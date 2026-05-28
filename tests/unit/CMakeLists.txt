@@ -2,6 +2,7 @@ add_executable(vdsim_unit_tests
     test_version.cpp
     test_headers_compile.cpp
     test_coordinate.cpp
+    test_tire_models.cpp
 )
 
 target_link_libraries(vdsim_unit_tests PRIVATE
