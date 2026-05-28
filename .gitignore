@@ -1,50 +1,66 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
+# Build directories
 build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+build-*/
+out/
+cmake-build-*/
 
-# Virtual environments
-venv/
-ENV/
-env/
-
-# CMake
+# CMake artifacts
 CMakeFiles/
-cmake_install.cmake
 CMakeCache.txt
-Makefile
+CMakeScripts/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
 *.cmake
+!CMakeLists.txt
+!cmake/*.cmake
 
-# IDE
+# Compiled
+*.o
+*.a
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+*.lib
+*.pdb
+
+# IDE / Editor
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+*.whl
+.venv/
+venv/
+env/
+
 # OS
 .DS_Store
 Thumbs.db
 
+# FetchContent cache
+third_party/_deps/
+
 # Local config
 .env
 .local
+
+# Claude Code local
+.claude/
+
+# Logs
+*.log
+logs/
+
+# CTest output
+Testing/
