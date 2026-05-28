@@ -3,6 +3,9 @@ add_library(vdsim_core
     src/coordinate.cpp
     src/pacejka_mf96.cpp
     src/linear_tire.cpp
+    src/bicycle_dynamics.cpp
+    src/dynamics_stubs.cpp
+    src/contact_providers.cpp
 )
 
 target_include_directories(vdsim_core PUBLIC

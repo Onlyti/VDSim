@@ -1,0 +1,288 @@
+// L1 Bicycle (single-track) vehicle dynamics.
+//
+// State vector for integration: [x_w, y_w, yaw, vx, vy, r, omega_f, omega_r]
+//   x_w, y_w : world position [m]
+//   yaw      : heading [rad], ISO 8855 RH (CCW positive)
+//   vx, vy   : body-frame velocity [m/s]
+//   r        : yaw rate [rad/s]
+//   omega_*  : wheel spin [rad/s] (front avg, rear avg)
+//
+// Tire forces from Pacejka MF96 with per-axle Fz.
+// Static Fz only (no longitudinal weight transfer in PoC bicycle).
+// Slip angle in ISO 8855 RH:  alpha_f = atan2(v_wheel_y, v_wheel_x)
+//                              alpha_r = atan2(vy - b*r, vx)
+// Note: this differs from Rajamani's "delta - atan(...)" which assumes
+// SAE Y-right convention.
+
+#include "vdsim/coordinate.hpp"
+#include "vdsim/interfaces.hpp"
+
+#include <algorithm>
+#include <cmath>
+#include <memory>
+#include <variant>
+
+namespace vdsim {
+
+namespace {
+
+constexpr double kAirDensity   = 1.225;   // [kg/m^3]
+constexpr double kGravity      = 9.80665; // [m/s^2]
+constexpr double kSpeedEps     = 0.5;     // [m/s] minimum denom for slip ratio / angle
+constexpr double kBrakeWidth   = 1.0;     // [rad/s] tanh transition width
+
+inline double smooth_sign(double x, double width) {
+    return std::tanh(x / width);
+}
+
+class BicycleDynamics final : public IVehicleDynamics {
+public:
+    explicit BicycleDynamics(std::unique_ptr<ITireModel> tire) : tire_(std::move(tire)) {}
+
+    Level level() const noexcept override { return Level::L1_Bicycle; }
+
+    void initialize(const VehicleParams& vp,
+                    const TireParams& tp,
+                    const SolverParams& sp) override {
+        vp_ = vp;
+        tp_ = tp;
+        sp_ = sp;
+        tire_->initialize(tp);
+
+        // Wheel rotational inertia: solid disk approximation 0.5 * m * R^2.
+        const double m_wheel = vp.unsprung_mass[WHEEL_FL] > 0.0
+                              ? vp.unsprung_mass[WHEEL_FL] : 25.0;
+        const double R = vp.wheel_radius_nominal;
+        I_wheel_ = 0.5 * m_wheel * R * R;
+        if (I_wheel_ < 0.01) I_wheel_ = 0.01;
+    }
+
+    void reset(const State& s) noexcept override {
+        state_ = s;
+    }
+
+    void step(const ControlInput& u,
+              const ContactArray& contacts,
+              double dt) noexcept override {
+        // PoC: only L4 is honored. Other variants treated as zero command.
+        const CmdL4* cmd_ptr = std::get_if<CmdL4>(&u);
+        const CmdL4  zero;
+        const CmdL4& cmd = cmd_ptr ? *cmd_ptr : zero;
+
+        if (!(dt > 0.0)) return;
+
+        const int N = std::max(1,
+                       std::min(sp_.max_substeps,
+                                static_cast<int>(std::ceil(dt / sp_.max_substep_dt))));
+        const double h = dt / static_cast<double>(N);
+        for (int i = 0; i < N; ++i) substep(cmd, contacts, h);
+    }
+
+    const State& state() const noexcept override { return state_; }
+
+    std::array<Vec3, NUM_WHEELS>   tire_forces_body() const override { return tire_F_; }
+    std::array<double, NUM_WHEELS> tire_Fz()           const override { return tire_Fz_; }
+    std::array<double, NUM_WHEELS> wheel_slip_ratio()  const override { return slip_ratio_; }
+    std::array<double, NUM_WHEELS> wheel_slip_angle()  const override { return slip_angle_; }
+
+private:
+    struct Deriv {
+        double dx_world {0.0};
+        double dy_world {0.0};
+        double dyaw     {0.0};
+        double dvx      {0.0};
+        double dvy      {0.0};
+        double dr       {0.0};
+        double domega_f {0.0};
+        double domega_r {0.0};
+    };
+
+    Deriv derivatives(const State& s,
+                      const CmdL4& cmd,
+                      const ContactArray& contacts) {
+        const double d   = cmd.steer_angle_wheel;
+        const double vx  = s.velocity.x();
+        const double vy  = s.velocity.y();
+        const double r   = s.angular_velocity.z();
+        const double of  = s.wheel_spin[WHEEL_FL];
+        const double or_ = s.wheel_spin[WHEEL_RL];
+        const double yaw = yaw_from_quat(s.orientation);
+
+        const double m   = vp_.mass;
+        const double Izz = vp_.inertia_diag.z();
+        const double a   = vp_.cg_to_front;
+        const double b   = vp_.cg_to_rear;
+        const double L   = vp_.wheelbase;
+        const double R   = vp_.wheel_radius_nominal;
+
+        // Static Fz per axle.
+        const double Fz_f = m * kGravity * b / L;
+        const double Fz_r = m * kGravity * a / L;
+
+        // Average mu from front/rear contact pairs.
+        auto avg = [](double p, double q) { return 0.5 * (p + q); };
+        const double mu_long_f = avg(contacts[WHEEL_FL].mu_long, contacts[WHEEL_FR].mu_long);
+        const double mu_lat_f  = avg(contacts[WHEEL_FL].mu_lat,  contacts[WHEEL_FR].mu_lat);
+        const double mu_long_r = avg(contacts[WHEEL_RL].mu_long, contacts[WHEEL_RR].mu_long);
+        const double mu_lat_r  = avg(contacts[WHEEL_RL].mu_lat,  contacts[WHEEL_RR].mu_lat);
+
+        // ---- Velocities ----
+        // Wheel positions in body: front (a, 0), rear (-b, 0).
+        // Body-frame velocity at wheel positions:
+        const double v_fx_body = vx;
+        const double v_fy_body = vy + a * r;
+        const double v_rx_body = vx;
+        const double v_ry_body = vy - b * r;
+
+        // Rotate front-wheel velocity into wheel frame (wheel rotated by d from body):
+        const double cd = std::cos(d);
+        const double sd = std::sin(d);
+        const double v_fx_wheel =  v_fx_body * cd + v_fy_body * sd;
+        const double v_fy_wheel = -v_fx_body * sd + v_fy_body * cd;
+        // Rear wheel: no steering, wheel frame == body frame.
+
+        // ---- Slip quantities (ISO 8855 RH) ----
+        // alpha = atan2(v_wheel_y, v_wheel_x) (positive when velocity is left of wheel-forward)
+        const double alpha_f = std::atan2(v_fy_wheel, v_fx_wheel);
+        const double alpha_r = std::atan2(v_ry_body,  v_rx_body);
+
+        const double denom_f = std::max(std::abs(v_fx_wheel), kSpeedEps);
+        const double denom_r = std::max(std::abs(v_rx_body),  kSpeedEps);
+        const double kappa_f = (R * of  - v_fx_wheel) / denom_f;
+        const double kappa_r = (R * or_ - v_rx_body)  / denom_r;
+
+        // ---- Tire forces (Pacejka in wheel frame) ----
+        ITireModel::Input in_f;
+        in_f.Fz = Fz_f; in_f.kappa = kappa_f; in_f.alpha = alpha_f;
+        in_f.mu_long = mu_long_f; in_f.mu_lat = mu_lat_f; in_f.Vx_wheel = v_fx_wheel;
+        const auto F_f = tire_->compute(in_f);
+
+        ITireModel::Input in_r;
+        in_r.Fz = Fz_r; in_r.kappa = kappa_r; in_r.alpha = alpha_r;
+        in_r.mu_long = mu_long_r; in_r.mu_lat = mu_lat_r; in_r.Vx_wheel = v_rx_body;
+        const auto F_r = tire_->compute(in_r);
+
+        // Rotate wheel-frame front forces back into body frame.
+        const double Fx_body_f = F_f.Fx * cd - F_f.Fy * sd;
+        const double Fy_body_f = F_f.Fx * sd + F_f.Fy * cd;
+        const double Fx_body_r = F_r.Fx;
+        const double Fy_body_r = F_r.Fy;
+
+        // Aero drag (opposes body-X velocity).
+        const double F_aero = 0.5 * kAirDensity * vp_.aero_drag_coeff *
+                              vp_.frontal_area * vx * std::abs(vx);
+
+        // ---- Drive / brake torques ----
+        double Td_f = 0.0, Td_r = 0.0;
+        switch (vp_.drive_type) {
+            case VehicleParams::Drive::FWD:
+                Td_f = cmd.throttle * vp_.max_motor_torque;
+                break;
+            case VehicleParams::Drive::RWD:
+                Td_r = cmd.throttle * vp_.max_motor_torque;
+                break;
+            case VehicleParams::Drive::AWD:
+                Td_f = 0.5 * cmd.throttle * vp_.max_motor_torque;
+                Td_r = 0.5 * cmd.throttle * vp_.max_motor_torque;
+                break;
+        }
+        if (cmd.gear < 0) {                   // reverse
+            Td_f = -Td_f; Td_r = -Td_r;
+        }
+        const double Tb_f_mag = 0.5 * cmd.brake * vp_.max_brake_torque;
+        const double Tb_r_mag = 0.5 * cmd.brake * vp_.max_brake_torque;
+        const double Tb_f = -smooth_sign(of,  kBrakeWidth) * Tb_f_mag;
+        const double Tb_r = -smooth_sign(or_, kBrakeWidth) * Tb_r_mag;
+
+        // ---- Body equations of motion (ISO 8855) ----
+        // m*(vx_dot - vy*r) = Fx_body  =>  vx_dot = Fx/m + vy*r
+        // m*(vy_dot + vx*r) = Fy_body  =>  vy_dot = Fy/m - vx*r
+        const double Fx_total = Fx_body_f + Fx_body_r - F_aero;
+        const double Fy_total = Fy_body_f + Fy_body_r;
+        const double Mz_total = a * Fy_body_f - b * Fy_body_r;
+
+        Deriv d_out;
+        d_out.dx_world = vx * std::cos(yaw) - vy * std::sin(yaw);
+        d_out.dy_world = vx * std::sin(yaw) + vy * std::cos(yaw);
+        d_out.dyaw     = r;
+        d_out.dvx      = Fx_total / m + vy * r;
+        d_out.dvy      = Fy_total / m - vx * r;
+        d_out.dr       = Mz_total / Izz;
+        d_out.domega_f = (Td_f + Tb_f - F_f.Fx * R) / I_wheel_;
+        d_out.domega_r = (Td_r + Tb_r - F_r.Fx * R) / I_wheel_;
+
+        // ---- Diagnostics ----
+        // Split axle force evenly across the two co-axial tires.
+        tire_F_[WHEEL_FL] = tire_F_[WHEEL_FR] = Vec3(0.5 * Fx_body_f, 0.5 * Fy_body_f, 0.0);
+        tire_F_[WHEEL_RL] = tire_F_[WHEEL_RR] = Vec3(0.5 * Fx_body_r, 0.5 * Fy_body_r, 0.0);
+        tire_Fz_[WHEEL_FL] = tire_Fz_[WHEEL_FR] = 0.5 * Fz_f;
+        tire_Fz_[WHEEL_RL] = tire_Fz_[WHEEL_RR] = 0.5 * Fz_r;
+        slip_ratio_[WHEEL_FL] = slip_ratio_[WHEEL_FR] = kappa_f;
+        slip_ratio_[WHEEL_RL] = slip_ratio_[WHEEL_RR] = kappa_r;
+        slip_angle_[WHEEL_FL] = slip_angle_[WHEEL_FR] = alpha_f;
+        slip_angle_[WHEEL_RL] = slip_angle_[WHEEL_RR] = alpha_r;
+
+        return d_out;
+    }
+
+    State apply(const State& s0, const Deriv& d, double h) {
+        State s = s0;
+        s.position.x() = s0.position.x() + d.dx_world * h;
+        s.position.y() = s0.position.y() + d.dy_world * h;
+        const double new_yaw = yaw_from_quat(s0.orientation) + d.dyaw * h;
+        s.orientation = quat_from_euler({0.0, 0.0, new_yaw});
+        s.velocity.x() = s0.velocity.x() + d.dvx * h;
+        s.velocity.y() = s0.velocity.y() + d.dvy * h;
+        s.angular_velocity.z() = s0.angular_velocity.z() + d.dr * h;
+        const double new_of = s0.wheel_spin[WHEEL_FL] + d.domega_f * h;
+        const double new_or = s0.wheel_spin[WHEEL_RL] + d.domega_r * h;
+        s.wheel_spin = {{new_of, new_of, new_or, new_or}};
+        return s;
+    }
+
+    void substep(const CmdL4& cmd, const ContactArray& contacts, double h) {
+        const State s0 = state_;
+        if (sp_.integrator == SolverParams::Integrator::Euler) {
+            const Deriv k = derivatives(s0, cmd, contacts);
+            state_ = apply(s0, k, h);
+            return;
+        }
+        // RK4
+        const Deriv k1 = derivatives(s0,                       cmd, contacts);
+        const Deriv k2 = derivatives(apply(s0, k1, 0.5 * h),  cmd, contacts);
+        const Deriv k3 = derivatives(apply(s0, k2, 0.5 * h),  cmd, contacts);
+        const Deriv k4 = derivatives(apply(s0, k3, h),        cmd, contacts);
+
+        Deriv k;
+        k.dx_world = (k1.dx_world + 2.0 * k2.dx_world + 2.0 * k3.dx_world + k4.dx_world) / 6.0;
+        k.dy_world = (k1.dy_world + 2.0 * k2.dy_world + 2.0 * k3.dy_world + k4.dy_world) / 6.0;
+        k.dyaw     = (k1.dyaw     + 2.0 * k2.dyaw     + 2.0 * k3.dyaw     + k4.dyaw)     / 6.0;
+        k.dvx      = (k1.dvx      + 2.0 * k2.dvx      + 2.0 * k3.dvx      + k4.dvx)      / 6.0;
+        k.dvy      = (k1.dvy      + 2.0 * k2.dvy      + 2.0 * k3.dvy      + k4.dvy)      / 6.0;
+        k.dr       = (k1.dr       + 2.0 * k2.dr       + 2.0 * k3.dr       + k4.dr)       / 6.0;
+        k.domega_f = (k1.domega_f + 2.0 * k2.domega_f + 2.0 * k3.domega_f + k4.domega_f) / 6.0;
+        k.domega_r = (k1.domega_r + 2.0 * k2.domega_r + 2.0 * k3.domega_r + k4.domega_r) / 6.0;
+
+        state_ = apply(s0, k, h);
+    }
+
+    VehicleParams vp_;
+    TireParams    tp_;
+    SolverParams  sp_;
+    std::unique_ptr<ITireModel> tire_;
+    double I_wheel_ {1.0};
+
+    State state_;
+    std::array<Vec3, NUM_WHEELS>   tire_F_    {};
+    std::array<double, NUM_WHEELS> tire_Fz_   {};
+    std::array<double, NUM_WHEELS> slip_ratio_ {};
+    std::array<double, NUM_WHEELS> slip_angle_ {};
+};
+
+}  // namespace
+
+std::unique_ptr<IVehicleDynamics> create_bicycle() {
+    return std::make_unique<BicycleDynamics>(create_pacejka_mf96());
+}
+
+}  // namespace vdsim
