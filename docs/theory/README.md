@@ -92,8 +92,8 @@ PhD 수준 독자가 읽고 — 식의 출처, 가정, 한계, 코드 매핑까�
 
 | 상태 | 챕터 |
 |---|---|
-| **draft 1차 완성** | 01, 02, 03, 04, 05, 06, 07 |
-| 작성 예정 | 08, 09, 10, 11, 12, 13 |
+| **draft 1차 완성** | 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13 (전체) |
+| follow-up 후보 | math appendix (변환 식 derivation), worked examples, Adams Car 실측 fit case study |
 
-이 README + 01-07 챕터 정독 시 VDSim 의 **simulator-side full stack** 의 이론적 배경 90% 가 cover 된다.
-나머지 (제어 디테일, 적분기, 아키텍처, multibody) 는 후속 챕터.
+README + 01-13 챕터 정독 시 VDSim 의 **simulator + controller + ABI + multibody outlook** 전체의 이론적 배경이 cover 된다.
+PT / 세일즈 시 이 문서를 출처로 인용 가능.
