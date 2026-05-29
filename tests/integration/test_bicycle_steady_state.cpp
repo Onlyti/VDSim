@@ -163,9 +163,10 @@ TEST_F(BicycleSteadyState, LowMuReducesYawRate) {
     EXPECT_LE(r_lo, r_hi);   // low mu cannot exceed high mu
 }
 
-TEST(BicycleStubs, SevenAndFourteenDoFThrow) {
-    EXPECT_THROW({ auto p = vdsim::create_seven_dof();    (void)p; }, std::runtime_error);
-    EXPECT_THROW({ auto p = vdsim::create_fourteen_dof(); (void)p; }, std::runtime_error);
+TEST(BicycleStubs, AllLevelsConstructible) {
+    EXPECT_NO_THROW({ auto p = vdsim::create_bicycle();      (void)p; });
+    EXPECT_NO_THROW({ auto p = vdsim::create_seven_dof();    (void)p; });
+    EXPECT_NO_THROW({ auto p = vdsim::create_fourteen_dof(); (void)p; });
 }
 
 TEST(FlatGround, QueryFillsAllContacts) {
