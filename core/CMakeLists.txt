@@ -4,8 +4,13 @@ add_library(vdsim_core
     src/pacejka_mf96.cpp
     src/linear_tire.cpp
     src/bicycle_dynamics.cpp
+    src/seven_dof_dynamics.cpp
+    src/fourteen_dof_dynamics.cpp
     src/dynamics_stubs.cpp
     src/contact_providers.cpp
+    src/params.cpp
+    src/scenario.cpp
+    src/control_converter.cpp
 )
 
 target_include_directories(vdsim_core PUBLIC
