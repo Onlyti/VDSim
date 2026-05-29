@@ -141,13 +141,84 @@ grid.material.opacity = 0.30; grid.material.transparent = true;
 scene.add(grid);
 
 // World axes at origin
-function makeAxis(color, dx, dy, dz) {
-  const m = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2, 12),
-                            new THREE.MeshPhongMaterial({ color }));
-  m.rotation.z = (dz === 1) ? 0 : Math.PI / 2;  // unused — just hint
-  return m;
-}
 const axisHelper = new THREE.AxesHelper(3); scene.add(axisHelper);
+
+// ===== Reference course: figure-eight R=20, cones every 5 m =====
+function buildFigureEight(R = 20, n = 160) {
+  const pts = [];
+  for (let i = 0; i < n / 2; i++) {
+    const t = 2 * Math.PI * i / (n / 2);
+    pts.push([R - R * Math.cos(t), R * Math.sin(t)]);
+  }
+  for (let i = 0; i < n / 2; i++) {
+    const t = 2 * Math.PI * i / (n / 2);
+    pts.push([-R + R * Math.cos(t), R * Math.sin(t)]);
+  }
+  return pts;
+}
+const courseR = 20;
+const coursePts = buildFigureEight(courseR);
+
+// Dashed path on ground
+const pathGeo = new THREE.BufferGeometry();
+pathGeo.setFromPoints(coursePts.concat([coursePts[0]]).map(p =>
+  new THREE.Vector3(p[0], p[1], 0.03)));
+const pathMat = new THREE.LineDashedMaterial({
+  color: 0xfff5b0, dashSize: 1.2, gapSize: 0.8, linewidth: 2,
+});
+const pathLine = new THREE.Line(pathGeo, pathMat);
+pathLine.computeLineDistances();
+scene.add(pathLine);
+
+// Cones along path
+const coneGeo = new THREE.ConeGeometry(0.30, 0.7, 16);
+const coneMat = new THREE.MeshPhongMaterial({ color: 0xff7000 });
+const coneBaseMat = new THREE.MeshPhongMaterial({ color: 0xffffff });
+const coneBaseGeo = new THREE.CylinderGeometry(0.30, 0.30, 0.08, 16);
+for (let i = 0; i < coursePts.length; i += 4) {   // every ~5 m
+  const [px, py] = coursePts[i];
+  const cone = new THREE.Mesh(coneGeo, coneMat);
+  cone.rotation.x = Math.PI / 2;
+  cone.position.set(px, py, 0.35);
+  cone.castShadow = true;
+  scene.add(cone);
+  const base = new THREE.Mesh(coneBaseGeo, coneBaseMat);
+  base.rotation.x = Math.PI / 2;
+  base.position.set(px, py, 0.04);
+  scene.add(base);
+}
+
+// Distance markers (text-like boxes every 20 m radial)
+for (let r = 20; r <= 80; r += 20) {
+  for (let a = 0; a < 4; a++) {
+    const angle = a * Math.PI / 2;
+    const m = new THREE.Mesh(
+      new THREE.BoxGeometry(1.5, 0.4, 0.05),
+      new THREE.MeshPhongMaterial({ color: 0x7090c0 })
+    );
+    m.position.set(r * Math.cos(angle), r * Math.sin(angle), 0.05);
+    m.rotation.z = angle;
+    scene.add(m);
+  }
+}
+
+// Tall reference posts at the two figure-eight centers (so motion is obvious)
+for (const [cx, cy] of [[courseR, 0], [-courseR, 0]]) {
+  const post = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.18, 0.18, 4.0, 16),
+    new THREE.MeshPhongMaterial({ color: 0xe04040 })
+  );
+  post.position.set(cx, cy, 2.0);
+  post.rotation.x = Math.PI / 2;
+  post.castShadow = true;
+  scene.add(post);
+  const cap = new THREE.Mesh(
+    new THREE.SphereGeometry(0.3, 16, 16),
+    new THREE.MeshPhongMaterial({ color: 0xffaa00 })
+  );
+  cap.position.set(cx, cy, 4.0);
+  scene.add(cap);
+}
 
 // ===== Vehicle Mesh =====
 const VEH = { L: 2.7, Tw_f: 1.55, Tw_r: 1.55, a: 1.20, b: 1.50, R: 0.32, h: 0.55, H: 1.40 };
