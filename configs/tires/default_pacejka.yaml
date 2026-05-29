@@ -1,0 +1,22 @@
+# Default Pacejka MF96 (simple form) tire.
+# F = D * sin(C * atan(B*s - E*(B*s - atan(B*s))))
+
+# ---- Longitudinal (slip ratio kappa) ----
+B_long: 10.0
+C_long: 1.65
+D_long: 1.0     # peak normalized to Fz * mu
+E_long: 0.97
+
+# ---- Lateral (slip angle alpha) ----
+B_lat:  8.0
+C_lat:  1.30
+D_lat:  1.0
+E_lat: -1.0
+
+# ---- Friction ----
+mu_nominal: 1.0
+Fz_nominal: 4000.0   # [N]
+
+# ---- Linear region (for validation / linear-tire fallback) ----
+cornering_stiffness: 80000.0   # C_alpha [N/rad]
+rolling_resistance:  0.015

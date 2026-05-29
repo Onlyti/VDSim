@@ -1,0 +1,21 @@
+# Drive straight through a low-mu patch and out the other side.
+
+name:          ice_patch
+initial_vx:    20.0
+duration:      6.0
+dt:            0.005
+mu:            1.0           # fallback if mu_profile empty
+interpolation: zoh
+
+controls:
+  - { t: 0.0, throttle: 0.0, brake: 0.0, steer: 0.0 }
+  - { t: 6.0, throttle: 0.0, brake: 0.0, steer: 0.0 }
+
+# Time-varying surface friction.
+mu_profile:
+  - { t: 0.0, mu: 1.0 }      # dry
+  - { t: 1.5, mu: 1.0 }      # dry up to here
+  - { t: 1.6, mu: 0.2 }      # snap to icy
+  - { t: 3.5, mu: 0.2 }      # icy patch
+  - { t: 3.6, mu: 1.0 }      # back to dry
+  - { t: 6.0, mu: 1.0 }

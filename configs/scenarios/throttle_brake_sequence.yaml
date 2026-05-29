@@ -1,0 +1,14 @@
+# Throttle for 3 s, coast 1 s, then brake to stop.
+
+name:          throttle_brake_sequence
+initial_vx:    5.0
+duration:      8.0
+dt:            0.005
+mu:            1.0
+interpolation: zoh
+
+controls:
+  - { t: 0.0, throttle: 0.5, brake: 0.0, steer: 0.0 }
+  - { t: 3.0, throttle: 0.0, brake: 0.0, steer: 0.0 }
+  - { t: 4.0, throttle: 0.0, brake: 0.8, steer: 0.0 }
+  - { t: 8.0, throttle: 0.0, brake: 0.8, steer: 0.0 }

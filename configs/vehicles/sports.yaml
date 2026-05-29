@@ -1,0 +1,44 @@
+# Sports variant — lighter, stiffer, more torque, lower CG.
+#
+# Matches the "sports" diff used in Task 12 sample emit comparison.
+
+# ---- Mass ----
+mass:         1320.0
+mass_sprung:  1180.0
+inertia_diag: [420.0, 1700.0, 2050.0]
+
+# ---- Geometry ----
+wheelbase:            2.55
+cg_to_front:          1.20
+cg_to_rear:           1.35
+track_front:          1.58
+track_rear:           1.56
+cg_height:            0.42
+wheel_radius_nominal: 0.33
+
+# ---- L3 suspension ----
+spring_stiffness:   [45000, 45000, 42000, 42000]
+damper_coefficient: [4200,  4200,  3900,  3900]
+unsprung_mass:      [42,    42,    38,    38]
+roll_stiffness_front: 48000.0
+roll_stiffness_rear:  38000.0
+
+# ---- Drivetrain ----
+drive_type:       RWD
+differential:     LSD       # mechanical LSD typical of sports trim
+lsd_preload:      0.18
+lsd_ramp:         0.40
+max_motor_torque: 480.0
+max_brake_torque: 3000.0
+brake_bias_front: 0.65      # slightly more front bias
+
+# ---- Steering ----
+steering_ratio:        12.0
+max_steer_angle_wheel: 0.55
+ackerman_percent:      85.0   # quicker, near-perfect Ackerman
+
+# ---- Aero ----
+aero_drag_coeff: 0.34
+frontal_area:    2.05
+aero_lift_front: 0.40       # front splitter
+aero_lift_rear:  0.60       # rear wing

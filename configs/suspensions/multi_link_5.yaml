@@ -1,0 +1,59 @@
+# 5-link multi-link — modern sedan rear suspension.
+#
+# Five links share the same knuckle.  Toe and camber are tuned by individual
+# link lengths and bushing pre-loads.
+
+topology: multi_link_5
+name:     "sedan RL 5-link"
+
+bodies:
+  - { id: chassis,    mass: 0.0,  inertia_diag: [0,0,0], cg_local: [0,0,0] }
+  - { id: knuckle,    mass: 7.5,  inertia_diag: [0.05, 0.05, 0.05], cg_local: [0.00, 0.72,  0.05] }
+  - { id: link_lat_f, mass: 2.5,  inertia_diag: [0.01, 0.05, 0.05], cg_local: [0.20, 0.40, -0.05] }
+  - { id: link_lat_r, mass: 2.5,  inertia_diag: [0.01, 0.05, 0.05], cg_local: [-0.20, 0.40, -0.05] }
+  - { id: link_camber,mass: 2.3,  inertia_diag: [0.01, 0.04, 0.04], cg_local: [0.10, 0.40,  0.20] }
+  - { id: link_toe,   mass: 2.0,  inertia_diag: [0.01, 0.03, 0.03], cg_local: [-0.10, 0.40, 0.05] }
+  - { id: trailing_arm, mass: 6.0, inertia_diag: [0.05, 0.20, 0.20], cg_local: [ 0.30, 0.50, -0.10] }
+
+hardpoints:
+  - { name: lat_f_inner,   body_id: chassis,  position: [ 0.40, 0.20, -0.05] }
+  - { name: lat_f_outer,   body_id: knuckle,  position: [ 0.10, 0.72, -0.05] }
+  - { name: lat_r_inner,   body_id: chassis,  position: [-0.40, 0.20, -0.05] }
+  - { name: lat_r_outer,   body_id: knuckle,  position: [-0.10, 0.72, -0.05] }
+  - { name: camber_inner,  body_id: chassis,  position: [ 0.20, 0.20,  0.25] }
+  - { name: camber_outer,  body_id: knuckle,  position: [ 0.00, 0.72,  0.20] }
+  - { name: toe_inner,     body_id: chassis,  position: [-0.20, 0.20,  0.05] }
+  - { name: toe_outer,     body_id: knuckle,  position: [-0.10, 0.72,  0.05] }
+  - { name: trailing_pivot,body_id: chassis,  position: [ 0.60, 0.40,  0.05] }
+  - { name: trailing_outer,body_id: knuckle,  position: [ 0.00, 0.72,  0.05] }
+  - { name: wheel_center,  body_id: knuckle,  position: [ 0.00, 0.80,  0.00] }
+
+joints:
+  - { id: j_lat_f_in,    type: ball, body_a: chassis, body_b: link_lat_f,
+      position_in_a: [ 0.40, 0.20, -0.05], position_in_b: [ 0.20, 0.00, 0.00] }
+  - { id: j_lat_f_out,   type: ball, body_a: link_lat_f, body_b: knuckle,
+      position_in_a: [-0.20, 0.00, 0.00], position_in_b: [ 0.10, 0.00, -0.10] }
+  - { id: j_lat_r_in,    type: ball, body_a: chassis, body_b: link_lat_r,
+      position_in_a: [-0.40, 0.20, -0.05], position_in_b: [-0.20, 0.00, 0.00] }
+  - { id: j_lat_r_out,   type: ball, body_a: link_lat_r, body_b: knuckle,
+      position_in_a: [ 0.20, 0.00, 0.00], position_in_b: [-0.10, 0.00, -0.10] }
+  - { id: j_camber_in,   type: ball, body_a: chassis, body_b: link_camber,
+      position_in_a: [ 0.20, 0.20, 0.25], position_in_b: [ 0.20, 0.00, 0.00] }
+  - { id: j_camber_out,  type: ball, body_a: link_camber, body_b: knuckle,
+      position_in_a: [-0.20, 0.00, 0.00], position_in_b: [ 0.00, 0.00, 0.15] }
+  - { id: j_toe_in,      type: ball, body_a: chassis, body_b: link_toe,
+      position_in_a: [-0.20, 0.20, 0.05], position_in_b: [ 0.20, 0.00, 0.00] }
+  - { id: j_toe_out,     type: ball, body_a: link_toe, body_b: knuckle,
+      position_in_a: [-0.20, 0.00, 0.00], position_in_b: [-0.10, 0.00, 0.00] }
+  - { id: j_trail_pivot, type: revolute, body_a: chassis, body_b: trailing_arm,
+      position_in_a: [ 0.60, 0.40, 0.05], position_in_b: [ 0.30, 0.00, 0.00], axis_in_a: [0, 1, 0] }
+  - { id: j_trail_outer, type: ball, body_a: trailing_arm, body_b: knuckle,
+      position_in_a: [-0.30, 0.00, 0.00], position_in_b: [ 0.00, 0.00, 0.00] }
+
+# Compliant inner mounts (typical modern sedan rear).
+bushings:
+  - { id: b_trail_pivot, body_a: chassis, body_b: trailing_arm,
+      position_in_a: [ 0.60, 0.40, 0.05], position_in_b: [ 0.30, 0.00, 0.00],
+      axis_in_a: [0, 1, 0],
+      k_translation: [5.0e6, 5.0e5, 5.0e5], k_rotation: [200, 200, 200],
+      c_translation: [3000, 1000, 1000], c_rotation: [5, 5, 5] }

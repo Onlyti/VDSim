@@ -1,0 +1,5 @@
+# Explicit Euler, 10 ms substep — intentionally coarse to expose integrator error.
+
+integrator:     Euler
+max_substep_dt: 0.010   # [s]
+max_substeps:   1

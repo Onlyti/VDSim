@@ -1,0 +1,13 @@
+# Step steer: hold 0 for 0.5 s, then snap to +0.05 rad and hold.
+
+name:          step_steer
+initial_vx:    10.0     # m/s
+duration:      5.0      # s
+dt:            0.005    # s outer tick
+mu:            1.0
+interpolation: zoh
+
+controls:
+  - { t: 0.0, throttle: 0.0, brake: 0.0, steer: 0.00 }
+  - { t: 0.5, throttle: 0.0, brake: 0.0, steer: 0.05 }
+  - { t: 5.0, throttle: 0.0, brake: 0.0, steer: 0.05 }
