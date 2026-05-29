@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>VDSim 3D Viewer</title>
+<style>
+body { margin: 0; overflow: hidden; font-family: monospace; background: #1a1a1a; color: #eee; }
+.panel { position: absolute; background: rgba(0,0,0,0.78); padding: 10px 14px; z-index: 100;
+         border-radius: 4px; font-size: 12px; line-height: 1.5; }
+#ui { top: 10px; left: 10px; max-width: 260px; }
+#hud { top: 10px; right: 10px; min-width: 180px; }
+#timeline { bottom: 10px; left: 10px; right: 10px; }
+button { background: #4F81BD; color: #fff; border: none; padding: 5px 10px; cursor: pointer;
+         margin: 2px; border-radius: 2px; font-family: inherit; font-size: 12px; }
+button:hover { background: #3F71AD; }
+button:disabled { background: #555; cursor: not-allowed; }
+input[type=range] { width: 100%; }
+input[type=file] { color: #ccc; font-size: 11px; }
+select { background: #333; color: #eee; border: 1px solid #555; padding: 2px 4px; font-family: inherit; }
+h3 { margin: 0 0 8px 0; color: #4F81BD; font-size: 13px; }
+.row { margin: 6px 0; }
+.hud-row { margin: 1px 0; }
+.lbl { color: #888; }
+#rtStatus.connected { color: #4caf50; } #rtStatus.disconnected { color: #f44336; }
+#rtStatus.error { color: #ff9800; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+
+<div class="panel" id="ui">
+  <h3>VDSim 3D Viewer</h3>
+  <div class="row"><b>CSV replay</b><br/>
+    <input type="file" id="csvInput" accept=".csv"/>
+  </div>
+  <div class="row"><b>Realtime</b><br/>
+    <button id="btnRealtime">Connect ws://localhost:8765</button><br/>
+    Status: <span id="rtStatus" class="disconnected">disconnected</span>
+  </div>
+  <div class="row"><b>Camera</b>
+    <select id="camMode">
+      <option value="orbit">Orbit</option>
+      <option value="follow" selected>Follow</option>
+      <option value="topdown">Top-down</option>
+      <option value="chase_close">Chase close</option>
+    </select>
+  </div>
+  <div class="row"><b>Source:</b> <span id="vehLabel">—</span></div>
+  <div class="row"><b>Trail:</b>
+    <button id="btnClearTrail">Clear</button>
+    <label><input type="checkbox" id="trailOn" checked /> show</label>
+  </div>
+</div>
+
+<div class="panel" id="hud">
+  <div class="hud-row"><span class="lbl">t:    </span><span id="hudT">0.000</span> s</div>
+  <div class="hud-row"><span class="lbl">vx:   </span><span id="hudVx">0.00</span> m/s</div>
+  <div class="hud-row"><span class="lbl">vy:   </span><span id="hudVy">0.00</span> m/s</div>
+  <div class="hud-row"><span class="lbl">r:    </span><span id="hudR">0.0000</span> rad/s</div>
+  <div class="hud-row"><span class="lbl">ax:   </span><span id="hudAx">0.00</span> m/s²</div>
+  <div class="hud-row"><span class="lbl">ay:   </span><span id="hudAy">0.00</span> m/s²</div>
+  <div class="hud-row"><span class="lbl">roll: </span><span id="hudRoll">0.00</span>°</div>
+  <div class="hud-row"><span class="lbl">pitch:</span><span id="hudPitch">0.00</span>°</div>
+  <div class="hud-row"><span class="lbl">steer:</span><span id="hudSteer">0.000</span> rad</div>
+  <div class="hud-row"><span class="lbl">thr:  </span><span id="hudThr">0.00</span> brk: <span id="hudBrk">0.00</span></div>
+</div>
+
+<div class="panel" id="timeline">
+  <button id="btnPlay">▶ Play</button>
+  <button id="btnPause">⏸ Pause</button>
+  <button id="btnRewind">⏮ Rewind</button>
+  Speed: <select id="speedSel">
+    <option value="0.25">0.25x</option>
+    <option value="0.5">0.5x</option>
+    <option value="1" selected>1x</option>
+    <option value="2">2x</option>
+    <option value="5">5x</option>
+    <option value="10">10x</option>
+  </select>
+  &nbsp; <span id="totalT">— s</span>
+  <input type="range" id="tSlider" min="0" max="1" value="0" step="0.001"/>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ===== Scene (ISO 8855 RH: x fwd, y left, z up) =====
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1f24);
+scene.fog = new THREE.Fog(0x1a1f24, 100, 500);
+
+const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 2000);
+camera.up.set(0, 0, 1);
+camera.position.set(15, -20, 12);
+camera.lookAt(0, 0, 1);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0, 1);
+controls.enableDamping = true;
+
+// ===== Lights =====
+scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+const sun = new THREE.DirectionalLight(0xffffff, 0.95);
+sun.position.set(60, -40, 100);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -80; sun.shadow.camera.right = 80;
+sun.shadow.camera.top = 80; sun.shadow.camera.bottom = -80;
+sun.shadow.camera.near = 1; sun.shadow.camera.far = 300;
+scene.add(sun);
+
+// ===== Ground + Grid =====
+scene.add(Object.assign(new THREE.Mesh(
+  new THREE.PlaneGeometry(1000, 1000),
+  new THREE.MeshPhongMaterial({ color: 0x2a2f37 })
+), { receiveShadow: true }));
+
+const grid = new THREE.GridHelper(800, 80, 0x4F81BD, 0x303540);
+grid.rotation.x = Math.PI / 2;
+grid.material.opacity = 0.30; grid.material.transparent = true;
+scene.add(grid);
+
+// World axes at origin
+function makeAxis(color, dx, dy, dz) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2, 12),
+                            new THREE.MeshPhongMaterial({ color }));
+  m.rotation.z = (dz === 1) ? 0 : Math.PI / 2;  // unused — just hint
+  return m;
+}
+const axisHelper = new THREE.AxesHelper(3); scene.add(axisHelper);
+
+// ===== Vehicle Mesh =====
+const VEH = { L: 2.7, Tw_f: 1.55, Tw_r: 1.55, a: 1.20, b: 1.50, R: 0.32, h: 0.55, H: 1.40 };
+const vehicle = new THREE.Group();
+scene.add(vehicle);
+
+// Chassis (lower box)
+const chassisMat = new THREE.MeshPhongMaterial({ color: 0x4F81BD });
+const chassis = new THREE.Mesh(
+  new THREE.BoxGeometry(VEH.L + 0.6, VEH.Tw_f, 0.6), chassisMat);
+chassis.position.set((VEH.a - VEH.b) / 2, 0, VEH.h);
+chassis.castShadow = true;
+vehicle.add(chassis);
+
+// Cabin (roof)
+const cabin = new THREE.Mesh(
+  new THREE.BoxGeometry(VEH.L * 0.45, VEH.Tw_f * 0.9, 0.55), chassisMat);
+cabin.position.set(0, 0, VEH.h + 0.55);
+cabin.castShadow = true;
+vehicle.add(cabin);
+
+// Front marker (yellow tip)
+const tip = new THREE.Mesh(
+  new THREE.BoxGeometry(0.1, VEH.Tw_f * 0.6, 0.2),
+  new THREE.MeshPhongMaterial({ color: 0xFFD700 }));
+tip.position.set(VEH.L / 2 + 0.35, 0, VEH.h + 0.05);
+vehicle.add(tip);
+
+// Wheels (cylinder default axis = local Y, which we'll align with body Y for steer + spin)
+const wheelGeo = new THREE.CylinderGeometry(VEH.R, VEH.R, 0.24, 32);
+const wheelMat = new THREE.MeshPhongMaterial({ color: 0x111 });
+const wheelTreadMat = new THREE.MeshPhongMaterial({ color: 0x666 });
+const wheelPos = [
+  [+VEH.a, +VEH.Tw_f / 2], // FL
+  [+VEH.a, -VEH.Tw_f / 2], // FR
+  [-VEH.b, +VEH.Tw_r / 2], // RL
+  [-VEH.b, -VEH.Tw_r / 2]  // RR
+];
+const wheelGroups = []; // outer group (for steering)
+const wheelMeshes = []; // inner mesh (for spin)
+for (let i = 0; i < 4; i++) {
+  const [px, py] = wheelPos[i];
+  const g = new THREE.Group();
+  g.position.set(px, py, VEH.R);
+  const w = new THREE.Mesh(wheelGeo, wheelMat);
+  w.castShadow = true;
+  g.add(w);
+  vehicle.add(g);
+  wheelGroups.push(g);
+  wheelMeshes.push(w);
+}
+
+// Trail line
+const trailMax = 8000;
+const trailPts = [];
+const trailGeo = new THREE.BufferGeometry();
+const trailMat = new THREE.LineBasicMaterial({ color: 0xff8c00 });
+const trailLine = new THREE.Line(trailGeo, trailMat);
+scene.add(trailLine);
+function updateTrail(x, y) {
+  trailPts.push(new THREE.Vector3(x, y, 0.02));
+  if (trailPts.length > trailMax) trailPts.shift();
+  trailGeo.setFromPoints(trailPts);
+}
+function clearTrail() { trailPts.length = 0; trailGeo.setFromPoints(trailPts); }
+document.getElementById('btnClearTrail').onclick = clearTrail;
+document.getElementById('trailOn').onchange = e => { trailLine.visible = e.target.checked; };
+
+// ===== State application =====
+let lastFrameTime = performance.now();
+let cumWheelAngle = 0;
+
+function applyState(s, dtFrame) {
+  vehicle.position.set(s.x || 0, s.y || 0, 0);
+  vehicle.rotation.z = s.yaw || 0;
+  // roll/pitch applied to chassis + cabin
+  chassis.rotation.x = s.roll || 0;
+  chassis.rotation.y = -(s.pitch || 0);  // nose-down on negative pitch
+  cabin.rotation.copy(chassis.rotation);
+  // Steering (front wheels)
+  const steer = s.steer || 0;
+  wheelGroups[0].rotation.z = steer;
+  wheelGroups[1].rotation.z = steer;
+  // Spin: accumulate angle using vx/R (wheel_spin not in CSV by default)
+  const vx = s.vx || 0;
+  const omega = vx / VEH.R;
+  cumWheelAngle -= omega * Math.max(0.001, Math.min(0.1, dtFrame));
+  for (let i = 0; i < 4; i++) wheelMeshes[i].rotation.y = cumWheelAngle;
+
+  if (trailLine.visible) updateTrail(s.x || 0, s.y || 0);
+
+  const fix = (v, n=2) => (v === undefined || v === null) ? '—' : Number(v).toFixed(n);
+  document.getElementById('hudT').textContent     = fix(s.t, 3);
+  document.getElementById('hudVx').textContent    = fix(s.vx, 2);
+  document.getElementById('hudVy').textContent    = fix(s.vy, 2);
+  document.getElementById('hudR').textContent     = fix(s.r, 4);
+  document.getElementById('hudAx').textContent    = fix(s.ax, 2);
+  document.getElementById('hudAy').textContent    = fix(s.ay, 2);
+  document.getElementById('hudRoll').textContent  = fix((s.roll || 0) * 180 / Math.PI, 2);
+  document.getElementById('hudPitch').textContent = fix((s.pitch || 0) * 180 / Math.PI, 2);
+  document.getElementById('hudSteer').textContent = fix(s.steer, 3);
+  document.getElementById('hudThr').textContent   = fix(s.throttle, 2);
+  document.getElementById('hudBrk').textContent   = fix(s.brake, 2);
+}
+
+// ===== CSV loading =====
+let csvData = null;
+let csvT0 = 0, csvT1 = 0;
+let t = 0; let playing = false; let speed = 1.0;
+
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const header = lines[0].split(',').map(s => s.trim());
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = lines[i].split(',');
+    const r = {};
+    header.forEach((h, idx) => { r[h] = parseFloat(vals[idx]); });
+    rows.push(r);
+  }
+  return rows;
+}
+
+document.getElementById('csvInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    csvData = parseCSV(reader.result);
+    if (csvData.length === 0) return;
+    csvT0 = csvData[0].t || 0;
+    csvT1 = csvData[csvData.length - 1].t || 0;
+    t = csvT0;
+    document.getElementById('totalT').textContent = csvT1.toFixed(2) + ' s';
+    document.getElementById('tSlider').min = csvT0;
+    document.getElementById('tSlider').max = csvT1;
+    document.getElementById('tSlider').value = csvT0;
+    clearTrail();
+    cumWheelAngle = 0;
+    playing = true;  // auto-play on load
+    document.getElementById('vehLabel').textContent = file.name;
+  };
+  reader.readAsText(file);
+});
+
+function sampleAt(t) {
+  if (!csvData || csvData.length === 0) return null;
+  if (t <= csvData[0].t) return csvData[0];
+  if (t >= csvData[csvData.length - 1].t) return csvData[csvData.length - 1];
+  let lo = 0, hi = csvData.length - 1;
+  while (lo < hi - 1) {
+    const mid = (lo + hi) >> 1;
+    if (csvData[mid].t <= t) lo = mid; else hi = mid;
+  }
+  const a = csvData[lo], b = csvData[hi];
+  const dt = b.t - a.t;
+  if (dt < 1e-9) return { ...a };
+  const k = (t - a.t) / dt;
+  const r = {};
+  for (const key of Object.keys(a)) {
+    const va = a[key], vb = b[key];
+    if (typeof va === 'number' && typeof vb === 'number' && !isNaN(va) && !isNaN(vb))
+      r[key] = va + k * (vb - va);
+  }
+  return r;
+}
+
+document.getElementById('btnPlay').onclick = () => { playing = true; };
+document.getElementById('btnPause').onclick = () => { playing = false; };
+document.getElementById('btnRewind').onclick = () => { t = csvT0; clearTrail(); cumWheelAngle = 0; };
+document.getElementById('tSlider').oninput = (e) => { t = parseFloat(e.target.value); playing = false; };
+document.getElementById('speedSel').onchange = (e) => { speed = parseFloat(e.target.value); };
+
+// ===== Camera modes =====
+let camMode = 'follow';
+document.getElementById('camMode').onchange = (e) => { camMode = e.target.value; };
+
+function updateCamera() {
+  const vx = vehicle.position.x, vy = vehicle.position.y, vz = vehicle.position.z;
+  const yaw = vehicle.rotation.z;
+  if (camMode === 'orbit') {
+    controls.enabled = true;
+    controls.target.set(vx, vy, vz + 0.5);
+  } else if (camMode === 'follow') {
+    controls.enabled = false;
+    const d = 10;
+    camera.position.set(vx - d * Math.cos(yaw), vy - d * Math.sin(yaw), vz + 4.5);
+    camera.lookAt(vx + 3 * Math.cos(yaw), vy + 3 * Math.sin(yaw), vz + 0.5);
+  } else if (camMode === 'topdown') {
+    controls.enabled = false;
+    camera.position.set(vx, vy, 60);
+    camera.lookAt(vx, vy, 0);
+  } else if (camMode === 'chase_close') {
+    controls.enabled = false;
+    const d = 5;
+    camera.position.set(vx - d * Math.cos(yaw), vy - d * Math.sin(yaw), vz + 2);
+    camera.lookAt(vx + 1.5 * Math.cos(yaw), vy + 1.5 * Math.sin(yaw), vz + 0.8);
+  }
+}
+
+// ===== Realtime WebSocket =====
+let ws = null;
+const rtQueue = [];
+document.getElementById('btnRealtime').onclick = () => {
+  if (ws) { ws.close(); return; }
+  ws = new WebSocket('ws://' + location.hostname + ':8765');
+  ws.onopen = () => {
+    document.getElementById('rtStatus').textContent = 'connected';
+    document.getElementById('rtStatus').className = 'connected';
+    document.getElementById('btnRealtime').textContent = 'Disconnect';
+    document.getElementById('vehLabel').textContent = 'realtime ws';
+    clearTrail();
+    cumWheelAngle = 0;
+  };
+  ws.onmessage = (e) => {
+    try { rtQueue.push(JSON.parse(e.data)); if (rtQueue.length > 600) rtQueue.shift(); }
+    catch (err) { console.error(err); }
+  };
+  ws.onclose = () => {
+    document.getElementById('rtStatus').textContent = 'disconnected';
+    document.getElementById('rtStatus').className = 'disconnected';
+    document.getElementById('btnRealtime').textContent = 'Connect ws://localhost:8765';
+    ws = null;
+  };
+  ws.onerror = () => {
+    document.getElementById('rtStatus').textContent = 'error (server not running?)';
+    document.getElementById('rtStatus').className = 'error';
+  };
+};
+
+// ===== Main animation loop =====
+function animate() {
+  const now = performance.now();
+  const dtFrame = Math.min(0.05, (now - lastFrameTime) / 1000);
+  lastFrameTime = now;
+
+  if (rtQueue.length > 0) {
+    // Realtime takes precedence; drain queue (one per frame for smooth playback)
+    const s = rtQueue.shift();
+    applyState(s, dtFrame);
+  } else if (csvData) {
+    if (playing) {
+      t += dtFrame * speed;
+      if (t > csvT1) { t = csvT1; playing = false; }
+      document.getElementById('tSlider').value = t;
+    }
+    const s = sampleAt(t);
+    if (s) applyState(s, dtFrame);
+  }
+
+  updateCamera();
+  if (controls.enabled) controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(animate);
+}
+animate();
+</script>
+</body>
+</html>
