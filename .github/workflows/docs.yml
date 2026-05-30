@@ -1,0 +1,47 @@
+name: Deploy docs
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Allow mike to push to gh-pages
+permissions:
+  contents: write
+
+# Cancel any in-progress deploy if a new one starts
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # mike needs full history of gh-pages
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install MkDocs Material + mike
+        run: |
+          python -m pip install --upgrade pip
+          pip install mkdocs-material pymdown-extensions mike
+
+      - name: Configure git for mike
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch gh-pages branch
+        run: |
+          git fetch origin gh-pages --depth=1 || true
+
+      - name: Deploy "main" version with mike
+        run: |
+          mike deploy --push --update-aliases main latest
+          mike set-default --push latest

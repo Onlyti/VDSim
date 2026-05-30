@@ -1,0 +1,125 @@
+site_name: VDSim
+site_description: Open-core vehicle dynamics simulator — theory + PoC reports
+site_url: https://onlyti.github.io/VDSim/
+repo_url: https://github.com/Onlyti/VDSim
+repo_name: Onlyti/VDSim
+edit_uri: edit/main/docs/
+
+docs_dir: docs
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  features:
+    - navigation.sections
+    - navigation.tabs
+    - navigation.top
+    - navigation.tracking
+    - navigation.indexes
+    - navigation.expand
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+extra_javascript:
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Onlyti/VDSim
+  version:
+    provider: mike
+    default: latest
+
+nav:
+  - Home:
+      - index.md
+  - Theory:
+      - Overview: theory/README.md
+      - "01 — Frames & conventions": theory/01_frames_and_conventions.md
+      - "02 — Rigid-body dynamics": theory/02_rigid_body_dynamics.md
+      - "03 — Tire (Pacejka MF96)": theory/03_tire_pacejka_mf96.md
+      - "04 — Ld1-Bicycle": theory/04_ld1_bicycle.md
+      - "05 — Ld2-SevenDOF": theory/05_ld2_seven_dof.md
+      - "06 — Ld3-FourteenDOF": theory/06_ld3_fourteen_dof.md
+      - "07 — Control ladder Lc1-Lc8": theory/07_control_ladder.md
+      - "08 — PID controllers": theory/08_pid_controllers.md
+      - "09 — Pure Pursuit / path": theory/09_pure_pursuit_path.md
+      - "10 — Driver model": theory/10_driver_model.md
+      - "11 — Numerical integration": theory/11_numerical_integration.md
+      - "12 — Software architecture": theory/12_software_architecture.md
+      - "13 — Multibody outlook": theory/13_multibody_outlook.md
+  - PoC Reports:
+      - Index: tasks/README.md
+      - PoC Summary v3 (95%): tasks/68_poc_summary_v3/README.md
+      - Competitive matrix: tasks/69_competitive_matrix/README.md
+      - Cycles overview: tasks/62_cycles_overview/README.md
+      - Benchmark matrix (4 vehicles): tasks/50_benchmark_matrix/README.md
+      - L1 vs L2 grid sweep: tasks/20_l1_l2_grid_sweep/README.md
+      - L3 dynamic suspension: tasks/30_l3_dynamic_suspension/README.md
+      - L5-L8 control cascade: tasks/31_l6_l7_l8_control/README.md
+      - Driver / skidpad / brake-in-turn: tasks/57_58_59_driver_skidpad/README.md
+      - L3 ride frequency limit: tasks/50_benchmark_matrix/README.md
+  - Examples:
+      - examples/README.md

@@ -4,42 +4,55 @@
 
 ## 12.1 아키텍처 layer
 
-```
-┌─────────────────────────────────────────────────────────┐
-│  User code (CARLA plugin / Python / CLI demos / paper)  │
-└─────────────────────────────────────────────────────────┘
-                            │ ABI surface
-                            ▼
-┌─────────────────────────────────────────────────────────┐
-│  Public headers (core/include/vdsim/)                    │
-│  - interfaces.hpp:  IVehicleDynamics, ITireModel,        │
-│                     IContactProvider, IRoughnessProvider │
-│  - params.hpp:      VehicleParams, TireParams, ...       │
-│  - state.hpp:       State (cover for Ld1-Ld5)            │
-│  - control.hpp:     CmdL1-L8 + variant<>                 │
-│  - control_converter.hpp: PID + Pure Pursuit             │
-│  - scenario.hpp:    Scenario YAML                        │
-│  - multibody.hpp:   Ld4-Ld5 stub                         │
-└─────────────────────────────────────────────────────────┘
-                            │ ABI hide
-                            ▼
-┌─────────────────────────────────────────────────────────┐
-│  Implementation (core/src/)                              │
-│  - bicycle_dynamics.cpp, seven_dof_dynamics.cpp,         │
-│    fourteen_dof_dynamics.cpp                             │
-│  - pacejka_mf96.cpp, linear_tire.cpp                     │
-│  - control_converter.cpp                                 │
-│  - params.cpp, scenario.cpp, contact_providers.cpp       │
-└─────────────────────────────────────────────────────────┘
-                            │ link
-                            ▼
-┌─────────────────────────────────────────────────────────┐
-│  Third-party (FetchContent)                              │
-│  - Eigen3 (header-only)                                  │
-│  - yaml-cpp                                              │
-│  - spdlog                                                │
-│  - GoogleTest (tests only)                               │
-└─────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph User["User code"]
+        Carla[CARLA UE5 plugin]
+        Py[Python notebook]
+        CLI[CLI demos]
+        Paper[Paper / experiment]
+    end
+
+    subgraph ABI["Public ABI (core/include/vdsim/)"]
+        IDyn["IVehicleDynamics"]
+        ITire["ITireModel"]
+        IContact["IContactProvider"]
+        Variant["ControlInput =<br/>variant&lt;CmdL1..L8&gt;"]
+        Params["VehicleParams /<br/>TireParams /<br/>SolverParams"]
+        Scen["Scenario YAML"]
+        MB["Multibody stub<br/>(Ld4-Ld5)"]
+    end
+
+    subgraph Impl["Hidden impl (core/src/, anonymous ns)"]
+        Ld1["bicycle_dynamics.cpp"]
+        Ld2["seven_dof_dynamics.cpp"]
+        Ld3["fourteen_dof_dynamics.cpp"]
+        Tire["pacejka_mf96.cpp"]
+        Ctrl["control_converter.cpp"]
+    end
+
+    subgraph TP["Third-party (FetchContent)"]
+        Eig[Eigen3]
+        Ycpp[yaml-cpp]
+        Sp[spdlog]
+        Gt[GoogleTest]
+    end
+
+    Carla --> ABI
+    Py --> ABI
+    CLI --> ABI
+    Paper --> ABI
+    ABI --> Impl
+    Impl --> TP
+
+    classDef user fill:#01A0E9,stroke:#005195,color:#fff;
+    classDef abi  fill:#4F81BD,stroke:#345A8A,color:#fff;
+    classDef impl fill:#7C8693,stroke:#333,color:#fff;
+    classDef tp   fill:#cfd8e3,stroke:#7C8693,color:#222;
+    class Carla,Py,CLI,Paper user
+    class IDyn,ITire,IContact,Variant,Params,Scen,MB abi
+    class Ld1,Ld2,Ld3,Tire,Ctrl impl
+    class Eig,Ycpp,Sp,Gt tp
 ```
 
 ## 12.2 Factory + pure virtual = ABI 안정

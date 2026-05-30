@@ -163,12 +163,30 @@ Lc3: Fx 를 typical "1g per sedan" (mass · 5 m/s²) 로 normalize.
 
 Lc4 까지가 dynamics 의 직접 입력. Lc5-Lc8 는 ControlConverter 모듈 (Chapter 08-09 상세) 가 cascade 로 lowering:
 
-```
-Lc8-Waypoint  ────(PurePursuit / MPC)──→  Lc7-PathCurvature
-Lc7           ────(δ = atan(κ·L))────→  Lc6-VTarget (steer 만)
-Lc6           ────(velocity PI)─────→  Lc5-AxTarget (ax 산출)
-Lc5           ────(ax PI + FF)──────→  Lc4-Pedal (throttle/brake)
-Lc4           ────────────────────────→  Dynamics step()
+```mermaid
+flowchart LR
+    Lc8["Lc8-Waypoint<br/>path[N] + lookahead"]
+    Lc7["Lc7-PathCurvature<br/>(v_target, κ)"]
+    Lc6["Lc6-VTarget<br/>v_target"]
+    Lc5["Lc5-AxTarget<br/>ax_target"]
+    Lc4["Lc4-Pedal<br/>(throttle, brake, steer)"]
+    Dyn(("IVehicleDynamics<br/>.step()"))
+
+    Lc8 -->|"Pure Pursuit /<br/>MPC"| Lc7
+    Lc7 -->|"δ = atan(κ·L)"| Lc6
+    Lc6 -->|"vx PI<br/>(cascade)"| Lc5
+    Lc5 -->|"ax PI + FF"| Lc4
+    Lc4 --> Dyn
+    Dyn --> Ld1["Ld1-Bicycle"]
+    Dyn --> Ld2["Ld2-SevenDOF"]
+    Dyn --> Ld3["Ld3-FourteenDOF"]
+
+    classDef ctrl  fill:#4F81BD,stroke:#345A8A,color:#fff;
+    classDef pedal fill:#01A0E9,stroke:#005195,color:#fff;
+    classDef dyn   fill:#7C8693,stroke:#333,color:#fff;
+    class Lc8,Lc7,Lc6,Lc5 ctrl
+    class Lc4 pedal
+    class Ld1,Ld2,Ld3 dyn
 ```
 
 즉 사용자가 Lc8 path 만 줘도 자동으로 Lc4 throttle/brake/steer 까지 변환되어 차량이 따라간다.
