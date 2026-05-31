@@ -1,0 +1,41 @@
+# Double wishbone (DW) front suspension — sports trim baseline.
+#
+# Frame: vehicle body frame, ISO 8855 RH (+x forward, +y leftward, +z up).
+# Hardpoints are given for the LEFT wheel (FL); the right wheel mirrors across
+# the body x-axis (y → -y).
+#
+# All distances in meters.  Reference origin: ground level (z=0) directly
+# below the wheel center at static ride height, midway between L/R wheels.
+
+type: double_wishbone
+side: left            # left wheel; right is mirrored
+
+# Wheel and tire
+wheel:
+  center:      [0.00, 0.79, 0.330]   # FL wheel center at static (y = +tw_f/2)
+  spin_axis:   [0.0, 1.0, 0.0]       # nominal axle axis in body frame
+  static_radius: 0.330
+
+# Lower control arm (LCA) — two ball joints, nearly horizontal.
+lca:
+  chassis_front: [+0.15, 0.30, 0.08]
+  chassis_rear:  [-0.18, 0.30, 0.08]
+  knuckle:       [-0.02, 0.75, 0.15]
+
+# Upper control arm (UCA) — shorter, inboard, tilted UP toward chassis.
+# Steeper angle than LCA → IC is brought inboard (≈0.2 m from body axis),
+# producing a roll-center near ground level and mild camber recovery.
+uca:
+  chassis_front: [+0.08, 0.45, 0.32]
+  chassis_rear:  [-0.22, 0.45, 0.32]
+  knuckle:       [-0.01, 0.70, 0.55]
+
+# Tie rod (steering link)
+tie_rod:
+  rack:    [-0.30, 0.35, 0.18]     # inner end at steering rack
+  knuckle: [-0.30, 0.74, 0.21]     # outer end at knuckle
+
+# Spring/damper attachment (geometry only; spring rate from vehicle.yaml)
+spring_damper:
+  chassis: [-0.05, 0.45, 0.50]
+  lca:     [-0.05, 0.55, 0.13]     # attaches to LCA at this point
