@@ -5,10 +5,13 @@
 
 #include "vdsim/coordinate.hpp"
 #include "vdsim/interfaces.hpp"
+#include "vdsim/suspension.hpp"
 
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <filesystem>
+#include <fstream>
 
 namespace {
 
@@ -250,4 +253,61 @@ TEST(FourteenDOF, RollFeedsPerWheelCamberWithCorrectSign) {
     for (int i = 0; i < 1500; ++i) dyn->step(cmd, contacts, dt);
 
     EXPECT_GT(std::abs(dyn->roll_angle_qs()), 0.005);
+}
+
+// =============================================================================
+// L3 Stage D: attach_front_kinematics replaces camber_per_roll behavior
+// =============================================================================
+TEST(FourteenDOF, AttachedKinematicsOverridesCamberPerRoll) {
+    // Build a tiny synthetic table that returns a STRONG fixed camber (5°) for
+    // ANY wheel travel — independent of vp_.camber_per_roll.
+    const auto csv_path = std::filesystem::temp_directory_path()
+                           / "vdsim_l3_kine.csv";
+    {
+        std::ofstream f(csv_path);
+        f << "wheel_travel,steer_rack_dy,camber,toe,track_change,caster,valid\n";
+        for (double t : {-0.05, 0.0, +0.05})
+            for (double s : {-0.005, 0.0, +0.005})
+                f << t << "," << s << "," << (5.0 * M_PI / 180.0)
+                  << "," << 0 << "," << 0 << "," << 0 << ",1\n";
+    }
+
+    auto run = [&](bool use_kine) {
+        vdsim::VehicleParams vp; vp.aero_drag_coeff = 0.0;
+        vp.camber_per_roll = 0.0;     // disable legacy fallback
+        vdsim::TireParams    tp; tp.camber_stiffness = 2.0;
+        vdsim::SolverParams  sp;
+
+        auto dyn = vdsim::create_fourteen_dof();
+        dyn->initialize(vp, tp, sp);
+        if (use_kine) {
+            auto k = vdsim::create_lookup_kinematics(csv_path.string());
+            EXPECT_TRUE(vdsim::attach_front_kinematics(*dyn, std::move(k)));
+        }
+        vdsim::State s0;
+        s0.velocity.x() = 15.0;
+        const double w0 = 15.0 / vp.wheel_radius_nominal;
+        s0.wheel_spin = {{w0, w0, w0, w0}};
+        dyn->reset(s0);
+
+        vdsim::CmdL4 cmd; cmd.steer_angle_wheel = 0.01;
+        vdsim::ContactArray contacts;
+        for (auto& p : contacts) { p.is_valid = true;
+                                    p.normal = vdsim::Vec3::UnitZ();
+                                    p.mu_long = 1.0; p.mu_lat = 1.0; }
+        const double dt = 0.001;
+        for (int i = 0; i < 800; ++i) dyn->step(cmd, contacts, dt);
+        return dyn->tire_forces_body();
+    };
+
+    const auto F_no_kine = run(false);
+    const auto F_kine    = run(true);
+
+    // With kinematics attached → fixed 5° camber on front → camber thrust on
+    // front Fy substantially shifted relative to baseline.
+    const double dFy_FL = std::abs(F_kine[vdsim::WHEEL_FL].y()
+                                     - F_no_kine[vdsim::WHEEL_FL].y());
+    EXPECT_GT(dFy_FL, 100.0);   // > 100 N change
+
+    std::filesystem::remove(csv_path);
 }

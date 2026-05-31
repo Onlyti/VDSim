@@ -34,6 +34,7 @@
 
 #include "vdsim/coordinate.hpp"
 #include "vdsim/interfaces.hpp"
+#include "vdsim/suspension.hpp"
 
 #include <spdlog/spdlog.h>
 
@@ -98,22 +99,51 @@ public:
     void step(const ControlInput& u,
               const ContactArray& contacts,
               double dt) noexcept override {
-        // Forward roll-induced camber to inner Ld2 BEFORE the planar step:
-        //   γ_i = camber_per_roll · sign_left(i) · phi   (left/right symmetric)
-        // 1-step lag is acceptable — phi_ is from the previous tick.
-        const double k_cam = vp_.camber_per_roll;
-        std::array<double, NUM_WHEELS> gamma {{
-            +k_cam * phi_,       // FL
-            -k_cam * phi_,       // FR
-            +k_cam * phi_,       // RL
-            -k_cam * phi_,       // RR
-        }};
+        // Per-wheel camber input to inner Ld2.  Two sources, in order:
+        //   1. Hardpoint kinematics (front and/or rear) if attached — uses
+        //      per-wheel travel from sprung-corner z minus unsprung world z.
+        //   2. Fallback: phenomenological vp_.camber_per_roll · phi  (legacy).
+        std::array<double, NUM_WHEELS> gamma {{0.0, 0.0, 0.0, 0.0}};
+        if (kine_front_ || kine_rear_) {
+            // Wheel travel: bump positive = wheel up relative to chassis.
+            // z_corner_sprung uses small-angle phi/th: z_corner = z_s + ry sin(phi) − rx sin(th).
+            for (int i = 0; i < NUM_WHEELS; ++i) {
+                const double z_corner_s = z_s_ + ry_[i] * std::sin(phi_)
+                                                - rx_[i] * std::sin(th_);
+                const double wheel_travel = z_u_[i] - z_corner_s;
+                ISuspensionKinematics* k = (i < 2) ? kine_front_.get()
+                                                   : kine_rear_.get();
+                if (k) {
+                    const auto o = k->compute(wheel_travel, 0.0);
+                    // Sign flip for right side (geometry mirrored about x-axis)
+                    const bool right = (i == WHEEL_FR || i == WHEEL_RR);
+                    gamma[i] = right ? -o.camber : o.camber;
+                } else {
+                    gamma[i] = (i == WHEEL_FR || i == WHEEL_RR)
+                                ? -vp_.camber_per_roll * phi_
+                                : +vp_.camber_per_roll * phi_;
+                }
+            }
+        } else {
+            const double k_cam = vp_.camber_per_roll;
+            gamma = {{ +k_cam * phi_, -k_cam * phi_,
+                       +k_cam * phi_, -k_cam * phi_ }};
+        }
         inner_->set_camber_per_wheel(gamma);
 
         inner_->step(u, contacts, dt);
         state_ = inner_->state();
         if (dt > 0.0) integrate_vertical(dt);
         write_pose_and_suspension();
+    }
+
+    // Attach an ISuspensionKinematics for the front (L) or rear (R) axle.
+    // nullptr restores the legacy camber_per_roll fallback.
+    void set_kinematics_front(std::unique_ptr<ISuspensionKinematics> k) {
+        kine_front_ = std::move(k);
+    }
+    void set_kinematics_rear(std::unique_ptr<ISuspensionKinematics> k) {
+        kine_rear_ = std::move(k);
     }
 
     const State& state() const noexcept override { return state_; }
@@ -298,12 +328,35 @@ private:
     double th_  {0.0}, th_dot_  {0.0};
     std::array<double, NUM_WHEELS> z_u_     {{0.0, 0.0, 0.0, 0.0}};
     std::array<double, NUM_WHEELS> z_u_dot_ {{0.0, 0.0, 0.0, 0.0}};
+
+    // Optional hardpoint kinematics (Ld4 Stage D).  When attached, replaces
+    // the lumped vp_.camber_per_roll · phi heuristic for the corresponding axle.
+    std::unique_ptr<ISuspensionKinematics> kine_front_;
+    std::unique_ptr<ISuspensionKinematics> kine_rear_;
 };
 
 }  // namespace
 
 std::unique_ptr<IVehicleDynamics> create_fourteen_dof() {
     return std::make_unique<FourteenDOFDynamics>();
+}
+
+// Public attach helpers — callers can build the kinematics object (e.g. via
+// create_lookup_kinematics) and hand it to the Ld3 instance.  Returns true on
+// success (i.e. dyn really is a FourteenDOFDynamics).
+bool attach_front_kinematics(IVehicleDynamics& dyn,
+                              std::unique_ptr<ISuspensionKinematics> k) {
+    auto* p = dynamic_cast<FourteenDOFDynamics*>(&dyn);
+    if (!p) return false;
+    p->set_kinematics_front(std::move(k));
+    return true;
+}
+bool attach_rear_kinematics(IVehicleDynamics& dyn,
+                             std::unique_ptr<ISuspensionKinematics> k) {
+    auto* p = dynamic_cast<FourteenDOFDynamics*>(&dyn);
+    if (!p) return false;
+    p->set_kinematics_rear(std::move(k));
+    return true;
 }
 
 }  // namespace vdsim

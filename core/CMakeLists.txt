@@ -11,6 +11,7 @@ add_library(vdsim_core
     src/params.cpp
     src/scenario.cpp
     src/control_converter.cpp
+    src/suspension_lookup.cpp
 )
 
 target_include_directories(vdsim_core PUBLIC
