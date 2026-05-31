@@ -1,0 +1,41 @@
+# MacPherson strut front suspension — sedan baseline.
+#
+# Frame: body frame ISO 8855 RH (+x forward, +y leftward, +z up).
+# All distances in meters.  Hardpoints for LEFT wheel (FL); right is mirrored.
+#
+# Differences vs double_wishbone:
+#   - No UCA — replaced by a single strut.
+#   - The strut top ("ST") is a single ball joint on the chassis.
+#   - The strut bottom ("SK") is rigidly attached to the knuckle.
+#   - The kingpin axis = the strut axis (line from ST to SK).
+#
+# When the wheel steers, the entire strut+knuckle rotates about the strut
+# axis (allowed by the thrust bearing at the top mount).
+
+type: macpherson
+side: left
+
+wheel:
+  center:        [0.00, 0.775, 0.305]
+  spin_axis:     [0.0, 1.0, 0.0]
+  static_radius: 0.305
+
+# Lower control arm
+lca:
+  chassis_front: [+0.10, 0.32, 0.18]
+  chassis_rear:  [-0.20, 0.32, 0.18]
+  knuckle:       [-0.02, 0.74, 0.20]
+
+# Strut: top mount (chassis ball joint), bottom (rigid on knuckle).
+# Strut length is the spring/damper compression — kinematically a rigid link.
+strut:
+  top:    [-0.04, 0.60, 0.65]
+  bottom: [-0.04, 0.72, 0.31]      # mounts onto knuckle (rigid)
+
+# Tie rod
+tie_rod:
+  rack:    [-0.30, 0.40, 0.22]
+  knuckle: [-0.30, 0.73, 0.25]
+
+# Spring/damper attachment (the strut housing is co-axial; for kinematics this
+# only matters via the strut length above).
