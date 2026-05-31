@@ -22,6 +22,13 @@ damper_coefficient: [4200,  4200,  3900,  3900]
 unsprung_mass:      [42,    42,    38,    38]
 roll_stiffness_front: 48000.0
 roll_stiffness_rear:  38000.0
+# ---- Roll / pitch axis geometry (inertial-coupling moment arms) ----
+# Standard textbook formulation: M_x_inertial = m_s · ay · (h_cg − h_rc).
+# h_rc = roll-center height (suspension geometry, typical 0.05–0.20 m).
+# h_pc = pitch axis equivalent (driven by anti-dive / anti-squat geometry).
+roll_center_height_front: 0.08
+roll_center_height_rear:  0.12
+pitch_center_height:      0.15
 
 # ---- Drivetrain ----
 drive_type:       RWD
