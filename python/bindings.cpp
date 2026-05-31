@@ -11,6 +11,7 @@
 #include "vdsim/params.hpp"
 #include "vdsim/scenario.hpp"
 #include "vdsim/state.hpp"
+#include "vdsim/suspension.hpp"
 
 namespace py = pybind11;
 
@@ -115,6 +116,31 @@ PYBIND11_MODULE(vdsim, m) {
         .def("compute",    &vdsim::ITireModel::compute);
     m.def("create_pacejka_mf96", &vdsim::create_pacejka_mf96);
     m.def("create_linear_tire",  &vdsim::create_linear_tire);
+
+    // -------- ISuspensionKinematics (Ld4) --------
+    py::class_<vdsim::ISuspensionKinematics::Output>(m, "KinematicsOutput")
+        .def_readonly("camber",       &vdsim::ISuspensionKinematics::Output::camber)
+        .def_readonly("toe",          &vdsim::ISuspensionKinematics::Output::toe)
+        .def_readonly("track_change", &vdsim::ISuspensionKinematics::Output::track_change)
+        .def_readonly("caster",       &vdsim::ISuspensionKinematics::Output::caster);
+    py::class_<vdsim::ISuspensionKinematics>(m, "ISuspensionKinematics")
+        .def("compute", &vdsim::ISuspensionKinematics::compute,
+             py::arg("wheel_travel"), py::arg("steer_input") = 0.0);
+    m.def("create_lookup_kinematics",
+          [](const std::string& csv_path) {
+              // unique_ptr<base> -> pybind11 keeps ownership
+              return vdsim::create_lookup_kinematics(csv_path);
+          });
+    m.def("attach_front_kinematics",
+          [](vdsim::IVehicleDynamics& dyn, const std::string& csv_path) {
+              auto k = vdsim::create_lookup_kinematics(csv_path);
+              return vdsim::attach_front_kinematics(dyn, std::move(k));
+          });
+    m.def("attach_rear_kinematics",
+          [](vdsim::IVehicleDynamics& dyn, const std::string& csv_path) {
+              auto k = vdsim::create_lookup_kinematics(csv_path);
+              return vdsim::attach_rear_kinematics(dyn, std::move(k));
+          });
 
     // -------- SolverParams --------
     py::class_<vdsim::SolverParams>(m, "SolverParams")

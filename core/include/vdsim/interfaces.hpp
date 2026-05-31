@@ -58,6 +58,10 @@ public:
     // kinematics.  Default no-op; overriding levels may use it.
     virtual void set_camber_per_wheel(
         const std::array<double, NUM_WHEELS>& /*gamma*/) noexcept {}
+    // External per-wheel toe input [rad].  Additive to the Ackerman-corrected
+    // steer angle on front; affects all wheels (bump-steer / kinematic toe).
+    virtual void set_toe_per_wheel(
+        const std::array<double, NUM_WHEELS>& /*toe*/) noexcept {}
 };
 
 std::unique_ptr<IVehicleDynamics> create_bicycle();

@@ -148,6 +148,11 @@ public:
         camber_ext_ = gamma;
     }
 
+    void set_toe_per_wheel(
+        const std::array<double, NUM_WHEELS>& toe) noexcept override {
+        toe_ext_ = toe;
+    }
+
 private:
     struct Deriv {
         double dx_world {0.0};
@@ -245,21 +250,26 @@ private:
         // Wheel position offsets in body frame (ax, ay relative to CG):
         const std::array<double, NUM_WHEELS> r_x = {{ +a,      +a,      -b,      -b      }};
         const std::array<double, NUM_WHEELS> r_y = {{ +Tw_f*0.5, -Tw_f*0.5, +Tw_r*0.5, -Tw_r*0.5 }};
-        const std::array<double, NUM_WHEELS> d_wheel = {{ d_FL, d_FR, 0.0, 0.0 }};
+        // Per-wheel total wheel-angle = Ackerman-corrected steer (front) +
+        // bump-steer / kinematic toe from Ld4 (any wheel).
+        const std::array<double, NUM_WHEELS> d_wheel = {{
+            d_FL + toe_ext_[WHEEL_FL],
+            d_FR + toe_ext_[WHEEL_FR],
+            0.0  + toe_ext_[WHEEL_RL],
+            0.0  + toe_ext_[WHEEL_RR],
+        }};
 
         for (int i = 0; i < NUM_WHEELS; ++i) {
             const double v_x_body = vx - r * r_y[i];
             const double v_y_body = vy + r * r_x[i];
 
             const double di = d_wheel[i];
-            const bool steered = (i == WHEEL_FL || i == WHEEL_FR);
+            // A wheel is "steered" if its angle is non-trivial (front or any
+            // wheel with non-zero toe input).  We just always do the rotation
+            // — it's a cheap cos/sin per wheel.
             const double cd_i = std::cos(di), sd_i = std::sin(di);
-            double v_x_wheel = v_x_body;
-            double v_y_wheel = v_y_body;
-            if (steered) {
-                v_x_wheel =  v_x_body * cd_i + v_y_body * sd_i;
-                v_y_wheel = -v_x_body * sd_i + v_y_body * cd_i;
-            }
+            double v_x_wheel = v_x_body * cd_i + v_y_body * sd_i;
+            double v_y_wheel = -v_x_body * sd_i + v_y_body * cd_i;
             const double a_slip = std::atan2(v_y_wheel, v_x_wheel);
             const double denom  = std::max(std::abs(v_x_wheel), kSpeedEps);
             const double k_slip = (R * s.wheel_spin[i] - v_x_wheel) / denom;
@@ -282,11 +292,10 @@ private:
             alpha_geom_last_[i] = a_slip;
             v_x_wheel_last_[i]  = v_x_wheel;
 
-            double Fx_b = out.Fx, Fy_b = out.Fy;
-            if (steered) {
-                Fx_b = out.Fx * cd_i - out.Fy * sd_i;
-                Fy_b = out.Fx * sd_i + out.Fy * cd_i;
-            }
+            // Project wheel-frame force into body frame.  Rear di may be
+            // non-zero from kinematic toe (bump-steer) — always rotate.
+            const double Fx_b = out.Fx * cd_i - out.Fy * sd_i;
+            const double Fy_b = out.Fx * sd_i + out.Fy * cd_i;
             F_body[i] = Vec3(Fx_b, Fy_b, 0.0);
             kappa[i]  = k_slip;
             alpha[i]  = a_slip;
@@ -382,16 +391,11 @@ private:
         d_out.ay_body  = Fy_total / m;
         for (int i = 0; i < NUM_WHEELS; ++i) {
             // Body-frame Fx already applied to body translation. For wheel
-            // spin, use wheel-frame Fx (i.e., the raw tire output along wheel-x).
-            // For un-steered wheels Fx_body == Fx_wheel; for steered we recover
-            // by inverse rotation -> but we have Fx_body and original F.Fx;
-            // simpler: re-rotate body force back into wheel x.
-            double Fx_wheel = F_body[i].x();
-            if (i == WHEEL_FL || i == WHEEL_FR) {
-                const double cd_i = std::cos(d_wheel[i]);
-                const double sd_i = std::sin(d_wheel[i]);
-                Fx_wheel =  F_body[i].x() * cd_i + F_body[i].y() * sd_i;
-            }
+            // spin, use wheel-frame Fx — re-rotate body force back to wheel x.
+            // Rear wheels now also have potentially-nonzero d_wheel (toe input).
+            const double cd_i = std::cos(d_wheel[i]);
+            const double sd_i = std::sin(d_wheel[i]);
+            const double Fx_wheel = F_body[i].x() * cd_i + F_body[i].y() * sd_i;
             d_out.domega[i] = (Td[i] + Tb[i] - Fx_wheel * R) / I_wheel_;
         }
 
@@ -482,6 +486,8 @@ private:
     std::array<double, NUM_WHEELS> v_x_wheel_last_  {{0.0, 0.0, 0.0, 0.0}};
     // External per-wheel camber input (set by Ld3 or caller before step).
     std::array<double, NUM_WHEELS> camber_ext_      {{0.0, 0.0, 0.0, 0.0}};
+    // External per-wheel toe input (additive to Ackerman steer angle).
+    std::array<double, NUM_WHEELS> toe_ext_         {{0.0, 0.0, 0.0, 0.0}};
 };
 
 }  // namespace

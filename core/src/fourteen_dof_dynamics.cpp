@@ -99,14 +99,14 @@ public:
     void step(const ControlInput& u,
               const ContactArray& contacts,
               double dt) noexcept override {
-        // Per-wheel camber input to inner Ld2.  Two sources, in order:
+        // Per-wheel camber AND toe input to inner Ld2.  Two sources:
         //   1. Hardpoint kinematics (front and/or rear) if attached — uses
         //      per-wheel travel from sprung-corner z minus unsprung world z.
-        //   2. Fallback: phenomenological vp_.camber_per_roll · phi  (legacy).
+        //   2. Fallback: phenomenological vp_.camber_per_roll · phi  (legacy);
+        //      no toe contribution in fallback (matches pre-Ld4 behavior).
         std::array<double, NUM_WHEELS> gamma {{0.0, 0.0, 0.0, 0.0}};
+        std::array<double, NUM_WHEELS> toe   {{0.0, 0.0, 0.0, 0.0}};
         if (kine_front_ || kine_rear_) {
-            // Wheel travel: bump positive = wheel up relative to chassis.
-            // z_corner_sprung uses small-angle phi/th: z_corner = z_s + ry sin(phi) − rx sin(th).
             for (int i = 0; i < NUM_WHEELS; ++i) {
                 const double z_corner_s = z_s_ + ry_[i] * std::sin(phi_)
                                                 - rx_[i] * std::sin(th_);
@@ -115,9 +115,9 @@ public:
                                                    : kine_rear_.get();
                 if (k) {
                     const auto o = k->compute(wheel_travel, 0.0);
-                    // Sign flip for right side (geometry mirrored about x-axis)
                     const bool right = (i == WHEEL_FR || i == WHEEL_RR);
                     gamma[i] = right ? -o.camber : o.camber;
+                    toe[i]   = right ? -o.toe    : o.toe;
                 } else {
                     gamma[i] = (i == WHEEL_FR || i == WHEEL_RR)
                                 ? -vp_.camber_per_roll * phi_
@@ -130,6 +130,7 @@ public:
                        +k_cam * phi_, -k_cam * phi_ }};
         }
         inner_->set_camber_per_wheel(gamma);
+        inner_->set_toe_per_wheel(toe);
 
         inner_->step(u, contacts, dt);
         state_ = inner_->state();

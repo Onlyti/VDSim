@@ -311,3 +311,55 @@ TEST(FourteenDOF, AttachedKinematicsOverridesCamberPerRoll) {
 
     std::filesystem::remove(csv_path);
 }
+
+// =============================================================================
+// L3 Stage G: kinematics toe (bump-steer) propagates to Ld2 wheel angle.
+// =============================================================================
+TEST(FourteenDOF, KinematicsToeProducesBumpSteer) {
+    // Hardpoint table with FIXED 0.05 rad toe on every row → effectively a
+    // hard 2.86° toe-in on front wheels at any travel.  In straight-line at
+    // 15 m/s, this should generate a non-zero front Fy from the toe alone
+    // (slip angle ≈ -toe).
+    const auto csv_path = std::filesystem::temp_directory_path()
+                           / "vdsim_l3_toe.csv";
+    {
+        std::ofstream f(csv_path);
+        f << "wheel_travel,steer_rack_dy,camber,toe,track_change,caster,valid\n";
+        for (double t : {-0.05, 0.0, +0.05})
+            for (double s : {-0.005, 0.0, +0.005})
+                f << t << "," << s << "," << 0 << "," << 0.05
+                  << "," << 0 << "," << 0 << ",1\n";
+    }
+
+    vdsim::VehicleParams vp; vp.aero_drag_coeff = 0.0;
+    vp.camber_per_roll = 0.0;
+    vdsim::TireParams    tp;
+    vdsim::SolverParams  sp;
+    auto dyn = vdsim::create_fourteen_dof();
+    dyn->initialize(vp, tp, sp);
+    auto k = vdsim::create_lookup_kinematics(csv_path.string());
+    ASSERT_TRUE(vdsim::attach_front_kinematics(*dyn, std::move(k)));
+
+    vdsim::State s0; s0.velocity.x() = 15.0;
+    const double w0 = 15.0 / vp.wheel_radius_nominal;
+    s0.wheel_spin = {{w0, w0, w0, w0}};
+    dyn->reset(s0);
+
+    vdsim::CmdL4 cmd;     // ZERO steering input
+    const vdsim::ControlInput u = cmd;
+    vdsim::ContactArray contacts;
+    for (auto& p : contacts) { p.is_valid = true;
+                                p.normal = vdsim::Vec3::UnitZ();
+                                p.mu_long = 1.0; p.mu_lat = 1.0; }
+    for (int i = 0; i < 100; ++i) dyn->step(u, contacts, 0.001);
+
+    // After a few steps the front wheels' kinematic toe should manifest as
+    // non-zero slip angle and thus non-zero Fy.  (Without toe wiring this
+    // would stay at zero since cmd.steer_angle_wheel = 0.)
+    const auto alphas = dyn->wheel_slip_angle();
+    EXPECT_GT(std::abs(alphas[vdsim::WHEEL_FL]) +
+              std::abs(alphas[vdsim::WHEEL_FR]),
+              0.02);   // ≥ ~1 deg slip from toe
+
+    std::filesystem::remove(csv_path);
+}
