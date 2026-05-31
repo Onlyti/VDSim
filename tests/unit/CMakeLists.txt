@@ -14,6 +14,9 @@ add_executable(vdsim_unit_tests
 
 target_link_libraries(vdsim_unit_tests PRIVATE vdsim_carla_plugin)
 
+target_compile_definitions(vdsim_unit_tests PRIVATE
+    VDSIM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+
 target_link_libraries(vdsim_unit_tests PRIVATE
     vdsim::core
     GTest::gtest

@@ -76,3 +76,42 @@ TEST_F(LookupKinematicsFixture, TrackChangeLinearInTravel) {
     const auto o = k_->compute(0.005, 0.0);    // 5 mm bump
     EXPECT_NEAR(o.track_change, -0.4 * 0.005, 1e-6);
 }
+
+// =============================================================================
+// DW native kinematics solver — match lookup at grid points
+// =============================================================================
+TEST(DWNativeKinematics, MatchesLookupAtGridPoints) {
+    const std::string yaml_path =
+        std::string(VDSIM_SOURCE_DIR) + "/configs/suspensions/dw_front_sports.yaml";
+    const std::string csv_path  =
+        std::string(VDSIM_SOURCE_DIR) + "/docs/tasks/T27_ld4_dw/run3d/sweep_3d.csv";
+
+    auto k_native = vdsim::create_dw_native_kinematics(yaml_path);
+    auto k_lookup = vdsim::create_lookup_kinematics(csv_path);
+    ASSERT_NE(k_native, nullptr);
+    ASSERT_NE(k_lookup, nullptr);
+
+    // At grid points from the precomputed sweep (travel ∈ {-50,-25,0,25,50} mm,
+    // steer ∈ {-20,0,+20} mm), the lookup returns the exact precomputed value
+    // and the native solver returns the same physically-correct answer.
+    for (double t : {-0.050, 0.0, +0.050}) {
+        for (double s : {-0.020, 0.0, +0.020}) {
+            const auto an = k_native->compute(t, s);
+            const auto al = k_lookup->compute(t, s);
+            EXPECT_NEAR(an.camber, al.camber, 1e-3);
+            EXPECT_NEAR(an.toe,    al.toe,    1e-3);
+            EXPECT_NEAR(an.track_change, al.track_change, 1e-3);
+        }
+    }
+}
+
+TEST(DWNativeKinematics, StaticReturnsZero) {
+    auto k = vdsim::create_dw_native_kinematics(
+        std::string(VDSIM_SOURCE_DIR) + "/configs/suspensions/dw_front_sports.yaml");
+    const auto o = k->compute(0.0, 0.0);
+    EXPECT_NEAR(o.camber, 0.0, 1e-6);
+    EXPECT_NEAR(o.toe,    0.0, 1e-6);
+    EXPECT_NEAR(o.track_change, 0.0, 1e-6);
+    EXPECT_GT(o.caster, 0.0);   // sample geometry has +caster ≈ 0.025 rad
+    EXPECT_LT(o.caster, 0.05);
+}

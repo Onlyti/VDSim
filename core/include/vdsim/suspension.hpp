@@ -42,6 +42,16 @@ public:
 std::unique_ptr<ISuspensionKinematics>
 create_lookup_kinematics(const std::string& csv_path);
 
+// Native (in-process) DW kinematics solver — reads a hardpoint YAML and
+// solves the linkage at every compute() call.  No offline precompute.
+//   - Newton on LCA θ for true wheel z (vs target = static + travel)
+//   - UCA θ from sphere–sphere intersection (|UK − LK| = const)
+//   - Trilateration for TK (3 spheres: LK, UK, TR_inner)
+//   - Camber / toe / track_change / caster from knuckle frame
+// Throws if the YAML is missing fields or has type ≠ "double_wishbone".
+std::unique_ptr<ISuspensionKinematics>
+create_dw_native_kinematics(const std::string& yaml_path);
+
 // Attach a kinematics model to a FourteenDOFDynamics instance.  Returns false
 // if `dyn` is not Ld3.  Ld1/Ld2 ignore this (no per-wheel suspension state).
 class IVehicleDynamics;

@@ -128,8 +128,11 @@ PYBIND11_MODULE(vdsim, m) {
              py::arg("wheel_travel"), py::arg("steer_input") = 0.0);
     m.def("create_lookup_kinematics",
           [](const std::string& csv_path) {
-              // unique_ptr<base> -> pybind11 keeps ownership
               return vdsim::create_lookup_kinematics(csv_path);
+          });
+    m.def("create_dw_native_kinematics",
+          [](const std::string& yaml_path) {
+              return vdsim::create_dw_native_kinematics(yaml_path);
           });
     m.def("attach_front_kinematics",
           [](vdsim::IVehicleDynamics& dyn, const std::string& csv_path) {
