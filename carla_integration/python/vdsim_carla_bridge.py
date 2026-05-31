@@ -118,6 +118,11 @@ class BridgeConfig:
     initial_vx: float = 0.0                         # m/s
     initial_world_xyz: Optional[Tuple[float, float, float]] = None
     initial_world_yaw_rad: Optional[float] = None
+    # Ld4 hardpoint kinematics — attach offline-computed lookup tables to L3.
+    # Paths relative to repo or absolute.  None = legacy phenomenological
+    # camber_per_roll fallback.
+    kinematics_front_csv: Optional[str] = None
+    kinematics_rear_csv:  Optional[str] = None
 
 
 class VDSimCarlaBridge:
@@ -152,6 +157,17 @@ class VDSimCarlaBridge:
             self.dyn = vdsim.create_seven_dof()
             self.level_enum = vdsim.Level.L2_SevenDOF
         self.dyn.initialize(self.vp, self.tp, self.sp)
+
+        # Optional Ld4 hardpoint kinematics (only meaningful for L3).
+        if cfg.level == "L3":
+            if cfg.kinematics_front_csv:
+                ok = vdsim.attach_front_kinematics(self.dyn, cfg.kinematics_front_csv)
+                if not ok:
+                    raise RuntimeError("attach_front_kinematics returned False")
+            if cfg.kinematics_rear_csv:
+                ok = vdsim.attach_rear_kinematics(self.dyn, cfg.kinematics_rear_csv)
+                if not ok:
+                    raise RuntimeError("attach_rear_kinematics returned False")
 
         # Initial state
         st0 = vdsim.State()

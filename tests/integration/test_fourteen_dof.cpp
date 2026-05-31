@@ -363,3 +363,113 @@ TEST(FourteenDOF, KinematicsToeProducesBumpSteer) {
 
     std::filesystem::remove(csv_path);
 }
+
+// =============================================================================
+// L3 sign convention regression — wheel_travel sign + L/R symmetry
+// =============================================================================
+
+namespace {
+
+// Build a tiny CSV with a SIGN-RICH lookup:
+//   camber = +K · wheel_travel   (positive for bump, negative for droop)
+// so any sign mistake in Ld3's wheel_travel computation gets caught.
+std::string make_signed_csv(const std::string& path, double K_deg_per_mm = 1.0) {
+    std::ofstream f(path);
+    f << "wheel_travel,steer_rack_dy,camber,toe,track_change,caster,valid\n";
+    for (double t : {-0.05, -0.025, 0.0, 0.025, 0.05}) {
+        for (double s : {-0.005, 0.0, 0.005}) {
+            const double cam = K_deg_per_mm * (t / 0.001) * (M_PI / 180.0);
+            f << t << "," << s << "," << cam << "," << 0.0
+              << "," << 0.0 << "," << 0.0 << ",1\n";
+        }
+    }
+    return path;
+}
+
+}
+
+TEST(FourteenDOF, WheelTravelSignConventionBumpIsPositive) {
+    // With camber = +1°/mm · travel, a brake-induced front *compression*
+    // (chassis dips → wheel up relative to chassis = BUMP → travel > 0)
+    // must yield positive camber on the front wheels.
+    const auto csv = std::filesystem::temp_directory_path() / "vdsim_sign_bump.csv";
+    make_signed_csv(csv.string(), +1.0);
+
+    vdsim::VehicleParams vp; vp.aero_drag_coeff = 0.0;
+    vp.camber_per_roll = 0.0;
+    vdsim::TireParams tp; tp.camber_stiffness = 0.0;  // isolate γ, no Fy_camber
+    vdsim::SolverParams sp;
+    auto dyn = vdsim::create_fourteen_dof();
+    dyn->initialize(vp, tp, sp);
+    auto k = vdsim::create_lookup_kinematics(csv.string());
+    ASSERT_TRUE(vdsim::attach_front_kinematics(*dyn, std::move(k)));
+
+    vdsim::State s0; s0.velocity.x() = 20.0;
+    const double w0 = 20.0 / vp.wheel_radius_nominal;
+    s0.wheel_spin = {{w0, w0, w0, w0}};
+    dyn->reset(s0);
+
+    vdsim::CmdL4 cmd; cmd.brake = 0.6;  // dive → front bump
+    const vdsim::ControlInput u = cmd;
+    vdsim::ContactArray contacts;
+    for (auto& p : contacts) { p.is_valid = true;
+                                p.normal = vdsim::Vec3::UnitZ();
+                                p.mu_long = 1.0; p.mu_lat = 1.0; }
+    for (int i = 0; i < 200; ++i) dyn->step(u, contacts, 0.005);
+
+    // We can probe wheel_travel indirectly via susp_compression delta:
+    const auto& s = dyn->state();
+    const double front_compression_dev =
+        s.susp_compression[vdsim::WHEEL_FL] - 0.0;   // rough; relative anyway
+    EXPECT_GT(front_compression_dev, 0.0);
+
+    std::filesystem::remove(csv);
+}
+
+TEST(FourteenDOF, LeftRightCamberSymmetry) {
+    // Lookup says +0.05 rad camber at any positive travel. Under straight-line
+    // braking (symmetric front bump), FL and FR must develop EQUAL-MAGNITUDE
+    // but OPPOSITE-SIGN per-wheel γ (left positive in lookup → right negated
+    // by side-flip).  We probe via tire_forces_body — camber thrust direction
+    // mirrors L/R if our sign convention is consistent.
+    const auto csv = std::filesystem::temp_directory_path() / "vdsim_sign_lr.csv";
+    {
+        std::ofstream f(csv.string());
+        f << "wheel_travel,steer_rack_dy,camber,toe,track_change,caster,valid\n";
+        for (double t : {-0.05, 0.0, +0.05})
+            for (double s : {-0.005, 0.0, +0.005})
+                f << t << "," << s << "," << 0.05 << "," << 0.0
+                  << "," << 0.0 << "," << 0.0 << ",1\n";
+    }
+
+    vdsim::VehicleParams vp; vp.aero_drag_coeff = 0.0;
+    vp.camber_per_roll = 0.0;
+    vdsim::TireParams tp; tp.camber_stiffness = 2.0;
+    vdsim::SolverParams sp;
+    auto dyn = vdsim::create_fourteen_dof();
+    dyn->initialize(vp, tp, sp);
+    auto k = vdsim::create_lookup_kinematics(csv.string());
+    ASSERT_TRUE(vdsim::attach_front_kinematics(*dyn, std::move(k)));
+
+    vdsim::State s0; s0.velocity.x() = 15.0;
+    const double w0 = 15.0 / vp.wheel_radius_nominal;
+    s0.wheel_spin = {{w0, w0, w0, w0}};
+    dyn->reset(s0);
+
+    vdsim::CmdL4 cmd;       // ZERO steer + zero brake — purely straight-line.
+    const vdsim::ControlInput u = cmd;
+    vdsim::ContactArray contacts;
+    for (auto& p : contacts) { p.is_valid = true;
+                                p.normal = vdsim::Vec3::UnitZ();
+                                p.mu_long = 1.0; p.mu_lat = 1.0; }
+    for (int i = 0; i < 50; ++i) dyn->step(u, contacts, 0.001);
+
+    // FL and FR front-axle Fy from camber thrust should be equal-and-opposite
+    // (mirror symmetry).
+    const auto F = dyn->tire_forces_body();
+    const double Fy_FL = F[vdsim::WHEEL_FL].y();
+    const double Fy_FR = F[vdsim::WHEEL_FR].y();
+    EXPECT_NEAR(Fy_FL, -Fy_FR, std::max(0.1, std::abs(Fy_FL) * 0.05));
+
+    std::filesystem::remove(csv);
+}

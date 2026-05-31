@@ -89,6 +89,10 @@ def main():
     ap.add_argument("--vehicle", default=str(REPO / "configs/vehicles/sports.yaml"))
     ap.add_argument("--tire",    default=str(REPO / "configs/tires/default_pacejka.yaml"))
     ap.add_argument("--level",   default="L2", choices=["L1", "L2", "L3"])
+    ap.add_argument("--kinematics_front", default=None,
+                    help="CSV lookup for front-axle suspension kinematics (Ld4)")
+    ap.add_argument("--kinematics_rear",  default=None,
+                    help="CSV lookup for rear-axle suspension kinematics (Ld4)")
     ap.add_argument("--blueprint", default="vehicle.tesla.model3")
     ap.add_argument("--spawn-idx", type=int, default=0)
     ap.add_argument("--duration", type=float, default=30.0)
@@ -113,6 +117,8 @@ def main():
         fixed_delta_seconds=0.02,   # 50 Hz tick
         inner_dt=0.005,
         initial_vx=args.v_target,
+        kinematics_front_csv=args.kinematics_front,
+        kinematics_rear_csv=args.kinematics_rear,
     )
 
     bridge = VDSimCarlaBridge(cfg, client)
