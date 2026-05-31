@@ -3,7 +3,8 @@
 ## 목적
 
 Ld4 의 두 번째 suspension type 추가. DW 와 schema / solver 패턴은 같지만
-**strut top 이 단일 ball joint (UCA 처럼 axis 없음)** 이라 구조적으로 다름.
+strut 의 **kinematic 모델이 본질적으로 다름** — strut tube 가 knuckle 에 강체
+결합 + chassis 측에 spherical top mount + 내부 telescoping(spring 압축).
 
 Stage E 의 핵심 검증:
 1. YAML schema 가 type-dispatch 로 깨끗하게 분리됨 (`type: macpherson`)
@@ -14,31 +15,39 @@ Stage E 의 핵심 검증:
 
 | 항목 | Double wishbone | MacPherson |
 |---|---|---|
-| Upper anchor | UCA (axis: chassis_front-rear) → UCA rotates about axis | Strut top (single ball joint) → 자유 회전 |
-| Upper-knuckle 운동 | Circle around UCA axis | Sphere around strut top |
-| 모르는 DOF | 0 (모두 결정) | 1 (knuckle 의 kingpin axis 회전 — under-determined) |
-| Solve | Sequential: LCA θ → UCA θ → trilaterate TK | least_squares with regularization + continuation |
+| Upper anchor | UCA (chassis_front-rear axis) — UCA rotates about axis | Strut tube (강체 on knuckle) + chassis 측 spherical top mount |
+| Upper-knuckle 운동 | UCA axis 주위 1-D arc | tube axis 가 chassis ST 통과해야 (cylindrical joint coaxial 제약) |
+| Strut 길이 | (없음, 두 arm 의 rigid bar) | **가변** (spring telescoping) |
+| Knuckle 자유도 닫힘 | UCA + tie rod = 0 free DOF | tube-axis cylindrical 제약 (2 scalar) + tie rod (1 scalar) = 0 free DOF |
+| Solve | Sequential: LCA θ → UCA θ → trilaterate TK | Single LM (3 cross-product residuals + 1 tie rod, 1 redundant) |
+
+## 첫 시도의 결함과 수정
+
+초기 구현은 strut top 을 단일 ball-joint sphere 로 모델 (`|SK − ST| = L_strut`, 1 scalar). 이는 strut 의 길이만 고정하고 방향은 자유롭게 두는 model — 실차의 *cylindrical joint*(축 고정, 길이 가변) 와 정반대. 결과적으로 knuckle 의 1 rotational DOF 가 미닫혀 numerical 발산 / regularization hack 필요.
+
+**올바른 제약**: tube 가 chassis 측 shaft 와 coaxial 이어야 하므로, *strut compression 길이는 자유* 이지만 *tube axis 의 line 은 chassis ST 를 통과* 해야 함.
+
+Tube 축 방향은 body frame 에 고정 (`tube_axis_body = (ST_static − SK_static).normalized`). 회전 후:
+```
+SK_world  - ST_chassis  ∥  R @ tube_axis_body
+   ⟺   (SK_world - ST_chassis) × (R @ tube_axis_body) = 0   (3 scalar, 1 redundant)
+```
 
 ## 구현 (`tools/kinematics/mp_3d_solver.py`)
 
 ```python
-def residuals(axis_angle_vec):
+def residuals(axis_angle_v):
     R = axis_angle_to_R(v)
     SK = LK + R @ off_SK
     TK = LK + R @ off_TK
-    return [
-        |SK - ST| - L_strut,            # hard constraint 1
-        |TK - TR_inner| - L_tr,         # hard constraint 2
-        0.005 * |v|,                    # regularization (prefer small rotation)
-    ]
-
-# scipy.optimize.least_squares (Levenberg-Marquardt)
-# Continuation: each (travel, steer) uses nearest already-solved point as x0
+    tube_axis_world = R @ tube_axis_body
+    cross = np.cross(SK - ST_chassis, tube_axis_world)   # 3 scalars
+    r_tie = |TK - TR_inner| - L_tr                       # 1 scalar
+    return [cross[0], cross[1], cross[2], r_tie]
+# 4 residuals, 3 R DOF, 1 dependency in cross — net 3 indep × 3 DOF = 0 free
 ```
 
-Regularization weight `0.005` 가 핵심: 너무 작으면 spurious far-flip basin
-으로 수렴, 너무 크면 constraint 무시. 0.005 + continuation = monotone 부드러운
-sweep.
+Regularization 도 continuation 도 불필요 — 단발 LM 으로 unique solution 수렴.
 
 ## 검증
 
@@ -51,14 +60,19 @@ sweep.
 | track_change | 0.000° |
 | caster | 0.000° (hardpoint 의 ST/SK 둘 다 x=−0.04 라 strut 가 y-z 평면) |
 
-### 11×5 (travel × steer) sweep
+### 17×5 (travel × steer) sweep
 
-- `docs/tasks/T28_ld4_mp/run01/sweep_3d.csv` — 55 points, all valid
-- `docs/tasks/T28_ld4_mp/run01/sweep_3d.png` — 4 panel plot
-- 곡선은 부드럽고 monotone — solver 안정성 검증 OK
-- Magnitude 는 sample hardpoint 가 IC 를 wheel 에 가까이 두어 큼
-  (sample 의 IC y ≈ wheel y − 0.02 m → camber gain ~1°/mm)
-- 실제 sedan 의 IC 는 wheel y − 0.6 m 정도 inboard → 0.05°/mm
+- `sweep_3d.csv` — 85 points, all valid
+- `sweep_3d.png` — 4 panel plot
+- 곡선 부드럽고 monotone, **단발 LM** 으로 수렴 (continuation 불필요)
+
+| 메트릭 | 값 (수정 후) |
+|---|---|
+| Camber gain | **0.034 °/mm** — 실차 sedan MacPherson typical (0.02–0.06 °/mm) ✓ |
+| Bump steer (toe gain) | ~0.02 °/mm — kinematic bump steer 의 정상치 |
+| Track narrowing | ~0.15 mm/mm — 일반적 |
+| Strut compression | ≈ 1:1 with wheel travel (LCA 가 거의 수평일 때 예상) |
+| Caster (이 sample) | 0° (ST/SK 모두 x=−0.04 → 측면 정렬) |
 
 ### C++ lookup 호환
 

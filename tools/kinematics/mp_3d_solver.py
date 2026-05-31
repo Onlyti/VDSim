@@ -1,25 +1,28 @@
 """
-MacPherson strut 3D solver — Stage E.
+MacPherson strut 3D solver — Stage E (proper kinematic).
 
-Differences vs the DW 3D solver:
-    - The strut top is a single ball joint (no axis like UCA chassis_front/rear).
-      That means SK (strut bottom on knuckle) lies on a SPHERE around ST, not on
-      a CIRCLE about an axis.  Combined with the rigid-knuckle distance to LK,
-      the SK locus is the *intersection* of two spheres — a circle.
-    - The remaining 1-DOF rotational freedom of the knuckle is ill-determined
-      by tie-rod alone.  We resolve it by *regularization*: prefer the knuckle
-      orientation closest (in Euler-angle norm) to the static one.
+Key insight: the strut is a CYLINDRICAL JOINT — tube rigidly on knuckle,
+shaft on chassis via spherical top mount, telescoping (length variable)
++ axial rotation allowed.  So the kinematic constraint is NOT "strut length
+constant" but "tube axis passes through chassis ST" (the shaft, attached at
+ST via spherical, must be coaxial with the tube).
 
-Solve: least_squares on 3 Euler angles (roll, pitch, yaw of knuckle frame),
-two strict constraints + one regularization term:
-    r0 = |SK_world(R) - ST| - L_strut
-    r1 = |TK_world(R) - TR_inner| - L_tr
-    r2 = lambda * pitch    (regularize the pitch DOF — least physical
-                            meaning for the wheel spin axis, which is
-                            invariant under rotation about its own axis)
+Tube axis direction in body frame is fixed by hardpoints:
+    tube_axis_body = (ST_static − SK_static).normalized
+
+After knuckle rotation R, the tube axis in world is R @ tube_axis_body.
+Constraint: SK_world must lie on the line through ST in direction
+R @ tube_axis_body.  Equivalently:
+
+    (SK_world − ST_chassis) × (R @ tube_axis_body) = 0      (3 scalars, 1 redundant)
+
+Combined with the tie-rod length constraint (1 scalar) and the LK-position
+constraint from LCA (3 scalars), the knuckle's 6 DOFs are fully determined
+(no free DOF, no regularization needed).  Strut compression length is a
+free output of the solve (the diagnostic for spring deflection).
 
 Inputs:  wheel_travel, steer_rack_dy.
-Outputs: camber, toe, track_change, caster (same CSV schema as DW).
+Outputs: camber, toe, track_change, caster, strut_length (compression).
 """
 from __future__ import annotations
 
@@ -89,6 +92,12 @@ class MPSolver:
         self.off_TK = self.tr_knuckle_static - self.lca_knuckle_static
         self.off_wheel = self.wheel_static - self.lca_knuckle_static
 
+        # Tube axis direction in body frame: from SK toward ST at static,
+        # normalized.  This direction is rigidly fixed in the knuckle's
+        # body frame (the tube itself is rigidly bolted to the knuckle).
+        tube_vec = self.strut_top - self.strut_bottom
+        self.tube_axis_body = tube_vec / np.linalg.norm(tube_vec)
+
     # ---- LCA helpers ----
     def _lca_knuckle_at(self, theta):
         return self.lca_pivot + rodrigues(self.lca_axis, theta) @ (
@@ -127,15 +136,17 @@ class MPSolver:
             R = axis_angle_to_R(v)
             sk = lk + R @ self.off_SK
             tk = lk + R @ self.off_TK
-            r0 = np.linalg.norm(sk - self.strut_top) - self.L_strut
-            r1 = np.linalg.norm(tk - tr_inner)        - self.L_tr
-            # Light regularization on total rotation — small enough not to
-            # bias the physically correct camber/toe response, large enough
-            # to avoid spurious far-flip minima.  Combined with continuation
-            # in sweep() (warm-start from previous solution), this gives a
-            # smooth, monotone family of solutions.
-            r2 = 0.005 * np.linalg.norm(v)
-            return [r0, r1, r2]
+            tube_axis_world = R @ self.tube_axis_body
+
+            # Strut constraint: (SK - ST) must be parallel to tube_axis_world.
+            # Cross product = 0 gives 3 scalar residuals (1 redundant, since
+            # parallel-vector constraint has only 2 independent components).
+            cross = np.cross(sk - self.strut_top, tube_axis_world)
+
+            # Tie rod length constraint (1 scalar).
+            r_tie = np.linalg.norm(tk - tr_inner) - self.L_tr
+
+            return [cross[0], cross[1], cross[2], r_tie]
 
         x0 = np.asarray(x0_axis_angle if x0_axis_angle is not None
                         else [0.0, 0.0, 0.0])
@@ -166,6 +177,9 @@ class MPSolver:
         kp = sk_world - self.strut_top
         caster = math.atan2(kp[0], -kp[2])    # strut points DOWN from top, so -z
 
+        strut_length_now = float(np.linalg.norm(sk_world - self.strut_top))
+        strut_compression = self.L_strut - strut_length_now  # + : compressed
+
         return {
             "valid": True,
             "wheel_travel": float(wheel_travel),
@@ -179,6 +193,7 @@ class MPSolver:
             "toe": float(toe),
             "track_change": float(track_change),
             "caster": float(caster),
+            "strut_compression": strut_compression,
         }
 
     def sweep(self, travel_range_m=0.08, n_travel=11,
