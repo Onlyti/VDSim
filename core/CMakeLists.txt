@@ -13,6 +13,9 @@ add_library(vdsim_core
     src/control_converter.cpp
     src/suspension_lookup.cpp
     src/dw_native_kinematics.cpp
+    src/ta_native_kinematics.cpp
+    src/mp_native_kinematics.cpp
+    src/fivelink_native_kinematics.cpp
 )
 
 target_include_directories(vdsim_core PUBLIC

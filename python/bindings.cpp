@@ -134,6 +134,18 @@ PYBIND11_MODULE(vdsim, m) {
           [](const std::string& yaml_path) {
               return vdsim::create_dw_native_kinematics(yaml_path);
           });
+    m.def("create_ta_native_kinematics",
+          [](const std::string& yaml_path) {
+              return vdsim::create_ta_native_kinematics(yaml_path);
+          });
+    m.def("create_mp_native_kinematics",
+          [](const std::string& yaml_path) {
+              return vdsim::create_mp_native_kinematics(yaml_path);
+          });
+    m.def("create_5link_native_kinematics",
+          [](const std::string& yaml_path) {
+              return vdsim::create_5link_native_kinematics(yaml_path);
+          });
     m.def("attach_front_kinematics",
           [](vdsim::IVehicleDynamics& dyn, const std::string& csv_path) {
               auto k = vdsim::create_lookup_kinematics(csv_path);

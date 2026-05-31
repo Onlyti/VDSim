@@ -115,3 +115,45 @@ TEST(DWNativeKinematics, StaticReturnsZero) {
     EXPECT_GT(o.caster, 0.0);   // sample geometry has +caster ≈ 0.025 rad
     EXPECT_LT(o.caster, 0.05);
 }
+
+// =============================================================================
+// TA / MP / 5-link native kinematics — match Python lookup at grid points
+// =============================================================================
+TEST(TANativeKinematics, MatchesLookupAtGridPoints) {
+    auto k_n = vdsim::create_ta_native_kinematics(
+        std::string(VDSIM_SOURCE_DIR) + "/configs/suspensions/ta_rear_sedan.yaml");
+    auto k_l = vdsim::create_lookup_kinematics(
+        std::string(VDSIM_SOURCE_DIR) + "/docs/tasks/T29_ld4_ta/run01/sweep_3d.csv");
+    for (double t : {-0.04, 0.0, +0.04}) {
+        const auto on = k_n->compute(t, 0.0);
+        const auto ol = k_l->compute(t, 0.0);
+        EXPECT_NEAR(on.camber, ol.camber, 1e-3);
+        EXPECT_NEAR(on.toe,    ol.toe,    1e-3);
+    }
+}
+
+TEST(MPNativeKinematics, MatchesLookupAtGridPoints) {
+    auto k_n = vdsim::create_mp_native_kinematics(
+        std::string(VDSIM_SOURCE_DIR) + "/configs/suspensions/mp_front_sedan.yaml");
+    auto k_l = vdsim::create_lookup_kinematics(
+        std::string(VDSIM_SOURCE_DIR) + "/docs/tasks/T28_ld4_mp/run01/sweep_3d.csv");
+    for (double t : {-0.04, 0.0, +0.04}) {
+        const auto on = k_n->compute(t, 0.0);
+        const auto ol = k_l->compute(t, 0.0);
+        EXPECT_NEAR(on.camber, ol.camber, 5e-3);
+        EXPECT_NEAR(on.toe,    ol.toe,    5e-3);
+    }
+}
+
+TEST(FiveLinkNativeKinematics, MatchesLookupAtGridPoints) {
+    auto k_n = vdsim::create_5link_native_kinematics(
+        std::string(VDSIM_SOURCE_DIR) + "/configs/suspensions/5link_rear_sports.yaml");
+    auto k_l = vdsim::create_lookup_kinematics(
+        std::string(VDSIM_SOURCE_DIR) + "/docs/tasks/T30_ld4_5link/run01/sweep_3d.csv");
+    for (double t : {-0.025, 0.0, +0.025}) {
+        const auto on = k_n->compute(t, 0.0);
+        const auto ol = k_l->compute(t, 0.0);
+        EXPECT_NEAR(on.camber, ol.camber, 5e-3);
+        EXPECT_NEAR(on.toe,    ol.toe,    5e-3);
+    }
+}

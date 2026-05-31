@@ -52,6 +52,21 @@ create_lookup_kinematics(const std::string& csv_path);
 std::unique_ptr<ISuspensionKinematics>
 create_dw_native_kinematics(const std::string& yaml_path);
 
+// Trailing-arm rear: single rigid arm rotating about one chassis axis.
+// 1-DOF mechanism; steer_input ignored (no rear steering).
+std::unique_ptr<ISuspensionKinematics>
+create_ta_native_kinematics(const std::string& yaml_path);
+
+// MacPherson front: cylindrical-joint constraint — tube axis must remain
+// parallel to (SK − ST_chassis).  Newton on θ_lca + LM on knuckle rotation R.
+std::unique_ptr<ISuspensionKinematics>
+create_mp_native_kinematics(const std::string& yaml_path);
+
+// 5-link rear: 6-DOF knuckle pose + 5 link-length residuals (+ 1 wheel-z).
+// Levenberg–Marquardt on (pos, axis_angle).
+std::unique_ptr<ISuspensionKinematics>
+create_5link_native_kinematics(const std::string& yaml_path);
+
 // Attach a kinematics model to a FourteenDOFDynamics instance.  Returns false
 // if `dyn` is not Ld3.  Ld1/Ld2 ignore this (no per-wheel suspension state).
 class IVehicleDynamics;
