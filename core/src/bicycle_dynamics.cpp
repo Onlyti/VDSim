@@ -102,6 +102,9 @@ public:
     void reset(const State& s) noexcept override {
         state_   = s;
         ax_prev_ = 0.0;
+        alpha_dyn_f_ = alpha_dyn_r_ = 0.0;
+        alpha_geom_f_last_ = alpha_geom_r_last_ = 0.0;
+        v_fx_wheel_last_ = v_rx_body_last_ = 0.0;
     }
 
     void step(const ControlInput& u,
@@ -215,15 +218,27 @@ private:
         const double kappa_r = (R * or_ - v_rx_body)  / denom_r;
 
         // ---- Tire forces (Pacejka in wheel frame) ----
+        // Use transient α_dyn when relaxation length is enabled.
+        const double alpha_in_f = (tp_.relaxation_length_lat > 1e-6)
+                                  ? alpha_dyn_f_ : alpha_f;
+        const double alpha_in_r = (tp_.relaxation_length_lat > 1e-6)
+                                  ? alpha_dyn_r_ : alpha_r;
         ITireModel::Input in_f;
-        in_f.Fz = Fz_f; in_f.kappa = kappa_f; in_f.alpha = alpha_f;
+        in_f.Fz = Fz_f; in_f.kappa = kappa_f; in_f.alpha = alpha_in_f;
         in_f.mu_long = mu_long_f; in_f.mu_lat = mu_lat_f; in_f.Vx_wheel = v_fx_wheel;
         const auto F_f = tire_->compute(in_f);
 
         ITireModel::Input in_r;
-        in_r.Fz = Fz_r; in_r.kappa = kappa_r; in_r.alpha = alpha_r;
+        in_r.Fz = Fz_r; in_r.kappa = kappa_r; in_r.alpha = alpha_in_r;
         in_r.mu_long = mu_long_r; in_r.mu_lat = mu_lat_r; in_r.Vx_wheel = v_rx_body;
         const auto F_r = tire_->compute(in_r);
+
+        // Cache geometric α and wheel-frame Vx for the substep-end relaxation
+        // update (done in substep(), not inside derivatives()).
+        alpha_geom_f_last_ = alpha_f;
+        alpha_geom_r_last_ = alpha_r;
+        v_fx_wheel_last_   = v_fx_wheel;
+        v_rx_body_last_    = v_rx_body;
 
         // Rotate wheel-frame front forces back into body frame.
         const double Fx_body_f = F_f.Fx * cd - F_f.Fy * sd;
@@ -338,6 +353,18 @@ private:
 
         state_   = apply(s0, k, h);
         ax_prev_ = k.dvx;
+        // Transient slip-angle relaxation (per axle, between substeps).
+        if (tp_.relaxation_length_lat > 1e-6) {
+            const double sigma = tp_.relaxation_length_lat;
+            const double vf = std::max(std::abs(v_fx_wheel_last_), kSpeedEps);
+            const double vr = std::max(std::abs(v_rx_body_last_),  kSpeedEps);
+            const double df = std::exp(-vf * h / sigma);
+            const double dr = std::exp(-vr * h / sigma);
+            alpha_dyn_f_ = alpha_geom_f_last_
+                         + (alpha_dyn_f_ - alpha_geom_f_last_) * df;
+            alpha_dyn_r_ = alpha_geom_r_last_
+                         + (alpha_dyn_r_ - alpha_geom_r_last_) * dr;
+        }
     }
 
     VehicleParams vp_;
@@ -352,6 +379,13 @@ private:
     std::array<double, NUM_WHEELS> tire_Fz_   {};
     std::array<double, NUM_WHEELS> slip_ratio_ {};
     std::array<double, NUM_WHEELS> slip_angle_ {};
+    // Per-axle transient slip + last-step caches (for relaxation length).
+    double alpha_dyn_f_       {0.0};
+    double alpha_dyn_r_       {0.0};
+    double alpha_geom_f_last_ {0.0};
+    double alpha_geom_r_last_ {0.0};
+    double v_fx_wheel_last_   {0.0};
+    double v_rx_body_last_    {0.0};
 };
 
 }  // namespace

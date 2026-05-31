@@ -83,9 +83,14 @@ public:
         // Sign: positive camber (top of tire leans into +y) generates +y force
         //       which conventionally is negative Fy (toward wheel forward).
         const double Fy_camber = -tp_.camber_stiffness * in.gamma * Fz * mu_y;
+        // Camber aligning moment contribution (small, linear).  The arm is
+        // typically ~ pneumatic_trail / 4 — captured as camber_mz_factor.  We
+        // re-use the same camber_stiffness with a fixed fraction for now.
+        const double Mz_camber = -tp_.pneumatic_trail * 0.25 *
+                                  tp_.camber_stiffness * in.gamma * Fz * mu_y;
         out.Fx = Fx;
         out.Fy = Fy + Fy_camber;
-        out.Mz = -trail * Fy;        // Mz from cornering Fy only (camber excluded for PoC)
+        out.Mz = -trail * Fy + Mz_camber;
         return out;
     }
 

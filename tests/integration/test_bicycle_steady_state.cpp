@@ -181,3 +181,45 @@ TEST(FlatGround, QueryFillsAllContacts) {
         EXPECT_DOUBLE_EQ(out[i].normal.z(), 1.0);
     }
 }
+
+// =============================================================================
+// L1 Bicycle: transient slip-angle relaxation (per axle)
+// =============================================================================
+TEST(Bicycle, RelaxationLengthDelaysLateralForce) {
+    vdsim::VehicleParams vp; vp.aero_drag_coeff = 0.0;
+    vdsim::SolverParams  sp;
+
+    vdsim::TireParams tp_instant;  tp_instant.relaxation_length_lat = 0.0;
+    vdsim::TireParams tp_lagged;   tp_lagged.relaxation_length_lat  = 0.6;
+
+    const double vx_init = 15.0;
+    const double dt      = 0.001;
+
+    auto run = [&](const vdsim::TireParams& tp, double t_probe) {
+        auto dyn = vdsim::create_bicycle();
+        dyn->initialize(vp, tp, sp);
+        vdsim::State s0; s0.velocity.x() = vx_init;
+        const double w0 = vx_init / vp.wheel_radius_nominal;
+        s0.wheel_spin = {{w0, w0, w0, w0}};
+        dyn->reset(s0);
+        vdsim::CmdL4 cmd; cmd.steer_angle_wheel = 0.05;
+        vdsim::ContactArray contacts;
+        for (auto& p : contacts) { p.is_valid = true;
+                                    p.normal = vdsim::Vec3::UnitZ();
+                                    p.mu_long = 1.0; p.mu_lat = 1.0; }
+        const int N = static_cast<int>(std::round(t_probe / dt));
+        for (int i = 0; i < N; ++i) dyn->step(cmd, contacts, dt);
+        const auto F = dyn->tire_forces_body();
+        // L1 splits axle Fy across the two co-axial tires; sum recovers axle Fy.
+        return F[vdsim::WHEEL_FL].y() + F[vdsim::WHEEL_FR].y();
+    };
+
+    const double t_relax = 0.6 / vx_init;     // ~0.04 s
+    const double Fy_inst = run(tp_instant, t_relax);
+    const double Fy_lag  = run(tp_lagged,  t_relax);
+    EXPECT_LT(std::abs(Fy_lag), std::abs(Fy_inst) * 0.85);
+
+    const double Fy_inst_long = run(tp_instant, 2.0);
+    const double Fy_lag_long  = run(tp_lagged,  2.0);
+    EXPECT_NEAR(Fy_lag_long, Fy_inst_long, std::abs(Fy_inst_long) * 0.10);
+}

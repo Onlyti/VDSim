@@ -305,3 +305,24 @@ TEST_F(PacejkaMF96Fixture, LoadSensitivityFloorClamp) {
     const auto out = model_->compute(make_input(40000, 0.0, 0.10));
     EXPECT_GT(std::abs(out.Fy), 0.0);
 }
+
+// =============================================================================
+// Camber Mz contribution
+// =============================================================================
+TEST_F(PacejkaMF96Fixture, CamberContributesToMz) {
+    tp_.camber_stiffness = 2.0;   // turn camber thrust + Mz contribution on
+    model_ = vdsim::create_pacejka_mf96();
+    model_->initialize(tp_);
+
+    auto in = make_input(4000, 0.0, 0.0);   // no kappa, no alpha
+    in.gamma = 0.0;
+    const auto out_0 = model_->compute(in);
+    in.gamma = 0.05;
+    const auto out_p = model_->compute(in);
+    in.gamma = -0.05;
+    const auto out_n = model_->compute(in);
+
+    EXPECT_NEAR(out_0.Mz, 0.0, 1e-9);
+    EXPECT_NE(out_p.Mz, 0.0);
+    EXPECT_NEAR(out_p.Mz, -out_n.Mz, 1e-6);   // antisymmetric in gamma
+}
