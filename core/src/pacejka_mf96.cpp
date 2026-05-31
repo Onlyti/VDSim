@@ -42,8 +42,14 @@ public:
         const double Fz = std::max(0.0, in.Fz);
         if (Fz < 1.0) return out;
 
-        const double mu_x = in.mu_long * tp_.mu_nominal;
-        const double mu_y = in.mu_lat  * tp_.mu_nominal;
+        // Load-sensitive μ:  μ_eff = μ_nominal · (1 − ls · (Fz/Fz_nom − 1))
+        // Floored at 0.3 · μ_nominal to keep numerics sane.
+        const double Fz_n  = std::max(1.0, tp_.Fz_nominal);
+        const double dfz   = Fz / Fz_n - 1.0;
+        const double mu_e  = std::max(0.3 * tp_.mu_nominal,
+                                       tp_.mu_nominal * (1.0 - tp_.load_sensitivity * dfz));
+        const double mu_x = in.mu_long * mu_e;
+        const double mu_y = in.mu_lat  * mu_e;
         const double Fx_max = tp_.D_long * Fz * mu_x;
         const double Fy_max = tp_.D_lat  * Fz * mu_y;
 

@@ -200,3 +200,54 @@ TEST(FourteenDOF, PoseEncodesRollAndPitch) {
     const double pose_roll = std::atan2(sinr_cosp, cosr_cosp);
     EXPECT_NEAR(pose_roll, roll, 0.02);   // within 1 degree of quasi-static estimate
 }
+
+// =============================================================================
+// L3 roll → per-wheel camber → tire Fy_camber path
+// =============================================================================
+TEST(FourteenDOF, RollFeedsPerWheelCamberWithCorrectSign) {
+    // Contract: ITireModel applies camber thrust = -k_cs · γ · Fz · μ.
+    // We verify (a) the Pacejka side enforces this sign rule, and (b) the L3
+    // body actually develops roll under sustained cornering — i.e. the
+    // upstream phi_ is non-zero and is forwarded each step via
+    // set_camber_per_wheel() (otherwise no roll → no camber thrust).
+    {
+        auto tire = vdsim::create_pacejka_mf96();
+        vdsim::TireParams tp; tp.camber_stiffness = 2.0;
+        tire->initialize(tp);
+        vdsim::ITireModel::Input in;
+        in.Fz = 4000; in.kappa = 0.0; in.alpha = 0.0;
+        in.mu_long = 1.0; in.mu_lat = 1.0; in.Vx_wheel = 15.0;
+
+        in.gamma = +0.05;
+        const auto o_pos = tire->compute(in);
+        in.gamma = -0.05;
+        const auto o_neg = tire->compute(in);
+        EXPECT_LT(o_pos.Fy, 0.0);
+        EXPECT_GT(o_neg.Fy, 0.0);
+        EXPECT_NEAR(o_pos.Fy, -o_neg.Fy, 1e-6);
+    }
+
+    vdsim::VehicleParams vp;
+    vp.aero_drag_coeff = 0.0;
+    vp.camber_per_roll = 0.8;
+    vdsim::TireParams    tp; tp.camber_stiffness = 2.0;
+    vdsim::SolverParams  sp;
+
+    auto dyn = vdsim::create_fourteen_dof();
+    dyn->initialize(vp, tp, sp);
+    vdsim::State s0;
+    s0.velocity.x() = 15.0;
+    const double w0 = 15.0 / vp.wheel_radius_nominal;
+    s0.wheel_spin = {{w0, w0, w0, w0}};
+    dyn->reset(s0);
+
+    vdsim::CmdL4 cmd; cmd.steer_angle_wheel = 0.06;
+    vdsim::ContactArray contacts;
+    for (auto& p : contacts) { p.is_valid = true;
+                                p.normal = vdsim::Vec3::UnitZ();
+                                p.mu_long = 1.0; p.mu_lat = 1.0; }
+    const double dt = 0.001;
+    for (int i = 0; i < 1500; ++i) dyn->step(cmd, contacts, dt);
+
+    EXPECT_GT(std::abs(dyn->roll_angle_qs()), 0.005);
+}

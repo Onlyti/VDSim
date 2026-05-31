@@ -17,6 +17,18 @@ E_lat: -1.0
 mu_nominal: 1.0
 Fz_nominal: 4000.0   # [N]
 
+# ---- Load sensitivity (μ decay with Fz) ----
+# μ_eff(Fz) = μ_nominal · (1 − load_sensitivity · (Fz/Fz_nominal − 1))
+# Typical 0.10–0.25.  Higher = more peak-grip fade at high vertical load.
+load_sensitivity:    0.15
+
+# ---- Transient response (relaxation length) ----
+# Tire forces lag steady state by σ / v_long (rolling distance).
+# Lateral σ 0.3–0.8 m for passenger, 0.1–0.3 for racing.  Longitudinal
+# relaxation is usually much smaller; here exposed for completeness.
+relaxation_length_lat:  0.6
+relaxation_length_long: 0.15
+
 # ---- Linear region (for validation / linear-tire fallback) ----
 cornering_stiffness: 80000.0   # C_alpha [N/rad]
 rolling_resistance:  0.015

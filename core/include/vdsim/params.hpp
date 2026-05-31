@@ -89,6 +89,19 @@ struct TireParams {
     // Camber thrust: extra Fy_camber = -camber_stiffness * gamma * Fz * mu
     double camber_stiffness      {0.0};         // [1/rad]  default off
 
+    // Load sensitivity:  μ_eff(Fz) = μ_nominal · (1 - load_sensitivity · (Fz/Fz_nominal - 1))
+    // Floor μ_eff at 0.3 · μ_nominal to keep numerics sane at very high Fz.
+    // Typical 0.10 – 0.25.  0.0 = legacy (no load sensitivity).
+    double load_sensitivity      {0.0};
+
+    // Transient response (relaxation length).  σ / |v_long| acts as 1st-order
+    // lag on slip; tire force responds to a transient slip α_dyn / κ_dyn that
+    // satisfies σ/|v| · ṡ_dyn = s_geom − s_dyn.  Stored on the dynamics state,
+    // NOT inside the stateless compute() — these are advisory params for the
+    // host integrator (Ld2 / Ld3 / Ld1).  0.0 = legacy (instant response).
+    double relaxation_length_lat   {0.0};       // σ_y [m]
+    double relaxation_length_long  {0.0};       // σ_x [m]
+
     // Vertical tire stiffness (for L3 ride dynamics). Typical 150-300 kN/m.
     double tire_vertical_stiffness {220000.0};  // [N/m]
 

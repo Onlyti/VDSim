@@ -87,10 +87,34 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("rolling_resistance",  &vdsim::TireParams::rolling_resistance)
         .def_readwrite("combined_slip_enabled", &vdsim::TireParams::combined_slip_enabled)
         .def_readwrite("pneumatic_trail",     &vdsim::TireParams::pneumatic_trail)
+        .def_readwrite("trail_falloff_alpha", &vdsim::TireParams::trail_falloff_alpha)
         .def_readwrite("camber_stiffness",    &vdsim::TireParams::camber_stiffness)
+        .def_readwrite("load_sensitivity",    &vdsim::TireParams::load_sensitivity)
+        .def_readwrite("relaxation_length_lat",  &vdsim::TireParams::relaxation_length_lat)
+        .def_readwrite("relaxation_length_long", &vdsim::TireParams::relaxation_length_long)
         .def_readwrite("tire_vertical_stiffness", &vdsim::TireParams::tire_vertical_stiffness)
         .def_static("from_yaml", &vdsim::TireParams::from_yaml)
         .def("to_yaml",          &vdsim::TireParams::to_yaml);
+
+    // -------- ITireModel (stand-alone tire query) --------
+    py::class_<vdsim::ITireModel::Input>(m, "TireInput")
+        .def(py::init<>())
+        .def_readwrite("Fz",       &vdsim::ITireModel::Input::Fz)
+        .def_readwrite("kappa",    &vdsim::ITireModel::Input::kappa)
+        .def_readwrite("alpha",    &vdsim::ITireModel::Input::alpha)
+        .def_readwrite("mu_long",  &vdsim::ITireModel::Input::mu_long)
+        .def_readwrite("mu_lat",   &vdsim::ITireModel::Input::mu_lat)
+        .def_readwrite("Vx_wheel", &vdsim::ITireModel::Input::Vx_wheel)
+        .def_readwrite("gamma",    &vdsim::ITireModel::Input::gamma);
+    py::class_<vdsim::ITireModel::Output>(m, "TireOutput")
+        .def_readonly("Fx", &vdsim::ITireModel::Output::Fx)
+        .def_readonly("Fy", &vdsim::ITireModel::Output::Fy)
+        .def_readonly("Mz", &vdsim::ITireModel::Output::Mz);
+    py::class_<vdsim::ITireModel>(m, "ITireModel")
+        .def("initialize", &vdsim::ITireModel::initialize)
+        .def("compute",    &vdsim::ITireModel::compute);
+    m.def("create_pacejka_mf96", &vdsim::create_pacejka_mf96);
+    m.def("create_linear_tire",  &vdsim::create_linear_tire);
 
     // -------- SolverParams --------
     py::class_<vdsim::SolverParams>(m, "SolverParams")
@@ -146,10 +170,15 @@ PYBIND11_MODULE(vdsim, m) {
         .def("state", &vdsim::IVehicleDynamics::state,
              py::return_value_policy::reference_internal)
         .def("tire_Fz",  &vdsim::IVehicleDynamics::tire_Fz)
+        .def("tire_forces_body", &vdsim::IVehicleDynamics::tire_forces_body)
+        .def("wheel_slip_ratio", &vdsim::IVehicleDynamics::wheel_slip_ratio)
+        .def("wheel_slip_angle", &vdsim::IVehicleDynamics::wheel_slip_angle)
         .def("roll_angle_qs",  &vdsim::IVehicleDynamics::roll_angle_qs)
         .def("pitch_angle_qs", &vdsim::IVehicleDynamics::pitch_angle_qs)
         .def("ax_body_est",    &vdsim::IVehicleDynamics::ax_body_est)
-        .def("ay_body_est",    &vdsim::IVehicleDynamics::ay_body_est);
+        .def("ay_body_est",    &vdsim::IVehicleDynamics::ay_body_est)
+        .def("set_camber_per_wheel",
+             &vdsim::IVehicleDynamics::set_camber_per_wheel);
 
     m.def("create_bicycle",      &vdsim::create_bicycle);
     m.def("create_seven_dof",    &vdsim::create_seven_dof);

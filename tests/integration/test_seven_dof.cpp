@@ -362,3 +362,47 @@ TEST(SevenDOF, IndependentWheelSpinUnderSplitMu) {
     // RL on low mu spins faster than RR (slip).
     EXPECT_GT(s.wheel_spin[vdsim::WHEEL_RL], s.wheel_spin[vdsim::WHEEL_RR]);
 }
+
+// =============================================================================
+// Transient slip angle (relaxation length): step-steer Fy build-up
+// =============================================================================
+// At steering onset, lateral force should NOT reach steady value instantly;
+// it should rise over a rolling distance σ_y.  Compare instant-response vs
+// finite-σ_y: at t = σ/v the lagged response should be ~63% of steady.
+
+TEST(SevenDOF, RelaxationLengthDelaysLateralForce) {
+    vdsim::VehicleParams vp; vp.aero_drag_coeff = 0.0;
+    vdsim::SolverParams  sp;
+
+    // Two tire configs: identical except for relaxation length
+    vdsim::TireParams tp_instant;  tp_instant.relaxation_length_lat = 0.0;
+    vdsim::TireParams tp_lagged;   tp_lagged.relaxation_length_lat  = 0.6;
+
+    const double vx_init = 15.0;
+    const double dt      = 0.001;
+    const double steer   = 0.05;
+
+    auto run = [&](const vdsim::TireParams& tp, double t_probe) {
+        auto dyn = vdsim::create_seven_dof();
+        dyn->initialize(vp, tp, sp);
+        dyn->reset(init_state(vx_init, vp.wheel_radius_nominal));
+        vdsim::CmdL4 cmd; cmd.steer_angle_wheel = steer;
+        const auto contacts = flat_contacts();
+        const int N = static_cast<int>(std::round(t_probe / dt));
+        for (int i = 0; i < N; ++i) dyn->step(cmd, contacts, dt);
+        // Sum body-frame Fy at front (axle):  F_FL.y + F_FR.y
+        const auto F = dyn->tire_forces_body();
+        return F[vdsim::WHEEL_FL].y() + F[vdsim::WHEEL_FR].y();
+    };
+
+    // At t = σ/v_x ≈ 0.04 s, lagged response ≈ 0.63 · steady (1 − 1/e).
+    const double t_relax = 0.6 / vx_init;     // ≈ 0.04 s
+    const double Fy_inst_relax = run(tp_instant, t_relax);
+    const double Fy_lag_relax  = run(tp_lagged,  t_relax);
+    EXPECT_LT(std::abs(Fy_lag_relax), std::abs(Fy_inst_relax) * 0.85);
+
+    // After many σ periods, both should converge to ~steady (≥ 95% of instant).
+    const double Fy_inst_long = run(tp_instant, 2.0);
+    const double Fy_lag_long  = run(tp_lagged,  2.0);
+    EXPECT_NEAR(Fy_lag_long, Fy_inst_long, std::abs(Fy_inst_long) * 0.10);
+}

@@ -268,3 +268,40 @@ TEST_F(PacejkaCombinedFixture, MzDecreasesAtLargeAlpha) {
     const double t_large = std::abs(large.Mz / large.Fy);
     EXPECT_GT(t_small, t_large);
 }
+
+// =============================================================================
+// Load sensitivity:  μ_eff(Fz) = μ · (1 − ls · (Fz/Fz_nom − 1))
+// =============================================================================
+
+TEST_F(PacejkaMF96Fixture, LoadSensitivityNoOpWhenZero) {
+    // load_sensitivity = 0 → Fy peak scales linearly with Fz
+    tp_.load_sensitivity = 0.0; tp_.Fz_nominal = 4000.0;
+    model_ = vdsim::create_pacejka_mf96();
+    model_->initialize(tp_);
+    const auto a = model_->compute(make_input(4000, 0.0, 0.10));
+    const auto b = model_->compute(make_input(8000, 0.0, 0.10));
+    // Without load sensitivity, |Fy(2 Fz)| / |Fy(Fz)| ≈ 2.0
+    EXPECT_NEAR(std::abs(b.Fy / a.Fy), 2.0, 0.02);
+}
+
+TEST_F(PacejkaMF96Fixture, LoadSensitivityFadeAtHighFz) {
+    // load_sensitivity > 0 → high-Fz peak grows sublinearly with Fz
+    tp_.load_sensitivity = 0.20; tp_.Fz_nominal = 4000.0;
+    model_ = vdsim::create_pacejka_mf96();
+    model_->initialize(tp_);
+    const auto a = model_->compute(make_input(4000, 0.0, 0.10));
+    const auto b = model_->compute(make_input(8000, 0.0, 0.10));
+    // At 2× Fz with ls=0.2, μ_eff = (1 − 0.2 · 1) = 0.8; so Fy ratio ≈ 2 · 0.8 = 1.6
+    const double ratio = std::abs(b.Fy / a.Fy);
+    EXPECT_NEAR(ratio, 1.6, 0.05);
+    EXPECT_LT(ratio, 2.0);              // strictly less than linear
+}
+
+TEST_F(PacejkaMF96Fixture, LoadSensitivityFloorClamp) {
+    // Very high Fz still gives non-trivial Fy due to 0.3 · μ floor
+    tp_.load_sensitivity = 0.50; tp_.Fz_nominal = 4000.0;
+    model_ = vdsim::create_pacejka_mf96();
+    model_->initialize(tp_);
+    const auto out = model_->compute(make_input(40000, 0.0, 0.10));
+    EXPECT_GT(std::abs(out.Fy), 0.0);
+}

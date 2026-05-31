@@ -95,6 +95,8 @@ public:
         state_   = s;
         ax_prev_ = 0.0;
         ay_prev_ = 0.0;
+        alpha_dyn_.fill(0.0);
+        alpha_geom_last_.fill(0.0);
     }
 
     void step(const ControlInput& u,
@@ -139,6 +141,11 @@ public:
     // Steering rack torque: front-wheel Mz summed and divided by steering_ratio.
     double steering_rack_torque() const override {
         return (mz_front_sum_ * vp_.steering_ratio);
+    }
+
+    void set_camber_per_wheel(
+        const std::array<double, NUM_WHEELS>& gamma) noexcept override {
+        camber_ext_ = gamma;
     }
 
 private:
@@ -261,13 +268,19 @@ private:
             const double mu_lat_i  = contacts[i].mu_lat;
 
             ITireModel::Input in;
-            in.Fz = Fz[i]; in.kappa = k_slip; in.alpha = a_slip;
+            in.Fz = Fz[i];
+            in.kappa = k_slip;
+            // Use the transient α_dyn_ if relaxation length is enabled; the
+            // host substep() advances α_dyn_ between substeps.  Within RK4 we
+            // hold it frozen so all 4 stages see the same Pacejka linearization.
+            in.alpha = (tp_.relaxation_length_lat > 1e-6) ? alpha_dyn_[i] : a_slip;
             in.mu_long = mu_long_i; in.mu_lat = mu_lat_i; in.Vx_wheel = v_x_wheel;
-            // Camber from roll: left side +camber when phi>0 (right-down),
-            // right side -camber. Approximated using ay_prev_ as proxy for roll.
-            // For L2 (no explicit phi), gamma ~ 0.
-            in.gamma = 0.0;
+            // Camber input: set by Ld3 (roll-driven) or by external caller via
+            // set_camber_per_wheel().  Stand-alone Ld2 leaves it at zero.
+            in.gamma = camber_ext_[i];
             const auto out = tire_->compute(in);
+            alpha_geom_last_[i] = a_slip;
+            v_x_wheel_last_[i]  = v_x_wheel;
 
             double Fx_b = out.Fx, Fy_b = out.Fy;
             if (steered) {
@@ -435,6 +448,18 @@ private:
         state_   = apply(s0, k, h);
         ax_prev_ = k.ax_body;
         ay_prev_ = k.ay_body;
+        // Advance the per-wheel transient slip angle exponentially:
+        //   α_dyn(t+h) = α_geom + (α_dyn(t) − α_geom) · exp(−|v|·h/σ)
+        if (tp_.relaxation_length_lat > 1e-6) {
+            const double sigma = tp_.relaxation_length_lat;
+            for (int i = 0; i < NUM_WHEELS; ++i) {
+                const double v_safe = std::max(std::abs(v_x_wheel_last_[i]),
+                                               kSpeedEps);
+                const double decay = std::exp(-v_safe * h / sigma);
+                alpha_dyn_[i] = alpha_geom_last_[i]
+                              + (alpha_dyn_[i] - alpha_geom_last_[i]) * decay;
+            }
+        }
     }
 
     VehicleParams vp_;
@@ -451,6 +476,12 @@ private:
     std::array<double, NUM_WHEELS> tire_Fz_    {};
     std::array<double, NUM_WHEELS> slip_ratio_ {};
     std::array<double, NUM_WHEELS> slip_angle_ {};
+    // Transient slip-angle state (relaxation length).  Updated between substeps.
+    std::array<double, NUM_WHEELS> alpha_dyn_       {{0.0, 0.0, 0.0, 0.0}};
+    std::array<double, NUM_WHEELS> alpha_geom_last_ {{0.0, 0.0, 0.0, 0.0}};
+    std::array<double, NUM_WHEELS> v_x_wheel_last_  {{0.0, 0.0, 0.0, 0.0}};
+    // External per-wheel camber input (set by Ld3 or caller before step).
+    std::array<double, NUM_WHEELS> camber_ext_      {{0.0, 0.0, 0.0, 0.0}};
 };
 
 }  // namespace

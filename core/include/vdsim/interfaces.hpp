@@ -52,6 +52,12 @@ public:
     // Steering-rack feedback torque (sum of front-wheel Mz times steering ratio).
     // Useful for driver model torque feedback. Returns 0 for L1 (axle-averaged Mz).
     virtual double steering_rack_torque() const { return 0.0; }   // [N m]
+
+    // External per-wheel camber input [rad] for the next step.  Used by L3
+    // (roll-induced camber) and by callers that have their own suspension
+    // kinematics.  Default no-op; overriding levels may use it.
+    virtual void set_camber_per_wheel(
+        const std::array<double, NUM_WHEELS>& /*gamma*/) noexcept {}
 };
 
 std::unique_ptr<IVehicleDynamics> create_bicycle();

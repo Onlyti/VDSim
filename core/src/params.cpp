@@ -244,6 +244,9 @@ TireParams TireParams::from_yaml(const std::string& path) {
     pull(root, "pneumatic_trail",       p.pneumatic_trail);
     pull(root, "trail_falloff_alpha",   p.trail_falloff_alpha);
     pull(root, "camber_stiffness",      p.camber_stiffness);
+    pull(root, "load_sensitivity",      p.load_sensitivity);
+    pull(root, "relaxation_length_lat", p.relaxation_length_lat);
+    pull(root, "relaxation_length_long", p.relaxation_length_long);
     pull(root, "tire_vertical_stiffness", p.tire_vertical_stiffness);
     return p;
 }
@@ -268,6 +271,9 @@ void TireParams::to_yaml(const std::string& path) const {
     out << YAML::Key << "pneumatic_trail"       << YAML::Value << pneumatic_trail;
     out << YAML::Key << "trail_falloff_alpha"   << YAML::Value << trail_falloff_alpha;
     out << YAML::Key << "camber_stiffness"      << YAML::Value << camber_stiffness;
+    out << YAML::Key << "load_sensitivity"      << YAML::Value << load_sensitivity;
+    out << YAML::Key << "relaxation_length_lat" << YAML::Value << relaxation_length_lat;
+    out << YAML::Key << "relaxation_length_long" << YAML::Value << relaxation_length_long;
     out << YAML::Key << "tire_vertical_stiffness" << YAML::Value << tire_vertical_stiffness;
     out << YAML::EndMap;
     std::ofstream ofs(path);

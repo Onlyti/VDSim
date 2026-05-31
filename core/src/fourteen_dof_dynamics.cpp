@@ -98,6 +98,18 @@ public:
     void step(const ControlInput& u,
               const ContactArray& contacts,
               double dt) noexcept override {
+        // Forward roll-induced camber to inner Ld2 BEFORE the planar step:
+        //   γ_i = camber_per_roll · sign_left(i) · phi   (left/right symmetric)
+        // 1-step lag is acceptable — phi_ is from the previous tick.
+        const double k_cam = vp_.camber_per_roll;
+        std::array<double, NUM_WHEELS> gamma {{
+            +k_cam * phi_,       // FL
+            -k_cam * phi_,       // FR
+            +k_cam * phi_,       // RL
+            -k_cam * phi_,       // RR
+        }};
+        inner_->set_camber_per_wheel(gamma);
+
         inner_->step(u, contacts, dt);
         state_ = inner_->state();
         if (dt > 0.0) integrate_vertical(dt);
