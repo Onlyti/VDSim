@@ -116,9 +116,11 @@ def main():
     )
 
     bridge = VDSimCarlaBridge(cfg, client)
-    print(f"[vdsim-carla] spawned ego at {bridge.actor.get_location()}")
-
-    spawn = world.get_actors().find(bridge.actor.id).get_transform()
+    # Settle actor: in sync mode the actor pose only becomes queryable after a tick.
+    if cfg.sync_mode:
+        world.tick()
+    spawn = bridge.actor.get_transform()
+    print(f"[vdsim-carla] spawned ego at {spawn.location}")
     path = make_figure_eight(spawn) if args.driver else None
     prev_idx = 0
     spectator = world.get_spectator() if not args.no_spectator else None
