@@ -103,28 +103,12 @@ class MPSolver:
         return self.lca_pivot + rodrigues(self.lca_axis, theta) @ (
             self.lca_knuckle_static - self.lca_pivot)
 
-    def _solve_lca_for_wheel_z(self, target_z, tol=1e-6, max_iter=50):
-        offset_z = self.wheel_static[2] - self.lca_knuckle_static[2]
-        theta = 0.0
-        for _ in range(max_iter):
-            lk = self._lca_knuckle_at(theta)
-            wz = lk[2] + offset_z
-            err = wz - target_z
-            if abs(err) < tol: return theta
-            dth = 1e-5
-            wz_p = self._lca_knuckle_at(theta + dth)[2] + offset_z
-            slope = (wz_p - wz) / dth
-            if abs(slope) < 1e-9: break
-            theta -= err / slope
-        return theta
-
-    # ---- Main solve ----
-    def solve(self, wheel_travel, steer_rack_dy=0.0,
-              x0_axis_angle=None):
-        target_wz = self.wheel_static[2] + wheel_travel
-        theta_l = self._solve_lca_for_wheel_z(target_wz)
+    # ---- Inner kinematic: solve R for given LCA angle ----
+    def _kinematic_at(self, theta_l, steer_rack_dy=0.0, x0_axis_angle=None):
+        """Run the full MacPherson R solve for given LCA angle.  Returns
+        wheel_pos, R, SK, TK, etc., or None on failure.  Used both by the
+        outer wheel-z Newton and by solve()."""
         lk = self._lca_knuckle_at(theta_l)
-
         tr_inner = self.tr_inner_static + np.array([0.0, steer_rack_dy, 0.0])
 
         def axis_angle_to_R(v):
@@ -137,30 +121,66 @@ class MPSolver:
             sk = lk + R @ self.off_SK
             tk = lk + R @ self.off_TK
             tube_axis_world = R @ self.tube_axis_body
-
-            # Strut constraint: (SK - ST) must be parallel to tube_axis_world.
-            # Cross product = 0 gives 3 scalar residuals (1 redundant, since
-            # parallel-vector constraint has only 2 independent components).
             cross = np.cross(sk - self.strut_top, tube_axis_world)
-
-            # Tie rod length constraint (1 scalar).
             r_tie = np.linalg.norm(tk - tr_inner) - self.L_tr
-
             return [cross[0], cross[1], cross[2], r_tie]
 
         x0 = np.asarray(x0_axis_angle if x0_axis_angle is not None
                         else [0.0, 0.0, 0.0])
-        result = least_squares(residuals, x0=x0,
-                               method='lm', max_nfev=300)
+        result = least_squares(residuals, x0=x0, method='lm', max_nfev=300)
         if not result.success:
-            return {"valid": False, "axis_angle": x0.tolist()}
+            return None
         R = axis_angle_to_R(result.x)
-        self._last_axis_angle = result.x.tolist()
-
-        sk_world = lk + R @ self.off_SK
-        tk_world = lk + R @ self.off_TK
+        sk = lk + R @ self.off_SK
+        tk = lk + R @ self.off_TK
         wheel_pos = lk + R @ self.off_wheel
         spin_axis_world = R @ self.wheel_spin_axis
+        return {
+            "lk": lk, "sk": sk, "tk": tk,
+            "wheel_pos": wheel_pos,
+            "spin_axis": spin_axis_world,
+            "R": R,
+            "tr_inner": tr_inner,
+            "axis_angle": result.x.tolist(),
+        }
+
+    # ---- Newton on TRUE wheel-z (uses _kinematic_at) ----
+    def _solve_lca_for_wheel_z(self, target_z, steer_rack_dy=0.0,
+                                tol=1e-7, max_iter=30,
+                                x0_axis_angle=None):
+        """Newton on θ_lca s.t. the *true* wheel z (after full knuckle
+        kinematic solve) equals target_z."""
+        theta = 0.0
+        for _ in range(max_iter):
+            st = self._kinematic_at(theta, steer_rack_dy, x0_axis_angle)
+            if st is None: return None
+            wz = st["wheel_pos"][2]
+            err = wz - target_z
+            if abs(err) < tol: return theta
+            dth = 1e-5
+            st_p = self._kinematic_at(theta + dth, steer_rack_dy, x0_axis_angle)
+            if st_p is None: return None
+            slope = (st_p["wheel_pos"][2] - wz) / dth
+            if abs(slope) < 1e-9: break
+            theta -= err / slope
+        return theta
+
+    # ---- Main solve ----
+    def solve(self, wheel_travel, steer_rack_dy=0.0,
+              x0_axis_angle=None):
+        target_wz = self.wheel_static[2] + wheel_travel
+        theta_l = self._solve_lca_for_wheel_z(
+            target_wz, steer_rack_dy, x0_axis_angle=x0_axis_angle)
+        if theta_l is None:
+            return {"valid": False, "axis_angle": x0_axis_angle or [0, 0, 0]}
+        st = self._kinematic_at(theta_l, steer_rack_dy, x0_axis_angle)
+        if st is None:
+            return {"valid": False, "axis_angle": x0_axis_angle or [0, 0, 0]}
+
+        lk, sk_world, tk_world = st["lk"], st["sk"], st["tk"]
+        wheel_pos = st["wheel_pos"]
+        spin_axis_world = st["spin_axis"]
+        self._last_axis_angle = st["axis_angle"]
 
         # Camber: top of wheel toward +y / −y in y-z plane
         camber = math.atan2(-spin_axis_world[2], abs(spin_axis_world[1]))

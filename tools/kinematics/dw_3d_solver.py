@@ -121,25 +121,67 @@ class DW3DSolver:
         return self.uca_pivot + rodrigues(self.uca_axis, theta) @ (
             self.uca_knuckle_static - self.uca_pivot)
 
-    # ---- Inverse: solve LCA θ so that wheel-z hits target ----
-    def _solve_lca_for_wheel_z(self, target_z, tol=1e-6, max_iter=50):
-        """Newton on θ_lca s.t. wheel_z(θ_lca) = target_z.
-        Wheel center is rigidly attached to the knuckle, which moves with LK.
-        Approximation: wheel_center ≈ LK + (wheel_static - LK_static)
-        (i.e., wheel z follows LK z; ignores knuckle rotation about kingpin).
-        """
-        offset_z = self.wheel_static[2] - self.lca_knuckle_static[2]
+    # ---- Inner kinematic solve for given LCA angle ----
+    def _kinematic_at(self, theta_l, steer_rack_dy=0.0):
+        """Run the full DW solve for a given LCA angle.  Returns a dict with
+        lk, uk, tk, R_now, R_0, wheel_pos, spin_axis (all numpy arrays), or
+        None if any inner step fails.  This is the canonical kinematics —
+        used both by the outer wheel-z Newton and by solve()."""
+        lk = self._lca_knuckle_at(theta_l)
+        theta_u, uk = self._solve_uca_for_knuckle_length(lk)
+        if uk is None:
+            return None
+        tr_inner = self.tr_inner_static + np.array([0.0, steer_rack_dy, 0.0])
+        tk = trilaterate(lk, self.L_LT, uk, self.L_UT,
+                         tr_inner, self.L_tr,
+                         near=self.tr_knuckle_static)
+        if tk is None:
+            return None
+        # Knuckle frame (kingpin = LK→UK, plane via TK).
+        ax = uk - lk
+        ax /= np.linalg.norm(ax)
+        tk_off = tk - lk
+        ay_raw = tk_off - np.dot(tk_off, ax) * ax
+        ay = ay_raw / max(1e-9, np.linalg.norm(ay_raw))
+        az = np.cross(ax, ay)
+        R_now = np.column_stack([ax, ay, az])
+        ax0 = self.uca_knuckle_static - self.lca_knuckle_static
+        ax0 /= np.linalg.norm(ax0)
+        tk_off0 = self.tr_knuckle_static - self.lca_knuckle_static
+        ay0_raw = tk_off0 - np.dot(tk_off0, ax0) * ax0
+        ay0 = ay0_raw / max(1e-9, np.linalg.norm(ay0_raw))
+        az0 = np.cross(ax0, ay0)
+        R_0 = np.column_stack([ax0, ay0, az0])
+        R_delta = R_now @ R_0.T
+        wheel_off_local = R_0.T @ (self.wheel_static - self.lca_knuckle_static)
+        wheel_pos = lk + R_now @ wheel_off_local
+        spin_axis_world = R_delta @ self.wheel_spin_axis
+        return {
+            "lk": lk, "uk": uk, "tk": tk,
+            "R_now": R_now, "R_0": R_0, "R_delta": R_delta,
+            "wheel_pos": wheel_pos, "spin_axis": spin_axis_world,
+            "tr_inner": tr_inner,
+            "theta_l": theta_l, "theta_u": theta_u,
+        }
+
+    # ---- Inverse: Newton on TRUE wheel-z ----
+    def _solve_lca_for_wheel_z(self, target_z, steer_rack_dy=0.0,
+                                tol=1e-7, max_iter=30):
+        """Newton on θ_lca s.t. the *true* wheel z (after full knuckle
+        kinematics) equals target_z.  Replaces the previous small-angle
+        approximation `wz ≈ LK_z + off_wheel_z` which had ~3 mm error at
+        ±0.1 rad LCA angle."""
         theta = 0.0
         for _ in range(max_iter):
-            lk = self._lca_knuckle_at(theta)
-            wz = lk[2] + offset_z
+            st = self._kinematic_at(theta, steer_rack_dy)
+            if st is None: return None
+            wz = st["wheel_pos"][2]
             err = wz - target_z
             if abs(err) < tol: return theta
-            # numerical derivative
             dth = 1e-5
-            lk_p = self._lca_knuckle_at(theta + dth)
-            wz_p = lk_p[2] + offset_z
-            slope = (wz_p - wz) / dth
+            st_p = self._kinematic_at(theta + dth, steer_rack_dy)
+            if st_p is None: return None
+            slope = (st_p["wheel_pos"][2] - wz) / dth
             if abs(slope) < 1e-9: break
             theta -= err / slope
         return theta
@@ -163,77 +205,35 @@ class DW3DSolver:
     # ---- Main solve ----
     def solve(self, wheel_travel: float, steer_rack_dy: float = 0.0) -> dict:
         target_wz = self.wheel_static[2] + wheel_travel
-        theta_l = self._solve_lca_for_wheel_z(target_wz)
-        lk = self._lca_knuckle_at(theta_l)
-        theta_u, uk = self._solve_uca_for_knuckle_length(lk)
-        # Steering rack moves laterally — for the side modeled, +y means rack
-        # pushes inner end toward +y.
-        tr_inner = self.tr_inner_static + np.array([0.0, steer_rack_dy, 0.0])
-        tk = trilaterate(lk, self.L_LT, uk, self.L_UT,
-                          tr_inner, self.L_tr,
-                          near=self.tr_knuckle_static)
-        if tk is None:
+        theta_l = self._solve_lca_for_wheel_z(target_wz, steer_rack_dy)
+        if theta_l is None:
+            return {"valid": False}
+        st = self._kinematic_at(theta_l, steer_rack_dy)
+        if st is None:
             return {"valid": False}
 
-        # Knuckle orientation from 3 attach points.  Build a knuckle frame
-        # with: x_k = (UK − LK).norm (kingpin), z_k perpendicular in TK plane.
-        ax = uk - lk
-        ax /= np.linalg.norm(ax)
-        tk_off = tk - lk
-        ay_raw = tk_off - np.dot(tk_off, ax) * ax
-        ay = ay_raw / max(1e-9, np.linalg.norm(ay_raw))
-        az = np.cross(ax, ay)
-        R_knuckle_now = np.column_stack([ax, ay, az])
+        lk, uk, tk = st["lk"], st["uk"], st["tk"]
+        wheel_pos = st["wheel_pos"]
+        spin_axis_world = st["spin_axis"]
 
-        # Same construction at static — defines the knuckle's intrinsic frame.
-        ax0 = self.uca_knuckle_static - self.lca_knuckle_static
-        ax0 /= np.linalg.norm(ax0)
-        tk_off0 = self.tr_knuckle_static - self.lca_knuckle_static
-        ay0_raw = tk_off0 - np.dot(tk_off0, ax0) * ax0
-        ay0 = ay0_raw / max(1e-9, np.linalg.norm(ay0_raw))
-        az0 = np.cross(ax0, ay0)
-        R_knuckle_0 = np.column_stack([ax0, ay0, az0])
-
-        # Knuckle's rotation since static (world frame): R = R_now · R_0^T
-        R_delta = R_knuckle_now @ R_knuckle_0.T
-
-        # Wheel center: rigid offset from LK in the knuckle frame
-        wheel_off_local = R_knuckle_0.T @ (self.wheel_static - self.lca_knuckle_static)
-        wheel_pos = lk + R_knuckle_now @ wheel_off_local
-        spin_axis_world = R_delta @ self.wheel_spin_axis
-
-        # Camber: angle of spin axis projected on y-z plane from +y
-        sa_yz = np.array([0.0, spin_axis_world[1], spin_axis_world[2]])
-        sa_yz_norm = np.linalg.norm(sa_yz)
-        if sa_yz_norm < 1e-9: camber = 0.0
-        else:
-            sa_yz /= sa_yz_norm
-            # angle from +y axis (in y-z plane), positive when tilted toward +z
-            camber = math.atan2(sa_yz[2], sa_yz[1])
-            # signed s.t. left wheel: camber > 0 if top toward +y (LEFT)
-            # spin_axis at static is +y → atan2(0, 1) = 0.  After tilt about x
-            # such that top of wheel moves +y direction, spin_axis_y increases,
-            # spin_axis_z stays small.  Reuse our convention: γ pos = top-toward-+y.
-            # For consistency with previous code, recompute as:
-            # γ = arctan(spin_axis_z / spin_axis_y) (since static = +y).
-            camber = math.atan2(-spin_axis_world[2], abs(spin_axis_world[1]))
-        # Sign for right side
+        # Camber: angle of spin axis tilt from +y in y-z plane.
+        # Spin axis at static = +y; tilt toward +z (top-of-wheel toward -y for
+        # left side) gives positive γ here when we use the same convention as
+        # MP (atan2(-z, |y|)).  Right-side sign flip below.
+        camber = math.atan2(-spin_axis_world[2], abs(spin_axis_world[1]))
         if self.side == "right": camber = -camber
 
-        # Toe: angle of spin axis in x-y plane from +y (positive = toe-in for
-        # left wheel = spin axis tilts so wheel faces inward).
-        sa_xy = np.array([spin_axis_world[0], spin_axis_world[1], 0.0])
-        toe = math.atan2(sa_xy[0], sa_xy[1])
+        # Toe: angle of spin axis in x-y plane from +y.
+        toe = math.atan2(spin_axis_world[0], spin_axis_world[1])
         if self.side == "right": toe = -toe
 
-        # Track change: wheel_pos.y minus static
+        # Track change: y-displacement of wheel center.
         track_change = wheel_pos[1] - self.wheel_static[1]
         if self.side == "right": track_change = -track_change
 
-        # Caster: kingpin axis (UK - LK) projected on x-z plane, from +z
+        # Caster: kingpin axis (UK - LK) in x-z plane.
         kp = uk - lk
-        kp_xz = np.array([kp[0], 0.0, kp[2]])
-        kp_xz_norm = np.linalg.norm(kp_xz)
+        kp_xz_norm = math.hypot(kp[0], kp[2])
         caster = math.atan2(kp[0], kp[2]) if kp_xz_norm > 1e-9 else 0.0
 
         return {
