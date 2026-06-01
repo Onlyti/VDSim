@@ -1,4 +1,10 @@
-# 13. Multibody Outlook — Ld4-MultibodyKinematic / Ld5-MultibodyCompliant
+# 13. Multibody (Ld4-Ld5) — Overview
+
+> **상태 안내.** 이 챕터는 lumped 14-DOF (Ld3) 와 본격 multibody (Ld4-Ld5) 의
+> *동기·데이터모형·로드맵* 을 다룬다. Ld4 의 hardpoint kinematics 가 실제로
+> **구현 완료**됐다 (DW / MacPherson / trailing arm / 5-link). 그 구체적 운동학
+> 식과 solver 는 **Chapter 14 (Hardpoint Kinematics)** 에서 다룬다. 본 챕터는
+> 전체 그림과 Ld5 (compliance, 아직 미구현) 의 outlook 을 유지한다.
 
 > **학습 목표.** Lumped 14-DOF (Ld3) 와 본격 multibody (Ld4-Ld5) 의 차이를 식 단위로 안다. hardpoint + joint + bushing 의 abstraction 으로 어떤 suspension topology 든 표현 가능한 이유를 안다. forward kinematics (FK) vs full DAE (Featherstone) 의 trade-off 를 안다. Adams Car 와의 cross-validation 의 의의를 명확히 한다.
 
@@ -255,18 +261,19 @@ parser:
 
 ## 13.9 Roadmap (M1-M7)
 
-| Stage | 기간 | deliverable |
+| Stage | 상태 | deliverable |
 |---|---|---|
-| M0 | done | 본 PoC 의 stub (header + 6 topology YAML) |
-| M1 | 3-4 주 | MacPherson FK + smoke test |
-| M2 | 4-6 주 | Double wishbone + multi-link FK |
-| M3 | 2-3 주 | Quasi-static compliance |
-| M4 | 6-8 주 | Full DAE (Featherstone or augmented Lagrangian) |
-| M5 | 2-3 주 | K&C chart 자동 생성 |
-| M6 | 2-3 주 | Adams .adm import |
-| M7 | 4 주 | Adams vs VDSim cross-validation |
+| M0 | ✅ done | header + topology YAML stub |
+| M1 | ✅ **done** | MacPherson FK + native solver (Chapter 14.4) |
+| M2 | ✅ **done** | Double wishbone + trailing arm + 5-link FK (Chapter 14.3/5/6) |
+| M3 | ⏳ Phase 2 | Quasi-static compliance (bushing) — 사용자 보류 |
+| M4 | ⏳ Phase 2 | Full DAE (Featherstone) — M5 가 deliverable 의 대부분 cover |
+| M5 | 🟡 부분 | sweep CSV + plot 있음; 표준 K&C chart 형식은 미완 |
+| M6 | ✅ **done** | Adams CSV import (`import_hardpoints.py`, Chapter 14.9) |
+| M7 | ⏳ Phase 2 | Adams vs VDSim cross-validation (실측 데이터 대기) |
 
-총 6-9 개월. 졸업 후 창업 초기.
+M1-M2, M6 가 이번 PoC 확장에서 완료. M3 (compliance) 가 Ld5 의 핵심으로 남음.
+FK 가 lookup + native 두 backend 로 구현됨 (Chapter 14.7).
 
 ## 13.10 차별화 요약
 
@@ -277,14 +284,16 @@ Adams Car 는 Ld4-Ld5 영역만, control 측은 Simulink 외부. VDSim 의 통�
 
 ## 13.11 한계
 
-| 항목 | M0 stub 의 한계 |
+| 항목 | 현재 상태 |
 |---|---|
-| Solver impl | 0 (interface 만) |
+| FK solver impl | ✅ DW/MP/TA/5-link (lookup + C++ native), Chapter 14 |
 | Hardpoint YAML 의 값 | indicative (실측 fit 필요) |
-| Bushing curve | linear stub만 (nonlinear 는 M3 이후) |
-| Tire 통합 | Ld3 의 lumped 와 ABI 통일은 미해결 |
+| Bushing compliance | ❌ 강체 joint 만 (Ld5, Phase 2 — 사용자 보류) |
+| Tire 통합 | ✅ camber/toe → Ld2 → Pacejka (Chapter 14.8) |
+| Full DAE dynamics | ❌ FK + quasi-static 만 (M4 Phase 2) |
+| K&C 표준 chart | 🟡 sweep CSV + plot; Adams 형식은 미완 |
 
-이게 PoC 의 끝. Phase 2 의 시작점.
+Ld4 kinematics 는 구현 완료. Ld5 compliance 가 Phase 2 의 다음 큰 항목.
 
 ## 13.12 참고
 

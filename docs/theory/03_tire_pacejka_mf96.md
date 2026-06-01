@@ -1,6 +1,6 @@
 # 03. 타이어 모델 — Pacejka Magic Formula 1996
 
-> **학습 목표.** Magic Formula 의 `D · sin(C · atan(B · s − E · (B·s − atan(B·s))))` 가 왜 그런 모양인지, 각 계수 B/C/D/E 의 물리적 역할이 무엇인지, combined slip 의 friction-ellipse rescale 이 어떤 가정 위에 있는지, aligning moment Mz 와 pneumatic trail 의 의미가 무엇인지 — 모두 독립적으로 설명할 수 있다. PoC 가 단순한 MF96 simple form 만 쓰는 이유와 MF2002 까지 가지 않은 trade-off 를 명확히 안다.
+> **학습 목표.** Magic Formula 의 `D · sin(C · atan(B · s − E · (B·s − atan(B·s))))` 가 왜 그런 모양인지, 각 계수 B/C/D/E 의 물리적 역할이 무엇인지, combined slip 의 friction-ellipse rescale 이 어떤 가정 위에 있는지, aligning moment Mz 와 pneumatic trail 의 의미가 무엇인지 — 모두 독립적으로 설명할 수 있다. 여기에 더해 **load sensitivity** (μ 가 Fz 에 따라 감소), **relaxation length** (slip 의 1차 지연), **camber thrust + camber Mz** 의 세 가지 확장이 무엇을 모델링하고 왜 추가됐는지 안다. PoC 가 단순한 MF96 simple form 을 베이스로 쓰는 이유와 MF2002 까지 가지 않은 trade-off 를 명확히 안다.
 
 ## 3.1 타이어가 차량 동역학의 비선형 핵심인 이유
 
@@ -142,7 +142,7 @@ for (int i = 0; i < NUM_WHEELS; ++i) Mz_total += mz_wheel[i];
 
 이게 step_steer 의 SS yaw rate 를 약 2.6 % 감소시킨다 (Task 23 검증). analytical linear-bicycle 은 Mz 무시하므로 sim vs analytical 차이 6.8 % 정도. 그게 implementation bug 가 아니라 model-mismatch 임을 명시.
 
-## 3.6 Camber thrust (linear, API only)
+## 3.6 Camber thrust + camber Mz
 
 ### 정의
 
@@ -152,34 +152,103 @@ wheel 이 vertical 에서 γ 만큼 기울었을 때 추가 lateral force 가 �
 Fy_camber = − C_γ · γ · Fz · μ_lat
 ```
 
-VDSim 의 `TireParams::camber_stiffness` default `0` — 즉 disable. enable 시 위 식이 `Fy_lat` 에 가산.
+`TireParams::camber_stiffness` default `0`. enable 시 위 식이 `Fy_lat` 에 가산.
 
-### 왜 default 0
+### camber 가 Mz 에도 기여
 
-본 PoC 에서 Ld2-Ld3 의 wheel kinematics 에서 `γ` 가 자동 계산되지 않는다 (Ld2 는 wheel 이 항상 vertical 가정, Ld3 는 roll 이 quaternion 에 있지만 wheel-level γ 로 mapping 안 됨). 따라서 `γ = 0` 으로 호출되어도 식이 들어와도 효과 없음 — backward-compat.
-
-camber 효과를 보고 싶으면 (a) `camber_stiffness > 0` 설정, (b) `in.gamma` 를 외부에서 주입. 실제 wheel kinematics 통합은 Ld4 의 forward kinematics 가 들어와야 가능.
-
-## 3.7 Fz 의 mu scaling
+camber thrust 의 application point 도 contact patch 중심에서 약간 벗어나 작은
+aligning moment 를 만든다. VDSim 의 추가 (`pacejka_mf96.cpp`):
 
 ```
-Fx = (D_long · Fz · μ_long) · sin(C_long · atan(...))
-Fy = − (D_lat · Fz · μ_lat) · sin(C_lat · atan(...))
+Mz_camber = − pneumatic_trail · 0.25 · camber_stiffness · γ · Fz · μ
+Mz_total  = − trail · Fy + Mz_camber
+```
+
+`0.25 · trail` 은 camber arm 의 근사. γ 에 anti-symmetric — `±γ` 가 `∓Mz`
+(test `CamberContributesToMz` 검증).
+
+### γ 가 이제 자동 계산됨 (Ld4 연결)
+
+이전 PoC 에서는 Ld2-Ld3 가 wheel-level γ 를 계산하지 못해 항상 `γ=0` 이었다.
+Ld4 hardpoint kinematics (Chapter 14) 가 들어오면서 바뀜:
+
+1. Ld3 가 매 substep per-wheel travel → `ISuspensionKinematics::compute` →
+   camber γ 를 얻음.
+2. `inner_->set_camber_per_wheel(γ)` 로 Ld2 에 전달.
+3. Ld2 가 Pacejka `in.gamma = camber_ext_[i]` 로 호출.
+
+hardpoint kinematics 가 attach 안 됐으면 legacy fallback (`camber_per_roll · φ`)
+또는 `γ=0`. 즉 backward-compat 유지하면서 geometry-driven camber 가능.
+
+연결 경로: `fourteen_dof_dynamics.cpp` → `seven_dof_dynamics.cpp` →
+`pacejka_mf96.cpp`. 자세히는 Chapter 14.8.
+
+## 3.7 Fz 의 mu scaling + load sensitivity
+
+```
+Fx = (D_long · Fz · μ_eff_long) · sin(C_long · atan(...))
+Fy = − (D_lat · Fz · μ_eff_lat) · sin(C_lat · atan(...))
 ```
 
 `μ_long`, `μ_lat` 는 `ContactPoint` 에서 받는 surface mu (per wheel). 노면 변화 (icy patch 등) 표현.
-`Fz_nominal` 은 reference (4000 N for sedan default), `D_param = 1.0` 이면 peak force = `Fz · μ`. 따라서 default 에서 `peak μ = 1.0`.
+
+### Load sensitivity — μ 가 Fz 에 따라 감소
+
+실제 타이어는 수직 하중이 클수록 *단위 하중당 grip* 이 감소한다 (rubber 의
+load sensitivity). VDSim 의 `μ_eff`:
+
+```
+μ_eff(Fz) = μ_nominal · (1 − load_sensitivity · (Fz/Fz_nominal − 1))
+            (0.3·μ_nominal 로 floor — 극한 Fz 에서 수치 안정)
+```
+
+- `Fz = Fz_nominal` 이면 `μ_eff = μ_nominal`.
+- `Fz > Fz_nominal`: grip 감소 → 코너링 시 외측 휠이 안쪽보다 *상대적으로
+  덜* 받쳐줌 → 자연스러운 load transfer 효과의 일부.
+- `load_sensitivity = 0`: legacy (Fz 에 비례하는 peak).
+
+`default_pacejka.yaml`: `load_sensitivity: 0.15`, `Fz_nominal: 4000`.
+검증 `LoadSensitivityFadeAtHighFz`: 2× Fz 에서 Fy ratio 가 1.6 (선형이면 2.0).
+
+## 3.7b Relaxation length — slip 의 1차 지연 (transient)
+
+이전 PoC 는 quasi-static — slip 이 바뀌면 force 가 즉시 따라갔다. 실제 타이어는
+carcass 변형 때문에 **rolling distance σ** 만큼 지연된다 (relaxation length).
+
+transient slip angle `α_dyn` 이 geometric slip `α_geom` 을 1차 시스템으로 추종:
+
+```
+(σ / |v_long|) · α̇_dyn  =  α_geom − α_dyn
+```
+
+force 는 `α_dyn` 으로 계산 (instantaneous α 가 아니라). 닫힌형 적분 (substep
+사이):
+
+```
+α_dyn(t+h) = α_geom + (α_dyn(t) − α_geom) · exp(−|v|·h/σ)
+```
+
+구현 위치: tire model 이 아니라 **host dynamics** 의 state (`seven_dof`,
+`bicycle` 의 `alpha_dyn_[4]`). tire `compute()` 는 stateless 유지.
+
+효과: step steer 시 Fy 가 약 `σ/v` 시간상수로 build-up. `default_pacejka.yaml`
+`relaxation_length_lat: 0.6` → 15 m/s 에서 시상수 ~40 ms. 검증
+`RelaxationLengthDelaysLateralForce`: t=σ/v 시점 Fy 가 instant 대비 < 85%.
+
+`Fz_nominal` 은 reference (4000 N for sedan default), `D_param = 1.0` 이면 peak force = `Fz · μ_eff`.
 
 ## 3.8 가정 / 한계 (정리)
 
 | 항목 | 본 모델 | 한계 / Phase 2 항목 |
 |---|---|---|
 | Combined slip | friction-ellipse rescale | MF2002 의 σ_x, σ_y 통합 |
-| Aligning moment | `−t_p(α) · Fy` | MF2002 의 Mzr 잔류 + camber-Mz 결합 |
-| Camber | linear `Fy_camber = −C_γ · γ · Fz` | non-linear (peak μ 의 camber 의존) |
-| Transient | quasi-static (relaxation length 무시) | 1st-order tire relaxation (Phase 2) |
+| Aligning moment | `−t_p(α) · Fy + Mz_camber` | MF2002 의 Mzr 잔류 모멘트 |
+| Camber | linear `Fy_camber` + linear camber Mz | non-linear (peak μ 의 camber 의존) |
+| Load sensitivity | linear `μ_eff(Fz)` ✅ 구현 | non-linear load curve |
+| Transient | 1st-order relaxation length (lateral) ✅ 구현 | longitudinal relaxation, carcass 동역학 |
+| γ 입력 | Ld4 hardpoint kinematics 가 자동 계산 ✅ | force→camber 역방향 compliance |
 | Temperature | 무시 (constant μ) | tire temperature evolution (Phase 2) |
-| Fz peak shift | constant D | Fz-dependent D / peak shift (Magic Formula extension) |
+| Fz peak shift | constant D (μ_eff 만 Fz 의존) | Fz-dependent B/C/E (Magic Formula extension) |
 | Camber-Fx | 무시 | 일부 race tire 에서 의미 |
 
 ## 3.9 검증
