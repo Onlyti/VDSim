@@ -1,0 +1,2158 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Open-core vehicle dynamics simulator — theory + PoC reports">
+      
+      
+      
+        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/theory/06_ld3_fourteen_dof/">
+      
+      
+        <link rel="prev" href="../05_ld2_seven_dof/">
+      
+      
+        <link rel="next" href="../07_control_ladder/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>06 — Ld3-FourteenDOF - VDSim</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#06-ld3-fourteendof-sprung-3-unsprung-4-vertical-dof" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="VDSim" class="md-header__button md-logo" aria-label="VDSim" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            VDSim
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              06 — Ld3-FourteenDOF
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Onlyti/VDSim" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Onlyti/VDSim
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../.." class="md-tabs__link">
+          
+  
+  
+    
+  
+  Home
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Theory
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../tasks/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  PoC Reports
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../examples/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Examples
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="VDSim" class="md-nav__button md-logo" aria-label="VDSim" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    VDSim
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Onlyti/VDSim" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Onlyti/VDSim
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../.." class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Home
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Theory
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Theory
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01_frames_and_conventions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    01 — Frames & conventions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02_rigid_body_dynamics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    02 — Rigid-body dynamics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../03_tire_pacejka_mf96/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    03 — Tire (Pacejka MF96)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04_ld1_bicycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    04 — Ld1-Bicycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../05_ld2_seven_dof/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    05 — Ld2-SevenDOF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    06 — Ld3-FourteenDOF
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    06 — Ld3-FourteenDOF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#61-14-dof" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.1 왜 14-DOF 라고 부르나
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#62-lumped-vs-full-multibody" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.2 Lumped vs full multibody
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#63-sprung-body-eom-heave-roll-pitch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.3 Sprung body EoM (heave / roll / pitch)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6.3 Sprung body EoM (heave / roll / pitch)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#heave-eom-z_s" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Heave EoM (z_s)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pitch-eom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pitch EoM (θ)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#anti-dive-anti-squat" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Anti-dive / anti-squat
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#roll-eom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roll EoM (φ)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-heavepitch-via-spring-corner-roll-via-axle-k_phi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why heave/pitch via spring corner, roll via axle K_phi?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#64-unsprung-mass-eom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.4 Unsprung mass EoM
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6.4 Unsprung mass EoM">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tire-vertical-stiffness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tire vertical stiffness 의 의미
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damping-ratio-task-51" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Damping ratio 문제 (Task 51 의 분석)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#65-rk4-14-vertical-dof" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.5 RK4 적분 — 14 vertical DOF
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#66-pose-quat-encoding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.6 Pose 의 quat encoding
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#67-susp_compression-susp_velocity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.7 Susp_compression / susp_velocity 의 의미
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#68-ld2-ld3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.8 Ld2 ↔ Ld3 의 거동 차이
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#69-follow-up" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.9 한계와 follow-up
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#610" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.10 사용 패턴
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#611" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.11 검증
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#612" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.12 참고
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../07_control_ladder/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    07 — Control ladder Lc1-Lc8
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../08_pid_controllers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    08 — PID controllers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../09_pure_pursuit_path/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    09 — Pure Pursuit / path
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../10_driver_model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10 — Driver model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../11_numerical_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11 — Numerical integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../12_software_architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12 — Software architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13_multibody_outlook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13 — Multibody outlook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../tasks/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PoC Reports
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    PoC Reports
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/68_poc_summary_v3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PoC Summary v3 (95%)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/69_competitive_matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Competitive matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/62_cycles_overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cycles overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmark matrix (4 vehicles)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/20_l1_l2_grid_sweep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    L1 vs L2 grid sweep
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/30_l3_dynamic_suspension/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    L3 dynamic suspension
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/31_l6_l7_l8_control/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    L5-L8 control cascade
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/57_58_59_driver_skidpad/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Driver / skidpad / brake-in-turn
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmark matrix (4 vehicles)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../examples/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#61-14-dof" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.1 왜 14-DOF 라고 부르나
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#62-lumped-vs-full-multibody" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.2 Lumped vs full multibody
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#63-sprung-body-eom-heave-roll-pitch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.3 Sprung body EoM (heave / roll / pitch)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6.3 Sprung body EoM (heave / roll / pitch)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#heave-eom-z_s" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Heave EoM (z_s)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pitch-eom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pitch EoM (θ)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#anti-dive-anti-squat" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Anti-dive / anti-squat
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#roll-eom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roll EoM (φ)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-heavepitch-via-spring-corner-roll-via-axle-k_phi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why heave/pitch via spring corner, roll via axle K_phi?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#64-unsprung-mass-eom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.4 Unsprung mass EoM
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6.4 Unsprung mass EoM">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tire-vertical-stiffness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tire vertical stiffness 의 의미
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damping-ratio-task-51" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Damping ratio 문제 (Task 51 의 분석)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#65-rk4-14-vertical-dof" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.5 RK4 적분 — 14 vertical DOF
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#66-pose-quat-encoding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.6 Pose 의 quat encoding
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#67-susp_compression-susp_velocity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.7 Susp_compression / susp_velocity 의 의미
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#68-ld2-ld3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.8 Ld2 ↔ Ld3 의 거동 차이
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#69-follow-up" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.9 한계와 follow-up
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#610" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.10 사용 패턴
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#611" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.11 검증
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#612" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.12 참고
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="06-ld3-fourteendof-sprung-3-unsprung-4-vertical-dof">06. Ld3-FourteenDOF — Sprung 3 + Unsprung 4 Vertical DOF<a class="headerlink" href="#06-ld3-fourteendof-sprung-3-unsprung-4-vertical-dof" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>학습 목표.</strong> Lumped 14-DOF 모델의 state 가 어떻게 구성되는지, sprung body 의 heave / roll / pitch 와 unsprung mass 의 z 동역학이 어떻게 결합되는지 식 단위로 안다. anti-dive geometry 의 effective h_cg 의 의미를 안다. wheel-hop frequency 의 이론값과 simulator 의 실측값이 왜 차이 나는지 (corner damper 의 overdamped 한계) 정확히 설명한다. quasi-static (Ld2) 와 dynamic (Ld3) 의 차이가 어디서 드러나는지 정리한다.</p>
+</blockquote>
+<h2 id="61-14-dof">6.1 왜 14-DOF 라고 부르나<a class="headerlink" href="#61-14-dof" title="Permanent link">&para;</a></h2>
+<p>D8 명세에서 14-DOF 의 분해:
+- Sprung body translation (x, y, z) — 3
+- Sprung body rotation (φ, θ, ψ) — 3
+- Unsprung vertical z (FL, FR, RL, RR) — 4
+- Wheel spin (FL, FR, RL, RR) — 4</p>
+<p>합계 14.</p>
+<p>본 VDSim 의 Ld3 는 위의 14 DOF 중:
+- Planar motion (x, y, ψ, vx, vy, r) + 4 wheel spin — Ld2 inner 로 위임.
+- 추가로 sprung vertical 3 (z_s, φ, θ) + unsprung vertical 4 (z_u_i) — 본 챕터의 핵심.</p>
+<p>planar 7 + vertical 7 = <strong>14 DOF (= 14 second-order ODE 또는 28 first-order)</strong>.</p>
+<h2 id="62-lumped-vs-full-multibody">6.2 Lumped vs full multibody<a class="headerlink" href="#62-lumped-vs-full-multibody" title="Permanent link">&para;</a></h2>
+<p>본 PoC 는 <strong>lumped suspension</strong>:
+- sprung body 의 corner displacement = <code>z_s + ry_i · φ − rx_i · θ</code> (small-angle linearized).
+- unsprung mass = lumped point mass, vertical 1 DOF.
+- spring + damper 가 sprung corner 와 unsprung mass 사이에 작용.
+- tire vertical stiffness <code>k_tire</code> 가 unsprung mass 와 ground 사이.</p>
+<p>본격 multibody (Ld4-Ld5) 는 lumped 가정을 풀고 hardpoint + joint + bushing 으로 분해. 본 챕터는 lumped 14-DOF.</p>
+<h2 id="63-sprung-body-eom-heave-roll-pitch">6.3 Sprung body EoM (heave / roll / pitch)<a class="headerlink" href="#63-sprung-body-eom-heave-roll-pitch" title="Permanent link">&para;</a></h2>
+<p>Per-corner spring/damper between sprung corner and unsprung mass.</p>
+<p>corner displacement (sprung side):
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>z_corner_i  =  z_s  −  rx_i · θ
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>v_corner_i  =  ż_s  −  rx_i · θ̇
+</span></code></pre></div></p>
+<p>(roll φ 는 별도로 axle-level roll stiffness 처리 — 아래 §6.4 참조.)</p>
+<p>spring + damper force on sprung corner (upward positive):
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>δ_i  =  z_corner_i  −  z_u_i           (compression deviation from static)
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>v_i  =  v_corner_i  −  ż_u_i
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>F_i  =  − k_i · δ_i  −  c_i · v_i      (spring + damper)
+</span></code></pre></div></p>
+<p>Sprung body EoM:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>m_s · z̈_s   =  Σ F_i
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>Iyy · θ̈   =  − Σ rx_i · F_i  +  m_s · ax · h_cg · (1 − anti)
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>Ixx · φ̈   =  − K_phi · φ  −  C_phi · φ̇  +  m_s · ay · h_cg
+</span></code></pre></div></p>
+<p>코드 <code>core/src/fourteen_dof_dynamics.cpp:128-156</code>.</p>
+<h3 id="heave-eom-z_s">Heave EoM (z_s)<a class="headerlink" href="#heave-eom-z_s" title="Permanent link">&para;</a></h3>
+<p>가장 단순. spring 합력이 sprung mass 의 vertical 가속도 만든다.</p>
+<h3 id="pitch-eom">Pitch EoM (θ)<a class="headerlink" href="#pitch-eom" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Iyy · θ̈  =  − Σ rx_i · F_i  +  m_s · ax · h_cg · (1 − anti_dive)
+</span></code></pre></div>
+<ul>
+<li><code>−Σ rx_i · F_i</code> 는 spring/damper 의 pitch moment. front spring 이 더 압축되면 nose down.</li>
+<li><code>m_s · ax · h_cg</code> 는 inertia 의 pitch contribution. 가속 시 nose up, 제동 시 nose down.</li>
+<li><code>(1 − anti_dive)</code> 가 suspension geometry 의 anti-dive 효과 — bypass 일부 inertia moment.</li>
+</ul>
+<h3 id="anti-dive-anti-squat">Anti-dive / anti-squat<a class="headerlink" href="#anti-dive-anti-squat" title="Permanent link">&para;</a></h3>
+<p>real suspension 은 brake 시 brake reaction force 가 일부 suspension link 를 통해 chassis 로 직접 전달 (suspension 의 instant center 이용). 그 만큼 pitch moment 가 감소.</p>
+<p>VDSim 의 단순 모델:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>anti  =  ax &lt; 0 ? anti_dive_front : anti_squat_rear  (clamped [0, 1])
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>M_inertia_pitch  =  m_s · ax · h_cg · (1 − anti)
+</span></code></pre></div></p>
+<p><code>anti = 1</code> 이면 brake 시 pitch 가 발생 안 함. <code>0</code> 이면 full pitch.</p>
+<h3 id="roll-eom">Roll EoM (φ)<a class="headerlink" href="#roll-eom" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Ixx · φ̈  =  − K_phi_total · φ  −  C_phi · φ̇  +  m_s · ay · h_cg
+</span></code></pre></div>
+<ul>
+<li><code>K_phi_total = roll_stiffness_front + roll_stiffness_rear</code> (axle-level roll stiffness, springs + ARB combined).</li>
+<li><code>C_phi</code> 는 axle 의 damper 의 roll-equivalent stiffness: <code>Σ (c_corner · arm²)</code>.</li>
+</ul>
+<p>quasi-static SS:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>φ_ss  =  m_s · ay · h_cg / K_phi_total
+</span></code></pre></div></p>
+<p>이게 Task 22 (<code>Roll/pitch state diagnostics</code>) 의 quasi-static estimator. Ld3 의 dynamic 적분이 SS 에서 위와 일치.</p>
+<h3 id="why-heavepitch-via-spring-corner-roll-via-axle-k_phi">Why heave/pitch via spring corner, roll via axle K_phi?<a class="headerlink" href="#why-heavepitch-via-spring-corner-roll-via-axle-k_phi" title="Permanent link">&para;</a></h3>
+<p>heave 와 pitch 는 per-corner spring 의 linear sum 으로 자연스럽게 표현. 그러나 roll 의 경우 ARB (anti-roll bar) 가 추가 contribution 을 줘서 sum 이 단순 spring·arm² 보다 큼. 따라서 axle-level <code>K_phi</code> 를 별도로 받아 통합 — 이게 textbook 표준 lumped 모델.</p>
+<p>만약 spring·arm² 만 쓰면 ARB 효과 누락 → roll 이 실측보다 작게 나옴. 본 PoC 의 sedan default 의 경우 <code>K_phi = 30 + 25 = 55 kN·m/rad</code>, 반면 spring·arm²·sum = <code>30000 · 2·(0.775)² ≈ 36 kN·m/rad</code>. ARB 가 약 35 % 추가 기여.</p>
+<h2 id="64-unsprung-mass-eom">6.4 Unsprung mass EoM<a class="headerlink" href="#64-unsprung-mass-eom" title="Permanent link">&para;</a></h2>
+<p>per-corner unsprung mass 의 vertical 동역학:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>m_u_i · z̈_u_i  =  − F_susp_on_sprung_i  −  k_tire · z_u_i
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>                =  + k_i · δ_i + c_i · v_i  −  k_tire · z_u_i
+</span></code></pre></div></p>
+<p>(Newton III: spring/damper 가 sprung 위로 미는 force 의 반대 = unsprung 아래로 미는 force.)</p>
+<p><code>k_tire</code> 는 TireParams 의 <code>tire_vertical_stiffness</code> (default 220 kN/m).</p>
+<p>코드 <code>core/src/fourteen_dof_dynamics.cpp:155-160</code>:
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">k_tire</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="n">tp_</span><span class="p">.</span><span class="n">tire_vertical_stiffness</span><span class="p">);</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">NUM_WHEELS</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">m_u</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="n">vp_</span><span class="p">.</span><span class="n">unsprung_mass</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="n">d</span><span class="p">.</span><span class="n">dz_u</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="n">zu_dot</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="n">d</span><span class="p">.</span><span class="n">dz_u_dot</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="o">-</span><span class="w"> </span><span class="n">F_susp</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">k_tire</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">zu</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">m_u</span><span class="p">;</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="p">}</span>
+</span></code></pre></div></p>
+<h3 id="tire-vertical-stiffness">Tire vertical stiffness 의 의미<a class="headerlink" href="#tire-vertical-stiffness" title="Permanent link">&para;</a></h3>
+<p>tire 가 vertical 방향으로 spring 처럼 작용. radial deformation 이 <code>Fz / k_tire</code>. typical 200-300 kN/m for passenger tires.</p>
+<p>이게 wheel hop frequency (sprung 과 분리된 unsprung 의 vertical resonance) 의 dominant stiffness:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>ω_hop  =  sqrt(k_tire / m_u)
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>f_hop  =  ω_hop / (2π)
+</span></code></pre></div></p>
+<p>sedan default: <code>sqrt(220000 / 40) / (2π) ≈ 11.8 Hz</code>.</p>
+<h3 id="damping-ratio-task-51">Damping ratio 문제 (Task 51 의 분석)<a class="headerlink" href="#damping-ratio-task-51" title="Permanent link">&para;</a></h3>
+<p>unsprung mass 의 critical damping:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>ζ_u  =  c_corner / (2 · sqrt(k_spring · m_u))
+</span></code></pre></div></p>
+<p>sedan default: <code>c = 3000, k = 30000, m_u = 40</code> → <code>ζ_u = 3000 / (2·sqrt(1.2e6)) = 1.37</code>. <strong>overdamped</strong>.</p>
+<p>실차의 corner damper 는 sprung body resonance (~1-2 Hz) 에 fit 되어 있어 ζ ~ 0.3-0.5. 그 동일 c 를 unsprung 에 쓰면 wheel-hop 영역 (10+ Hz) 에서 너무 stiff.</p>
+<p>본 PoC 는 corner damper 한 값만 (sprung + unsprung 분리 안 됨). wheel-hop FFT (Task 51) 에서 11.8 Hz peak 가 명확히 안 보임 (5 Hz coupled mode 만 보임).
+실제 차량 simulator (Adams Car 등) 는 sprung damper 와 unsprung damper 를 분리. 본 PoC follow-up: <code>corner_damper</code> 를 <code>damper_sprung</code> / <code>damper_unsprung</code> 로 분할.</p>
+<h2 id="65-rk4-14-vertical-dof">6.5 RK4 적분 — 14 vertical DOF<a class="headerlink" href="#65-rk4-14-vertical-dof" title="Permanent link">&para;</a></h2>
+<p>State vector (planar 7 은 inner Ld2 가 처리):
+<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>y = [z_s, ż_s, φ, φ̇, θ, θ̇, z_u_FL, ż_u_FL, z_u_FR, ż_u_FR, z_u_RL, ż_u_RL, z_u_RR, ż_u_RR]
+</span></code></pre></div></p>
+<p>14 first-order ODE.</p>
+<p>derivative <code>f(y, t)</code>:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>ẏ = [ż_s, z̈_s, φ̇, φ̈, θ̇, θ̈, ż_u_FL, z̈_u_FL, ..., ż_u_RR, z̈_u_RR]
+</span></code></pre></div></p>
+<p>각 second-order 가 위에서 본 식대로 계산.</p>
+<p><code>integrate_vertical()</code> (코드 <code>core/src/fourteen_dof_dynamics.cpp:182-238</code>) 가 RK4:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>k1  =  f(y, t)
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>k2  =  f(y + h/2 · k1, t + h/2)
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>k3  =  f(y + h/2 · k2, t + h/2)
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>k4  =  f(y + h · k3, t + h)
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>y_{n+1}  =  y_n + h/6 · (k1 + 2k2 + 2k3 + k4)
+</span></code></pre></div></p>
+<p>substep dt = 1 ms (sp_.max_substep_dt). outer dt = 5 ms 면 5 substeps per outer.</p>
+<p><code>ax</code>, <code>ay</code> 의 1-step lag — outer step 의 input (Ld2 의 직전 값) 으로 vertical 적분 동안 constant. 더 정확하게는 매 substep 마다 update 해야 하지만 본 PoC 는 outer-step lag.</p>
+<h2 id="66-pose-quat-encoding">6.6 Pose 의 quat encoding<a class="headerlink" href="#66-pose-quat-encoding" title="Permanent link">&para;</a></h2>
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="n">state_</span><span class="p">.</span><span class="n">orientation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">quat_from_euler</span><span class="p">({</span><span class="n">phi_</span><span class="p">,</span><span class="w"> </span><span class="n">th_</span><span class="p">,</span><span class="w"> </span><span class="n">yaw</span><span class="p">});</span>
+</span></code></pre></div>
+<p>yaw 는 planar Ld2 가 이미 적분. roll φ, pitch θ 는 Ld3 의 적분 결과.
+ZYX intrinsic Euler 로 quat 구성.</p>
+<p>이렇게 quat 에 RPY 모두 encode 하면 외부 시각화 (CARLA, viewer) 가 차체 자세 그대로 표현 가능. Ld1-Ld2 는 yaw 만 encode (RPY 의 0, 0, yaw).</p>
+<h2 id="67-susp_compression-susp_velocity">6.7 Susp_compression / susp_velocity 의 의미<a class="headerlink" href="#67-susp_compression-susp_velocity" title="Permanent link">&para;</a></h2>
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="n">state_</span><span class="p">.</span><span class="n">susp_compression</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w">  </span><span class="o">=</span><span class="w">  </span><span class="n">static_compression_</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">δ_i</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="n">state_</span><span class="p">.</span><span class="n">susp_velocity</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w">     </span><span class="o">=</span><span class="w">  </span><span class="n">v_corner_i</span><span class="w"> </span><span class="err">−</span><span class="w"> </span><span class="n">ż_u_i</span>
+</span></code></pre></div>
+<p><code>static_compression_[i] = Fz_static_i / k_i</code> — sprung 의 정적 weight 로 인한 spring 압축.
+<code>δ_i</code> 는 동적 deviation (sprung corner z − unsprung z).</p>
+<p>총 susp_compression &gt; static_compression → spring 이 압축됨.
+&lt; static_compression → spring 이 신장됨 (떨림 또는 wheel 들림).</p>
+<p>ride 분석에서 이 두 값이 핵심 진단.</p>
+<h2 id="68-ld2-ld3">6.8 Ld2 ↔ Ld3 의 거동 차이<a class="headerlink" href="#68-ld2-ld3" title="Permanent link">&para;</a></h2>
+<p>quasi-static 의 SS yaw rate / Fz 는 Ld2 와 Ld3 가 일치 (분석값 동일). 차이는:
+- <strong>Transient</strong>: Ld3 가 roll overshoot, settle 시간, wheel-hop oscillation 표현 가능.
+- <strong>dynamic Fz</strong>: Ld3 의 Fz 가 매 step 마다 spring 의 transient 반영. Ld2 는 quasi-static.</p>
+<p>검증 (Task 30 FourteenDOF dynamic):
+- step steer (sports, vx=10, δ=0.05): Ld3 의 roll oscillation, settle ~ 1.5 s.
+- DLC: roll range ±4° (sport 거동).
+- brake step: pitch transient + nose dive.</p>
+<p><code>PlanarMotionMatchesL2Closely</code> test 는 Ld3 의 planar (vx, vy, r) 가 Ld2 와 bit-equal 임을 보장 — Ld3 가 Ld2 위에 vertical 만 추가했음을 검증.</p>
+<h2 id="69-follow-up">6.9 한계와 follow-up<a class="headerlink" href="#69-follow-up" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>본 PoC</th>
+<th>follow-up</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sprung 6-DOF integration</td>
+<td>small-angle linearized</td>
+<td>full nonlinear (Featherstone)</td>
+</tr>
+<tr>
+<td>Corner damper 분리</td>
+<td>단일 c</td>
+<td>sprung / unsprung 분리</td>
+</tr>
+<tr>
+<td>Anti-dive geometry</td>
+<td>scalar factor</td>
+<td>instant-center 기반 정확 모델</td>
+</tr>
+<tr>
+<td>Suspension link friction</td>
+<td>무시</td>
+<td>bushing nonlinearity</td>
+</tr>
+<tr>
+<td>Wheel camber from roll</td>
+<td><code>γ = 0</code> (Pacejka API 만)</td>
+<td>hardpoint → wheel kinematics</td>
+</tr>
+<tr>
+<td>Tire transient (relaxation)</td>
+<td>무시</td>
+<td>1<sup>st</sup>-order tire dynamics</td>
+</tr>
+<tr>
+<td>Lateral load transfer 동적</td>
+<td>1-step lag</td>
+<td>self-consistent 통합</td>
+</tr>
+</tbody>
+</table>
+<p>Ld4-Ld5 가 본격 multibody 로 위 한계 대부분 해소.</p>
+<h2 id="610">6.10 사용 패턴<a class="headerlink" href="#610" title="Permanent link">&para;</a></h2>
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="k">auto</span><span class="w"> </span><span class="n">dyn</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">vdsim</span><span class="o">::</span><span class="n">create_fourteen_dof</span><span class="p">();</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="n">dyn</span><span class="o">-&gt;</span><span class="n">initialize</span><span class="p">(</span><span class="n">vp</span><span class="p">,</span><span class="w"> </span><span class="n">tp</span><span class="p">,</span><span class="w"> </span><span class="n">sp</span><span class="p">);</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="c1">// ... reset, step (Ld1 / Ld2 와 동일 API)</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="n">dyn</span><span class="o">-&gt;</span><span class="n">roll_angle_qs</span><span class="p">();</span><span class="w">    </span><span class="c1">// dynamic roll (rad)</span>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="n">dyn</span><span class="o">-&gt;</span><span class="n">pitch_angle_qs</span><span class="p">();</span><span class="w">   </span><span class="c1">// dynamic pitch</span>
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="n">dyn</span><span class="o">-&gt;</span><span class="n">state</span><span class="p">().</span><span class="n">susp_compression</span><span class="p">[</span><span class="n">WHEEL_FL</span><span class="p">];</span><span class="w">   </span><span class="c1">// FL spring 압축 (m)</span>
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="n">dyn</span><span class="o">-&gt;</span><span class="n">state</span><span class="p">().</span><span class="n">susp_velocity</span><span class="p">[</span><span class="n">WHEEL_FL</span><span class="p">];</span><span class="w">      </span><span class="c1">// FL ride velocity (m/s)</span>
+</span></code></pre></div>
+<p><code>ax_body_est()</code>, <code>ay_body_est()</code> 도 Ld2 와 동일하게 사용 가능. Ld3 는 inner Ld2 의 값을 전달.</p>
+<h2 id="611">6.11 검증<a class="headerlink" href="#611" title="Permanent link">&para;</a></h2>
+<p><code>FourteenDOF.*</code> (Task 24, 30, 41 통합):
+- <code>ConstructionAndLevel</code>
+- <code>StaticSuspensionPopulatedAtRest</code> — <code>susp_compression = static_compression</code> at rest.
+- <code>CompressionGrowsUnderBrakeOnFront</code>
+- <code>PlanarMotionMatchesL2Closely</code> — Ld3 planar 의 vx, vy, r 가 Ld2 와 1e-9 일치.
+- <code>PoseEncodesRollAndPitch</code> — quat 의 roll 추출이 <code>roll_angle_qs</code> 와 0.02 rad 이내.
+- <code>RollOscillatesAndSettles</code> — step steer 의 dynamic overshoot.
+- <code>PitchTransientUnderBrake</code>
+- <code>SuspensionVelocityNonZeroDuringTransient</code>
+- <code>AntiDiveReducesPitchUnderBrake</code> — anti_dive 0 vs 0.5 비교, anti-dive 가 pitch 감소.</p>
+<p>총 9 tests pass.</p>
+<h2 id="612">6.12 참고<a class="headerlink" href="#612" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Genta, <em>Motor Vehicle Dynamics</em>, §7 (lumped 14-DOF).</li>
+<li>Milliken, <em>Race Car Vehicle Dynamics</em>, §17 (anti-dive / anti-squat).</li>
+<li>Reimpell, <em>The Automotive Chassis</em>, §6 (suspension kinematics).</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/Onlyti/VDSim" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.expand", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
