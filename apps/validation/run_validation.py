@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import vdsim
 from iso_7401 import run_iso_7401, format_report as fmt_7401
 from iso_4138 import run_iso_4138, format_report as fmt_4138
+from iso_3888 import run_iso_3888, format_report as fmt_3888, dlc_waypoints
 
 
 def make_dyn(level: str):
@@ -52,6 +53,35 @@ def plot_7401(r, out_png):
                     label=f"a_y_ss = {r.a_y_ss:.2f} m/s²")
     axes[2].set_xlabel("t [s]"); axes[2].set_ylabel("a_y [m/s²]")
     axes[2].grid(True, alpha=0.3); axes[2].legend(loc="lower right", fontsize=8)
+    fig.tight_layout(); fig.savefig(out_png, dpi=120); plt.close(fig)
+
+
+def plot_3888(r, out_png):
+    """Top view of vehicle path through DLC cone course + speed timeline."""
+    traj = r.trajectory
+    wp = dlc_waypoints()
+    fig, axes = plt.subplots(2, 1, figsize=(11, 6),
+                              gridspec_kw={"height_ratios": [2, 1]})
+    ax = axes[0]
+    # Cone gates (rough): draw lane corridors as fill
+    ax.plot(wp[:, 0], wp[:, 1] + 1.0, "k--", lw=0.5, alpha=0.5)
+    ax.plot(wp[:, 0], wp[:, 1] - 1.0, "k--", lw=0.5, alpha=0.5)
+    ax.plot(wp[:, 0], wp[:, 1], "g:", lw=1.0, label="target center")
+    ax.plot(traj["x"], traj["y"], "b-", lw=1.6, label="vehicle path")
+    ax.set_xlabel("x [m]"); ax.set_ylabel("y [m]")
+    ax.set_title(f"ISO 3888-2 DLC @ {r.v_entry_kmh:.0f} km/h — "
+                  f"{'PASS' if r.success else 'FAIL'}")
+    ax.legend(loc="upper right"); ax.grid(True, alpha=0.3); ax.set_aspect("equal")
+
+    ax2 = axes[1]
+    ax2.plot(traj["t"], traj["vx"] * 3.6, "b-", lw=1.5, label="vx [km/h]")
+    ax2.axhline(r.v_entry_kmh, color="g", ls="--", alpha=0.5, label="entry")
+    ax2b = ax2.twinx()
+    ax2b.plot(traj["t"], np.degrees(traj["r"]), "r-", lw=1, alpha=0.7,
+              label="yaw rate")
+    ax2.set_xlabel("t [s]"); ax2.set_ylabel("speed [km/h]")
+    ax2b.set_ylabel("yaw rate [°/s]", color="r")
+    ax2.legend(loc="lower right", fontsize=8); ax2.grid(True, alpha=0.3)
     fig.tight_layout(); fig.savefig(out_png, dpi=120); plt.close(fig)
 
 
@@ -115,6 +145,13 @@ def main():
     plot_4138(r4138, out_dir / "iso_4138_ramp.png", vp)
     results["iso_4138"] = r4138
 
+    print("--- Running ISO 3888-2 Double Lane Change (60 km/h) ---")
+    dyn = make_dyn(args.level); dyn.initialize(vp, tp, sp)
+    r3888 = run_iso_3888(dyn, vp, v_entry_kmh=60.0)
+    print(fmt_3888(r3888))
+    plot_3888(r3888, out_dir / "iso_3888_dlc.png")
+    results["iso_3888"] = r3888
+
     # Write markdown report
     report = out_dir / "REPORT.md"
     with open(report, "w") as f:
@@ -131,7 +168,11 @@ def main():
         f.write(f"## ISO 4138 — steady-state circular driving\n\n")
         for line in fmt_4138(r4138).splitlines():
             f.write("    " + line + "\n")
-        f.write(f"\n![iso_4138](iso_4138_ramp.png)\n")
+        f.write(f"\n![iso_4138](iso_4138_ramp.png)\n\n")
+        f.write(f"## ISO 3888-2 — Double Lane Change\n\n")
+        for line in fmt_3888(r3888).splitlines():
+            f.write("    " + line + "\n")
+        f.write(f"\n![iso_3888](iso_3888_dlc.png)\n")
     print(f"[validate] report -> {report}")
 
 

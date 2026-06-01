@@ -33,3 +33,18 @@
       a_y_max in test       : 6.58 m/s² (0.67 g)
 
 ![iso_4138](iso_4138_ramp.png)
+
+## ISO 3888-2 — Double Lane Change
+
+    === ISO 3888-2 — Severe lane-change (DLC / moose test) ===
+      v_entry            : 60.0 km/h
+      v_exit             : 54.5 km/h
+      Speed loss         : +5.46 km/h
+      Max lateral excursion (vs target lane): 1.298 m
+      Peak yaw rate      : 33.6 °/s
+      Peak |a_y|         : 0.892 g
+      Verdict            : FAIL
+                           (criteria: speed loss < 2.0 km/h AND
+                            excursion < 1.0 m vs target lane)
+
+![iso_3888](iso_3888_dlc.png)

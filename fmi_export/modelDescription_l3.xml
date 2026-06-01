@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fmiModelDescription
+    fmiVersion="2.0"
+    modelName="vdsim_l3"
+    guid="vdsim-l3-fmu-2026-06"
+    description="VDSim L3 FourteenDOF (sprung + 4 unsprung + Ld4 hardpoint kinematics)"
+    author="VDSim"
+    version="0.1"
+    generationTool="VDSim FMU export"
+    variableNamingConvention="structured">
+
+  <CoSimulation
+      modelIdentifier="vdsim_l3"
+      canHandleVariableCommunicationStepSize="true"
+      canInterpolateInputs="false"
+      maxOutputDerivativeOrder="0"
+      canRunAsynchronously="false"
+      canBeInstantiatedOnlyOncePerProcess="false"
+      canNotUseMemoryManagementFunctions="true"
+      canGetAndSetFMUstate="false"
+      canSerializeFMUstate="false"
+      providesDirectionalDerivative="false"/>
+
+  <ModelVariables>
+    <ScalarVariable name="steer_angle_wheel" valueReference="1" causality="input" variability="continuous"><Real start="0.0"/></ScalarVariable>
+    <ScalarVariable name="throttle"          valueReference="2" causality="input" variability="continuous"><Real start="0.0"/></ScalarVariable>
+    <ScalarVariable name="brake"             valueReference="3" causality="input" variability="continuous"><Real start="0.0"/></ScalarVariable>
+
+    <ScalarVariable name="x_world"   valueReference="10" causality="output" variability="continuous" initial="exact"><Real start="0.0"/></ScalarVariable>
+    <ScalarVariable name="y_world"   valueReference="11" causality="output" variability="continuous" initial="exact"><Real start="0.0"/></ScalarVariable>
+    <ScalarVariable name="yaw"       valueReference="12" causality="output" variability="continuous" initial="exact"><Real start="0.0"/></ScalarVariable>
+    <ScalarVariable name="vx"        valueReference="13" causality="output" variability="continuous" initial="exact"><Real start="0.0"/></ScalarVariable>
+    <ScalarVariable name="vy"        valueReference="14" causality="output" variability="continuous" initial="exact"><Real start="0.0"/></ScalarVariable>
+    <ScalarVariable name="yaw_rate"  valueReference="15" causality="output" variability="continuous" initial="exact"><Real start="0.0"/></ScalarVariable>
+    <ScalarVariable name="ax_body"   valueReference="16" causality="output" variability="continuous" initial="exact"><Real start="0.0"/></ScalarVariable>
+    <ScalarVariable name="ay_body"   valueReference="17" causality="output" variability="continuous" initial="exact"><Real start="0.0"/></ScalarVariable>
+
+    <ScalarVariable name="roll"      valueReference="20" causality="output" variability="continuous" initial="exact"><Real start="0.0"/></ScalarVariable>
+    <ScalarVariable name="pitch"     valueReference="21" causality="output" variability="continuous" initial="exact"><Real start="0.0"/></ScalarVariable>
+
+    <ScalarVariable name="susp_comp_FL" valueReference="30" causality="output" variability="continuous" initial="exact"><Real start="0.0"/></ScalarVariable>
+    <ScalarVariable name="susp_comp_FR" valueReference="31" causality="output" variability="continuous" initial="exact"><Real start="0.0"/></ScalarVariable>
+    <ScalarVariable name="susp_comp_RL" valueReference="32" causality="output" variability="continuous" initial="exact"><Real start="0.0"/></ScalarVariable>
+    <ScalarVariable name="susp_comp_RR" valueReference="33" causality="output" variability="continuous" initial="exact"><Real start="0.0"/></ScalarVariable>
+
+    <ScalarVariable name="Fz_FL" valueReference="40" causality="output" variability="continuous" initial="exact"><Real start="0.0"/></ScalarVariable>
+    <ScalarVariable name="Fz_FR" valueReference="41" causality="output" variability="continuous" initial="exact"><Real start="0.0"/></ScalarVariable>
+    <ScalarVariable name="Fz_RL" valueReference="42" causality="output" variability="continuous" initial="exact"><Real start="0.0"/></ScalarVariable>
+    <ScalarVariable name="Fz_RR" valueReference="43" causality="output" variability="continuous" initial="exact"><Real start="0.0"/></ScalarVariable>
+  </ModelVariables>
+
+  <ModelStructure>
+    <Outputs>
+      <Unknown index="4"/>  <Unknown index="5"/>  <Unknown index="6"/>
+      <Unknown index="7"/>  <Unknown index="8"/>  <Unknown index="9"/>
+      <Unknown index="10"/> <Unknown index="11"/>
+      <Unknown index="12"/> <Unknown index="13"/>
+      <Unknown index="14"/> <Unknown index="15"/> <Unknown index="16"/> <Unknown index="17"/>
+      <Unknown index="18"/> <Unknown index="19"/> <Unknown index="20"/> <Unknown index="21"/>
+    </Outputs>
+  </ModelStructure>
+</fmiModelDescription>
