@@ -1,0 +1,7 @@
+# Explicit Euler, 1 ms substep.
+# Cheaper per step but less accurate; for L1 it adds bias in yaw rate
+# transient.  Use for benchmarking, not validation.
+
+integrator:     Euler
+max_substep_dt: 0.001   # [s]
+max_substeps:   10

@@ -1,0 +1,34 @@
+# Default Pacejka MF96 (simple form) tire.
+# F = D * sin(C * atan(B*s - E*(B*s - atan(B*s))))
+
+# ---- Longitudinal (slip ratio kappa) ----
+B_long: 10.0
+C_long: 1.65
+D_long: 1.0     # peak normalized to Fz * mu
+E_long: 0.97
+
+# ---- Lateral (slip angle alpha) ----
+B_lat:  8.0
+C_lat:  1.30
+D_lat:  1.0
+E_lat: -1.0
+
+# ---- Friction ----
+mu_nominal: 1.0
+Fz_nominal: 4000.0   # [N]
+
+# ---- Load sensitivity (μ decay with Fz) ----
+# μ_eff(Fz) = μ_nominal · (1 − load_sensitivity · (Fz/Fz_nominal − 1))
+# Typical 0.10–0.25.  Higher = more peak-grip fade at high vertical load.
+load_sensitivity:    0.15
+
+# ---- Transient response (relaxation length) ----
+# Tire forces lag steady state by σ / v_long (rolling distance).
+# Lateral σ 0.3–0.8 m for passenger, 0.1–0.3 for racing.  Longitudinal
+# relaxation is usually much smaller; here exposed for completeness.
+relaxation_length_lat:  0.6
+relaxation_length_long: 0.15
+
+# ---- Linear region (for validation / linear-tire fallback) ----
+cornering_stiffness: 80000.0   # C_alpha [N/rad]
+rolling_resistance:  0.015

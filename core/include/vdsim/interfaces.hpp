@@ -42,6 +42,26 @@ public:
     virtual std::array<double, NUM_WHEELS> tire_Fz()           const = 0;  // [N]
     virtual std::array<double, NUM_WHEELS> wheel_slip_ratio()  const = 0;  // [-]
     virtual std::array<double, NUM_WHEELS> wheel_slip_angle()  const = 0;  // [rad]
+
+    // Quasi-static roll / pitch estimates (zero for L1; non-zero for L2 onward).
+    virtual double roll_angle_qs()  const { return 0.0; }   // [rad]
+    virtual double pitch_angle_qs() const { return 0.0; }   // [rad]
+    virtual double ax_body_est()    const { return 0.0; }   // [m/s^2]
+    virtual double ay_body_est()    const { return 0.0; }
+
+    // Steering-rack feedback torque (sum of front-wheel Mz times steering ratio).
+    // Useful for driver model torque feedback. Returns 0 for L1 (axle-averaged Mz).
+    virtual double steering_rack_torque() const { return 0.0; }   // [N m]
+
+    // External per-wheel camber input [rad] for the next step.  Used by L3
+    // (roll-induced camber) and by callers that have their own suspension
+    // kinematics.  Default no-op; overriding levels may use it.
+    virtual void set_camber_per_wheel(
+        const std::array<double, NUM_WHEELS>& /*gamma*/) noexcept {}
+    // External per-wheel toe input [rad].  Additive to the Ackerman-corrected
+    // steer angle on front; affects all wheels (bump-steer / kinematic toe).
+    virtual void set_toe_per_wheel(
+        const std::array<double, NUM_WHEELS>& /*toe*/) noexcept {}
 };
 
 std::unique_ptr<IVehicleDynamics> create_bicycle();
@@ -60,6 +80,7 @@ public:
         double mu_long  {1.0};    // surface mu scaling [-]
         double mu_lat   {1.0};    // surface mu scaling [-]
         double Vx_wheel {0.0};    // [m/s]
+        double gamma    {0.0};    // camber angle [rad]
     };
     struct Output {
         double Fx {0.0};          // [N] body frame, wheel-axis longitudinal

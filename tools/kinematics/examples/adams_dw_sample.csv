@@ -1,0 +1,10 @@
+name,x,y,z
+hpl_lca_inner_front,0.15,0.30,0.08
+hpl_lca_inner_rear,-0.18,0.30,0.08
+hpl_lca_outer,-0.02,0.75,0.15
+hpl_uca_inner_front,0.08,0.45,0.32
+hpl_uca_inner_rear,-0.22,0.45,0.32
+hpl_uca_outer,-0.01,0.70,0.55
+hpl_tierod_inner,-0.30,0.35,0.18
+hpl_tierod_outer,-0.30,0.74,0.21
+hpl_wheel_center,0.00,0.79,0.33

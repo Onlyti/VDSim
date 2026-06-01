@@ -1,0 +1,13 @@
+vehicle,scenario,vx0,vx_end,delta_vx,r_peak,y_extent
+sedan,step_steer,9.99987,9.72776,-0.27210999999999963,0.179542,16.6103
+sedan,double_lane_change,14.9997,14.3114,-0.6882999999999999,0.312835,4.44459
+sedan,throttle_brake_sequence,5.00122,0.0240714,-4.9771486,0.0,0.0
+sports,step_steer,9.99984,9.69211,-0.30773000000000117,0.189121,17.2307
+sports,double_lane_change,14.9996,14.2269,-0.7726999999999986,0.325553,4.62373
+sports,throttle_brake_sequence,5.0021,0.0153445,-4.9867555,0.0,0.0
+fsk_formula,step_steer,9.99873,8.63392,-1.3648100000000003,0.291042,22.0651
+fsk_formula,double_lane_change,14.9971,11.7501,-3.247,0.46511,6.23472
+fsk_formula,throttle_brake_sequence,5.00362,0.0170267,-4.9865933,0.0,0.0
+race_car,step_steer,9.99968,9.56279,-0.43689,0.180725,16.5828
+race_car,double_lane_change,14.9993,13.8996,-1.0997000000000003,0.304583,4.32791
+race_car,throttle_brake_sequence,5.00456,0.0183014,-4.986258599999999,0.0,0.0

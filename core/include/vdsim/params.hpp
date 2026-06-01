@@ -28,20 +28,32 @@ struct VehicleParams {
     std::array<double, NUM_WHEELS> unsprung_mass      {{40,    40,    40,    40}};     // [kg]
     double roll_stiffness_front {30000.0};                             // [N m/rad]
     double roll_stiffness_rear  {25000.0};                             // [N m/rad]
+    double anti_dive_front      {0.0};                                 // [0, 1] fraction
+    double anti_squat_rear      {0.0};                                 // [0, 1] fraction
+    double camber_per_roll      {0.0};                                 // [rad/rad] roll-to-camber gain
 
     // ---- Drivetrain ----
     enum class Drive { FWD, RWD, AWD };
+    enum class Differential { Open, Locked, LSD };
     Drive  drive_type            {Drive::RWD};
+    Differential differential    {Differential::Open};
+    double lsd_preload           {0.10};    // [-] 0..0.5, baseline bias magnitude
+    double lsd_ramp              {0.20};    // [-] per (rad/s) bias growth
     double max_motor_torque      {300.0};                              // [Nm]
     double max_brake_torque      {2000.0};                             // [Nm]
+    double brake_bias_front      {0.5};                                // front share [0, 1]
+    bool   brake_ebd_enabled     {false};                              // dynamic Fz-based bias
 
     // ---- Steering ----
     double steering_ratio        {15.0};                               // wheel/driver
     double max_steer_angle_wheel {0.5};                                // [rad]
+    double ackerman_percent      {0.0};                                // 0 = parallel, 100 = perfect Ackerman
 
     // ---- Aero ----
     double aero_drag_coeff       {0.30};                               // Cd
     double frontal_area          {2.2};                                // [m^2]
+    double aero_lift_front       {0.0};                                // Cl_front (positive = downforce)
+    double aero_lift_rear        {0.0};                                // Cl_rear  (positive = downforce)
 
     static VehicleParams from_yaml(const std::string& path);
     void to_yaml(const std::string& path) const;
@@ -67,10 +79,35 @@ struct TireParams {
 
     // Linear region (for validation / fallback)
     double cornering_stiffness   {80000.0};     // C_alpha [N/rad]
-    double rolling_resistance    {0.015};
+    double rolling_resistance    {0.0};         // 0 = off (analytical baseline). Typical 0.010-0.015.
+
+    // Combined slip (friction ellipse) and aligning moment
+    bool   combined_slip_enabled {true};        // false -> Fx, Fy decoupled (legacy)
+    double pneumatic_trail       {0.05};        // [m] t_p_0, Mz = -t_p * Fy
+    double trail_falloff_alpha   {0.20};        // [rad] t_p decay scale
+
+    // Camber thrust: extra Fy_camber = -camber_stiffness * gamma * Fz * mu
+    double camber_stiffness      {0.0};         // [1/rad]  default off
+
+    // Load sensitivity:  μ_eff(Fz) = μ_nominal · (1 - load_sensitivity · (Fz/Fz_nominal - 1))
+    // Floor μ_eff at 0.3 · μ_nominal to keep numerics sane at very high Fz.
+    // Typical 0.10 – 0.25.  0.0 = legacy (no load sensitivity).
+    double load_sensitivity      {0.0};
+
+    // Transient response (relaxation length).  σ / |v_long| acts as 1st-order
+    // lag on slip; tire force responds to a transient slip α_dyn / κ_dyn that
+    // satisfies σ/|v| · ṡ_dyn = s_geom − s_dyn.  Stored on the dynamics state,
+    // NOT inside the stateless compute() — these are advisory params for the
+    // host integrator (Ld2 / Ld3 / Ld1).  0.0 = legacy (instant response).
+    double relaxation_length_lat   {0.0};       // σ_y [m]
+    double relaxation_length_long  {0.0};       // σ_x [m]
+
+    // Vertical tire stiffness (for L3 ride dynamics). Typical 150-300 kN/m.
+    double tire_vertical_stiffness {220000.0};  // [N/m]
 
     static TireParams from_yaml(const std::string& path);
     static TireParams from_tir(const std::string& path);   // AVL .tir (Phase 2)
+    void              to_yaml (const std::string& path) const;
 };
 
 struct SolverParams {
@@ -78,6 +115,9 @@ struct SolverParams {
     Integrator integrator   {Integrator::RK4};
     double     max_substep_dt {1e-3};           // [s]
     int        max_substeps   {10};
+
+    static SolverParams from_yaml(const std::string& path);
+    void                to_yaml (const std::string& path) const;
 };
 
 }  // namespace vdsim

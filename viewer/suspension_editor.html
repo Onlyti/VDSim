@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>VDSim · Suspension Hardpoint Editor</title>
+<style>
+  html, body { margin:0; padding:0; height:100%; font-family: -apple-system, Helvetica, Arial, sans-serif;
+               background:#fafafa; color:#222; overflow:hidden; }
+  #app { display:grid; grid-template-columns: 1fr 360px 320px; height: 100vh; }
+  #scene { background: #1a1a1a; position: relative; }
+  #scene canvas { display:block; }
+  #curves { padding: 10px; overflow-y: auto; border-left: 1px solid #ddd; background: #fff; }
+  #controls { padding: 10px; overflow-y: auto; border-left: 1px solid #ddd; background: #f0f0f0; }
+  .curve-card { margin-bottom: 16px; }
+  .curve-card h3 { margin: 4px 0; font-size: 13px; color: #333; font-weight: 600; }
+  canvas.plot { width:100%; height:120px; background:#fefefe; border:1px solid #ddd; }
+  .hp-row { display:flex; align-items:center; padding:4px 0; font-size:12px; font-family: monospace; }
+  .hp-row label { flex:1; font-weight:600; color: #444; }
+  .hp-row input { width: 65px; margin-left:4px; padding:3px; font-family: monospace; font-size:11px;
+                   border:1px solid #ccc; border-radius:3px; }
+  .hp-row .delta { color: #888; margin-left: 4px; }
+  .header { font-size: 14px; font-weight: 700; padding: 6px 0; color: #005195; border-bottom: 1px solid #ddd; margin-bottom: 8px; }
+  button { background: #005195; color:white; border:0; padding:8px 14px; font-size: 13px; cursor: pointer; border-radius: 3px; margin-right: 4px; }
+  button:hover { background: #004080; }
+  #status { position: absolute; top: 10px; left: 10px; color: #fff; font-family: monospace; font-size: 11px;
+            background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 3px; }
+  .axis-tag { color: #999; font-size:10px; margin-left:2px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="scene">
+    <div id="status">connecting…</div>
+  </div>
+  <div id="controls">
+    <div class="header">Hardpoint editor</div>
+    <div style="font-size:11px; color:#666; margin-bottom:8px;">
+      Type: <span id="type-label">-</span> · Side: <span id="side-label">-</span>
+    </div>
+    <div id="hp-list"></div>
+    <div style="margin-top:12px;">
+      <button onclick="onSave()">💾 Save YAML</button>
+      <button onclick="onReset()">↺ Reset</button>
+    </div>
+    <div style="font-size:11px; color:#888; margin-top:8px;">
+      Edit a coordinate → curves recompute. Save writes back to original path.
+    </div>
+  </div>
+  <div id="curves">
+    <div class="header">Kinematic curves vs travel</div>
+    <div class="curve-card">
+      <h3>Camber [°]</h3>
+      <canvas class="plot" id="plot-camber" width="290" height="120"></canvas>
+    </div>
+    <div class="curve-card">
+      <h3>Toe [°]</h3>
+      <canvas class="plot" id="plot-toe" width="290" height="120"></canvas>
+    </div>
+    <div class="curve-card">
+      <h3>Track change [mm]</h3>
+      <canvas class="plot" id="plot-track" width="290" height="120"></canvas>
+    </div>
+    <div class="curve-card">
+      <h3>Reading at travel = 0</h3>
+      <div id="static-readout" style="font-family:monospace; font-size:11px; line-height:1.6;"></div>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// --------------- WebSocket -----------------
+const ws = new WebSocket("ws://localhost:8765");
+let originalHp = null;
+let currentState = null;
+
+ws.onopen = () => {
+  document.getElementById('status').textContent = "connected; loading…";
+  // Default DW front sample
+  ws.send(JSON.stringify({
+    action: "load",
+    config: "configs/suspensions/dw_front_sports.yaml"
+  }));
+};
+ws.onerror = e => { document.getElementById('status').textContent = "WS error"; };
+ws.onmessage = ev => {
+  const msg = JSON.parse(ev.data);
+  if (msg.error) { console.error(msg.error); return; }
+  if (msg.hp && originalHp === null) {
+    originalHp = JSON.parse(JSON.stringify(msg.hp));
+  }
+  if (msg.hp) renderControls(msg);
+  if (msg.sweep) renderCurves(msg.sweep);
+  if (msg.geometry) renderGeometry(msg.geometry);
+  if (msg.saved) { document.getElementById('status').textContent = "saved → " + msg.path; }
+  document.getElementById('status').textContent = "ready";
+  currentState = msg;
+};
+
+// --------------- 3D scene -----------------
+const sceneDiv = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(sceneDiv.clientWidth, sceneDiv.clientHeight);
+renderer.setClearColor(0x1a1a1a);
+sceneDiv.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, sceneDiv.clientWidth / sceneDiv.clientHeight, 0.01, 100);
+camera.position.set(2.0, 1.5, 1.2);
+camera.up.set(0, 0, 1);
+scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+dirLight.position.set(2, 2, 3);
+scene.add(dirLight);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0.4, 0.3);
+
+// Ground grid (y-z plane)
+const grid = new THREE.GridHelper(2, 10, 0x555555, 0x303030);
+grid.rotation.x = Math.PI / 2;   // grid in x-y; rotate to lay flat with z up
+scene.add(grid);
+const axes = new THREE.AxesHelper(0.3);
+scene.add(axes);
+
+// Hardpoint sphere registry
+let hpSpheres = {};   // path -> Mesh
+let linksGroup = new THREE.Group();
+scene.add(linksGroup);
+
+function clearGeometry() {
+  for (const k in hpSpheres) scene.remove(hpSpheres[k]);
+  hpSpheres = {};
+  while (linksGroup.children.length) linksGroup.remove(linksGroup.children[0]);
+}
+
+function makeLine(p1, p2, color) {
+  const g = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(p1[0], p1[1], p1[2]),
+    new THREE.Vector3(p2[0], p2[1], p2[2]),
+  ]);
+  return new THREE.Line(g, new THREE.LineBasicMaterial({ color, linewidth: 2 }));
+}
+
+const TYPE_LINKS = {
+  double_wishbone: [
+    ["lca.chassis_front", "lca.knuckle", 0x1565c0],
+    ["lca.chassis_rear",  "lca.knuckle", 0x1565c0],
+    ["uca.chassis_front", "uca.knuckle", 0xc62828],
+    ["uca.chassis_rear",  "uca.knuckle", 0xc62828],
+    ["tie_rod.rack",      "tie_rod.knuckle", 0x6a1b9a],
+    ["lca.knuckle",       "uca.knuckle", 0x37474f],
+  ],
+  macpherson: [
+    ["lca.chassis_front", "lca.knuckle", 0x1565c0],
+    ["lca.chassis_rear",  "lca.knuckle", 0x1565c0],
+    ["strut.top",         "strut.bottom", 0xc62828],
+    ["tie_rod.rack",      "tie_rod.knuckle", 0x6a1b9a],
+  ],
+  trailing_arm: [
+    ["arm_pivot.chassis_inboard",  "wheel.center", 0x1565c0],
+    ["arm_pivot.chassis_outboard", "wheel.center", 0x1565c0],
+  ],
+  five_link: [
+    ["links.upper_fore.chassis",  "links.upper_fore.knuckle",  0x1565c0],
+    ["links.upper_aft.chassis",   "links.upper_aft.knuckle",   0x1565c0],
+    ["links.lower_fore.chassis",  "links.lower_fore.knuckle",  0xc62828],
+    ["links.lower_aft.chassis",   "links.lower_aft.knuckle",   0xc62828],
+    ["links.toe_link.chassis",    "links.toe_link.knuckle",    0x6a1b9a],
+  ],
+};
+
+function renderGeometry(geom) {
+  clearGeometry();
+  const type = currentState ? currentState.type : "double_wishbone";
+
+  // Spheres at each hardpoint
+  for (const [path, p] of Object.entries(geom)) {
+    const sphere = new THREE.Mesh(
+      new THREE.SphereGeometry(0.012, 16, 16),
+      new THREE.MeshLambertMaterial({ color: path.includes("wheel") ? 0xffeb3b : 0xeeeeee })
+    );
+    sphere.position.set(p[0], p[1], p[2]);
+    scene.add(sphere);
+    hpSpheres[path] = sphere;
+  }
+
+  // Wheel disc
+  if (geom["wheel.center"]) {
+    const wc = geom["wheel.center"];
+    const r = (currentState && currentState.hp && currentState.hp.wheel && currentState.hp.wheel.static_radius) || 0.32;
+    const ring = new THREE.RingGeometry(r * 0.97, r, 32);
+    const mat = new THREE.MeshBasicMaterial({ color: 0x424242, side: THREE.DoubleSide });
+    const disc = new THREE.Mesh(ring, mat);
+    disc.position.set(wc[0], wc[1], wc[2]);
+    disc.rotation.y = Math.PI / 2;   // face +y
+    scene.add(disc);
+    linksGroup.add(disc);
+  }
+
+  // Lines for the linkage
+  const links = TYPE_LINKS[type] || [];
+  for (const [pathA, pathB, color] of links) {
+    if (geom[pathA] && geom[pathB]) {
+      linksGroup.add(makeLine(geom[pathA], geom[pathB], color));
+    }
+  }
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+// --------------- Controls panel -----------------
+function renderControls(msg) {
+  document.getElementById('type-label').textContent = msg.type || "-";
+  document.getElementById('side-label').textContent = msg.hp.side || "-";
+  const list = document.getElementById('hp-list');
+  list.innerHTML = "";
+  const editable = collectHardpoints(msg.hp);
+  for (const path of editable) {
+    const val = pathGet(msg.hp, path);
+    if (!Array.isArray(val) || val.length !== 3) continue;
+    const orig = pathGet(originalHp, path);
+    for (let axis = 0; axis < 3; ++axis) {
+      const row = document.createElement('div');
+      row.className = "hp-row";
+      const label = document.createElement('label');
+      label.textContent = `${path}.${'xyz'[axis]}`;
+      const input = document.createElement('input');
+      input.type = "number";
+      input.step = "0.005";
+      input.value = val[axis].toFixed(3);
+      input.addEventListener('change', () => {
+        const v = [...val]; v[axis] = parseFloat(input.value);
+        ws.send(JSON.stringify({action: "update", path, value: v}));
+      });
+      const delta = document.createElement('span');
+      delta.className = "delta";
+      const diff = val[axis] - orig[axis];
+      delta.textContent = (Math.abs(diff) < 1e-4) ? "" : `Δ${(diff * 1000).toFixed(1)}mm`;
+      row.appendChild(label);
+      row.appendChild(input);
+      row.appendChild(delta);
+      list.appendChild(row);
+    }
+  }
+}
+
+function collectHardpoints(hp) {
+  // List paths to nodes that are length-3 numeric arrays.
+  const out = [];
+  function walk(obj, prefix) {
+    if (Array.isArray(obj) && obj.length === 3 && obj.every(v => typeof v === "number")) {
+      if (prefix) out.push(prefix);
+      return;
+    }
+    if (typeof obj === "object" && obj !== null) {
+      for (const k in obj) walk(obj[k], prefix ? `${prefix}.${k}` : k);
+    }
+  }
+  walk(hp, "");
+  return out.filter(p => !p.startsWith("wheel.spin_axis"));
+}
+
+function pathGet(obj, path) {
+  const parts = path.split(".");
+  for (const p of parts) obj = obj[p];
+  return obj;
+}
+
+// --------------- Curves rendering -----------------
+function drawPlot(canvasId, x, y, color, fmt) {
+  const c = document.getElementById(canvasId);
+  const ctx = c.getContext('2d');
+  const w = c.width, h = c.height;
+  ctx.clearRect(0, 0, w, h);
+  if (x.length === 0) return;
+  const xmin = Math.min(...x), xmax = Math.max(...x);
+  const ymin = Math.min(...y), ymax = Math.max(...y);
+  const ypad = Math.max(0.01, (ymax - ymin) * 0.1);
+  const y0 = ymin - ypad, y1 = ymax + ypad;
+  const X = v => (v - xmin) / (xmax - xmin) * (w - 30) + 25;
+  const Y = v => h - 10 - (v - y0) / (y1 - y0) * (h - 20);
+  // Axes
+  ctx.strokeStyle = '#bbb';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  if (y0 < 0 && y1 > 0) { ctx.moveTo(25, Y(0)); ctx.lineTo(w-5, Y(0)); }
+  if (xmin < 0 && xmax > 0) { ctx.moveTo(X(0), 5); ctx.lineTo(X(0), h-10); }
+  ctx.stroke();
+  // Curve
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.moveTo(X(x[0]), Y(y[0]));
+  for (let i = 1; i < x.length; ++i) ctx.lineTo(X(x[i]), Y(y[i]));
+  ctx.stroke();
+  // Labels
+  ctx.fillStyle = '#666'; ctx.font = '10px sans-serif';
+  ctx.fillText(fmt(y0), 2, h - 10);
+  ctx.fillText(fmt(y1), 2, 12);
+}
+
+function renderCurves(sweep) {
+  const travels_mm = sweep.map(r => r.travel * 1000);
+  const camber_deg = sweep.map(r => r.camber * 180 / Math.PI);
+  const toe_deg    = sweep.map(r => r.toe    * 180 / Math.PI);
+  const track_mm   = sweep.map(r => r.track_change * 1000);
+  drawPlot('plot-camber', travels_mm, camber_deg, '#c62828', v => v.toFixed(2));
+  drawPlot('plot-toe',    travels_mm, toe_deg,    '#388e3c', v => v.toFixed(2));
+  drawPlot('plot-track',  travels_mm, track_mm,   '#1565c0', v => v.toFixed(1));
+  // Static readout
+  const mid = sweep.find(r => Math.abs(r.travel) < 1e-6);
+  if (mid) {
+    document.getElementById('static-readout').innerHTML =
+      `camber:  ${(mid.camber * 180/Math.PI).toFixed(4)}°<br>` +
+      `toe:     ${(mid.toe    * 180/Math.PI).toFixed(4)}°<br>` +
+      `track:   ${(mid.track_change * 1000).toFixed(2)} mm`;
+  }
+}
+
+window.onSave = () => {
+  ws.send(JSON.stringify({action: "save",
+    path: "configs/suspensions/edited.yaml"}));
+};
+window.onReset = () => {
+  // Reload from disk
+  ws.send(JSON.stringify({action: "load",
+    config: "configs/suspensions/dw_front_sports.yaml"}));
+};
+</script>
+</body>
+</html>

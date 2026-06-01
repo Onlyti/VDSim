@@ -1,0 +1,34 @@
+# Example DOE / parameter sweep: how does cornering stiffness and CG height
+# affect step-steer yaw response of a sports-trim vehicle at 25 m/s ?
+#
+# Run:
+#   python3 apps/doe/sweep_runner.py --config apps/doe/example_sweep.yaml
+
+base:
+  vehicle: configs/vehicles/sports.yaml
+  tire:    configs/tires/default_pacejka.yaml
+  level:   L2
+
+parameters:
+  vehicle.cg_height: [0.35, 0.42, 0.50, 0.58]
+  tire.D_lat:        [0.8, 0.95, 1.05, 1.20]   # Pacejka MF96 lateral peak factor
+  # tire.mu_nominal: [0.8, 1.0, 1.2]           # uniform surface mu
+  # vehicle.mass:    [1200, 1320, 1450]
+
+scenarios:
+  step_30deg_at_25:
+    type: step_steer
+    params: {v_target: 25.0, steer_deg: 30.0, t_pre: 0.5, t_post: 4.0, dt: 0.005}
+  step_15deg_at_30:
+    type: step_steer
+    params: {v_target: 30.0, steer_deg: 15.0, t_pre: 0.5, t_post: 4.0, dt: 0.005}
+
+metrics:
+  - peak_yaw_rate
+  - steady_state_yaw_rate
+  - yaw_overshoot
+  - yaw_settling_time
+  - peak_lateral_g
+
+output:
+  csv: sweep_results.csv

@@ -1,0 +1,13 @@
+# FSK SAE skidpad: constant radius (R~10m) circular run.
+# Required wheel angle for R=10, L=2.7 (sedan) -> delta = atan(L/R) ~ 0.265 rad.
+
+name:          skidpad
+initial_vx:    8.0
+duration:      10.0
+dt:            0.005
+mu:            1.0
+interpolation: zoh
+
+controls:
+  - { t: 0.0,  throttle: 0.0, brake: 0.0, steer: 0.27 }
+  - { t: 10.0, throttle: 0.0, brake: 0.0, steer: 0.27 }

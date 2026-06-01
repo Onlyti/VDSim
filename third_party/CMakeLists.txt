@@ -1,5 +1,8 @@
 include(FetchContent)
 
+# Make all FetchContent targets PIC so they can link into shared objects.
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # Eigen3 (MPL2, headers only)
 FetchContent_Declare(
     eigen

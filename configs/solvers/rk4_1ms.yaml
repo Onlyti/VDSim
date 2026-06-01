@@ -1,0 +1,6 @@
+# RK4 integrator, 1 ms substep, up to 10 substeps per outer dt.
+# Default. Stable for L1 bicycle through L3 14-DOF.
+
+integrator:     RK4
+max_substep_dt: 0.001   # [s]
+max_substeps:   10

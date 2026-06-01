@@ -1,0 +1,42 @@
+# 5-link rear suspension — sports trim baseline.
+#
+# Frame: body frame ISO 8855 RH (+x forward, +y leftward, +z up).
+# Hardpoints for LEFT wheel (RL); right is mirrored.
+#
+# Five independent 2-ball-joint rigid links connect chassis to knuckle.
+# Each link constrains 1 length, total 5 constraints on the 6-DOF knuckle
+# → 1 DOF remaining (wheel travel).  No tie rod (rear, no steer) — the
+# steering DOF on a 5-link rear is achieved by re-arranging links rather
+# than a separate tie rod.
+#
+# Solver: knuckle pose = (x, y, z, axis-angle 3-vec) = 6 DOF.
+# Residuals: 5 link lengths.  Newton-LM finds the unique config per
+# wheel travel target via continuation from static.
+
+type: five_link
+side: left
+
+wheel:
+  center:        [-1.35, 0.78, 0.305]
+  spin_axis:     [0.0, 1.0, 0.0]
+  static_radius: 0.305
+
+# Each link: chassis-side ball + knuckle-side ball.
+# Standard naming: upper fore (UF), upper aft (UA), lower fore (LF),
+# lower aft (LA), toe link (TL).
+links:
+  upper_fore:
+    chassis: [-1.10, 0.42, 0.50]
+    knuckle: [-1.30, 0.72, 0.48]
+  upper_aft:
+    chassis: [-1.60, 0.42, 0.50]
+    knuckle: [-1.40, 0.72, 0.48]
+  lower_fore:
+    chassis: [-1.10, 0.42, 0.15]
+    knuckle: [-1.30, 0.74, 0.16]
+  lower_aft:
+    chassis: [-1.60, 0.42, 0.15]
+    knuckle: [-1.40, 0.74, 0.16]
+  toe_link:
+    chassis: [-1.55, 0.42, 0.32]      # acts as effective "tie rod"
+    knuckle: [-1.42, 0.74, 0.32]

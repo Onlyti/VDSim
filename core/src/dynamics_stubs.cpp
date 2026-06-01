@@ -8,14 +8,7 @@
 
 namespace vdsim {
 
-std::unique_ptr<IVehicleDynamics> create_seven_dof() {
-    throw std::runtime_error(
-        "vdsim::create_seven_dof: L2 7-DOF not yet implemented (planned W9-W10)");
-}
-
-std::unique_ptr<IVehicleDynamics> create_fourteen_dof() {
-    throw std::runtime_error(
-        "vdsim::create_fourteen_dof: L3 14-DOF not yet implemented (planned W11-W12)");
-}
+// L2 (create_seven_dof) provided by core/src/seven_dof_dynamics.cpp.
+// L3 (create_fourteen_dof) provided by core/src/fourteen_dof_dynamics.cpp.
 
 }  // namespace vdsim

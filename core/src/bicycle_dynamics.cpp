@@ -17,14 +17,52 @@
 #include "vdsim/coordinate.hpp"
 #include "vdsim/interfaces.hpp"
 
+#include <spdlog/spdlog.h>
+
 #include <algorithm>
 #include <cmath>
 #include <memory>
+#include <numeric>
+#include <type_traits>
 #include <variant>
 
 namespace vdsim {
 
 namespace {
+
+// Lower L1/L2/L3 commands to a unified L4 (throttle/brake/steer) for the
+// downstream dynamics path.  Higher-level inputs (L5..L8) fall back to zero
+// — they should be handled by an external converter cascade.
+inline CmdL4 lower_to_l4(const ControlInput& u) {
+    return std::visit([](const auto& cmd) -> CmdL4 {
+        using T = std::decay_t<decltype(cmd)>;
+        CmdL4 out;
+        if constexpr (std::is_same_v<T, CmdL1>) {
+            const double T_drive = std::accumulate(cmd.motor_torque.begin(),
+                                                    cmd.motor_torque.end(), 0.0);
+            const double T_brake = std::accumulate(cmd.brake_torque.begin(),
+                                                    cmd.brake_torque.end(), 0.0);
+            // Normalize against typical max sums (300 Nm motor * 1 axle, etc.)
+            out.throttle = std::clamp(T_drive / 600.0, -1.0, 1.0);
+            out.brake    = std::clamp(T_brake / 4000.0, 0.0, 1.0);
+            if (out.throttle < 0.0) { out.brake = std::max(out.brake, -out.throttle); out.throttle = 0.0; }
+            out.steer_angle_wheel = cmd.steer_angle_wheel;
+        } else if constexpr (std::is_same_v<T, CmdL2>) {
+            out.throttle = std::clamp(cmd.drive_torque / 600.0, -1.0, 1.0);
+            out.brake    = std::clamp(cmd.brake_torque / 4000.0, 0.0, 1.0);
+            if (out.throttle < 0.0) { out.brake = std::max(out.brake, -out.throttle); out.throttle = 0.0; }
+            out.steer_angle_wheel = cmd.steer_angle_wheel;
+        } else if constexpr (std::is_same_v<T, CmdL3>) {
+            const double scale = cmd.Fx_total / (1500.0 * 5.0);   // m * a_ref
+            out.throttle = std::clamp(scale, 0.0, 1.0);
+            out.brake    = std::clamp(-scale, 0.0, 1.0);
+            out.steer_angle_wheel = cmd.steer_angle_wheel;
+        } else if constexpr (std::is_same_v<T, CmdL4>) {
+            out = cmd;
+        }
+        return out;
+    }, u);
+}
 
 constexpr double kAirDensity   = 1.225;   // [kg/m^3]
 constexpr double kGravity      = 9.80665; // [m/s^2]
@@ -48,6 +86,10 @@ public:
         tp_ = tp;
         sp_ = sp;
         tire_->initialize(tp);
+        spdlog::debug("[L1 Bicycle] init: mass={:.0f} kg, L={:.2f} m, wr={:.3f} m, "
+                      "RWD={}, ackerman={:.0f}%",
+                      vp.mass, vp.wheelbase, vp.wheel_radius_nominal,
+                      vp.drive_type == VehicleParams::Drive::RWD, vp.ackerman_percent);
 
         // Wheel rotational inertia: solid disk approximation 0.5 * m * R^2.
         const double m_wheel = vp.unsprung_mass[WHEEL_FL] > 0.0
@@ -58,18 +100,31 @@ public:
     }
 
     void reset(const State& s) noexcept override {
-        state_ = s;
+        state_   = s;
+        ax_prev_ = 0.0;
+        alpha_dyn_f_ = alpha_dyn_r_ = 0.0;
+        alpha_geom_f_last_ = alpha_geom_r_last_ = 0.0;
+        v_fx_wheel_last_ = v_rx_body_last_ = 0.0;
     }
 
     void step(const ControlInput& u,
               const ContactArray& contacts,
               double dt) noexcept override {
-        // PoC: only L4 is honored. Other variants treated as zero command.
-        const CmdL4* cmd_ptr = std::get_if<CmdL4>(&u);
-        const CmdL4  zero;
-        const CmdL4& cmd = cmd_ptr ? *cmd_ptr : zero;
+        // L1-L4 direct dispatch via std::visit. Higher levels fall back to zero.
+        CmdL4 cmd = lower_to_l4(u);
 
-        if (!(dt > 0.0)) return;
+        // NaN/Inf guard on inputs — log once then sanitize.
+        auto sanitize = [](double& v, double lo, double hi) {
+            if (!std::isfinite(v)) { v = 0.0; return true; }
+            if (v < lo) v = lo; if (v > hi) v = hi; return false;
+        };
+        bool bad = false;
+        bad |= sanitize(cmd.throttle, 0.0, 1.0);
+        bad |= sanitize(cmd.brake,    0.0, 1.0);
+        bad |= sanitize(cmd.steer_angle_wheel, -1.5, 1.5);
+        if (bad) spdlog::warn("[L1] non-finite CmdL4 sanitized");
+
+        if (!(dt > 0.0) || !std::isfinite(dt)) return;
 
         const int N = std::max(1,
                        std::min(sp_.max_substeps,
@@ -114,10 +169,21 @@ private:
         const double b   = vp_.cg_to_rear;
         const double L   = vp_.wheelbase;
         const double R   = vp_.wheel_radius_nominal;
+        const double h_cg = vp_.cg_height;
 
-        // Static Fz per axle.
-        const double Fz_f = m * kGravity * b / L;
-        const double Fz_r = m * kGravity * a / L;
+        // Aerodynamic downforce per axle (positive Cl -> Fz increase).
+        const double q_aero = 0.5 * kAirDensity * vp_.frontal_area * vx * std::abs(vx);
+        const double Fz_aero_f = vp_.aero_lift_front * q_aero;
+        const double Fz_aero_r = vp_.aero_lift_rear  * q_aero;
+
+        // Quasi-static longitudinal weight transfer (1-step lag on ax to
+        // avoid self-reference).  ax > 0 (accel) -> rear loaded.
+        const double dFz_long = m * ax_prev_ * h_cg / L;
+        double Fz_f = m * kGravity * b / L + Fz_aero_f - dFz_long;
+        double Fz_r = m * kGravity * a / L + Fz_aero_r + dFz_long;
+        // Clamp to non-negative (extreme braking can lift rear).
+        if (Fz_f < 0.0) Fz_f = 0.0;
+        if (Fz_r < 0.0) Fz_r = 0.0;
 
         // Average mu from front/rear contact pairs.
         auto avg = [](double p, double q) { return 0.5 * (p + q); };
@@ -152,15 +218,27 @@ private:
         const double kappa_r = (R * or_ - v_rx_body)  / denom_r;
 
         // ---- Tire forces (Pacejka in wheel frame) ----
+        // Use transient α_dyn when relaxation length is enabled.
+        const double alpha_in_f = (tp_.relaxation_length_lat > 1e-6)
+                                  ? alpha_dyn_f_ : alpha_f;
+        const double alpha_in_r = (tp_.relaxation_length_lat > 1e-6)
+                                  ? alpha_dyn_r_ : alpha_r;
         ITireModel::Input in_f;
-        in_f.Fz = Fz_f; in_f.kappa = kappa_f; in_f.alpha = alpha_f;
+        in_f.Fz = Fz_f; in_f.kappa = kappa_f; in_f.alpha = alpha_in_f;
         in_f.mu_long = mu_long_f; in_f.mu_lat = mu_lat_f; in_f.Vx_wheel = v_fx_wheel;
         const auto F_f = tire_->compute(in_f);
 
         ITireModel::Input in_r;
-        in_r.Fz = Fz_r; in_r.kappa = kappa_r; in_r.alpha = alpha_r;
+        in_r.Fz = Fz_r; in_r.kappa = kappa_r; in_r.alpha = alpha_in_r;
         in_r.mu_long = mu_long_r; in_r.mu_lat = mu_lat_r; in_r.Vx_wheel = v_rx_body;
         const auto F_r = tire_->compute(in_r);
+
+        // Cache geometric α and wheel-frame Vx for the substep-end relaxation
+        // update (done in substep(), not inside derivatives()).
+        alpha_geom_f_last_ = alpha_f;
+        alpha_geom_r_last_ = alpha_r;
+        v_fx_wheel_last_   = v_fx_wheel;
+        v_rx_body_last_    = v_rx_body;
 
         // Rotate wheel-frame front forces back into body frame.
         const double Fx_body_f = F_f.Fx * cd - F_f.Fy * sd;
@@ -171,6 +249,9 @@ private:
         // Aero drag (opposes body-X velocity).
         const double F_aero = 0.5 * kAirDensity * vp_.aero_drag_coeff *
                               vp_.frontal_area * vx * std::abs(vx);
+        // Rolling resistance: f_rr * (Fz_f + Fz_r) * tanh(vx / 0.5)
+        const double F_rr = tp_.rolling_resistance * (Fz_f + Fz_r) *
+                            std::tanh(vx / 0.5);
 
         // ---- Drive / brake torques ----
         double Td_f = 0.0, Td_r = 0.0;
@@ -189,17 +270,23 @@ private:
         if (cmd.gear < 0) {                   // reverse
             Td_f = -Td_f; Td_r = -Td_r;
         }
-        const double Tb_f_mag = 0.5 * cmd.brake * vp_.max_brake_torque;
-        const double Tb_r_mag = 0.5 * cmd.brake * vp_.max_brake_torque;
+        double bias = std::clamp(vp_.brake_bias_front, 0.0, 1.0);
+        if (vp_.brake_ebd_enabled) {
+            const double total = Fz_f + Fz_r;
+            if (total > 1.0) bias = std::clamp(Fz_f / total, 0.05, 0.95);
+        }
+        const double Tb_f_mag =  bias        * cmd.brake * vp_.max_brake_torque;
+        const double Tb_r_mag = (1.0 - bias) * cmd.brake * vp_.max_brake_torque;
         const double Tb_f = -smooth_sign(of,  kBrakeWidth) * Tb_f_mag;
         const double Tb_r = -smooth_sign(or_, kBrakeWidth) * Tb_r_mag;
 
         // ---- Body equations of motion (ISO 8855) ----
         // m*(vx_dot - vy*r) = Fx_body  =>  vx_dot = Fx/m + vy*r
         // m*(vy_dot + vx*r) = Fy_body  =>  vy_dot = Fy/m - vx*r
-        const double Fx_total = Fx_body_f + Fx_body_r - F_aero;
+        const double Fx_total = Fx_body_f + Fx_body_r - F_aero - F_rr;
         const double Fy_total = Fy_body_f + Fy_body_r;
-        const double Mz_total = a * Fy_body_f - b * Fy_body_r;
+        // Wheel-z and body-z are parallel (camber=0 assumed); Mz adds directly.
+        const double Mz_total = a * Fy_body_f - b * Fy_body_r + F_f.Mz + F_r.Mz;
 
         Deriv d_out;
         d_out.dx_world = vx * std::cos(yaw) - vy * std::sin(yaw);
@@ -244,7 +331,8 @@ private:
         const State s0 = state_;
         if (sp_.integrator == SolverParams::Integrator::Euler) {
             const Deriv k = derivatives(s0, cmd, contacts);
-            state_ = apply(s0, k, h);
+            state_   = apply(s0, k, h);
+            ax_prev_ = k.dvx;
             return;
         }
         // RK4
@@ -263,7 +351,20 @@ private:
         k.domega_f = (k1.domega_f + 2.0 * k2.domega_f + 2.0 * k3.domega_f + k4.domega_f) / 6.0;
         k.domega_r = (k1.domega_r + 2.0 * k2.domega_r + 2.0 * k3.domega_r + k4.domega_r) / 6.0;
 
-        state_ = apply(s0, k, h);
+        state_   = apply(s0, k, h);
+        ax_prev_ = k.dvx;
+        // Transient slip-angle relaxation (per axle, between substeps).
+        if (tp_.relaxation_length_lat > 1e-6) {
+            const double sigma = tp_.relaxation_length_lat;
+            const double vf = std::max(std::abs(v_fx_wheel_last_), kSpeedEps);
+            const double vr = std::max(std::abs(v_rx_body_last_),  kSpeedEps);
+            const double df = std::exp(-vf * h / sigma);
+            const double dr = std::exp(-vr * h / sigma);
+            alpha_dyn_f_ = alpha_geom_f_last_
+                         + (alpha_dyn_f_ - alpha_geom_f_last_) * df;
+            alpha_dyn_r_ = alpha_geom_r_last_
+                         + (alpha_dyn_r_ - alpha_geom_r_last_) * dr;
+        }
     }
 
     VehicleParams vp_;
@@ -273,10 +374,18 @@ private:
     double I_wheel_ {1.0};
 
     State state_;
+    double ax_prev_ {0.0};
     std::array<Vec3, NUM_WHEELS>   tire_F_    {};
     std::array<double, NUM_WHEELS> tire_Fz_   {};
     std::array<double, NUM_WHEELS> slip_ratio_ {};
     std::array<double, NUM_WHEELS> slip_angle_ {};
+    // Per-axle transient slip + last-step caches (for relaxation length).
+    double alpha_dyn_f_       {0.0};
+    double alpha_dyn_r_       {0.0};
+    double alpha_geom_f_last_ {0.0};
+    double alpha_geom_r_last_ {0.0};
+    double v_fx_wheel_last_   {0.0};
+    double v_rx_body_last_    {0.0};
 };
 
 }  // namespace

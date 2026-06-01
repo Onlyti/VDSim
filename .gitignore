@@ -64,3 +64,10 @@ logs/
 
 # CTest output
 Testing/
+
+# MkDocs build output
+site/
+
+# Animation raw frames (mp4 is committed instead)
+carla_integration/results/*/frames/
+apps/jump_demo/*/frames/

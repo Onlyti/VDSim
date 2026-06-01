@@ -1,0 +1,15 @@
+# Sweep aero drag coefficient × initial vx using L1 vs L2.
+
+base_vehicle:  configs/vehicles/sedan.yaml
+base_tire:     configs/tires/default_pacejka.yaml
+base_scenario: configs/scenarios/step_steer.yaml
+binary:        vdsim_l1_vs_l2
+
+sweep:
+  - param:  vehicle.aero_drag_coeff
+    values: [0.20, 0.30, 0.40]
+  - param:  scenario.initial_vx
+    values: [5.0, 10.0, 15.0]
+
+output:
+  keep_csv: true
