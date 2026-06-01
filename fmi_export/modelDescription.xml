@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fmiModelDescription
+    fmiVersion="2.0"
+    modelName="vdsim_l2"
+    guid="vdsim-l2-fmu-2026-06"
+    description="VDSim L2 SevenDOF vehicle dynamics (CoSimulation)"
+    author="VDSim"
+    version="0.1"
+    generationTool="VDSim FMU export"
+    variableNamingConvention="structured">
+
+  <CoSimulation
+      modelIdentifier="vdsim_l2"
+      canHandleVariableCommunicationStepSize="true"
+      canInterpolateInputs="false"
+      maxOutputDerivativeOrder="0"
+      canRunAsynchronously="false"
+      canBeInstantiatedOnlyOncePerProcess="false"
+      canNotUseMemoryManagementFunctions="true"
+      canGetAndSetFMUstate="false"
+      canSerializeFMUstate="false"
+      providesDirectionalDerivative="false"/>
+
+  <ModelVariables>
+    <!-- Inputs -->
+    <ScalarVariable name="steer_angle_wheel" valueReference="1"
+                    causality="input" variability="continuous"
+                    description="front wheel steer angle [rad]">
+      <Real start="0.0"/>
+    </ScalarVariable>
+    <ScalarVariable name="throttle" valueReference="2"
+                    causality="input" variability="continuous"
+                    description="throttle pedal [0..1]">
+      <Real start="0.0"/>
+    </ScalarVariable>
+    <ScalarVariable name="brake" valueReference="3"
+                    causality="input" variability="continuous"
+                    description="brake pedal [0..1]">
+      <Real start="0.0"/>
+    </ScalarVariable>
+
+    <!-- Outputs -->
+    <ScalarVariable name="x_world" valueReference="10"
+                    causality="output" variability="continuous"
+                    initial="exact" description="vehicle CG x in world [m]">
+      <Real start="0.0"/>
+    </ScalarVariable>
+    <ScalarVariable name="y_world" valueReference="11"
+                    causality="output" variability="continuous"
+                    initial="exact" description="vehicle CG y in world [m]">
+      <Real start="0.0"/>
+    </ScalarVariable>
+    <ScalarVariable name="yaw" valueReference="12"
+                    causality="output" variability="continuous"
+                    initial="exact" description="yaw angle [rad]">
+      <Real start="0.0"/>
+    </ScalarVariable>
+    <ScalarVariable name="vx" valueReference="13"
+                    causality="output" variability="continuous"
+                    initial="exact" description="body-x velocity [m/s]">
+      <Real start="0.0"/>
+    </ScalarVariable>
+    <ScalarVariable name="vy" valueReference="14"
+                    causality="output" variability="continuous"
+                    initial="exact" description="body-y velocity [m/s]">
+      <Real start="0.0"/>
+    </ScalarVariable>
+    <ScalarVariable name="yaw_rate" valueReference="15"
+                    causality="output" variability="continuous"
+                    initial="exact" description="yaw rate [rad/s]">
+      <Real start="0.0"/>
+    </ScalarVariable>
+    <ScalarVariable name="ax_body" valueReference="16"
+                    causality="output" variability="continuous"
+                    initial="exact" description="body-x acceleration [m/s²]">
+      <Real start="0.0"/>
+    </ScalarVariable>
+    <ScalarVariable name="ay_body" valueReference="17"
+                    causality="output" variability="continuous"
+                    initial="exact" description="body-y acceleration [m/s²]">
+      <Real start="0.0"/>
+    </ScalarVariable>
+  </ModelVariables>
+
+  <ModelStructure>
+    <Outputs>
+      <Unknown index="4"/>   <!-- x_world -->
+      <Unknown index="5"/>   <!-- y_world -->
+      <Unknown index="6"/>   <!-- yaw -->
+      <Unknown index="7"/>   <!-- vx -->
+      <Unknown index="8"/>   <!-- vy -->
+      <Unknown index="9"/>   <!-- yaw_rate -->
+      <Unknown index="10"/>  <!-- ax -->
+      <Unknown index="11"/>  <!-- ay -->
+    </Outputs>
+  </ModelStructure>
+</fmiModelDescription>
