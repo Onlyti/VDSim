@@ -1,9 +1,15 @@
 # VDSim
 
-차량 설계와 자율주행 평가를 잇는 오픈코어 차량 동역학 시뮬레이션 플랫폼.
+**English** · [한국어](README.ko.md)
 
-> *Positioning*: 외부 시각화/센서 (CARLA 등) 의존, 그 대비 정확하고 검증된
-> 차량 동역학 + 하드포인트 기반 설계 검증 + FMI 양방향 통합.
+An open-core vehicle-dynamics simulation platform bridging chassis design and
+autonomous-driving evaluation.
+
+📖 **Documentation (theory + reports):** https://onlyti.github.io/VDSim/
+
+> *Positioning*: external visualization / sensors are delegated (CARLA, etc.);
+> VDSim owns **accurate, validated vehicle dynamics** + **hardpoint-based design
+> validation** + **bidirectional FMI 2.0 integration**.
 
 ## Layout
 
@@ -178,6 +184,31 @@ python3 carla_integration/python/run_demo.py \
 | 12 | FMI 2.0 import (generic master) | ✅ |
 | 13 | SMPC / MPC controller | Phase 2 (HPIPM integration) |
 | 14 | Ld5 compliance (bushings) | Phase 2 |
+
+## Documentation
+
+Full theory reference + PoC reports are published with MkDocs Material
+(MathJax equations, search, dark mode) at **https://onlyti.github.io/VDSim/**.
+
+Theory chapters (each pairs equations with the `file:line` of the
+implementation and a verification test):
+
+| # | Chapter | # | Chapter |
+|---|---|---|---|
+| 01 | Frames & conventions | 09 | Pure pursuit / path |
+| 02 | Rigid-body dynamics | 10 | Driver model |
+| 03 | Tire (Pacejka MF96) | 11 | Numerical integration |
+| 04 | Ld1-Bicycle | 12 | Software architecture |
+| 05 | Ld2-SevenDOF | 13 | Multibody (Ld4) overview |
+| 06 | Ld3-FourteenDOF | 14 | Hardpoint kinematics |
+| 07 | Control ladder Lc1-Lc8 | 15 | Validation & DOE |
+| 08 | PID controllers | 16 | FMI 2.0 integration |
+
+Build the docs locally:
+```bash
+pip install mkdocs-material pymdown-extensions mike
+mkdocs serve        # → http://localhost:8000/VDSim/
+```
 
 ## License
 
