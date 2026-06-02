@@ -10,6 +10,7 @@
 #include "vdsim/interfaces.hpp"
 #include "vdsim/magic_formula.hpp"
 #include "vdsim/params.hpp"
+#include "vdsim/sim_session.hpp"
 #include "vdsim/scenario.hpp"
 #include "vdsim/state.hpp"
 #include "vdsim/suspension.hpp"
@@ -267,4 +268,47 @@ PYBIND11_MODULE(vdsim, m) {
         .def("initialize", &vdsim::LongVxController::initialize)
         .def("reset",      &vdsim::LongVxController::reset)
         .def("update",     &vdsim::LongVxController::update);
+
+    // -------- SimSession kernel (Phase 1: web backend access) --------
+    py::class_<vdsim::SimOutput>(m, "SimOutput")
+        .def_readonly("state",         &vdsim::SimOutput::state)
+        .def_readonly("measured",      &vdsim::SimOutput::measured)
+        .def_readonly("sim_time",      &vdsim::SimOutput::sim_time)
+        .def_readonly("ax",            &vdsim::SimOutput::ax)
+        .def_readonly("ay",            &vdsim::SimOutput::ay)
+        .def_readonly("roll",          &vdsim::SimOutput::roll)
+        .def_readonly("pitch",         &vdsim::SimOutput::pitch)
+        .def_readonly("Fz",            &vdsim::SimOutput::Fz)
+        .def_readonly("steer_applied", &vdsim::SimOutput::steer_applied)
+        .def_readonly("rack_torque",   &vdsim::SimOutput::rack_torque);
+
+    py::class_<vdsim::SimSession>(m, "SimSession")
+        .def("reset",          &vdsim::SimSession::reset)
+        .def("set_input",      &vdsim::SimSession::set_input)
+        .def("tick",           &vdsim::SimSession::tick)
+        .def("state",          &vdsim::SimSession::state)
+        .def("measured_state", &vdsim::SimSession::measured_state)
+        .def("output",         &vdsim::SimSession::output)
+        .def("sim_time",       &vdsim::SimSession::sim_time);
+
+    // Factory: build a SimSession (flat ground) from level + params.
+    m.def("make_sim_session",
+          [](const vdsim::VehicleParams& vp, const vdsim::TireParams& tp,
+             const std::string& level, double sensor_delay_s, double mu,
+             double nominal_dt) {
+              std::unique_ptr<vdsim::IVehicleDynamics> dyn =
+                  (level == "L1") ? vdsim::create_bicycle()
+                  : (level == "L3") ? vdsim::create_fourteen_dof()
+                                    : vdsim::create_seven_dof();
+              vdsim::SimConfig cfg;
+              cfg.sensor_delay_s = sensor_delay_s;
+              cfg.nominal_dt     = nominal_dt;
+              vdsim::SolverParams sp;
+              return std::make_unique<vdsim::SimSession>(
+                  std::move(dyn), vdsim::create_flat_ground(0.0, mu),
+                  vp, tp, sp, cfg);
+          },
+          py::arg("vehicle"), py::arg("tire"), py::arg("level") = "L2",
+          py::arg("sensor_delay_s") = 0.0, py::arg("mu") = 1.0,
+          py::arg("nominal_dt") = 0.005);
 }
