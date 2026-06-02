@@ -138,8 +138,8 @@ TEST(FourteenDOF, PitchTransientUnderBrake) {
     for (int i = 0; i < 200; ++i) dyn->step(u, contacts, 0.005);
 
     const double pitch = dyn->pitch_angle_qs();
-    EXPECT_LT(pitch, 0.0);                             // nose dive
-    EXPECT_LT(pitch, -0.001);                          // measurable
+    EXPECT_GT(pitch, 0.0);                             // nose dive: +theta = nose-down (ISO)
+    EXPECT_GT(pitch, 0.001);                           // measurable
 }
 
 TEST(FourteenDOF, AntiDiveReducesPitchUnderBrake) {

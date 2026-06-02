@@ -42,7 +42,6 @@ public:
     explicit MagicFormulaTire(MFCoeffs c) : c_(std::move(c)) {
         Fz0_  = c_.g("FNOMIN", 4000.0);
         R0_   = c_.g("UNLOADED_RADIUS", 0.3);
-        Vref_ = c_.g("LONGVL", 16.7);
         LFZO_ = c_.g("LFZO", 1.0);
     }
 
@@ -171,7 +170,7 @@ private:
     static double mf_cos_arg(double x) { return std::cos(std::atan(x)); }
 
     MFCoeffs c_;
-    double Fz0_{4000.0}, R0_{0.3}, Vref_{16.7}, LFZO_{1.0};
+    double Fz0_{4000.0}, R0_{0.3}, LFZO_{1.0};
 };
 
 }  // namespace

@@ -81,7 +81,7 @@ Sprung body EoM:
 $$
 \begin{aligned}
 m_s\, \ddot z_s &= \textstyle\sum_i F_i \\
-I_{yy}\, \ddot\theta &= -\textstyle\sum_i r_{x,i} F_i + m_s\, a_x\, h_{cg}\, (1 - \text{anti}) \\
+I_{yy}\, \ddot\theta &= -\textstyle\sum_i r_{x,i} F_i - m_s\, a_x\, h_{cg}\, (1 - \text{anti}) \\
 I_{xx}\, \ddot\phi &= - K_{\phi,\text{total}}\, \phi - C_\phi\, \dot\phi + m_s\, a_y\, h_{cg}
 \end{aligned}
 $$
@@ -93,11 +93,12 @@ spring 합력이 sprung mass 의 vertical 가속도를 만든다.
 ### Pitch (θ) 와 anti-dive
 
 $$
-I_{yy}\, \ddot\theta = -\textstyle\sum_i r_{x,i} F_i + m_s\, a_x\, h_{cg}\, (1 - \text{anti})
+I_{yy}\, \ddot\theta = -\textstyle\sum_i r_{x,i} F_i - m_s\, a_x\, h_{cg}\, (1 - \text{anti})
 $$
 
 - $-\sum_i r_{x,i} F_i$: spring/damper 의 pitch moment (front 압축 → nose down).
-- $m_s a_x h_{cg}$: inertia 의 pitch 기여 (가속 nose up, 제동 nose down).
+- $-m_s a_x h_{cg}$: inertia 의 pitch 기여. ISO 부호 $+\theta=$ nose-down 이므로
+  제동($a_x<0$)→$+\theta$ (dive), 가속($a_x>0$)→$-\theta$ (squat).
 - $(1 - \text{anti})$: suspension geometry 의 anti-dive/anti-squat.
 
 real suspension 은 brake reaction 의 일부가 suspension link 의 instant center
@@ -106,7 +107,7 @@ real suspension 은 brake reaction 의 일부가 suspension link 의 instant cen
 $$
 \text{anti} = \begin{cases} \text{anti\_dive\_front} & a_x < 0 \\ \text{anti\_squat\_rear} & a_x \ge 0 \end{cases}
 \;(\text{clamp } [0,1]), \qquad
-M_{\text{inertia,pitch}} = m_s\, a_x\, h_{cg}\, (1 - \text{anti})
+M_{\text{inertia,pitch}} = -m_s\, a_x\, h_{cg}\, (1 - \text{anti})
 $$
 
 $\text{anti}=1$ 이면 brake 시 pitch 없음, $0$ 이면 full pitch.

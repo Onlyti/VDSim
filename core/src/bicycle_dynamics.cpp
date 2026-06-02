@@ -105,6 +105,11 @@ public:
         alpha_dyn_f_ = alpha_dyn_r_ = 0.0;
         alpha_geom_f_last_ = alpha_geom_r_last_ = 0.0;
         v_fx_wheel_last_ = v_rx_body_last_ = 0.0;
+        // Clear diagnostics so accessors don't return stale values before step().
+        tire_F_.fill(Vec3::Zero());
+        tire_Fz_.fill(0.0);
+        slip_ratio_.fill(0.0);
+        slip_angle_.fill(0.0);
     }
 
     void step(const ControlInput& u,

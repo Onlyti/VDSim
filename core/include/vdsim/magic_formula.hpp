@@ -10,6 +10,7 @@
 // (see `.gitignore`).  Only the evaluation equations live in source.
 #pragma once
 
+#include <cctype>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -25,11 +26,17 @@ struct MFCoeffs {
     std::unordered_map<std::string, double> p;
 
     // Case-insensitive lookup with default (missing coefficient -> default).
+    // Keys are stored uppercased by parse_tir; uppercase the query to match.
+    static std::string up(const char* key) {
+        std::string s(key);
+        for (auto& c : s) c = static_cast<char>(std::toupper(c));
+        return s;
+    }
     double g(const char* key, double def) const {
-        auto it = p.find(key);
+        auto it = p.find(up(key));
         return (it != p.end()) ? it->second : def;
     }
-    bool has(const char* key) const { return p.find(key) != p.end(); }
+    bool has(const char* key) const { return p.find(up(key)) != p.end(); }
 };
 
 // Parse a .tir file into MFCoeffs.  Throws std::runtime_error if the file

@@ -312,7 +312,7 @@ TEST(SevenDOF, PitchAngleSignDuringBrake) {
     const double ax    = dyn->ax_body_est();
     const double pitch = dyn->pitch_angle_qs();
     EXPECT_LT(ax, 0.0);
-    EXPECT_LT(pitch, 0.0);                      // nose-dive => negative pitch numerically
+    EXPECT_GT(pitch, 0.0);                      // nose-dive => +theta (ISO: +theta = nose-down)
 }
 
 TEST(BicycleDefaultDiagnostics, RollPitchZero) {

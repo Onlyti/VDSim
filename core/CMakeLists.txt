@@ -7,7 +7,6 @@ add_library(vdsim_core
     src/bicycle_dynamics.cpp
     src/seven_dof_dynamics.cpp
     src/fourteen_dof_dynamics.cpp
-    src/dynamics_stubs.cpp
     src/contact_providers.cpp
     src/params.cpp
     src/scenario.cpp

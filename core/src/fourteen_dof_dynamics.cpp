@@ -21,14 +21,18 @@
 //
 //   m_s · z̈_s     = Σ F_total_i  + m_s · g_z_effective
 //   I_xx · ϕ̈     = Σ ry_i · F_total_i + m_s · ay · h_cg     (lateral inertia)
-//   I_yy · θ̈     = − Σ rx_i · F_total_i + m_s · ax · h_cg   (long. inertia)
+//   I_yy · θ̈     = − Σ rx_i · F_total_i − m_s · ax · h_cg   (long. inertia)
 //
 // where g_z_effective ≈ 0 (we work in z relative to static eq).
+// Sign convention (ISO 8855): +phi = lean (left-up under left turn), +theta =
+// nose-down. Braking (ax<0) -> +theta -> front compresses (dive). The pose
+// quaternion uses these directly; susp_compression is reported as a magnitude
+// (larger = more compressed).
 //
 // Steady state of small linear system:
 //   z_s    → 0
-//   phi    → m_s · ay · h_cg / K_phi_total
-//   theta  → m_s · ax · h_cg / K_pitch_total
+//   phi    →   m_s · ay · h_cg / K_phi_total
+//   theta  → − m_s · ax · h_cg / K_pitch_total
 //
 // matches the Task 22 quasi-static formulas.  Damper gives transient ringing.
 
@@ -221,7 +225,9 @@ private:
         const double anti = (ax < 0.0)
                             ? std::clamp(vp_.anti_dive_front, 0.0, 1.0)
                             : std::clamp(vp_.anti_squat_rear, 0.0, 1.0);
-        const double M_inertia_pitch = m_s * ax * h * (1.0 - anti);
+        // ISO sign: +theta = nose-down. Braking (ax<0) must dive (front compress),
+        // i.e. theta>0, so the inertial pitch moment is -m_s*ax*h.
+        const double M_inertia_pitch = -m_s * ax * h * (1.0 - anti);
 
         Deriv6 d;
         d.dz       = z_dot;
@@ -311,8 +317,11 @@ private:
             const double v_corner = z_s_dot_ + ry_[i] * phi_dot_ - rx_[i] * th_dot_;
             const double delta    = z_corner - z_u_[i];
             const double rel_vel  = v_corner - z_u_dot_[i];
-            state_.susp_compression[i] = static_compression_[i] + delta;
-            state_.susp_velocity[i]    = rel_vel;
+            // Report compression as a magnitude (larger = more compressed). The
+            // sprung corner moving toward the unsprung (delta<0) is more
+            // compression, hence the minus. susp_velocity is its time rate.
+            state_.susp_compression[i] = static_compression_[i] - delta;
+            state_.susp_velocity[i]    = -rel_vel;
         }
     }
 

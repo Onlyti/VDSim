@@ -40,12 +40,16 @@ inline CmdL4 lower_to_l4(const ControlInput& u) {
                                                     cmd.motor_torque.end(), 0.0);
             const double T_brake = std::accumulate(cmd.brake_torque.begin(),
                                                     cmd.brake_torque.end(), 0.0);
+            // Negative aggregate drive (regen/engine braking) maps to brake.
             out.throttle = std::clamp(T_drive / 600.0, 0.0, 1.0);
-            out.brake    = std::clamp(T_brake / 4000.0, 0.0, 1.0);
+            out.brake    = std::clamp(T_brake / 4000.0 - std::min(0.0, T_drive) / 4000.0,
+                                       0.0, 1.0);
             out.steer_angle_wheel = cmd.steer_angle_wheel;
         } else if constexpr (std::is_same_v<T, CmdL2>) {
             out.throttle = std::clamp(cmd.drive_torque / 600.0, 0.0, 1.0);
-            out.brake    = std::clamp(cmd.brake_torque / 4000.0, 0.0, 1.0);
+            out.brake    = std::clamp(cmd.brake_torque / 4000.0
+                                       - std::min(0.0, cmd.drive_torque) / 4000.0,
+                                       0.0, 1.0);
             out.steer_angle_wheel = cmd.steer_angle_wheel;
         } else if constexpr (std::is_same_v<T, CmdL3>) {
             const double scale = cmd.Fx_total / (1500.0 * 5.0);
@@ -97,6 +101,12 @@ public:
         ay_prev_ = 0.0;
         alpha_dyn_.fill(0.0);
         alpha_geom_last_.fill(0.0);
+        // Clear diagnostics so accessors don't return stale values before step().
+        tire_F_.fill(Vec3::Zero());
+        tire_Fz_.fill(0.0);
+        slip_ratio_.fill(0.0);
+        slip_angle_.fill(0.0);
+        mz_front_sum_ = 0.0;
     }
 
     void step(const ControlInput& u,
@@ -126,6 +136,7 @@ public:
     }
     // Quasi-static pitch: anti-dive omitted; effective pitch stiffness
     // approximated by per-axle spring k * (a^2 + b^2) about CG.
+    // ISO sign: +theta = nose-down, so braking (ax<0) -> positive pitch (dive).
     double pitch_angle_qs() const override {
         const double k_avg = 0.25 * (vp_.spring_stiffness[WHEEL_FL] +
                                      vp_.spring_stiffness[WHEEL_FR] +
@@ -134,7 +145,7 @@ public:
         const double K_pitch = k_avg * (vp_.cg_to_front * vp_.cg_to_front +
                                         vp_.cg_to_rear  * vp_.cg_to_rear) * 2.0;
         return (K_pitch > 1e-6)
-               ? (vp_.mass * ax_prev_ * vp_.cg_height / K_pitch) : 0.0;
+               ? (-vp_.mass * ax_prev_ * vp_.cg_height / K_pitch) : 0.0;
     }
     double ax_body_est() const override { return ax_prev_; }
     double ay_body_est() const override { return ay_prev_; }
@@ -275,6 +286,10 @@ private:
             const double denom  = std::max(std::abs(v_x_wheel), kSpeedEps);
             const double k_slip = (R * s.wheel_spin[i] - v_x_wheel) / denom;
 
+            // LIMITATION: only contact mu is consumed. is_valid / penetration /
+            // normal are ignored, so a wheel flagged off-ground still develops
+            // full static-geometry Fz and tire force. Correct for flat ground;
+            // must be wired in before any non-flat IContactProvider is used.
             const double mu_long_i = contacts[i].mu_long;
             const double mu_lat_i  = contacts[i].mu_lat;
 
