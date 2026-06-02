@@ -394,4 +394,8 @@ std::unique_ptr<IVehicleDynamics> create_bicycle() {
     return std::make_unique<BicycleDynamics>(create_pacejka_mf96());
 }
 
+std::unique_ptr<IVehicleDynamics> create_bicycle(std::unique_ptr<ITireModel> tire) {
+    return std::make_unique<BicycleDynamics>(std::move(tire));
+}
+
 }  // namespace vdsim

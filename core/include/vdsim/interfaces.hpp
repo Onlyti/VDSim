@@ -96,6 +96,13 @@ public:
 std::unique_ptr<ITireModel> create_pacejka_mf96();
 std::unique_ptr<ITireModel> create_linear_tire();
 
+// Dynamics factories that inject a custom tire model (e.g. full Magic Formula
+// from a .tir).  Ownership transfers to the dynamics; for Ld3 the tire is
+// forwarded to the inner Ld2.  Declared here, after ITireModel.
+std::unique_ptr<IVehicleDynamics> create_bicycle(std::unique_ptr<ITireModel> tire);
+std::unique_ptr<IVehicleDynamics> create_seven_dof(std::unique_ptr<ITireModel> tire);
+std::unique_ptr<IVehicleDynamics> create_fourteen_dof(std::unique_ptr<ITireModel> tire);
+
 // =============================================================================
 // IContactProvider — 4-wheel contact information
 // =============================================================================

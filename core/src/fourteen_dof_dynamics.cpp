@@ -52,6 +52,8 @@ constexpr double kGravity = 9.80665;
 class FourteenDOFDynamics final : public IVehicleDynamics {
 public:
     FourteenDOFDynamics() : inner_(create_seven_dof()) {}
+    explicit FourteenDOFDynamics(std::unique_ptr<ITireModel> tire)
+        : inner_(create_seven_dof(std::move(tire))) {}
 
     Level level() const noexcept override { return Level::L3_FourteenDOF; }
 
@@ -340,6 +342,10 @@ private:
 
 std::unique_ptr<IVehicleDynamics> create_fourteen_dof() {
     return std::make_unique<FourteenDOFDynamics>();
+}
+
+std::unique_ptr<IVehicleDynamics> create_fourteen_dof(std::unique_ptr<ITireModel> tire) {
+    return std::make_unique<FourteenDOFDynamics>(std::move(tire));
 }
 
 // Public attach helpers — callers can build the kinematics object (e.g. via

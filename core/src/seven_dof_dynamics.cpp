@@ -496,4 +496,8 @@ std::unique_ptr<IVehicleDynamics> create_seven_dof() {
     return std::make_unique<SevenDOFDynamics>(create_pacejka_mf96());
 }
 
+std::unique_ptr<IVehicleDynamics> create_seven_dof(std::unique_ptr<ITireModel> tire) {
+    return std::make_unique<SevenDOFDynamics>(std::move(tire));
+}
+
 }  // namespace vdsim

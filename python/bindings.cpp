@@ -224,9 +224,11 @@ PYBIND11_MODULE(vdsim, m) {
         .def("set_camber_per_wheel",
              &vdsim::IVehicleDynamics::set_camber_per_wheel);
 
-    m.def("create_bicycle",      &vdsim::create_bicycle);
-    m.def("create_seven_dof",    &vdsim::create_seven_dof);
-    m.def("create_fourteen_dof", &vdsim::create_fourteen_dof);
+    // No-arg overloads (disambiguated from the tire-injecting overloads).
+    using DynFactory = std::unique_ptr<vdsim::IVehicleDynamics> (*)();
+    m.def("create_bicycle",      static_cast<DynFactory>(&vdsim::create_bicycle));
+    m.def("create_seven_dof",    static_cast<DynFactory>(&vdsim::create_seven_dof));
+    m.def("create_fourteen_dof", static_cast<DynFactory>(&vdsim::create_fourteen_dof));
     m.def("create_flat_ground",  &vdsim::create_flat_ground,
           py::arg("z") = 0.0, py::arg("mu") = 1.0);
 
