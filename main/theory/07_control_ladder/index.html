@@ -2410,19 +2410,23 @@
 </span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="c1">// throttle/brake 는 별도 Lc6 + Lc5 cascade</span>
 </span></code></pre></div>
 <h2 id="77-task-43">7.7 검증 (Task 43)<a class="headerlink" href="#77-task-43" title="Permanent link">&para;</a></h2>
-<p><code>ControlDispatch.*</code>:
-- <code>BicycleHandlesCmdL2Drive</code> — Lc2 drive_torque &gt; 0 → vx 증가.
-- <code>BicycleHandlesCmdL3BrakeNegativeFx</code> — Lc3 Fx &lt; 0 → vx 감소.
-- <code>SevenDOFHandlesCmdL1PerWheelTorque</code> — Lc1 RL/RR torque → vx 증가.
-- <code>BicycleFallbackOnHigherLevelInput</code> — Lc5 (cascade 없으면) → zero command fallback.
-- <code>NaNInputSanitizedNoCrash</code> — NaN/Inf Lc4 입력 → sanitize 후 crash 없음.</p>
+<p><code>ControlDispatch.*</code>:</p>
+<ul>
+<li><code>BicycleHandlesCmdL2Drive</code> — Lc2 drive_torque &gt; 0 → vx 증가.</li>
+<li><code>BicycleHandlesCmdL3BrakeNegativeFx</code> — Lc3 Fx &lt; 0 → vx 감소.</li>
+<li><code>SevenDOFHandlesCmdL1PerWheelTorque</code> — Lc1 RL/RR torque → vx 증가.</li>
+<li><code>BicycleFallbackOnHigherLevelInput</code> — Lc5 (cascade 없으면) → zero command fallback.</li>
+<li><code>NaNInputSanitizedNoCrash</code> — NaN/Inf Lc4 입력 → sanitize 후 crash 없음.</li>
+</ul>
 <p>5 tests pass. dispatch 와 NaN guard 검증.</p>
 <h2 id="78-lc1-dispatch-phase-2">7.8 Lc1 의 직접 dispatch (Phase 2)<a class="headerlink" href="#78-lc1-dispatch-phase-2" title="Permanent link">&para;</a></h2>
 <p>본 PoC 의 <code>lower_to_l4</code> 는 lowering. 그러나 <strong>per-wheel torque 의 직접 적용</strong> (variant visit 으로 Lc1 의 motor_torque 가 wheel-spin EoM 에 직접 들어가는 path) 는 미구현.</p>
-<p>Phase 2 의 Lc1 direct dispatch:
-- <code>CmdL1::motor_torque[i]</code> → wheel-spin EoM 의 <code>T_drive_i</code> 에 직접 사용.
-- differential 의 결과를 직접 override (low-level controller 가 per-wheel 결정).
-- traction control / torque vectoring 시뮬 가능.</p>
+<p>Phase 2 의 Lc1 direct dispatch:</p>
+<ul>
+<li><code>CmdL1::motor_torque[i]</code> → wheel-spin EoM 의 <code>T_drive_i</code> 에 직접 사용.</li>
+<li>differential 의 결과를 직접 override (low-level controller 가 per-wheel 결정).</li>
+<li>traction control / torque vectoring 시뮬 가능.</li>
+</ul>
 <p>본 PoC 의 lowering 으로는 위 use case 불가 (axle 평균). 그러나 ABI 는 ready.</p>
 <h2 id="79">7.9 한계<a class="headerlink" href="#79" title="Permanent link">&para;</a></h2>
 <table>

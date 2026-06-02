@@ -2288,10 +2288,12 @@
 <p><strong>학습 목표.</strong> Lumped 14-DOF (Ld3) 와 본격 multibody (Ld4-Ld5) 의 차이를 식 단위로 안다. hardpoint + joint + bushing 의 abstraction 으로 어떤 suspension topology 든 표현 가능한 이유를 안다. forward kinematics (FK) vs full DAE (Featherstone) 의 trade-off 를 안다. Adams Car 와의 cross-validation 의 의의를 명확히 한다.</p>
 </blockquote>
 <h2 id="131-lumped-14-dof">13.1 왜 lumped 14-DOF 로 부족한가<a class="headerlink" href="#131-lumped-14-dof" title="Permanent link">&para;</a></h2>
-<p>Chapter 06 의 Ld3 는:
-- sprung body 의 corner displacement 가 <code>z_s + ry · φ − rx · θ</code> 로 표현 — small-angle linear.
-- per-corner spring/damper 가 sprung corner ↔ unsprung mass 사이에 작용.
-- unsprung mass 가 single-DOF (vertical) 의 point mass.</p>
+<p>Chapter 06 의 Ld3 는:</p>
+<ul>
+<li>sprung body 의 corner displacement 가 <code>z_s + ry · φ − rx · θ</code> 로 표현 — small-angle linear.</li>
+<li>per-corner spring/damper 가 sprung corner ↔ unsprung mass 사이에 작용.</li>
+<li>unsprung mass 가 single-DOF (vertical) 의 point mass.</li>
+</ul>
 <p>이게 ride 의 quasi-static + transient response 까지는 정확. 그러나:</p>
 <p><strong>Lumped 의 한계</strong> (Ld4-Ld5 가 채우는 것):
 1. <strong>wheel kinematics 부재</strong> — bump steer, roll steer, camber-from-roll 등 suspension geometry 효과 표현 불가.
@@ -2375,32 +2377,40 @@
 <p>각 topology 가 YAML 로 hardpoint + joint + bushing 명세.</p>
 <h3 id="macpherson-sedan-fl">MacPherson 예 (sedan FL)<a class="headerlink" href="#macpherson-sedan-fl" title="Permanent link">&para;</a></h3>
 <p>bodies: chassis (reference), lower_control_arm (mass 8.5, inertia diag), strut (12.0), knuckle (6.5), tie_rod (1.8).</p>
-<p>hardpoints:
-- lca_inner_front
-- lca_inner_rear
-- lca_outer_ball
-- strut_top_mount
-- strut_to_knuckle
-- tie_rod_inner
-- tie_rod_outer
-- wheel_center</p>
-<p>joints:
-- lca_inner_front: revolute (axis = body-x) between chassis and LCA.
-- lca_inner_rear: revolute (axis = body-x) between chassis and LCA.
-- lca_outer_ball: ball joint between LCA and knuckle.
-- strut_top_mount: ball joint between chassis and strut top.
-- strut_to_knuckle: prismatic (axis = strut local z) between strut and knuckle.
-- tie_rod_inner: ball joint between chassis and tie rod inner.
-- tie_rod_outer: ball joint between tie rod and knuckle.</p>
+<p>hardpoints:</p>
+<ul>
+<li>lca_inner_front</li>
+<li>lca_inner_rear</li>
+<li>lca_outer_ball</li>
+<li>strut_top_mount</li>
+<li>strut_to_knuckle</li>
+<li>tie_rod_inner</li>
+<li>tie_rod_outer</li>
+<li>wheel_center</li>
+</ul>
+<p>joints:</p>
+<ul>
+<li>lca_inner_front: revolute (axis = body-x) between chassis and LCA.</li>
+<li>lca_inner_rear: revolute (axis = body-x) between chassis and LCA.</li>
+<li>lca_outer_ball: ball joint between LCA and knuckle.</li>
+<li>strut_top_mount: ball joint between chassis and strut top.</li>
+<li>strut_to_knuckle: prismatic (axis = strut local z) between strut and knuckle.</li>
+<li>tie_rod_inner: ball joint between chassis and tie rod inner.</li>
+<li>tie_rod_outer: ball joint between tie rod and knuckle.</li>
+</ul>
 <p>이게 표준 MacPherson kinematic skeleton.</p>
 <h2 id="134-forward-kinematics-m1">13.4 Forward Kinematics — M1 의 목표<a class="headerlink" href="#134-forward-kinematics-m1" title="Permanent link">&para;</a></h2>
 <h3 id="problem-definition">Problem definition<a class="headerlink" href="#problem-definition" title="Permanent link">&para;</a></h3>
-<p>given:
-- <code>SuspensionTopology</code> (모든 hardpoint, joint).
-- <code>travel_z</code> — suspension vertical travel input.
-- <code>steer_rad</code> — steering wheel angle (steering rack 위치).</p>
-<p>output:
-- <code>WheelPose</code>: wheel center 의 world 위치 + orientation + toe, camber, caster.</p>
+<p>given:</p>
+<ul>
+<li><code>SuspensionTopology</code> (모든 hardpoint, joint).</li>
+<li><code>travel_z</code> — suspension vertical travel input.</li>
+<li><code>steer_rad</code> — steering wheel angle (steering rack 위치).</li>
+</ul>
+<p>output:</p>
+<ul>
+<li><code>WheelPose</code>: wheel center 의 world 위치 + orientation + toe, camber, caster.</li>
+</ul>
 <h3 id="macpherson-simplified-fk">MacPherson 의 simplified FK<a class="headerlink" href="#macpherson-simplified-fk" title="Permanent link">&para;</a></h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>1. strut_top_mount 위치는 chassis frame 에 fixed.
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>2. strut_to_knuckle 의 prismatic axis 는 strut 의 local z.
@@ -2423,22 +2433,28 @@
 </span></code></pre></div>
 <p>closed-form 또는 12-line analytical 가능. M1 의 1차 구현.</p>
 <h3 id="kc-chart-m5">K&amp;C chart (M5)<a class="headerlink" href="#kc-chart-m5" title="Permanent link">&para;</a></h3>
-<p>travel_z 를 ±100mm sweep, steer 를 ±0.5 rad sweep:
-- toe(travel) — bump steer
-- camber(travel) — camber gain
-- caster(steer) — caster trail change
-- track_change(travel) — scrub
-- roll_center(travel) — roll center height</p>
+<p>travel_z 를 ±100mm sweep, steer 를 ±0.5 rad sweep:</p>
+<ul>
+<li>toe(travel) — bump steer</li>
+<li>camber(travel) — camber gain</li>
+<li>caster(steer) — caster trail change</li>
+<li>track_change(travel) — scrub</li>
+<li>roll_center(travel) — roll center height</li>
+</ul>
 <p>이게 chassis 설계자의 표준 chart. Adams Car / VI 가 GUI 로 자동 plot.</p>
 <p>VDSim Phase 2: forward kinematics 후 sweep → matplotlib chart 자동 생성.</p>
 <h2 id="135-quasi-static-compliance-m3">13.5 Quasi-Static Compliance — M3 의 목표<a class="headerlink" href="#135-quasi-static-compliance-m3" title="Permanent link">&para;</a></h2>
 <h3 id="problem">Problem<a class="headerlink" href="#problem" title="Permanent link">&para;</a></h3>
-<p>given:
-- topology + travel (FK 결과).
-- WheelLoad (Fx, Fy, Fz at wheel center).</p>
-<p>output:
-- bushing 의 deflection (compliance).
-- updated wheel pose (compliance steer / camber).</p>
+<p>given:</p>
+<ul>
+<li>topology + travel (FK 결과).</li>
+<li>WheelLoad (Fx, Fy, Fz at wheel center).</li>
+</ul>
+<p>output:</p>
+<ul>
+<li>bushing 의 deflection (compliance).</li>
+<li>updated wheel pose (compliance steer / camber).</li>
+</ul>
 <h3 id="linear-bushing-model">Linear bushing model<a class="headerlink" href="#linear-bushing-model" title="Permanent link">&para;</a></h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>F_bushing  =  − K · q_local  −  C · q_dot_local
 </span></code></pre></div>
@@ -2503,10 +2519,12 @@ constraint 가 있는 multibody system 의 EoM 을 풀기 위한 효율적 알�
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>  lca_rear:  ...
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>  ...
 </span></code></pre></div></p>
-<p>parser:
-- regex 또는 yacc 으로 hardpoint coord 추출.
-- joint topology (revolute axes, ball joints) 도 별도 키워드.
-- bushing parameter (Adams 의 bushing curve) 는 linear 부분만 import (nonlinear curve 는 polynomial fit 옵션).</p>
+<p>parser:</p>
+<ul>
+<li>regex 또는 yacc 으로 hardpoint coord 추출.</li>
+<li>joint topology (revolute axes, ball joints) 도 별도 키워드.</li>
+<li>bushing parameter (Adams 의 bushing curve) 는 linear 부분만 import (nonlinear curve 는 polynomial fit 옵션).</li>
+</ul>
 <p>본 PoC 의 <code>python/tir_to_yaml.py</code> 의 패턴이 적용 가능.</p>
 <h2 id="139-roadmap-m1-m7">13.9 Roadmap (M1-M7)<a class="headerlink" href="#139-roadmap-m1-m7" title="Permanent link">&para;</a></h2>
 <table>

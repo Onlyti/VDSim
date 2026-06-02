@@ -2383,8 +2383,12 @@
 <ol>
 <li><strong>Implementation 이 anonymous namespace 안</strong>. external code 가 <code>BicycleDynamics</code> 클래스 자체에 접근 불가 → 내부 멤버 변경이 ABI 변화로 외부에 영향 없음.</li>
 <li><strong>Factory function 반환 <code>unique_ptr</code></strong> — heap allocation, ownership 명확. shared lib 경계에서 안전.</li>
-<li><strong>Pure virtual + final</strong>:</li>
-<li><code>virtual</code> 로 derived dispatch 가능.</li>
+<li>
+<p><strong>Pure virtual + final</strong>:</p>
+</li>
+<li>
+<p><code>virtual</code> 로 derived dispatch 가능.</p>
+</li>
 <li><code>final</code> 로 implementation class 가 더 inherit 불가 (vtable 최적화 + 의도 명확).</li>
 </ol>
 <h3 id="default-virtual-implementation-abi">Default virtual implementation 의 ABI 추가<a class="headerlink" href="#default-virtual-implementation-abi" title="Permanent link">&para;</a></h3>
@@ -2430,11 +2434,13 @@
 </span></code></pre></div>
 <p>CmdL8 가 <code>std::vector&lt;PathPoint&gt;</code> 포함이라 heap에서 데이터, ControlInput 자체는 ~32 bytes. trivial.</p>
 <h2 id="124-yaml-io-backward-compat">12.4 YAML I/O — backward compat<a class="headerlink" href="#124-yaml-io-backward-compat" title="Permanent link">&para;</a></h2>
-<p>VDSim 의 YAML schema 규칙:
-- top-level keys map 1:1 to struct members (flat, no nesting).
-- missing keys → default 유지 (forward-compat).
-- unknown keys → silently ignored (backward-compat).
-- wrong types → <code>std::runtime_error</code> throw.</p>
+<p>VDSim 의 YAML schema 규칙:</p>
+<ul>
+<li>top-level keys map 1:1 to struct members (flat, no nesting).</li>
+<li>missing keys → default 유지 (forward-compat).</li>
+<li>unknown keys → silently ignored (backward-compat).</li>
+<li>wrong types → <code>std::runtime_error</code> throw.</li>
+</ul>
 <p>코드 <code>core/src/params.cpp</code> 의 <code>pull(node, key, dst)</code>:
 <div class="language-cpp highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">template</span><span class="w"> </span><span class="o">&lt;</span><span class="k">typename</span><span class="w"> </span><span class="nc">T</span><span class="o">&gt;</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kt">void</span><span class="w"> </span><span class="n">pull</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">YAML</span><span class="o">::</span><span class="n">Node</span><span class="o">&amp;</span><span class="w"> </span><span class="n">node</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">key</span><span class="p">,</span><span class="w"> </span><span class="n">T</span><span class="o">&amp;</span><span class="w"> </span><span class="n">dst</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
@@ -2516,11 +2522,13 @@ ice = 8 (mu_long = 0.2, mu_lat = 0.2).
 wet asphalt = 4 (0.8, 0.8).</p>
 <p><code>std::find_if</code> 로 lookup. fallback <code>default_mu</code> 0.65 (typical).</p>
 <h3 id="test-task-42">Test (Task 42)<a class="headerlink" href="#test-task-42" title="Permanent link">&para;</a></h3>
-<p>4 mock tests:
-- <code>FlatGroundLookupYieldsKnownMu</code>
-- <code>UnknownSurfaceFallsBackToDefault</code>
-- <code>MissedRaycastInvalidatesContact</code>
-- <code>NullRaycastSafe</code> — crash 없음.</p>
+<p>4 mock tests:</p>
+<ul>
+<li><code>FlatGroundLookupYieldsKnownMu</code></li>
+<li><code>UnknownSurfaceFallsBackToDefault</code></li>
+<li><code>MissedRaycastInvalidatesContact</code></li>
+<li><code>NullRaycastSafe</code> — crash 없음.</li>
+</ul>
 <p>CARLA 실 통합 없이 ABI 검증.</p>
 <h2 id="127-cmake-structure-fetchcontent">12.7 CMake structure — FetchContent<a class="headerlink" href="#127-cmake-structure-fetchcontent" title="Permanent link">&para;</a></h2>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>VDSim/
@@ -2532,17 +2540,21 @@ wet asphalt = 4 (0.8, 0.8).</p>
 </span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>├── tests/{unit,integration}/CMakeLists.txt
 </span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>└── examples/CMakeLists.txt
 </span></code></pre></div>
-<p>FetchContent 의 효과:
-- 사용자 system 의 Eigen / yaml-cpp 버전 의존성 없음.
-- git submodule 보다 간단 (cmake 가 자동 처리).
-- offline build 시 <code>_deps/</code> 캐시 사용.</p>
+<p>FetchContent 의 효과:</p>
+<ul>
+<li>사용자 system 의 Eigen / yaml-cpp 버전 의존성 없음.</li>
+<li>git submodule 보다 간단 (cmake 가 자동 처리).</li>
+<li>offline build 시 <code>_deps/</code> 캐시 사용.</li>
+</ul>
 <h3 id="configuration-time">Configuration time<a class="headerlink" href="#configuration-time" title="Permanent link">&para;</a></h3>
 <p>첫 configure: 5-10 min (Eigen + yaml-cpp + spdlog + GoogleTest 다운로드 + build).
 이후 incremental: cache 사용으로 1-2 sec.</p>
 <h2 id="128-test">12.8 Test 구조<a class="headerlink" href="#128-test" title="Permanent link">&para;</a></h2>
-<p><code>tests/unit/</code> 와 <code>tests/integration/</code> 분리:
-- <strong>Unit</strong>: 단일 module 의 함수 / class 의 boundary case. typical &lt; 100 ms.
-- <strong>Integration</strong>: 여러 module 결합 (e.g., dyn + tire + contact). 1 시나리오 SS 까지 적분.</p>
+<p><code>tests/unit/</code> 와 <code>tests/integration/</code> 분리:</p>
+<ul>
+<li><strong>Unit</strong>: 단일 module 의 함수 / class 의 boundary case. typical &lt; 100 ms.</li>
+<li><strong>Integration</strong>: 여러 module 결합 (e.g., dyn + tire + contact). 1 시나리오 SS 까지 적분.</li>
+</ul>
 <p>GoogleTest 의 fixture pattern:
 <div class="language-cpp highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">WeightTransfer</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="o">::</span><span class="n">testing</span><span class="o">::</span><span class="n">Test</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="k">protected</span><span class="o">:</span>

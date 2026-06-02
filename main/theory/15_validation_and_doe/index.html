@@ -2072,9 +2072,11 @@ $$
 | max lateral excursion | target lane 대비 최대 횡 이탈 [m] |
 | peak yaw rate, peak a_y | 한계 거동 지표 |</p>
 <p>Pass 기준 (단순화): speed loss &lt; 2 km/h <strong>AND</strong> excursion &lt; 1 m.</p>
-<p>샘플 (sports L3):
-- 60 km/h: FAIL (excursion 1.3 m, speed loss 5.5 km/h).
-- 40 km/h: PASS (excursion 0.3 m, speed loss 1.0 km/h).</p>
+<p>샘플 (sports L3):</p>
+<ul>
+<li>60 km/h: FAIL (excursion 1.3 m, speed loss 5.5 km/h).</li>
+<li>40 km/h: PASS (excursion 0.3 m, speed loss 1.0 km/h).</li>
+</ul>
 <p>실차 moose test 와 동일 패턴 — 속도가 오를수록 한계에서 follow 실패.</p>
 <h2 id="155-doe-parameter-sweep">15.5 DOE — parameter sweep<a class="headerlink" href="#155-doe-parameter-sweep" title="Permanent link">&para;</a></h2>
 <p><code>apps/doe/sweep_runner.py</code>.</p>
@@ -2092,10 +2094,12 @@ response surface. 설계 검증의 핵심 워크플로:</p>
 </span></code></pre></div>
 <p><code>vehicle.* / tire.* / solver.*</code> dotted-path 로 어떤 parameter 든 override.
 16 combos × 2 scenarios = 32 runs 가 수 초.</p>
-<p>출력 자동 분기:
-- 1-param sweep → line plot.
-- 2-param → heatmap (response surface).
-- 3+ param → sensitivity bar (각 param 의 <code>std/mean</code> 상대 민감도).</p>
+<p>출력 자동 분기:</p>
+<ul>
+<li>1-param sweep → line plot.</li>
+<li>2-param → heatmap (response surface).</li>
+<li>3+ param → sensitivity bar (각 param 의 <code>std/mean</code> 상대 민감도).</li>
+</ul>
 <p><code>metrics.py</code> 의 추출기는 ISO validation 의 metric 과 공유 — DOE 가 ISO
 metric 을 격자 위에서 sweep 가능 (예: 100 tire variant 의 K 분포).</p>
 <h2 id="156">15.6 산업적 의의<a class="headerlink" href="#156" title="Permanent link">&para;</a></h2>

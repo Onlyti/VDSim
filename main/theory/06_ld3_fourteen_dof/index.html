@@ -2215,23 +2215,29 @@
 <p><strong>학습 목표.</strong> Lumped 14-DOF 모델의 state 가 어떻게 구성되는지, sprung body 의 heave / roll / pitch 와 unsprung mass 의 z 동역학이 어떻게 결합되는지 식 단위로 안다. anti-dive geometry 의 effective h_cg 의 의미를 안다. wheel-hop frequency 의 이론값과 simulator 의 실측값이 왜 차이 나는지 (corner damper 의 overdamped 한계) 정확히 설명한다. quasi-static (Ld2) 와 dynamic (Ld3) 의 차이가 어디서 드러나는지 정리한다.</p>
 </blockquote>
 <h2 id="61-14-dof">6.1 왜 14-DOF 라고 부르나<a class="headerlink" href="#61-14-dof" title="Permanent link">&para;</a></h2>
-<p>D8 명세에서 14-DOF 의 분해:
-- Sprung body translation (x, y, z) — 3
-- Sprung body rotation (φ, θ, ψ) — 3
-- Unsprung vertical z (FL, FR, RL, RR) — 4
-- Wheel spin (FL, FR, RL, RR) — 4</p>
+<p>D8 명세에서 14-DOF 의 분해:</p>
+<ul>
+<li>Sprung body translation (x, y, z) — 3</li>
+<li>Sprung body rotation (φ, θ, ψ) — 3</li>
+<li>Unsprung vertical z (FL, FR, RL, RR) — 4</li>
+<li>Wheel spin (FL, FR, RL, RR) — 4</li>
+</ul>
 <p>합계 14.</p>
-<p>본 VDSim 의 Ld3 는 위의 14 DOF 중:
-- Planar motion (x, y, ψ, vx, vy, r) + 4 wheel spin — Ld2 inner 로 위임.
-- 추가로 sprung vertical 3 (z_s, φ, θ) + unsprung vertical 4 (z_u_i) — 본 챕터의 핵심.</p>
+<p>본 VDSim 의 Ld3 는 위의 14 DOF 중:</p>
+<ul>
+<li>Planar motion (x, y, ψ, vx, vy, r) + 4 wheel spin — Ld2 inner 로 위임.</li>
+<li>추가로 sprung vertical 3 (z_s, φ, θ) + unsprung vertical 4 (z_u_i) — 본 챕터의 핵심.</li>
+</ul>
 <p>planar 7 + vertical 7 = <strong>14 DOF (= 14 second-order ODE 또는 28 first-order)</strong>.</p>
 <p><img alt="Quarter-car model" src="../figures/06_quarter_car.png" /></p>
 <h2 id="62-lumped-vs-full-multibody">6.2 Lumped vs full multibody<a class="headerlink" href="#62-lumped-vs-full-multibody" title="Permanent link">&para;</a></h2>
-<p>본 PoC 는 <strong>lumped suspension</strong>:
-- sprung body 의 corner displacement = <code>z_s + ry_i · φ − rx_i · θ</code> (small-angle linearized).
-- unsprung mass = lumped point mass, vertical 1 DOF.
-- spring + damper 가 sprung corner 와 unsprung mass 사이에 작용.
-- tire vertical stiffness <code>k_tire</code> 가 unsprung mass 와 ground 사이.</p>
+<p>본 PoC 는 <strong>lumped suspension</strong>:</p>
+<ul>
+<li>sprung body 의 corner displacement = <code>z_s + ry_i · φ − rx_i · θ</code> (small-angle linearized).</li>
+<li>unsprung mass = lumped point mass, vertical 1 DOF.</li>
+<li>spring + damper 가 sprung corner 와 unsprung mass 사이에 작용.</li>
+<li>tire vertical stiffness <code>k_tire</code> 가 unsprung mass 와 ground 사이.</li>
+</ul>
 <p>본격 multibody (Ld4-Ld5) 는 lumped 가정을 풀고 hardpoint + joint + bushing 으로 분해. 본 챕터는 lumped 14-DOF.</p>
 <p><img alt="Roll + pitch transient (actual L3)" src="../figures/06_transient.png" /></p>
 <h2 id="63-sprung-body-eom-heave-roll-pitch">6.3 Sprung body EoM (heave / roll / pitch)<a class="headerlink" href="#63-sprung-body-eom-heave-roll-pitch" title="Permanent link">&para;</a></h2>
@@ -2362,13 +2368,17 @@ ZYX intrinsic Euler 로 quat 구성.</p>
 &lt; static_compression → spring 이 신장됨 (떨림 또는 wheel 들림).</p>
 <p>ride 분석에서 이 두 값이 핵심 진단.</p>
 <h2 id="68-ld2-ld3">6.8 Ld2 ↔ Ld3 의 거동 차이<a class="headerlink" href="#68-ld2-ld3" title="Permanent link">&para;</a></h2>
-<p>quasi-static 의 SS yaw rate / Fz 는 Ld2 와 Ld3 가 일치 (분석값 동일). 차이는:
-- <strong>Transient</strong>: Ld3 가 roll overshoot, settle 시간, wheel-hop oscillation 표현 가능.
-- <strong>dynamic Fz</strong>: Ld3 의 Fz 가 매 step 마다 spring 의 transient 반영. Ld2 는 quasi-static.</p>
-<p>검증 (Task 30 FourteenDOF dynamic):
-- step steer (sports, vx=10, δ=0.05): Ld3 의 roll oscillation, settle ~ 1.5 s.
-- DLC: roll range ±4° (sport 거동).
-- brake step: pitch transient + nose dive.</p>
+<p>quasi-static 의 SS yaw rate / Fz 는 Ld2 와 Ld3 가 일치 (분석값 동일). 차이는:</p>
+<ul>
+<li><strong>Transient</strong>: Ld3 가 roll overshoot, settle 시간, wheel-hop oscillation 표현 가능.</li>
+<li><strong>dynamic Fz</strong>: Ld3 의 Fz 가 매 step 마다 spring 의 transient 반영. Ld2 는 quasi-static.</li>
+</ul>
+<p>검증 (Task 30 FourteenDOF dynamic):</p>
+<ul>
+<li>step steer (sports, vx=10, δ=0.05): Ld3 의 roll oscillation, settle ~ 1.5 s.</li>
+<li>DLC: roll range ±4° (sport 거동).</li>
+<li>brake step: pitch transient + nose dive.</li>
+</ul>
 <p><code>PlanarMotionMatchesL2Closely</code> test 는 Ld3 의 planar (vx, vy, r) 가 Ld2 와 bit-equal 임을 보장 — Ld3 가 Ld2 위에 vertical 만 추가했음을 검증.</p>
 <h2 id="69-follow-up">6.9 한계와 follow-up<a class="headerlink" href="#69-follow-up" title="Permanent link">&para;</a></h2>
 <table>
@@ -2430,16 +2440,18 @@ ZYX intrinsic Euler 로 quat 구성.</p>
 </span></code></pre></div>
 <p><code>ax_body_est()</code>, <code>ay_body_est()</code> 도 Ld2 와 동일하게 사용 가능. Ld3 는 inner Ld2 의 값을 전달.</p>
 <h2 id="611">6.11 검증<a class="headerlink" href="#611" title="Permanent link">&para;</a></h2>
-<p><code>FourteenDOF.*</code> (Task 24, 30, 41 통합):
-- <code>ConstructionAndLevel</code>
-- <code>StaticSuspensionPopulatedAtRest</code> — <code>susp_compression = static_compression</code> at rest.
-- <code>CompressionGrowsUnderBrakeOnFront</code>
-- <code>PlanarMotionMatchesL2Closely</code> — Ld3 planar 의 vx, vy, r 가 Ld2 와 1e-9 일치.
-- <code>PoseEncodesRollAndPitch</code> — quat 의 roll 추출이 <code>roll_angle_qs</code> 와 0.02 rad 이내.
-- <code>RollOscillatesAndSettles</code> — step steer 의 dynamic overshoot.
-- <code>PitchTransientUnderBrake</code>
-- <code>SuspensionVelocityNonZeroDuringTransient</code>
-- <code>AntiDiveReducesPitchUnderBrake</code> — anti_dive 0 vs 0.5 비교, anti-dive 가 pitch 감소.</p>
+<p><code>FourteenDOF.*</code> (Task 24, 30, 41 통합):</p>
+<ul>
+<li><code>ConstructionAndLevel</code></li>
+<li><code>StaticSuspensionPopulatedAtRest</code> — <code>susp_compression = static_compression</code> at rest.</li>
+<li><code>CompressionGrowsUnderBrakeOnFront</code></li>
+<li><code>PlanarMotionMatchesL2Closely</code> — Ld3 planar 의 vx, vy, r 가 Ld2 와 1e-9 일치.</li>
+<li><code>PoseEncodesRollAndPitch</code> — quat 의 roll 추출이 <code>roll_angle_qs</code> 와 0.02 rad 이내.</li>
+<li><code>RollOscillatesAndSettles</code> — step steer 의 dynamic overshoot.</li>
+<li><code>PitchTransientUnderBrake</code></li>
+<li><code>SuspensionVelocityNonZeroDuringTransient</code></li>
+<li><code>AntiDiveReducesPitchUnderBrake</code> — anti_dive 0 vs 0.5 비교, anti-dive 가 pitch 감소.</li>
+</ul>
 <p>총 9 tests pass.</p>
 <h2 id="612">6.12 참고<a class="headerlink" href="#612" title="Permanent link">&para;</a></h2>
 <ul>

@@ -2167,13 +2167,15 @@
 y = [\,x_w,\; y_w,\; \psi,\; v_x,\; v_y,\; r,\; \omega_f,\; \omega_r\,]
 \]</div>
 <p>실제 DOF count 는 5 (<span class="arithmatex">\(v_x, v_y, \psi\)</span> + 2 wheel spin), 적분기 입장에서는 8 개 first-order ODE (포지션 3 개는 kinematic).</p>
-<p><code>State</code> struct 매핑:
-- <code>position.x</code>, <code>position.y</code> ← <code>x_w</code>, <code>y_w</code>
-- <code>orientation</code> (quat) ← <code>quat_from_euler(0, 0, ψ)</code>
-- <code>velocity.x</code>, <code>velocity.y</code> ← <code>vx</code>, <code>vy</code>
-- <code>angular_velocity.z</code> ← <code>r</code>
-- <code>wheel_spin[FL] = wheel_spin[FR] = ω_f</code>
-- <code>wheel_spin[RL] = wheel_spin[RR] = ω_r</code></p>
+<p><code>State</code> struct 매핑:</p>
+<ul>
+<li><code>position.x</code>, <code>position.y</code> ← <code>x_w</code>, <code>y_w</code></li>
+<li><code>orientation</code> (quat) ← <code>quat_from_euler(0, 0, ψ)</code></li>
+<li><code>velocity.x</code>, <code>velocity.y</code> ← <code>vx</code>, <code>vy</code></li>
+<li><code>angular_velocity.z</code> ← <code>r</code></li>
+<li><code>wheel_spin[FL] = wheel_spin[FR] = ω_f</code></li>
+<li><code>wheel_spin[RL] = wheel_spin[RR] = ω_r</code></li>
+</ul>
 <p>코드 <code>core/src/bicycle_dynamics.cpp:89-99</code> 의 <code>Deriv</code> struct 이 위와 1-to-1.</p>
 <h2 id="44-bicycle-eom">4.4 Bicycle EoM (식)<a class="headerlink" href="#44-bicycle-eom" title="Permanent link">&para;</a></h2>
 <p>Body-frame Newton-Euler (Chapter 02 결론) + per-axle tire force:</p>
@@ -2186,13 +2188,15 @@ I_w\, \dot\omega_f &amp;= T_{\text{drive},f} + T_{\text{brake},f} - F_{x,\text{w
 I_w\, \dot\omega_r &amp;= T_{\text{drive},r} + T_{\text{brake},r} - F_{x,\text{wheel},r}\, R &amp;&amp;\text{(rear spin)}
 \end{aligned}
 \]</div>
-<p>여기서:
-- <code>Fx_total = Fx_body_f + Fx_body_r − F_aero − F_rr</code> (drag + rolling 합쳐서).
-- <code>Fy_total = Fy_body_f + Fy_body_r</code>.
-- <code>Fx_body_f = Fx_wheel_f · cos(δ) − Fy_wheel_f · sin(δ)</code> (wheel frame → body frame, 회전).
-- <code>Fy_body_f = Fx_wheel_f · sin(δ) + Fy_wheel_f · cos(δ)</code>.
-- Rear: <code>Fx_body_r = Fx_wheel_r</code>, <code>Fy_body_r = Fy_wheel_r</code> (un-steered).
-- <code>a, b</code> = CG-to-front, CG-to-rear distance.</p>
+<p>여기서:</p>
+<ul>
+<li><code>Fx_total = Fx_body_f + Fx_body_r − F_aero − F_rr</code> (drag + rolling 합쳐서).</li>
+<li><code>Fy_total = Fy_body_f + Fy_body_r</code>.</li>
+<li><code>Fx_body_f = Fx_wheel_f · cos(δ) − Fy_wheel_f · sin(δ)</code> (wheel frame → body frame, 회전).</li>
+<li><code>Fy_body_f = Fx_wheel_f · sin(δ) + Fy_wheel_f · cos(δ)</code>.</li>
+<li>Rear: <code>Fx_body_r = Fx_wheel_r</code>, <code>Fy_body_r = Fy_wheel_r</code> (un-steered).</li>
+<li><code>a, b</code> = CG-to-front, CG-to-rear distance.</li>
+</ul>
 <p>코드 <code>core/src/bicycle_dynamics.cpp:165-203</code> 가 정확히 위 식.</p>
 <h2 id="45-per-axle-fz-with-longitudinal-weight-transfer">4.5 Per-axle Fz with longitudinal weight transfer<a class="headerlink" href="#45-per-axle-fz-with-longitudinal-weight-transfer" title="Permanent link">&para;</a></h2>
 <p>Static Fz:</p>
@@ -2208,9 +2212,11 @@ F_{z,r}^{\text{static}} = \frac{m g a}{L}
 F_{z,f} = \frac{m g b}{L} + F_{z,\text{aero},f} - \Delta F_{z,\text{long}}, \qquad
 F_{z,r} = \frac{m g a}{L} + F_{z,\text{aero},r} + \Delta F_{z,\text{long}}
 \]</div>
-<p>부호 직관:
-- 가속 (ax &gt; 0) → ΔFz_long &gt; 0 → rear 가 더 loaded, front 가 덜 loaded.
-- 제동 (ax &lt; 0) → ΔFz_long &lt; 0 → front 가 더 loaded (nose dive).</p>
+<p>부호 직관:</p>
+<ul>
+<li>가속 (ax &gt; 0) → ΔFz_long &gt; 0 → rear 가 더 loaded, front 가 덜 loaded.</li>
+<li>제동 (ax &lt; 0) → ΔFz_long &lt; 0 → front 가 더 loaded (nose dive).</li>
+</ul>
 <h3 id="1-step-lag">1-step lag — 왜 필요한가<a class="headerlink" href="#1-step-lag" title="Permanent link">&para;</a></h3>
 <p><code>ax</code> 는 <code>Fx_total / m</code>. <code>Fx_total</code> 은 tire Fx 의 합. tire Fx 는 Pacejka 가 Fz 의 함수. Fz 는 ax 의 함수.
 즉 self-referential: <code>ax = f(Fz(ax))</code>. 풀려면 fixed-point iteration.</p>
@@ -2233,10 +2239,12 @@ F_{z,\text{aero},r} = C_{l,r}\, q
 <p><span class="arithmatex">\(v_x |v_x|\)</span> 표기 — 후진 시 부호 반전.
 default Cl_f = Cl_r = 0 (sedan 은 거의 효과 없음). sports / race / FSK 에서 nonzero.</p>
 <h2 id="46-drive-brake-torque">4.6 Drive / brake torque 분배<a class="headerlink" href="#46-drive-brake-torque" title="Permanent link">&para;</a></h2>
-<p>Drive split 은 <code>drive_type</code>:
-- FWD: front axle 만.
-- RWD: rear axle 만 (default for sedan).
-- AWD: front/rear 50:50.</p>
+<p>Drive split 은 <code>drive_type</code>:</p>
+<ul>
+<li>FWD: front axle 만.</li>
+<li>RWD: rear axle 만 (default for sedan).</li>
+<li>AWD: front/rear 50:50.</li>
+</ul>
 <p>Brake 는 <code>brake_bias_front</code>:</p>
 <div class="arithmatex">\[
 T_{b,f} = \text{bias} \cdot \text{brake} \cdot T_{\text{brake,max}}, \qquad
@@ -2250,11 +2258,13 @@ T_{b,r} = (1 - \text{bias}) \cdot \text{brake} \cdot T_{\text{brake,max}}
 <p>Smooth sign 함수 <code>tanh(ω / w)</code> 로 wheel spin 부호 부드럽게 처리 — 정지 근처 발진 방지.</p>
 <h2 id="47-linear-bicycle-analytical-steady-state">4.7 Linear-bicycle analytical steady-state<a class="headerlink" href="#47-linear-bicycle-analytical-steady-state" title="Permanent link">&para;</a></h2>
 <p>검증 baseline 이 되는 식. <strong>Cornering 의 linear region</strong> 에서 SS yaw rate.</p>
-<p>가정:
-- 작은 α (linear region) → <code>Fy = −Cα · α</code> (Pacejka 의 linear-region slope, <code>Cα = B·C·D·Fz·μ</code>).
-- <code>vx = const</code>.
-- v̇y = 0, ṙ = 0 (SS).
-- vy ≪ vx.</p>
+<p>가정:</p>
+<ul>
+<li>작은 α (linear region) → <code>Fy = −Cα · α</code> (Pacejka 의 linear-region slope, <code>Cα = B·C·D·Fz·μ</code>).</li>
+<li><code>vx = const</code>.</li>
+<li>v̇y = 0, ṙ = 0 (SS).</li>
+<li>vy ≪ vx.</li>
+</ul>
 <p>EoM:</p>
 <div class="arithmatex">\[
 m\, v_x\, r = F_{y,\text{total}} \quad (\text{body-y SS}), \qquad
@@ -2300,14 +2310,20 @@ r_{ss} = \frac{v_x\, \delta}{L\,(1 + K_{us}\, v_x^2)}
 <p><em>VDSim L2 (sports) 의 실제 sweep — yaw-rate gain 이 고속에서 neutral 선 (v/L) 아래로 처지고 saturate. understeer 차량의 교과서적 거동.</em></p>
 <p><img alt="Step-steer transient yaw rate (actual Ld1)" src="../figures/04_step_response.png" /></p>
 <h2 id="48-analytical-vs-simulator">4.8 검증 — analytical vs simulator<a class="headerlink" href="#48-analytical-vs-simulator" title="Permanent link">&para;</a></h2>
-<p><code>BicycleSteadyState.LeftTurnYawRateMatchesAnalytical</code>:
-- vx0 = 10 m/s, δ = 0.05 rad, 5 s 적분.
-- <code>r_sim ≈ 0.176 rad/s</code>, <code>r_ana ≈ 0.185 rad/s</code>. 오차 −5 %.
-- analytical 이 linear bicycle (no Mz aggregation) 이라 −2.6 % 는 Mz 기여, 나머지 −2-3 % 는 small non-linearity 영역에 들어선 효과.</p>
-<p><code>StepSteerSweep.LinearRegionWithinTenPercent</code>:
-- 3 × 5 grid (vx, δ) 에서 ay &lt; 3 m/s² 인 cell 모두 <code>|err| ≤ 10 %</code>.</p>
-<p><code>LongScenarios.DragCoastMatchesAnalytical</code>:
-- aero drag only (RR=0). 20 m/s 에서 10 s coast. analytical <code>vx(t) = vx0 / (1 + vx0 · k · t)</code> (k = ½ρCdA / m) 과 ±5 %.</p>
+<p><code>BicycleSteadyState.LeftTurnYawRateMatchesAnalytical</code>:</p>
+<ul>
+<li>vx0 = 10 m/s, δ = 0.05 rad, 5 s 적분.</li>
+<li><code>r_sim ≈ 0.176 rad/s</code>, <code>r_ana ≈ 0.185 rad/s</code>. 오차 −5 %.</li>
+<li>analytical 이 linear bicycle (no Mz aggregation) 이라 −2.6 % 는 Mz 기여, 나머지 −2-3 % 는 small non-linearity 영역에 들어선 효과.</li>
+</ul>
+<p><code>StepSteerSweep.LinearRegionWithinTenPercent</code>:</p>
+<ul>
+<li>3 × 5 grid (vx, δ) 에서 ay &lt; 3 m/s² 인 cell 모두 <code>|err| ≤ 10 %</code>.</li>
+</ul>
+<p><code>LongScenarios.DragCoastMatchesAnalytical</code>:</p>
+<ul>
+<li>aero drag only (RR=0). 20 m/s 에서 10 s coast. analytical <code>vx(t) = vx0 / (1 + vx0 · k · t)</code> (k = ½ρCdA / m) 과 ±5 %.</li>
+</ul>
 <p>이런 closed-form 비교가 simulator-side 의 "correctness" 의 강한 evidence.</p>
 <h2 id="49">4.9 한계<a class="headerlink" href="#49" title="Permanent link">&para;</a></h2>
 <table>

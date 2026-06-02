@@ -2168,12 +2168,16 @@ u = K_p\, e + K_i \int e\, dt + K_d\, \dot e + K_{ff}\, a_{x,\text{target}}
 <p>코드 <code>core/src/control_converter.cpp</code> 의 <code>LongAxController::update</code>.</p>
 <h3 id="throttle-brake">Throttle / brake 자동 분기<a class="headerlink" href="#throttle-brake" title="Permanent link">&para;</a></h3>
 <p><code>u</code> 의 sign 으로 dispatch. throttle 과 brake 가 동시에 0 이 아닌 경우 없음 (mutually exclusive).</p>
-<p>이게 단순한 가정. 실제로는:
-- regenerative brake 가 있는 EV 에서 <code>throttle &lt; 0</code> 의미 가능.
-- 갑작스러운 sign 전환 시 actuator dead-time 으로 진동 가능.</p>
-<p>본 PoC 는 simple bang-bang 분기. follow-up:
-- <code>throttle_brake_overlap_band</code> — sign 전환 시 dead-zone.
-- regen mode (negative throttle).</p>
+<p>이게 단순한 가정. 실제로는:</p>
+<ul>
+<li>regenerative brake 가 있는 EV 에서 <code>throttle &lt; 0</code> 의미 가능.</li>
+<li>갑작스러운 sign 전환 시 actuator dead-time 으로 진동 가능.</li>
+</ul>
+<p>본 PoC 는 simple bang-bang 분기. follow-up:</p>
+<ul>
+<li><code>throttle_brake_overlap_band</code> — sign 전환 시 dead-zone.</li>
+<li>regen mode (negative throttle).</li>
+</ul>
 <h3 id="anti-windup">Anti-windup<a class="headerlink" href="#anti-windup" title="Permanent link">&para;</a></h3>
 <p><code>integ</code> 를 ±<code>i_max</code> 로 clamp. saturation 영역에서 integrator 가 무한히 누적되어 desaturation 후 overshoot 만드는 현상 (windup) 방지.</p>
 <p>cap 값:
@@ -2214,41 +2218,55 @@ K_{ff} \approx \frac{m R}{T_{\max}} \approx \frac{1500 \cdot 0.32}{300} \approx 
 <div class="arithmatex">\[
 \omega_{\text{inner}} \ge 3\, \omega_{\text{outer}} \quad (\text{transient decoupling})
 \]</div>
-<p>본 PoC default:
-- Lc5: Kp = 0.4 (ax control loop dominant pole ~ 5-10 rad/s)
-- Lc6: Kp = 0.8 (v control loop ~ 1-2 rad/s)</p>
+<p>본 PoC default:</p>
+<ul>
+<li>Lc5: Kp = 0.4 (ax control loop dominant pole ~ 5-10 rad/s)</li>
+<li>Lc6: Kp = 0.8 (v control loop ~ 1-2 rad/s)</li>
+</ul>
 <p>ratio ~ 5. 충분 separation.</p>
 <h2 id="84-cascade-saturation">8.4 Cascade 의 한계 — saturation 의 전파<a class="headerlink" href="#84-cascade-saturation" title="Permanent link">&para;</a></h2>
-<p>만약 ax_target &gt; 실제 차량의 max ax (e.g., FSK 의 가속 한계 ~ 6 m/s²) 이면:
-- Lc5 가 throttle = 1.0 saturate.
-- Lc6 의 integrator 가 계속 누적 (실제 ax 가 못 따라가니 vx error 누적).
-- Anti-windup 으로 cap 되지만 outer-loop wind-down 까지 시간 지연.</p>
-<p>본 PoC 의 <code>vdsim_ax_track_demo</code> (Task 25) 의 결과:
-- accel phase (ax_target=+2): mean 0.58 (cap), RMSE 1.42.
-- 차량 한계 노출.</p>
-<p>해결책 (follow-up):
-- Lc6 의 <code>ax_clamp</code> 를 차종 max ax 로 자동 조정.
-- Conditional integration (saturation 영역에서 integrator hold).
-- back-calculation anti-windup.</p>
+<p>만약 ax_target &gt; 실제 차량의 max ax (e.g., FSK 의 가속 한계 ~ 6 m/s²) 이면:</p>
+<ul>
+<li>Lc5 가 throttle = 1.0 saturate.</li>
+<li>Lc6 의 integrator 가 계속 누적 (실제 ax 가 못 따라가니 vx error 누적).</li>
+<li>Anti-windup 으로 cap 되지만 outer-loop wind-down 까지 시간 지연.</li>
+</ul>
+<p>본 PoC 의 <code>vdsim_ax_track_demo</code> (Task 25) 의 결과:</p>
+<ul>
+<li>accel phase (ax_target=+2): mean 0.58 (cap), RMSE 1.42.</li>
+<li>차량 한계 노출.</li>
+</ul>
+<p>해결책 (follow-up):</p>
+<ul>
+<li>Lc6 의 <code>ax_clamp</code> 를 차종 max ax 로 자동 조정.</li>
+<li>Conditional integration (saturation 영역에서 integrator hold).</li>
+<li>back-calculation anti-windup.</li>
+</ul>
 <h2 id="85-driver-model-pi-gain">8.5 Driver model 의 PI gain (참고)<a class="headerlink" href="#85-driver-model-pi-gain" title="Permanent link">&para;</a></h2>
-<p><code>DriverModel</code> (Chapter 10 상세) 가 내부에서 cascade 사용:
-- vx PID: Kp = 0.6, Ki = 0.15 (slower than auto cascade)
-- ax PID: default (Lc5 default 그대로)</p>
+<p><code>DriverModel</code> (Chapter 10 상세) 가 내부에서 cascade 사용:</p>
+<ul>
+<li>vx PID: Kp = 0.6, Ki = 0.15 (slower than auto cascade)</li>
+<li>ax PID: default (Lc5 default 그대로)</li>
+</ul>
 <p>인간 driver 의 reaction 이 controller 보다 느림 → outer loop gain 도 낮게.</p>
 <h2 id="86-task-25">8.6 검증 (Task 25)<a class="headerlink" href="#86-task-25" title="Permanent link">&para;</a></h2>
-<p><code>LongAxController.*</code> 7 tests:
-- <code>ZeroErrorZeroOutput</code>
-- <code>PositiveTargetUsesThrottle</code>
-- <code>NegativeTargetUsesBrake</code>
-- <code>IntegratorAccumulates</code>
-- <code>ResetClearsState</code>
-- <code>OutputsAreClamped</code>
-- <code>IntegratorAntiwindup</code> — sustain error 입력 후 <code>|integ| ≤ i_max</code>.</p>
-<p><code>LongVxController.*</code> 4 tests:
-- <code>ZeroErrorZeroOutput</code>
-- <code>PositiveErrorPositiveAx</code>
-- <code>NegativeErrorNegativeAx</code>
-- <code>OutputClamped</code></p>
+<p><code>LongAxController.*</code> 7 tests:</p>
+<ul>
+<li><code>ZeroErrorZeroOutput</code></li>
+<li><code>PositiveTargetUsesThrottle</code></li>
+<li><code>NegativeTargetUsesBrake</code></li>
+<li><code>IntegratorAccumulates</code></li>
+<li><code>ResetClearsState</code></li>
+<li><code>OutputsAreClamped</code></li>
+<li><code>IntegratorAntiwindup</code> — sustain error 입력 후 <code>|integ| ≤ i_max</code>.</li>
+</ul>
+<p><code>LongVxController.*</code> 4 tests:</p>
+<ul>
+<li><code>ZeroErrorZeroOutput</code></li>
+<li><code>PositiveErrorPositiveAx</code></li>
+<li><code>NegativeErrorNegativeAx</code></li>
+<li><code>OutputClamped</code></li>
+</ul>
 <p>11 tests pass.</p>
 <h3 id="end-to-end-vdsim_ax_track_demo">End-to-end (vdsim_ax_track_demo)<a class="headerlink" href="#end-to-end-vdsim_ax_track_demo" title="Permanent link">&para;</a></h3>
 <p>step-target ax = (0 → +2 → 0 → −3 → 0) 으로 10 s.</p>

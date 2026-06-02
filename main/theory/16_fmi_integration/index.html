@@ -2039,11 +2039,13 @@ dSPACE, ANSYS Twin Builder, Chrono (개발 중) — 거의 모든 시뮬 도구.
 <li><code>fmi2DoStep</code> — CmdL4 구성 → <code>dyn-&gt;step(u, contacts, h)</code>.</li>
 <li><code>fmi2GetReal</code> — VR 10-17 (L2) / 10-43 (L3: + roll/pitch/susp/Fz) 출력.</li>
 </ul>
-<p>빌드 (<code>build_fmu.sh</code>):
-1. <code>libvdsim_core.a</code> + yaml-cpp + spdlog 정적 링크하여 .so 컴파일.
-2. <code>-fvisibility=hidden</code> + <code>--version-script</code> 로 <code>fmi2*</code> 심볼만 노출.
-3. configs YAML 을 resources/ 로 복사.
-4. ZIP → <code>.fmu</code>.</p>
+<p>빌드 (<code>build_fmu.sh</code>):</p>
+<ol>
+<li><code>libvdsim_core.a</code> + yaml-cpp + spdlog 정적 링크하여 .so 컴파일.</li>
+<li><code>-fvisibility=hidden</code> + <code>--version-script</code> 로 <code>fmi2*</code> 심볼만 노출.</li>
+<li>configs YAML 을 resources/ 로 복사.</li>
+<li>ZIP → <code>.fmu</code>.</li>
+</ol>
 <p>출력: <code>vdsim_l2.fmu</code> (4.1 MB), <code>vdsim_l3.fmu</code> (4.6 MB, Ld4 kinematics 포함).</p>
 <p>variable map (L2):
 <div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>입력  1 steer_angle_wheel, 2 throttle, 3 brake
@@ -2058,11 +2060,13 @@ dSPACE, ANSYS Twin Builder, Chrono (개발 중) — 거의 모든 시뮬 도구.
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">fmu</span><span class="o">.</span><span class="n">do_step</span><span class="p">(</span><span class="n">t</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.02</span><span class="p">)</span>
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">fmu</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;vx&quot;</span><span class="p">))</span>
 </span></code></pre></div>
-<p>구현:
-1. ZIP 해제 → tempdir → <code>modelDescription.xml</code> 파싱 (이름→VR 맵).
-2. <code>binaries/&lt;platform&gt;/&lt;modelIdentifier&gt;.so</code> 를 ctypes 로 로드.
-3. FMI 2.0 CS 라이프사이클 함수 시그니처 바인딩.
-4. 변수를 <strong>이름</strong>으로 접근 (raw VR 보다 친화적).</p>
+<p>구현:</p>
+<ol>
+<li>ZIP 해제 → tempdir → <code>modelDescription.xml</code> 파싱 (이름→VR 맵).</li>
+<li><code>binaries/&lt;platform&gt;/&lt;modelIdentifier&gt;.so</code> 를 ctypes 로 로드.</li>
+<li>FMI 2.0 CS 라이프사이클 함수 시그니처 바인딩.</li>
+<li>변수를 <strong>이름</strong>으로 접근 (raw VR 보다 친화적).</li>
+</ol>
 <p>어떤 FMI 2.0 CS FMU 든 로드 — 우리 vdsim_l2/l3.fmu, Chrono Vehicle export,
 CarMaker / CarSim export, Modelica 생성 FMU 등.</p>
 <h2 id="166">16.6 양방향의 전략적 의미<a class="headerlink" href="#166" title="Permanent link">&para;</a></h2>

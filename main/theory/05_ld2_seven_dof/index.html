@@ -2354,11 +2354,13 @@ F_{\text{outer}} - F_{\text{inner}} = \frac{M_{\text{roll,axle}}}{T_w / 2} = 2\,
 v_{x,\text{body},i} = v_x - r\, r_{y,i}, \qquad
 v_{y,\text{body},i} = v_y + r\, r_{x,i}
 \]</div>
-<p>여기서 <span class="arithmatex">\((r_{x,i}, r_{y,i})\)</span> 는 wheel 의 body-frame 위치:
-- FL: <code>(+a, +Tw_f/2)</code>
-- FR: <code>(+a, −Tw_f/2)</code>
-- RL: <code>(−b, +Tw_r/2)</code>
-- RR: <code>(−b, −Tw_r/2)</code></p>
+<p>여기서 <span class="arithmatex">\((r_{x,i}, r_{y,i})\)</span> 는 wheel 의 body-frame 위치:</p>
+<ul>
+<li>FL: <code>(+a, +Tw_f/2)</code></li>
+<li>FR: <code>(+a, −Tw_f/2)</code></li>
+<li>RL: <code>(−b, +Tw_r/2)</code></li>
+<li>RR: <code>(−b, −Tw_r/2)</code></li>
+</ul>
 <p>(ISO 8855 RH 에서 +y = leftward → left wheels 는 +y, right wheels 는 −y.)</p>
 <p>front wheels 는 추가로 steer angle <span class="arithmatex">\(\delta_i\)</span> (Ackerman 적용 시 <span class="arithmatex">\(i\)</span> 마다 다름) 만큼 rotated:</p>
 <div class="arithmatex">\[
@@ -2394,11 +2396,13 @@ f = \frac{\text{ackerman\_percent}}{100}, \qquad
 <li><code>ackerman_percent = 100</code> → perfect Ackerman.</li>
 </ul>
 <p>VDSim 코드 <code>core/src/seven_dof_dynamics.cpp:212-228</code>. 좌선회 (<code>δ &gt; 0</code>) 일 때 inside = FL, outside = FR.</p>
-<p>차종 별 default:
-- sedan: 60 % (typical street car partial Ackerman).
-- sports: 85 %.
-- FSK formula: 100 %.
-- race: 90 %.</p>
+<p>차종 별 default:</p>
+<ul>
+<li>sedan: 60 % (typical street car partial Ackerman).</li>
+<li>sports: 85 %.</li>
+<li>FSK formula: 100 %.</li>
+<li>race: 90 %.</li>
+</ul>
 <p>검증 (Task 21): tight turn (<code>R=20, vx=2, δ=0.35</code>) 에서 <code>ackerman_percent 0 → 100</code> 으로 변경 시 SS yaw rate 가 +37 % 증가. inner wheel 의 slip 감소가 net cornering efficiency 향상으로 reflect.</p>
 <h2 id="55-differential-model">5.5 Differential model<a class="headerlink" href="#55-differential-model" title="Permanent link">&para;</a></h2>
 <h3 id="open-differential">Open differential<a class="headerlink" href="#open-differential" title="Permanent link">&para;</a></h3>
@@ -2425,10 +2429,12 @@ T_{L,R} = (0.5 \mp \text{bias})\, T_{\text{axle}}
 \]</div>
 <p>preload = 0.10, ramp = 0.20 (sedan default).
 실제 LSD ramp angle 모델은 더 복잡 (drive vs coast 비대칭), 본 PoC 는 대칭.</p>
-<p>검증 (Task 26 split-mu accel):
-- Open: Δω_end = 0.605 rad/s
-- LSD: Δω_end = 0.353
-- Locked: Δω_end = 0.207</p>
+<p>검증 (Task 26 split-mu accel):</p>
+<ul>
+<li>Open: Δω_end = 0.605 rad/s</li>
+<li>LSD: Δω_end = 0.353</li>
+<li>Locked: Δω_end = 0.207</li>
+</ul>
 <p>수치 ordering 이 정성 정확.</p>
 <h2 id="56-steering-rack-torque-feedback">5.6 Steering rack torque feedback<a class="headerlink" href="#56-steering-rack-torque-feedback" title="Permanent link">&para;</a></h2>
 <p>front-wheel 의 Mz 합산 × steering_ratio = steering wheel torque (driver feedback).</p>
@@ -2468,9 +2474,11 @@ I_w\, \dot\omega_i = T_{\text{drive},i} + T_{\text{brake},i} - F_{x,\text{wheel}
 <p>drive split → differential → per-wheel <code>T_drive_i</code>. brake split → axle bias + EBD → per-wheel <code>T_brake_i</code>.</p>
 <h2 id="59-linear-region-ld2-ld1">5.9 Linear region 의 Ld2 ↔ Ld1 동일성<a class="headerlink" href="#59-linear-region-ld2-ld1" title="Permanent link">&para;</a></h2>
 <p>Linear region (ay 작음) 에서 lateral transfer 가 작고 differential 차이 미미. Ld2 SS yaw rate 가 Ld1 SS 와 거의 같다.</p>
-<p>검증 (Task 20 격자 sweep):
-- vx ≤ 15, |δ| ≤ 0.04: <code>|r_L2 − r_L1| / r_L1 ≤ 0.5 %</code>.
-- vx = 20, δ = 0.10 (nonlinear): up to 89 % 차이. 이는 outer-tire saturation 의 본격 효과.</p>
+<p>검증 (Task 20 격자 sweep):</p>
+<ul>
+<li>vx ≤ 15, |δ| ≤ 0.04: <code>|r_L2 − r_L1| / r_L1 ≤ 0.5 %</code>.</li>
+<li>vx = 20, δ = 0.10 (nonlinear): up to 89 % 차이. 이는 outer-tire saturation 의 본격 효과.</li>
+</ul>
 <p>즉 Ld2 의 의미는 <strong>nonlinear region 에서 본격 부각</strong>.</p>
 <h2 id="510-ld3">5.10 한계 (Ld3 가 채우는 것)<a class="headerlink" href="#510-ld3" title="Permanent link">&para;</a></h2>
 <table>
@@ -2505,18 +2513,20 @@ I_w\, \dot\omega_i = T_{\text{drive},i} + T_{\text{brake},i} - F_{x,\text{wheel}
 </table>
 <p>이 모두 Ld3 가 추가.</p>
 <h2 id="511-task-19-20">5.11 검증 (Task 19, 20 등)<a class="headerlink" href="#511-task-19-20" title="Permanent link">&para;</a></h2>
-<p><code>SevenDOF.*</code> 18 tests:
-- ConstructionAndLevel
-- AtRestStaticFz — sum = m·g, per-axle 정확.
-- HardBrakeLoadsBothFrontWheels — Fz_F &gt; 1.05 · static_F.
-- LeftTurnLoadsRightWheels — Fz_FR &gt; Fz_FL, Fz_RR &gt; Fz_RL.
-- SmallSteerYawRateMatchesBicycle — linear region Ld1 ↔ Ld2 ≤ 10 %.
-- AeroDownforceIncreasesFzAtSpeed
-- OpenDifferentialSplitMu / LockedDifferentialReducesSpread / LSDBetweenOpenAndLocked
-- AckermanInfluencesTurningRadius / AckermanZeroReproducesBaseline
-- RollAngleSignAndScale / PitchAngleSignDuringBrake
-- SteeringRackTorqueSignOpposesSteer
-- IndependentWheelSpinUnderSplitMu</p>
+<p><code>SevenDOF.*</code> 18 tests:</p>
+<ul>
+<li>ConstructionAndLevel</li>
+<li>AtRestStaticFz — sum = m·g, per-axle 정확.</li>
+<li>HardBrakeLoadsBothFrontWheels — Fz_F &gt; 1.05 · static_F.</li>
+<li>LeftTurnLoadsRightWheels — Fz_FR &gt; Fz_FL, Fz_RR &gt; Fz_RL.</li>
+<li>SmallSteerYawRateMatchesBicycle — linear region Ld1 ↔ Ld2 ≤ 10 %.</li>
+<li>AeroDownforceIncreasesFzAtSpeed</li>
+<li>OpenDifferentialSplitMu / LockedDifferentialReducesSpread / LSDBetweenOpenAndLocked</li>
+<li>AckermanInfluencesTurningRadius / AckermanZeroReproducesBaseline</li>
+<li>RollAngleSignAndScale / PitchAngleSignDuringBrake</li>
+<li>SteeringRackTorqueSignOpposesSteer</li>
+<li>IndependentWheelSpinUnderSplitMu</li>
+</ul>
 <p>총 18 tests pass.</p>
 <h2 id="512">5.12 참고<a class="headerlink" href="#512" title="Permanent link">&para;</a></h2>
 <ul>

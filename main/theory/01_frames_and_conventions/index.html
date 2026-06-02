@@ -2283,10 +2283,12 @@ R(\text{roll}, \text{pitch}, \text{yaw}) = R_z(\text{yaw}) \cdot R_y(\text{pitch
 <p>$$
   v_{x,\text{wheel}} = v_{x,\text{body}}, \qquad v_{y,\text{wheel}} = v_{y,cg} - b r
   $$</p>
-<p>부호 직관:
-- 좌선회 (r &gt; 0, δ &gt; 0). rear 의 경우 <code>v_y_wheel = v_y − b·r</code>. SS 에서 <code>v_y</code> 가 약간 음수, <code>b·r</code> 가 양수 → 합쳐서 음수. <code>v_x</code> 양수 → <code>α_r = atan2(− , +) &lt; 0</code>.
-- 그러므로 <strong>좌선회에서 alpha &lt; 0</strong>. ISO 8855 RH 의 약속.
-- 그리고 Pacejka 에서 <code>Fy = − D · sin(...)</code> 로 leading minus 부호. <code>α &lt; 0</code> → <code>sin(...) &lt; 0</code> → <code>Fy &gt; 0</code> (i.e., +y_body = leftward = inside of left turn). 즉 cornering force 가 차량을 안쪽으로 잡아준다.</p>
+<p>부호 직관:</p>
+<ul>
+<li>좌선회 (r &gt; 0, δ &gt; 0). rear 의 경우 <code>v_y_wheel = v_y − b·r</code>. SS 에서 <code>v_y</code> 가 약간 음수, <code>b·r</code> 가 양수 → 합쳐서 음수. <code>v_x</code> 양수 → <code>α_r = atan2(− , +) &lt; 0</code>.</li>
+<li>그러므로 <strong>좌선회에서 alpha &lt; 0</strong>. ISO 8855 RH 의 약속.</li>
+<li>그리고 Pacejka 에서 <code>Fy = − D · sin(...)</code> 로 leading minus 부호. <code>α &lt; 0</code> → <code>sin(...) &lt; 0</code> → <code>Fy &gt; 0</code> (i.e., +y_body = leftward = inside of left turn). 즉 cornering force 가 차량을 안쪽으로 잡아준다.</li>
+</ul>
 <p>VDSim 코드: <code>core/src/bicycle_dynamics.cpp:146-147</code>:
 <div class="language-cpp highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">alpha_f</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">atan2</span><span class="p">(</span><span class="n">v_fy_wheel</span><span class="p">,</span><span class="w"> </span><span class="n">v_fx_wheel</span><span class="p">);</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">alpha_r</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">atan2</span><span class="p">(</span><span class="n">v_ry_body</span><span class="p">,</span><span class="w"> </span><span class="n">v_rx_body</span><span class="p">);</span>
@@ -2302,10 +2304,12 @@ R(\text{roll}, \text{pitch}, \text{yaw}) = R_z(\text{yaw}) \cdot R_y(\text{pitch
 <li><code>v_x_wheel</code> 은 wheel center 의 longitudinal velocity.</li>
 <li><code>ε = 0.5 m/s</code> 의 floor — 정지 근처에서 발산 방지.</li>
 </ul>
-<p>부호 직관:
-- 가속 (drive): <code>R · omega &gt; v_x</code> → κ &gt; 0 → <code>Fx &gt; 0</code> (drive force).
-- 제동 (brake): <code>R · omega &lt; v_x</code> → κ &lt; 0 → <code>Fx &lt; 0</code>.
-- 정지: <code>omega = v_x = 0</code> → κ = 0.</p>
+<p>부호 직관:</p>
+<ul>
+<li>가속 (drive): <code>R · omega &gt; v_x</code> → κ &gt; 0 → <code>Fx &gt; 0</code> (drive force).</li>
+<li>제동 (brake): <code>R · omega &lt; v_x</code> → κ &lt; 0 → <code>Fx &lt; 0</code>.</li>
+<li>정지: <code>omega = v_x = 0</code> → κ = 0.</li>
+</ul>
 <p>VDSim 코드: <code>core/src/bicycle_dynamics.cpp:151-152</code>:
 <div class="language-cpp highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">kappa_f</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">R</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">of</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">v_fx_wheel</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">denom_f</span><span class="p">;</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">kappa_r</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">R</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">or_</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">v_rx_body</span><span class="p">)</span><span class="w">  </span><span class="o">/</span><span class="w"> </span><span class="n">denom_r</span><span class="p">;</span>
@@ -2380,10 +2384,12 @@ Ld3-FourteenDOF 는 roll/pitch 도 함께 quat 에 encoding.</p>
 <p>좌표계가 정해졌으니, 다음 챕터에서는 <strong>이 frame 위에서의 강체 운동방정식 (Newton-Euler)</strong> 을 정리한다.
 이게 정리되어야 Pacejka / Ld1 / Ld2 / Ld3 모두 같은 base 위에 올릴 수 있다.</p>
 <h2 id="19">1.9 검증<a class="headerlink" href="#19" title="Permanent link">&para;</a></h2>
-<p>VDSim 의 <code>test_headers_compile.cpp</code> 와 <code>test_coordinate.cpp</code> 에서:
-- <code>Vec3::UnitZ()</code> 가 contact normal 의 default 와 일치.
-- <code>quat_from_euler({0,0,0}).isApprox(Quat::Identity())</code>.
-- <code>yaw_from_quat(quat_from_euler({0,0,π/2}))</code> ≈ π/2.</p>
+<p>VDSim 의 <code>test_headers_compile.cpp</code> 와 <code>test_coordinate.cpp</code> 에서:</p>
+<ul>
+<li><code>Vec3::UnitZ()</code> 가 contact normal 의 default 와 일치.</li>
+<li><code>quat_from_euler({0,0,0}).isApprox(Quat::Identity())</code>.</li>
+<li><code>yaw_from_quat(quat_from_euler({0,0,π/2}))</code> ≈ π/2.</li>
+</ul>
 <p>또한 <code>test_bicycle_steady_state.cpp</code> 의 <code>LeftTurnYawRateMatchesAnalytical</code> 이 ISO 8855 RH 부호로 짜였음을 통과로 확인.</p>
 <h2 id="110">1.10 참고<a class="headerlink" href="#110" title="Permanent link">&para;</a></h2>
 <ul>

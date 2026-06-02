@@ -2163,9 +2163,11 @@ strut compression 길이는 자유 (스프링이 결정), 방향만 구속.</p>
 <p><code>tools/kinematics/ta_3d_solver.py</code>, <code>core/src/ta_native_kinematics.cpp</code>.</p>
 <p>가장 단순. arm + knuckle + wheel 이 한 강체, chassis 측 single revolute axis.
 <code>M = 6·1 − 5 = 1</code> (wheel travel). steer 없음.</p>
-<p>axis 방향이 camber/toe gain 을 결정:
-- pure trailing (axis ∥ +y): camber/toe gain 0.
-- semi-trailing (axis 가 x 또는 z 성분): gain 발생.</p>
+<p>axis 방향이 camber/toe gain 을 결정:</p>
+<ul>
+<li>pure trailing (axis ∥ +y): camber/toe gain 0.</li>
+<li>semi-trailing (axis 가 x 또는 z 성분): gain 발생.</li>
+</ul>
 <p>풀이: arm 회전각 θ 하나만 Newton (wheel z 목표). 샘플 axis tilt 14° (toe
 방향) + 5.5° (anti-dive) → camber 0.022 °/mm, toe 0.009 °/mm (sedan rear typical).</p>
 <h2 id="146-5-link-general-multilink">14.6 5-link — general multilink<a class="headerlink" href="#146-5-link-general-multilink" title="Permanent link">&para;</a></h2>

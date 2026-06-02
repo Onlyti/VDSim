@@ -2237,9 +2237,11 @@ y_{n+1} &amp;= y_n + \tfrac{dt}{6}(k_1 + 2k_2 + 2k_3 + k_4)
 \]</div>
 <p>훨씬 넓다. RK4 는 stiff system 의 일부 범위까지 stable.</p>
 <h3 id="rk4-cost">RK4 의 cost<a class="headerlink" href="#rk4-cost" title="Permanent link">&para;</a></h3>
-<p>4 evaluations of <code>f</code> per step. Euler 의 4 배. 하지만:
-- error 가 <code>O(dt⁴)</code> 이므로 같은 정확도에 더 큰 dt 가능.
-- 결과적으로 Euler 보다 빠를 수도 (정확도가 같다는 가정).</p>
+<p>4 evaluations of <code>f</code> per step. Euler 의 4 배. 하지만:</p>
+<ul>
+<li>error 가 <code>O(dt⁴)</code> 이므로 같은 정확도에 더 큰 dt 가능.</li>
+<li>결과적으로 Euler 보다 빠를 수도 (정확도가 같다는 가정).</li>
+</ul>
 <p>VDSim 의 inner substep dt = 1 ms 의 RK4 는 차량 dynamics 에서 numerical error 가 무시 가능 수준 (<code>O(10^{-12})</code>).</p>
 <h2 id="114-substepping-outer-dt-inner-dt">11.4 Substepping — outer dt 와 inner dt 의 분리<a class="headerlink" href="#114-substepping-outer-dt-inner-dt" title="Permanent link">&para;</a></h2>
 <p>CARLA / 외부 host 의 tick 이 보통 20 ms (50 Hz) 정도. 그러나 차량 spring 의 frequency 가 10-15 Hz 이라 outer dt 20 ms 으로 직접 RK4 하면 oscillation 인접에서 numerical artifact.</p>
@@ -2257,9 +2259,11 @@ N_{\text{sub}} = \lceil dt_{\text{outer}} / dt_{\text{sub}} \rceil
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">h</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dt</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="p">(</span><span class="n">N</span><span class="p">);</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">N</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="n">substep</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span><span class="w"> </span><span class="n">contacts</span><span class="p">,</span><span class="w"> </span><span class="n">h</span><span class="p">);</span>
 </span></code></pre></div></p>
-<p>default: <code>max_substep_dt = 0.001 s</code>, <code>max_substeps = 10</code>.
-- outer dt = 5 ms → 5 substeps of 1 ms.
-- outer dt = 20 ms → cap 에 10 substeps of 2 ms.</p>
+<p>default: <code>max_substep_dt = 0.001 s</code>, <code>max_substeps = 10</code>.</p>
+<ul>
+<li>outer dt = 5 ms → 5 substeps of 1 ms.</li>
+<li>outer dt = 20 ms → cap 에 10 substeps of 2 ms.</li>
+</ul>
 <h3 id="inner-dt">Inner dt 의 선택 기준<a class="headerlink" href="#inner-dt" title="Permanent link">&para;</a></h3>
 <div class="arithmatex">\[
 dt_{\text{inner}} \le \frac{1}{10\, f_{\max}}
@@ -2304,10 +2308,12 @@ sim 측정 Fz_f ratio = 1.125, 분석값 = 1.126. 오차 0.1 %.</p>
 Anti-dive: pitch 의 inertia term 에 <code>ax</code> 사용 — 동일 lag.</p>
 <p>본 PoC 는 일관되게 1-step lag.</p>
 <h2 id="116-rk4-substep-1-step-lag-combination">11.6 RK4 substep + 1-step lag 의 combination<a class="headerlink" href="#116-rk4-substep-1-step-lag-combination" title="Permanent link">&para;</a></h2>
-<p>각 substep 마다:
-1. <code>ax_prev</code>, <code>ay_prev</code> 사용해 Fz 계산.
-2. RK4 4 stage 진행 (<code>f</code> 4번 evaluation).
-3. substep 끝에서 <code>ax_prev = k.dvx − vy · r</code> (= <code>Fx_total / m</code>), <code>ay_prev = k.dvy + vx · r</code> 갱신.</p>
+<p>각 substep 마다:</p>
+<ol>
+<li><code>ax_prev</code>, <code>ay_prev</code> 사용해 Fz 계산.</li>
+<li>RK4 4 stage 진행 (<code>f</code> 4번 evaluation).</li>
+<li>substep 끝에서 <code>ax_prev = k.dvx − vy · r</code> (= <code>Fx_total / m</code>), <code>ay_prev = k.dvy + vx · r</code> 갱신.</li>
+</ol>
 <p>RK4 의 4 stage 안에서는 <code>ax_prev</code> constant. 더 정확하게는 매 stage 마다 update 가능하지만 (1) 식 복잡, (2) 효과 미미.</p>
 <p>코드 <code>core/src/seven_dof_dynamics.cpp:418-425</code>:
 <div class="language-cpp highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">state_</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">apply</span><span class="p">(</span><span class="n">s0</span><span class="p">,</span><span class="w"> </span><span class="n">k</span><span class="p">,</span><span class="w"> </span><span class="n">h</span><span class="p">);</span>
@@ -2353,9 +2359,11 @@ Anti-dive: pitch 의 inertia term 에 <code>ax</code> 사용 — 동일 lag.</p>
 |---|---:|---:|---:|
 | RK4 | 1 ms | 0.17993 | 9.713 |
 | Euler | 10 ms (= outer dt) | 0.17950 | 9.693 |</p>
-<p>차이 +0.24 %, +0.21 %. 작지만 측정 가능.
-- outer dt 가 5 ms 같으면 Euler 가 잘 동작.
-- 큰 outer dt (50 ms 이상) 면 Euler 가 진동 시작.</p>
+<p>차이 +0.24 %, +0.21 %. 작지만 측정 가능.</p>
+<ul>
+<li>outer dt 가 5 ms 같으면 Euler 가 잘 동작.</li>
+<li>큰 outer dt (50 ms 이상) 면 Euler 가 진동 시작.</li>
+</ul>
 <h2 id="119-future-work">11.9 한계 / future work<a class="headerlink" href="#119-future-work" title="Permanent link">&para;</a></h2>
 <table>
 <thead>

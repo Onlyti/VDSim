@@ -2416,9 +2416,11 @@ VDSim default:
 <div class="arithmatex">\[
 F_y(\alpha) = - D \sin\!\Big( C \arctan\big( B\alpha - E (B\alpha - \arctan(B\alpha)) \big) \Big)
 \]</div>
-<p>leading minus. 이유:
-- α &gt; 0 (위치상 wheel 의 velocity 가 +y_wheel 쪽으로 기울어진 상황) → tire 가 restoring force 를 −y 방향 으로 생성 → <code>Fy &lt; 0</code>.
-- VDSim 이 <code>Fy = −Dy · sin(...)</code> 로 구현하면 부호 자동.</p>
+<p>leading minus. 이유:</p>
+<ul>
+<li>α &gt; 0 (위치상 wheel 의 velocity 가 +y_wheel 쪽으로 기울어진 상황) → tire 가 restoring force 를 −y 방향 으로 생성 → <code>Fy &lt; 0</code>.</li>
+<li>VDSim 이 <code>Fy = −Dy · sin(...)</code> 로 구현하면 부호 자동.</li>
+</ul>
 <p>코드 <code>core/src/pacejka_mf96.cpp:42-48</code>:
 <div class="language-cpp highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">s</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">in</span><span class="p">.</span><span class="n">alpha</span><span class="p">;</span>
@@ -2611,20 +2613,24 @@ carcass 변형 때문에 <strong>rolling distance σ</strong> 만큼 지연된�
 </tbody>
 </table>
 <h2 id="39">3.9 검증<a class="headerlink" href="#39" title="Permanent link">&para;</a></h2>
-<p><code>test_tire_models.cpp</code> 의 검증:
-- <code>ZeroSlipZeroForce</code>, <code>ZeroFzZeroForce</code> — 기본 boundary.
-- <code>LinearRegionLateralSlope</code>, <code>LinearRegionLongitudinalSlope</code> — α=1e-4 에서 <code>Fy/α ≈ −B·C·D·Fz·μ</code> 의 ±1 %.
-- <code>SignConventions</code> — α &gt; 0 → Fy &lt; 0, κ &gt; 0 → Fx &gt; 0, etc.
-- <code>PeakBoundedByFzMu</code> — sweep <code>[-0.5, 0.5]</code> 에서 <code>|Fy| ≤ Fz · μ · D_lat · 1.001</code>.
-- <code>MuScalesLinearly</code> — linear region 에서 mu 스케일 정확.
-- <code>FzScalesLinearlyInLinearRegion</code> — Fz 절반 → Fy 절반.</p>
-<p><code>PacejkaCombinedFixture</code>:
-- <code>FrictionEllipseBound</code> (Task 15) — 1024 점에서 <code>(Fx/Fx_max)² + (Fy/Fy_max)² ≤ 1</code>.
-- <code>PureSlipUnchangedByCombinedFlag</code> — pure slip 케이스 backward-compat.
-- <code>MzZeroWhenAlphaZero</code>, <code>MzSignOppositeFy</code>.
-- <code>MzLinearRegionMatchesPneumaticTrail</code> — α=1e-4 에서 <code>Mz ≈ −t_p · Fy</code>.
-- <code>MzDecreasesAtLargeAlpha</code> — <code>|Mz/Fy|</code> 가 small α 보다 large α 에서 작음.
-- <code>CamberAddsLateralForce</code>, <code>CamberZeroByDefault</code>.</p>
+<p><code>test_tire_models.cpp</code> 의 검증:</p>
+<ul>
+<li><code>ZeroSlipZeroForce</code>, <code>ZeroFzZeroForce</code> — 기본 boundary.</li>
+<li><code>LinearRegionLateralSlope</code>, <code>LinearRegionLongitudinalSlope</code> — α=1e-4 에서 <code>Fy/α ≈ −B·C·D·Fz·μ</code> 의 ±1 %.</li>
+<li><code>SignConventions</code> — α &gt; 0 → Fy &lt; 0, κ &gt; 0 → Fx &gt; 0, etc.</li>
+<li><code>PeakBoundedByFzMu</code> — sweep <code>[-0.5, 0.5]</code> 에서 <code>|Fy| ≤ Fz · μ · D_lat · 1.001</code>.</li>
+<li><code>MuScalesLinearly</code> — linear region 에서 mu 스케일 정확.</li>
+<li><code>FzScalesLinearlyInLinearRegion</code> — Fz 절반 → Fy 절반.</li>
+</ul>
+<p><code>PacejkaCombinedFixture</code>:</p>
+<ul>
+<li><code>FrictionEllipseBound</code> (Task 15) — 1024 점에서 <code>(Fx/Fx_max)² + (Fy/Fy_max)² ≤ 1</code>.</li>
+<li><code>PureSlipUnchangedByCombinedFlag</code> — pure slip 케이스 backward-compat.</li>
+<li><code>MzZeroWhenAlphaZero</code>, <code>MzSignOppositeFy</code>.</li>
+<li><code>MzLinearRegionMatchesPneumaticTrail</code> — α=1e-4 에서 <code>Mz ≈ −t_p · Fy</code>.</li>
+<li><code>MzDecreasesAtLargeAlpha</code> — <code>|Mz/Fy|</code> 가 small α 보다 large α 에서 작음.</li>
+<li><code>CamberAddsLateralForce</code>, <code>CamberZeroByDefault</code>.</li>
+</ul>
 <p>전체 unit-test 가 통과하면 <code>ITireModel</code> 의 contract 가 확정.</p>
 <h2 id="310-in-eom">3.10 사용 패턴 (in 차량 EoM)<a class="headerlink" href="#310-in-eom" title="Permanent link">&para;</a></h2>
 <div class="language-cpp highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">ITireModel</span><span class="o">::</span><span class="n">Input</span><span class="w"> </span><span class="n">in</span><span class="p">;</span>

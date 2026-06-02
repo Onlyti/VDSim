@@ -2202,9 +2202,11 @@ R_{\text{path}} = \frac{L_d^2}{2\, dy_b}, \qquad L_d^2 = dx_b^2 + dy_b^2
 <p>여기서 <span class="arithmatex">\(\delta\)</span> 는 front wheel angle, <span class="arithmatex">\(L\)</span> 은 wheelbase.
 작은 angle 영역: <span class="arithmatex">\(\delta \approx \kappa L = 2\, dy_b\, L / L_d^2\)</span>.</p>
 <h2 id="93-lookahead-distance-ld-scheduling">9.3 Lookahead distance Ld 의 scheduling<a class="headerlink" href="#93-lookahead-distance-ld-scheduling" title="Permanent link">&para;</a></h2>
-<p>constant Ld 의 문제:
-- <strong>너무 작음</strong>: 작은 lateral error 에 큰 steer 반응 → 진동 (특히 정지 근처).
-- <strong>너무 큼</strong>: corner 입장에서 일찍 cut, late-apex, 부드럽지만 path 추적 부정확.</p>
+<p>constant Ld 의 문제:</p>
+<ul>
+<li><strong>너무 작음</strong>: 작은 lateral error 에 큰 steer 반응 → 진동 (특히 정지 근처).</li>
+<li><strong>너무 큼</strong>: corner 입장에서 일찍 cut, late-apex, 부드럽지만 path 추적 부정확.</li>
+</ul>
 <p>VDSim 의 standard scheduling:</p>
 <div class="arithmatex">\[
 L_d = \max(L_{d,\min},\; k\, v_x)
@@ -2212,9 +2214,11 @@ L_d = \max(L_{d,\min},\; k\, v_x)
 <p>low vx → <span class="arithmatex">\(L_{d,\min}\)</span> (default 1.5 m) — 정지 근처 진동 방지.
 high vx → <span class="arithmatex">\(k\, v_x\)</span> (default <span class="arithmatex">\(k = 0.40\)</span> s) — vx 비례, 시야가 더 멀리.</p>
 <p><code>k = 0.40</code> 의 의미: 0.4 초 후 위치를 예측.</p>
-<p>검증 (Task 32 + figure-8 demo):
-- vx = 8 m/s, Ld = max(1.5, 3.2) = 3.2 m.
-- figure-8 의 R = 20 corner 에서 sedan max_steer 0.5 rad 에 도달.</p>
+<p>검증 (Task 32 + figure-8 demo):</p>
+<ul>
+<li>vx = 8 m/s, Ld = max(1.5, 3.2) = 3.2 m.</li>
+<li>figure-8 의 R = 20 corner 에서 sedan max_steer 0.5 rad 에 도달.</li>
+</ul>
 <h2 id="94-lookahead-index-search">9.4 Lookahead index search<a class="headerlink" href="#94-lookahead-index-search" title="Permanent link">&para;</a></h2>
 <p>path 가 dense 한 waypoint sequence 라면:
 <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>for idx = prev_idx, ... , N−1:
@@ -2295,20 +2299,26 @@ high vx → <span class="arithmatex">\(k\, v_x\)</span> (default <span class="ar
 <p><code>s</code> 가 arc length 면 path 의 미분 quantities (yaw, kappa, v_des) 가 자연스럽게 정의.</p>
 <p><code>kappa</code> 가 미리 계산되어 있으면 PurePursuit 결과의 sanity check 또는 feed-forward 로 활용 가능.</p>
 <h2 id="98-implementation-frame">9.8 Implementation 의 한 가지 주의 — Frame<a class="headerlink" href="#98-implementation-frame" title="Permanent link">&para;</a></h2>
-<p>path 가 어느 frame 에 있는가?
-- world frame (ENU, X north, Y east) — 본 PoC 의 가정.
-- vehicle relative — controller 내부에서 변환.
-- Frenet (s, d) — path 진행 방향 + lateral offset.</p>
+<p>path 가 어느 frame 에 있는가?</p>
+<ul>
+<li>world frame (ENU, X north, Y east) — 본 PoC 의 가정.</li>
+<li>vehicle relative — controller 내부에서 변환.</li>
+<li>Frenet (s, d) — path 진행 방향 + lateral offset.</li>
+</ul>
 <p>본 PoC 는 world frame 만. 본격 path tracking (특히 highway driving) 에서는 Frenet frame 이 표준.</p>
 <h2 id="99-task-32">9.9 검증 (Task 32)<a class="headerlink" href="#99-task-32" title="Permanent link">&para;</a></h2>
-<p><code>PurePursuit.*</code> 3 tests:
-- <code>StraightAheadZeroSteer</code> — x-axis 직선 path, steer ≈ 0.
-- <code>LeftCircleProducesPositiveSteer</code> — R = 20 원호, steer &gt; 0, κ &gt; 0.
-- <code>MaxSteerClamped</code> — tight (R = 1) turn, |steer| ≤ max_steer (saturation).</p>
-<p>End-to-end <code>vdsim_path_tracking</code>:
-- sedan + figure-8 (R = 20) + v_target = 8.
-- 결과: vx mean 5.79 ± 0.37 (under-tracking), steer max = 0.50 (saturated), 25 s.
-- sedan max_steer 0.5 한계로 corner 에서 saturate. Pure Pursuit 자체는 정상.</p>
+<p><code>PurePursuit.*</code> 3 tests:</p>
+<ul>
+<li><code>StraightAheadZeroSteer</code> — x-axis 직선 path, steer ≈ 0.</li>
+<li><code>LeftCircleProducesPositiveSteer</code> — R = 20 원호, steer &gt; 0, κ &gt; 0.</li>
+<li><code>MaxSteerClamped</code> — tight (R = 1) turn, |steer| ≤ max_steer (saturation).</li>
+</ul>
+<p>End-to-end <code>vdsim_path_tracking</code>:</p>
+<ul>
+<li>sedan + figure-8 (R = 20) + v_target = 8.</li>
+<li>결과: vx mean 5.79 ± 0.37 (under-tracking), steer max = 0.50 (saturated), 25 s.</li>
+<li>sedan max_steer 0.5 한계로 corner 에서 saturate. Pure Pursuit 자체는 정상.</li>
+</ul>
 <h2 id="910-follow-up">9.10 한계 / follow-up<a class="headerlink" href="#910-follow-up" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
