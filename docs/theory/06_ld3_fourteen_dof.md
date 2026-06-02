@@ -130,6 +130,14 @@ $$
 - $K_{\text{ARB}} = K_{\text{ARB},f} + K_{\text{ARB},r}$: anti-roll bar 의 roll
   전용 stiffness (undamped). 유일한 roll 전용 입력.
 
+> **단위 두 관례**: $K_{\text{ARB}}$ 는 차체 roll 각 기준 roll stiffness
+> [N·m/rad] (Milliken RCVD 표준). 시뮬레이터/setup 에서 흔한 wheel-rate
+> [N/m] 와는 axle track 으로 환산된다:
+> $K_{\text{ARB,axle}} = k_{\text{wheel}}\cdot T_w^2/2$, 즉
+> $k_{\text{wheel}} = 2 K_{\text{ARB,axle}}/T_w^2$. spring 유도식
+> $(k_l+k_r)(T_w/2)^2$ 와 동일 factor. GUI 는 두 입력을 track 으로 양방향
+> 링크해 한쪽 입력 시 나머지를 자동 계산하고, 저장은 roll stiffness 가 canonical.
+
 quasi-static SS ($K_{\phi,\text{spring}} = (k_l+k_r)(T_w/2)^2$ 의 axle 합):
 
 $$
