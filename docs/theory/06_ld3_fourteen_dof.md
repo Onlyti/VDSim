@@ -33,26 +33,31 @@ planar 7 + vertical 7 = **14 DOF (= 14 second-order ODE 또는 28 first-order)**
 Per-corner spring/damper between sprung corner and unsprung mass.
 
 corner displacement (sprung side):
-```
-z_corner_i  =  z_s  −  rx_i · θ
-v_corner_i  =  ż_s  −  rx_i · θ̇
-```
 
-(roll φ 는 별도로 axle-level roll stiffness 처리 — 아래 §6.4 참조.)
+$$
+z_{\text{corner},i} = z_s - r_{x,i}\, \theta, \qquad
+v_{\text{corner},i} = \dot z_s - r_{x,i}\, \dot\theta
+$$
+
+(roll $\phi$ 는 별도로 axle-level roll stiffness 처리 — 아래 §6.4 참조.)
 
 spring + damper force on sprung corner (upward positive):
-```
-δ_i  =  z_corner_i  −  z_u_i           (compression deviation from static)
-v_i  =  v_corner_i  −  ż_u_i
-F_i  =  − k_i · δ_i  −  c_i · v_i      (spring + damper)
-```
+
+$$
+\delta_i = z_{\text{corner},i} - z_{u,i}, \quad
+v_i = v_{\text{corner},i} - \dot z_{u,i}, \quad
+F_i = - k_i\, \delta_i - c_i\, v_i
+$$
 
 Sprung body EoM:
-```
-m_s · z̈_s   =  Σ F_i
-Iyy · θ̈   =  − Σ rx_i · F_i  +  m_s · ax · h_cg · (1 − anti)
-Ixx · φ̈   =  − K_phi · φ  −  C_phi · φ̇  +  m_s · ay · h_cg
-```
+
+$$
+\begin{aligned}
+m_s\, \ddot z_s &= \textstyle\sum_i F_i \\
+I_{yy}\, \ddot\theta &= -\textstyle\sum_i r_{x,i} F_i + m_s\, a_x\, h_{cg}\, (1 - \text{anti}) \\
+I_{xx}\, \ddot\phi &= - K_\phi\, \phi - C_\phi\, \dot\phi + m_s\, a_y\, h_{cg}
+\end{aligned}
+$$
 
 코드 `core/src/fourteen_dof_dynamics.cpp:128-156`.
 
@@ -62,11 +67,11 @@ Ixx · φ̈   =  − K_phi · φ  −  C_phi · φ̇  +  m_s · ay · h_cg
 
 ### Pitch EoM (θ)
 
-```
-Iyy · θ̈  =  − Σ rx_i · F_i  +  m_s · ax · h_cg · (1 − anti_dive)
-```
+$$
+I_{yy}\, \ddot\theta = -\textstyle\sum_i r_{x,i} F_i + m_s\, a_x\, h_{cg}\, (1 - \text{anti\_dive})
+$$
 
-- `−Σ rx_i · F_i` 는 spring/damper 의 pitch moment. front spring 이 더 압축되면 nose down.
+- $-\sum_i r_{x,i} F_i$ 는 spring/damper 의 pitch moment. front spring 이 더 압축되면 nose down.
 - `m_s · ax · h_cg` 는 inertia 의 pitch contribution. 가속 시 nose up, 제동 시 nose down.
 - `(1 − anti_dive)` 가 suspension geometry 의 anti-dive 효과 — bypass 일부 inertia moment.
 
@@ -75,26 +80,29 @@ Iyy · θ̈  =  − Σ rx_i · F_i  +  m_s · ax · h_cg · (1 − anti_dive)
 real suspension 은 brake 시 brake reaction force 가 일부 suspension link 를 통해 chassis 로 직접 전달 (suspension 의 instant center 이용). 그 만큼 pitch moment 가 감소.
 
 VDSim 의 단순 모델:
-```
-anti  =  ax < 0 ? anti_dive_front : anti_squat_rear  (clamped [0, 1])
-M_inertia_pitch  =  m_s · ax · h_cg · (1 − anti)
-```
+
+$$
+\text{anti} = \begin{cases} \text{anti\_dive\_front} & a_x < 0 \\ \text{anti\_squat\_rear} & a_x \ge 0 \end{cases}
+\quad (\text{clamp } [0,1]), \qquad
+M_{\text{inertia,pitch}} = m_s\, a_x\, h_{cg}\, (1 - \text{anti})
+$$
 
 `anti = 1` 이면 brake 시 pitch 가 발생 안 함. `0` 이면 full pitch.
 
 ### Roll EoM (φ)
 
-```
-Ixx · φ̈  =  − K_phi_total · φ  −  C_phi · φ̇  +  m_s · ay · h_cg
-```
+$$
+I_{xx}\, \ddot\phi = - K_{\phi,\text{total}}\, \phi - C_\phi\, \dot\phi + m_s\, a_y\, h_{cg}
+$$
 
-- `K_phi_total = roll_stiffness_front + roll_stiffness_rear` (axle-level roll stiffness, springs + ARB combined).
-- `C_phi` 는 axle 의 damper 의 roll-equivalent stiffness: `Σ (c_corner · arm²)`.
+- $K_{\phi,\text{total}} = K_{\phi,f} + K_{\phi,r}$ (axle-level roll stiffness, springs + ARB combined).
+- $C_\phi$ 는 axle damper 의 roll-equivalent: $\sum_i c_i\, \text{arm}_i^2$.
 
 quasi-static SS:
-```
-φ_ss  =  m_s · ay · h_cg / K_phi_total
-```
+
+$$
+\phi_{ss} = \frac{m_s\, a_y\, h_{cg}}{K_{\phi,\text{total}}}
+$$
 
 이게 Task 22 (`Roll/pitch state diagnostics`) 의 quasi-static estimator. Ld3 의 dynamic 적분이 SS 에서 위와 일치.
 
@@ -107,10 +115,11 @@ heave 와 pitch 는 per-corner spring 의 linear sum 으로 자연스럽게 표�
 ## 6.4 Unsprung mass EoM
 
 per-corner unsprung mass 의 vertical 동역학:
-```
-m_u_i · z̈_u_i  =  − F_susp_on_sprung_i  −  k_tire · z_u_i
-                =  + k_i · δ_i + c_i · v_i  −  k_tire · z_u_i
-```
+
+$$
+m_{u,i}\, \ddot z_{u,i} = - F_{\text{susp},i} - k_{\text{tire}}\, z_{u,i}
+= + k_i\, \delta_i + c_i\, v_i - k_{\text{tire}}\, z_{u,i}
+$$
 
 (Newton III: spring/damper 가 sprung 위로 미는 force 의 반대 = unsprung 아래로 미는 force.)
 
@@ -131,21 +140,23 @@ for (int i = 0; i < NUM_WHEELS; ++i) {
 tire 가 vertical 방향으로 spring 처럼 작용. radial deformation 이 `Fz / k_tire`. typical 200-300 kN/m for passenger tires.
 
 이게 wheel hop frequency (sprung 과 분리된 unsprung 의 vertical resonance) 의 dominant stiffness:
-```
-ω_hop  =  sqrt(k_tire / m_u)
-f_hop  =  ω_hop / (2π)
-```
 
-sedan default: `sqrt(220000 / 40) / (2π) ≈ 11.8 Hz`.
+$$
+\omega_{\text{hop}} = \sqrt{\frac{k_{\text{tire}}}{m_u}}, \qquad
+f_{\text{hop}} = \frac{\omega_{\text{hop}}}{2\pi}
+$$
+
+sedan default: $\sqrt{220000 / 40} / (2\pi) \approx 11.8$ Hz.
 
 ### Damping ratio 문제 (Task 51 의 분석)
 
 unsprung mass 의 critical damping:
-```
-ζ_u  =  c_corner / (2 · sqrt(k_spring · m_u))
-```
 
-sedan default: `c = 3000, k = 30000, m_u = 40` → `ζ_u = 3000 / (2·sqrt(1.2e6)) = 1.37`. **overdamped**.
+$$
+\zeta_u = \frac{c_{\text{corner}}}{2\sqrt{k_{\text{spring}}\, m_u}}
+$$
+
+sedan default: $c = 3000,\, k = 30000,\, m_u = 40$ → $\zeta_u = 3000 / (2\sqrt{1.2\times10^6}) = 1.37$. **overdamped**.
 
 실차의 corner damper 는 sprung body resonance (~1-2 Hz) 에 fit 되어 있어 ζ ~ 0.3-0.5. 그 동일 c 를 unsprung 에 쓰면 wheel-hop 영역 (10+ Hz) 에서 너무 stiff.
 
@@ -155,28 +166,28 @@ sedan default: `c = 3000, k = 30000, m_u = 40` → `ζ_u = 3000 / (2·sqrt(1.2e6
 ## 6.5 RK4 적분 — 14 vertical DOF
 
 State vector (planar 7 은 inner Ld2 가 처리):
-```
-y = [z_s, ż_s, φ, φ̇, θ, θ̇, z_u_FL, ż_u_FL, z_u_FR, ż_u_FR, z_u_RL, ż_u_RL, z_u_RR, ż_u_RR]
-```
 
-14 first-order ODE.
+$$
+y = [\,z_s, \dot z_s, \phi, \dot\phi, \theta, \dot\theta,\;
+z_{u,FL}, \dot z_{u,FL},\, \ldots,\, z_{u,RR}, \dot z_{u,RR}\,]
+$$
 
-derivative `f(y, t)`:
-```
-ẏ = [ż_s, z̈_s, φ̇, φ̈, θ̇, θ̈, ż_u_FL, z̈_u_FL, ..., ż_u_RR, z̈_u_RR]
-```
+14 first-order ODE. derivative $\dot y = f(y, t)$ 의 각 2차 항이 위 식대로 계산.
 
 각 second-order 가 위에서 본 식대로 계산.
 
 `integrate_vertical()` (코드 `core/src/fourteen_dof_dynamics.cpp:182-238`) 가 RK4:
-```
-k1  =  f(y, t)
-k2  =  f(y + h/2 · k1, t + h/2)
-k3  =  f(y + h/2 · k2, t + h/2)
-k4  =  f(y + h · k3, t + h)
 
-y_{n+1}  =  y_n + h/6 · (k1 + 2k2 + 2k3 + k4)
-```
+$$
+\begin{aligned}
+k_1 &= f(y, t), & k_2 &= f(y + \tfrac{h}{2} k_1,\, t + \tfrac{h}{2}) \\
+k_3 &= f(y + \tfrac{h}{2} k_2,\, t + \tfrac{h}{2}), & k_4 &= f(y + h k_3,\, t + h)
+\end{aligned}
+$$
+
+$$
+y_{n+1} = y_n + \tfrac{h}{6}(k_1 + 2k_2 + 2k_3 + k_4)
+$$
 
 substep dt = 1 ms (sp_.max_substep_dt). outer dt = 5 ms 면 5 substeps per outer.
 

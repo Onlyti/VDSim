@@ -20,23 +20,29 @@ Ld2 는 본격 차량 dynamics validation 의 entry level. autonomy 도메인 (A
 ## 5.2 Per-tire Fz with lateral + longitudinal weight transfer
 
 Static per-tire:
-```
-Fz_static_f_per_tire  =  m · g · b / (2 · L)
-Fz_static_r_per_tire  =  m · g · a / (2 · L)
-```
+
+$$
+F_{z,f}^{\text{static}} = \frac{m g b}{2 L}, \qquad
+F_{z,r}^{\text{static}} = \frac{m g a}{2 L}
+$$
 
 Longitudinal transfer (per-tire axle 의 절반):
-```
-ΔFz_long_half  =  m · ax · h_cg / (2 · L)
-```
+
+$$
+\Delta F_{z,\text{long,half}} = \frac{m\, a_x\, h_{cg}}{2 L}
+$$
 
 Lateral transfer — 핵심 식:
-```
-ΔFz_lat_f  =  (m · ay · h_cg / Tw_f) · share_f
-ΔFz_lat_r  =  (m · ay · h_cg / Tw_r) · share_r
-share_f    =  K_phi_f / (K_phi_f + K_phi_r)
-share_r    =  K_phi_r / (K_phi_f + K_phi_r)
-```
+
+$$
+\Delta F_{z,\text{lat},f} = \frac{m\, a_y\, h_{cg}}{T_{w,f}} \cdot s_f, \qquad
+\Delta F_{z,\text{lat},r} = \frac{m\, a_y\, h_{cg}}{T_{w,r}} \cdot s_r
+$$
+
+$$
+s_f = \frac{K_{\phi,f}}{K_{\phi,f} + K_{\phi,r}}, \qquad
+s_r = \frac{K_{\phi,r}}{K_{\phi,f} + K_{\phi,r}}
+$$
 
 `K_phi_f`, `K_phi_r` 는 front / rear axle 의 roll stiffness (springs + ARB combined).
 
@@ -50,12 +56,12 @@ front 가 더 stiff 한 차량 → front axle 이 더 많은 lateral transfer �
 이 moment 가 front axle 과 rear axle 의 roll spring 에 의해 분배. 각 axle 의 share 는 stiffness 비율 (parallel spring 으로 봤을 때).
 
 axle 의 share 가 결정되면, 그 share 가 axle 내 좌우 tire 의 Fz 차이를 만든다:
-```
-F_outer_axle  −  F_inner_axle  =  M_roll_axle / (Tw_axle / 2)
-                                 =  2 · ΔFz_lat
-```
 
-따라서 `ΔFz_lat = M_roll_axle / Tw_axle = (m · ay · h_cg · share) / Tw`.
+$$
+F_{\text{outer}} - F_{\text{inner}} = \frac{M_{\text{roll,axle}}}{T_w / 2} = 2\, \Delta F_{z,\text{lat}}
+$$
+
+따라서 $\Delta F_{z,\text{lat}} = M_{\text{roll,axle}} / T_w = (m\, a_y\, h_{cg}\, s) / T_w$.
 
 VDSim 코드 `core/src/seven_dof_dynamics.cpp:158-176`:
 ```cpp
@@ -83,12 +89,13 @@ Fz[WHEEL_RR] = Fz_static_r + dFz_long_half + dFz_lat_r;
 ## 5.3 Per-wheel velocity / slip
 
 각 wheel 의 body-frame velocity:
-```
-v_x_body_i  =  vx  −  r · ry_i
-v_y_body_i  =  vy  +  r · rx_i
-```
 
-여기서 `(rx_i, ry_i)` 는 wheel 의 body-frame 위치:
+$$
+v_{x,\text{body},i} = v_x - r\, r_{y,i}, \qquad
+v_{y,\text{body},i} = v_y + r\, r_{x,i}
+$$
+
+여기서 $(r_{x,i}, r_{y,i})$ 는 wheel 의 body-frame 위치:
 - FL: `(+a, +Tw_f/2)`
 - FR: `(+a, −Tw_f/2)`
 - RL: `(−b, +Tw_r/2)`
@@ -96,11 +103,12 @@ v_y_body_i  =  vy  +  r · rx_i
 
 (ISO 8855 RH 에서 +y = leftward → left wheels 는 +y, right wheels 는 −y.)
 
-front wheels 는 추가로 steer angle `δ_i` (Ackerman 적용 시 i 마다 다름) 만큼 rotated:
-```
-v_x_wheel  =  v_x_body · cos(δ_i)  +  v_y_body · sin(δ_i)
-v_y_wheel  = −v_x_body · sin(δ_i)  +  v_y_body · cos(δ_i)
-```
+front wheels 는 추가로 steer angle $\delta_i$ (Ackerman 적용 시 $i$ 마다 다름) 만큼 rotated:
+
+$$
+v_{x,\text{wheel}} =  v_{x,\text{body}} \cos\delta_i + v_{y,\text{body}} \sin\delta_i, \qquad
+v_{y,\text{wheel}} = -v_{x,\text{body}} \sin\delta_i + v_{y,\text{body}} \cos\delta_i
+$$
 
 rear wheels: wheel frame = body frame.
 
@@ -117,24 +125,26 @@ low-speed cornering 에서 inner / outer wheel 의 path radius 가 다르다. pa
 차량의 instantaneous center of rotation (ICR) 이 rear axle 의 연장선과 front-wheel 의 steering plane 교점. 양 front wheel 의 steering angle 이 그 ICR 로 align 되도록.
 
 Geometry:
-```
-R  =  L / tan(δ_avg)      (turning radius from averaged steer)
-R_inner  =  R − Tw_f / 2
-R_outer  =  R + Tw_f / 2
 
-δ_inner  =  atan(L / R_inner)
-δ_outer  =  atan(L / R_outer)
-```
+$$
+R = \frac{L}{\tan\delta_{\text{avg}}}, \qquad
+R_{\text{inner}} = R - \tfrac{T_{w,f}}{2}, \qquad
+R_{\text{outer}} = R + \tfrac{T_{w,f}}{2}
+$$
 
-`δ_inner > δ_outer` (inner wheel 이 더 많이 꺾임).
+$$
+\delta_{\text{inner}} = \arctan\frac{L}{R_{\text{inner}}}, \qquad
+\delta_{\text{outer}} = \arctan\frac{L}{R_{\text{outer}}}
+$$
+
+$\delta_{\text{inner}} > \delta_{\text{outer}}$ (inner wheel 이 더 많이 꺾임).
 
 ### VDSim 의 percent-interpolation
 
-```
-fraction  =  ackerman_percent / 100
-δ_FL_eff  =  δ + fraction · (δ_FL_ack − δ)
-δ_FR_eff  =  δ + fraction · (δ_FR_ack − δ)
-```
+$$
+f = \frac{\text{ackerman\_percent}}{100}, \qquad
+\delta_{i,\text{eff}} = \delta + f\, (\delta_{i,\text{ack}} - \delta)
+$$
 
 - `ackerman_percent = 0` → parallel steer (default Ld1 호환).
 - `ackerman_percent = 100` → perfect Ackerman.
@@ -153,21 +163,22 @@ VDSim 코드 `core/src/seven_dof_dynamics.cpp:212-228`. 좌선회 (`δ > 0`) 일
 
 ### Open differential
 
-```
-T_L  =  T_R  =  T_axle / 2
-```
+$$
+T_L = T_R = \frac{T_{\text{axle}}}{2}
+$$
 
 좌우 동일 torque. 한쪽이 low-mu 면 (split-mu) 그 쪽이 spin up, 다른 쪽은 동일 torque 만 받음 (low). 결국 차량 전체 traction = lower mu side 의 한계.
 
 ### Locked differential (spool)
 
 좌우 ω 동등화 강제. 실제로는 algebraic constraint (DAE). VDSim 의 smooth approximation:
-```
-Δω      =  ω_L − ω_R
-bias    =  0.45 · tanh(2 · Δω)
-T_L     =  (0.5 − bias) · T_axle
-T_R     =  (0.5 + bias) · T_axle
-```
+
+$$
+\Delta\omega = \omega_L - \omega_R, \quad
+\text{bias} = 0.45 \tanh(2\Delta\omega), \quad
+T_L = (0.5 - \text{bias})\, T_{\text{axle}}, \quad
+T_R = (0.5 + \text{bias})\, T_{\text{axle}}
+$$
 
 `Δω > 0` (L spinning faster) → bias > 0 → R 가 더 많이 받음 (slower wheel gets more torque).
 0.45 cap 으로 100:0 split 발산 방지.
@@ -175,11 +186,12 @@ T_R     =  (0.5 + bias) · T_axle
 ### LSD (limited-slip differential)
 
 preload + Δω-dependent ramp:
-```
-bias_magnitude  =  clamp(preload + ramp · |Δω|, 0, 0.45)
-bias            =  bias_magnitude · tanh(2 · Δω)
-T_L, T_R        =  (0.5 ∓ bias) · T_axle
-```
+
+$$
+\text{mag} = \operatorname{clamp}(\text{preload} + \text{ramp} \cdot |\Delta\omega|,\; 0,\; 0.45), \quad
+\text{bias} = \text{mag} \cdot \tanh(2\Delta\omega), \quad
+T_{L,R} = (0.5 \mp \text{bias})\, T_{\text{axle}}
+$$
 
 preload = 0.10, ramp = 0.20 (sedan default).
 실제 LSD ramp angle 모델은 더 복잡 (drive vs coast 비대칭), 본 PoC 는 대칭.
@@ -195,9 +207,9 @@ preload = 0.10, ramp = 0.20 (sedan default).
 
 front-wheel 의 Mz 합산 × steering_ratio = steering wheel torque (driver feedback).
 
-```
-M_rack  =  (Mz_FL + Mz_FR) · steering_ratio
-```
+$$
+M_{\text{rack}} = (M_{z,FL} + M_{z,FR}) \cdot \text{steering\_ratio}
+$$
 
 VDSim 코드 `core/src/seven_dof_dynamics.cpp:114-117`:
 ```cpp
@@ -212,28 +224,34 @@ DriverModel 에서 force-feedback 통합 시 활용 예정.
 
 ## 5.7 Body force / moment 합산
 
-```
-Fx_total  =  Σ Fx_body_i  −  F_aero  −  F_rr
-Fy_total  =  Σ Fy_body_i
-Mz_total  =  Σ (rx_i · Fy_body_i  −  ry_i · Fx_body_i)  +  Σ Mz_wheel_i
-```
+$$
+\begin{aligned}
+F_{x,\text{total}} &= \textstyle\sum_i F_{x,\text{body},i} - F_{\text{aero}} - F_{rr} \\
+F_{y,\text{total}} &= \textstyle\sum_i F_{y,\text{body},i} \\
+M_{z,\text{total}} &= \textstyle\sum_i (r_{x,i} F_{y,\text{body},i} - r_{y,i} F_{x,\text{body},i}) + \textstyle\sum_i M_{z,\text{wheel},i}
+\end{aligned}
+$$
 
 body EoM:
-```
-m · v̇x  =  Fx_total  +  m · vy · r
-m · v̇y  =  Fy_total  −  m · vx · r
-Izz · ṙ =  Mz_total
-ax_body =  Fx_total / m   (저장)
-ay_body =  Fy_total / m   (저장 — 1-step lag input)
-```
+
+$$
+m\dot v_x = F_{x,\text{total}} + m v_y r, \quad
+m\dot v_y = F_{y,\text{total}} - m v_x r, \quad
+I_{zz}\dot r = M_{z,\text{total}}
+$$
+
+$$
+a_{x,\text{body}} = F_{x,\text{total}}/m, \qquad
+a_{y,\text{body}} = F_{y,\text{total}}/m \quad (\text{1-step lag input})
+$$
 
 ## 5.8 Wheel-spin EoM (per-wheel)
 
-```
-I_wheel · ω̇_i  =  T_drive_i  +  T_brake_i  −  Fx_wheel_i · R
-```
+$$
+I_w\, \dot\omega_i = T_{\text{drive},i} + T_{\text{brake},i} - F_{x,\text{wheel},i}\, R
+$$
 
-`I_wheel = 0.5 · m_unsprung · R²` (solid-disk approximation).
+$I_w = 0.5\, m_{\text{unsprung}}\, R^2$ (solid-disk approximation).
 
 drive split → differential → per-wheel `T_drive_i`. brake split → axle bias + EBD → per-wheel `T_brake_i`.
 
