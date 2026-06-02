@@ -1,228 +1,272 @@
-# 08. Lc5-AxTarget / Lc6-VTarget — PI + Feed-Forward Cascade
+# 08. Lc5-AxTarget / Lc6-VTarget (PI + Feed-Forward Cascade)
 
-> **학습 목표.** PI controller 의 anti-windup 이 왜 필요한지, feed-forward 가 어떻게 transient response 를 빠르게 하는지 식 단위로 안다. cascade 구조 (Lc6 → Lc5 → Lc4) 에서 inner loop bandwidth 가 outer loop 보다 빨라야 하는 이유를 안다. PoC 의 throttle / brake 자동 분기가 어떤 가정 위에 있는지 명확히 한다.
+## Learning objectives
 
-## 8.1 왜 PI + FF 인가 (not PID, not pure FF)
+이 chapter 를 마치면 다음을 할 수 있다.
 
-차량의 longitudinal dynamics 는 (PoC range 내에서) **1차에 가까운 비선형 시스템**:
+1. longitudinal control 에 PI + FF 가 적합하고 PID/pure-FF 가 부적합한 이유를
+   plant 특성으로 설명한다.
+2. anti-windup 의 필요성과 integrator clamp 의 효과를 기술한다.
+3. cascade (Lc6 → Lc5 → Lc4) 에서 inner-loop bandwidth 가 outer 보다 빨라야
+   하는 이유를 설명한다.
+4. saturation 전파 (outer integrator windup) 의 거동과 해결책을 판단한다.
+
+## Prerequisites
+
+- **Chapter 07** — control 사다리, Lc4-Lc6 의 위치.
+- **Chapter 04** — longitudinal dynamics ($\dot v_x = F_x/m$).
+- **외부** — PI/PID, cascade control 기초 (Aström & Murray).
+
+---
+
+## 8.1 동기 — PI + FF (not PID, not pure FF)
+
+longitudinal dynamics 는 작은 perturbation 영역에서 1차에 가깝다.
 
 $$
 \dot v_x \approx \frac{T_{\text{drive}}\, \eta_{\text{drivetrain}} - F_{\text{aero}} - F_{rr}}{m}
 $$
 
-$F_{\text{aero}} \sim v_x^2$ 는 weak nonlinearity. 작은 perturbation 영역에서는 1차 system.
+$F_{\text{aero}}\sim v_x^2$ 는 weak nonlinearity.
 
-- **Pure P** — steady-state error 존재 (drag 보상 못 함).
-- **PI** — integrator 가 SS error 0 으로 만듦.
-- **PID** — D term 이 noise amplify, vx 신호의 noise 가 크지 않아 D 의 이득보다 손해 큼.
-- **PI + FF** — feed-forward 가 transient 부분, integrator 가 SS bias.
+- Pure P — SS error 존재 (drag 보상 불가).
+- PI — integrator 가 SS error 를 0 으로.
+- PID — D term 이 noise amplify, $v_x$ noise 대비 이득보다 손해.
+- PI + FF — FF 가 transient, integrator 가 SS bias.
 
-본 PoC 의 `LongAxController` (Lc5):
+Lc5 의 일반형 (default $K_d=0$):
 
 $$
 u = K_p\, e + K_i \int e\, dt + K_d\, \dot e + K_{ff}\, a_{x,\text{target}}
 $$
 
-PoC default $K_d = 0$, $K_{ff} = 0.10$ (typical).
+---
 
-## 8.2 Lc5-AxTarget 의 식
+## 8.2 가정
 
-`ax_target` (m/s²) → throttle / brake [0, 1].
+| 가정 | 의미 | 깨지는 case |
+|---|---|---|
+| 1차 plant | linear PI 로 충분 | gain scheduling 필요 영역 |
+| Pedal mutually exclusive | throttle·brake 동시 비영 없음 | regen / hybrid braking |
+| Clamp anti-windup | integrator $\pm i_{\max}$ cap | back-calculation 필요 |
+| Sedan calibration | $K_{ff}, K_p$ 가 sedan default | FSK/race 재튜닝 |
 
-```cpp
-e        =  ax_target − ax_meas
-integ   +=  e · dt              // clamped to ±i_max
-de_dt    =  (e − prev_e) / dt   // first call: 0
-u        =  Kp · e + Ki · integ + Kd · de_dt + Kff · ax_target
+---
 
-if u ≥ 0:   throttle = clamp(u, 0, 1),  brake = 0
-else:       throttle = 0,                brake = clamp(−u, 0, 1)
-```
+## 8.3 Lc5-AxTarget
 
-코드 `core/src/control_converter.cpp` 의 `LongAxController::update`.
+$a_{x,\text{target}}$ → throttle/brake $\in[0,1]$.
 
-### Throttle / brake 자동 분기
+$$
+\begin{aligned}
+e &= a_{x,\text{target}} - a_{x,\text{meas}} \\
+\text{integ} &\mathrel{+}= e\, dt \quad (\text{clamp } \pm i_{\max}) \\
+u &= K_p e + K_i\,\text{integ} + K_d \dot e + K_{ff}\, a_{x,\text{target}} \\
+&\begin{cases}
+u\ge0: & \text{throttle}=\operatorname{clamp}(u,0,1),\; \text{brake}=0 \\
+u<0:   & \text{throttle}=0,\; \text{brake}=\operatorname{clamp}(-u,0,1)
+\end{cases}
+\end{aligned}
+$$
 
-`u` 의 sign 으로 dispatch. throttle 과 brake 가 동시에 0 이 아닌 경우 없음 (mutually exclusive).
+### Throttle/brake 자동 분기
 
-이게 단순한 가정. 실제로는:
-
-- regenerative brake 가 있는 EV 에서 `throttle < 0` 의미 가능.
-- 갑작스러운 sign 전환 시 actuator dead-time 으로 진동 가능.
-
-본 PoC 는 simple bang-bang 분기. follow-up:
-
-- `throttle_brake_overlap_band` — sign 전환 시 dead-zone.
-- regen mode (negative throttle).
+$u$ 의 부호로 dispatch — mutually exclusive. 단순 가정으로, 실제는 (1) regen
+EV 에서 $u<0$ 이 throttle<0 일 수 있고, (2) 급격한 sign 전환 시 actuator
+dead-time 으로 진동 가능. follow-up: overlap dead-band, regen mode.
 
 ### Anti-windup
 
-`integ` 를 ±`i_max` 로 clamp. saturation 영역에서 integrator 가 무한히 누적되어 desaturation 후 overshoot 만드는 현상 (windup) 방지.
+integrator 를 $\pm i_{\max}$ 로 clamp. saturation 동안 integrator 가 무한
+누적되어 desaturation 후 overshoot 를 만드는 windup 을 방지한다. 정량 사례는
+§8.10 box.
 
-cap 값:
-```
-i_max = 2.5
-```
+### Feed-forward
 
-`Ki = 0.60` 이면 integrator 단독 최대 contribution = `Ki · i_max = 1.5` (throttle 기준 1.5x — 이미 clamp 됨).
-즉 i_max 가 작아도 충분.
-
-### Feed-forward 의 의미
-
-`Kff · ax_target` 항이 transient 응답 빠르게.
-
-직관: ax_target = 3 m/s² 입력 시, 모델이 throttle ≈ 0.6 (sedan 추정) 가 필요함을 미리 안다. FF 가 0.10 · 3 = 0.30 을 즉시 출력 + PI 가 보정.
-
-FF gain 결정:
+$K_{ff}\, a_{x,\text{target}}$ 가 transient 를 빠르게 한다. 직관: 목표
+가속도에 필요한 throttle 을 모델이 미리 출력하고 PI 가 보정. gain 추정:
 
 $$
-K_{ff} \approx \frac{m R}{T_{\max}} \approx \frac{1500 \cdot 0.32}{300} \approx 1.6 \;\text{s}^2/\text{m}
+K_{ff} \approx \frac{m R}{T_{\max}} \approx \frac{1500\cdot0.32}{300} \approx 1.6\;\text{s}^2/\text{m}
 $$
 
-이 값을 normalized throttle 으로 변환: throttle = T / T_max → Kff_norm = 0.10 정도.
+normalized throttle 로 변환하면 $K_{ff,\text{norm}}\approx0.10$ (sedan). 차종별
+calibration 필요.
 
-차종별 calibration 필요. sedan 기준 default.
+---
 
-## 8.3 Lc6-VTarget — Cascade PI
+## 8.4 Lc6-VTarget — Cascade PI
 
-`v_target` (m/s) → `ax_target` (m/s²).
-
-```cpp
-e        =  v_target − vx_meas
-integ   +=  e · dt          // clamped to ±i_max
-ax_out   =  Kp · e + Ki · integ
-ax_target =  clamp(ax_out, −ax_clamp, +ax_clamp)
-```
-
-코드 `core/src/control_converter.cpp` 의 `LongVxController::update`.
-
-default gains: `Kp = 0.8, Ki = 0.20, ax_clamp = 3.5`.
-
-### Cascade 구조의 이점
-
-```
-v_target  →  Lc6 PI  →  ax_target  →  Lc5 PI+FF  →  throttle/brake  →  Plant
-```
-
-- **Outer loop (Lc6)** 의 dynamics 가 inner loop 보다 느림.
-- **Inner loop (Lc5)** 가 빠르게 ax 를 tracking → outer loop 입장에서 ax 가 거의 즉시 따라가는 1차 system 으로 보임.
-- gain 분리 가능 → 개별 tuning 쉽다.
-- saturation 분리 (ax 한계와 throttle 한계 별도).
-
-이게 industrial cascade control 의 표준 pattern.
-
-### Inner / outer bandwidth 분리
-
-empirical guide:
+$v_{\text{target}}$ → $a_{x,\text{target}}$.
 
 $$
-\omega_{\text{inner}} \ge 3\, \omega_{\text{outer}} \quad (\text{transient decoupling})
+e = v_{\text{target}} - v_{x,\text{meas}}, \quad
+\text{integ} \mathrel{+}= e\,dt\;(\text{clamp}), \quad
+a_{x,\text{target}} = \operatorname{clamp}(K_p e + K_i\,\text{integ},\, \pm a_{\text{clamp}})
 $$
 
-본 PoC default:
+cascade:
 
-- Lc5: Kp = 0.4 (ax control loop dominant pole ~ 5-10 rad/s)
-- Lc6: Kp = 0.8 (v control loop ~ 1-2 rad/s)
+```
+v_target → Lc6 PI → ax_target → Lc5 PI+FF → throttle/brake → Plant
+```
 
-ratio ~ 5. 충분 separation.
+- outer (Lc6) 가 inner (Lc5) 보다 느림.
+- inner 가 빠르게 $a_x$ 를 tracking → outer 입장에서 $a_x$ 가 거의 즉시
+  따라가는 1차 system 으로 보임.
+- gain/saturation 분리 → 개별 tuning 용이. industrial cascade 의 표준.
 
-## 8.4 Cascade 의 한계 — saturation 의 전파
+bandwidth 분리 가이드:
 
-만약 ax_target > 실제 차량의 max ax (e.g., FSK 의 가속 한계 ~ 6 m/s²) 이면:
+$$
+\omega_{\text{inner}} \ge 3\, \omega_{\text{outer}}
+$$
 
-- Lc5 가 throttle = 1.0 saturate.
-- Lc6 의 integrator 가 계속 누적 (실제 ax 가 못 따라가니 vx error 누적).
-- Anti-windup 으로 cap 되지만 outer-loop wind-down 까지 시간 지연.
+default 에서 inner ~5-10 rad/s, outer ~1-2 rad/s (ratio ~5, 충분 separation).
 
-본 PoC 의 `vdsim_ax_track_demo` (Task 25) 의 결과:
+---
 
-- accel phase (ax_target=+2): mean 0.58 (cap), RMSE 1.42.
-- 차량 한계 노출.
+## 8.5 Cascade 한계 — saturation 전파
 
-해결책 (follow-up):
+$a_{x,\text{target}}$ 가 차량 max $a_x$ 를 초과하면:
 
-- Lc6 의 `ax_clamp` 를 차종 max ax 로 자동 조정.
-- Conditional integration (saturation 영역에서 integrator hold).
-- back-calculation anti-windup.
+- Lc5 가 throttle=1.0 saturate.
+- 실제 $a_x$ 가 못 따라가 Lc6 의 vx error 가 누적 → integrator windup.
+- anti-windup clamp 로 막히지만 outer wind-down 까지 지연.
 
-## 8.5 Driver model 의 PI gain (참고)
+해결 (follow-up): Lc6 의 $a_{\text{clamp}}$ 를 차종 max $a_x$ 로 자동 조정,
+conditional integration (saturation 시 hold), back-calculation anti-windup.
 
-`DriverModel` (Chapter 10 상세) 가 내부에서 cascade 사용:
+---
 
-- vx PID: Kp = 0.6, Ki = 0.15 (slower than auto cascade)
-- ax PID: default (Lc5 default 그대로)
+## 8.6 검증 전략
 
-인간 driver 의 reaction 이 controller 보다 느림 → outer loop gain 도 낮게.
+| 검증 | 케이스 |
+|---|---|
+| Lc5 부호 분기 | target>0 throttle, <0 brake |
+| Integrator | 누적 + reset clear |
+| Anti-windup | sustain error 후 $|\text{integ}|\le i_{\max}$ |
+| Clamp | 출력 $[0,1]$ / $\pm a_{\text{clamp}}$ |
+| Lc6 부호 | error>0 → $a_x>0$ |
+| End-to-end | step ax target 추종 (saturation 노출) |
 
-## 8.6 검증 (Task 25)
+---
 
-`LongAxController.*` 7 tests:
-
-- `ZeroErrorZeroOutput`
-- `PositiveTargetUsesThrottle`
-- `NegativeTargetUsesBrake`
-- `IntegratorAccumulates`
-- `ResetClearsState`
-- `OutputsAreClamped`
-- `IntegratorAntiwindup` — sustain error 입력 후 `|integ| ≤ i_max`.
-
-`LongVxController.*` 4 tests:
-
-- `ZeroErrorZeroOutput`
-- `PositiveErrorPositiveAx`
-- `NegativeErrorNegativeAx`
-- `OutputClamped`
-
-11 tests pass.
-
-### End-to-end (vdsim_ax_track_demo)
-
-step-target ax = (0 → +2 → 0 → −3 → 0) 으로 10 s.
-
-| Phase | ax_target | mean ax | RMSE | 해석 |
-|---|---:|---:|---:|---|
-| accel | +2 | +0.58 | 1.42 | actuator saturation |
-| coast | 0 | +0.47 | 0.48 | momentum + integrator residual |
-| brake | −3 | −1.51 | 2.24 | tire saturation |
-| idle | 0 | 0 | 0.02 | drift 최소 |
-
-위 결과가 saturation 의 실전 거동을 보여줌. controller correctness + plant limitation 동시 확인.
-
-## 8.7 한계 / follow-up
+## 8.7 한계
 
 | 항목 | 한계 |
 |---|---|
-| Pure linear PI | gain scheduling 없음 (vx, mu 별 별도 tuning) |
-| Throttle/brake mutually exclusive | regen 모드, hybrid braking 미반영 |
-| Saturation feedback 없음 | conditional integration / back-calc 가 더 정확 |
-| Disturbance feedforward 없음 | road slope, wind 등 외란 미반영 |
-| Actuator dynamics 무시 | first-order throttle / brake lag 미반영 |
-| 차종 calibration | Kff / Kp 가 sedan 기준 default, FSK / race 에서 별도 tuning 필요 |
+| Linear PI | gain scheduling 없음 (vx, μ별 별도 tuning) |
+| Pedal exclusive | regen/hybrid braking 미반영 |
+| Saturation feedback | conditional/back-calc 가 더 정확 |
+| Disturbance FF | road slope, wind 미반영 |
+| Actuator dynamics | first-order throttle/brake lag 미반영 |
+| 차종 calibration | sedan default, FSK/race 재튜닝 |
 
-## 8.8 사용 패턴
+---
 
-```cpp
-vdsim::LongAxController axc;
-vdsim::LongAxController::Gains g;
-g.kp = 0.4; g.ki = 0.6; g.kff = 0.10;
-axc.initialize(g);
+## 8.8 다음 chapter 와의 연결
 
-vdsim::LongVxController vxc;
-vxc.initialize({});
+chapter 08 은 longitudinal cascade (Lc5/Lc6) 를 다뤘다. chapter 09 는 lateral
++ path 의 Lc7/Lc8 (Pure Pursuit, curvature → steer) 을 전개하며, 둘이 합쳐져
+full path tracking (chapter 10 driver model) 을 구성한다.
 
-while (...) {
-    double ax_target = vxc.update(v_target, dyn->state().vx(), dt);
-    auto [thr, brk] = axc.update(ax_target, dyn->ax_body_est(), dt);
-    vdsim::CmdL4 cmd; cmd.throttle = thr; cmd.brake = brk;
-    cmd.steer_angle_wheel = steer_from_path_planner;
-    dyn->step(cmd, contacts, dt);
-}
-```
+---
 
-`vdsim_path_tracking` 의 main loop 가 거의 그대로.
+## 8.9 참고문헌
 
-## 8.9 참고
+- **Aström, K.J. & Murray, R.M.**, *Feedback Systems*, Princeton, 2008, §10 PID.
+- **Aström & Hägglund**, *Advanced PID Control*, ISA, 2006, §6 anti-windup, §10 cascade.
+- **Skogestad & Postlethwaite**, *Multivariable Feedback Control*, Wiley, 2005.
 
-- Aström, K.J. & Murray, R.M., *Feedback Systems*, Princeton, 2008 — §10 (PID 표준).
-- Aström & Hägglund, *Advanced PID Control*, ISA, 2006 — §6 (anti-windup), §10 (cascade).
-- Skogestad, S. & Postlethwaite, I., *Multivariable Feedback Control*, Wiley, 2005 — cascade structure 일반.
+---
+
+## 8.10 Self-check
+
+<details>
+<summary>1. longitudinal control 에 D term 을 빼는 이유?</summary>
+
+$v_x$ 신호의 noise 가 D term 으로 증폭되는데, plant 가 1차에 가까워 D 의
+phase-lead 이득이 작다. 손해(noise)가 이득(damping)보다 커서 $K_d=0$.
+</details>
+
+<details>
+<summary>2. anti-windup 없이 saturation 에 오래 머물면?</summary>
+
+integrator 가 계속 누적되어 desaturation 후에도 큰 적분값이 남아 과도한
+overshoot/지연 desaturation 을 만든다. clamp 또는 conditional integration 필요.
+</details>
+
+<details>
+<summary>3. cascade 에서 inner loop 가 outer 보다 느리면?</summary>
+
+outer 가 명령한 $a_x$ 를 inner 가 제때 못 따라가 두 loop dynamics 가 결합되어
+진동/불안정. $\omega_{\text{inner}}\ge3\omega_{\text{outer}}$ 로 decouple 해야 한다.
+</details>
+
+<details>
+<summary>4. feed-forward gain 을 너무 크게 잡으면?</summary>
+
+PI 보정 전에 FF 가 과도 입력을 줘 overshoot. $K_{ff}$ 는 plant inverse 의
+근사($mR/T_{\max}$)에 맞춰야 하고 차종별로 다르다.
+</details>
+
+<details>
+<summary>5. ax_target 이 차량 한계를 넘으면 end-to-end 에서 무엇이 보이나?</summary>
+
+throttle saturate + 실측 $a_x$ 가 target 에 미달 + outer integrator windup.
+이는 controller 버그가 아니라 plant limitation 의 정상 노출이다.
+</details>
+
+---
+
+## 8.11 VDSim 구현 노트
+
+> **[VDSim impl] § 8.3 — LongAxController 코드**
+>
+> `core/src/control_converter.cpp` 의 `LongAxController::update`. default
+> $K_p=0.4, K_i=0.6, K_{ff}=0.10, K_d=0, i_{\max}=2.5$. $K_i\cdot i_{\max}=1.5$
+> 로 integrator 단독 contribution 이 이미 throttle clamp 안에 들어와 작은
+> $i_{\max}$ 로 충분.
+
+> **[VDSim impl] § 8.4 — LongVxController 코드**
+>
+> `core/src/control_converter.cpp` 의 `LongVxController::update`. default
+> $K_p=0.8, K_i=0.20, a_{\text{clamp}}=3.5$.
+
+> **[VDSim impl] § 8.5 — DriverModel cascade gain**
+>
+> DriverModel (chapter 10) 이 내부 cascade 사용: vx PID $K_p=0.6, K_i=0.15$
+> (auto cascade 보다 느림 — 인간 reaction 모사), ax PID 는 Lc5 default.
+
+> **[VDSim impl] § 8.6 — 검증 test + end-to-end**
+>
+> `LongAxController.*` 7 (`ZeroErrorZeroOutput`, `PositiveTargetUsesThrottle`,
+> `NegativeTargetUsesBrake`, `IntegratorAccumulates`, `ResetClearsState`,
+> `OutputsAreClamped`, `IntegratorAntiwindup`) + `LongVxController.*` 4
+> (`ZeroErrorZeroOutput`, `PositiveErrorPositiveAx`, `NegativeErrorNegativeAx`,
+> `OutputClamped`). 11 pass.
+>
+> `vdsim_ax_track_demo` step target (0→+2→0→−3→0, 10 s):
+>
+> | Phase | ax_target | mean ax | RMSE | 해석 |
+> |---|---:|---:|---:|---|
+> | accel | +2 | +0.58 | 1.42 | actuator saturation |
+> | coast | 0 | +0.47 | 0.48 | momentum + integ residual |
+> | brake | −3 | −1.51 | 2.24 | tire saturation |
+> | idle | 0 | 0 | 0.02 | drift 최소 |
+
+> **[VDSim impl] § 8.x — 사용 예제**
+>
+> ```cpp
+> vdsim::LongAxController axc;  axc.initialize({.kp=0.4,.ki=0.6,.kff=0.10});
+> vdsim::LongVxController vxc;  vxc.initialize({});
+> while (...) {
+>     double ax_t = vxc.update(v_target, dyn->state().vx(), dt);
+>     auto [thr, brk] = axc.update(ax_t, dyn->ax_body_est(), dt);
+>     vdsim::CmdL4 cmd{.throttle=thr, .brake=brk,
+>                      .steer_angle_wheel=steer_from_planner};
+>     dyn->step(cmd, contacts, dt);
+> }
+> ```
+> `vdsim_path_tracking` 의 main loop 와 거의 동일.

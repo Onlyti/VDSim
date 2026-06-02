@@ -1,167 +1,118 @@
-# 07. Control 사다리 Lc1-Lc8 — Variant Dispatch
+# 07. Control Ladder Lc1-Lc8 (Variant Dispatch)
 
-> **학습 목표.** Lc1-Lc8 의 abstraction 사다리가 왜 8 단계인지, 각 tier 의 입력이 차량 system 의 어느 layer 와 대응하는지 안다. `ControlInput = variant<CmdL1, ..., CmdL8>` 의 dispatch 메커니즘과 `lower_to_l4` 의 lowering 식을 안다. **m × n 매트릭스 (Ld × Lc)** 의 ABI claim 의 의미를 정확히 설명할 수 있다.
+## Learning objectives
 
-## 7.1 왜 8 단계인가
+이 chapter 를 마치면 다음을 할 수 있다.
 
-차량 control 의 입력은 **abstraction 의 fluid spectrum**:
+1. Lc1-Lc8 abstraction 사다리의 각 tier 가 차량 system 의 어느 layer 에
+   대응하는지 설명한다.
+2. type-safe sum type (`variant`) 기반 dispatch 와 lowering 의 개념을 기술한다.
+3. m × n (Ld × Lc) ABI claim 의 의미 — "controller 한 번 작성, 모든 Ld 에서
+   동작" — 를 설명한다.
+4. lowering 과 직접 dispatch (per-wheel torque) 의 차이와 각각의 use case 를
+   판단한다.
 
-| 추상 수준 | 의미 | 만드는 사람 |
+## Prerequisites
+
+- **Chapter 04-06** — Ld1-Ld3 plant 의 입력 (Lc4 pedal).
+- **외부** — C++17 `std::variant` / `std::visit` 개념 (구현 세부는 박스).
+
+---
+
+## 7.1 동기 — 왜 8 단계인가
+
+차량 control 입력은 abstraction 의 연속 spectrum 이다.
+
+| 추상 수준 | tier | 의미 | 생산자 |
+|---|---|---|---|
+| 가장 낮음 | Lc1 | per-wheel motor/brake torque + steer | low-level ECU, TC, torque vectoring |
+| 낮음 | Lc2 | axle drive torque | drivetrain controller |
+| 중 | Lc3 | longitudinal force $F_x$ | ABS/EBD, 단순 controller |
+| 중 (CARLA 호환) | Lc4 | throttle/brake/steer pedal | driver, CARLA, basic AV stack |
+| 중-상 | Lc5 | acceleration target | ACC, longitudinal MPC |
+| 상 | Lc6 | velocity target | cruise control, speed planner |
+| 상 | Lc7 | curvature + speed | Pure Pursuit, Stanley |
+| 가장 상 | Lc8 | waypoint path | global/behavior planner |
+
+대부분의 commercial 시뮬레이터는 Lc4 (throttle/brake/steer) 한 단계만 노출한다.
+8 tier 를 명시적으로 두는 것이 VDSim 의 설계 선택이다.
+
+---
+
+## 7.2 가정
+
+| 가정 | 의미 | 깨지는 case |
 |---|---|---|
-| 가장 낮음 | per-wheel motor / brake torque | low-level ECU, traction control, torque vectoring |
-| 낮음 | axle 단위 drive torque | drivetrain controller (engine + transmission) |
-| 중 | longitudinal force | ABS / EBD / 단순 controller |
-| **중 (CARLA 호환)** | **throttle / brake / steer pedal** | **driver, CARLA, basic AV stack** |
-| 중-상 | acceleration target | ACC, longitudinal MPC |
-| 상 | velocity target | cruise control, speed planner |
-| 상 | curvature + speed | Pure Pursuit, Stanley |
-| 가장 상 | waypoint path | global planner, behavior planner |
+| Lowering to Lc4 | Lc1-Lc3 를 Lc4 로 normalize 후 동일 path | Lc1 직접 per-wheel dispatch (Phase 2) |
+| Normalize 상수 | typical max torque/force 기준 scale | 정확한 inverse mapping |
+| Lc5+ external cascade | dynamics 가 직접 처리 안 함 | dynamics 내장 cascade |
+| Mutually-exclusive pedal | throttle/brake 동시 비영 없음 | regen braking |
 
-VDSim 의 8 단계는 이 spectrum 을 strawman 명시. 다른 commercial 시뮬레이터는 보통 throttle/brake/steer (Lc4) 한 단계만.
+---
 
-## 7.2 CmdL1 - CmdL8 struct (정의)
+## 7.3 Tier 정의 (개념)
 
-`core/include/vdsim/control.hpp`:
+각 tier 는 그 layer 의 자연스러운 입력 단위를 갖는다.
 
-```cpp
-// Lc1: per-wheel motor + brake + steer
-struct CmdL1 {
-    std::array<double, NUM_WHEELS> motor_torque {{0,0,0,0}};   // [N·m]
-    std::array<double, NUM_WHEELS> brake_torque {{0,0,0,0}};   // [N·m] (≥ 0)
-    double steer_angle_wheel {0.0};                             // [rad]
-};
+- Lc1: per-wheel motor torque, per-wheel brake torque, steer (per-wheel
+  traction/torque-vectoring 표현 가능).
+- Lc2: axle drive torque + brake torque + steer.
+- Lc3: total longitudinal force $F_x$ + steer.
+- Lc4: throttle/brake $\in[0,1]$ + steer + gear + handbrake (CARLA 호환).
+- Lc5: $a_x$ target + steer.
+- Lc6: $v$ target + steer.
+- Lc7: $v$ target + curvature $\kappa$.
+- Lc8: waypoint path (s, xy, yaw, κ, v_des) + lookahead.
 
-// Lc2: axle-level
-struct CmdL2 {
-    double drive_torque {0.0};        // [N·m]
-    double brake_torque {0.0};
-    double steer_angle_wheel {0.0};
-};
+전체 입력이 하나의 type-safe sum type 으로 묶여 compile-time 에 어느 tier 인지
+판별된다 (구현 §7.10 box).
 
-// Lc3: longitudinal force
-struct CmdL3 {
-    double Fx_total {0.0};            // [N]
-    double steer_angle_wheel {0.0};
-};
+---
 
-// Lc4: pedal (CARLA-compatible)
-struct CmdL4 {
-    double throttle {0.0};            // [0, 1]
-    double brake    {0.0};            // [0, 1]
-    double steer_angle_wheel {0.0};
-    int    gear     {1};              // ±1, 0
-    bool   handbrake {false};
-};
+## 7.4 Lowering — Lc1-Lc3 → Lc4
 
-// Lc5: ax target
-struct CmdL5 {
-    double ax_target {0.0};           // [m/s²]
-    double steer_angle_wheel {0.0};
-};
+dynamics (Ld1-Ld3) 는 Lc4 를 직접 처리한다. Lc1-Lc3 는 lowering 으로 Lc4 로
+변환된 뒤 동일 path 를 탄다.
 
-// Lc6: v target
-struct CmdL6 {
-    double v_target {0.0};            // [m/s]
-    double steer_angle_wheel {0.0};
-};
+- Lc1: per-wheel torque 합을 typical max (drive 600 N·m, brake 4000 N·m,
+  both axles) 로 normalize.
+- Lc2: axle torque → 동일 normalize.
+- Lc3: $F_x$ 를 typical 1 g (mass · 5 m/s²) 로 normalize.
 
-// Lc7: curvature
-struct CmdL7 {
-    double v_target {0.0};
-    double kappa    {0.0};             // [1/m]
-};
+이는 정확한 inverse mapping 이 아니라 API 동작/dispatch 검증 목적이다. 본격
+inverse cascade (ControlConverter 의 reverse mapping) 는 Phase 2.
 
-// Lc8: path
-struct CmdL8 {
-    struct PathPoint {
-        double s; Vec2 xy; double yaw; double kappa; double v_des;
-    };
-    std::vector<PathPoint> path;
-    double lookahead_distance {5.0};
-};
+---
 
-using ControlInput = std::variant<CmdL1, CmdL2, CmdL3, CmdL4,
-                                   CmdL5, CmdL6, CmdL7, CmdL8>;
-```
+## 7.5 m × n 매트릭스 — 핵심 claim
 
-`std::variant` 가 C++17 의 type-safe sum type. compile-time 에서 어느 alternative 가 들어왔는지 확인 가능 + heap allocation 없음.
-
-## 7.3 Dispatch — `lower_to_l4`
-
-본 PoC 의 dynamics (Ld1-Ld3) 는 Lc4 직접 처리. Lc1-Lc3 는 lowering 으로 Lc4 변환 후 동일 path. Lc5+ 는 fallback (zero command).
-
-`std::visit` + `if constexpr` 패턴:
-```cpp
-inline CmdL4 lower_to_l4(const ControlInput& u) {
-    return std::visit([](const auto& cmd) -> CmdL4 {
-        using T = std::decay_t<decltype(cmd)>;
-        CmdL4 out;
-        if constexpr (std::is_same_v<T, CmdL1>) {
-            const double T_drive = sum(cmd.motor_torque);
-            const double T_brake = sum(cmd.brake_torque);
-            out.throttle = clamp(T_drive / 600, 0, 1);
-            out.brake    = clamp(T_brake / 4000, 0, 1);
-            out.steer_angle_wheel = cmd.steer_angle_wheel;
-        }
-        else if constexpr (std::is_same_v<T, CmdL2>) {
-            out.throttle = clamp(cmd.drive_torque / 600, 0, 1);
-            out.brake    = clamp(cmd.brake_torque / 4000, 0, 1);
-            out.steer_angle_wheel = cmd.steer_angle_wheel;
-        }
-        else if constexpr (std::is_same_v<T, CmdL3>) {
-            const double scale = cmd.Fx_total / (1500 * 5);   // m · a_ref
-            out.throttle = clamp(scale, 0, 1);
-            out.brake    = clamp(-scale, 0, 1);
-            out.steer_angle_wheel = cmd.steer_angle_wheel;
-        }
-        else if constexpr (std::is_same_v<T, CmdL4>) {
-            out = cmd;
-        }
-        return out;
-    }, u);
-}
-```
-
-코드 `core/src/bicycle_dynamics.cpp:33-69` 및 `core/src/seven_dof_dynamics.cpp:46-77`.
-
-### 식의 의미
-
-Lc1 lowering: per-wheel torque 의 합을 typical max (600 N·m drive, 4000 N·m brake, both axles combined) 로 normalize. 부정확하지만 **실험 / dispatch 만 검증** 목적.
-
-Lc2: axle 단위 → 동일.
-
-Lc3: Fx 를 typical "1g per sedan" (mass · 5 m/s²) 로 normalize.
-
-이게 정확한 inverse mapping 은 아니지만 **API 가 동작함을 입증**. 본격 inverse cascade (Lc1-Lc3 의 직접 dispatch + ControlConverter 의 reverse mapping) 는 Phase 2.
-
-## 7.4 m × n 매트릭스 — VDSim 의 unique claim
-
-### Dynamics 사다리: Ld1, Ld2, Ld3, Ld4 (plan), Ld5 (plan) — 5 tiers.
-
-### Control 사다리: Lc1 - Lc8 — 8 tiers.
-
-### m × n = 40 조합
-
-각 cell `(Ldi, Lcj)` 는 "Ldi 차량을 Lcj 입력으로 구동" 의미.
+Dynamics 사다리 Ld1-Ld5 (5 tier) × Control 사다리 Lc1-Lc8 (8 tier) = 40 조합.
+각 cell $(Ld_i, Lc_j)$ 는 "$Ld_i$ 차량을 $Lc_j$ 입력으로 구동" 을 의미한다.
 
 | | Ld1 | Ld2 | Ld3 | Ld4 | Ld5 |
 |---|---|---|---|---|---|
 | Lc1 | ✓ via lower | ✓ | ✓ | plan | plan |
 | Lc2 | ✓ | ✓ | ✓ | plan | plan |
 | Lc3 | ✓ | ✓ | ✓ | plan | plan |
-| **Lc4** | **✓ primary** | **✓ primary** | **✓ primary** | plan | plan |
+| Lc4 | ✓ primary | ✓ primary | ✓ primary | plan | plan |
 | Lc5 | ✓ cascade | ✓ cascade | ✓ cascade | plan | plan |
 | Lc6 | ✓ | ✓ | ✓ | plan | plan |
 | Lc7 | ✓ | ✓ | ✓ | plan | plan |
-| Lc8 | ✓ figure-8 | ✓ figure-8 | ✓ figure-8 | plan | plan |
+| Lc8 | ✓ | ✓ | ✓ | plan | plan |
 
-**현재 8 × 3 = 24 verified 조합**. Ld4/Ld5 추가 시 40 까지.
+현재 8 × 3 = 24 verified cell. Ld4/Ld5 추가 시 40 까지.
 
-이게 VDSim 의 **unique 차별화** — 다른 어떤 시뮬레이터도 Ld × Lc 의 m × n grid 가 ABI 안 정의되어 있지 않다.
+이것이 차별화 지점이다. 대부분의 commercial 시뮬레이터는 Ld 를 바꾸면 Lc 를
+다시 작성해야 하는 vendor lock-in 이다. VDSim 의 ABI claim 은 "controller 를
+한 번 작성하면 어느 Ld 에서도 동일하게 동작" 이며, 24 verified cell + 통합
+test 로 검증된다.
 
-## 7.5 Lc5-Lc8 의 cascade (현재)
+---
 
-Lc4 까지가 dynamics 의 직접 입력. Lc5-Lc8 는 ControlConverter 모듈 (Chapter 08-09 상세) 가 cascade 로 lowering:
+## 7.6 Lc5-Lc8 cascade
+
+Lc4 까지가 dynamics 의 직접 입력이고, Lc5-Lc8 은 ControlConverter (chapter
+08-09) 가 cascade 로 lowering 한다.
 
 ```mermaid
 flowchart LR
@@ -189,70 +140,113 @@ flowchart LR
     class Ld1,Ld2,Ld3 dyn
 ```
 
-즉 사용자가 Lc8 path 만 줘도 자동으로 Lc4 throttle/brake/steer 까지 변환되어 차량이 따라간다.
+사용자가 Lc8 path 만 줘도 자동으로 Lc4 throttle/brake/steer 까지 변환되어
+차량이 path 를 따라간다.
 
-## 7.6 ControlInput 의 사용 패턴
+---
 
-```cpp
-// Lc4 direct
-vdsim::CmdL4 cmd; cmd.throttle = 0.5; cmd.steer_angle_wheel = 0.05;
-vdsim::ControlInput u = cmd;
-dyn->step(u, contacts, dt);
+## 7.7 검증 전략
 
-// Lc1 per-wheel (lowering 자동)
-vdsim::CmdL1 cmd1;
-cmd1.motor_torque = {{0, 0, 150, 150}};   // rear drive
-vdsim::ControlInput u1 = cmd1;
-dyn->step(u1, contacts, dt);   // 내부에서 lower_to_l4(u1) 로 변환
-
-// Lc8 path (ControlConverter cascade 필요)
-vdsim::PurePursuitController pp;
-auto out = pp.update(x, y, yaw, vx, path_x, path_y, n_pts);
-vdsim::CmdL4 cmd; cmd.steer_angle_wheel = out.steer;
-// throttle/brake 는 별도 Lc6 + Lc5 cascade
-```
-
-## 7.7 검증 (Task 43)
-
-`ControlDispatch.*`:
-
-- `BicycleHandlesCmdL2Drive` — Lc2 drive_torque > 0 → vx 증가.
-- `BicycleHandlesCmdL3BrakeNegativeFx` — Lc3 Fx < 0 → vx 감소.
-- `SevenDOFHandlesCmdL1PerWheelTorque` — Lc1 RL/RR torque → vx 증가.
-- `BicycleFallbackOnHigherLevelInput` — Lc5 (cascade 없으면) → zero command fallback.
-- `NaNInputSanitizedNoCrash` — NaN/Inf Lc4 입력 → sanitize 후 crash 없음.
-
-5 tests pass. dispatch 와 NaN guard 검증.
-
-## 7.8 Lc1 의 직접 dispatch (Phase 2)
-
-본 PoC 의 `lower_to_l4` 는 lowering. 그러나 **per-wheel torque 의 직접 적용** (variant visit 으로 Lc1 의 motor_torque 가 wheel-spin EoM 에 직접 들어가는 path) 는 미구현.
-
-Phase 2 의 Lc1 direct dispatch:
-
-- `CmdL1::motor_torque[i]` → wheel-spin EoM 의 `T_drive_i` 에 직접 사용.
-- differential 의 결과를 직접 override (low-level controller 가 per-wheel 결정).
-- traction control / torque vectoring 시뮬 가능.
-
-본 PoC 의 lowering 으로는 위 use case 불가 (axle 평균). 그러나 ABI 는 ready.
-
-## 7.9 한계
-
-| 항목 | 한계 |
+| 검증 | 케이스 |
 |---|---|
-| Lc8 직접 dispatch | ControlConverter 외부 cascade 필요 |
-| Lc1 직접 per-wheel | lowering 만, 평균화. 본격 dispatch 는 Phase 2 |
-| Lc7 의 reference path mismatch | path[N] 의 좌표계 정의 필요 (world / vehicle frame) |
-| MPC dispatch | Phase 2 (HPIPM 통합 후) |
+| Lc2 drive dispatch | drive_torque>0 → vx 증가 |
+| Lc3 brake dispatch | $F_x<0$ → vx 감소 |
+| Lc1 per-wheel | RL/RR torque → vx 증가 |
+| Higher-level fallback | Lc5 (cascade 없음) → zero command fallback |
+| NaN guard | NaN/Inf Lc4 → sanitize 후 crash 없음 |
 
-## 7.10 사다리 magic 이 왜 의미 있나 — 한 줄
+dispatch 정확성 + NaN guard 를 통합 test 로 보장 (§7.10 box).
 
-다른 commercial 시뮬레이터는 "Ld 갈아끼우면 Lc 도 다시 짜야 한다" 의 vendor lock-in.
-VDSim 의 ABI claim: **"controller 한 번 짜면 어느 Ld 든 동일하게 동작"**.
+---
 
-이게 검증 가능한 형태 (24 verified cells, 통합 tests) 로 보장되는 게 본 PoC 의 핵심 결과.
+## 7.8 한계
 
-## 7.11 참고
+| 항목 | 한계 | 해소 |
+|---|---|---|
+| Lc8 직접 dispatch | external cascade 필요 | Phase 2 내장 |
+| Lc1 per-wheel | lowering(평균)만 | Phase 2 direct dispatch |
+| Lc7 path frame | world/vehicle frame 정의 필요 | API 명세 보강 |
+| MPC dispatch | 미구현 | Phase 2 (HPIPM 통합 후) |
 
-- `std::variant` + `std::visit` + `if constexpr` 패턴 — C++ Templates: The Complete Guide (2nd ed., Vandevoorde et al.) 또는 cppreference.com.
-- 차량 control 사다리의 abstraction 분석 — VDSim 의 D11 design doc (`docs/tasks/05_D11_control_api/README.md`).
+Lc1 direct dispatch (per-wheel `motor_torque` 가 wheel-spin EoM 의 $T_{drive,i}$
+에 직접 들어가는 path) 는 traction control / torque vectoring 시뮬에 필요하나
+현재는 lowering(axle 평균)만. ABI 는 ready 상태.
+
+---
+
+## 7.9 다음 chapter 와의 연결
+
+이 chapter 는 control 사다리의 구조와 dispatch 를 다뤘다. chapter 08 은
+Lc5/Lc6 의 PI + feed-forward cascade 를, chapter 09 는 Lc7/Lc8 의 Pure Pursuit
+path tracking 을 상세히 전개한다.
+
+---
+
+## 7.10 VDSim 구현 노트
+
+> **[VDSim impl] § 7.3 — CmdL1-CmdL8 + variant**
+>
+> `core/include/vdsim/control.hpp` 에 8 struct + `ControlInput =
+> std::variant<CmdL1,...,CmdL8>`. C++17 type-safe sum type — compile-time tier
+> 판별 + heap allocation 없음.
+>
+> ```cpp
+> struct CmdL4 {                       // CARLA 호환 tier
+>     double throttle {0.0};           // [0, 1]
+>     double brake    {0.0};
+>     double steer_angle_wheel {0.0};
+>     int    gear     {1};
+>     bool   handbrake {false};
+> };
+> using ControlInput = std::variant<CmdL1, CmdL2, CmdL3, CmdL4,
+>                                   CmdL5, CmdL6, CmdL7, CmdL8>;
+> ```
+
+> **[VDSim impl] § 7.4 — lower_to_l4 코드**
+>
+> `std::visit` + `if constexpr` dispatch.
+> `core/src/bicycle_dynamics.cpp:33-69`, `seven_dof_dynamics.cpp:46-77`.
+>
+> ```cpp
+> inline CmdL4 lower_to_l4(const ControlInput& u) {
+>     return std::visit([](const auto& cmd) -> CmdL4 {
+>         using T = std::decay_t<decltype(cmd)>;
+>         CmdL4 out;
+>         if constexpr (std::is_same_v<T, CmdL1>) {
+>             out.throttle = clamp(sum(cmd.motor_torque) / 600, 0, 1);
+>             out.brake    = clamp(sum(cmd.brake_torque) / 4000, 0, 1);
+>             out.steer_angle_wheel = cmd.steer_angle_wheel;
+>         } else if constexpr (std::is_same_v<T, CmdL3>) {
+>             const double scale = cmd.Fx_total / (1500 * 5);
+>             out.throttle = clamp(scale, 0, 1);
+>             out.brake    = clamp(-scale, 0, 1);
+>             out.steer_angle_wheel = cmd.steer_angle_wheel;
+>         } else if constexpr (std::is_same_v<T, CmdL4>) {
+>             out = cmd;
+>         }
+>         return out;
+>     }, u);
+> }
+> ```
+
+> **[VDSim impl] § 7.7 — 검증 test**
+>
+> `ControlDispatch.*` 5 tests: `BicycleHandlesCmdL2Drive`,
+> `BicycleHandlesCmdL3BrakeNegativeFx`, `SevenDOFHandlesCmdL1PerWheelTorque`,
+> `BicycleFallbackOnHigherLevelInput`, `NaNInputSanitizedNoCrash`. 전 5 pass.
+
+> **[VDSim impl] § 7.x — 사용 예제**
+>
+> ```cpp
+> vdsim::CmdL4 cmd; cmd.throttle = 0.5; cmd.steer_angle_wheel = 0.05;
+> dyn->step(vdsim::ControlInput{cmd}, contacts, dt);
+>
+> vdsim::CmdL1 cmd1;
+> cmd1.motor_torque = {{0, 0, 150, 150}};      // rear drive (lowering 자동)
+> dyn->step(vdsim::ControlInput{cmd1}, contacts, dt);
+> ```
+
+> **[VDSim impl] § 7.8 — 설계 문서**
+>
+> control 사다리 abstraction 분석: `docs/tasks/05_D11_control_api/README.md`
+> (D11 design doc).
