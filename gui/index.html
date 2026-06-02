@@ -117,10 +117,12 @@
 <div class="toolbar panel">
   <button id="tb_veh">Vehicle</button>
   <button id="tb_sim">Simulation</button>
+  <button id="tb_act">Actuator</button>
 </div>
 
 <div id="win_veh" class="win"><div class="win-h"><b>Vehicle</b><span class="x">✕</span></div><div class="win-b" id="veh_body"></div></div>
 <div id="win_sim" class="win"><div class="win-h"><b>Simulation</b><span class="x">✕</span></div><div class="win-b" id="sim_body"></div></div>
+<div id="win_act" class="win"><div class="win-h"><b>Actuator &amp; feedback</b><span class="x">✕</span></div><div class="win-b" id="act_body"></div></div>
 
 <div id="manbar" class="panel" style="display:none">
   <button id="m_brk" class="mbtn">◀ BRAKE</button>
@@ -398,7 +400,7 @@ function makeDraggable(win){
   ['mouseup','touchend','touchcancel'].forEach(ev=>addEventListener(ev,()=>dragging=false));
   win.querySelector('.x').onclick=()=>win.classList.remove('open');
 }
-['win_veh','win_sim'].forEach(id=>makeDraggable($(id)));
+['win_veh','win_sim','win_act'].forEach(id=>makeDraggable($(id)));
 
 // ---- 2-level Vehicle window (category -> fields), tire folded in ----
 function fieldRow(f, lvl){
@@ -407,14 +409,27 @@ function fieldRow(f, lvl){
   const lab=document.createElement('label'); lab.textContent=f.label;
   if(!applies){ const b=document.createElement('span'); b.className='badge'; b.textContent=f.levels.join('/'); lab.appendChild(b); }
   row.appendChild(lab);
-  if(f.array){ const wrap=document.createElement('span'); wrap.className='arr';
+  if(f.kind==='arr'){ const wrap=document.createElement('span'); wrap.className='arr';
     f.value.forEach((v,i)=>{ const inp=document.createElement('input'); inp.type='number'; inp.step='any';
       inp.value=v; inp.dataset.name=f.name; inp.dataset.idx=i; inp.disabled=!applies; wrap.appendChild(inp); });
     row.appendChild(wrap);
+  } else if(f.kind==='bool'){ const inp=document.createElement('input'); inp.type='checkbox';
+    inp.checked=!!f.value; inp.dataset.name=f.name; inp.disabled=!applies; row.appendChild(inp);
+  } else if(f.kind==='enum'){ const sel=document.createElement('select');
+    sel.innerHTML=(f.choices||[]).map(c=>`<option ${c===f.value?'selected':''}>${c}</option>`).join('');
+    sel.dataset.name=f.name; sel.disabled=!applies; row.appendChild(sel);
   } else { const inp=document.createElement('input'); inp.type='number'; inp.step='any';
     inp.value=f.value; inp.dataset.name=f.name; inp.disabled=!applies; row.appendChild(inp); }
   return row;
 }
+// Collect editable widgets (number/array/checkbox/select) under `el` into a dict.
+function collectFields(el, names){ const out={}, arrs={};
+  el.querySelectorAll('[data-name]').forEach(inp=>{ const nm=inp.dataset.name; if(names&&!names.has(nm))return;
+    if(inp.dataset.idx!==undefined){ (arrs[nm]=arrs[nm]||[])[+inp.dataset.idx]=+inp.value; }
+    else if(inp.type==='checkbox') out[nm]=inp.checked;
+    else if(inp.tagName==='SELECT') out[nm]=inp.value;
+    else out[nm]=+inp.value; });
+  Object.assign(out,arrs); return out; }
 function section(title, open){
   const d=document.createElement('details'); d.className='sec'; d.open=!!open;
   const s=document.createElement('summary'); s.textContent=title; d.appendChild(s);
@@ -447,13 +462,22 @@ async function buildVehicle(){
   for(const g in tg){ const l=document.createElement('div'); l.className='subgrp'; l.textContent=g; ts.body.appendChild(l);
     tg[g].forEach(f=>ts.body.appendChild(fieldRow(f,lvl))); }
   el.appendChild(ts.sec);
-  const collect=(names)=>{ const out={},arrs={};
-    el.querySelectorAll('input[data-name]').forEach(inp=>{ const nm=inp.dataset.name; if(!names.has(nm))return;
-      if(inp.dataset.idx!==undefined){(arrs[nm]=arrs[nm]||[])[+inp.dataset.idx]=+inp.value;} else out[nm]=+inp.value; });
-    Object.assign(out,arrs); return out; };
   const vnames=new Set(veh.map(f=>f.name)), tnames=new Set(tire.map(f=>f.name));
   const btn=document.createElement('button'); btn.className='apply'; btn.textContent='Apply (rebuild sim)';
-  btn.onclick=async()=>{ await post('/api/vehicle', collect(vnames)); await post('/api/tire', collect(tnames)); };
+  btn.onclick=async()=>{ await post('/api/vehicle', collectFields(el,vnames)); await post('/api/tire', collectFields(el,tnames)); };
+  el.appendChild(btn);
+}
+
+// ---- Actuator & feedback window ----
+async function buildActuator(){
+  const fields=(await(await fetch('/api/actuator')).json()).fields;
+  const el=$('act_body'); el.innerHTML='';
+  const g={}; fields.forEach(f=>{(g[f.group]=g[f.group]||[]).push(f);});
+  let first=true;
+  for(const grp in g){ const s=section(grp,first); first=false;
+    g[grp].forEach(f=>s.body.appendChild(fieldRow(f,'L2'))); el.appendChild(s.sec); }
+  const btn=document.createElement('button'); btn.className='apply'; btn.textContent='Apply (rebuild sim)';
+  btn.onclick=()=>post('/api/actuator', collectFields(el,null));
   el.appendChild(btn);
 }
 
@@ -492,6 +516,7 @@ async function buildSim(){
 function openWin(id, build){ const w=$(id); w.classList.toggle('open'); if(w.classList.contains('open')) build(); }
 $('tb_veh').onclick =()=>openWin('win_veh', buildVehicle);
 $('tb_sim').onclick =()=>openWin('win_sim', buildSim);
+$('tb_act').onclick =()=>openWin('win_act', buildActuator);
 </script>
 </body>
 </html>
