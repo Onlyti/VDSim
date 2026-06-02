@@ -17,6 +17,8 @@
 
 Ld2 는 본격 차량 dynamics validation 의 entry level. autonomy 도메인 (ADAS) 의 표준 fidelity.
 
+![Weight transfer in a left turn](figures/05_weight_transfer.png)
+
 ## 5.2 Per-tire Fz with lateral + longitudinal weight transfer
 
 Static per-tire:

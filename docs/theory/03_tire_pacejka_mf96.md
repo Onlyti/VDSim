@@ -10,6 +10,10 @@ vehicle dynamics 의 sensitivity 를 따져보면, mass / wheelbase / aero 보�
 
 VDSim 은 Pacejka MF96 의 **simple form (semi-empirical, simplified)** 을 채택. MF2002 의 full form (combined slip 의 자체 식, Mzr 잔류 모멘트, camber-Mz 결합 등) 은 Phase 2.
 
+![Pacejka Fy-alpha + friction ellipse (actual VDSim model output)](figures/03_tire.png)
+
+*위 그림은 VDSim 의 실제 Pacejka 모델 출력 — load sensitivity (8 kN 이 4 kN 의 1.7배, 선형이면 2배) 와 friction ellipse 의 boundary saturation 이 보인다.*
+
 ## 3.2 Magic Formula 의 모양
 
 기본형:

@@ -18,6 +18,8 @@ D8 명세에서 14-DOF 의 분해:
 
 planar 7 + vertical 7 = **14 DOF (= 14 second-order ODE 또는 28 first-order)**.
 
+![Quarter-car model](figures/06_quarter_car.png)
+
 ## 6.2 Lumped vs full multibody
 
 본 PoC 는 **lumped suspension**:

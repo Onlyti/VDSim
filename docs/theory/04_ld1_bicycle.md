@@ -8,6 +8,8 @@
 
 VDSim 의 Ld1 = "the L4 controller can drive any vehicle" 의 testbed.
 
+![Single-track geometry](figures/04_bicycle_geom.png)
+
 ## 4.2 가정 (정리)
 
 | 가정 | 의미 |
@@ -211,6 +213,10 @@ r_{ss} = \frac{v_x\, \delta}{L\,(1 + K_{us}\, v_x^2)}
 $$
 
 `vx → ∞` 한계 — understeer 차량은 r 의 증가가 둔화, oversteer 는 발산.
+
+![Understeer: yaw-rate gain vs speed (actual VDSim L2 sweep)](figures/04_understeer.png)
+
+*VDSim L2 (sports) 의 실제 sweep — yaw-rate gain 이 고속에서 neutral 선 (v/L) 아래로 처지고 saturate. understeer 차량의 교과서적 거동.*
 
 ## 4.8 검증 — analytical vs simulator
 

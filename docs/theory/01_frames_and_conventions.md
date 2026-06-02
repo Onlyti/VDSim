@@ -52,6 +52,8 @@ constexpr int NUM_WHEELS = 4;
 
 ## 1.3 Quaternion 변환
 
+![ISO 8855 frame, wheel index, slip angle](figures/01_frames.png)
+
 VDSim 은 Eigen `Quaterniond` 사용. **body → world** 변환:
 
 $$

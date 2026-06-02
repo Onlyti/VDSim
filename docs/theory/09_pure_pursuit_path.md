@@ -11,6 +11,8 @@
 
 geometry 가 모든 것을 결정 — feedback 도 없고 optimization 도 없다.
 
+![Pure pursuit lookahead geometry](figures/09_pure_pursuit.png)
+
 ## 9.2 Geometry derivation
 
 차량의 body frame: x_b forward, y_b leftward.

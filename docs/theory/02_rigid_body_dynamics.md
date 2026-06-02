@@ -2,6 +2,8 @@
 
 > **학습 목표.** 차량을 한 개의 강체로 볼 때 Newton-Euler 방정식이 body frame 에서 왜 `m(v̇ + ω × v)` 형태가 되는지 step-by-step 유도한다. Inertial vs body frame 의 cross 항이 어디서 오는지 직관과 식으로 모두 설명할 수 있게 된다. 이게 이해되면 Ld1-Ld3 의 모든 EoM 이 자명해진다.
 
+![Coriolis term in body frame](figures/02_coriolis.png)
+
 ## 2.1 Why body-frame EoM (not inertial)
 
 차량의 mass 와 inertia tensor 는 body 에 고정된 좌표계에서만 시간 불변이다. body 가 yaw 하면 world 의 `xy` 좌표 입장에서 차의 inertia 가 매 순간 회전한다 — 즉 매 step 마다 `I_world(t)` 가 변한다. 이걸 inertial frame 에서 풀려면 `I(t)` 의 시간 의존성을 매번 계산해야 한다.
