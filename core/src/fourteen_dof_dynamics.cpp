@@ -313,6 +313,10 @@ private:
     void write_pose_and_suspension() {
         const double yaw = yaw_from_quat(state_.orientation);
         state_.orientation = quat_from_euler({phi_, th_, yaw});
+        // Roll/pitch rates live in the L3 vertical model; publish them into the
+        // body angular velocity so the gyro/IMU sees them (z = yaw rate from inner).
+        state_.angular_velocity.x() = phi_dot_;
+        state_.angular_velocity.y() = th_dot_;
         for (int i = 0; i < NUM_WHEELS; ++i) {
             const double z_corner = z_s_ + ry_[i] * phi_ - rx_[i] * th_;
             const double v_corner = z_s_dot_ + ry_[i] * phi_dot_ - rx_[i] * th_dot_;
