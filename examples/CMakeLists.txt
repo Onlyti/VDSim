@@ -37,3 +37,8 @@ add_executable(vdsim_path_tracking path_tracking_demo.cpp)
 target_link_libraries(vdsim_path_tracking PRIVATE vdsim::core)
 set_target_properties(vdsim_path_tracking PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+add_executable(vdsim_mf_tire_demo mf_tire_demo.cpp)
+target_link_libraries(vdsim_mf_tire_demo PRIVATE vdsim::core)
+set_target_properties(vdsim_mf_tire_demo PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

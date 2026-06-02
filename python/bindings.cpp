@@ -8,6 +8,7 @@
 #include "vdsim/control_converter.hpp"
 #include "vdsim/coordinate.hpp"
 #include "vdsim/interfaces.hpp"
+#include "vdsim/magic_formula.hpp"
 #include "vdsim/params.hpp"
 #include "vdsim/scenario.hpp"
 #include "vdsim/state.hpp"
@@ -231,6 +232,18 @@ PYBIND11_MODULE(vdsim, m) {
     m.def("create_fourteen_dof", static_cast<DynFactory>(&vdsim::create_fourteen_dof));
     m.def("create_flat_ground",  &vdsim::create_flat_ground,
           py::arg("z") = 0.0, py::arg("mu") = 1.0);
+
+    // Dynamics driven by a full Magic Formula tire loaded from a .tir file.
+    // Keep .tir files (which may hold confidential measured data) out of the repo.
+    m.def("create_bicycle_from_tir", [](const std::string& tir) {
+        return vdsim::create_bicycle(vdsim::create_magic_formula_tire_from_tir(tir));
+    }, py::arg("tir_path"));
+    m.def("create_seven_dof_from_tir", [](const std::string& tir) {
+        return vdsim::create_seven_dof(vdsim::create_magic_formula_tire_from_tir(tir));
+    }, py::arg("tir_path"));
+    m.def("create_fourteen_dof_from_tir", [](const std::string& tir) {
+        return vdsim::create_fourteen_dof(vdsim::create_magic_formula_tire_from_tir(tir));
+    }, py::arg("tir_path"));
 
     // -------- LongAxController / LongVxController / PurePursuit --------
     py::class_<vdsim::LongAxController::Gains>(m, "LongAxGains")
