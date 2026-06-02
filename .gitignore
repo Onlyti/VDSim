@@ -71,3 +71,8 @@ site/
 # Animation raw frames (mp4 is committed instead)
 carla_integration/results/*/frames/
 apps/jump_demo/*/frames/
+
+# Confidential measured data — never commit to open-core repo
+*.tir
+configs/tires/measured/
+*_private/
