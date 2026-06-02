@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#11-rk4-substepping-1-step-lag" class="md-skip">
+        <a href="#11-numerical-integration-rk4-substepping-1-step-lag" class="md-skip">
           Skip to content
         </a>
       
@@ -907,10 +907,32 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#learning-objectives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Learning objectives
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#111-ode" class="md-nav__link">
     <span class="md-ellipsis">
       
-        11.1 ODE 의 일반형
+        11.1 동기 — ODE 일반형
       
     </span>
   </a>
@@ -918,155 +940,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#112-explicit-euler" class="md-nav__link">
+  <a href="#112" class="md-nav__link">
     <span class="md-ellipsis">
       
-        11.2 Explicit Euler — 단순 / 부정확
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="11.2 Explicit Euler — 단순 / 부정확">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#poc-euler" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        본 PoC 의 Euler 옵션
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#113-runge-kutta-4-rk4-poc-default" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        11.3 Runge-Kutta 4 (RK4) — 본 PoC 의 default
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="11.3 Runge-Kutta 4 (RK4) — 본 PoC 의 default">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#rk4-cost" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        RK4 의 cost
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#114-substepping-outer-dt-inner-dt" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        11.4 Substepping — outer dt 와 inner dt 의 분리
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="11.4 Substepping — outer dt 와 inner dt 의 분리">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#inner-dt" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Inner dt 의 선택 기준
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#115-1-step-lag-self-referential" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        11.5 1-Step Lag — Self-referential 식의 단순화
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="11.5 1-Step Lag — Self-referential 식의 단순화">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        문제
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#1-step-lag" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1-Step Lag 의 해
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#task-17" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        검증 (Task 17)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#self-referential" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        다른 self-referential 예
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#116-rk4-substep-1-step-lag-combination" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        11.6 RK4 substep + 1-step lag 의 combination
+        11.2 가정
       
     </span>
   </a>
@@ -1074,10 +951,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#117-outer-step-dt" class="md-nav__link">
+  <a href="#113-explicit-euler" class="md-nav__link">
     <span class="md-ellipsis">
       
-        11.7 외부 outer step 의 dt 권고
+        11.3 Explicit Euler
       
     </span>
   </a>
@@ -1085,10 +962,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#118-solver-task-16" class="md-nav__link">
+  <a href="#114-runge-kutta-4" class="md-nav__link">
     <span class="md-ellipsis">
       
-        11.8 검증 — Solver 별 비교 (Task 16)
+        11.4 Runge-Kutta 4
       
     </span>
   </a>
@@ -1096,10 +973,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#119-future-work" class="md-nav__link">
+  <a href="#115-substepping" class="md-nav__link">
     <span class="md-ellipsis">
       
-        11.9 한계 / future work
+        11.5 Substepping
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#116-1-step-lag-self-referential" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.6 1-Step Lag — self-referential 단순화
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#117-rk4-substep-1-step-lag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.7 RK4 substep + 1-step lag 결합
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#118-outer-dt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.8 외부 outer dt 권고
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#119" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.9 검증 전략
       
     </span>
   </a>
@@ -1110,7 +1031,51 @@
   <a href="#1110" class="md-nav__link">
     <span class="md-ellipsis">
       
-        11.10 참고
+        11.10 한계
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1111-chapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.11 다음 chapter 와의 연결
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1112" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.12 참고문헌
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1113-self-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.13 Self-check
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1114-vdsim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.14 VDSim 구현 노트
       
     </span>
   </a>
@@ -1960,10 +1925,32 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#learning-objectives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Learning objectives
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#111-ode" class="md-nav__link">
     <span class="md-ellipsis">
       
-        11.1 ODE 의 일반형
+        11.1 동기 — ODE 일반형
       
     </span>
   </a>
@@ -1971,155 +1958,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#112-explicit-euler" class="md-nav__link">
+  <a href="#112" class="md-nav__link">
     <span class="md-ellipsis">
       
-        11.2 Explicit Euler — 단순 / 부정확
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="11.2 Explicit Euler — 단순 / 부정확">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#poc-euler" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        본 PoC 의 Euler 옵션
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#113-runge-kutta-4-rk4-poc-default" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        11.3 Runge-Kutta 4 (RK4) — 본 PoC 의 default
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="11.3 Runge-Kutta 4 (RK4) — 본 PoC 의 default">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#rk4-cost" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        RK4 의 cost
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#114-substepping-outer-dt-inner-dt" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        11.4 Substepping — outer dt 와 inner dt 의 분리
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="11.4 Substepping — outer dt 와 inner dt 의 분리">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#inner-dt" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Inner dt 의 선택 기준
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#115-1-step-lag-self-referential" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        11.5 1-Step Lag — Self-referential 식의 단순화
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="11.5 1-Step Lag — Self-referential 식의 단순화">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        문제
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#1-step-lag" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1-Step Lag 의 해
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#task-17" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        검증 (Task 17)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#self-referential" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        다른 self-referential 예
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#116-rk4-substep-1-step-lag-combination" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        11.6 RK4 substep + 1-step lag 의 combination
+        11.2 가정
       
     </span>
   </a>
@@ -2127,10 +1969,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#117-outer-step-dt" class="md-nav__link">
+  <a href="#113-explicit-euler" class="md-nav__link">
     <span class="md-ellipsis">
       
-        11.7 외부 outer step 의 dt 권고
+        11.3 Explicit Euler
       
     </span>
   </a>
@@ -2138,10 +1980,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#118-solver-task-16" class="md-nav__link">
+  <a href="#114-runge-kutta-4" class="md-nav__link">
     <span class="md-ellipsis">
       
-        11.8 검증 — Solver 별 비교 (Task 16)
+        11.4 Runge-Kutta 4
       
     </span>
   </a>
@@ -2149,10 +1991,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#119-future-work" class="md-nav__link">
+  <a href="#115-substepping" class="md-nav__link">
     <span class="md-ellipsis">
       
-        11.9 한계 / future work
+        11.5 Substepping
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#116-1-step-lag-self-referential" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.6 1-Step Lag — self-referential 단순화
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#117-rk4-substep-1-step-lag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.7 RK4 substep + 1-step lag 결합
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#118-outer-dt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.8 외부 outer dt 권고
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#119" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.9 검증 전략
       
     </span>
   </a>
@@ -2163,7 +2049,51 @@
   <a href="#1110" class="md-nav__link">
     <span class="md-ellipsis">
       
-        11.10 참고
+        11.10 한계
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1111-chapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.11 다음 chapter 와의 연결
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1112" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.12 참고문헌
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1113-self-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.13 Self-check
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1114-vdsim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.14 VDSim 구현 노트
       
     </span>
   </a>
@@ -2190,37 +2120,82 @@
   
 
 
-<h1 id="11-rk4-substepping-1-step-lag">11. 수치 적분 — RK4, Substepping, 1-Step Lag<a class="headerlink" href="#11-rk4-substepping-1-step-lag" title="Permanent link">&para;</a></h1>
-<blockquote>
-<p><strong>학습 목표.</strong> Euler vs RK4 의 local / global error order 를 안다. substepping 이 stiff system 에서 왜 필요한지 stability 측면에서 설명한다. 1-step lag 의 정확한 의미 — self-referential 식을 단순화하기 위한 의도적 추정 — 를 안다. 본 PoC 가 default RK4 + 1 ms substep + 1-step lag 조합인 이유를 명확히 한다.</p>
-</blockquote>
-<h2 id="111-ode">11.1 ODE 의 일반형<a class="headerlink" href="#111-ode" title="Permanent link">&para;</a></h2>
-<p>차량 dynamics 를 1차 ODE 로 표현:</p>
+<h1 id="11-numerical-integration-rk4-substepping-1-step-lag">11. Numerical Integration (RK4, Substepping, 1-Step Lag)<a class="headerlink" href="#11-numerical-integration-rk4-substepping-1-step-lag" title="Permanent link">&para;</a></h1>
+<h2 id="learning-objectives">Learning objectives<a class="headerlink" href="#learning-objectives" title="Permanent link">&para;</a></h2>
+<p>이 chapter 를 마치면 다음을 할 수 있다.</p>
+<ol>
+<li>Euler 와 RK4 의 local/global error order 와 stability region 을 비교한다.</li>
+<li>stiff system 에서 substepping 이 필요한 이유를 frequency/stability 로
+   설명한다.</li>
+<li>1-step lag 가 self-referential 식 (weight transfer) 을 단순화하는 의도적
+   추정임을 이해하고 그 bias 를 정량 평가한다.</li>
+<li>RK4 + 1 ms substep + 1-step lag 조합의 trade-off 를 판단한다.</li>
+</ol>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Chapter 04-06</strong> — Ld1-Ld3 의 EoM (적분 대상).</li>
+<li><strong>외부</strong> — ODE 수치해석 기초 (Hairer/Wanner, Numerical Recipes).</li>
+</ul>
+<hr />
+<h2 id="111-ode">11.1 동기 — ODE 일반형<a class="headerlink" href="#111-ode" title="Permanent link">&para;</a></h2>
+<p>차량 dynamics 를 1차 ODE 로:</p>
 <div class="arithmatex">\[
 \dot y = f(y, u, t)
 \]</div>
-<p><span class="arithmatex">\(y\)</span> 는 state vector, <span class="arithmatex">\(u\)</span> 는 input (control), <span class="arithmatex">\(t\)</span> 는 time.
-Ld1 의 경우 <code>y ∈ R^8</code> (x_w, y_w, ψ, vx, vy, r, ω_f, ω_r), Ld3 의 경우 더 크다.</p>
-<p>수치 적분은 <code>y(t + dt)</code> 를 <code>y(t)</code>, <code>f(y, t)</code> 로부터 추정.</p>
-<h2 id="112-explicit-euler">11.2 Explicit Euler — 단순 / 부정확<a class="headerlink" href="#112-explicit-euler" title="Permanent link">&para;</a></h2>
+<p><span class="arithmatex">\(y\)</span> state, <span class="arithmatex">\(u\)</span> input, <span class="arithmatex">\(t\)</span> time. Ld1 의 <span class="arithmatex">\(y\in\mathbb{R}^8\)</span>, Ld3 은 더 크다.
+수치 적분은 <span class="arithmatex">\(y(t+dt)\)</span> 를 <span class="arithmatex">\(y(t), f(y,t)\)</span> 로부터 추정한다.</p>
+<hr />
+<h2 id="112">11.2 가정<a class="headerlink" href="#112" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>가정</th>
+<th>의미</th>
+<th>깨지는 case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fixed step</td>
+<td>adaptive step 없음</td>
+<td>급격한 transient (RK45 필요)</td>
+</tr>
+<tr>
+<td>Explicit RK4</td>
+<td>implicit 아님</td>
+<td>very stiff (BDF/IRK)</td>
+</tr>
+<tr>
+<td>1-step lag</td>
+<td>weight transfer 가 직전 step <span class="arithmatex">\(a\)</span> 기반</td>
+<td>큰 dt 에서 transient bias</td>
+</tr>
+<tr>
+<td>ODE (not DAE)</td>
+<td>algebraic constraint 없음</td>
+<td>constrained multibody (Ld4-Ld5)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="113-explicit-euler">11.3 Explicit Euler<a class="headerlink" href="#113-explicit-euler" title="Permanent link">&para;</a></h2>
 <div class="arithmatex">\[
-y_{n+1} = y_n + dt \cdot f(y_n, t_n)
+y_{n+1} = y_n + dt\cdot f(y_n, t_n)
 \]</div>
-<p>local error <span class="arithmatex">\(O(dt^2)\)</span> per step, global error <span class="arithmatex">\(O(dt)\)</span> over <span class="arithmatex">\([0, T]\)</span>.</p>
-<p><strong>stable region</strong> (linear ODE <span class="arithmatex">\(\dot y = \lambda y\)</span>):</p>
+<p>local error <span class="arithmatex">\(O(dt^2)\)</span>, global <span class="arithmatex">\(O(dt)\)</span>. linear test <span class="arithmatex">\(\dot y=\lambda y\)</span> 의 stable
+region:</p>
 <div class="arithmatex">\[
-|1 + dt\, \lambda| \le 1
+|1 + dt\,\lambda| \le 1
 \]</div>
-<p><span class="arithmatex">\(\lambda = -1000\)</span> (stiff) 이면 <span class="arithmatex">\(dt &lt; 0.002\)</span> 필요. 매우 작아야 stable.</p>
-<p>VDSim 의 spring/damper system 의 stiffness ratio (k_tire = 220 kN/m, m_u = 40 kg) → ω² ≈ 5500, ω ≈ 74 rad/s, 그리고 underdamped 모드 cluster. Euler 는 stable region 좁아 작은 dt 강제.</p>
-<h3 id="poc-euler">본 PoC 의 Euler 옵션<a class="headerlink" href="#poc-euler" title="Permanent link">&para;</a></h3>
-<p><code>SolverParams::Integrator::Euler</code> — benchmark / fairness 비교 용. default 는 RK4.
-<code>configs/solvers/euler_10ms.yaml</code> 같은 coarse Euler config 으로 integrator 의 numerical error 시범 가능.</p>
+<p><span class="arithmatex">\(\lambda=-1000\)</span> (stiff) 이면 <span class="arithmatex">\(dt&lt;0.002\)</span> 필요. tire-vertical mode
+(<span class="arithmatex">\(k_{\text{tire}}=220\)</span> kN/m, <span class="arithmatex">\(m_u=40\)</span> kg → <span class="arithmatex">\(\omega\approx74\)</span> rad/s) 같은 stiff
+cluster 에서 Euler 는 작은 dt 를 강제한다.</p>
 <p><img alt="Euler vs RK4 step-steer (actual model)" src="../figures/11_integrator.png" /></p>
-<p><em>동일 step-steer 를 RK4 1ms (reference) vs Euler 20ms vs RK4 20ms 로. stiff
-suspension 에서 Euler 20ms 는 불안정해지고, RK4 는 큰 dt 에서도 reference 에
-근접.</em></p>
-<h2 id="113-runge-kutta-4-rk4-poc-default">11.3 Runge-Kutta 4 (RK4) — 본 PoC 의 default<a class="headerlink" href="#113-runge-kutta-4-rk4-poc-default" title="Permanent link">&para;</a></h2>
+<p>동일 step-steer 를 RK4 1ms (reference) vs Euler 20ms vs RK4 20ms. stiff
+suspension 에서 Euler 20ms 는 불안정해지고 RK4 는 큰 dt 에서도 reference 에
+근접한다.</p>
+<hr />
+<h2 id="114-runge-kutta-4">11.4 Runge-Kutta 4<a class="headerlink" href="#114-runge-kutta-4" title="Permanent link">&para;</a></h2>
 <div class="arithmatex">\[
 \begin{aligned}
 k_1 &amp;= f(y_n, t_n) \\
@@ -2230,97 +2205,55 @@ k_4 &amp;= f(y_n + dt\, k_3,\; t_n + dt) \\
 y_{n+1} &amp;= y_n + \tfrac{dt}{6}(k_1 + 2k_2 + 2k_3 + k_4)
 \end{aligned}
 \]</div>
-<p>local error <span class="arithmatex">\(O(dt^5)\)</span>, global error <span class="arithmatex">\(O(dt^4)\)</span>.</p>
-<p>stable region (linear test problem):</p>
+<p>local error <span class="arithmatex">\(O(dt^5)\)</span>, global <span class="arithmatex">\(O(dt^4)\)</span>. stability:</p>
 <div class="arithmatex">\[
 |R(z)| \le 1, \qquad R(z) = 1 + z + \tfrac{z^2}{2} + \tfrac{z^3}{6} + \tfrac{z^4}{24}
 \]</div>
-<p>훨씬 넓다. RK4 는 stiff system 의 일부 범위까지 stable.</p>
-<h3 id="rk4-cost">RK4 의 cost<a class="headerlink" href="#rk4-cost" title="Permanent link">&para;</a></h3>
-<p>4 evaluations of <code>f</code> per step. Euler 의 4 배. 하지만:</p>
-<ul>
-<li>error 가 <code>O(dt⁴)</code> 이므로 같은 정확도에 더 큰 dt 가능.</li>
-<li>결과적으로 Euler 보다 빠를 수도 (정확도가 같다는 가정).</li>
-</ul>
-<p>VDSim 의 inner substep dt = 1 ms 의 RK4 는 차량 dynamics 에서 numerical error 가 무시 가능 수준 (<code>O(10^{-12})</code>).</p>
-<h2 id="114-substepping-outer-dt-inner-dt">11.4 Substepping — outer dt 와 inner dt 의 분리<a class="headerlink" href="#114-substepping-outer-dt-inner-dt" title="Permanent link">&para;</a></h2>
-<p>CARLA / 외부 host 의 tick 이 보통 20 ms (50 Hz) 정도. 그러나 차량 spring 의 frequency 가 10-15 Hz 이라 outer dt 20 ms 으로 직접 RK4 하면 oscillation 인접에서 numerical artifact.</p>
-<p>VDSim 의 처리:</p>
+<p>Euler 보다 훨씬 넓어 stiff system 의 일부 범위까지 stable.</p>
+<p>cost: step 당 <span class="arithmatex">\(f\)</span> 4 회 evaluation (Euler 의 4 배). 그러나 <span class="arithmatex">\(O(dt^4)\)</span> error 로
+같은 정확도에 더 큰 dt 가능 → 결과적으로 더 빠를 수 있다. 1 ms RK4 의 차량
+dynamics numerical error 는 <span class="arithmatex">\(O(10^{-12})\)</span> 수준.</p>
+<hr />
+<h2 id="115-substepping">11.5 Substepping<a class="headerlink" href="#115-substepping" title="Permanent link">&para;</a></h2>
+<p>외부 host (CARLA) tick 은 보통 20 ms (50 Hz). 차량 spring frequency 10-15 Hz
+라 outer dt 20 ms 로 직접 RK4 하면 oscillation 인접에서 artifact 가 생긴다.</p>
 <div class="arithmatex">\[
-dt_{\text{sub}} = \min(dt_{\text{outer}},\, dt_{\max}), \qquad
+dt_{\text{sub}} = \min(dt_{\text{outer}}, dt_{\max}), \qquad
 N_{\text{sub}} = \lceil dt_{\text{outer}} / dt_{\text{sub}} \rceil
 \]</div>
-<p>(capped at <code>max_substeps</code>)</p>
-<p>매 outer step 안에서 N_substeps 회의 RK4 inner step.</p>
-<p>코드 <code>core/src/bicycle_dynamics.cpp:117-119</code>:
-<div class="language-cpp highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">               </span><span class="n">std</span><span class="o">::</span><span class="n">min</span><span class="p">(</span><span class="n">sp_</span><span class="p">.</span><span class="n">max_substeps</span><span class="p">,</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">                        </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">ceil</span><span class="p">(</span><span class="n">dt</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">sp_</span><span class="p">.</span><span class="n">max_substep_dt</span><span class="p">))));</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">h</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dt</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="p">(</span><span class="n">N</span><span class="p">);</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">N</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="n">substep</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span><span class="w"> </span><span class="n">contacts</span><span class="p">,</span><span class="w"> </span><span class="n">h</span><span class="p">);</span>
-</span></code></pre></div></p>
-<p>default: <code>max_substep_dt = 0.001 s</code>, <code>max_substeps = 10</code>.</p>
-<ul>
-<li>outer dt = 5 ms → 5 substeps of 1 ms.</li>
-<li>outer dt = 20 ms → cap 에 10 substeps of 2 ms.</li>
-</ul>
-<h3 id="inner-dt">Inner dt 의 선택 기준<a class="headerlink" href="#inner-dt" title="Permanent link">&para;</a></h3>
+<p>(max_substeps cap). 매 outer step 안에서 <span class="arithmatex">\(N\)</span> 회 RK4 inner step.</p>
+<p>inner dt 선택 기준:</p>
 <div class="arithmatex">\[
 dt_{\text{inner}} \le \frac{1}{10\, f_{\max}}
 \]</div>
-<p><span class="arithmatex">\(f_{\max}\)</span> 는 가장 빠른 system mode 의 frequency.
-sedan default: spring k = 30000, m_u = 40 → ω ≈ 27 rad/s ≈ 4.3 Hz. dt_inner ≤ 23 ms 면 충분.
-하지만 tire-vertical mode k_tire = 220000, m_u = 40 → ω ≈ 74 → f ≈ 12 Hz. dt_inner ≤ 8 ms.</p>
-<p>본 PoC 의 1 ms 는 매우 보수적. 정확도 우선.</p>
-<h2 id="115-1-step-lag-self-referential">11.5 1-Step Lag — Self-referential 식의 단순화<a class="headerlink" href="#115-1-step-lag-self-referential" title="Permanent link">&para;</a></h2>
-<h3 id="_1">문제<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h3>
+<p><span class="arithmatex">\(f_{\max}\)</span> 는 가장 빠른 mode. tire-vertical mode (~12 Hz) 면 <span class="arithmatex">\(dt_{\text{inner}}
+\le 8\)</span> ms. 1 ms default 는 보수적 — 정확도 우선.</p>
+<hr />
+<h2 id="116-1-step-lag-self-referential">11.6 1-Step Lag — self-referential 단순화<a class="headerlink" href="#116-1-step-lag-self-referential" title="Permanent link">&para;</a></h2>
 <p>Ld1 의 longitudinal weight transfer:</p>
 <div class="arithmatex">\[
 F_{z,f}(t) = F_{z,f}^{\text{static}} - \frac{m\, a_x(t)\, h_{cg}}{L}, \qquad
-a_x(t) = \frac{F_{x,\text{total}}(F_{z,f}(t), F_{z,r}(t), \ldots)}{m}
+a_x(t) = \frac{F_{x,\text{total}}(F_z(t))}{m}
 \]</div>
-<p><span class="arithmatex">\(F_z\)</span> 는 <span class="arithmatex">\(a_x\)</span> 의 함수, <span class="arithmatex">\(a_x\)</span> 는 <span class="arithmatex">\(F_z\)</span> 의 함수. <strong>self-referential</strong>.</p>
-<p>엄밀하게 풀려면 fixed-point iteration:
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Fz^{(0)}  =  static
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>ax^{(0)}  =  compute(Fz^{(0)})
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>Fz^{(1)}  =  static − m · ax^{(0)} · h_cg / L
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>ax^{(1)}  =  compute(Fz^{(1)})
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>... 수렴 까지
-</span></code></pre></div></p>
-<p>매 substep 마다 iteration → 비용 큼 + tire 의 nonlinearity 로 수렴 보장 없음.</p>
-<h3 id="1-step-lag">1-Step Lag 의 해<a class="headerlink" href="#1-step-lag" title="Permanent link">&para;</a></h3>
-<p>직전 substep 의 <span class="arithmatex">\(a_{x,\text{prev}}\)</span> 를 사용:</p>
+<p><span class="arithmatex">\(F_z\)</span> 가 <span class="arithmatex">\(a_x\)</span> 의 함수, <span class="arithmatex">\(a_x\)</span> 가 <span class="arithmatex">\(F_z\)</span> 의 함수 — self-referential. 엄밀히는
+fixed-point iteration 이 필요하나 매 substep iteration → 비용 + tire
+nonlinearity 로 수렴 보장 없음.</p>
+<p>1-step lag: 직전 substep 의 <span class="arithmatex">\(a_{x,\text{prev}}\)</span> 사용.</p>
 <div class="arithmatex">\[
-F_{z,f}(t) = F_{z,f}^{\text{static}} - \frac{m\, a_{x,\text{prev}}\, h_{cg}}{L}, \qquad
-a_x(t) = \text{compute}(F_z(t)), \qquad
-a_{x,\text{prev}} \leftarrow a_x(t)
+F_{z,f}(t) = F_{z,f}^{\text{static}} - \frac{m\, a_{x,\text{prev}}\, h_{cg}}{L},
+\quad a_x(t) = \text{compute}(F_z(t)), \quad a_{x,\text{prev}}\leftarrow a_x(t)
 \]</div>
-<ul>
-<li>bias: 직전 step 의 ax 사용 → transient 동안 small lag.</li>
-<li>substep dt = 1 ms 면 bias 가 <code>~ dt · |dax/dt|</code>. brake 의 ax = −5 m/s², 시간 도함수 ~ 100 m/s³ 이라도 bias = 100 · 0.001 = 0.1 m/s². ΔFz 영향 = <code>m · 0.1 · h / L ≈ 30 N</code> (sedan 의 경우). 무시 가능.</li>
-</ul>
-<h3 id="task-17">검증 (Task 17)<a class="headerlink" href="#task-17" title="Permanent link">&para;</a></h3>
-<p>brake step 의 실측 ax = −3.36 m/s² → 분석값 ΔFz_long = 1027 N.
-sim 측정 Fz_f ratio = 1.125, 분석값 = 1.126. 오차 0.1 %.</p>
-<p>1-step lag 가 실용적으로 무시 가능 정확도.</p>
-<h3 id="self-referential">다른 self-referential 예<a class="headerlink" href="#self-referential" title="Permanent link">&para;</a></h3>
-<p>Lateral weight transfer (Ld2): <code>ay_prev</code> 동일 패턴.
-Anti-dive: pitch 의 inertia term 에 <code>ax</code> 사용 — 동일 lag.</p>
-<p>본 PoC 는 일관되게 1-step lag.</p>
-<h2 id="116-rk4-substep-1-step-lag-combination">11.6 RK4 substep + 1-step lag 의 combination<a class="headerlink" href="#116-rk4-substep-1-step-lag-combination" title="Permanent link">&para;</a></h2>
-<p>각 substep 마다:</p>
-<ol>
-<li><code>ax_prev</code>, <code>ay_prev</code> 사용해 Fz 계산.</li>
-<li>RK4 4 stage 진행 (<code>f</code> 4번 evaluation).</li>
-<li>substep 끝에서 <code>ax_prev = k.dvx − vy · r</code> (= <code>Fx_total / m</code>), <code>ay_prev = k.dvy + vx · r</code> 갱신.</li>
-</ol>
-<p>RK4 의 4 stage 안에서는 <code>ax_prev</code> constant. 더 정확하게는 매 stage 마다 update 가능하지만 (1) 식 복잡, (2) 효과 미미.</p>
-<p>코드 <code>core/src/seven_dof_dynamics.cpp:418-425</code>:
-<div class="language-cpp highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">state_</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">apply</span><span class="p">(</span><span class="n">s0</span><span class="p">,</span><span class="w"> </span><span class="n">k</span><span class="p">,</span><span class="w"> </span><span class="n">h</span><span class="p">);</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">ax_prev_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">k</span><span class="p">.</span><span class="n">ax_body</span><span class="p">;</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">ay_prev_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">k</span><span class="p">.</span><span class="n">ay_body</span><span class="p">;</span>
-</span></code></pre></div></p>
-<h2 id="117-outer-step-dt">11.7 외부 outer step 의 dt 권고<a class="headerlink" href="#117-outer-step-dt" title="Permanent link">&para;</a></h2>
+<p>bias <span class="arithmatex">\(\sim dt\cdot|da_x/dt|\)</span>. brake <span class="arithmatex">\(a_x=-5\)</span> m/s², <span class="arithmatex">\(da_x/dt\sim100\)</span> m/s³ 라도
+1 ms substep 에서 bias <span class="arithmatex">\(=0.1\)</span> m/s² → <span class="arithmatex">\(\Delta F_z\approx30\)</span> N (sedan). 무시
+가능. 같은 패턴이 lateral transfer (<span class="arithmatex">\(a_{y,\text{prev}}\)</span>), anti-dive 에도 적용
+된다.</p>
+<hr />
+<h2 id="117-rk4-substep-1-step-lag">11.7 RK4 substep + 1-step lag 결합<a class="headerlink" href="#117-rk4-substep-1-step-lag" title="Permanent link">&para;</a></h2>
+<p>매 substep: (1) <span class="arithmatex">\(a_{x},a_{y}\)</span> prev 로 Fz 계산, (2) RK4 4 stage, (3) substep
+끝에서 <span class="arithmatex">\(a_{\cdot,\text{prev}}\)</span> 갱신 (<span class="arithmatex">\(= F_{\cdot}/m\)</span>). RK4 4 stage 안에서는
+<span class="arithmatex">\(a_{\text{prev}}\)</span> constant — 매 stage update 도 가능하나 식 복잡 대비 효과 미미.</p>
+<hr />
+<h2 id="118-outer-dt">11.8 외부 outer dt 권고<a class="headerlink" href="#118-outer-dt" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
@@ -2333,17 +2266,17 @@ Anti-dive: pitch 의 inertia term 에 <code>ax</code> 사용 — 동일 lag.</p>
 <tr>
 <td>CARLA 50 Hz</td>
 <td>20 ms</td>
-<td>substep 10 으로 cap, inner 2 ms</td>
+<td>substep 10 cap, inner 2 ms</td>
 </tr>
 <tr>
 <td>Lab analysis</td>
 <td>5 ms</td>
-<td>5 substeps of 1 ms (PoC default)</td>
+<td>5 substeps of 1 ms (default)</td>
 </tr>
 <tr>
 <td>Highest fidelity</td>
 <td>1 ms</td>
-<td>substep 1, inner 1 ms (no substep)</td>
+<td>no substep</td>
 </tr>
 <tr>
 <td>MPC inner loop</td>
@@ -2352,56 +2285,170 @@ Anti-dive: pitch 의 inertia term 에 <code>ax</code> 사용 — 동일 lag.</p>
 </tr>
 </tbody>
 </table>
-<p><code>sp_.max_substep_dt = 0.001</code> 유지 추천. <code>sp_.max_substeps = 10</code> 도.</p>
-<h2 id="118-solver-task-16">11.8 검증 — Solver 별 비교 (Task 16)<a class="headerlink" href="#118-solver-task-16" title="Permanent link">&para;</a></h2>
-<p>step_steer (δ=0.05, vx=10, 5s):
-| Integrator | substep | r(T) | vx(T) |
-|---|---:|---:|---:|
-| RK4 | 1 ms | 0.17993 | 9.713 |
-| Euler | 10 ms (= outer dt) | 0.17950 | 9.693 |</p>
-<p>차이 +0.24 %, +0.21 %. 작지만 측정 가능.</p>
-<ul>
-<li>outer dt 가 5 ms 같으면 Euler 가 잘 동작.</li>
-<li>큰 outer dt (50 ms 이상) 면 Euler 가 진동 시작.</li>
-</ul>
-<h2 id="119-future-work">11.9 한계 / future work<a class="headerlink" href="#119-future-work" title="Permanent link">&para;</a></h2>
+<hr />
+<h2 id="119">11.9 검증 전략<a class="headerlink" href="#119" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>검증</th>
+<th>케이스</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RK4 vs Euler</td>
+<td>step_steer 에서 r(T), vx(T) 차이 측정</td>
+</tr>
+<tr>
+<td>Coarse Euler 불안정</td>
+<td>큰 outer dt 에서 Euler 진동, RK4 안정</td>
+</tr>
+<tr>
+<td>1-step lag bias</td>
+<td>brake step 의 <span class="arithmatex">\(F_{z,f}\)</span> 비율이 해석값과 0.1 %</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="1110">11.10 한계<a class="headerlink" href="#1110" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
 <th>항목</th>
 <th>한계</th>
+<th>follow-up</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>RK4 의 stiff system 한계</td>
-<td>implicit methods (BDF, IRK) 가 더 stable</td>
+<td>RK4 stiff</td>
+<td>implicit (BDF, IRK) 가 더 stable</td>
+<td>Phase 2</td>
 </tr>
 <tr>
-<td>1-step lag 의 transient bias</td>
+<td>1-step lag transient</td>
 <td>fixed-point iteration 옵션</td>
+<td>Phase 2</td>
 </tr>
 <tr>
-<td>Variable-step adaptive</td>
-<td>본 PoC 는 fixed step (RK45 / Dormand-Prince 미지원)</td>
+<td>Variable-step</td>
+<td>fixed step 만 (RK45 미지원)</td>
+<td>Phase 2</td>
 </tr>
 <tr>
-<td>Symplectic integrators</td>
-<td>spring/damper 에서 energy preservation 우수 (Verlet)</td>
+<td>Symplectic</td>
+<td>spring/damper energy 보존 우수 (Verlet)</td>
+<td>평가</td>
 </tr>
 <tr>
 <td>DAE</td>
-<td>constrained multibody (Ld4-Ld5) 에서 필요</td>
+<td>constrained multibody 필요</td>
+<td>Ld4-Ld5</td>
 </tr>
 </tbody>
 </table>
-<p>본 PoC 는 fixed-step RK4 단일. Phase 2 에서 adaptive / implicit / DAE 옵션 추가.</p>
-<h2 id="1110">11.10 참고<a class="headerlink" href="#1110" title="Permanent link">&para;</a></h2>
+<hr />
+<h2 id="1111-chapter">11.11 다음 chapter 와의 연결<a class="headerlink" href="#1111-chapter" title="Permanent link">&para;</a></h2>
+<p>이 chapter 는 모든 Ld 의 EoM 을 적분하는 공통 수치 엔진을 다뤘다. chapter 12
+는 이 엔진과 control 사다리를 묶는 전체 software architecture (ABI, binding,
+plugin) 를 다룬다.</p>
+<hr />
+<h2 id="1112">11.12 참고문헌<a class="headerlink" href="#1112" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Hairer, E., Wanner, G., <em>Solving Ordinary Differential Equations II — Stiff and Differential-Algebraic Problems</em>, Springer, 1996.</li>
-<li>Press, W.H. et al., <em>Numerical Recipes</em>, 3<sup>rd</sup> ed., Cambridge, 2007 — §17 (ODE integrators).</li>
-<li>본 PoC 의 검증: <code>configs/solvers/{rk4_1ms, euler_10ms}.yaml</code> + Task 16 figure.</li>
+<li><strong>Hairer, E. &amp; Wanner, G.</strong>, <em>Solving ODE II — Stiff and DAE Problems</em>, Springer, 1996.</li>
+<li><strong>Press, W.H. et al.</strong>, <em>Numerical Recipes</em>, 3<sup>rd</sup> ed., Cambridge, 2007, §17.</li>
 </ul>
+<hr />
+<h2 id="1113-self-check">11.13 Self-check<a class="headerlink" href="#1113-self-check" title="Permanent link">&para;</a></h2>
+<details>
+<summary>1. RK4 가 Euler 보다 step 당 4배 비싼데도 빠를 수 있는 이유?</summary>
+
+error 가 $O(dt^4)$ 라 같은 정확도를 훨씬 큰 dt 로 달성. step 수가 1/4 이하로
+줄면 총 evaluation 이 Euler 보다 적어질 수 있다.
+</details>
+
+<details>
+<summary>2. stiff system 에서 explicit Euler 가 강제하는 것은?</summary>
+
+stable region $|1+dt\lambda|\le1$ 이 좁아 가장 빠른 mode($|\lambda|$ 큼)에
+맞춰 매우 작은 dt 를 써야 한다. 비효율적.
+</details>
+
+<details>
+<summary>3. 1-step lag 의 bias 가 작은 이유를 정량으로?</summary>
+
+bias $\sim dt\cdot|da/dt|$. 1 ms substep 에서 $da/dt\sim100$ m/s³ 라도
+0.1 m/s² → $\Delta F_z\sim30$ N. static 수천 N 대비 무시 가능.
+</details>
+
+<details>
+<summary>4. outer dt 20 ms 인데 spring 이 12 Hz 면 왜 substep?</summary>
+
+$dt_{\text{inner}}\le1/(10 f_{\max})\approx8$ ms 필요. 20 ms 직접 적분은
+oscillation 을 under-sample 해 numerical artifact. substep 으로 inner 를 작게.
+</details>
+
+<details>
+<summary>5. Ld4-Ld5 에서 RK4 만으로 부족한 이유?</summary>
+
+joint constraint 가 algebraic equation 을 더해 ODE 가 DAE 가 된다. explicit
+RK4 는 constraint drift 를 일으켜 DAE solver (index reduction, Baumgarte) 가
+필요.
+</details>
+
+<hr />
+<h2 id="1114-vdsim">11.14 VDSim 구현 노트<a class="headerlink" href="#1114-vdsim" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p><strong>[VDSim impl] § 11.3 — Euler 옵션</strong></p>
+<p><code>SolverParams::Integrator::Euler</code> (benchmark/fairness 용, default RK4).
+<code>configs/solvers/euler_10ms.yaml</code> 로 coarse Euler numerical error 시범.</p>
+<p><strong>[VDSim impl] § 11.5 — Substep 코드</strong></p>
+<p><code>core/src/bicycle_dynamics.cpp:117-119</code>:</p>
+<p><div class="language-cpp highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">min</span><span class="p">(</span><span class="n">sp_</span><span class="p">.</span><span class="n">max_substeps</span><span class="p">,</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">               </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">ceil</span><span class="p">(</span><span class="n">dt</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">sp_</span><span class="p">.</span><span class="n">max_substep_dt</span><span class="p">))));</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">h</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dt</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="p">(</span><span class="n">N</span><span class="p">);</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">N</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="n">substep</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span><span class="w"> </span><span class="n">contacts</span><span class="p">,</span><span class="w"> </span><span class="n">h</span><span class="p">);</span>
+</span></code></pre></div>
+default <code>max_substep_dt=0.001</code>, <code>max_substeps=10</code>. outer 5 ms → 5×1 ms,
+outer 20 ms → cap 10×2 ms.</p>
+<p><strong>[VDSim impl] § 11.6 — 1-step lag 검증</strong></p>
+<p>brake step 실측 <span class="arithmatex">\(a_x=-3.36\)</span> m/s² → 해석 <span class="arithmatex">\(\Delta F_z=1027\)</span> N. sim <span class="arithmatex">\(F_{z,f}\)</span>
+비율 1.125 vs 해석 1.126, 오차 0.1 %.</p>
+<p><strong>[VDSim impl] § 11.7 — substep update 코드</strong></p>
+<p><code>core/src/seven_dof_dynamics.cpp:418-425</code>:</p>
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">state_</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">apply</span><span class="p">(</span><span class="n">s0</span><span class="p">,</span><span class="w"> </span><span class="n">k</span><span class="p">,</span><span class="w"> </span><span class="n">h</span><span class="p">);</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">ax_prev_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">k</span><span class="p">.</span><span class="n">ax_body</span><span class="p">;</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">ay_prev_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">k</span><span class="p">.</span><span class="n">ay_body</span><span class="p">;</span>
+</span></code></pre></div>
+<p><strong>[VDSim impl] § 11.9 — Solver 비교</strong></p>
+<p>step_steer (δ=0.05, vx=10, 5 s):</p>
+<table>
+<thead>
+<tr>
+<th>Integrator</th>
+<th style="text-align: right;">substep</th>
+<th style="text-align: right;">r(T)</th>
+<th style="text-align: right;">vx(T)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RK4</td>
+<td style="text-align: right;">1 ms</td>
+<td style="text-align: right;">0.17993</td>
+<td style="text-align: right;">9.713</td>
+</tr>
+<tr>
+<td>Euler</td>
+<td style="text-align: right;">10 ms</td>
+<td style="text-align: right;">0.17950</td>
+<td style="text-align: right;">9.693</td>
+</tr>
+</tbody>
+</table>
+<p>차이 +0.24 %, +0.21 %. outer 5 ms 면 Euler 도 양호, 50 ms 이상에서 진동.
+config: <code>configs/solvers/{rk4_1ms, euler_10ms}.yaml</code>.</p>
+</blockquote>
 
 
 

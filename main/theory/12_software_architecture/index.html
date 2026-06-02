@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#12-software-architecture-c17-abi-pybind11-carla-plug-in" class="md-skip">
+        <a href="#12-software-architecture-abi-bindings-plugin" class="md-skip">
           Skip to content
         </a>
       
@@ -935,10 +935,32 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#121-layer" class="md-nav__link">
+  <a href="#learning-objectives" class="md-nav__link">
     <span class="md-ellipsis">
       
-        12.1 아키텍처 layer
+        Learning objectives
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#121-layered-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.1 동기 — layered architecture
       
     </span>
   </a>
@@ -958,21 +980,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#_1" class="md-nav__link">
+  <a href="#backward-compat" class="md-nav__link">
     <span class="md-ellipsis">
       
-        의의
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#default-virtual-implementation-abi" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Default virtual implementation 의 ABI 추가
+        인터페이스 확장의 backward compat
       
     </span>
   </a>
@@ -985,41 +996,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#123-stdvariant-stdvisit-if-constexpr" class="md-nav__link">
+  <a href="#123-type-safe-variant-dispatch" class="md-nav__link">
     <span class="md-ellipsis">
       
-        12.3 std::variant + std::visit + if constexpr
+        12.3 Type-safe variant dispatch
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="12.3 std::variant + std::visit + if constexpr">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#pattern" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Pattern 의 의의
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#variant-size" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Variant 의 size 비용
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1032,147 +1015,13 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="12.4 YAML I/O — backward compat">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#roundtrip" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Roundtrip 정확성
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
-  <a href="#125-pybind11-module-build-pitfall" class="md-nav__link">
+  <a href="#125-pybind11-pic" class="md-nav__link">
     <span class="md-ellipsis">
       
-        12.5 Pybind11 module — Build pitfall
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="12.5 Pybind11 module — Build pitfall">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#pic" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PIC 문제
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#module-abi" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Module 의 ABI 안정
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#126-carla-plugin-raycast-injection" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        12.6 CARLA Plugin — Raycast injection
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="12.6 CARLA Plugin — Raycast injection">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#key-idea-dependency-inversion" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Key idea — dependency inversion
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#surface-id-mu-lookup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Surface ID → mu lookup
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#test-task-42" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Test (Task 42)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#127-cmake-structure-fetchcontent" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        12.7 CMake structure — FetchContent
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="12.7 CMake structure — FetchContent">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#configuration-time" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuration time
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#128-test" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        12.8 Test 구조
+        12.5 Pybind11 — PIC 함정
       
     </span>
   </a>
@@ -1180,10 +1029,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#129-future-work" class="md-nav__link">
+  <a href="#126-carla-plugin-dependency-inversion" class="md-nav__link">
     <span class="md-ellipsis">
       
-        12.9 한계 / future work
+        12.6 CARLA Plugin — dependency inversion
       
     </span>
   </a>
@@ -1191,10 +1040,76 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#1210" class="md-nav__link">
+  <a href="#127-build-test" class="md-nav__link">
     <span class="md-ellipsis">
       
-        12.10 참고
+        12.7 Build / test 구조
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#128" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.8 검증 전략
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#129" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.9 한계
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1210-chapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.10 다음 chapter 와의 연결
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1211" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.11 참고문헌
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1212-self-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.12 Self-check
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1213-vdsim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.13 VDSim 구현 노트
       
     </span>
   </a>
@@ -2016,10 +1931,32 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#121-layer" class="md-nav__link">
+  <a href="#learning-objectives" class="md-nav__link">
     <span class="md-ellipsis">
       
-        12.1 아키텍처 layer
+        Learning objectives
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#121-layered-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.1 동기 — layered architecture
       
     </span>
   </a>
@@ -2039,21 +1976,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#_1" class="md-nav__link">
+  <a href="#backward-compat" class="md-nav__link">
     <span class="md-ellipsis">
       
-        의의
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#default-virtual-implementation-abi" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Default virtual implementation 의 ABI 추가
+        인터페이스 확장의 backward compat
       
     </span>
   </a>
@@ -2066,41 +1992,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#123-stdvariant-stdvisit-if-constexpr" class="md-nav__link">
+  <a href="#123-type-safe-variant-dispatch" class="md-nav__link">
     <span class="md-ellipsis">
       
-        12.3 std::variant + std::visit + if constexpr
+        12.3 Type-safe variant dispatch
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="12.3 std::variant + std::visit + if constexpr">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#pattern" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Pattern 의 의의
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#variant-size" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Variant 의 size 비용
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -2113,147 +2011,13 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="12.4 YAML I/O — backward compat">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#roundtrip" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Roundtrip 정확성
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
-  <a href="#125-pybind11-module-build-pitfall" class="md-nav__link">
+  <a href="#125-pybind11-pic" class="md-nav__link">
     <span class="md-ellipsis">
       
-        12.5 Pybind11 module — Build pitfall
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="12.5 Pybind11 module — Build pitfall">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#pic" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PIC 문제
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#module-abi" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Module 의 ABI 안정
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#126-carla-plugin-raycast-injection" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        12.6 CARLA Plugin — Raycast injection
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="12.6 CARLA Plugin — Raycast injection">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#key-idea-dependency-inversion" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Key idea — dependency inversion
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#surface-id-mu-lookup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Surface ID → mu lookup
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#test-task-42" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Test (Task 42)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#127-cmake-structure-fetchcontent" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        12.7 CMake structure — FetchContent
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="12.7 CMake structure — FetchContent">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#configuration-time" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuration time
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#128-test" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        12.8 Test 구조
+        12.5 Pybind11 — PIC 함정
       
     </span>
   </a>
@@ -2261,10 +2025,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#129-future-work" class="md-nav__link">
+  <a href="#126-carla-plugin-dependency-inversion" class="md-nav__link">
     <span class="md-ellipsis">
       
-        12.9 한계 / future work
+        12.6 CARLA Plugin — dependency inversion
       
     </span>
   </a>
@@ -2272,10 +2036,76 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#1210" class="md-nav__link">
+  <a href="#127-build-test" class="md-nav__link">
     <span class="md-ellipsis">
       
-        12.10 참고
+        12.7 Build / test 구조
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#128" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.8 검증 전략
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#129" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.9 한계
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1210-chapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.10 다음 chapter 와의 연결
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1211" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.11 참고문헌
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1212-self-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.12 Self-check
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1213-vdsim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.13 VDSim 구현 노트
       
     </span>
   </a>
@@ -2302,11 +2132,25 @@
   
 
 
-<h1 id="12-software-architecture-c17-abi-pybind11-carla-plug-in">12. Software Architecture — C++17 ABI, Pybind11, CARLA Plug-in<a class="headerlink" href="#12-software-architecture-c17-abi-pybind11-carla-plug-in" title="Permanent link">&para;</a></h1>
-<blockquote>
-<p><strong>학습 목표.</strong> Factory function + pure virtual interface 가 ABI 안정성을 어떻게 보장하는지 안다. <code>std::variant</code> 의 type-safety 가 dispatch 코드를 어떻게 단순화하는지 안다. pybind11 + PIC 빌드의 함정 (static lib 가 shared object 에 link 될 때 fPIC 강제) 을 인지한다. CARLA plugin 의 raycast injection pattern (CARLA 의존성 0 으로 빌드 가능) 의 이론을 안다.</p>
-</blockquote>
-<h2 id="121-layer">12.1 아키텍처 layer<a class="headerlink" href="#121-layer" title="Permanent link">&para;</a></h2>
+<h1 id="12-software-architecture-abi-bindings-plugin">12. Software Architecture (ABI, Bindings, Plugin)<a class="headerlink" href="#12-software-architecture-abi-bindings-plugin" title="Permanent link">&para;</a></h1>
+<h2 id="learning-objectives">Learning objectives<a class="headerlink" href="#learning-objectives" title="Permanent link">&para;</a></h2>
+<p>이 chapter 를 마치면 다음을 할 수 있다.</p>
+<ol>
+<li>factory function + pure virtual interface 가 ABI 안정성을 보장하는 원리를
+   설명한다.</li>
+<li>type-safe sum type (variant) dispatch 가 control 입력 처리를 단순화·안전화
+   하는 이유를 설명한다.</li>
+<li>static lib 를 shared object 에 link 할 때의 PIC (fPIC) 함정을 인지한다.</li>
+<li>dependency-inversion 기반 plugin (외부 시뮬레이터 의존성 0 으로 빌드) 의
+   설계를 설명한다.</li>
+</ol>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Chapter 04-11</strong> — 이 architecture 가 묶는 plant/control/integrator.</li>
+<li><strong>외부</strong> — C++17 (variant, unique_ptr), CMake, pybind11 기초.</li>
+</ul>
+<hr />
+<h2 id="121-layered-architecture">12.1 동기 — layered architecture<a class="headerlink" href="#121-layered-architecture" title="Permanent link">&para;</a></h2>
 <pre class="mermaid"><code>flowchart TB
     subgraph User["User code"]
         Carla[CARLA UE5 plugin]
@@ -2314,7 +2158,6 @@
         CLI[CLI demos]
         Paper[Paper / experiment]
     end
-
     subgraph ABI["Public ABI (core/include/vdsim/)"]
         IDyn["IVehicleDynamics"]
         ITire["ITireModel"]
@@ -2324,7 +2167,6 @@
         Scen["Scenario YAML"]
         MB["Multibody stub&lt;br/&gt;(Ld4-Ld5)"]
     end
-
     subgraph Impl["Hidden impl (core/src/, anonymous ns)"]
         Ld1["bicycle_dynamics.cpp"]
         Ld2["seven_dof_dynamics.cpp"]
@@ -2332,21 +2174,18 @@
         Tire["pacejka_mf96.cpp"]
         Ctrl["control_converter.cpp"]
     end
-
     subgraph TP["Third-party (FetchContent)"]
         Eig[Eigen3]
         Ycpp[yaml-cpp]
         Sp[spdlog]
         Gt[GoogleTest]
     end
-
     Carla --&gt; ABI
     Py --&gt; ABI
     CLI --&gt; ABI
     Paper --&gt; ABI
     ABI --&gt; Impl
     Impl --&gt; TP
-
     classDef user fill:#01A0E9,stroke:#005195,color:#fff;
     classDef abi  fill:#4F81BD,stroke:#345A8A,color:#fff;
     classDef impl fill:#7C8693,stroke:#333,color:#fff;
@@ -2355,220 +2194,102 @@
     class IDyn,ITire,IContact,Variant,Params,Scen,MB abi
     class Ld1,Ld2,Ld3,Tire,Ctrl impl
     class Eig,Ycpp,Sp,Gt tp</code></pre>
+<p>public ABI (header) 와 hidden impl (cpp, anonymous namespace) 을 분리하여 내부
+변경이 외부에 전파되지 않게 한다.</p>
+<hr />
 <h2 id="122-factory-pure-virtual-abi">12.2 Factory + pure virtual = ABI 안정<a class="headerlink" href="#122-factory-pure-virtual-abi" title="Permanent link">&para;</a></h2>
-<p>전형적 코드:
-<div class="language-cpp highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1">// header — public surface</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">IVehicleDynamics</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">public</span><span class="o">:</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="k">virtual</span><span class="w"> </span><span class="o">~</span><span class="n">IVehicleDynamics</span><span class="p">()</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">default</span><span class="p">;</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="k">virtual</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">VehicleParams</span><span class="o">&amp;</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">TireParams</span><span class="o">&amp;</span><span class="p">,</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">                             </span><span class="k">const</span><span class="w"> </span><span class="n">SolverParams</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="k">virtual</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">ControlInput</span><span class="o">&amp;</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">ContactArray</span><span class="o">&amp;</span><span class="p">,</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">dt</span><span class="p">)</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="c1">// ... other virtual methods</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="p">};</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">IVehicleDynamics</span><span class="o">&gt;</span><span class="w"> </span><span class="n">create_bicycle</span><span class="p">();</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">IVehicleDynamics</span><span class="o">&gt;</span><span class="w"> </span><span class="n">create_seven_dof</span><span class="p">();</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">IVehicleDynamics</span><span class="o">&gt;</span><span class="w"> </span><span class="n">create_fourteen_dof</span><span class="p">();</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="c1">// cpp — hidden impl</span>
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="k">namespace</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">    </span><span class="k">class</span><span class="w"> </span><span class="nc">BicycleDynamics</span><span class="w"> </span><span class="k">final</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">IVehicleDynamics</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="p">};</span>
-</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="p">}</span>
-</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">IVehicleDynamics</span><span class="o">&gt;</span><span class="w"> </span><span class="n">create_bicycle</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">make_unique</span><span class="o">&lt;</span><span class="n">BicycleDynamics</span><span class="o">&gt;</span><span class="p">(</span><span class="n">create_pacejka_mf96</span><span class="p">());</span>
-</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="p">}</span>
-</span></code></pre></div></p>
-<h3 id="_1">의의<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h3>
+<p>header 는 pure virtual interface 와 factory function 만 노출하고, 구현 class
+는 cpp 의 anonymous namespace 에 숨긴다.</p>
+<p>원리:</p>
 <ol>
-<li><strong>Implementation 이 anonymous namespace 안</strong>. external code 가 <code>BicycleDynamics</code> 클래스 자체에 접근 불가 → 내부 멤버 변경이 ABI 변화로 외부에 영향 없음.</li>
-<li><strong>Factory function 반환 <code>unique_ptr</code></strong> — heap allocation, ownership 명확. shared lib 경계에서 안전.</li>
-<li>
-<p><strong>Pure virtual + final</strong>:</p>
-</li>
-<li>
-<p><code>virtual</code> 로 derived dispatch 가능.</p>
-</li>
-<li><code>final</code> 로 implementation class 가 더 inherit 불가 (vtable 최적화 + 의도 명확).</li>
+<li>implementation 이 anonymous namespace 안 → external code 가 구현 class 에
+   접근 불가 → 내부 멤버 변경이 ABI 영향 없음.</li>
+<li>factory 가 <code>unique_ptr</code> 반환 → heap allocation + ownership 명확, shared lib
+   경계에서 안전.</li>
+<li>pure virtual + <code>final</code> → derived dispatch 가능 + 추가 inherit 차단 (vtable
+   최적화 + 의도 명확).</li>
 </ol>
-<h3 id="default-virtual-implementation-abi">Default virtual implementation 의 ABI 추가<a class="headerlink" href="#default-virtual-implementation-abi" title="Permanent link">&para;</a></h3>
-<p>Chapter 5 § 5.6 에서 본 <code>steering_rack_torque()</code> 가 추가될 때:
-<div class="language-cpp highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">IVehicleDynamics</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="c1">// existing methods</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="k">virtual</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="nf">steering_rack_torque</span><span class="p">()</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="mf">0.0</span><span class="p">;</span><span class="w"> </span><span class="p">}</span><span class="w">   </span><span class="c1">// default</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="p">};</span>
-</span></code></pre></div></p>
-<p>기존 derived class (e.g., L1 bicycle) 는 override 안 해도 빌드 + 기본 동작 0.
-새로 추가된 L2/L3 가 override 해서 정확한 값 반환.</p>
-<p>이게 <strong>interface 확장 시 backward compat</strong> 의 표준 패턴.</p>
-<h2 id="123-stdvariant-stdvisit-if-constexpr">12.3 std::variant + std::visit + if constexpr<a class="headerlink" href="#123-stdvariant-stdvisit-if-constexpr" title="Permanent link">&para;</a></h2>
-<p>ControlInput dispatch (chapter 07 의 패턴):
-<div class="language-cpp highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">using</span><span class="w"> </span><span class="n">ControlInput</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">variant</span><span class="o">&lt;</span><span class="n">CmdL1</span><span class="p">,</span><span class="w"> </span><span class="n">CmdL2</span><span class="p">,</span><span class="w"> </span><span class="n">CmdL3</span><span class="p">,</span><span class="w"> </span><span class="n">CmdL4</span><span class="p">,</span><span class="w"> </span><span class="n">CmdL5</span><span class="p">,</span><span class="w"> </span><span class="n">CmdL6</span><span class="p">,</span><span class="w"> </span><span class="n">CmdL7</span><span class="p">,</span><span class="w"> </span><span class="n">CmdL8</span><span class="o">&gt;</span><span class="p">;</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="kr">inline</span><span class="w"> </span><span class="n">CmdL4</span><span class="w"> </span><span class="nf">lower_to_l4</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">ControlInput</span><span class="o">&amp;</span><span class="w"> </span><span class="n">u</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">visit</span><span class="p">([](</span><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">cmd</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">CmdL4</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">        </span><span class="k">using</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">decay_t</span><span class="o">&lt;</span><span class="k">decltype</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span><span class="o">&gt;</span><span class="p">;</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">        </span><span class="n">CmdL4</span><span class="w"> </span><span class="n">out</span><span class="p">;</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="k">constexpr</span><span class="w"> </span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">is_same_v</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span><span class="w"> </span><span class="n">CmdL1</span><span class="o">&gt;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">            </span><span class="c1">// CmdL1 specific lowering</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">        </span><span class="p">}</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">        </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">constexpr</span><span class="w"> </span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">is_same_v</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span><span class="w"> </span><span class="n">CmdL2</span><span class="o">&gt;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">            </span><span class="c1">// CmdL2 specific</span>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">        </span><span class="p">}</span>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">        </span><span class="c1">// ...</span>
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">out</span><span class="p">;</span>
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">    </span><span class="p">},</span><span class="w"> </span><span class="n">u</span><span class="p">);</span>
-</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="p">}</span>
-</span></code></pre></div></p>
-<h3 id="pattern">Pattern 의 의의<a class="headerlink" href="#pattern" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Type-safe</strong>. CmdL4 의 멤버를 CmdL3 에 호출하면 compile error.</li>
-<li><strong>No heap allocation</strong>. variant 는 stack 에 fixed-size union + tag.</li>
-<li><strong>Compile-time dispatch via <code>if constexpr</code></strong> — runtime branch 없음. 효율적.</li>
-<li><strong>Exhaustive</strong>. 모든 variant alternative 가 handle 되면 compile-time 검증.</li>
-</ul>
-<p>VDSim 의 8 single-line <code>if constexpr</code> 가 깔끔.</p>
-<h3 id="variant-size">Variant 의 size 비용<a class="headerlink" href="#variant-size" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>sizeof(ControlInput)  =  max(sizeof(CmdL1), ..., sizeof(CmdL8))  +  tag
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>                      ≈  sizeof(CmdL8)  +  4
+<h3 id="backward-compat">인터페이스 확장의 backward compat<a class="headerlink" href="#backward-compat" title="Permanent link">&para;</a></h3>
+<p>새 method 를 default implementation 과 함께 추가하면:</p>
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">virtual</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="nf">steering_rack_torque</span><span class="p">()</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="mf">0.0</span><span class="p">;</span><span class="w"> </span><span class="p">}</span><span class="w">   </span><span class="c1">// default</span>
 </span></code></pre></div>
-<p>CmdL8 가 <code>std::vector&lt;PathPoint&gt;</code> 포함이라 heap에서 데이터, ControlInput 자체는 ~32 bytes. trivial.</p>
+<p>기존 derived class 는 override 없이 빌드 + 기본값, 새 class 만 override 해서
+정확한 값을 반환한다. 이것이 interface 확장의 표준 backward-compat 패턴이다.</p>
+<hr />
+<h2 id="123-type-safe-variant-dispatch">12.3 Type-safe variant dispatch<a class="headerlink" href="#123-type-safe-variant-dispatch" title="Permanent link">&para;</a></h2>
+<p>control 입력 8 tier 를 <code>variant&lt;CmdL1,...,CmdL8&gt;</code> 로 묶고 <code>visit</code> +
+<code>if constexpr</code> 로 dispatch 한다 (chapter 07).</p>
+<p>장점:</p>
+<ul>
+<li>Type-safe — 잘못된 멤버 접근이 compile error.</li>
+<li>No heap — variant 는 stack 의 fixed-size union + tag.</li>
+<li>Compile-time dispatch — <code>if constexpr</code> 로 runtime branch 없음.</li>
+<li>Exhaustive — 모든 alternative handle 을 compile-time 검증.</li>
+</ul>
+<p>size 비용은 <span class="arithmatex">\(\max_i \text{sizeof}(\text{Cmd}_i) + \text{tag}\)</span>. 가장 큰 CmdL8 도
+<code>vector</code> 는 heap 에 데이터를 두므로 variant 자체는 ~32 bytes (trivial).</p>
+<hr />
 <h2 id="124-yaml-io-backward-compat">12.4 YAML I/O — backward compat<a class="headerlink" href="#124-yaml-io-backward-compat" title="Permanent link">&para;</a></h2>
-<p>VDSim 의 YAML schema 규칙:</p>
-<ul>
-<li>top-level keys map 1:1 to struct members (flat, no nesting).</li>
-<li>missing keys → default 유지 (forward-compat).</li>
-<li>unknown keys → silently ignored (backward-compat).</li>
-<li>wrong types → <code>std::runtime_error</code> throw.</li>
-</ul>
-<p>코드 <code>core/src/params.cpp</code> 의 <code>pull(node, key, dst)</code>:
-<div class="language-cpp highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">template</span><span class="w"> </span><span class="o">&lt;</span><span class="k">typename</span><span class="w"> </span><span class="nc">T</span><span class="o">&gt;</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kt">void</span><span class="w"> </span><span class="n">pull</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">YAML</span><span class="o">::</span><span class="n">Node</span><span class="o">&amp;</span><span class="w"> </span><span class="n">node</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">key</span><span class="p">,</span><span class="w"> </span><span class="n">T</span><span class="o">&amp;</span><span class="w"> </span><span class="n">dst</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="n">sub</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">node</span><span class="p">[</span><span class="n">key</span><span class="p">];</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">sub</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">sub</span><span class="p">.</span><span class="n">IsNull</span><span class="p">())</span><span class="w"> </span><span class="k">return</span><span class="p">;</span><span class="w">        </span><span class="c1">// missing → default 유지</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="k">try</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">dst</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sub</span><span class="p">.</span><span class="n">as</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">();</span><span class="w"> </span><span class="p">}</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">YAML</span><span class="o">::</span><span class="n">Exception</span><span class="o">&amp;</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">        </span><span class="k">throw</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">runtime_error</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">(</span><span class="s">&quot;YAML field &#39;&quot;</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">key</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">&quot;&#39;: &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="n">what</span><span class="p">());</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="p">}</span>
-</span></code></pre></div></p>
-<h3 id="roundtrip">Roundtrip 정확성<a class="headerlink" href="#roundtrip" title="Permanent link">&para;</a></h3>
-<p>VDSim 의 모든 to_yaml / from_yaml pair 가 <strong>bit-exact roundtrip</strong>:
-<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>default → to_yaml → from_yaml → default&#39;   bit-equal
-</span></code></pre></div></p>
-<p>검증 (Task 12, 16): 45 fields, max |Δ| = 0.</p>
-<p>yaml-cpp emitter 가 17-digit precision 으로 double 출력. 가독성은 나쁘지만 roundtrip 정확.</p>
-<p>사람-친화 YAML (configs/vehicles/sedan.yaml 등) 은 손작성 — 한 자릿수 정확도, 주석 포함.</p>
-<h2 id="125-pybind11-module-build-pitfall">12.5 Pybind11 module — Build pitfall<a class="headerlink" href="#125-pybind11-module-build-pitfall" title="Permanent link">&para;</a></h2>
-<p>본 PoC 의 <code>python/bindings.cpp</code> + <code>python/CMakeLists.txt</code> 가 <code>vdsim_core</code> static lib 를 link 해 Python shared module 생성.</p>
-<h3 id="pic">PIC 문제<a class="headerlink" href="#pic" title="Permanent link">&para;</a></h3>
-<p>Linux 의 static lib 는 default 로 PIC (Position Independent Code) 없이 빌드. PIC 가 없으면 shared module 에 link 불가:
-<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>relocation R_X86_64_TPOFF32 against `_ZGVZN6spdlog7details2os9thread_idEvE3tid&#39; can not be used when making a shared object; recompile with -fPIC
-</span></code></pre></div></p>
-<p>해결: <code>CMAKE_POSITION_INDEPENDENT_CODE = ON</code> for spdlog / yaml-cpp / vdsim_core.</p>
-<p>코드 <code>third_party/CMakeLists.txt:3-4</code>:
-<div class="language-cmake highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c"># Make all FetchContent targets PIC so they can link into shared objects.</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_POSITION_INDEPENDENT_CODE</span><span class="w"> </span><span class="s">ON</span><span class="p">)</span>
-</span></code></pre></div></p>
-<p>핵심.</p>
-<h3 id="module-abi">Module 의 ABI 안정<a class="headerlink" href="#module-abi" title="Permanent link">&para;</a></h3>
-<p>Pybind11 의 <code>PYBIND11_MODULE(name, m)</code> 매크로가 entry point. C++ 의 <code>std::shared_ptr&lt;IVehicleDynamics&gt;</code> 가 Python 의 reference-counted object 로 노출.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">vdsim</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">dyn</span> <span class="o">=</span> <span class="n">vdsim</span><span class="o">.</span><span class="n">create_seven_dof</span><span class="p">()</span>    <span class="c1"># 자동 reference counting</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="c1"># dyn 이 GC 시 C++ 의 destructor 호출 + Pacejka tire 해제</span>
+<p>schema 규칙: top-level key 가 struct member 와 1:1 (flat), missing key →
+default 유지 (forward-compat), unknown key → ignore (backward-compat), wrong
+type → throw. 모든 to_yaml/from_yaml pair 는 bit-exact roundtrip (emitter 가
+17-digit precision). 사람-친화 config 는 손작성 (한 자릿수 + 주석).</p>
+<hr />
+<h2 id="125-pybind11-pic">12.5 Pybind11 — PIC 함정<a class="headerlink" href="#125-pybind11-pic" title="Permanent link">&para;</a></h2>
+<p>static lib 를 Python shared module 에 link 할 때, Linux static lib 는 default
+로 PIC (Position Independent Code) 없이 빌드되어 link 가 실패한다:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>relocation R_X86_64_TPOFF32 against ... can not be used when making
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>a shared object; recompile with -fPIC
 </span></code></pre></div>
-<p>C++ exception 이 Python exception 으로 자동 변환 (RuntimeError 등). 본 PoC 의 <code>runtime_error</code> 가 invalid YAML 시 Python RuntimeError 로 propagate.</p>
-<h2 id="126-carla-plugin-raycast-injection">12.6 CARLA Plugin — Raycast injection<a class="headerlink" href="#126-carla-plugin-raycast-injection" title="Permanent link">&para;</a></h2>
-<p>본 PoC 의 <code>carla_integration/plugin/raycast_contact_provider.{hpp,cpp}</code>:
-<div class="language-cpp highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">using</span><span class="w"> </span><span class="n">RaycastFn</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">function</span><span class="o">&lt;</span><span class="kt">bool</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">Vec3</span><span class="o">&amp;</span><span class="w"> </span><span class="n">start</span><span class="p">,</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">max_depth</span><span class="p">,</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">                                       </span><span class="kt">double</span><span class="o">&amp;</span><span class="w"> </span><span class="n">out_z</span><span class="p">,</span><span class="w"> </span><span class="n">Vec3</span><span class="o">&amp;</span><span class="w"> </span><span class="n">out_normal</span><span class="p">,</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">                                       </span><span class="kt">int</span><span class="o">&amp;</span><span class="w"> </span><span class="n">out_surface_id</span><span class="p">)</span><span class="o">&gt;</span><span class="p">;</span>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">RaycastContactProvider</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">IContactProvider</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="k">public</span><span class="o">:</span>
-</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">    </span><span class="n">RaycastContactProvider</span><span class="p">(</span><span class="n">RaycastFn</span><span class="w"> </span><span class="n">raycast</span><span class="p">,</span>
-</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">                           </span><span class="k">const</span><span class="w"> </span><span class="n">SurfaceMaterial</span><span class="o">*</span><span class="w"> </span><span class="n">mats</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">n_mats</span><span class="p">,</span>
-</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">                           </span><span class="kt">double</span><span class="w"> </span><span class="n">default_mu</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.0</span><span class="p">);</span>
-</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">query</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">State</span><span class="o">&amp;</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">VehicleParams</span><span class="o">&amp;</span><span class="p">,</span><span class="w"> </span><span class="n">ContactArray</span><span class="o">&amp;</span><span class="w"> </span><span class="n">out</span><span class="p">)</span><span class="w"> </span><span class="k">override</span><span class="p">;</span>
-</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="k">private</span><span class="o">:</span>
-</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">    </span><span class="n">RaycastFn</span><span class="w"> </span><span class="n">raycast_</span><span class="p">;</span>
-</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">SurfaceMaterial</span><span class="o">&gt;</span><span class="w"> </span><span class="n">materials_</span><span class="p">;</span>
-</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">default_mu_</span><span class="p">;</span>
-</span><span id="__span-9-15"><a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="p">};</span>
-</span></code></pre></div></p>
-<h3 id="key-idea-dependency-inversion">Key idea — dependency inversion<a class="headerlink" href="#key-idea-dependency-inversion" title="Permanent link">&para;</a></h3>
-<p>VDSim 의 <code>vdsim_carla_plugin</code> static lib 가 <strong>CARLA 의존성 없이 빌드</strong> 가능.
-런타임에 host process (UE5, 또는 mock for tests) 가 raycast function 을 주입.</p>
-<p>UE5 plugin 측:
-<div class="language-cpp highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">auto</span><span class="w"> </span><span class="n">provider</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">vdsim_carla</span><span class="o">::</span><span class="n">create_raycast_provider</span><span class="p">(</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="p">[](</span><span class="k">const</span><span class="w"> </span><span class="n">vdsim</span><span class="o">::</span><span class="n">Vec3</span><span class="o">&amp;</span><span class="w"> </span><span class="n">start</span><span class="p">,</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">max</span><span class="p">,</span><span class="w"> </span><span class="p">...)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">        </span><span class="c1">// CARLA UE5 의 GWorld-&gt;LineTraceSingleByChannel(...)</span>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">        </span><span class="c1">// return result</span>
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="p">},</span>
-</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span><span class="n">materials</span><span class="p">,</span><span class="w"> </span><span class="n">n_materials</span><span class="p">);</span>
-</span></code></pre></div></p>
-<p>본 PoC 의 mock test:
-<div class="language-cpp highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="k">auto</span><span class="w"> </span><span class="n">provider</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">create_raycast_provider</span><span class="p">(</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="p">[](</span><span class="k">const</span><span class="w"> </span><span class="n">Vec3</span><span class="o">&amp;</span><span class="p">,</span><span class="w"> </span><span class="kt">double</span><span class="p">,</span><span class="w"> </span><span class="kt">double</span><span class="o">&amp;</span><span class="w"> </span><span class="n">z</span><span class="p">,</span><span class="w"> </span><span class="n">Vec3</span><span class="o">&amp;</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="o">&amp;</span><span class="w"> </span><span class="n">sid</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">        </span><span class="n">z</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Vec3</span><span class="o">::</span><span class="n">UnitZ</span><span class="p">();</span><span class="w"> </span><span class="n">sid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">7</span><span class="p">;</span>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="p">},</span>
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">    </span><span class="n">materials</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span>
-</span></code></pre></div></p>
-<h3 id="surface-id-mu-lookup">Surface ID → mu lookup<a class="headerlink" href="#surface-id-mu-lookup" title="Permanent link">&para;</a></h3>
-<p>UE5 의 PhysicalMaterial 이 ID 매핑.
-asphalt = 1 (mu_long = 1.0, mu_lat = 1.0).
-ice = 8 (mu_long = 0.2, mu_lat = 0.2).
-wet asphalt = 4 (0.8, 0.8).</p>
-<p><code>std::find_if</code> 로 lookup. fallback <code>default_mu</code> 0.65 (typical).</p>
-<h3 id="test-task-42">Test (Task 42)<a class="headerlink" href="#test-task-42" title="Permanent link">&para;</a></h3>
-<p>4 mock tests:</p>
-<ul>
-<li><code>FlatGroundLookupYieldsKnownMu</code></li>
-<li><code>UnknownSurfaceFallsBackToDefault</code></li>
-<li><code>MissedRaycastInvalidatesContact</code></li>
-<li><code>NullRaycastSafe</code> — crash 없음.</li>
-</ul>
-<p>CARLA 실 통합 없이 ABI 검증.</p>
-<h2 id="127-cmake-structure-fetchcontent">12.7 CMake structure — FetchContent<a class="headerlink" href="#127-cmake-structure-fetchcontent" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>VDSim/
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>├── CMakeLists.txt              top-level options + subdirectory
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>├── third_party/CMakeLists.txt  FetchContent: Eigen, yaml-cpp, spdlog, gtest
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>├── core/CMakeLists.txt         vdsim_core static lib
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>├── carla_integration/plugin/CMakeLists.txt  vdsim_carla_plugin static lib
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>├── python/CMakeLists.txt       vdsim pybind11 module (shared)
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>├── tests/{unit,integration}/CMakeLists.txt
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>└── examples/CMakeLists.txt
+<p>해결: 모든 관련 target 에 <code>CMAKE_POSITION_INDEPENDENT_CODE = ON</code>. binding 은
+<code>shared_ptr&lt;IVehicleDynamics&gt;</code> 를 Python reference-counted object 로 노출하며,
+GC 시 C++ destructor 가 호출되고 C++ exception 이 Python exception 으로 자동
+변환된다.</p>
+<hr />
+<h2 id="126-carla-plugin-dependency-inversion">12.6 CARLA Plugin — dependency inversion<a class="headerlink" href="#126-carla-plugin-dependency-inversion" title="Permanent link">&para;</a></h2>
+<p>plugin static lib 가 외부 시뮬레이터 (CARLA/UE5) 의존성 없이 빌드되게 하려면,
+raycast 같은 host 기능을 <code>std::function</code> 으로 주입받는다.</p>
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">using</span><span class="w"> </span><span class="n">RaycastFn</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">function</span><span class="o">&lt;</span><span class="kt">bool</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">Vec3</span><span class="o">&amp;</span><span class="w"> </span><span class="n">start</span><span class="p">,</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">max_depth</span><span class="p">,</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">                                     </span><span class="kt">double</span><span class="o">&amp;</span><span class="w"> </span><span class="n">out_z</span><span class="p">,</span><span class="w"> </span><span class="n">Vec3</span><span class="o">&amp;</span><span class="w"> </span><span class="n">out_normal</span><span class="p">,</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">                                     </span><span class="kt">int</span><span class="o">&amp;</span><span class="w"> </span><span class="n">out_surface_id</span><span class="p">)</span><span class="o">&gt;</span><span class="p">;</span>
 </span></code></pre></div>
-<p>FetchContent 의 효과:</p>
-<ul>
-<li>사용자 system 의 Eigen / yaml-cpp 버전 의존성 없음.</li>
-<li>git submodule 보다 간단 (cmake 가 자동 처리).</li>
-<li>offline build 시 <code>_deps/</code> 캐시 사용.</li>
-</ul>
-<h3 id="configuration-time">Configuration time<a class="headerlink" href="#configuration-time" title="Permanent link">&para;</a></h3>
-<p>첫 configure: 5-10 min (Eigen + yaml-cpp + spdlog + GoogleTest 다운로드 + build).
-이후 incremental: cache 사용으로 1-2 sec.</p>
-<h2 id="128-test">12.8 Test 구조<a class="headerlink" href="#128-test" title="Permanent link">&para;</a></h2>
-<p><code>tests/unit/</code> 와 <code>tests/integration/</code> 분리:</p>
-<ul>
-<li><strong>Unit</strong>: 단일 module 의 함수 / class 의 boundary case. typical &lt; 100 ms.</li>
-<li><strong>Integration</strong>: 여러 module 결합 (e.g., dyn + tire + contact). 1 시나리오 SS 까지 적분.</li>
-</ul>
-<p>GoogleTest 의 fixture pattern:
-<div class="language-cpp highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">WeightTransfer</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="o">::</span><span class="n">testing</span><span class="o">::</span><span class="n">Test</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="k">protected</span><span class="o">:</span>
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">SetUp</span><span class="p">()</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="p">}</span>
-</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">    </span><span class="n">vdsim</span><span class="o">::</span><span class="n">VehicleParams</span><span class="w"> </span><span class="n">vp_</span><span class="p">;</span>
-</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">vdsim</span><span class="o">::</span><span class="n">IVehicleDynamics</span><span class="o">&gt;</span><span class="w"> </span><span class="n">dyn_</span><span class="p">;</span>
-</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="p">};</span>
-</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>
-</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="n">TEST_F</span><span class="p">(</span><span class="n">WeightTransfer</span><span class="p">,</span><span class="w"> </span><span class="n">BrakeBiasInfluencesFrontFx</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="w">    </span><span class="c1">// test body</span>
-</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="p">}</span>
-</span></code></pre></div></p>
-<p>본 PoC 의 모든 test 가 RAII fixture 활용.</p>
-<h2 id="129-future-work">12.9 한계 / future work<a class="headerlink" href="#129-future-work" title="Permanent link">&para;</a></h2>
+<p>런타임에 host (UE5 의 <code>LineTraceSingleByChannel</code>, 또는 test 의 mock) 가
+function 을 주입한다. surface ID → μ lookup 으로 노면별 마찰을 매핑하고 (asphalt,
+wet, ice 등), 미지 surface 는 default μ fallback. 이로써 CARLA 실 통합 없이
+ABI 를 mock test 로 검증할 수 있다.</p>
+<hr />
+<h2 id="127-build-test">12.7 Build / test 구조<a class="headerlink" href="#127-build-test" title="Permanent link">&para;</a></h2>
+<p>FetchContent 로 Eigen / yaml-cpp / spdlog / GoogleTest 를 가져온다 (system
+의존성 없음, submodule 보다 간단, <code>_deps/</code> offline 캐시). 첫 configure 5-10
+min, 이후 incremental 1-2 sec.</p>
+<p>test 는 unit (단일 module boundary, &lt;100 ms) 과 integration (다 module 결합,
+1 시나리오 SS 적분) 으로 분리하고 GoogleTest fixture (RAII SetUp) 를 사용한다.</p>
+<hr />
+<h2 id="128">12.8 검증 전략<a class="headerlink" href="#128" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>검증</th>
+<th>케이스</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>YAML roundtrip</td>
+<td>default→emit→parse→default' bit-equal (45 fields, max|Δ|=0)</td>
+</tr>
+<tr>
+<td>Raycast provider</td>
+<td>known μ lookup, unknown fallback, missed/null raycast 안전</td>
+</tr>
+<tr>
+<td>Python binding</td>
+<td>create_*→step→GC 시 destructor, invalid YAML → RuntimeError</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="129">12.9 한계<a class="headerlink" href="#129" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
@@ -2578,38 +2299,124 @@ wet asphalt = 4 (0.8, 0.8).</p>
 </thead>
 <tbody>
 <tr>
-<td>Plugin system</td>
-<td>정적 link 만 (dynamic plugin loading 없음)</td>
+<td>Plugin</td>
+<td>정적 link 만 (dynamic loading 없음)</td>
 </tr>
 <tr>
 <td>ROS/ROS2 bridge</td>
 <td>없음</td>
 </tr>
 <tr>
-<td>Real-time (RT scheduler)</td>
+<td>Real-time scheduler</td>
 <td>일반 scheduler 만</td>
 </tr>
 <tr>
 <td>Multi-threading</td>
-<td>단일 thread 만 (parallel scenario sweep 은 process-level)</td>
+<td>단일 thread (sweep 은 process-level)</td>
 </tr>
 <tr>
-<td>GPU compute</td>
-<td>없음</td>
-</tr>
-<tr>
-<td>WASM build</td>
-<td>미평가</td>
+<td>GPU / WASM</td>
+<td>없음 / 미평가</td>
 </tr>
 </tbody>
 </table>
-<h2 id="1210">12.10 참고<a class="headerlink" href="#1210" title="Permanent link">&para;</a></h2>
+<hr />
+<h2 id="1210-chapter">12.10 다음 chapter 와의 연결<a class="headerlink" href="#1210-chapter" title="Permanent link">&para;</a></h2>
+<p>chapter 01-12 가 현재 구현된 lumped EoM 사다리 + control + architecture 를
+완성한다. chapter 13-16 은 미래 방향 — multibody outlook (Ld4-Ld5), hardpoint
+kinematics, validation/DOE, FMI 통합 — 을 다룬다.</p>
+<hr />
+<h2 id="1211">12.11 참고문헌<a class="headerlink" href="#1211" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Lakos, J., <em>Large-Scale C++ Software Design</em>, Addison-Wesley, 1996 — ABI 안정 패턴.</li>
-<li>Stroustrup, B., <em>The C++ Programming Language</em>, 4<sup>th</sup> ed., 2013 — std::variant.</li>
-<li>Sutter, H. &amp; Alexandrescu, A., <em>C++ Coding Standards</em>, 2004 — factory pattern.</li>
+<li><strong>Lakos, J.</strong>, <em>Large-Scale C++ Software Design</em>, Addison-Wesley, 1996 (ABI 패턴).</li>
+<li><strong>Stroustrup, B.</strong>, <em>The C++ Programming Language</em>, 4<sup>th</sup> ed., 2013 (variant).</li>
+<li><strong>Sutter &amp; Alexandrescu</strong>, <em>C++ Coding Standards</em>, 2004 (factory).</li>
 <li>pybind11 documentation: https://pybind11.readthedocs.io/.</li>
 </ul>
+<hr />
+<h2 id="1212-self-check">12.12 Self-check<a class="headerlink" href="#1212-self-check" title="Permanent link">&para;</a></h2>
+<details>
+<summary>1. 구현 class 를 anonymous namespace 에 두면 ABI 측면 이점은?</summary>
+
+external translation unit 이 그 class 의 layout 에 의존할 수 없으므로 멤버를
+추가/변경해도 외부 재컴파일/ABI 깨짐이 없다. header 의 interface 만 안정 유지.
+</details>
+
+<details>
+<summary>2. variant dispatch 가 virtual 상속 대신 갖는 이점?</summary>
+
+heap allocation 없이 stack 에 값으로 담기고, `if constexpr` 로 compile-time
+dispatch + exhaustive check. 작은 closed set (8 tier) 에는 variant 가 적합.
+</details>
+
+<details>
+<summary>3. static lib 가 PIC 없이 빌드되면 무엇이 깨지나?</summary>
+
+shared object (.so) 로 link 시 TLS/global 의 relocation 이 PIC 를 요구해 link
+실패. `CMAKE_POSITION_INDEPENDENT_CODE=ON` 으로 모든 target 을 PIC 빌드해야 한다.
+</details>
+
+<details>
+<summary>4. raycast 를 std::function 으로 주입하는 설계의 핵심 이점?</summary>
+
+plugin 이 CARLA 헤더/라이브러리에 link 하지 않아도 빌드되고, host 가 런타임에
+구현을 주입한다 (dependency inversion). mock 으로 ABI 단독 test 가능.
+</details>
+
+<details>
+<summary>5. interface 에 default 구현 method 를 추가하는 게 backward-compat 인 이유?</summary>
+
+기존 derived class 는 override 없이도 default 동작으로 컴파일/실행되고, 필요한
+class 만 override. 기존 코드 수정 없이 interface 확장 가능.
+</details>
+
+<hr />
+<h2 id="1213-vdsim">12.13 VDSim 구현 노트<a class="headerlink" href="#1213-vdsim" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p><strong>[VDSim impl] § 12.2 — Factory + interface 코드</strong></p>
+<p><div class="language-cpp highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">IVehicleDynamics</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="k">public</span><span class="o">:</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="k">virtual</span><span class="w"> </span><span class="o">~</span><span class="n">IVehicleDynamics</span><span class="p">()</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">default</span><span class="p">;</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="k">virtual</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">VehicleParams</span><span class="o">&amp;</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">TireParams</span><span class="o">&amp;</span><span class="p">,</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">                            </span><span class="k">const</span><span class="w"> </span><span class="n">SolverParams</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="k">virtual</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">ControlInput</span><span class="o">&amp;</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">ContactArray</span><span class="o">&amp;</span><span class="p">,</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">dt</span><span class="p">)</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="p">};</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">IVehicleDynamics</span><span class="o">&gt;</span><span class="w"> </span><span class="n">create_bicycle</span><span class="p">();</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">IVehicleDynamics</span><span class="o">&gt;</span><span class="w"> </span><span class="n">create_seven_dof</span><span class="p">();</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">IVehicleDynamics</span><span class="o">&gt;</span><span class="w"> </span><span class="n">create_fourteen_dof</span><span class="p">();</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="c1">// cpp:</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="k">namespace</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">BicycleDynamics</span><span class="w"> </span><span class="k">final</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">IVehicleDynamics</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="p">};</span><span class="w"> </span><span class="p">}</span>
+</span></code></pre></div>
+확장 예: <code>steering_rack_torque()</code> default 0 (chapter 05 §5.7) → Ld1 은
+override 없이, Ld2/Ld3 만 override.</p>
+<p><strong>[VDSim impl] § 12.4 — YAML pull + roundtrip</strong></p>
+<p><code>core/src/params.cpp</code> 의 <code>pull(node, key, dst)</code>: missing/null → default 유지,
+파싱 실패 → <code>runtime_error</code>. roundtrip 45 fields max|Δ|=0.</p>
+<p><strong>[VDSim impl] § 12.5 — PIC 설정</strong></p>
+<p><code>third_party/CMakeLists.txt:3-4</code>:
+<div class="language-cmake highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c"># Make all FetchContent targets PIC so they can link into shared objects.</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_POSITION_INDEPENDENT_CODE</span><span class="w"> </span><span class="s">ON</span><span class="p">)</span>
+</span></code></pre></div>
+<code>python/bindings.cpp</code> 가 <code>vdsim_core</code> static lib 를 link 해 <code>vdsim</code> module
+생성. <code>import vdsim; vdsim.create_seven_dof()</code> 가 자동 reference counting.</p>
+<p><strong>[VDSim impl] § 12.6 — Raycast provider 코드 + test</strong></p>
+<p><code>carla_integration/plugin/raycast_contact_provider.{hpp,cpp}</code> 의
+<code>RaycastContactProvider : public IContactProvider</code>. surface ID 예: asphalt=1
+(1.0,1.0), wet=4 (0.8,0.8), ice=8 (0.2,0.2), <code>std::find_if</code> lookup, fallback
+default_mu 0.65. mock 4 tests: <code>FlatGroundLookupYieldsKnownMu</code>,
+<code>UnknownSurfaceFallsBackToDefault</code>, <code>MissedRaycastInvalidatesContact</code>,
+<code>NullRaycastSafe</code>.</p>
+<p><strong>[VDSim impl] § 12.7 — CMake 구조</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>VDSim/
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>├── CMakeLists.txt              top-level options
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>├── third_party/CMakeLists.txt  FetchContent
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>├── core/CMakeLists.txt         vdsim_core static lib
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>├── carla_integration/plugin/   vdsim_carla_plugin static lib
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>├── python/CMakeLists.txt       vdsim pybind11 module (shared)
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>├── tests/{unit,integration}/
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>└── examples/
+</span></code></pre></div>
+</blockquote>
 
 
 
