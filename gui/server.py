@@ -206,7 +206,7 @@ class Handler(BaseHTTPRequestHandler):
                     payload = json.dumps(RUNNER.snapshot())
                     self.wfile.write(f"data: {payload}\n\n".encode())
                     self.wfile.flush()
-                    time.sleep(1.0 / 30.0)
+                    time.sleep(1.0 / 60.0)
             except (BrokenPipeError, ConnectionResetError):
                 return
         else:

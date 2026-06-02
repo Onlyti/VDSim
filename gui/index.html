@@ -111,13 +111,16 @@ scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(fig8()),
           new THREE.LineBasicMaterial({color:0x2f6d8f})));
 
 // ---- car ----
+// car (group): heading (yaw) + position. sprung (child): roll/pitch (leans the
+// body+cabin only). wheels stay on the car group so they remain grounded.
 const car = new THREE.Group();
+const sprung = new THREE.Group(); car.add(sprung);
 const body = new THREE.Mesh(new THREE.BoxGeometry(4.2,1.1,1.8),
               new THREE.MeshStandardMaterial({color:0x01A0E9, metalness:.3, roughness:.5}));
-body.position.y = 0.75; car.add(body);
+body.position.y = 0.75; sprung.add(body);
 const cabin = new THREE.Mesh(new THREE.BoxGeometry(2.0,0.7,1.5),
               new THREE.MeshStandardMaterial({color:0x9fd8f5}));
-cabin.position.set(-0.2,1.45,0); car.add(cabin);
+cabin.position.set(-0.2,1.45,0); sprung.add(cabin);
 const wheelGeo = new THREE.CylinderGeometry(0.34,0.34,0.25,16);
 const wheelMat = new THREE.MeshStandardMaterial({color:0x14181f});
 const wxz = [[1.4,0.75],[1.4,-0.75],[-1.4,0.75],[-1.4,-0.75]]; // FL FR RL RR (x fwd, z=-left)
@@ -135,14 +138,36 @@ const trail=new THREE.Line(tg,new THREE.LineBasicMaterial({color:0xffa500})); sc
 function toThree(x,y,z){ return new THREE.Vector3(x, z, -y); }
 
 let follow=true;
+// Interpolation target (set from the SSE stream); the render loop eases the car
+// toward it every frame so motion is smooth regardless of the stream rate.
+const tgt={pos:new THREE.Vector3(), yaw:0, roll:0, pitch:0, vx:0, vy:0, r:0, has:false};
+const lerpAngle=(a,b,t)=>{ let d=((b-a+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI; return a+d*t; };
+const clock=new THREE.Clock();
+// Follow = translate camera + orbit target by the car's motion each frame, so
+// the car stays framed while OrbitControls still lets you change view angle/zoom.
+const prevCarPos=new THREE.Vector3(); let prevInit=false;
 function frame(){ requestAnimationFrame(frame);
-  if(follow){ const o=car.position;
-    const back=new THREE.Vector3(Math.sin(carYaw),0,Math.cos(carYaw)).multiplyScalar(-12);
-    const want=o.clone().add(new THREE.Vector3(back.x,8,back.z));
-    camera.position.lerp(want,0.06); controls.target.lerp(o,0.1); }
+  const dt=Math.min(clock.getDelta(), 0.1);
+  if(tgt.has){
+    // Dead-reckon at the reported velocity (smooth, true speed), then gently
+    // correct toward the authoritative target — avoids ease-in/out stutter.
+    const yaw=car.rotation.y;
+    const vE=tgt.vx*Math.cos(yaw)-tgt.vy*Math.sin(yaw);   // body -> ENU
+    const vN=tgt.vx*Math.sin(yaw)+tgt.vy*Math.cos(yaw);
+    car.position.x +=  vE*dt;            // ENU x -> three x
+    car.position.z += -vN*dt;            // ENU y -> three -z
+    car.position.lerp(tgt.pos, 0.10);    // drift correction toward latest state
+    car.rotation.set(0, lerpAngle(yaw + tgt.r*dt, tgt.yaw, 0.15), 0);
+    sprung.rotation.x += (tgt.roll     - sprung.rotation.x)*0.3;
+    sprung.rotation.z += ((-tgt.pitch) - sprung.rotation.z)*0.3;
+  }
+  const cp=car.position;
+  if(!prevInit){ prevCarPos.copy(cp); prevInit=true; }
+  if(follow){ const d=cp.clone().sub(prevCarPos);
+    camera.position.add(d); controls.target.add(d); }
+  prevCarPos.copy(cp);
   controls.update(); renderer.render(scene,camera);
 }
-let carYaw=0;
 frame();
 addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight); });
@@ -152,12 +177,12 @@ const $=id=>document.getElementById(id);
 const f=(v,p=2)=> (v==null?'—':(+v).toFixed(p));
 function applyState(s){
   if(s.x==null) return;
-  car.position.copy(toThree(s.x,s.y,0));
-  carYaw = s.yaw;
-  car.rotation.set(0, s.yaw, 0);
-  body.rotation.set(s.pitch||0, 0, s.roll||0);  // subtle attitude cue
-  // trail
-  tpos[thead*3]=car.position.x; tpos[thead*3+1]=0.05; tpos[thead*3+2]=car.position.z;
+  // Store as interpolation target; the render loop eases toward it (smooth).
+  tgt.pos.copy(toThree(s.x,s.y,0)); tgt.yaw=s.yaw; tgt.roll=s.roll||0; tgt.pitch=s.pitch||0;
+  tgt.vx=s.vx||0; tgt.vy=s.vy||0; tgt.r=s.r||0;   // for dead-reckoning between updates
+  if(!tgt.has){ car.position.copy(tgt.pos); car.rotation.set(0,tgt.yaw,0); tgt.has=true; }
+  // trail (at stream rate, from the target position)
+  tpos[thead*3]=tgt.pos.x; tpos[thead*3+1]=0.05; tpos[thead*3+2]=tgt.pos.z;
   thead=(thead+1)%MAXT; tcount=Math.min(tcount+1,MAXT);
   tg.setDrawRange(0,tcount); tg.attributes.position.needsUpdate=true;
   $('h_t').textContent=f(s.t); $('h_vx').textContent=f(s.vx)+' m/s';
@@ -187,8 +212,9 @@ $('vt').oninput=e=>{ $('vtv').textContent=e.target.value+' m/s'; };
 $('vt').onchange=e=>post('/api/config',{v_target:+e.target.value});
 $('start').onclick=()=>post('/api/control',{action:'start'});
 $('stop').onclick =()=>post('/api/control',{action:'stop'});
-$('reset').onclick=()=>{ thead=tcount=0; tg.setDrawRange(0,0); post('/api/control',{action:'reset'}); };
-$('follow').onclick=e=>{ follow=!follow; e.target.classList.toggle('on',follow); };
+$('reset').onclick=()=>{ thead=tcount=0; tg.setDrawRange(0,0); tgt.has=false; post('/api/control',{action:'reset'}); };
+$('follow').onclick=e=>{ follow=!follow; e.target.classList.toggle('on',follow);
+  if(follow) controls.target.copy(car.position); };  // re-frame on enable; drag still orbits
 function setMode(driver){ post('/api/config',{driver}); $('drv').classList.toggle('on',driver); $('man').classList.toggle('on',!driver); }
 $('drv').onclick=()=>setMode(true);
 $('man').onclick=()=>setMode(false);
