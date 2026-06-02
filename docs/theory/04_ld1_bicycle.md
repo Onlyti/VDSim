@@ -1,49 +1,72 @@
 # 04. Ld1-Bicycle (Single-Track, 5 DOF)
 
-> **학습 목표.** Single-track bicycle 의 가정과 한계를 명확히 한다. 5 DOF state vector 의 의미를 안다. linear-bicycle 의 analytical steady-state yaw rate 공식을 유도하고, 그게 왜 simulator-side 의 검증 baseline 이 되는지 안다. weight transfer (longitudinal) 의 1-step lag 처리 이유를 안다.
+## Learning objectives
 
-## 4.1 왜 Single-Track 부터 시작하나
+이 chapter 를 마치면 다음을 할 수 있다.
 
-차량 dynamics 의 모든 핵심 거동 (cornering, braking, accel) 이 single-track 만으로 정성 정확하게 표현된다. 4-wheel per-tire (Ld2) 는 weight transfer 의 quantitative 정확도를 더하지만, **policy / controller 개발 단계에서는 Ld1 이면 충분**. controller 가 Ld1 에서 동작하면 Ld2-Ld3 로 옮겨도 거의 그대로 동작 (안 그러면 controller 가 invariance 가 부족).
+1. single-track 모델의 가정과 적용 범위를 한계와 함께 설명한다.
+2. 5-DOF state vector 의 각 성분과 적분 구조를 기술한다.
+3. linear-bicycle 의 steady-state yaw rate 와 understeer gradient $K_{us}$ 를
+   유도하고, 그것이 simulator 검증의 baseline 이 되는 이유를 설명한다.
+4. longitudinal weight transfer 의 self-referential 구조와 1-step lag 처리의
+   타당성을 판단한다.
 
-VDSim 의 Ld1 = "the L4 controller can drive any vehicle" 의 testbed.
+## Prerequisites
+
+- **Chapter 01** — frame, slip 정의, 부호 약속.
+- **Chapter 02** — body-frame EoM, kinematic $a_x$.
+- **Chapter 03** — Pacejka 로부터 $F_x, F_y, M_z$.
+- **외부 reference** — Genta §4-5, Rajamani §2 (SAE 부호 주의).
+
+---
+
+## 4.1 동기 — 왜 single-track 부터인가
+
+차량 동역학의 핵심 거동 (cornering / braking / accel) 은 single-track 만으로
+정성적으로 정확히 표현된다. 4-wheel per-tire 모델 (Ld2) 은 weight transfer 의
+정량 정확도를 더하지만, **제어기 개발 단계에서는 single-track 으로 충분**하다.
+제어기가 Ld1 에서 동작하면 더 높은 fidelity (Ld2-Ld3) 로 옮겨도 거의 그대로
+동작한다 — 그렇지 않다면 제어기의 모델 invariance 가 부족한 것이다.
 
 ![Single-track geometry](figures/04_bicycle_geom.png)
 
-## 4.2 가정 (정리)
+위 그림은 CG 로부터 front/rear axle 거리 $a, b$, 조향각 $\delta$, 그리고 각
+axle 의 slip angle $\alpha_f, \alpha_r$ 의 기하 관계를 보여준다.
 
-| 가정 | 의미 |
-|---|---|
-| Single-track | front 양 wheel 을 axle 평균으로, rear 도 동일. wheel 수 = 2 (axle 단위). |
-| Planar | z 방향 모션 없음. roll, pitch = 0. yaw 만. |
-| Static Fz | weight transfer 가 있어도 axle 단위. lateral transfer 무시. |
-| Per-axle Pacejka | 각 axle 의 Fz 와 평균 slip 으로 Pacejka 1 회 call. |
-| Rigid wheel-spin | wheel 회전 에너지는 모델링되지만 wheel-axle 의 spin inertia 는 단순한 disk approximation. |
+---
+
+## 4.2 가정
+
+| 가정 | 의미 | 깨지는 case |
+|---|---|---|
+| Single-track | 양 wheel 을 axle 평균으로 (wheel 수 = 2) | chapter 05 (per-tire 4) |
+| Planar | roll/pitch = 0, yaw 만 | chapter 06 (Ld3) |
+| Static Fz (lateral) | longitudinal transfer 만, lateral 무시 | chapter 05 (lateral transfer) |
+| Per-axle Pacejka | axle Fz + 평균 slip 으로 1 회 call | chapter 05 (per-tire 4 call) |
+| Rigid wheel-spin | spin inertia = disk approximation | — |
+
+---
 
 ## 4.3 State vector (5 DOF)
 
-본 PoC 의 Ld1 적분 상태는:
+적분 상태:
 
 $$
 y = [\,x_w,\; y_w,\; \psi,\; v_x,\; v_y,\; r,\; \omega_f,\; \omega_r\,]
 $$
 
-실제 DOF count 는 5 ($v_x, v_y, \psi$ + 2 wheel spin), 적분기 입장에서는 8 개 first-order ODE (포지션 3 개는 kinematic).
+물리적 DOF 는 5 개 ($v_x, v_y, \psi$ + 2 wheel spin) 이며, 적분기 관점에서는
+8 개의 first-order ODE (position 3 개는 kinematic). $\omega_f, \omega_r$ 는
+front/rear axle 의 wheel spin.
 
-`State` struct 매핑:
+state 와 frame 약속의 매핑 (position=world, velocity=body 등) 은 chapter 01
+§1.5 의 ABI 약속을 따른다.
 
-- `position.x`, `position.y` ← `x_w`, `y_w`
-- `orientation` (quat) ← `quat_from_euler(0, 0, ψ)`
-- `velocity.x`, `velocity.y` ← `vx`, `vy`
-- `angular_velocity.z` ← `r`
-- `wheel_spin[FL] = wheel_spin[FR] = ω_f`
-- `wheel_spin[RL] = wheel_spin[RR] = ω_r`
+---
 
-코드 `core/src/bicycle_dynamics.cpp:89-99` 의 `Deriv` struct 이 위와 1-to-1.
+## 4.4 Bicycle EoM
 
-## 4.4 Bicycle EoM (식)
-
-Body-frame Newton-Euler (Chapter 02 결론) + per-axle tire force:
+body-frame Newton-Euler (chapter 02) + per-axle tire force:
 
 $$
 \begin{aligned}
@@ -55,18 +78,24 @@ I_w\, \dot\omega_r &= T_{\text{drive},r} + T_{\text{brake},r} - F_{x,\text{wheel
 \end{aligned}
 $$
 
-여기서:
+힘의 구성 (wheel frame → body frame 회전 포함):
 
-- `Fx_total = Fx_body_f + Fx_body_r − F_aero − F_rr` (drag + rolling 합쳐서).
-- `Fy_total = Fy_body_f + Fy_body_r`.
-- `Fx_body_f = Fx_wheel_f · cos(δ) − Fy_wheel_f · sin(δ)` (wheel frame → body frame, 회전).
-- `Fy_body_f = Fx_wheel_f · sin(δ) + Fy_wheel_f · cos(δ)`.
-- Rear: `Fx_body_r = Fx_wheel_r`, `Fy_body_r = Fy_wheel_r` (un-steered).
-- `a, b` = CG-to-front, CG-to-rear distance.
+$$
+\begin{aligned}
+F_{x,\text{total}} &= F_{x,\text{body},f} + F_{x,\text{body},r} - F_{\text{aero}} - F_{rr} \\
+F_{y,\text{total}} &= F_{y,\text{body},f} + F_{y,\text{body},r} \\
+F_{x,\text{body},f} &= F_{x,\text{wheel},f}\cos\delta - F_{y,\text{wheel},f}\sin\delta \\
+F_{y,\text{body},f} &= F_{x,\text{wheel},f}\sin\delta + F_{y,\text{wheel},f}\cos\delta
+\end{aligned}
+$$
 
-코드 `core/src/bicycle_dynamics.cpp:165-203` 가 정확히 위 식.
+rear 는 un-steered 이므로 $F_{x,\text{body},r} = F_{x,\text{wheel},r}$,
+$F_{y,\text{body},r} = F_{y,\text{wheel},r}$. $a, b$ 는 CG-to-front,
+CG-to-rear 거리.
 
-## 4.5 Per-axle Fz with longitudinal weight transfer
+---
+
+## 4.5 Per-axle Fz — longitudinal weight transfer
 
 Static Fz:
 
@@ -75,7 +104,7 @@ F_{z,f}^{\text{static}} = \frac{m g b}{L}, \qquad
 F_{z,r}^{\text{static}} = \frac{m g a}{L}
 $$
 
-Longitudinal weight transfer (Ld1 는 axle 단위):
+Longitudinal transfer (axle 단위):
 
 $$
 \Delta F_{z,\text{long}} = \frac{m\, a_x\, h_{cg}}{L}
@@ -88,30 +117,27 @@ $$
 
 부호 직관:
 
-- 가속 (ax > 0) → ΔFz_long > 0 → rear 가 더 loaded, front 가 덜 loaded.
-- 제동 (ax < 0) → ΔFz_long < 0 → front 가 더 loaded (nose dive).
+- 가속 ($a_x > 0$) → $\Delta F_{z,\text{long}} > 0$ → rear loaded, front 가 덜 loaded.
+- 제동 ($a_x < 0$) → front loaded (nose dive).
 
-### 1-step lag — 왜 필요한가
+### Self-referential 구조와 1-step lag
 
-`ax` 는 `Fx_total / m`. `Fx_total` 은 tire Fx 의 합. tire Fx 는 Pacejka 가 Fz 의 함수. Fz 는 ax 의 함수.
-즉 self-referential: `ax = f(Fz(ax))`. 풀려면 fixed-point iteration.
+$a_x = F_{x,\text{total}}/m$ 인데, $F_{x,\text{total}}$ 은 tire $F_x$ 의 합이고,
+tire $F_x$ 는 Pacejka 가 $F_z$ 의 함수로 계산하며, $F_z$ 는 다시 $a_x$ 의
+함수다. 즉 $a_x = f(F_z(a_x))$ 의 self-referential 구조 — 엄밀히 풀려면
+fixed-point iteration 이 필요하다.
 
-본 PoC 는 **1-step lag** 사용:
+표준적 해법은 **1-step lag**: 직전 substep 의 $a_{x,\text{prev}}$ 를 사용한다.
 
 $$
 F_z(t) = F_z^{\text{static}} + \frac{m\, a_{x,\text{prev}}\, h_{cg}}{L}
 $$
 
-$a_{x,\text{prev}}$ 는 직전 substep 의 $a_x$ 값. 다음 substep 에서 update. RK4 substep dt = 1 ms 이라 1-step lag bias 가 작음 (verified: Task 17 의 brake step 에서 분석값 vs 측정값 < 0.1 %).
+substep 이 충분히 작으면 (1 ms 수준) lag bias 가 무시 가능하다. 정량 검증은
+§4.8 과 §4.13 의 implementation note 참조. iteration 의 trade-off 는
+chapter 11 (수치 적분) 에서 다룬다.
 
-코드 `core/src/bicycle_dynamics.cpp:120-127`:
-```cpp
-const double dFz_long = m * ax_prev_ * h_cg / L;
-double Fz_f = m * kGravity * b / L + Fz_aero_f - dFz_long;
-double Fz_r = m * kGravity * a / L + Fz_aero_r + dFz_long;
-```
-
-### Aero downforce 더하기
+### Aero downforce
 
 $$
 q = \tfrac{1}{2} \rho_{\text{air}} A\, v_x |v_x|, \qquad
@@ -119,62 +145,60 @@ F_{z,\text{aero},f} = C_{l,f}\, q, \qquad
 F_{z,\text{aero},r} = C_{l,r}\, q
 $$
 
-$v_x |v_x|$ 표기 — 후진 시 부호 반전.
-default Cl_f = Cl_r = 0 (sedan 은 거의 효과 없음). sports / race / FSK 에서 nonzero.
+$v_x|v_x|$ 표기로 후진 시 부호 반전. 승용차는 $C_l \approx 0$, sports/race
+에서 nonzero.
+
+---
 
 ## 4.6 Drive / brake torque 분배
 
-Drive split 은 `drive_type`:
+Drive split (drive_type 별):
 
 - FWD: front axle 만.
-- RWD: rear axle 만 (default for sedan).
+- RWD: rear axle 만.
 - AWD: front/rear 50:50.
 
-Brake 는 `brake_bias_front`:
+Brake (brake_bias_front):
 
 $$
 T_{b,f} = \text{bias} \cdot \text{brake} \cdot T_{\text{brake,max}}, \qquad
 T_{b,r} = (1 - \text{bias}) \cdot \text{brake} \cdot T_{\text{brake,max}}
 $$
 
-`brake_ebd_enabled = true` 이면 dynamic bias:
+EBD (electronic brake distribution) 활성 시 dynamic bias:
 
 $$
 \text{bias} = \operatorname{clamp}\!\left(\frac{F_{z,f}}{F_{z,f} + F_{z,r}},\; 0.05,\; 0.95\right)
 $$
 
-brake 시 front 가 더 loaded → bias 가 자동 증가 → front 가 더 많이 brake → ABS 효과 유사.
+제동 시 front 가 더 loaded → bias 증가 → front 가 더 많이 제동 → ABS 유사
+효과. wheel spin 부호는 $\tanh(\omega/w)$ 의 smooth sign 으로 처리해 정지
+근처 발진을 막는다.
 
-Smooth sign 함수 `tanh(ω / w)` 로 wheel spin 부호 부드럽게 처리 — 정지 근처 발진 방지.
+---
 
-## 4.7 Linear-bicycle analytical steady-state
+## 4.7 Linear-bicycle steady-state (검증 baseline)
 
-검증 baseline 이 되는 식. **Cornering 의 linear region** 에서 SS yaw rate.
+linear region 의 SS yaw rate. 가정:
 
-가정:
+- 작은 $\alpha$ → $F_y = -C_\alpha \alpha$ ($C_\alpha = B C D F_z \mu$, Pacejka linear slope).
+- $v_x = \text{const}$, $\dot v_y = \dot r = 0$, $v_y \ll v_x$.
 
-- 작은 α (linear region) → `Fy = −Cα · α` (Pacejka 의 linear-region slope, `Cα = B·C·D·Fz·μ`).
-- `vx = const`.
-- v̇y = 0, ṙ = 0 (SS).
-- vy ≪ vx.
-
-EoM:
+SS EoM:
 
 $$
-m\, v_x\, r = F_{y,\text{total}} \quad (\text{body-y SS}), \qquad
-0 = a\, F_{y,f} - b\, F_{y,r} \quad (\text{yaw SS})
+m\, v_x\, r = F_{y,\text{total}}, \qquad
+0 = a\, F_{y,f} - b\, F_{y,r}
 $$
 
-$\alpha_f, \alpha_r$ 의 linear 표현:
+slip angle 의 linear 표현 (ISO 8855 부호):
 
 $$
-\alpha_f = \arctan\frac{v_y + a r}{v_x} - \delta \approx \frac{v_y + a r}{v_x} - \delta, \qquad
-\alpha_r = \arctan\frac{v_y - b r}{v_x} \approx \frac{v_y - b r}{v_x}
+\alpha_f \approx \frac{v_y + a r}{v_x} - \delta, \qquad
+\alpha_r \approx \frac{v_y - b r}{v_x}
 $$
 
-(주의: ISO 8855 RH 부호. SAE convention 의 $\delta - \arctan(\cdots)$ 와 다름.)
-
-$F_{y,f} = -C_f \alpha_f$, $F_{y,r} = -C_r \alpha_r$. 위 EoM 에 대입 후 정리하면 2×2 선형 시스템:
+$F_{y,f} = -C_f \alpha_f$, $F_{y,r} = -C_r \alpha_r$ 대입 후 2×2 선형 시스템:
 
 $$
 \begin{bmatrix}
@@ -186,112 +210,179 @@ $$
 \begin{bmatrix} C_f \delta \\ a C_f \delta \end{bmatrix}
 $$
 
-$r$ 해는 $r = (A_{11} B_2 - A_{21} B_1) / \det(A)$.
-
-코드 `tests/integration/test_bicycle_steady_state.cpp:42-70` 의 `analytical_yaw_rate` 가 위 식 그대로.
-
-### Special case: neutral steer
-
-`a · Cf = b · Cr` (front and rear cornering stiffness times lever arm 동일) 이면 understeer gradient 가 0 — neutral steer.
-이 경우:
-
-$$
-r_{\text{neutral}} = \frac{v_x\, \delta}{L} \quad (\text{Ackerman steady-state})
-$$
-
-VDSim default tire 의 경우 `Cf = B_lat · C_lat · D_lat · Fz_f · μ`, `Cr = B_lat · C_lat · D_lat · Fz_r · μ`. ratio `Cf / Cr = Fz_f / Fz_r = b / a`. 따라서 `a · Cf = b · Cr` 자동 성립 → neutral steer.
-
-이게 우연이 아니라 **default 의 tire stiffness 가 mass 분포에 맞춰 linearly scale 되기 때문**. 차종이 다르면 깨짐.
-
 ### Understeer gradient
 
 $$
-K_{us} = \frac{m}{L}\left(\frac{b}{C_f} - \frac{a}{C_r}\right)
-$$
-
-$K_{us} > 0$ → understeer. $K_{us} < 0$ → oversteer. neutral = 0.
-
-SS yaw rate:
-
-$$
+K_{us} = \frac{m}{L}\left(\frac{b}{C_f} - \frac{a}{C_r}\right), \qquad
 r_{ss} = \frac{v_x\, \delta}{L\,(1 + K_{us}\, v_x^2)}
 $$
 
-`vx → ∞` 한계 — understeer 차량은 r 의 증가가 둔화, oversteer 는 발산.
+$K_{us} > 0$ understeer, $< 0$ oversteer, $= 0$ neutral. $v_x \to \infty$
+에서 understeer 차량은 yaw rate 증가가 둔화, oversteer 는 발산한다.
 
-![Understeer: yaw-rate gain vs speed (actual VDSim L2 sweep)](figures/04_understeer.png)
+**Neutral steer 의 special case**: $a C_f = b C_r$ 이면 $K_{us} = 0$,
+$r_{\text{neutral}} = v_x \delta / L$ (Ackermann). cornering stiffness 가
+질량 분포에 비례해 scale 되면 ($C_f/C_r = F_{z,f}/F_{z,r} = b/a$) 자동
+성립하나, 차종이 바뀌면 깨진다.
 
-*VDSim L2 (sports) 의 실제 sweep — yaw-rate gain 이 고속에서 neutral 선 (v/L) 아래로 처지고 saturate. understeer 차량의 교과서적 거동.*
+![Understeer: yaw-rate gain vs speed](figures/04_understeer.png)
 
-![Step-steer transient yaw rate (actual Ld1)](figures/04_step_response.png)
+위 그림은 실제 모델 sweep — yaw-rate gain $r/\delta$ 가 고속에서 neutral 선
+$v/L$ 아래로 처지고 saturate 하는 understeer 의 교과서적 거동을 보여준다.
 
-## 4.8 검증 — analytical vs simulator
+![Step-steer transient yaw rate](figures/04_step_response.png)
 
-`BicycleSteadyState.LeftTurnYawRateMatchesAnalytical`:
+step 입력 후 yaw rate 가 속도별로 다른 정상값으로 수렴하는 과도 응답.
 
-- vx0 = 10 m/s, δ = 0.05 rad, 5 s 적분.
-- `r_sim ≈ 0.176 rad/s`, `r_ana ≈ 0.185 rad/s`. 오차 −5 %.
-- analytical 이 linear bicycle (no Mz aggregation) 이라 −2.6 % 는 Mz 기여, 나머지 −2-3 % 는 small non-linearity 영역에 들어선 효과.
+---
 
-`StepSteerSweep.LinearRegionWithinTenPercent`:
+## 4.8 검증 전략
 
-- 3 × 5 grid (vx, δ) 에서 ay < 3 m/s² 인 cell 모두 `|err| ≤ 10 %`.
+| 검증 | 식 / 케이스 |
+|---|---|
+| SS yaw rate vs 해석값 | $v_x=10$, $\delta=0.05$ 에서 sim 과 linear-bicycle 해석값 오차 5 % 이내 |
+| Linear region 일관성 | (vx, δ) 격자에서 $a_y < 3$ m/s² cell 의 오차 ≤ 10 % |
+| Drag coast | aero drag only 의 $v_x(t) = v_{x0}/(1 + v_{x0} k t)$ 해석해와 ±5 % |
+| weight transfer | brake step 의 $F_{z,f}$ 비율이 해석값과 0.1 % 이내 |
 
-`LongScenarios.DragCoastMatchesAnalytical`:
+sim vs 해석값의 차이 일부는 Mz aggregation (해석 bicycle 은 무시) 와 small
+nonlinearity 진입의 효과로, 구현 오류가 아니다. test 매핑은 §4.13 참조.
 
-- aero drag only (RR=0). 20 m/s 에서 10 s coast. analytical `vx(t) = vx0 / (1 + vx0 · k · t)` (k = ½ρCdA / m) 과 ±5 %.
-
-이런 closed-form 비교가 simulator-side 의 "correctness" 의 강한 evidence.
+---
 
 ## 4.9 한계
 
-| 항목 | 한계 |
-|---|---|
-| Lateral weight transfer | 없음 (Ld2 부터) |
-| Per-tire diff / differential | 없음 (axle 평균) |
-| Combined slip 의 advanced 식 | friction-ellipse rescale 만 |
-| Suspension dynamics | 없음 (Ld3 부터) |
-| Driver model | 외부 controller 사용 |
+| 항목 | 한계 | 다루는 chapter |
+|---|---|---|
+| Lateral weight transfer | 없음 | chapter 05 |
+| Differential | 없음 (axle 평균) | chapter 05 |
+| Suspension dynamics | 없음 | chapter 06 |
+| Combined slip | friction-ellipse rescale 만 | chapter 03 §3.4 |
+| Driver model | 외부 제어기 사용 | chapter 10 |
 
-이 한계 모두 Ld2-Ld5 의 이유. 그러나 Ld1 자체가 controller dev 용으로는 sufficient.
+single-track 자체는 제어기 개발용으로 충분하다.
 
-## 4.10 사용 패턴 (code)
+---
 
-```cpp
-vdsim::VehicleParams vp = vdsim::VehicleParams::from_yaml("configs/vehicles/sedan.yaml");
-vdsim::TireParams    tp = vdsim::TireParams::from_yaml("configs/tires/default_pacejka.yaml");
-vdsim::SolverParams  sp;
+## 4.10 다음 chapter 와의 연결
 
-auto dyn = vdsim::create_bicycle();
-dyn->initialize(vp, tp, sp);
+single-track 은 axle 단위 Fz 만 다룬다. chapter 05 (Ld2) 는 이를 **per-tire
+4-wheel** 로 확장하여 lateral weight transfer, Ackermann geometry,
+differential 을 더한다. 같은 base EoM (chapter 02) 위에 force 구성만 정교해진다.
 
-vdsim::State s0;
-s0.velocity = {10, 0, 0};
-dyn->reset(s0);
+---
 
-// flat ground, mu = 1
-vdsim::ContactArray contacts;
-for (auto& p : contacts) {
-    p.is_valid = true;
-    p.normal   = {0, 0, 1};
-    p.mu_long  = 1;
-    p.mu_lat   = 1;
-}
+## 4.11 참고문헌
 
-vdsim::CmdL4 cmd;
-cmd.steer_angle_wheel = 0.05;
+- **Genta, G.** *Motor Vehicle Dynamics*, 2014. §4 single-track, §5 understeer/oversteer.
+- **Rajamani, R.** *Vehicle Dynamics and Control*, 2012. §2 bicycle derivation (SAE 부호).
+- **Gillespie, T.** *Fundamentals of Vehicle Dynamics*, SAE, 1992. understeer gradient.
 
-for (int i = 0; i < 1000; ++i) {
-    dyn->step(cmd, contacts, 0.005);
-}
+---
 
-std::cout << "yaw rate = " << dyn->state().yaw_rate() << "\n";
-```
+## 4.12 Self-check
 
-이게 PoC 의 minimal controller-on-bicycle 루프. Lc4-Pedal level. Lc5+ 는 ControlConverter 위에 cascade.
+<details>
+<summary>1. single-track 에서 제어기를 개발한 뒤 Ld2-Ld3 로 옮겨도 되는 근거는?</summary>
 
-## 4.11 참고
+핵심 거동 (cornering/braking/accel) 이 single-track 으로 정성적으로 정확하므로,
+모델 invariant 한 제어기라면 fidelity 를 올려도 동작한다. 옮겨서 깨진다면
+제어기가 특정 fidelity 에 과적합된 것.
+</details>
 
-- Genta, *Motor Vehicle Dynamics*, §4 (single-track), §5 (understeer/oversteer).
-- Rajamani, *Vehicle Dynamics and Control*, §2 — bicycle derivation (단, SAE).
-- VDSim 의 검증 코드: `tests/integration/test_bicycle_steady_state.cpp`.
+<details>
+<summary>2. <code>K_us > 0</code> 차량의 고속 거동은?</summary>
+
+understeer. $r_{ss} = v_x\delta / (L(1+K_{us}v_x^2))$ 에서 분모가 $v_x^2$ 로
+커져 yaw rate gain 의 증가가 둔화된다. 고속에서 "밀리는" 안정적 거동.
+</details>
+
+<details>
+<summary>3. weight transfer 의 self-referential 구조란?</summary>
+
+$F_z$ 가 $a_x$ 의 함수이고 $a_x = F_x/m$ 인데 $F_x$ 는 Pacejka 가 $F_z$ 로
+계산 → $a_x = f(F_z(a_x))$. 닫힌 형태로 풀려면 fixed-point iteration 또는
+1-step lag 근사가 필요하다.
+</details>
+
+<details>
+<summary>4. neutral steer 가 default tire 에서 자동 성립하는 조건은?</summary>
+
+$C_f/C_r = b/a$, 즉 cornering stiffness 가 static Fz 분포($F_{z,f}/F_{z,r}=b/a$)에
+비례할 때. 이때 $a C_f = b C_r$ 이 되어 $K_{us}=0$. 차종(질량분포)이 바뀌면 깨진다.
+</details>
+
+<details>
+<summary>5. aero downforce 식에 <code>vx·|vx|</code> 를 쓰는 이유는?</summary>
+
+aero 힘은 $v_x^2$ 에 비례하지만 방향은 진행 방향. $v_x|v_x|$ 로 쓰면 후진
+($v_x<0$) 시 부호가 자동 반전되어 항상 진행을 거스르는 drag/downforce 가 된다.
+</details>
+
+---
+
+## 4.13 VDSim 구현 노트
+
+> **[VDSim impl] § 4.3 — State 매핑**
+>
+> `core/src/bicycle_dynamics.cpp:89-99` 의 `Deriv` struct 이 state vector 와
+> 1-to-1. `wheel_spin[FL]=wheel_spin[FR]=ω_f`, `wheel_spin[RL]=wheel_spin[RR]=ω_r`
+> (axle 평균을 두 wheel 에 복제).
+
+> **[VDSim impl] § 4.4 — EoM 코드**
+>
+> `core/src/bicycle_dynamics.cpp:165-203` 가 §4.4 의 force 구성 + EoM 그대로.
+
+> **[VDSim impl] § 4.5 — 1-step lag 코드 + 검증**
+>
+> `core/src/bicycle_dynamics.cpp:120-127`:
+>
+> ```cpp
+> const double dFz_long = m * ax_prev_ * h_cg / L;
+> double Fz_f = m * kGravity * b / L + Fz_aero_f - dFz_long;
+> double Fz_r = m * kGravity * a / L + Fz_aero_r + dFz_long;
+> ```
+>
+> brake step 검증: 실측 $a_x = -3.36$ m/s² → 해석 $\Delta F_z = 1027$ N. sim
+> 의 $F_{z,f}$ 비율 1.125 vs 해석 1.126 — 오차 0.1 %. 1-step lag 가 1 ms
+> substep 에서 무시 가능 정확도임을 확인.
+
+> **[VDSim impl] § 4.7 — 해석 baseline 코드**
+>
+> `tests/integration/test_bicycle_steady_state.cpp:42-70` 의
+> `analytical_yaw_rate` 가 §4.7 의 2×2 시스템 해 그대로. sim 출력과 대조하는
+> ground truth.
+
+> **[VDSim impl] § 4.8 — 검증 test**
+>
+> | 검증 | test |
+> |---|---|
+> | SS yaw rate vs 해석 | `BicycleSteadyState.LeftTurnYawRateMatchesAnalytical` |
+> | linear region 격자 | `StepSteerSweep.LinearRegionWithinTenPercent` |
+> | drag coast | `LongScenarios.DragCoastMatchesAnalytical` |
+
+> **[VDSim impl] § 4.x — 최소 사용 예제**
+>
+> ```cpp
+> auto dyn = vdsim::create_bicycle();
+> dyn->initialize(vp, tp, sp);
+>
+> vdsim::State s0;
+> s0.velocity = {10, 0, 0};
+> dyn->reset(s0);
+>
+> vdsim::ContactArray contacts;          // flat ground, mu = 1
+> for (auto& p : contacts) {
+>     p.is_valid = true; p.normal = {0, 0, 1};
+>     p.mu_long = 1; p.mu_lat = 1;
+> }
+>
+> vdsim::CmdL4 cmd;
+> cmd.steer_angle_wheel = 0.05;
+> for (int i = 0; i < 1000; ++i) dyn->step(cmd, contacts, 0.005);
+>
+> std::cout << "yaw rate = " << dyn->state().yaw_rate() << "\n";
+> ```
+>
+> minimal controller-on-bicycle 루프 (Lc4-Pedal level). 상위 제어 cascade 는
+> chapter 07-09.
