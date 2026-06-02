@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/tasks/09_W2_coordinate_impl/">
+        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/theory/16_fmi_integration/">
       
       
+        <link rel="prev" href="../15_validation_and_doe/">
+      
+      
+        <link rel="next" href="../../tasks/T22_carla_bridge/REPORT/">
       
       
         
@@ -23,7 +27,7 @@
     
     
       
-        <title>Task 09 — coordinate.cpp 구현 + 단위 테스트 - VDSim</title>
+        <title>16 — FMI 2.0 integration - VDSim</title>
       
     
     
@@ -74,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#task-09-coordinatecpp" class="md-skip">
+        <a href="#16-fmi-20-integration-co-simulation" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Task 09 — coordinate.cpp 구현 + 단위 테스트
+              16 — FMI 2.0 integration
             
           </span>
         </div>
@@ -250,11 +254,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../theory/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
           
   
   
@@ -276,7 +282,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../T22_carla_bridge/REPORT/" class="md-tabs__link">
+        <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-tabs__link">
           
   
   
@@ -298,7 +304,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../" class="md-tabs__link">
+        <a href="../../tasks/" class="md-tabs__link">
           
   
   
@@ -454,6 +460,8 @@
       
   
   
+    
+  
   
   
     
@@ -499,22 +507,23 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../theory/" class="md-nav__link ">
+            <a href="../" class="md-nav__link ">
               
   
   
@@ -532,13 +541,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -558,7 +567,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/01_frames_and_conventions/" class="md-nav__link">
+      <a href="../01_frames_and_conventions/" class="md-nav__link">
         
   
   
@@ -586,7 +595,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/02_rigid_body_dynamics/" class="md-nav__link">
+      <a href="../02_rigid_body_dynamics/" class="md-nav__link">
         
   
   
@@ -614,7 +623,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/03_tire_pacejka_mf96/" class="md-nav__link">
+      <a href="../03_tire_pacejka_mf96/" class="md-nav__link">
         
   
   
@@ -642,7 +651,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/04_ld1_bicycle/" class="md-nav__link">
+      <a href="../04_ld1_bicycle/" class="md-nav__link">
         
   
   
@@ -670,7 +679,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/05_ld2_seven_dof/" class="md-nav__link">
+      <a href="../05_ld2_seven_dof/" class="md-nav__link">
         
   
   
@@ -698,7 +707,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/06_ld3_fourteen_dof/" class="md-nav__link">
+      <a href="../06_ld3_fourteen_dof/" class="md-nav__link">
         
   
   
@@ -726,7 +735,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/07_control_ladder/" class="md-nav__link">
+      <a href="../07_control_ladder/" class="md-nav__link">
         
   
   
@@ -754,7 +763,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/08_pid_controllers/" class="md-nav__link">
+      <a href="../08_pid_controllers/" class="md-nav__link">
         
   
   
@@ -782,7 +791,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/09_pure_pursuit_path/" class="md-nav__link">
+      <a href="../09_pure_pursuit_path/" class="md-nav__link">
         
   
   
@@ -810,7 +819,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/10_driver_model/" class="md-nav__link">
+      <a href="../10_driver_model/" class="md-nav__link">
         
   
   
@@ -838,7 +847,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/11_numerical_integration/" class="md-nav__link">
+      <a href="../11_numerical_integration/" class="md-nav__link">
         
   
   
@@ -866,7 +875,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/12_software_architecture/" class="md-nav__link">
+      <a href="../12_software_architecture/" class="md-nav__link">
         
   
   
@@ -894,7 +903,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/13_multibody_outlook/" class="md-nav__link">
+      <a href="../13_multibody_outlook/" class="md-nav__link">
         
   
   
@@ -922,7 +931,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/14_hardpoint_kinematics/" class="md-nav__link">
+      <a href="../14_hardpoint_kinematics/" class="md-nav__link">
         
   
   
@@ -950,7 +959,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/15_validation_and_doe/" class="md-nav__link">
+      <a href="../15_validation_and_doe/" class="md-nav__link">
         
   
   
@@ -975,10 +984,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../theory/16_fmi_integration/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16 — FMI 2.0 integration
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -994,6 +1030,125 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#161-fmi-fmu" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16.1 FMI / FMU 란
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#162-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16.2 두 가지 mode
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#163-c-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16.3 핵심 C API 흐름
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#164-vdsim-fmu-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16.4 VDSim FMU export
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#165-vdsim-fmu-import" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16.5 VDSim FMU import
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#166" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16.6 양방향의 전략적 의미
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#167-round-trip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16.7 Round-trip 검증
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#168" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16.8 한계
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#169" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16.9 참고
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1081,7 +1236,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T22_carla_bridge/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-nav__link">
         
   
   
@@ -1109,7 +1264,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T23_jump_14dof/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T23_jump_14dof/REPORT/" class="md-nav__link">
         
   
   
@@ -1137,7 +1292,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T27_ld4_dw/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T27_ld4_dw/REPORT/" class="md-nav__link">
         
   
   
@@ -1165,7 +1320,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T28_ld4_mp/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T28_ld4_mp/REPORT/" class="md-nav__link">
         
   
   
@@ -1193,7 +1348,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T29_ld4_ta/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T29_ld4_ta/REPORT/" class="md-nav__link">
         
   
   
@@ -1221,7 +1376,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T30_ld4_5link/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T30_ld4_5link/REPORT/" class="md-nav__link">
         
   
   
@@ -1299,7 +1454,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../" class="md-nav__link ">
+            <a href="../../tasks/" class="md-nav__link ">
               
   
   
@@ -1343,7 +1498,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../68_poc_summary_v3/" class="md-nav__link">
+      <a href="../../tasks/68_poc_summary_v3/" class="md-nav__link">
         
   
   
@@ -1371,7 +1526,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../69_competitive_matrix/" class="md-nav__link">
+      <a href="../../tasks/69_competitive_matrix/" class="md-nav__link">
         
   
   
@@ -1399,7 +1554,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../62_cycles_overview/" class="md-nav__link">
+      <a href="../../tasks/62_cycles_overview/" class="md-nav__link">
         
   
   
@@ -1427,7 +1582,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../50_benchmark_matrix/" class="md-nav__link">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
         
   
   
@@ -1455,7 +1610,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../20_l1_l2_grid_sweep/" class="md-nav__link">
+      <a href="../../tasks/20_l1_l2_grid_sweep/" class="md-nav__link">
         
   
   
@@ -1483,7 +1638,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../30_l3_dynamic_suspension/" class="md-nav__link">
+      <a href="../../tasks/30_l3_dynamic_suspension/" class="md-nav__link">
         
   
   
@@ -1511,7 +1666,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../31_l6_l7_l8_control/" class="md-nav__link">
+      <a href="../../tasks/31_l6_l7_l8_control/" class="md-nav__link">
         
   
   
@@ -1539,7 +1694,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../57_58_59_driver_skidpad/" class="md-nav__link">
+      <a href="../../tasks/57_58_59_driver_skidpad/" class="md-nav__link">
         
   
   
@@ -1567,7 +1722,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../50_benchmark_matrix/" class="md-nav__link">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
         
   
   
@@ -1693,10 +1848,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1" class="md-nav__link">
+  <a href="#161-fmi-fmu" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. 목적
+        16.1 FMI / FMU 란
       
     </span>
   </a>
@@ -1704,60 +1859,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2" class="md-nav__link">
+  <a href="#162-mode" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. 구현 방법
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="2. 구현 방법">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#coordinatecpp" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        coordinate.cpp 함수별 구현 노트
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#quaternion-y-flip" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Quaternion Y-flip 유도
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#frame" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        외부 frame 흐름도
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. 검증 방법 (근거)
+        16.2 두 가지 mode
       
     </span>
   </a>
@@ -1765,49 +1870,76 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4" class="md-nav__link">
+  <a href="#163-c-api" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. 검증 결과
+        16.3 핵심 C API 흐름
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="4. 검증 결과">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        수치 예 (대표)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        빌드 / 테스트 통계
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#5" class="md-nav__link">
+  <a href="#164-vdsim-fmu-export" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. 판단
+        16.4 VDSim FMU export
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#165-vdsim-fmu-import" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16.5 VDSim FMU import
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#166" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16.6 양방향의 전략적 의미
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#167-round-trip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16.7 Round-trip 검증
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#168" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16.8 한계
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#169" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16.9 참고
       
     </span>
   </a>
@@ -1834,257 +1966,186 @@
   
 
 
-<h1 id="task-09-coordinatecpp">Task 09 — coordinate.cpp 구현 + 단위 테스트<a class="headerlink" href="#task-09-coordinatecpp" title="Permanent link">&para;</a></h1>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Value</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Task ID</td>
-<td>W2 coordinate impl</td>
-</tr>
-<tr>
-<td>Type</td>
-<td>Impl</td>
-</tr>
-<tr>
-<td>Date</td>
-<td>2026-05-29</td>
-</tr>
-<tr>
-<td>Commit</td>
-<td><code>56cc48a</code></td>
-</tr>
-<tr>
-<td>Status</td>
-<td>completed</td>
-</tr>
-</tbody>
-</table>
-<h2 id="1">1. 목적<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
-<p>D7 좌표계 명세를 코드로 변환 + 단위 테스트. 좌표 변환 버그는 CarSim / Chrono CARLA 통합 초기 단골 (CARLA 통합 가이드 §10.1) — 후속 task 들이 안심하고 사용할 수 있게 11 개 단위 테스트로 cover.</p>
-<h2 id="2">2. 구현 방법<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
-<h3 id="coordinatecpp"><code>coordinate.cpp</code> 함수별 구현 노트<a class="headerlink" href="#coordinatecpp" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>함수</th>
-<th>방법</th>
-<th>비고</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>quat_from_euler</code></td>
-<td><code>AngleAxisd(yaw,Z) * AngleAxisd(pitch,Y) * AngleAxisd(roll,X)</code></td>
-<td>ZYX intrinsic, Eigen 표준</td>
-</tr>
-<tr>
-<td><code>euler_from_quat</code></td>
-<td>직접 q 성분 → roll/pitch/yaw</td>
-<td>Eigen <code>eulerAngles(2,1,0)</code> 의 범위 surprise 회피</td>
-</tr>
-<tr>
-<td><code>yaw_from_quat</code></td>
-<td><code>atan2(2(qw qz + qx qy), 1 − 2(qy² + qz²))</code></td>
-<td>gimbal-safe</td>
-</tr>
-<tr>
-<td><code>ue::*_position</code></td>
-<td>1/100 + Y flip</td>
-<td>UE5 cm,LH ↔ VDSim m,RH</td>
-</tr>
-<tr>
-<td><code>ue::*_rotation</code></td>
-<td>quat (w,x,y,z) ↔ (w,−x,y,−z)</td>
-<td>Y axis 반사 = LH↔RH conversion</td>
-</tr>
-<tr>
-<td><code>ue::*_velocity</code></td>
-<td>position 과 동일 transform</td>
-<td>linear, scale 1/100 + Y flip</td>
-</tr>
-</tbody>
-</table>
-<h3 id="quaternion-y-flip">Quaternion Y-flip 유도<a class="headerlink" href="#quaternion-y-flip" title="Permanent link">&para;</a></h3>
-<p>UE LH 에서 axis-angle <code>(ax, ay, az, θ)</code> → VDSim RH 로 변환:
-- Y flip: ay → −ay
-- LH→RH: θ → −θ (회전 방향 반대)</p>
-<p>Quaternion 으로:
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>q_LH = (cos(θ/2), ax·sin(θ/2), ay·sin(θ/2), az·sin(θ/2))
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>q_RH = (cos(−θ/2), ax·sin(−θ/2), (−ay)·sin(−θ/2), az·sin(−θ/2))
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>     = (cos(θ/2), −ax·sin(θ/2), ay·sin(θ/2), −az·sin(θ/2))
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>     = (qw_LH, −qx_LH, qy_LH, −qz_LH)
+<h1 id="16-fmi-20-integration-co-simulation">16. FMI 2.0 Integration — 산업 표준 co-simulation<a class="headerlink" href="#16-fmi-20-integration-co-simulation" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>학습 목표.</strong> FMI / FMU 가 무엇이고 차량 dynamics 업계에서 왜 표준인지
+안다. Model Exchange vs Co-Simulation 의 차이를 안다. VDSim 의 FMU export
+(우리 모델을 산업 도구가 사용) 와 import (외부 모델을 VDSim 이 backend 로
+사용) 의 양방향 구조와 그 전략적 의미를 안다.</p>
+</blockquote>
+<h2 id="161-fmi-fmu">16.1 FMI / FMU 란<a class="headerlink" href="#161-fmi-fmu" title="Permanent link">&para;</a></h2>
+<p><strong>FMI (Functional Mock-up Interface)</strong> — 서로 다른 시뮬 도구 사이에 동역학
+모델을 주고받는 open standard (Modelica Association, BSD-2). C API + XML
+metadata 규약. v2.0 이 현재 대세.</p>
+<p><strong>FMU (Functional Mock-up Unit)</strong> — <code>.fmu</code> 확장자, 실제로는 ZIP:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>mymodel.fmu (ZIP)
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── modelDescription.xml      변수 정의 (이름, VR, 단위, causality)
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── binaries/&lt;platform&gt;/      컴파일된 .so / .dll
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>└── resources/                룩업 테이블, parameter 등
 </span></code></pre></div></p>
-<p>→ involution (<code>f(f(x)) = x</code>), 즉 from_ue 와 to_ue 가 같은 식.</p>
-<h3 id="frame">외부 frame 흐름도<a class="headerlink" href="#frame" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ADMA/GPS (ENU, m, RH) ────identity──── VDSim world (ENU, m, RH)
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>                                              │
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>                          coordinate.hpp       │
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>                                              │
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>                          ┌──────── body→world ────┐
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>                          ▼                        │
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>                    VDSim body                     │
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>                  (ISO 8855, m, RH)                │
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>                          │                        │
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>   Y flip + ×100 ─────────┤                        │
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>                          ▼                        │
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>                    UE5 body/world                 │
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>                  (LH, cm, Z up, Y right)          │
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>                                                   │
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>   Y flip ────────── MORAI Unity ──────────────────┘
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>                  (LH, m, Z up, Y right)
+<p>생성·소비 도구: Dymola, OpenModelica, MATLAB/Simulink, CarMaker, CarSim,
+dSPACE, ANSYS Twin Builder, Chrono (개발 중) — 거의 모든 시뮬 도구.</p>
+<h2 id="162-mode">16.2 두 가지 mode<a class="headerlink" href="#162-mode" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>설명</th>
+<th>통합기(integrator) 위치</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Model Exchange (ME)</strong></td>
+<td>모델은 <code>f(x,u,t) → ẋ</code> 만 제공</td>
+<td>호스트가 RK4 등으로 적분</td>
+</tr>
+<tr>
+<td><strong>Co-Simulation (CS)</strong></td>
+<td>모델 안에 자체 integrator</td>
+<td>호스트는 <code>do_step(t, dt)</code> 만 호출</td>
+</tr>
+</tbody>
+</table>
+<p>VDSim 의 FMU 는 <strong>CS</strong> — VDSim 의 RK4 substepping 을 내부에 가짐. 호스트는
+입력 set → <code>fmi2DoStep</code> → 출력 get 만 하면 됨. 이게 우리 <code>IVehicleDynamics::step</code>
+패턴과 자연스럽게 맞음.</p>
+<h2 id="163-c-api">16.3 핵심 C API 흐름<a class="headerlink" href="#163-c-api" title="Permanent link">&para;</a></h2>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">fmi2Component</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">fmi2Instantiate</span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">fmi2CoSimulation</span><span class="p">,</span><span class="w"> </span><span class="n">guid</span><span class="p">,</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">                                   </span><span class="n">resourceLocation</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">callbacks</span><span class="p">,</span><span class="w"> </span><span class="p">...);</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">fmi2SetupExperiment</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="w"> </span><span class="p">...);</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">fmi2EnterInitializationMode</span><span class="p">(</span><span class="n">c</span><span class="p">);</span><span class="w">    </span><span class="c1">// ← VDSim: YAML 로드 + dynamics init</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">fmi2ExitInitializationMode</span><span class="p">(</span><span class="n">c</span><span class="p">);</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">T</span><span class="p">;</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">dt</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="n">fmi2SetReal</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="w"> </span><span class="n">vr_in</span><span class="p">,</span><span class="w"> </span><span class="n">n_in</span><span class="p">,</span><span class="w"> </span><span class="n">inputs</span><span class="p">);</span><span class="w">    </span><span class="c1">// steer, throttle, brake</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="n">fmi2DoStep</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="w"> </span><span class="n">t</span><span class="p">,</span><span class="w"> </span><span class="n">dt</span><span class="p">,</span><span class="w"> </span><span class="p">...);</span><span class="w">              </span><span class="c1">// VDSim dyn.step()</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span><span class="n">fmi2GetReal</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="w"> </span><span class="n">vr_out</span><span class="p">,</span><span class="w"> </span><span class="n">n_out</span><span class="p">,</span><span class="w"> </span><span class="n">outputs</span><span class="p">);</span><span class="w"> </span><span class="c1">// vx, yaw_rate, ay, ...</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="p">}</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="n">fmi2Terminate</span><span class="p">(</span><span class="n">c</span><span class="p">);</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="n">fmi2FreeInstance</span><span class="p">(</span><span class="n">c</span><span class="p">);</span>
 </span></code></pre></div>
-<h2 id="3">3. 검증 방법 (근거)<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
-<p>검증 4 카테고리:
-1. <strong>Roundtrip</strong> — <code>f⁻¹(f(x)) ≈ x</code> (수치 안정성 + 부호 일관)
-2. <strong>Sign / direction</strong> — yaw +π/2 이 body X → world +Y 매핑 (좌측 = Y+ in ISO)
-3. <strong>UE 부호 반전</strong> — VDSim yaw +π/2 (CCW, RH) ↔ UE yaw −π/2 (CW, LH)
-4. <strong>Identity preservation</strong> — <code>Quat::Identity()</code> → <code>Quat::Identity()</code> 유지</p>
-<p>Tolerance: 1e-9 (RK4 누적 오차보다 10⁶ 이상 정밀)</p>
-<h2 id="4">4. 검증 결과<a class="headerlink" href="#4" title="Permanent link">&para;</a></h2>
-<p><code>tests/unit/test_coordinate.cpp</code> 11 tests, <strong>11/11 pass</strong>.</p>
+<p>각 변수는 <code>valueReference</code> (정수 ID) 로 식별, <code>modelDescription.xml</code> 이
+이름↔VR 매핑을 정의.</p>
+<h2 id="164-vdsim-fmu-export">16.4 VDSim FMU export<a class="headerlink" href="#164-vdsim-fmu-export" title="Permanent link">&para;</a></h2>
+<p><code>fmi_export/vdsim_l2_fmu.cpp</code>, <code>vdsim_l3_fmu.cpp</code>.</p>
+<p>C ABI wrapper 가 내부에 VDSim dynamics 인스턴스를 소유:</p>
+<ul>
+<li><code>fmi2Instantiate</code> — VDSimL2/L3 struct 생성, resourceLocation 기록.</li>
+<li><code>fmi2EnterInitializationMode</code> — <code>&lt;resources&gt;/configs/{vehicle,tire}.yaml</code>
+  로드 → <code>create_seven_dof()</code> / <code>create_fourteen_dof()</code> → initialize.
+  L3 는 <code>&lt;resources&gt;/kinematics/{front,rear}.csv</code> 있으면 Ld4 lookup attach.</li>
+<li><code>fmi2SetReal</code> — VR 1-3 (steer/throttle/brake) 캐시.</li>
+<li><code>fmi2DoStep</code> — CmdL4 구성 → <code>dyn-&gt;step(u, contacts, h)</code>.</li>
+<li><code>fmi2GetReal</code> — VR 10-17 (L2) / 10-43 (L3: + roll/pitch/susp/Fz) 출력.</li>
+</ul>
+<p>빌드 (<code>build_fmu.sh</code>):
+1. <code>libvdsim_core.a</code> + yaml-cpp + spdlog 정적 링크하여 .so 컴파일.
+2. <code>-fvisibility=hidden</code> + <code>--version-script</code> 로 <code>fmi2*</code> 심볼만 노출.
+3. configs YAML 을 resources/ 로 복사.
+4. ZIP → <code>.fmu</code>.</p>
+<p>출력: <code>vdsim_l2.fmu</code> (4.1 MB), <code>vdsim_l3.fmu</code> (4.6 MB, Ld4 kinematics 포함).</p>
+<p>variable map (L2):
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>입력  1 steer_angle_wheel, 2 throttle, 3 brake
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>출력  10 x, 11 y, 12 yaw, 13 vx, 14 vy, 15 yaw_rate, 16 ax, 17 ay
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>L3 추가  20 roll, 21 pitch, 30-33 susp_comp, 40-43 Fz
+</span></code></pre></div></p>
+<h2 id="165-vdsim-fmu-import">16.5 VDSim FMU import<a class="headerlink" href="#165-vdsim-fmu-import" title="Permanent link">&para;</a></h2>
+<p><code>fmi_export/fmu_master.py</code> — pure-Python ctypes, <strong>fmpy 의존 없음</strong>.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">fmu</span> <span class="o">=</span> <span class="n">FMUMaster</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;anything.fmu&quot;</span><span class="p">)</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">fmu</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="n">t0</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">fmu</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;steer_angle_wheel&quot;</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">)</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">fmu</span><span class="o">.</span><span class="n">do_step</span><span class="p">(</span><span class="n">t</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.02</span><span class="p">)</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">fmu</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;vx&quot;</span><span class="p">))</span>
+</span></code></pre></div>
+<p>구현:
+1. ZIP 해제 → tempdir → <code>modelDescription.xml</code> 파싱 (이름→VR 맵).
+2. <code>binaries/&lt;platform&gt;/&lt;modelIdentifier&gt;.so</code> 를 ctypes 로 로드.
+3. FMI 2.0 CS 라이프사이클 함수 시그니처 바인딩.
+4. 변수를 <strong>이름</strong>으로 접근 (raw VR 보다 친화적).</p>
+<p>어떤 FMI 2.0 CS FMU 든 로드 — 우리 vdsim_l2/l3.fmu, Chrono Vehicle export,
+CarMaker / CarSim export, Modelica 생성 FMU 등.</p>
+<h2 id="166">16.6 양방향의 전략적 의미<a class="headerlink" href="#166" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>        ┌─ export ─→  CarMaker / dSPACE / Simulink 가 VDSim dynamics 사용
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>VDSim ──┤
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>        └─ import ─←  Chrono / CarMaker FMU 를 VDSim backend 로 사용
+</span></code></pre></div>
+<p>이로써 VDSim 은 <strong>"vehicle dynamics backend 를 갈아끼울 수 있는 AV-focused
+시뮬레이터"</strong> 가 됨:</p>
 <table>
 <thead>
 <tr>
-<th>Test</th>
-<th>검증</th>
-<th>결과</th>
+<th>backend</th>
+<th>용도</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>QuatFromEulerIdentity</td>
-<td>(0,0,0) → Quat(1,0,0,0)</td>
-<td>pass (≤ 1e-9)</td>
+<td>VDSim native Ld1-Ld3</td>
+<td>가벼움, 빠름, hardpoint 통합</td>
 </tr>
 <tr>
-<td>PureYawQuat</td>
-<td>yaw=π/4 → qw=cos(π/8), qz=sin(π/8)</td>
-<td>pass</td>
+<td>Chrono Vehicle FMU</td>
+<td>full multibody 정확도가 필요할 때</td>
 </tr>
 <tr>
-<td>EulerRoundtripSmallAngles</td>
-<td>(0.05, 0.03, 0.7) → quat → euler</td>
-<td>pass (≤ 1e-12)</td>
-</tr>
-<tr>
-<td>EulerRoundtripNegativeYaw</td>
-<td>yaw=−π/3</td>
-<td>pass</td>
-</tr>
-<tr>
-<td>YawCcwPositive</td>
-<td>yaw +π/2: (1,0,0)_body → (0,1,0)_world</td>
-<td>pass</td>
-</tr>
-<tr>
-<td>PositionForward</td>
-<td>(1,2,3)_VDSim → (100,−200,300)_UE</td>
-<td>pass</td>
-</tr>
-<tr>
-<td>PositionRoundtrip</td>
-<td>VDSim → UE → VDSim identity</td>
-<td>pass</td>
-</tr>
-<tr>
-<td>VelocityRoundtrip</td>
-<td>동일 (linear)</td>
-<td>pass</td>
-</tr>
-<tr>
-<td>RotationRoundtrip</td>
-<td>quat (0.1, 0.2, 0.3) → UE → VDSim</td>
-<td>pass (|dot| = 1)</td>
-</tr>
-<tr>
-<td>YawSignFlip</td>
-<td>VDSim yaw +π/2 → UE qz 부호 반전</td>
-<td>pass</td>
-</tr>
-<tr>
-<td>IdentityIsIdentity</td>
-<td>I → I</td>
-<td>pass</td>
+<td>CarMaker FMU</td>
+<td>산업 reference 검증</td>
 </tr>
 </tbody>
 </table>
-<h3 id="_1">수치 예 (대표)<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Input (VDSim)</th>
-<th>UE</th>
-<th>Inverse</th>
-<th>Error</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>pos (1.0, 2.0, 3.0) m</td>
-<td>(100.0, −200.0, 300.0) cm</td>
-<td>(1.0, 2.0, 3.0) m</td>
-<td>0</td>
-</tr>
-<tr>
-<td>pos (1.234, −5.678, 9.0) m</td>
-<td>(123.4, 567.8, 900.0) cm</td>
-<td>(1.234, −5.678, 9.0) m</td>
-<td>&lt; 1e-15</td>
-</tr>
-<tr>
-<td>Euler (0.05, 0.03, 0.7) rad</td>
-<td>—</td>
-<td>(0.05, 0.03, 0.7) rad</td>
-<td>&lt; 1e-13</td>
-</tr>
-<tr>
-<td>vy +π/2 (좌회전)</td>
-<td>UE qz=−sin(π/4)</td>
-<td>yaw +π/2</td>
-<td>부호 반전 정확</td>
-</tr>
-</tbody>
-</table>
-<h3 id="_2">빌드 / 테스트 통계<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
+<p>정확도 약점 (Chapter: positioning) 을 FMI import 로 cover, 산업 진입을
+FMI export 로 — 둘 다 같은 표준 인터페이스.</p>
+<h2 id="167-round-trip">16.7 Round-trip 검증<a class="headerlink" href="#167-round-trip" title="Permanent link">&para;</a></h2>
+<p><code>fmi_export/test_roundtrip.py</code>: native VDSim L2 vs FMU 로 감싼 VDSim L2 를
+동일 입력·timestep 으로 100 step 비교:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>max |Δ vx|       = 0.000e+00
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>max |Δ vy|       = 0.000e+00
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>max |Δ yaw_rate| = 0.000e+00
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>max |Δ ay|       = 0.000e+00
+</span></code></pre></div>
+<p>수치 정밀도 한계까지 0 차이 — export 경로가 native 와 동일함을 보증.</p>
+<h2 id="168">16.8 한계<a class="headerlink" href="#168" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
 <th>항목</th>
-<th>값</th>
+<th>현재</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>LOC (impl)</td>
-<td>78</td>
+<td>Platform</td>
+<td>linux64 만 빌드 (win64/darwin 은 cross-compile 필요)</td>
 </tr>
 <tr>
-<td>LOC (test)</td>
-<td>119</td>
+<td>FMI version</td>
+<td>2.0 만 (3.0 의 clock/terminal 미지원)</td>
 </tr>
 <tr>
-<td>Total ctest</td>
-<td>19/19 pass (위 11 + 8 이전)</td>
+<td>Model Exchange</td>
+<td>미지원 (CS 만)</td>
 </tr>
 <tr>
-<td>Build 시간 (incremental)</td>
-<td>&lt; 5 s</td>
+<td>GetAndSetFMUstate</td>
+<td>false (체크포인트/롤백 미지원)</td>
+</tr>
+<tr>
+<td>Directional derivative</td>
+<td>미지원 (linearization 불가)</td>
+</tr>
+<tr>
+<td>외부 FMU 검증</td>
+<td>우리 FMU round-trip 만; Chrono/CarMaker 는 패턴상 호환 (실측 검증 대기)</td>
 </tr>
 </tbody>
 </table>
-<h2 id="5">5. 판단<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
+<h2 id="169">16.9 참고<a class="headerlink" href="#169" title="Permanent link">&para;</a></h2>
 <ul>
-<li>결과: <strong>pass</strong></li>
-<li>근거: 11/11 단위 테스트 모두 tolerance (1e-9 ~ 1e-12) 이내. UE 변환의 involution 성질, yaw 부호, roundtrip 모두 검증. 후속 task 11 의 bicycle 가 본 함수들 (특히 <code>yaw_from_quat</code>, <code>quat_from_euler</code>) 사용해 analytical agreement 통과.</li>
-<li>Follow-up:</li>
-<li>MORAI Unity 변환은 헤더에 reserve 했으나 impl 미작성. 한국 시장 영업 task 시 추가.</li>
-<li>NED 변환 (aerospace) — Phase 2.</li>
+<li>FMI 표준: https://fmi-standard.org/  (FMI 2.0 spec, BSD-2 headers).</li>
+<li>FMPy: https://github.com/CATIA-Systems/FMPy (Python reference).</li>
+<li>Modelon FMI Library: https://github.com/modelon-community/fmi-library (C ref).</li>
+<li>구현: <code>fmi_export/vdsim_{l2,l3}_fmu.cpp</code>, <code>fmu_master.py</code>, <code>build_*.sh</code>.</li>
 </ul>
 
 

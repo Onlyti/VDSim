@@ -282,6 +282,28 @@
     
     
       <li class="md-tabs__item">
+        <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Phase 2 — Multibody & Integration
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
         <a href="../../tasks/" class="md-tabs__link">
           
   
@@ -447,6 +469,12 @@
       
         
           
+        
+      
+        
+      
+        
+      
         
       
         
@@ -803,7 +831,7 @@
   <a href="#t_p-falloff" class="md-nav__link">
     <span class="md-ellipsis">
       
-        t_p 의 falloff
+        \(t_p\) 의 falloff
       
     </span>
   </a>
@@ -827,15 +855,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#36-camber-thrust-linear-api-only" class="md-nav__link">
+  <a href="#36-camber-thrust-camber-mz" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3.6 Camber thrust (linear, API only)
+        3.6 Camber thrust + camber Mz
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="3.6 Camber thrust (linear, API only)">
+    <nav class="md-nav" aria-label="3.6 Camber thrust + camber Mz">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -850,10 +878,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#default-0" class="md-nav__link">
+  <a href="#camber-mz" class="md-nav__link">
     <span class="md-ellipsis">
       
-        왜 default 0
+        camber 가 Mz 에도 기여
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ld4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        γ 가 이제 자동 계산됨 (Ld4 연결)
       
     </span>
   </a>
@@ -866,10 +905,38 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#37-fz-mu-scaling" class="md-nav__link">
+  <a href="#37-fz-mu-scaling-load-sensitivity" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3.7 Fz 의 mu scaling
+        3.7 Fz 의 mu scaling + load sensitivity
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3.7 Fz 의 mu scaling + load sensitivity">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#load-sensitivity-fz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Load sensitivity — μ 가 Fz 에 따라 감소
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#37b-relaxation-length-slip-1-transient" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.7b Relaxation length — slip 의 1차 지연 (transient)
       
     </span>
   </a>
@@ -1195,7 +1262,334 @@
   <span class="md-ellipsis">
     
   
-    13 — Multibody outlook
+    13 — Multibody (Ld4) overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../14_hardpoint_kinematics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    14 — Hardpoint kinematics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../15_validation_and_doe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    15 — Validation & DOE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../16_fmi_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16 — FMI 2.0 integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase 2 — Multibody & Integration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Phase 2 — Multibody & Integration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T22 — CARLA Python bridge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/T23_jump_14dof/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T23 — Jump 14-DOF (world-z)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/T27_ld4_dw/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T27 — Ld4 double wishbone
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/T28_ld4_mp/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T28 — Ld4 MacPherson
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/T29_ld4_ta/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T29 — Ld4 trailing arm
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/T30_ld4_5link/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T30 — Ld4 5-link rear
   
 
     
@@ -1262,7 +1656,7 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
         
           
           <div class="md-nav__link md-nav__container">
@@ -1284,14 +1678,14 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1590,7 +1984,7 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
         
           
           <div class="md-nav__link md-nav__container">
@@ -1613,8 +2007,8 @@
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1808,7 +2202,7 @@
   <a href="#t_p-falloff" class="md-nav__link">
     <span class="md-ellipsis">
       
-        t_p 의 falloff
+        \(t_p\) 의 falloff
       
     </span>
   </a>
@@ -1832,15 +2226,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#36-camber-thrust-linear-api-only" class="md-nav__link">
+  <a href="#36-camber-thrust-camber-mz" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3.6 Camber thrust (linear, API only)
+        3.6 Camber thrust + camber Mz
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="3.6 Camber thrust (linear, API only)">
+    <nav class="md-nav" aria-label="3.6 Camber thrust + camber Mz">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1855,10 +2249,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#default-0" class="md-nav__link">
+  <a href="#camber-mz" class="md-nav__link">
     <span class="md-ellipsis">
       
-        왜 default 0
+        camber 가 Mz 에도 기여
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ld4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        γ 가 이제 자동 계산됨 (Ld4 연결)
       
     </span>
   </a>
@@ -1871,10 +2276,38 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#37-fz-mu-scaling" class="md-nav__link">
+  <a href="#37-fz-mu-scaling-load-sensitivity" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3.7 Fz 의 mu scaling
+        3.7 Fz 의 mu scaling + load sensitivity
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3.7 Fz 의 mu scaling + load sensitivity">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#load-sensitivity-fz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Load sensitivity — μ 가 Fz 에 따라 감소
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#37b-relaxation-length-slip-1-transient" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.7b Relaxation length — slip 의 1차 지연 (transient)
       
     </span>
   </a>
@@ -1947,22 +2380,23 @@
 
 <h1 id="03-pacejka-magic-formula-1996">03. 타이어 모델 — Pacejka Magic Formula 1996<a class="headerlink" href="#03-pacejka-magic-formula-1996" title="Permanent link">&para;</a></h1>
 <blockquote>
-<p><strong>학습 목표.</strong> Magic Formula 의 <code>D · sin(C · atan(B · s − E · (B·s − atan(B·s))))</code> 가 왜 그런 모양인지, 각 계수 B/C/D/E 의 물리적 역할이 무엇인지, combined slip 의 friction-ellipse rescale 이 어떤 가정 위에 있는지, aligning moment Mz 와 pneumatic trail 의 의미가 무엇인지 — 모두 독립적으로 설명할 수 있다. PoC 가 단순한 MF96 simple form 만 쓰는 이유와 MF2002 까지 가지 않은 trade-off 를 명확히 안다.</p>
+<p><strong>학습 목표.</strong> Magic Formula 의 <code>D · sin(C · atan(B · s − E · (B·s − atan(B·s))))</code> 가 왜 그런 모양인지, 각 계수 B/C/D/E 의 물리적 역할이 무엇인지, combined slip 의 friction-ellipse rescale 이 어떤 가정 위에 있는지, aligning moment Mz 와 pneumatic trail 의 의미가 무엇인지 — 모두 독립적으로 설명할 수 있다. 여기에 더해 <strong>load sensitivity</strong> (μ 가 Fz 에 따라 감소), <strong>relaxation length</strong> (slip 의 1차 지연), <strong>camber thrust + camber Mz</strong> 의 세 가지 확장이 무엇을 모델링하고 왜 추가됐는지 안다. PoC 가 단순한 MF96 simple form 을 베이스로 쓰는 이유와 MF2002 까지 가지 않은 trade-off 를 명확히 안다.</p>
 </blockquote>
 <h2 id="31">3.1 타이어가 차량 동역학의 비선형 핵심인 이유<a class="headerlink" href="#31" title="Permanent link">&para;</a></h2>
 <p>차량 동역학은 본질적으로 <strong>타이어 한계 동역학</strong> 이다. 정상적 운전 조건 (linear region) 에서는 거의 모든 차량이 비슷하게 거동한다. cornering 한계, brake 한계, traction 한계 — 모두 타이어의 비선형 saturation 에서 결정된다.</p>
 <p>vehicle dynamics 의 sensitivity 를 따져보면, mass / wheelbase / aero 보다 <strong>tire 의 (D, μ, Cα)</strong> 에 훨씬 강하게 의존. 그래서 Pacejka 가 타이어 modeling 에 한 평생을 쓴 것이다.</p>
 <p>VDSim 은 Pacejka MF96 의 <strong>simple form (semi-empirical, simplified)</strong> 을 채택. MF2002 의 full form (combined slip 의 자체 식, Mzr 잔류 모멘트, camber-Mz 결합 등) 은 Phase 2.</p>
 <h2 id="32-magic-formula">3.2 Magic Formula 의 모양<a class="headerlink" href="#32-magic-formula" title="Permanent link">&para;</a></h2>
-<p>기본형:
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>F(s) = D · sin( C · atan( B · s − E · (B · s − atan(B · s)) ) )
-</span></code></pre></div></p>
+<p>기본형:</p>
+<div class="arithmatex">\[
+F(s) = D \sin\!\Big( C \arctan\big( B s - E (B s - \arctan(B s)) \big) \Big)
+\]</div>
 <ul>
-<li><code>s</code> — 입력 (lateral 의 경우 slip angle α, longitudinal 의 경우 slip ratio κ).</li>
-<li><code>D</code> — 피크 force amplitude. <code>D = D_param · Fz · μ</code>.</li>
-<li><code>B</code> — stiffness factor. linear-region slope 결정. <code>slope_0 = B · C · D</code>.</li>
-<li><code>C</code> — shape factor. 곡선의 폭 / 비선형 정도.</li>
-<li><code>E</code> — curvature factor. 피크 주변의 형상.</li>
+<li><span class="arithmatex">\(s\)</span> — 입력 (lateral 의 경우 slip angle <span class="arithmatex">\(\alpha\)</span>, longitudinal 의 경우 slip ratio <span class="arithmatex">\(\kappa\)</span>).</li>
+<li><span class="arithmatex">\(D\)</span> — 피크 force amplitude. <span class="arithmatex">\(D = D_{\text{param}} \cdot F_z \cdot \mu\)</span>.</li>
+<li><span class="arithmatex">\(B\)</span> — stiffness factor. linear-region slope 결정. <span class="arithmatex">\(\text{slope}_0 = B C D\)</span>.</li>
+<li><span class="arithmatex">\(C\)</span> — shape factor. 곡선의 폭 / 비선형 정도.</li>
+<li><span class="arithmatex">\(E\)</span> — curvature factor. 피크 주변의 형상.</li>
 </ul>
 <h3 id="sinatan">왜 sin(atan(...))?<a class="headerlink" href="#sinatan" title="Permanent link">&para;</a></h3>
 <p><code>atan(B·s)</code> 는 <code>s → ∞</code> 에서 <code>π/2</code> 로 saturate. <code>sin(C · π/2)</code> 가 1 이면 peak 위치 결정.
@@ -1971,37 +2405,40 @@
 <h3 id="e">E 항의 역할<a class="headerlink" href="#e" title="Permanent link">&para;</a></h3>
 <p><code>B·s − E · (B·s − atan(B·s))</code> 의 second term <code>(B·s − atan(B·s))</code> 는 <code>s &gt; 0</code> 영역에서 음수 (atan 이 항상 더 작음). E &lt; 1 이면 boost, E &gt; 1 이면 over-saturation.
 VDSim default:
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>B_long = 10.0,  C_long = 1.65,  D_long = 1.0,  E_long = +0.97
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>B_lat  =  8.0,  C_lat  = 1.30,  D_lat  = 1.0,  E_lat  = -1.00
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>B_long = 10.0,  C_long = 1.65,  D_long = 1.0,  E_long = +0.97
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>B_lat  =  8.0,  C_lat  = 1.30,  D_lat  = 1.0,  E_lat  = -1.00
 </span></code></pre></div></p>
 <p><code>E_lat = −1</code> 가 음수인 이유: lateral 곡선이 peak 후 더 sharp 하게 떨어지도록.</p>
 <h2 id="33-lateral">3.3 부호 약속 (lateral)<a class="headerlink" href="#33-lateral" title="Permanent link">&para;</a></h2>
-<p>ISO 8855 RH 에서 lateral 식은:
-<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Fy(α) = − D · sin( C · atan( B·α − E · (B·α − atan(B·α)) ) )
-</span></code></pre></div></p>
+<p>ISO 8855 RH 에서 lateral 식은:</p>
+<div class="arithmatex">\[
+F_y(\alpha) = - D \sin\!\Big( C \arctan\big( B\alpha - E (B\alpha - \arctan(B\alpha)) \big) \Big)
+\]</div>
 <p>leading minus. 이유:
 - α &gt; 0 (위치상 wheel 의 velocity 가 +y_wheel 쪽으로 기울어진 상황) → tire 가 restoring force 를 −y 방향 으로 생성 → <code>Fy &lt; 0</code>.
 - VDSim 이 <code>Fy = −Dy · sin(...)</code> 로 구현하면 부호 자동.</p>
 <p>코드 <code>core/src/pacejka_mf96.cpp:42-48</code>:
-<div class="language-cpp highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">s</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">in</span><span class="p">.</span><span class="n">alpha</span><span class="p">;</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">t</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">tp_</span><span class="p">.</span><span class="n">B_lat</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">s</span><span class="p">;</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">phi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">tp_</span><span class="p">.</span><span class="n">E_lat</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="n">t</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">atan</span><span class="p">(</span><span class="n">t</span><span class="p">));</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="n">out</span><span class="p">.</span><span class="n">Fy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">-</span><span class="n">Dy</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">sin</span><span class="p">(</span><span class="n">tp_</span><span class="p">.</span><span class="n">C_lat</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">atan</span><span class="p">(</span><span class="n">phi</span><span class="p">));</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="p">}</span>
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">s</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">in</span><span class="p">.</span><span class="n">alpha</span><span class="p">;</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">t</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">tp_</span><span class="p">.</span><span class="n">B_lat</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">s</span><span class="p">;</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">phi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">tp_</span><span class="p">.</span><span class="n">E_lat</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="n">t</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">atan</span><span class="p">(</span><span class="n">t</span><span class="p">));</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="n">out</span><span class="p">.</span><span class="n">Fy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">-</span><span class="n">Dy</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">sin</span><span class="p">(</span><span class="n">tp_</span><span class="p">.</span><span class="n">C_lat</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">atan</span><span class="p">(</span><span class="n">phi</span><span class="p">));</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="p">}</span>
 </span></code></pre></div></p>
 <h2 id="34-combined-slip-friction-ellipse-rescale">3.4 Combined slip — friction ellipse rescale<a class="headerlink" href="#34-combined-slip-friction-ellipse-rescale" title="Permanent link">&para;</a></h2>
 <h3 id="_1">문제<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h3>
 <p>decoupled <code>Fx(κ)</code> and <code>Fy(α)</code> 가 동시에 비-zero 일 때 <code>(Fx, Fy)</code> 의 합력이 <code>μ · Fz</code> 의 friction circle 을 넘어갈 수 있다. 실제 tire 는 그게 불가능하므로 어떤 형태로든 cap 이 필요하다.</p>
 <h3 id="friction-ellipse-rescale-vdsim">해법 — friction-ellipse rescale (VDSim 채택)<a class="headerlink" href="#friction-ellipse-rescale-vdsim" title="Permanent link">&para;</a></h3>
-<p>각 축의 peak: <code>Fx_max = D_long · Fz · μ_long</code>, <code>Fy_max = D_lat · Fz · μ_lat</code>.</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>r² = (Fx_pure / Fx_max)² + (Fy_pure / Fy_max)²
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>if r² &gt; 1:
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    scale = 1 / sqrt(r²)
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    Fx, Fy *= scale
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>else:
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    Fx = Fx_pure, Fy = Fy_pure
-</span></code></pre></div>
+<p>각 축의 peak: <span class="arithmatex">\(F_{x,\max} = D_{\text{long}} F_z \mu_{\text{long}}\)</span>, <span class="arithmatex">\(F_{y,\max} = D_{\text{lat}} F_z \mu_{\text{lat}}\)</span>.</p>
+<div class="arithmatex">\[
+r^2 = \left(\frac{F_{x,\text{pure}}}{F_{x,\max}}\right)^2 + \left(\frac{F_{y,\text{pure}}}{F_{y,\max}}\right)^2
+\]</div>
+<div class="arithmatex">\[
+(F_x, F_y) = \begin{cases}
+(F_{x,\text{pure}}, F_{y,\text{pure}}) &amp; r^2 \le 1 \\[4pt]
+\dfrac{1}{r}\,(F_{x,\text{pure}}, F_{y,\text{pure}}) &amp; r^2 &gt; 1
+\end{cases}
+\]</div>
 <p>ellipse (or circle if <code>Fx_max = Fy_max</code>) 내부면 그대로, 외부면 가장 가까운 ellipse boundary 로 끌어당김.</p>
 <h3 id="rescale-ok">왜 단순 rescale 이 OK 인가<a class="headerlink" href="#rescale-ok" title="Permanent link">&para;</a></h3>
 <p>pure-slip 케이스 (<code>κ = 0</code> or <code>α = 0</code>) 에서는 <code>Fy_pure = 0</code> or <code>Fx_pure = 0</code>. <code>r ≤ 1</code> 이 항상 보장 → rescale 발생 안 함. 즉 본 PoC 의 단순 rescale 은 모든 pure-slip 테스트 (Task 11/13 의 8 unit + 4 integration test) 를 깨지 않는다.</p>
@@ -2010,50 +2447,109 @@ VDSim default:
 <p>MF2002 는 normalized slip <code>σ_x = κ / (1 + κ)</code>, <code>σ_y = tan(α) / (1 + κ)</code> 으로 통합 후 한 식으로 푼다. 이게 더 정확하지만 (1) <code>κ = -1</code> 의 brake-locked 발산 처리 필요, (2) 파라미터 5 개 더, (3) implementation complexity. PoC 는 friction-ellipse rescale 로 충분.</p>
 <h2 id="35-aligning-moment-mz">3.5 Aligning moment Mz<a class="headerlink" href="#35-aligning-moment-mz" title="Permanent link">&para;</a></h2>
 <h3 id="_2">정의<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
-<p>타이어가 받는 lateral force 의 application point 가 contact patch 중심에서 <strong>t_p (pneumatic trail)</strong> 만큼 뒤에 있다. 따라서:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Mz_wheel = − t_p(α) · Fy
-</span></code></pre></div>
+<p>타이어가 받는 lateral force 의 application point 가 contact patch 중심에서 <strong><span class="arithmatex">\(t_p\)</span> (pneumatic trail)</strong> 만큼 뒤에 있다. 따라서:</p>
+<div class="arithmatex">\[
+M_{z,\text{wheel}} = - t_p(\alpha) \cdot F_y
+\]</div>
 <ul>
-<li><code>Mz &gt; 0</code> (위에서 본 CCW) when <code>α &gt; 0</code> (Fy &lt; 0). 즉 self-aligning — wheel 을 α 가 줄어드는 방향으로 회전시킨다.</li>
+<li><span class="arithmatex">\(M_z &gt; 0\)</span> (위에서 본 CCW) when <span class="arithmatex">\(\alpha &gt; 0\)</span> (<span class="arithmatex">\(F_y &lt; 0\)</span>). 즉 self-aligning — wheel 을 <span class="arithmatex">\(\alpha\)</span> 가 줄어드는 방향으로 회전시킨다.</li>
 </ul>
-<h3 id="t_p-falloff">t_p 의 falloff<a class="headerlink" href="#t_p-falloff" title="Permanent link">&para;</a></h3>
-<p>low α 영역에서는 <code>t_p ≈ t_p_0</code> (constant, 보통 50 mm).
-α 가 커지면 contact patch 의 pressure distribution 이 앞쪽으로 이동 → t_p 감소.</p>
-<p>VDSim 모델:
-<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>t_p(α) = t_p_0 / sqrt(1 + (α / α_falloff)²)
-</span></code></pre></div></p>
-<p>이건 <code>cos(atan(α/α_fo))</code> 와 등가. 단순하지만 textbook 의 일반 trend (<code>α</code> 작을 때 거의 일정, 큰 α 에서 단조 감소) 잘 표현.</p>
+<h3 id="t_p-falloff"><span class="arithmatex">\(t_p\)</span> 의 falloff<a class="headerlink" href="#t_p-falloff" title="Permanent link">&para;</a></h3>
+<p>low <span class="arithmatex">\(\alpha\)</span> 영역에서는 <span class="arithmatex">\(t_p \approx t_{p,0}\)</span> (constant, 보통 50 mm).
+<span class="arithmatex">\(\alpha\)</span> 가 커지면 contact patch 의 pressure distribution 이 앞쪽으로 이동 → <span class="arithmatex">\(t_p\)</span> 감소.</p>
+<p>VDSim 모델:</p>
+<div class="arithmatex">\[
+t_p(\alpha) = \frac{t_{p,0}}{\sqrt{1 + (\alpha / \alpha_{\text{falloff}})^2}}
+\]</div>
+<p>이건 <span class="arithmatex">\(\cos(\arctan(\alpha/\alpha_{\text{fo}}))\)</span> 와 등가. 단순하지만 textbook 의 일반 trend (<span class="arithmatex">\(\alpha\)</span> 작을 때 거의 일정, 큰 <span class="arithmatex">\(\alpha\)</span> 에서 단조 감소) 잘 표현.</p>
 <p>VDSim default:
-<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>t_p_0 = 0.05 m,  α_falloff = 0.20 rad (≈ 11.5°)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>t_p_0 = 0.05 m,  α_falloff = 0.20 rad (≈ 11.5°)
 </span></code></pre></div></p>
 <h3 id="yaw-moment">차량 yaw moment 에 미치는 영향<a class="headerlink" href="#yaw-moment" title="Permanent link">&para;</a></h3>
 <p>Mz 가 단순히 tire 가 받는 self-aligning torque 가 아니라, body 의 yaw moment 에 더해진다 (steered wheel 이 받는 torque 가 steering 시스템 통해 chassis 로 전달).</p>
-<p>VDSim 의 Mz aggregation:
-<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>Mz_body = Σ (rx_i · Fy_body_i − ry_i · Fx_body_i)   (force translation)
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>        + Σ Mz_wheel_i                                (per-tire intrinsic Mz)
-</span></code></pre></div></p>
+<p>VDSim 의 Mz aggregation:</p>
+<div class="arithmatex">\[
+M_{z,\text{body}} = \underbrace{\sum_i \big(r_{x,i} F_{y,\text{body},i} - r_{y,i} F_{x,\text{body},i}\big)}_{\text{force translation}} + \underbrace{\sum_i M_{z,\text{wheel},i}}_{\text{per-tire intrinsic } M_z}
+\]</div>
 <p>코드 <code>core/src/seven_dof_dynamics.cpp:336-340</code>:
-<div class="language-cpp highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">NUM_WHEELS</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="n">Mz_total</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">r_x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">F_body</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">y</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">r_y</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">F_body</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">x</span><span class="p">();</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="p">}</span>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">NUM_WHEELS</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="n">Mz_total</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">mz_wheel</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">NUM_WHEELS</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="n">Mz_total</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">r_x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">F_body</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">y</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">r_y</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">F_body</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">x</span><span class="p">();</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="p">}</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">NUM_WHEELS</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="n">Mz_total</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">mz_wheel</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
 </span></code></pre></div></p>
 <p>이게 step_steer 의 SS yaw rate 를 약 2.6 % 감소시킨다 (Task 23 검증). analytical linear-bicycle 은 Mz 무시하므로 sim vs analytical 차이 6.8 % 정도. 그게 implementation bug 가 아니라 model-mismatch 임을 명시.</p>
-<h2 id="36-camber-thrust-linear-api-only">3.6 Camber thrust (linear, API only)<a class="headerlink" href="#36-camber-thrust-linear-api-only" title="Permanent link">&para;</a></h2>
+<h2 id="36-camber-thrust-camber-mz">3.6 Camber thrust + camber Mz<a class="headerlink" href="#36-camber-thrust-camber-mz" title="Permanent link">&para;</a></h2>
 <h3 id="_3">정의<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
-<p>wheel 이 vertical 에서 γ 만큼 기울었을 때 추가 lateral force 가 생성된다.</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>Fy_camber = − C_γ · γ · Fz · μ_lat
-</span></code></pre></div>
-<p>VDSim 의 <code>TireParams::camber_stiffness</code> default <code>0</code> — 즉 disable. enable 시 위 식이 <code>Fy_lat</code> 에 가산.</p>
-<h3 id="default-0">왜 default 0<a class="headerlink" href="#default-0" title="Permanent link">&para;</a></h3>
-<p>본 PoC 에서 Ld2-Ld3 의 wheel kinematics 에서 <code>γ</code> 가 자동 계산되지 않는다 (Ld2 는 wheel 이 항상 vertical 가정, Ld3 는 roll 이 quaternion 에 있지만 wheel-level γ 로 mapping 안 됨). 따라서 <code>γ = 0</code> 으로 호출되어도 식이 들어와도 효과 없음 — backward-compat.</p>
-<p>camber 효과를 보고 싶으면 (a) <code>camber_stiffness &gt; 0</code> 설정, (b) <code>in.gamma</code> 를 외부에서 주입. 실제 wheel kinematics 통합은 Ld4 의 forward kinematics 가 들어와야 가능.</p>
-<h2 id="37-fz-mu-scaling">3.7 Fz 의 mu scaling<a class="headerlink" href="#37-fz-mu-scaling" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>Fx = (D_long · Fz · μ_long) · sin(C_long · atan(...))
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>Fy = − (D_lat · Fz · μ_lat) · sin(C_lat · atan(...))
-</span></code></pre></div>
-<p><code>μ_long</code>, <code>μ_lat</code> 는 <code>ContactPoint</code> 에서 받는 surface mu (per wheel). 노면 변화 (icy patch 등) 표현.
-<code>Fz_nominal</code> 은 reference (4000 N for sedan default), <code>D_param = 1.0</code> 이면 peak force = <code>Fz · μ</code>. 따라서 default 에서 <code>peak μ = 1.0</code>.</p>
+<p>wheel 이 vertical 에서 <span class="arithmatex">\(\gamma\)</span> 만큼 기울었을 때 추가 lateral force 가 생성된다.</p>
+<div class="arithmatex">\[
+F_{y,\text{camber}} = - C_\gamma \cdot \gamma \cdot F_z \cdot \mu_{\text{lat}}
+\]</div>
+<p><code>TireParams::camber_stiffness</code> (<span class="arithmatex">\(C_\gamma\)</span>) default <code>0</code>. enable 시 위 식이 <span class="arithmatex">\(F_{y,\text{lat}}\)</span> 에 가산.</p>
+<h3 id="camber-mz">camber 가 Mz 에도 기여<a class="headerlink" href="#camber-mz" title="Permanent link">&para;</a></h3>
+<p>camber thrust 의 application point 도 contact patch 중심에서 약간 벗어나 작은
+aligning moment 를 만든다. VDSim 의 추가 (<code>pacejka_mf96.cpp</code>):</p>
+<div class="arithmatex">\[
+M_{z,\text{camber}} = - t_{p,0} \cdot 0.25 \cdot C_\gamma \cdot \gamma \cdot F_z \cdot \mu
+\]</div>
+<div class="arithmatex">\[
+M_{z,\text{total}} = - t_p \cdot F_y + M_{z,\text{camber}}
+\]</div>
+<p><span class="arithmatex">\(0.25 \cdot t_{p,0}\)</span> 은 camber arm 의 근사. <span class="arithmatex">\(\gamma\)</span> 에 anti-symmetric — <span class="arithmatex">\(\pm\gamma\)</span> 가 <span class="arithmatex">\(\mp M_z\)</span>
+(test <code>CamberContributesToMz</code> 검증).</p>
+<h3 id="ld4">γ 가 이제 자동 계산됨 (Ld4 연결)<a class="headerlink" href="#ld4" title="Permanent link">&para;</a></h3>
+<p>이전 PoC 에서는 Ld2-Ld3 가 wheel-level γ 를 계산하지 못해 항상 <code>γ=0</code> 이었다.
+Ld4 hardpoint kinematics (Chapter 14) 가 들어오면서 바뀜:</p>
+<ol>
+<li>Ld3 가 매 substep per-wheel travel → <code>ISuspensionKinematics::compute</code> →
+   camber γ 를 얻음.</li>
+<li><code>inner_-&gt;set_camber_per_wheel(γ)</code> 로 Ld2 에 전달.</li>
+<li>Ld2 가 Pacejka <code>in.gamma = camber_ext_[i]</code> 로 호출.</li>
+</ol>
+<p>hardpoint kinematics 가 attach 안 됐으면 legacy fallback (<code>camber_per_roll · φ</code>)
+또는 <code>γ=0</code>. 즉 backward-compat 유지하면서 geometry-driven camber 가능.</p>
+<p>연결 경로: <code>fourteen_dof_dynamics.cpp</code> → <code>seven_dof_dynamics.cpp</code> →
+<code>pacejka_mf96.cpp</code>. 자세히는 Chapter 14.8.</p>
+<h2 id="37-fz-mu-scaling-load-sensitivity">3.7 Fz 의 mu scaling + load sensitivity<a class="headerlink" href="#37-fz-mu-scaling-load-sensitivity" title="Permanent link">&para;</a></h2>
+<div class="arithmatex">\[
+\begin{aligned}
+F_x &amp;= (D_{\text{long}} F_z \mu_{\text{eff,long}}) \sin(C_{\text{long}} \arctan(\cdots)) \\
+F_y &amp;= -(D_{\text{lat}}  F_z \mu_{\text{eff,lat}})  \sin(C_{\text{lat}}  \arctan(\cdots))
+\end{aligned}
+\]</div>
+<p><span class="arithmatex">\(\mu_{\text{long}}\)</span>, <span class="arithmatex">\(\mu_{\text{lat}}\)</span> 는 <code>ContactPoint</code> 에서 받는 surface mu (per wheel). 노면 변화 (icy patch 등) 표현.</p>
+<h3 id="load-sensitivity-fz">Load sensitivity — μ 가 Fz 에 따라 감소<a class="headerlink" href="#load-sensitivity-fz" title="Permanent link">&para;</a></h3>
+<p>실제 타이어는 수직 하중이 클수록 <em>단위 하중당 grip</em> 이 감소한다 (rubber 의
+load sensitivity). VDSim 의 <code>μ_eff</code>:</p>
+<div class="arithmatex">\[
+\mu_{\text{eff}}(F_z) = \mu_{\text{nominal}} \cdot \big(1 - k_{\text{load}} \cdot (F_z/F_{z,\text{nominal}} - 1)\big)
+\]</div>
+<p>(단, <span class="arithmatex">\(0.3\,\mu_{\text{nominal}}\)</span> 로 floor — 극한 <span class="arithmatex">\(F_z\)</span> 에서 수치 안정.
+<span class="arithmatex">\(k_{\text{load}}\)</span> = <code>load_sensitivity</code>.)</p>
+<ul>
+<li><code>Fz = Fz_nominal</code> 이면 <code>μ_eff = μ_nominal</code>.</li>
+<li><code>Fz &gt; Fz_nominal</code>: grip 감소 → 코너링 시 외측 휠이 안쪽보다 <em>상대적으로
+  덜</em> 받쳐줌 → 자연스러운 load transfer 효과의 일부.</li>
+<li><code>load_sensitivity = 0</code>: legacy (Fz 에 비례하는 peak).</li>
+</ul>
+<p><code>default_pacejka.yaml</code>: <code>load_sensitivity: 0.15</code>, <code>Fz_nominal: 4000</code>.
+검증 <code>LoadSensitivityFadeAtHighFz</code>: 2× Fz 에서 Fy ratio 가 1.6 (선형이면 2.0).</p>
+<h2 id="37b-relaxation-length-slip-1-transient">3.7b Relaxation length — slip 의 1차 지연 (transient)<a class="headerlink" href="#37b-relaxation-length-slip-1-transient" title="Permanent link">&para;</a></h2>
+<p>이전 PoC 는 quasi-static — slip 이 바뀌면 force 가 즉시 따라갔다. 실제 타이어는
+carcass 변형 때문에 <strong>rolling distance σ</strong> 만큼 지연된다 (relaxation length).</p>
+<p>transient slip angle <span class="arithmatex">\(\alpha_{\text{dyn}}\)</span> 이 geometric slip <span class="arithmatex">\(\alpha_{\text{geom}}\)</span> 을 1차 시스템으로 추종:</p>
+<div class="arithmatex">\[
+\frac{\sigma}{|v_{\text{long}}|}\,\dot\alpha_{\text{dyn}} = \alpha_{\text{geom}} - \alpha_{\text{dyn}}
+\]</div>
+<p>force 는 <span class="arithmatex">\(\alpha_{\text{dyn}}\)</span> 으로 계산 (instantaneous <span class="arithmatex">\(\alpha\)</span> 가 아니라). 닫힌형 적분 (substep 사이):</p>
+<div class="arithmatex">\[
+\alpha_{\text{dyn}}(t+h) = \alpha_{\text{geom}} + \big(\alpha_{\text{dyn}}(t) - \alpha_{\text{geom}}\big)\, e^{-|v|\,h/\sigma}
+\]</div>
+<p>구현 위치: tire model 이 아니라 <strong>host dynamics</strong> 의 state (<code>seven_dof</code>,
+<code>bicycle</code> 의 <code>alpha_dyn_[4]</code>). tire <code>compute()</code> 는 stateless 유지.</p>
+<p>효과: step steer 시 Fy 가 약 <code>σ/v</code> 시간상수로 build-up. <code>default_pacejka.yaml</code>
+<code>relaxation_length_lat: 0.6</code> → 15 m/s 에서 시상수 ~40 ms. 검증
+<code>RelaxationLengthDelaysLateralForce</code>: t=σ/v 시점 Fy 가 instant 대비 &lt; 85%.</p>
+<p><code>Fz_nominal</code> 은 reference (4000 N for sedan default), <code>D_param = 1.0</code> 이면 peak force = <code>Fz · μ_eff</code>.</p>
 <h2 id="38">3.8 가정 / 한계 (정리)<a class="headerlink" href="#38" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2071,18 +2567,28 @@ VDSim default:
 </tr>
 <tr>
 <td>Aligning moment</td>
-<td><code>−t_p(α) · Fy</code></td>
-<td>MF2002 의 Mzr 잔류 + camber-Mz 결합</td>
+<td><code>−t_p(α) · Fy + Mz_camber</code></td>
+<td>MF2002 의 Mzr 잔류 모멘트</td>
 </tr>
 <tr>
 <td>Camber</td>
-<td>linear <code>Fy_camber = −C_γ · γ · Fz</code></td>
+<td>linear <code>Fy_camber</code> + linear camber Mz</td>
 <td>non-linear (peak μ 의 camber 의존)</td>
 </tr>
 <tr>
+<td>Load sensitivity</td>
+<td>linear <code>μ_eff(Fz)</code> ✅ 구현</td>
+<td>non-linear load curve</td>
+</tr>
+<tr>
 <td>Transient</td>
-<td>quasi-static (relaxation length 무시)</td>
-<td>1<sup>st</sup>-order tire relaxation (Phase 2)</td>
+<td>1<sup>st</sup>-order relaxation length (lateral) ✅ 구현</td>
+<td>longitudinal relaxation, carcass 동역학</td>
+</tr>
+<tr>
+<td>γ 입력</td>
+<td>Ld4 hardpoint kinematics 가 자동 계산 ✅</td>
+<td>force→camber 역방향 compliance</td>
 </tr>
 <tr>
 <td>Temperature</td>
@@ -2091,8 +2597,8 @@ VDSim default:
 </tr>
 <tr>
 <td>Fz peak shift</td>
-<td>constant D</td>
-<td>Fz-dependent D / peak shift (Magic Formula extension)</td>
+<td>constant D (μ_eff 만 Fz 의존)</td>
+<td>Fz-dependent B/C/E (Magic Formula extension)</td>
 </tr>
 <tr>
 <td>Camber-Fx</td>
@@ -2118,17 +2624,17 @@ VDSim default:
 - <code>CamberAddsLateralForce</code>, <code>CamberZeroByDefault</code>.</p>
 <p>전체 unit-test 가 통과하면 <code>ITireModel</code> 의 contract 가 확정.</p>
 <h2 id="310-in-eom">3.10 사용 패턴 (in 차량 EoM)<a class="headerlink" href="#310-in-eom" title="Permanent link">&para;</a></h2>
-<div class="language-cpp highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">ITireModel</span><span class="o">::</span><span class="n">Input</span><span class="w"> </span><span class="n">in</span><span class="p">;</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="n">in</span><span class="p">.</span><span class="n">Fz</span><span class="w">       </span><span class="o">=</span><span class="w"> </span><span class="n">Fz_axle</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w">       </span><span class="c1">// per tire</span>
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="n">in</span><span class="p">.</span><span class="n">kappa</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">R</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">omega</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">vx_wheel</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="o">|</span><span class="n">vx_wheel</span><span class="o">|</span><span class="p">,</span><span class="w"> </span><span class="mf">0.5</span><span class="p">);</span>
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="n">in</span><span class="p">.</span><span class="n">alpha</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="n">atan2</span><span class="p">(</span><span class="n">vy_wheel</span><span class="p">,</span><span class="w"> </span><span class="n">vx_wheel</span><span class="p">);</span>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="n">in</span><span class="p">.</span><span class="n">mu_long</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">contact</span><span class="p">.</span><span class="n">mu_long</span><span class="p">;</span>
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="n">in</span><span class="p">.</span><span class="n">mu_lat</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">contact</span><span class="p">.</span><span class="n">mu_lat</span><span class="p">;</span>
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="n">in</span><span class="p">.</span><span class="n">Vx_wheel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">vx_wheel</span><span class="p">;</span>
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="n">in</span><span class="p">.</span><span class="n">gamma</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="mf">0.0</span><span class="p">;</span><span class="w">               </span><span class="c1">// wheel camber (Ld2-Ld3 에서 0, Ld4 에서 계산)</span>
-</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>
-</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="n">F</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tire_</span><span class="o">-&gt;</span><span class="n">compute</span><span class="p">(</span><span class="n">in</span><span class="p">);</span>
-</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="c1">// F.Fx, F.Fy in wheel frame.  Rotate back to body frame if wheel was steered.</span>
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">ITireModel</span><span class="o">::</span><span class="n">Input</span><span class="w"> </span><span class="n">in</span><span class="p">;</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">in</span><span class="p">.</span><span class="n">Fz</span><span class="w">       </span><span class="o">=</span><span class="w"> </span><span class="n">Fz_axle</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w">       </span><span class="c1">// per tire</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">in</span><span class="p">.</span><span class="n">kappa</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">R</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">omega</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">vx_wheel</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="o">|</span><span class="n">vx_wheel</span><span class="o">|</span><span class="p">,</span><span class="w"> </span><span class="mf">0.5</span><span class="p">);</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">in</span><span class="p">.</span><span class="n">alpha</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="n">atan2</span><span class="p">(</span><span class="n">vy_wheel</span><span class="p">,</span><span class="w"> </span><span class="n">vx_wheel</span><span class="p">);</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">in</span><span class="p">.</span><span class="n">mu_long</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">contact</span><span class="p">.</span><span class="n">mu_long</span><span class="p">;</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">in</span><span class="p">.</span><span class="n">mu_lat</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">contact</span><span class="p">.</span><span class="n">mu_lat</span><span class="p">;</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="n">in</span><span class="p">.</span><span class="n">Vx_wheel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">vx_wheel</span><span class="p">;</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="n">in</span><span class="p">.</span><span class="n">gamma</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="mf">0.0</span><span class="p">;</span><span class="w">               </span><span class="c1">// wheel camber (Ld2-Ld3 에서 0, Ld4 에서 계산)</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="n">F</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tire_</span><span class="o">-&gt;</span><span class="n">compute</span><span class="p">(</span><span class="n">in</span><span class="p">);</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="c1">// F.Fx, F.Fy in wheel frame.  Rotate back to body frame if wheel was steered.</span>
 </span></code></pre></div>
 <p>이 호출이 차량 EoM 의 모든 lateral / longitudinal force 의 source.</p>
 <h2 id="311">3.11 참고<a class="headerlink" href="#311" title="Permanent link">&para;</a></h2>
@@ -2210,7 +2716,7 @@ VDSim default:
     
       <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
-        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+        <script src="../../javascripts/mathjax.js"></script>
       
         <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
       

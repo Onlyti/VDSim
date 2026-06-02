@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/tasks/09_W2_coordinate_impl/">
+        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/theory/14_hardpoint_kinematics/">
       
       
+        <link rel="prev" href="../13_multibody_outlook/">
+      
+      
+        <link rel="next" href="../15_validation_and_doe/">
       
       
         
@@ -23,7 +27,7 @@
     
     
       
-        <title>Task 09 — coordinate.cpp 구현 + 단위 테스트 - VDSim</title>
+        <title>14 — Hardpoint kinematics - VDSim</title>
       
     
     
@@ -74,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#task-09-coordinatecpp" class="md-skip">
+        <a href="#14-hardpoint-kinematics-ld4" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Task 09 — coordinate.cpp 구현 + 단위 테스트
+              14 — Hardpoint kinematics
             
           </span>
         </div>
@@ -250,11 +254,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../theory/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
           
   
   
@@ -276,7 +282,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../T22_carla_bridge/REPORT/" class="md-tabs__link">
+        <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-tabs__link">
           
   
   
@@ -298,7 +304,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../" class="md-tabs__link">
+        <a href="../../tasks/" class="md-tabs__link">
           
   
   
@@ -454,6 +460,8 @@
       
   
   
+    
+  
   
   
     
@@ -499,22 +507,23 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../theory/" class="md-nav__link ">
+            <a href="../" class="md-nav__link ">
               
   
   
@@ -532,13 +541,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -558,7 +567,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/01_frames_and_conventions/" class="md-nav__link">
+      <a href="../01_frames_and_conventions/" class="md-nav__link">
         
   
   
@@ -586,7 +595,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/02_rigid_body_dynamics/" class="md-nav__link">
+      <a href="../02_rigid_body_dynamics/" class="md-nav__link">
         
   
   
@@ -614,7 +623,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/03_tire_pacejka_mf96/" class="md-nav__link">
+      <a href="../03_tire_pacejka_mf96/" class="md-nav__link">
         
   
   
@@ -642,7 +651,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/04_ld1_bicycle/" class="md-nav__link">
+      <a href="../04_ld1_bicycle/" class="md-nav__link">
         
   
   
@@ -670,7 +679,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/05_ld2_seven_dof/" class="md-nav__link">
+      <a href="../05_ld2_seven_dof/" class="md-nav__link">
         
   
   
@@ -698,7 +707,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/06_ld3_fourteen_dof/" class="md-nav__link">
+      <a href="../06_ld3_fourteen_dof/" class="md-nav__link">
         
   
   
@@ -726,7 +735,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/07_control_ladder/" class="md-nav__link">
+      <a href="../07_control_ladder/" class="md-nav__link">
         
   
   
@@ -754,7 +763,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/08_pid_controllers/" class="md-nav__link">
+      <a href="../08_pid_controllers/" class="md-nav__link">
         
   
   
@@ -782,7 +791,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/09_pure_pursuit_path/" class="md-nav__link">
+      <a href="../09_pure_pursuit_path/" class="md-nav__link">
         
   
   
@@ -810,7 +819,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/10_driver_model/" class="md-nav__link">
+      <a href="../10_driver_model/" class="md-nav__link">
         
   
   
@@ -838,7 +847,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/11_numerical_integration/" class="md-nav__link">
+      <a href="../11_numerical_integration/" class="md-nav__link">
         
   
   
@@ -866,7 +875,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/12_software_architecture/" class="md-nav__link">
+      <a href="../12_software_architecture/" class="md-nav__link">
         
   
   
@@ -894,7 +903,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/13_multibody_outlook/" class="md-nav__link">
+      <a href="../13_multibody_outlook/" class="md-nav__link">
         
   
   
@@ -919,10 +928,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../theory/14_hardpoint_kinematics/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    14 — Hardpoint kinematics
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -938,6 +974,147 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#141" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.1 문제 정의 — 입력과 출력
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#142" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.2 강체 운동학의 공통 패턴
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#143-double-wishbone-sequential-closed-form" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.3 Double wishbone — sequential closed-form
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#144-macpherson-cylindrical-joint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.4 MacPherson — cylindrical joint 제약
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#145-trailing-arm-revolute" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.5 Trailing arm — 단일 revolute
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#146-5-link-general-multilink" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.6 5-link — general multilink
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#147-backend-lookup-vs-native" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.7 두 backend — lookup vs native
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#148-ld3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.8 Ld3 와의 연결
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#149-toolchain-design-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.9 Toolchain — design workflow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1410" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.10 한계
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1411" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.11 참고
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -950,7 +1127,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/15_validation_and_doe/" class="md-nav__link">
+      <a href="../15_validation_and_doe/" class="md-nav__link">
         
   
   
@@ -978,7 +1155,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/16_fmi_integration/" class="md-nav__link">
+      <a href="../16_fmi_integration/" class="md-nav__link">
         
   
   
@@ -1081,7 +1258,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T22_carla_bridge/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-nav__link">
         
   
   
@@ -1109,7 +1286,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T23_jump_14dof/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T23_jump_14dof/REPORT/" class="md-nav__link">
         
   
   
@@ -1137,7 +1314,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T27_ld4_dw/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T27_ld4_dw/REPORT/" class="md-nav__link">
         
   
   
@@ -1165,7 +1342,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T28_ld4_mp/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T28_ld4_mp/REPORT/" class="md-nav__link">
         
   
   
@@ -1193,7 +1370,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T29_ld4_ta/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T29_ld4_ta/REPORT/" class="md-nav__link">
         
   
   
@@ -1221,7 +1398,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T30_ld4_5link/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T30_ld4_5link/REPORT/" class="md-nav__link">
         
   
   
@@ -1299,7 +1476,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../" class="md-nav__link ">
+            <a href="../../tasks/" class="md-nav__link ">
               
   
   
@@ -1343,7 +1520,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../68_poc_summary_v3/" class="md-nav__link">
+      <a href="../../tasks/68_poc_summary_v3/" class="md-nav__link">
         
   
   
@@ -1371,7 +1548,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../69_competitive_matrix/" class="md-nav__link">
+      <a href="../../tasks/69_competitive_matrix/" class="md-nav__link">
         
   
   
@@ -1399,7 +1576,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../62_cycles_overview/" class="md-nav__link">
+      <a href="../../tasks/62_cycles_overview/" class="md-nav__link">
         
   
   
@@ -1427,7 +1604,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../50_benchmark_matrix/" class="md-nav__link">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
         
   
   
@@ -1455,7 +1632,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../20_l1_l2_grid_sweep/" class="md-nav__link">
+      <a href="../../tasks/20_l1_l2_grid_sweep/" class="md-nav__link">
         
   
   
@@ -1483,7 +1660,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../30_l3_dynamic_suspension/" class="md-nav__link">
+      <a href="../../tasks/30_l3_dynamic_suspension/" class="md-nav__link">
         
   
   
@@ -1511,7 +1688,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../31_l6_l7_l8_control/" class="md-nav__link">
+      <a href="../../tasks/31_l6_l7_l8_control/" class="md-nav__link">
         
   
   
@@ -1539,7 +1716,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../57_58_59_driver_skidpad/" class="md-nav__link">
+      <a href="../../tasks/57_58_59_driver_skidpad/" class="md-nav__link">
         
   
   
@@ -1567,7 +1744,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../50_benchmark_matrix/" class="md-nav__link">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
         
   
   
@@ -1693,10 +1870,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1" class="md-nav__link">
+  <a href="#141" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. 목적
+        14.1 문제 정의 — 입력과 출력
       
     </span>
   </a>
@@ -1704,60 +1881,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2" class="md-nav__link">
+  <a href="#142" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. 구현 방법
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="2. 구현 방법">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#coordinatecpp" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        coordinate.cpp 함수별 구현 노트
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#quaternion-y-flip" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Quaternion Y-flip 유도
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#frame" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        외부 frame 흐름도
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. 검증 방법 (근거)
+        14.2 강체 운동학의 공통 패턴
       
     </span>
   </a>
@@ -1765,49 +1892,98 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4" class="md-nav__link">
+  <a href="#143-double-wishbone-sequential-closed-form" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. 검증 결과
+        14.3 Double wishbone — sequential closed-form
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="4. 검증 결과">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        수치 예 (대표)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        빌드 / 테스트 통계
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#5" class="md-nav__link">
+  <a href="#144-macpherson-cylindrical-joint" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. 판단
+        14.4 MacPherson — cylindrical joint 제약
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#145-trailing-arm-revolute" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.5 Trailing arm — 단일 revolute
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#146-5-link-general-multilink" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.6 5-link — general multilink
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#147-backend-lookup-vs-native" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.7 두 backend — lookup vs native
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#148-ld3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.8 Ld3 와의 연결
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#149-toolchain-design-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.9 Toolchain — design workflow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1410" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.10 한계
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1411" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.11 참고
       
     </span>
   </a>
@@ -1834,257 +2010,269 @@
   
 
 
-<h1 id="task-09-coordinatecpp">Task 09 — coordinate.cpp 구현 + 단위 테스트<a class="headerlink" href="#task-09-coordinatecpp" title="Permanent link">&para;</a></h1>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Value</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Task ID</td>
-<td>W2 coordinate impl</td>
-</tr>
-<tr>
-<td>Type</td>
-<td>Impl</td>
-</tr>
-<tr>
-<td>Date</td>
-<td>2026-05-29</td>
-</tr>
-<tr>
-<td>Commit</td>
-<td><code>56cc48a</code></td>
-</tr>
-<tr>
-<td>Status</td>
-<td>completed</td>
-</tr>
-</tbody>
-</table>
-<h2 id="1">1. 목적<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
-<p>D7 좌표계 명세를 코드로 변환 + 단위 테스트. 좌표 변환 버그는 CarSim / Chrono CARLA 통합 초기 단골 (CARLA 통합 가이드 §10.1) — 후속 task 들이 안심하고 사용할 수 있게 11 개 단위 테스트로 cover.</p>
-<h2 id="2">2. 구현 방법<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
-<h3 id="coordinatecpp"><code>coordinate.cpp</code> 함수별 구현 노트<a class="headerlink" href="#coordinatecpp" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>함수</th>
-<th>방법</th>
-<th>비고</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>quat_from_euler</code></td>
-<td><code>AngleAxisd(yaw,Z) * AngleAxisd(pitch,Y) * AngleAxisd(roll,X)</code></td>
-<td>ZYX intrinsic, Eigen 표준</td>
-</tr>
-<tr>
-<td><code>euler_from_quat</code></td>
-<td>직접 q 성분 → roll/pitch/yaw</td>
-<td>Eigen <code>eulerAngles(2,1,0)</code> 의 범위 surprise 회피</td>
-</tr>
-<tr>
-<td><code>yaw_from_quat</code></td>
-<td><code>atan2(2(qw qz + qx qy), 1 − 2(qy² + qz²))</code></td>
-<td>gimbal-safe</td>
-</tr>
-<tr>
-<td><code>ue::*_position</code></td>
-<td>1/100 + Y flip</td>
-<td>UE5 cm,LH ↔ VDSim m,RH</td>
-</tr>
-<tr>
-<td><code>ue::*_rotation</code></td>
-<td>quat (w,x,y,z) ↔ (w,−x,y,−z)</td>
-<td>Y axis 반사 = LH↔RH conversion</td>
-</tr>
-<tr>
-<td><code>ue::*_velocity</code></td>
-<td>position 과 동일 transform</td>
-<td>linear, scale 1/100 + Y flip</td>
-</tr>
-</tbody>
-</table>
-<h3 id="quaternion-y-flip">Quaternion Y-flip 유도<a class="headerlink" href="#quaternion-y-flip" title="Permanent link">&para;</a></h3>
-<p>UE LH 에서 axis-angle <code>(ax, ay, az, θ)</code> → VDSim RH 로 변환:
-- Y flip: ay → −ay
-- LH→RH: θ → −θ (회전 방향 반대)</p>
-<p>Quaternion 으로:
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>q_LH = (cos(θ/2), ax·sin(θ/2), ay·sin(θ/2), az·sin(θ/2))
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>q_RH = (cos(−θ/2), ax·sin(−θ/2), (−ay)·sin(−θ/2), az·sin(−θ/2))
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>     = (cos(θ/2), −ax·sin(θ/2), ay·sin(θ/2), −az·sin(θ/2))
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>     = (qw_LH, −qx_LH, qy_LH, −qz_LH)
-</span></code></pre></div></p>
-<p>→ involution (<code>f(f(x)) = x</code>), 즉 from_ue 와 to_ue 가 같은 식.</p>
-<h3 id="frame">외부 frame 흐름도<a class="headerlink" href="#frame" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ADMA/GPS (ENU, m, RH) ────identity──── VDSim world (ENU, m, RH)
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>                                              │
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>                          coordinate.hpp       │
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>                                              │
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>                          ┌──────── body→world ────┐
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>                          ▼                        │
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>                    VDSim body                     │
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>                  (ISO 8855, m, RH)                │
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>                          │                        │
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>   Y flip + ×100 ─────────┤                        │
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>                          ▼                        │
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>                    UE5 body/world                 │
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>                  (LH, cm, Z up, Y right)          │
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>                                                   │
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>   Y flip ────────── MORAI Unity ──────────────────┘
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>                  (LH, m, Z up, Y right)
+<h1 id="14-hardpoint-kinematics-ld4">14. Hardpoint Kinematics — Ld4 의 실제 구현<a class="headerlink" href="#14-hardpoint-kinematics-ld4" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>학습 목표.</strong> Chapter 13 이 "outlook" 으로 제시한 multibody kinematics 가
+실제로 어떻게 구현됐는지 식 단위로 안다. 4 가지 suspension topology
+(double wishbone / MacPherson / trailing arm / 5-link) 각각의 운동학 제약과
+풀이 방법을 안다. offline solver (Python) 와 native solver (C++) 의 두
+backend 가 universal <code>ISuspensionKinematics</code> 인터페이스로 통일되는 구조를
+안다. Gruebler mobility 로 각 topology 의 자유도가 닫히는지 검증할 수 있다.</p>
+</blockquote>
+<h2 id="141">14.1 문제 정의 — 입력과 출력<a class="headerlink" href="#141" title="Permanent link">&para;</a></h2>
+<p>모든 suspension 의 운동학은 동일한 black-box 인터페이스:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>입력: (wheel_travel, steer_input)
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>출력: (camber, toe, track_change, caster)
 </span></code></pre></div>
-<h2 id="3">3. 검증 방법 (근거)<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
-<p>검증 4 카테고리:
-1. <strong>Roundtrip</strong> — <code>f⁻¹(f(x)) ≈ x</code> (수치 안정성 + 부호 일관)
-2. <strong>Sign / direction</strong> — yaw +π/2 이 body X → world +Y 매핑 (좌측 = Y+ in ISO)
-3. <strong>UE 부호 반전</strong> — VDSim yaw +π/2 (CCW, RH) ↔ UE yaw −π/2 (CW, LH)
-4. <strong>Identity preservation</strong> — <code>Quat::Identity()</code> → <code>Quat::Identity()</code> 유지</p>
-<p>Tolerance: 1e-9 (RK4 누적 오차보다 10⁶ 이상 정밀)</p>
-<h2 id="4">4. 검증 결과<a class="headerlink" href="#4" title="Permanent link">&para;</a></h2>
-<p><code>tests/unit/test_coordinate.cpp</code> 11 tests, <strong>11/11 pass</strong>.</p>
+<ul>
+<li><code>wheel_travel</code> [m] — bump 이 양수 (wheel 이 chassis 대비 위로).</li>
+<li><code>steer_input</code> — DW/MP 에서는 steering rack 의 lateral displacement [m];
+  rear (TA/5-link) 에서는 무시.</li>
+<li><code>camber</code> [rad] — wheel plane 의 y-z 평면 tilt (좌측 wheel: top 이 +y 쪽이면 양수).</li>
+<li><code>toe</code> [rad] — wheel spin axis 의 x-y 평면 회전 (toe-in 양수).</li>
+<li><code>track_change</code> [m] — wheel center 의 y 변위.</li>
+<li><code>caster</code> [rad] — kingpin axis 의 x-z 평면 tilt.</li>
+</ul>
+<p>C++ 인터페이스 (<code>core/include/vdsim/suspension.hpp</code>):</p>
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">ISuspensionKinematics</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">public</span><span class="o">:</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">Output</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">camber</span><span class="p">,</span><span class="w"> </span><span class="n">toe</span><span class="p">,</span><span class="w"> </span><span class="n">track_change</span><span class="p">,</span><span class="w"> </span><span class="n">caster</span><span class="p">;</span><span class="w"> </span><span class="p">};</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="k">virtual</span><span class="w"> </span><span class="n">Output</span><span class="w"> </span><span class="nf">compute</span><span class="p">(</span><span class="kt">double</span><span class="w"> </span><span class="n">wheel_travel</span><span class="p">,</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">                           </span><span class="kt">double</span><span class="w"> </span><span class="n">steer_input</span><span class="p">)</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="p">};</span>
+</span></code></pre></div>
+<h2 id="142">14.2 강체 운동학의 공통 패턴<a class="headerlink" href="#142" title="Permanent link">&para;</a></h2>
+<p>knuckle 은 강체. 정적 상태에서 body frame 의 wheel center 를 기준점으로
+삼고, hardpoint 들의 정적 offset 을 knuckle frame 에 고정. wheel travel 에
+따라 knuckle 이 회전·평행이동하면:</p>
+<div class="arithmatex">\[
+p_{\text{world}}(R, t) = LK + R\,(p_{\text{static}} - LK_{\text{static}})
+\]</div>
+<p>여기서 <span class="arithmatex">\(R\)</span> 은 knuckle 의 회전 (정적 대비), <span class="arithmatex">\(LK\)</span> 는 현재 lower-knuckle 위치.
+camber/toe 는 회전된 spin axis 로부터:</p>
+<div class="arithmatex">\[
+\begin{aligned}
+\text{spin}_{\text{world}} &amp;= R \cdot \text{spin}_{\text{body}} \\
+\text{camber} &amp;= \operatorname{atan2}(-\text{spin}_z,\; |\text{spin}_y|) \quad (\text{좌측; 우측 부호 반전}) \\
+\text{toe} &amp;= \operatorname{atan2}(\text{spin}_x,\; \text{spin}_y)
+\end{aligned}
+\]</div>
+<p>문제는 <strong>각 topology 가 R 을 어떻게 결정하느냐</strong> — joint 제약의 차이.</p>
+<h2 id="143-double-wishbone-sequential-closed-form">14.3 Double wishbone — sequential closed-form<a class="headerlink" href="#143-double-wishbone-sequential-closed-form" title="Permanent link">&para;</a></h2>
+<p><code>tools/kinematics/dw_3d_solver.py</code>, <code>core/src/dw_native_kinematics.cpp</code>.</p>
+<p>UCA / LCA 가 각각 chassis 측 revolute axis 를 가짐 (chassis_front-rear 두
+점이 axis 정의). knuckle 은 LCA-knuckle (LK), UCA-knuckle (UK), tie-rod-knuckle
+(TK) 세 ball joint 로 부착.</p>
+<p><strong>Gruebler mobility</strong> (N=4: chassis, LCA, UCA, TieRod, knuckle 은 강체 분리 안함):</p>
 <table>
 <thead>
 <tr>
-<th>Test</th>
-<th>검증</th>
-<th>결과</th>
+<th>joint</th>
+<th>type</th>
+<th>제약 c</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>QuatFromEulerIdentity</td>
-<td>(0,0,0) → Quat(1,0,0,0)</td>
-<td>pass (≤ 1e-9)</td>
+<td>LCA-chassis</td>
+<td>revolute (R)</td>
+<td>5</td>
 </tr>
 <tr>
-<td>PureYawQuat</td>
-<td>yaw=π/4 → qw=cos(π/8), qz=sin(π/8)</td>
-<td>pass</td>
+<td>LCA-knuckle</td>
+<td>ball (S)</td>
+<td>3</td>
 </tr>
 <tr>
-<td>EulerRoundtripSmallAngles</td>
-<td>(0.05, 0.03, 0.7) → quat → euler</td>
-<td>pass (≤ 1e-12)</td>
+<td>UCA-chassis</td>
+<td>revolute (R)</td>
+<td>5</td>
 </tr>
 <tr>
-<td>EulerRoundtripNegativeYaw</td>
-<td>yaw=−π/3</td>
-<td>pass</td>
+<td>UCA-knuckle</td>
+<td>ball (S)</td>
+<td>3</td>
 </tr>
 <tr>
-<td>YawCcwPositive</td>
-<td>yaw +π/2: (1,0,0)_body → (0,1,0)_world</td>
-<td>pass</td>
+<td>TieRod-rack</td>
+<td>ball (S)</td>
+<td>3</td>
 </tr>
 <tr>
-<td>PositionForward</td>
-<td>(1,2,3)_VDSim → (100,−200,300)_UE</td>
-<td>pass</td>
-</tr>
-<tr>
-<td>PositionRoundtrip</td>
-<td>VDSim → UE → VDSim identity</td>
-<td>pass</td>
-</tr>
-<tr>
-<td>VelocityRoundtrip</td>
-<td>동일 (linear)</td>
-<td>pass</td>
-</tr>
-<tr>
-<td>RotationRoundtrip</td>
-<td>quat (0.1, 0.2, 0.3) → UE → VDSim</td>
-<td>pass (|dot| = 1)</td>
-</tr>
-<tr>
-<td>YawSignFlip</td>
-<td>VDSim yaw +π/2 → UE qz 부호 반전</td>
-<td>pass</td>
-</tr>
-<tr>
-<td>IdentityIsIdentity</td>
-<td>I → I</td>
-<td>pass</td>
+<td>TieRod-knuckle</td>
+<td>ball (S)</td>
+<td>3</td>
 </tr>
 </tbody>
 </table>
-<h3 id="_1">수치 예 (대표)<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h3>
+<p><code>M = 6·(N−1) − Σc = 6·4 − 22 = 2</code>. tie rod 자체 축 회전이 passive DOF 1 →
+active M = 1 (wheel travel). steer 입력 1개로 닫힘.</p>
+<p><strong>풀이 순서</strong> (sequential, no global solve 필요):</p>
+<ol>
+<li><strong>LCA 각도 <span class="arithmatex">\(\theta_l\)</span></strong> — wheel travel 목표로 Newton:</li>
+</ol>
+<p>$$
+   \text{wheel}<em _text_wheel="\text{wheel">z(\theta_l) = \big(LK(\theta_l) + R(\theta_l)\, \text{off}</em>\big)}<em _text_static="\text{static">z \overset{!}{=} z</em>
+   $$}} + \text{travel</p>
+<p>여기서 <em>진짜 wheel z</em> 를 쓰는 게 핵심. 초기 구현은 <code>LK_z + off_z</code> 의
+   small-angle 근사를 썼는데 ±50 mm 에서 ~3 mm 오차 (<code>fix(ld4): Newton on
+   TRUE wheel z</code> commit).</p>
+<ol>
+<li>
+<p><strong>UCA 각도 θ_u</strong> — <code>|UK − LK| = L_LU</code> (knuckle rigid 거리) 보존하도록
+   sphere–sphere 교차 Newton.</p>
+</li>
+<li>
+<p><strong>TK</strong> — 3-sphere trilateration: LK 중심 반경 <code>L_LT</code>, UK 중심 반경 <code>L_UT</code>,
+   tie_rod_inner 중심 반경 <code>L_tr</code> 의 교점. 정적 위치에 가까운 해 선택.</p>
+</li>
+<li>
+<p><strong>knuckle frame</strong> — (LK→UK) 을 kingpin x축, TK 로 y축 평면 정의 →
+   R_now. R_delta = R_now · R_static^T.</p>
+</li>
+</ol>
+<p>샘플 (sports DW, 정적): instant center (0.167, 0.059) m, roll center 7.5 cm,
+camber gain −0.094 °/mm — sports car 표준 범위.</p>
+<h2 id="144-macpherson-cylindrical-joint">14.4 MacPherson — cylindrical joint 제약<a class="headerlink" href="#144-macpherson-cylindrical-joint" title="Permanent link">&para;</a></h2>
+<p><code>tools/kinematics/mp_3d_solver.py</code>, <code>core/src/mp_native_kinematics.cpp</code>.</p>
+<p>DW 와 결정적 차이: UCA 가 없고 <strong>strut</strong> 이 그 역할. strut tube 는 knuckle 에
+강체 결합, chassis 측 top mount 는 spherical bearing, 내부는 telescoping
+(스프링 압축) + 축 회전 허용 → <strong>cylindrical joint</strong>.</p>
+<p><strong>핵심 통찰</strong> (초기 구현의 결함 수정): strut 의 운동학 제약은
+"strut 길이 일정" 이 <em>아니라</em> "tube axis 가 chassis top mount 를 통과" 이다.
+strut compression 길이는 자유 (스프링이 결정), 방향만 구속.</p>
+<p>tube 축 방향은 body frame 에 고정:</p>
+<div class="arithmatex">\[
+\text{tube\_axis}_{\text{body}} = \frac{ST_{\text{static}} - SK_{\text{static}}}{\|ST_{\text{static}} - SK_{\text{static}}\|}
+\]</div>
+<p>회전 후 cross-product 제약 (3 scalar, 1 redundant):</p>
+<div class="arithmatex">\[
+(SK_{\text{world}} - ST_{\text{chassis}}) \times (R \cdot \text{tube\_axis}_{\text{body}}) = 0
+\]</div>
+<p>tie rod 거리 제약 1 scalar 추가 → knuckle 3 회전 DOF 가 닫힘.
+<code>scipy.optimize.least_squares</code> (Python) / Eigen LM (C++) 으로 풀이.</p>
+<p>초기 구현은 strut 을 양단 ball-joint 의 고정길이 막대로 모델 (sphere
+제약 1 scalar) → knuckle 의 strut-축 회전이 미닫혀 발산. regularization hack
+필요했고 camber gain 이 ~1 °/mm (비현실적). cylindrical 제약으로 수정 후
+0.034 °/mm (sedan MacPherson 표준), 단발 LM 수렴.</p>
+<p>자세한 회계는 <code>docs/tasks/T28_ld4_mp/REPORT.md</code>.</p>
+<h2 id="145-trailing-arm-revolute">14.5 Trailing arm — 단일 revolute<a class="headerlink" href="#145-trailing-arm-revolute" title="Permanent link">&para;</a></h2>
+<p><code>tools/kinematics/ta_3d_solver.py</code>, <code>core/src/ta_native_kinematics.cpp</code>.</p>
+<p>가장 단순. arm + knuckle + wheel 이 한 강체, chassis 측 single revolute axis.
+<code>M = 6·1 − 5 = 1</code> (wheel travel). steer 없음.</p>
+<p>axis 방향이 camber/toe gain 을 결정:
+- pure trailing (axis ∥ +y): camber/toe gain 0.
+- semi-trailing (axis 가 x 또는 z 성분): gain 발생.</p>
+<p>풀이: arm 회전각 θ 하나만 Newton (wheel z 목표). 샘플 axis tilt 14° (toe
+방향) + 5.5° (anti-dive) → camber 0.022 °/mm, toe 0.009 °/mm (sedan rear typical).</p>
+<h2 id="146-5-link-general-multilink">14.6 5-link — general multilink<a class="headerlink" href="#146-5-link-general-multilink" title="Permanent link">&para;</a></h2>
+<p><code>tools/kinematics/fivelink_3d_solver.py</code>,
+<code>core/src/fivelink_native_kinematics.cpp</code>.</p>
+<p>가장 일반적. 다른 topology 들은 이것의 특수 케이스. 5 개의 양단 ball-joint
+rigid link. knuckle 6-DOF, 각 link 1 length 제약 → 5 제약 + wheel-z 입력 1 →
+6 제약 on 6 DOF, 닫힘.</p>
+<p>knuckle pose = <span class="arithmatex">\((x, y, z, \text{axis-angle})\)</span> 6-vector. 잔차:</p>
+<div class="arithmatex">\[
+\begin{aligned}
+r_i &amp;= \|\text{pos} + R\, \text{off}_{\text{knuckle},i} - \text{chassis}_i\| - L_{\text{link},i}, \quad i = 1\ldots5 \\
+r_6 &amp;= \text{pos}_z - (z_{\text{static}} + \text{travel})
+\end{aligned}
+\]</div>
+<p>Levenberg–Marquardt (Python scipy / C++ Eigen 직접 구현). continuation
+(이전 sweep 해를 warm-start) 으로 부드러운 단조 해 family.</p>
+<p>샘플: camber 0.019 °/mm, toe 0.026 °/mm (sports rear 의 tight 제어).</p>
+<h2 id="147-backend-lookup-vs-native">14.7 두 backend — lookup vs native<a class="headerlink" href="#147-backend-lookup-vs-native" title="Permanent link">&para;</a></h2>
+<p>같은 <code>ISuspensionKinematics</code> 인터페이스에 두 구현:</p>
 <table>
 <thead>
 <tr>
-<th>Input (VDSim)</th>
-<th>UE</th>
-<th>Inverse</th>
-<th>Error</th>
+<th>Backend</th>
+<th>구현</th>
+<th>특성</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>pos (1.0, 2.0, 3.0) m</td>
-<td>(100.0, −200.0, 300.0) cm</td>
-<td>(1.0, 2.0, 3.0) m</td>
-<td>0</td>
+<td><strong>Lookup</strong></td>
+<td><code>create_lookup_kinematics(csv)</code></td>
+<td>offline solver 가 만든 (travel × steer) CSV 를 bilinear 보간. O(1).</td>
 </tr>
 <tr>
-<td>pos (1.234, −5.678, 9.0) m</td>
-<td>(123.4, 567.8, 900.0) cm</td>
-<td>(1.234, −5.678, 9.0) m</td>
-<td>&lt; 1e-15</td>
-</tr>
-<tr>
-<td>Euler (0.05, 0.03, 0.7) rad</td>
-<td>—</td>
-<td>(0.05, 0.03, 0.7) rad</td>
-<td>&lt; 1e-13</td>
-</tr>
-<tr>
-<td>vy +π/2 (좌회전)</td>
-<td>UE qz=−sin(π/4)</td>
-<td>yaw +π/2</td>
-<td>부호 반전 정확</td>
+<td><strong>Native</strong></td>
+<td><code>create_{dw,mp,ta,5link}_native_kinematics(yaml)</code></td>
+<td>runtime 에 hardpoint 직접 풀이. hardpoint 가 변하는 케이스 (향후 compliance).</td>
 </tr>
 </tbody>
 </table>
-<h3 id="_2">빌드 / 테스트 통계<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
+<p>검증: native solver 출력이 grid point 에서 lookup 과 &lt; 1e-3 rad 일치
+(<code>tests/unit/test_suspension_lookup.cpp</code>).</p>
+<h2 id="148-ld3">14.8 Ld3 와의 연결<a class="headerlink" href="#148-ld3" title="Permanent link">&para;</a></h2>
+<p><code>fourteen_dof_dynamics.cpp::step()</code> 이 매 substep:</p>
+<ol>
+<li>per-wheel travel = <code>z_u[i] − z_corner_sprung[i]</code> (bump 양수).</li>
+<li><code>kinematics-&gt;compute(travel, 0)</code> → camber, toe.</li>
+<li>좌/우 mirror 부호 적용 후 <code>inner_-&gt;set_camber_per_wheel</code>,
+   <code>set_toe_per_wheel</code> 로 Ld2 에 전달.</li>
+<li>Ld2 가 Pacejka 의 <code>gamma</code> 입력 + 각 wheel steer 에 toe 가산.</li>
+</ol>
+<p>이게 Chapter 06 의 phenomenological <code>camber_per_roll · φ</code> 를 대체. attach
+안 하면 legacy fallback 으로 동작 (back-compat).</p>
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">auto</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">vdsim</span><span class="o">::</span><span class="n">create_lookup_kinematics</span><span class="p">(</span><span class="s">&quot;dw_front.csv&quot;</span><span class="p">);</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">vdsim</span><span class="o">::</span><span class="n">attach_front_kinematics</span><span class="p">(</span><span class="o">*</span><span class="n">l3_dyn</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">k</span><span class="p">));</span>
+</span></code></pre></div>
+<h2 id="149-toolchain-design-workflow">14.9 Toolchain — design workflow<a class="headerlink" href="#149-toolchain-design-workflow" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>hardpoint YAML (configs/suspensions/*.yaml)
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>   │
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>   ├─ tools/kinematics/diagnose.py        — self-consistency check
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>   ├─ tools/kinematics/*_3d_solver.py     — sweep CSV 생성
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>   ├─ tools/kinematics/import_hardpoints.py — Adams CSV → VDSim YAML
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>   └─ viewer/suspension_editor.html       — Three.js 라이브 편집
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>                                              (WebSocket → native solver)
+</span></code></pre></div>
+<p><code>diagnose.py</code> 출력 예 (4 type 모두 통과):
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>DW    : RC 7.5cm, camber gain -0.094°/mm, wheel-z err &lt; 0.1 μm
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>MP    : strut tilt 19.4°, camber gain -0.019°/mm
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>TA    : semi-trailing 14°, anti-dive 5.5°
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>5-link: link lengths [0.36, 0.36, 0.38, 0.38, 0.35]
+</span></code></pre></div></p>
+<h2 id="1410">14.10 한계<a class="headerlink" href="#1410" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
 <th>항목</th>
-<th>값</th>
+<th>현재</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>LOC (impl)</td>
-<td>78</td>
+<td>Compliance (bushing)</td>
+<td>없음 — 강체 joint 만 (Ld5 영역, Phase 2)</td>
 </tr>
 <tr>
-<td>LOC (test)</td>
-<td>119</td>
+<td>Steer 통합</td>
+<td>DW/MP 의 rack displacement 만; rear steer 없음</td>
 </tr>
 <tr>
-<td>Total ctest</td>
-<td>19/19 pass (위 11 + 8 이전)</td>
+<td>Anti-dive/squat 정량</td>
+<td>kinematic 만; 종방향 reaction 의 force 효과 미반영</td>
 </tr>
 <tr>
-<td>Build 시간 (incremental)</td>
-<td>&lt; 5 s</td>
+<td>Tire 와의 force coupling</td>
+<td>camber/toe 가 tire 입력으로만 (역방향 force feedback 없음)</td>
+</tr>
+<tr>
+<td>K&amp;C chart 표준 출력</td>
+<td>sweep CSV + plot 있음; Adams 형식 chart 는 미구현</td>
 </tr>
 </tbody>
 </table>
-<h2 id="5">5. 판단<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
+<h2 id="1411">14.11 참고<a class="headerlink" href="#1411" title="Permanent link">&para;</a></h2>
 <ul>
-<li>결과: <strong>pass</strong></li>
-<li>근거: 11/11 단위 테스트 모두 tolerance (1e-9 ~ 1e-12) 이내. UE 변환의 involution 성질, yaw 부호, roundtrip 모두 검증. 후속 task 11 의 bicycle 가 본 함수들 (특히 <code>yaw_from_quat</code>, <code>quat_from_euler</code>) 사용해 analytical agreement 통과.</li>
-<li>Follow-up:</li>
-<li>MORAI Unity 변환은 헤더에 reserve 했으나 impl 미작성. 한국 시장 영업 task 시 추가.</li>
-<li>NED 변환 (aerospace) — Phase 2.</li>
+<li>Milliken, W. &amp; Milliken, D., <em>Race Car Vehicle Dynamics</em>, SAE, 1995 — §17 (suspension geometry, instant center, roll center).</li>
+<li>Reimpell, Stoll, Betzler, <em>The Automotive Chassis</em>, 2001 — K&amp;C, suspension types.</li>
+<li>Gillespie, T., <em>Fundamentals of Vehicle Dynamics</em>, SAE, 1992 — camber/toe gain 정의.</li>
+<li>구현: <code>tools/kinematics/*.py</code>, <code>core/src/*_native_kinematics.cpp</code>,
+  <code>docs/tasks/T27_ld4_dw</code> ~ <code>T30_ld4_5link/REPORT.md</code>.</li>
 </ul>
 
 
