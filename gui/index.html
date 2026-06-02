@@ -149,23 +149,74 @@ function fig8(R=20, n=160){
 scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(fig8()),
           new THREE.LineBasicMaterial({color:0x2f6d8f})));
 
-// ---- car ----
-// car (group): heading (yaw) + position. sprung (child): roll/pitch (leans the
-// body+cabin only). wheels stay on the car group so they remain grounded.
+// ---- car (rebuilt per dynamics level) ----
+// car (group): heading (yaw) + position. sprung (child): body+cabin, gets
+// roll/pitch. wheels / springs / force arrows are children of car (grounded).
+// Local frame: +x forward, +y up, +z = RIGHT (car-left = -z).
 const car = new THREE.Group();
-const sprung = new THREE.Group(); car.add(sprung);
-const body = new THREE.Mesh(new THREE.BoxGeometry(4.2,1.1,1.8),
-              new THREE.MeshStandardMaterial({color:0x01A0E9, metalness:.3, roughness:.5}));
-body.position.y = 0.75; sprung.add(body);
-const cabin = new THREE.Mesh(new THREE.BoxGeometry(2.0,0.7,1.5),
-              new THREE.MeshStandardMaterial({color:0x9fd8f5}));
-cabin.position.set(-0.2,1.45,0); sprung.add(cabin);
-const wheelGeo = new THREE.CylinderGeometry(0.34,0.34,0.25,16);
+const sprung = new THREE.Group(); car.add(sprung); scene.add(car);
+const bodyMat  = new THREE.MeshStandardMaterial({color:0x01A0E9, metalness:.3, roughness:.5});
+const cabinMat = new THREE.MeshStandardMaterial({color:0x9fd8f5});
 const wheelMat = new THREE.MeshStandardMaterial({color:0x14181f});
-const wxz = [[1.4,0.75],[1.4,-0.75],[-1.4,0.75],[-1.4,-0.75]]; // FL FR RL RR (x fwd, z=-left)
-for(const [wx,wz] of wxz){ const w=new THREE.Mesh(wheelGeo,wheelMat);
-  w.rotation.x=Math.PI/2; w.position.set(wx,0.34,wz); car.add(w); }
-scene.add(car);
+const springMat= new THREE.MeshStandardMaterial({color:0xb0b8c0, metalness:.6, roughness:.4});
+const unsprMat = new THREE.MeshStandardMaterial({color:0x444c57});
+let wheels=[], frics=[], loads=[], springs=[], unspr=[], geom=null, renderLevel=null, rebuilding=false;
+const FSCALE=0.0012, FZSCALE=0.0006;   // N -> metres for the arrows
+function clearGroup(g){ for(const c of [...g.children]){ g.remove(c); if(c.geometry) c.geometry.dispose(); } }
+async function rebuildCar(level){
+  rebuilding=true;
+  const r=await(await fetch('/api/vehicle')).json(); const g={}; r.fields.forEach(f=>g[f.name]=f.value);
+  const a=g.cg_to_front, b=g.cg_to_rear, tf=g.track_front, tr=g.track_rear, R=g.wheel_radius_nominal;
+  geom={a,b,tf,tr,R};
+  clearGroup(sprung);
+  [...wheels,...springs,...unspr,...frics,...loads].forEach(m=>car.remove(m));
+  wheels=[];frics=[];loads=[];springs=[];unspr=[];
+  const bike=(level==='K'||level==='L1'), susp=(level==='L3');
+  const L=a+b, W=Math.max(tf,tr,0.6);
+  const body=new THREE.Mesh(new THREE.BoxGeometry(L*0.95,1.0,bike?0.5:W*0.9),bodyMat);
+  body.position.set((a-b)/2,0.7,0); sprung.add(body);
+  const cabin=new THREE.Mesh(new THREE.BoxGeometry(L*0.4,0.6,bike?0.4:W*0.65),cabinMat);
+  cabin.position.set((a-b)/2-0.2,1.3,0); sprung.add(cabin);
+  const pos = bike ? [[a,0],[-b,0]]
+                   : [[a,-tf/2],[a,tf/2],[-b,-tr/2],[-b,tr/2]];  // FL FR RL RR (+z=right)
+  const wg=new THREE.CylinderGeometry(R,R,0.22,18);
+  pos.forEach(([x,z])=>{
+    const w=new THREE.Mesh(wg,wheelMat); w.rotation.x=Math.PI/2; w.position.set(x,R,z); car.add(w); wheels.push(w);
+    const fr=new THREE.ArrowHelper(new THREE.Vector3(1,0,0),new THREE.Vector3(x,0.06,z),0.01,0x00e5ff,0.4,0.28);
+    fr.visible=false; car.add(fr); frics.push(fr);
+    const ld=new THREE.ArrowHelper(new THREE.Vector3(0,1,0),new THREE.Vector3(x,R,z),0.01,0x7CFC00,0.4,0.28);
+    car.add(ld); loads.push(ld);
+    if(susp){
+      const sp=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,0.4,10),springMat);
+      sp.position.set(x,R+0.25,z); car.add(sp); springs.push(sp);
+      const us=new THREE.Mesh(new THREE.BoxGeometry(0.22,0.16,0.22),unsprMat);
+      us.position.set(x,R,z); car.add(us); unspr.push(us);
+    } else { springs.push(null); unspr.push(null); }
+  });
+  renderLevel=level; rebuilding=false;
+}
+rebuildCar('L2');
+
+// Map streamed per-wheel forces (always 4) onto the rendered wheels (2 or 4).
+function renderForces(Ft, Fz, susp){
+  if(!renderLevel || !wheels.length || !Ft) return;
+  let WF;
+  if(wheels.length===2){  // bicycle: front = FL+FR, rear = RL+RR
+    WF=[[Ft[0][0]+Ft[1][0], Ft[0][1]+Ft[1][1], (Fz[0]||0)+(Fz[1]||0)],
+        [Ft[2][0]+Ft[3][0], Ft[2][1]+Ft[3][1], (Fz[2]||0)+(Fz[3]||0)]];
+  } else WF=[0,1,2,3].map(i=>[Ft[i][0],Ft[i][1],Fz[i]||0]);
+  for(let i=0;i<wheels.length;i++){
+    const [Fx,Fy,Fzz]=WF[i]; const w=wheels[i].position;
+    const fmag=Math.hypot(Fx,Fy); const fr=frics[i];
+    if(fmag>5){ fr.visible=true; fr.position.set(w.x,0.06,w.z);
+      fr.setDirection(new THREE.Vector3(Fx,0,-Fy).normalize());   // body +y(left) -> local -z
+      fr.setLength(Math.max(0.15,fmag*FSCALE),0.4,0.28);
+    } else fr.visible=false;
+    loads[i].position.set(w.x, geom.R, w.z);
+    loads[i].setLength(Math.max(0.1,Fzz*FZSCALE),0.35,0.25);
+    if(springs[i] && susp){ springs[i].scale.y=Math.max(0.3,Math.min(1.9, susp[i]/0.12)); }
+  }
+}
 
 // trail — drawn ON TOP of the grid (depthTest off + high renderOrder) and raised,
 // so it stays visible from any view angle. setFromPoints rebuilds a connected
@@ -249,6 +300,8 @@ function applyState(s){
   tgt.pos.copy(toThree(s.x,s.y,0)); tgt.yaw=s.yaw; tgt.roll=s.roll||0; tgt.pitch=s.pitch||0;
   tgt.vx=s.vx||0; tgt.vy=s.vy||0; tgt.r=s.r||0;   // for dead-reckoning between updates
   if(!tgt.has){ car.position.copy(tgt.pos); car.rotation.set(0,tgt.yaw,0); tgt.has=true; }
+  if(s.level && s.level!==renderLevel && !rebuilding) rebuildCar(s.level);  // model per level
+  renderForces(s.Ft, s.Fz, s.susp);   // contact (Fz) + friction (Fx,Fy) arrows
   pushTrail(tgt.pos.x, tgt.pos.z);   // trail at stream rate, from target position
   $('h_t').textContent=f(s.t); $('h_vx').textContent=f(s.vx)+' m/s';
   $('h_vy').textContent=f(s.vy); $('h_r').textContent=f(s.r,3)+' rad/s';

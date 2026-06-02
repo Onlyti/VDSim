@@ -283,6 +283,7 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readonly("roll",          &vdsim::SimOutput::roll)
         .def_readonly("pitch",         &vdsim::SimOutput::pitch)
         .def_readonly("Fz",            &vdsim::SimOutput::Fz)
+        .def_readonly("tire_forces",   &vdsim::SimOutput::tire_forces)
         .def_readonly("steer_applied", &vdsim::SimOutput::steer_applied)
         .def_readonly("rack_torque",   &vdsim::SimOutput::rack_torque);
 

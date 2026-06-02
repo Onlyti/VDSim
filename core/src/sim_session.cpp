@@ -59,6 +59,7 @@ void SimSession::tick(double dt) {
     const double pitch = dyn_->pitch_angle_qs();
     const double rack = dyn_->steering_rack_torque();
     const auto Fz = dyn_->tire_Fz();
+    const auto Ft = dyn_->tire_forces_body();
 
     {
         std::lock_guard<std::mutex> lk(mtx_);
@@ -66,7 +67,7 @@ void SimSession::tick(double dt) {
         meas_state_ = meas;
         ax_ = ax; ay_ = ay; roll_ = roll; pitch_ = pitch; rack_ = rack;
         steer_applied_ = realized.steer_angle_wheel;
-        Fz_ = Fz;
+        Fz_ = Fz; tire_forces_ = Ft;
         sim_time_  += dt;
     }
 }
@@ -81,6 +82,7 @@ SimOutput SimSession::output() const {
     o.rack_torque = rack_;
     o.steer_applied = steer_applied_;
     o.Fz = Fz_;
+    o.tire_forces = tire_forces_;
     return o;
 }
 

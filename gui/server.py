@@ -242,6 +242,8 @@ class Runner:
                     "vx": s.vx(), "vy": s.vy(), "r": s.yaw_rate(),
                     "ax": o.ax, "ay": o.ay, "steer": o.steer_applied,
                     "Fz": [float(v) for v in o.Fz],
+                    "Ft": [[float(f[0]), float(f[1])] for f in o.tire_forces],
+                    "susp": [float(v) for v in s.susp_compression],
                     "level": self.cfg["level"], "vehicle": self.cfg["vehicle"],
                     "v_target": vt, "dt": dt, "time_scale": ts}
             with self.lock:
