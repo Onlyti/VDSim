@@ -10,85 +10,90 @@ body frame 에서 풀면 `I_body = const` (대각이 보통), 대신 frame 자�
 
 ## 2.2 위치 / 속도 / 가속도의 변환 식
 
-(i, j, k) 를 inertial frame 단위 벡터, (e₁, e₂, e₃) 를 body frame 단위 벡터라 하자.
-한 점 P 의 inertial frame 위치 `r` 와 body frame 위치 `r_b`:
+$(i, j, k)$ 를 inertial frame 단위 벡터, $(e_1, e_2, e_3)$ 를 body frame 단위 벡터라 하자.
+한 점 P 의 inertial frame 위치 $r$ 와 body frame 위치 $r_b$:
 
-```
-r = R(t) · r_b  +  r_O(t)
-```
+$$
+r = R(t)\, r_b + r_O(t)
+$$
 
-여기서 `R(t)` 는 body→world 회전, `r_O(t)` 는 body 원점의 world 위치.
+여기서 $R(t)$ 는 body→world 회전, $r_O(t)$ 는 body 원점의 world 위치.
 
 미분:
-```
-ṙ = R · ṙ_b  +  Ṙ · r_b  +  ṙ_O
-```
 
-`Ṙ = R · [ω_body]_×` (강체 운동학 표준), where `[ω]_×` 는 skew matrix.
+$$
+\dot r = R\, \dot r_b + \dot R\, r_b + \dot r_O
+$$
+
+$\dot R = R\, [\omega_{\text{body}}]_\times$ (강체 운동학 표준), 여기서 $[\omega]_\times$ 는 skew matrix.
 
 따라서:
-```
-ṙ = R · (ṙ_b + ω_body × r_b)  +  ṙ_O
-```
 
-P 가 body 위에 고정 (`ṙ_b = 0`) 이라면:
-```
-ṙ = R · (ω_body × r_b)  +  ṙ_O
-```
+$$
+\dot r = R\, (\dot r_b + \omega_{\text{body}} \times r_b) + \dot r_O
+$$
 
-CG (`r_b = 0`) 의 경우:
-```
-ṙ_CG = ṙ_O
-```
+P 가 body 위에 고정 ($\dot r_b = 0$) 이라면:
 
-body 원점이 곧 CG 이므로 `ṙ_O = v_world`.
+$$
+\dot r = R\, (\omega_{\text{body}} \times r_b) + \dot r_O
+$$
+
+CG ($r_b = 0$) 의 경우 $\dot r_{CG} = \dot r_O$. body 원점이 곧 CG 이므로 $\dot r_O = v_{\text{world}}$.
 
 ## 2.3 Body frame 에서 본 속도 / 가속도
 
-`v_body = R^T · v_world` (world → body 회전).
+$v_{\text{body}} = R^T v_{\text{world}}$ (world → body 회전).
 
 body frame 의 시간 도함수 (lab frame 에서 본 차)와 body frame 자체에서 본 도함수는 다르다:
 
-```
-( d/dt v_world ) |_world  =  R · ( d/dt v_body ) |_body  +  Ṙ · v_body
-                            =  R · ( v̇_body + ω_body × v_body )
-```
+$$
+\left.\frac{d}{dt} v_{\text{world}}\right|_{\text{world}}
+= R \left.\frac{d}{dt} v_{\text{body}}\right|_{\text{body}} + \dot R\, v_{\text{body}}
+= R\,(\dot v_{\text{body}} + \omega_{\text{body}} \times v_{\text{body}})
+$$
 
 즉 **inertial frame 가속도** = body frame 도함수 + Coriolis term.
 
-좌변 = inertial frame 가속도 = `a_world`. 양변에 `R^T`:
-```
-R^T · a_world  =  v̇_body + ω_body × v_body
-```
+좌변 = inertial frame 가속도 = $a_{\text{world}}$. 양변에 $R^T$:
 
-`R^T · a_world = a_body_observed` 라 하자. 이게 **차체에 탑승한 관측자가 measure 하는 가속도** (IMU x-accel, y-accel).
+$$
+R^T a_{\text{world}} = \dot v_{\text{body}} + \omega_{\text{body}} \times v_{\text{body}}
+$$
 
-**여기가 직관 핵심**: IMU 가 measure 하는 양은 `v̇_body + ω × v_body` 다. 단순히 `v̇_body` 가 아니다.
+$R^T a_{\text{world}} = a_{\text{body,observed}}$ 라 하자. 이게 **차체에 탑승한 관측자가 measure 하는 가속도** (IMU x-accel, y-accel).
+
+**여기가 직관 핵심**: IMU 가 measure 하는 양은 $\dot v_{\text{body}} + \omega \times v_{\text{body}}$ 다. 단순히 $\dot v_{\text{body}}$ 가 아니다.
 
 ## 2.4 Newton 의 운동 법칙 (body frame)
 
 Newton:
-```
-m · a_world = F_world
-```
 
-양변에 `R^T`:
-```
-m · (v̇_body + ω_body × v_body) = R^T · F_world = F_body
-```
+$$
+m\, a_{\text{world}} = F_{\text{world}}
+$$
 
-차량의 경우 `ω_body = (p, q, r)` 인데 Ld1-Ld2 는 planar 가정으로 `p = q = 0`, `r = yaw rate`. cross product:
+양변에 $R^T$:
 
-```
-ω × v_body = (0, 0, r) × (vx, vy, vz) = (−r · vy, r · vx, 0)
-```
+$$
+m\,(\dot v_{\text{body}} + \omega_{\text{body}} \times v_{\text{body}}) = R^T F_{\text{world}} = F_{\text{body}}
+$$
+
+차량의 경우 $\omega_{\text{body}} = (p, q, r)$ 인데 Ld1-Ld2 는 planar 가정으로 $p = q = 0$, $r$ = yaw rate. cross product:
+
+$$
+\omega \times v_{\text{body}} = (0, 0, r) \times (v_x, v_y, v_z) = (-r v_y,\; r v_x,\; 0)
+$$
 
 따라서:
-```
-m · v̇x_body  − m · r · vy  =  Fx_body
-m · v̇y_body  + m · r · vx  =  Fy_body
-m · v̇z_body                =  Fz_body  − m·g  (vertical balance)
-```
+
+$$
+\begin{aligned}
+m\, \dot v_x - m\, r\, v_y &= F_{x,\text{body}} \\
+m\, \dot v_y + m\, r\, v_x &= F_{y,\text{body}} \\
+m\, \dot v_z &= F_{z,\text{body}} - m g \quad (\text{vertical balance})
+\end{aligned}
+$$
 
 VDSim 의 모든 사다리는 이 두 식을 핵심 EoM 으로 사용한다. 코드 `core/src/bicycle_dynamics.cpp:208-209`:
 ```cpp
@@ -102,23 +107,26 @@ d_out.dvy = Fy_total / m - vx * r;
 
 각운동량의 body-frame 시간 도함수도 Coriolis 항을 포함한다:
 
-```
-I_body · ω̇_body  +  ω_body × (I_body · ω_body)  =  M_body
-```
+$$
+I_{\text{body}}\, \dot\omega_{\text{body}} + \omega_{\text{body}} \times (I_{\text{body}}\, \omega_{\text{body}}) = M_{\text{body}}
+$$
 
-`I_body` 가 대각 (`diag(Ixx, Iyy, Izz)`) 이라 가정.
-planar 차량 (`p = q = 0`):
+$I_{\text{body}}$ 가 대각 ($\operatorname{diag}(I_{xx}, I_{yy}, I_{zz})$) 이라 가정.
+planar 차량 ($p = q = 0$):
 
-```
-Ixx · ṗ  +  (Izz − Iyy) · q · r  =  Mx
-Iyy · q̇  +  (Ixx − Izz) · p · r  =  My
-Izz · ṙ  +  (Iyy − Ixx) · p · q  =  Mz
-```
+$$
+\begin{aligned}
+I_{xx}\, \dot p + (I_{zz} - I_{yy})\, q r &= M_x \\
+I_{yy}\, \dot q + (I_{xx} - I_{zz})\, p r &= M_y \\
+I_{zz}\, \dot r + (I_{yy} - I_{xx})\, p q &= M_z
+\end{aligned}
+$$
 
-planar 의 경우 `p = q = 0` 이면 cross 항 모두 0:
-```
-Izz · ṙ = Mz
-```
+planar 의 경우 $p = q = 0$ 이면 cross 항 모두 0:
+
+$$
+I_{zz}\, \dot r = M_z
+$$
 
 VDSim Ld1-Ld2 는 이 단순화. 코드 `core/src/bicycle_dynamics.cpp:210`:
 ```cpp
@@ -130,12 +138,14 @@ d_out.dr = Mz_total / Izz;
 Ld3 (FourteenDOF) 는 `p, q` 가 nonzero (roll/pitch DOF 활성).
 그러나 본 PoC 는 **small-angle linearization** 사용:
 
-```
-Ixx · φ̈  +  K_phi · φ  +  C_phi · φ̇  =  m_s · ay · h_cg
-Iyy · θ̈  +  M_pitch_spring          =  m_s · ax · h_cg · (1 − anti_dive)
-```
+$$
+\begin{aligned}
+I_{xx}\, \ddot\phi + K_\phi\, \phi + C_\phi\, \dot\phi &= m_s\, a_y\, h_{cg} \\
+I_{yy}\, \ddot\theta + M_{\text{pitch,spring}} &= m_s\, a_x\, h_{cg}\, (1 - \text{anti\_dive})
+\end{aligned}
+$$
 
-cross 항 `(Izz − Iyy) · q · r` 등은 small-angle 가정으로 무시. 본격 multibody (Ld4-Ld5) 에서는 다시 살린다 (Featherstone formulation).
+cross 항 $(I_{zz} - I_{yy})\, q r$ 등은 small-angle 가정으로 무시. 본격 multibody (Ld4-Ld5) 에서는 다시 살린다 (Featherstone formulation).
 
 ## 2.7 가속도 표기 약속 (자주 헷갈리는 정의)
 
@@ -156,18 +166,22 @@ d_out.ay_body = Fy_total / m;
 
 ## 2.8 EoM 정리 — 모든 Ld 의 공통 backbone
 
-```
-m · v̇x   =  Fx_total + m · vy · r     (kinematic body-x EoM)
-m · v̇y   =  Fy_total − m · vx · r
-Izz · ṙ  =  Mz_total
+$$
+\begin{aligned}
+m\, \dot v_x  &= F_{x,\text{total}} + m\, v_y\, r \\
+m\, \dot v_y  &= F_{y,\text{total}} - m\, v_x\, r \\
+I_{zz}\, \dot r &= M_{z,\text{total}}
+\end{aligned}
+$$
 
-vx,  vy   =  body frame translation velocity components
-r         =  yaw rate (= angular_velocity.z)
+$v_x, v_y$ = body frame translation velocity, $r$ = yaw rate ($= \omega_z$).
+World 적분 (yaw-only):
 
-ẋ_w   =  vx · cos(ψ) − vy · sin(ψ)    (yaw-only world integration)
-ẏ_w   =  vx · sin(ψ) + vy · cos(ψ)
-ψ̇    =  r
-```
+$$
+\dot x_w = v_x \cos\psi - v_y \sin\psi, \quad
+\dot y_w = v_x \sin\psi + v_y \cos\psi, \quad
+\dot\psi = r
+$$
 
 Ld 별 차이는 **Fx_total, Fy_total, Mz_total 을 어떻게 결정하는가** 뿐이다. base EoM 은 동일.
 

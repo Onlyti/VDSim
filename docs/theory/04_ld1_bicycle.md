@@ -21,10 +21,12 @@ VDSim 의 Ld1 = "the L4 controller can drive any vehicle" 의 testbed.
 ## 4.3 State vector (5 DOF)
 
 본 PoC 의 Ld1 적분 상태는:
-```
-y = [x_w, y_w, ψ, vx, vy, r, ω_f, ω_r]
-```
-실제 DOF count 는 5 (vx, vy, ψ + 2 wheel spin), 적분기 입장에서는 8 개 first-order ODE (포지션 3 개는 kinematic).
+
+$$
+y = [\,x_w,\; y_w,\; \psi,\; v_x,\; v_y,\; r,\; \omega_f,\; \omega_r\,]
+$$
+
+실제 DOF count 는 5 ($v_x, v_y, \psi$ + 2 wheel spin), 적분기 입장에서는 8 개 first-order ODE (포지션 3 개는 kinematic).
 
 `State` struct 매핑:
 - `position.x`, `position.y` ← `x_w`, `y_w`
@@ -40,14 +42,15 @@ y = [x_w, y_w, ψ, vx, vy, r, ω_f, ω_r]
 
 Body-frame Newton-Euler (Chapter 02 결론) + per-axle tire force:
 
-```
-m · v̇x  =  Fx_total  +  m · vy · r                   (body-x EoM)
-m · v̇y  =  Fy_total  −  m · vx · r                   (body-y EoM)
-Izz · ṙ =  a · Fy_body_f  −  b · Fy_body_r  +  ΣMz_wheel  (yaw)
-
-I_wheel · ω̇_f  =  T_drive_f  +  T_brake_f  −  Fx_wheel_f · R   (wheel-spin)
-I_wheel · ω̇_r  =  T_drive_r  +  T_brake_r  −  Fx_wheel_r · R
-```
+$$
+\begin{aligned}
+m\, \dot v_x  &= F_{x,\text{total}} + m\, v_y\, r &&\text{(body-x)} \\
+m\, \dot v_y  &= F_{y,\text{total}} - m\, v_x\, r &&\text{(body-y)} \\
+I_{zz}\, \dot r &= a\, F_{y,\text{body},f} - b\, F_{y,\text{body},r} + \textstyle\sum M_{z,\text{wheel}} &&\text{(yaw)} \\
+I_w\, \dot\omega_f &= T_{\text{drive},f} + T_{\text{brake},f} - F_{x,\text{wheel},f}\, R &&\text{(front spin)} \\
+I_w\, \dot\omega_r &= T_{\text{drive},r} + T_{\text{brake},r} - F_{x,\text{wheel},r}\, R &&\text{(rear spin)}
+\end{aligned}
+$$
 
 여기서:
 - `Fx_total = Fx_body_f + Fx_body_r − F_aero − F_rr` (drag + rolling 합쳐서).
@@ -62,18 +65,22 @@ I_wheel · ω̇_r  =  T_drive_r  +  T_brake_r  −  Fx_wheel_r · R
 ## 4.5 Per-axle Fz with longitudinal weight transfer
 
 Static Fz:
-```
-Fz_f_static  =  m · g · b / L
-Fz_r_static  =  m · g · a / L
-```
+
+$$
+F_{z,f}^{\text{static}} = \frac{m g b}{L}, \qquad
+F_{z,r}^{\text{static}} = \frac{m g a}{L}
+$$
 
 Longitudinal weight transfer (Ld1 는 axle 단위):
-```
-ΔFz_long  =  m · ax · h_cg / L
 
-Fz_f  =  m·g·b/L  +  Fz_aero_f  −  ΔFz_long
-Fz_r  =  m·g·a/L  +  Fz_aero_r  +  ΔFz_long
-```
+$$
+\Delta F_{z,\text{long}} = \frac{m\, a_x\, h_{cg}}{L}
+$$
+
+$$
+F_{z,f} = \frac{m g b}{L} + F_{z,\text{aero},f} - \Delta F_{z,\text{long}}, \qquad
+F_{z,r} = \frac{m g a}{L} + F_{z,\text{aero},r} + \Delta F_{z,\text{long}}
+$$
 
 부호 직관:
 - 가속 (ax > 0) → ΔFz_long > 0 → rear 가 더 loaded, front 가 덜 loaded.
@@ -85,11 +92,12 @@ Fz_r  =  m·g·a/L  +  Fz_aero_r  +  ΔFz_long
 즉 self-referential: `ax = f(Fz(ax))`. 풀려면 fixed-point iteration.
 
 본 PoC 는 **1-step lag** 사용:
-```
-Fz(t)  =  Fz_static  +  m · ax_prev · h_cg / L
-```
 
-`ax_prev` 는 직전 substep 의 `ax` 값. 다음 substep 에서 update. RK4 substep dt = 1 ms 이라 1-step lag bias 가 작음 (verified: Task 17 의 brake step 에서 분석값 vs 측정값 < 0.1 %).
+$$
+F_z(t) = F_z^{\text{static}} + \frac{m\, a_{x,\text{prev}}\, h_{cg}}{L}
+$$
+
+$a_{x,\text{prev}}$ 는 직전 substep 의 $a_x$ 값. 다음 substep 에서 update. RK4 substep dt = 1 ms 이라 1-step lag bias 가 작음 (verified: Task 17 의 brake step 에서 분석값 vs 측정값 < 0.1 %).
 
 코드 `core/src/bicycle_dynamics.cpp:120-127`:
 ```cpp
@@ -100,13 +108,13 @@ double Fz_r = m * kGravity * a / L + Fz_aero_r + dFz_long;
 
 ### Aero downforce 더하기
 
-```
-q  =  0.5 · ρ_air · A · vx · |vx|
-Fz_aero_f  =  Cl_f · q
-Fz_aero_r  =  Cl_r · q
-```
+$$
+q = \tfrac{1}{2} \rho_{\text{air}} A\, v_x |v_x|, \qquad
+F_{z,\text{aero},f} = C_{l,f}\, q, \qquad
+F_{z,\text{aero},r} = C_{l,r}\, q
+$$
 
-`vx · |vx|` 표기 — 후진 시 부호 반전.
+$v_x |v_x|$ 표기 — 후진 시 부호 반전.
 default Cl_f = Cl_r = 0 (sedan 은 거의 효과 없음). sports / race / FSK 에서 nonzero.
 
 ## 4.6 Drive / brake torque 분배
@@ -117,15 +125,17 @@ Drive split 은 `drive_type`:
 - AWD: front/rear 50:50.
 
 Brake 는 `brake_bias_front`:
-```
-Tb_f  =  bias · cmd.brake · max_brake_torque
-Tb_r  =  (1 − bias) · cmd.brake · max_brake_torque
-```
+
+$$
+T_{b,f} = \text{bias} \cdot \text{brake} \cdot T_{\text{brake,max}}, \qquad
+T_{b,r} = (1 - \text{bias}) \cdot \text{brake} \cdot T_{\text{brake,max}}
+$$
 
 `brake_ebd_enabled = true` 이면 dynamic bias:
-```
-bias  =  clamp(Fz_f / (Fz_f + Fz_r),  0.05,  0.95)
-```
+
+$$
+\text{bias} = \operatorname{clamp}\!\left(\frac{F_{z,f}}{F_{z,f} + F_{z,r}},\; 0.05,\; 0.95\right)
+$$
 
 brake 시 front 가 더 loaded → bias 가 자동 증가 → front 가 더 많이 brake → ABS 효과 유사.
 
@@ -142,36 +152,34 @@ Smooth sign 함수 `tanh(ω / w)` 로 wheel spin 부호 부드럽게 처리 — 
 - vy ≪ vx.
 
 EoM:
-```
-m · vx · r  =  Fy_total                  (body-y SS)
-Izz · 0    =  a · Fy_f − b · Fy_r        (yaw SS)
-```
 
-α_f, α_r 의 linear 표현:
-```
-α_f  =  atan2(vy + a · r, vx) − δ  ≈  (vy + a · r) / vx − δ
-α_r  =  atan2(vy − b · r, vx)      ≈  (vy − b · r) / vx
-```
+$$
+m\, v_x\, r = F_{y,\text{total}} \quad (\text{body-y SS}), \qquad
+0 = a\, F_{y,f} - b\, F_{y,r} \quad (\text{yaw SS})
+$$
 
-(주의: ISO 8855 RH 부호. SAE convention 의 `δ − atan(...)` 와 다름.)
+$\alpha_f, \alpha_r$ 의 linear 표현:
 
-`Fy_f = −Cf · α_f`, `Fy_r = −Cr · α_r`. 위 EoM 에 대입:
+$$
+\alpha_f = \arctan\frac{v_y + a r}{v_x} - \delta \approx \frac{v_y + a r}{v_x} - \delta, \qquad
+\alpha_r = \arctan\frac{v_y - b r}{v_x} \approx \frac{v_y - b r}{v_x}
+$$
 
-```
-m · vx · r  =  −Cf · (vy + a·r)/vx + Cf · δ  −  Cr · (vy − b·r)/vx
-0           =  a · [−Cf · (vy + a·r)/vx + Cf · δ]  −  b · [−Cr · (vy − b·r)/vx]
-```
+(주의: ISO 8855 RH 부호. SAE convention 의 $\delta - \arctan(\cdots)$ 와 다름.)
 
-정리:
-```
-[ (Cf + Cr)/vx               (a·Cf − b·Cr)/vx − m·vx ]  [vy]   [Cf · δ  ]
-[ (a·Cf − b·Cr)/vx           (a²·Cf + b²·Cr)/vx       ]  [r ] = [a·Cf · δ]
-```
+$F_{y,f} = -C_f \alpha_f$, $F_{y,r} = -C_r \alpha_r$. 위 EoM 에 대입 후 정리하면 2×2 선형 시스템:
 
-이 2×2 선형 시스템의 r 해:
-```
-r  =  (A11 · B2 − A21 · B1) / det(A)
-```
+$$
+\begin{bmatrix}
+(C_f + C_r)/v_x & (a C_f - b C_r)/v_x - m v_x \\[2pt]
+(a C_f - b C_r)/v_x & (a^2 C_f + b^2 C_r)/v_x
+\end{bmatrix}
+\begin{bmatrix} v_y \\ r \end{bmatrix}
+=
+\begin{bmatrix} C_f \delta \\ a C_f \delta \end{bmatrix}
+$$
+
+$r$ 해는 $r = (A_{11} B_2 - A_{21} B_1) / \det(A)$.
 
 코드 `tests/integration/test_bicycle_steady_state.cpp:42-70` 의 `analytical_yaw_rate` 가 위 식 그대로.
 
@@ -179,9 +187,10 @@ r  =  (A11 · B2 − A21 · B1) / det(A)
 
 `a · Cf = b · Cr` (front and rear cornering stiffness times lever arm 동일) 이면 understeer gradient 가 0 — neutral steer.
 이 경우:
-```
-r_neutral  =  vx · δ / L          (Ackerman steady-state)
-```
+
+$$
+r_{\text{neutral}} = \frac{v_x\, \delta}{L} \quad (\text{Ackerman steady-state})
+$$
 
 VDSim default tire 의 경우 `Cf = B_lat · C_lat · D_lat · Fz_f · μ`, `Cr = B_lat · C_lat · D_lat · Fz_r · μ`. ratio `Cf / Cr = Fz_f / Fz_r = b / a`. 따라서 `a · Cf = b · Cr` 자동 성립 → neutral steer.
 
@@ -189,16 +198,17 @@ VDSim default tire 의 경우 `Cf = B_lat · C_lat · D_lat · Fz_f · μ`, `Cr 
 
 ### Understeer gradient
 
-```
-K_us  =  m / L · (b / Cf − a / Cr)
-```
+$$
+K_{us} = \frac{m}{L}\left(\frac{b}{C_f} - \frac{a}{C_r}\right)
+$$
 
-`K_us > 0` → understeer. `K_us < 0` → oversteer. neutral = 0.
+$K_{us} > 0$ → understeer. $K_{us} < 0$ → oversteer. neutral = 0.
 
 SS yaw rate:
-```
-r_ss  =  vx · δ / [ L · (1 + K_us · vx²) ]
-```
+
+$$
+r_{ss} = \frac{v_x\, \delta}{L\,(1 + K_{us}\, v_x^2)}
+$$
 
 `vx → ∞` 한계 — understeer 차량은 r 의 증가가 둔화, oversteer 는 발산.
 
