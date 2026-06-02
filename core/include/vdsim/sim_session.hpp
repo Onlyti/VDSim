@@ -32,6 +32,18 @@ struct SimConfig {
     double         nominal_dt   {0.005}; // for delay-buffer sizing
 };
 
+// Thread-safe snapshot of one tick's result (true + measured state plus the
+// dynamics diagnostics needed for logging / the co-sim STATE packet).
+struct SimOutput {
+    State  state    {};                  // true plant state
+    State  measured {};                  // sensor-delayed (controller feedback)
+    double sim_time {0.0};
+    double ax {0.0}, ay {0.0};           // body accel (ax_body_est / ay_body_est)
+    double roll {0.0}, pitch {0.0};      // roll_angle_qs / pitch_angle_qs
+    std::array<double, NUM_WHEELS> Fz {{0,0,0,0}};
+    double rack_torque {0.0};
+};
+
 class SimSession {
 public:
     SimSession(std::unique_ptr<IVehicleDynamics> dyn,
@@ -49,6 +61,7 @@ public:
 
     State  state() const;             // true plant state (pull)
     State  measured_state() const;    // sensor-delayed state (controller feedback)
+    SimOutput output() const;         // full thread-safe snapshot (state + diagnostics)
     double sim_time() const;
     double seconds_since_last_input() const;  // for failsafe (wall clock)
 
@@ -65,6 +78,8 @@ private:
     CmdL4  latched_ {};
     State  true_state_ {};
     State  meas_state_ {};
+    double ax_ {0.0}, ay_ {0.0}, roll_ {0.0}, pitch_ {0.0}, rack_ {0.0};
+    std::array<double, NUM_WHEELS> Fz_ {{0,0,0,0}};
     double sim_time_ {0.0};
     std::chrono::steady_clock::time_point last_input_tp_ {std::chrono::steady_clock::now()};
 };

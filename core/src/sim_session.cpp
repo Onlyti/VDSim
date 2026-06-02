@@ -52,12 +52,34 @@ void SimSession::tick(double dt) {
     const State next = dyn_->state();
     const State meas = sensor_.apply(next, dt);
 
+    // Snapshot diagnostics while we hold the (single) sim thread.
+    const double ax = dyn_->ax_body_est();
+    const double ay = dyn_->ay_body_est();
+    const double roll = dyn_->roll_angle_qs();
+    const double pitch = dyn_->pitch_angle_qs();
+    const double rack = dyn_->steering_rack_torque();
+    const auto Fz = dyn_->tire_Fz();
+
     {
         std::lock_guard<std::mutex> lk(mtx_);
         true_state_ = next;
         meas_state_ = meas;
+        ax_ = ax; ay_ = ay; roll_ = roll; pitch_ = pitch; rack_ = rack;
+        Fz_ = Fz;
         sim_time_  += dt;
     }
+}
+
+SimOutput SimSession::output() const {
+    std::lock_guard<std::mutex> lk(mtx_);
+    SimOutput o;
+    o.state = true_state_;
+    o.measured = meas_state_;
+    o.sim_time = sim_time_;
+    o.ax = ax_; o.ay = ay_; o.roll = roll_; o.pitch = pitch_;
+    o.rack_torque = rack_;
+    o.Fz = Fz_;
+    return o;
 }
 
 State SimSession::state() const {
