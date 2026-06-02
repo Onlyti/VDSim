@@ -6,8 +6,9 @@
 
 1. Ld2 가 Ld1 위에 더하는 것 (per-tire Fz, lateral transfer, Ackermann,
    differential) 을 정확히 열거한다.
-2. lateral weight transfer 의 roll-stiffness 분배 공식을 roll moment balance
-   로부터 유도한다.
+2. lateral weight transfer 를 geometric(roll center) + elastic(roll-stiffness
+   분배) + unsprung 성분으로 분해해 유도한다. roll stiffness 는 corner spring
+   에서 유도되고 ARB·roll-center 만 입력임을 안다.
 3. Ackermann steering geometry 의 inner/outer wheel 각도 식을 유도하고
    percent-interpolation 의 의미를 설명한다.
 4. Open / Locked / LSD differential 의 torque 분배 메커니즘과 split-mu 거동
@@ -51,7 +52,7 @@ fidelity.
 | 1-step lag $a_y$ | lateral transfer 가 직전 step $a_y$ 기반 | chapter 11 (iteration 옵션) |
 | Symmetric LSD | drive/coast ramp 대칭 | 실차 LSD 비대칭 |
 | Zero camber | roll 로부터 camber 없음 ($\gamma=0$) | chapter 06 |
-| Rigid roll axis | roll-stiffness 비율로만 분배 | chapter 06 (compliance) |
+| Rigid roll axis | geometric(roll center) + elastic(roll-stiffness 비율) + unsprung 으로 분배 | chapter 06 (compliance) |
 
 ---
 
@@ -70,41 +71,44 @@ $$
 \Delta F_{z,\text{long,half}} = \frac{m\, a_x\, h_{cg}}{2 L}
 $$
 
-Lateral transfer — 핵심 식:
+Lateral transfer — geometric + elastic + unsprung 분해:
 
 $$
-\Delta F_{z,\text{lat},f} = \frac{m\, a_y\, h_{cg}}{T_{w,f}} \cdot s_f, \qquad
-\Delta F_{z,\text{lat},r} = \frac{m\, a_y\, h_{cg}}{T_{w,r}} \cdot s_r
+\Delta F_{z,\text{lat},f} = \frac{1}{T_{w,f}}\Big[
+\underbrace{F_{y,s}\,\tfrac{b}{L}\,h_{rc,f}}_{\text{geometric (jacking)}}
++ \underbrace{M_{\text{roll}}\, s_f}_{\text{elastic (roll)}}
++ \underbrace{m_{u,f}\, a_y\, h_{u}}_{\text{unsprung}} \Big]
 $$
 
-$$
-s_f = \frac{K_{\phi,f}}{K_{\phi,f} + K_{\phi,r}}, \qquad
-s_r = \frac{K_{\phi,r}}{K_{\phi,f} + K_{\phi,r}}
-$$
-
-$K_{\phi,f}, K_{\phi,r}$ 는 front/rear axle 의 roll stiffness (spring + ARB 합성).
-
-share 의 의미: total roll moment 가 두 axle 에 stiffness 비율로 분배된다.
-front 가 더 stiff → front axle 이 더 많은 lateral transfer 흡수 → front
-outer 가 더 loaded → understeer 경향.
-
-### 유도 — roll moment balance
-
-좌선회 ($a_y > 0$). sprung mass 의 inertia force $= -m_s a_y \hat{y}$. CG
-height $h_{cg}$ lever arm 으로 roll moment $M_{\text{roll}} = m a_y h_{cg}$.
-
-이 moment 가 front/rear roll spring 에 parallel 로 분배 → 각 axle share 는
-stiffness 비율. axle share 가 결정되면 좌우 tire 의 Fz 차이를 만든다:
+(rear 도 $a\leftrightarrow b$, $f\leftrightarrow r$ 대칭). 여기서
 
 $$
-F_{\text{outer}} - F_{\text{inner}} = \frac{M_{\text{roll,axle}}}{T_w / 2}
-= 2\, \Delta F_{z,\text{lat}}
+F_{y,s} = m_s\, a_y, \quad
+M_{\text{roll}} = F_{y,s}\,(h_{cg}-h_{ra}), \quad
+h_{ra} = h_{rc,f}\tfrac{b}{L} + h_{rc,r}\tfrac{a}{L},
 $$
 
 $$
-\therefore \Delta F_{z,\text{lat}} = \frac{M_{\text{roll,axle}}}{T_w}
-= \frac{m\, a_y\, h_{cg}\, s}{T_w}
+s_f = \frac{K_{\phi,f}}{K_{\phi,f}+K_{\phi,r}}, \qquad
+K_{\phi,\text{axle}} = (k_{\text{left}}+k_{\text{right}})\left(\tfrac{T_w}{2}\right)^2 + K_{\text{ARB}}.
 $$
+
+핵심: axle roll stiffness $K_\phi$ 는 **corner spring 에서 유도**되며 ($spring \cdot arm^2$),
+ARB 는 roll 전용 추가항이다 (입력은 ARB 와 roll-center height 만). $h_u$ 는 unsprung
+CG 높이 ($\approx$ wheel radius).
+
+### 유도 — geometric vs elastic
+
+lateral force 가 sprung mass 에 작용할 때 전달 경로는 둘로 갈린다.
+- **Geometric (jacking)**: roll center 를 통해 suspension link 로 즉시 전달되는
+  성분. roll 을 일으키지 않고 $F_{y,s}\,h_{rc}/T_w$ 만큼 직접 Fz 차이.
+- **Elastic (roll)**: roll axis (front/rear roll center 를 잇는 선, CG 아래 높이
+  $h_{ra}$) 둘레의 roll moment $M_{\text{roll}} = F_{y,s}(h_{cg}-h_{ra})$ 가 두
+  axle 의 roll spring 에 stiffness 비율 $s_f$ 로 분배.
+
+front 가 더 stiff (또는 front ARB↑) → front share↑ → front outer 가 더 loaded
+→ understeer 경향. $h_{rc}=0$ 이면 geometric=0, $h_{ra}=0$ 으로 elastic-only
+($M_{\text{roll}}=m_s a_y h_{cg}$) 이 되어 단순 모델로 환원된다.
 
 부호 직관: $a_y > 0$ (좌선회, centripetal $+y$) → 차체가 $-y$ 쪽으로 기울고
 → right side (FR, RR) loaded → $F_{z,FR} > F_{z,FL}$.
@@ -364,17 +368,20 @@ nonlinear region. linear 에서는 lateral transfer 효과가 작아 SS yaw rate
 > `core/src/seven_dof_dynamics.cpp:158-176`:
 >
 > ```cpp
+> const double Kf = axle_roll_stiffness(vp_, 0);   // (k_l+k_r)*(tw/2)^2 + ARB
+> const double Kr = axle_roll_stiffness(vp_, 1);
+> const double h_ra  = hrc_f * (b/L) + hrc_r * (a/L);
+> const double Fys   = vp_.mass_sprung * ay_prev_;
+> const double Mroll = Fys * (h_cg - h_ra);
 > const double dFz_lat_f = (Tw_f > 1e-3)
->     ? m * ay_prev_ * h_cg / Tw_f * share_f : 0.0;
-> const double dFz_lat_r = (Tw_r > 1e-3)
->     ? m * ay_prev_ * h_cg / Tw_r * share_r : 0.0;
+>     ? (Fys*(b/L)*hrc_f + Mroll*(Kf/(Kf+Kr)) + m_uf*ay_prev_*R) / Tw_f : 0.0;
 > Fz[WHEEL_FL] = Fz_static_f - dFz_long_half - dFz_lat_f;
 > Fz[WHEEL_FR] = Fz_static_f - dFz_long_half + dFz_lat_f;
-> Fz[WHEEL_RL] = Fz_static_r + dFz_long_half - dFz_lat_r;
-> Fz[WHEEL_RR] = Fz_static_r + dFz_long_half + dFz_lat_r;
 > ```
 >
-> `+dFz_lat_f` 가 FR 에 더해져 좌선회 시 $F_{z,FR}>F_{z,FL}$ 부호 정확.
+> 3-성분(geometric+elastic+unsprung). `+dFz_lat_f` 가 FR 에 더해져 좌선회 시
+> $F_{z,FR}>F_{z,FL}$ 부호 정확. roll stiffness 는 spring 에서 유도되며 ARB·roll-center
+> 만 입력.
 
 > **[VDSim impl] § 5.3 — ay 정의 버그 history**
 >
