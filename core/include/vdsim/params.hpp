@@ -30,8 +30,16 @@ struct VehicleParams {
     // solid-disk approximation 0.5 * unsprung_mass * wheel_radius^2; a positive
     // value overrides it (rim+tire is not a uniform disk, so measured I differs).
     std::array<double, NUM_WHEELS> wheel_inertia      {{0, 0, 0, 0}};
-    double roll_stiffness_front {30000.0};                             // [N m/rad]
-    double roll_stiffness_rear  {25000.0};                             // [N m/rad]
+    // Anti-roll bar roll stiffness per axle [N m/rad]. The spring contribution to
+    // roll stiffness is derived from spring_stiffness x track (see dynamics), so
+    // this is the ARB-only addition. 0 = no anti-roll bar.
+    double arb_stiffness_front  {0.0};                                 // [N m/rad]
+    double arb_stiffness_rear   {0.0};                                 // [N m/rad]
+    // Roll-center height per axle [m] above ground. Sets the geometric (jacking)
+    // vs elastic split of lateral load transfer. 0 = roll axis at ground (all
+    // sprung-mass transfer is elastic, through the springs/ARB).
+    double roll_center_height_front {0.0};                             // [m]
+    double roll_center_height_rear  {0.0};                             // [m]
     double anti_dive_front      {0.0};                                 // [0, 1] fraction
     double anti_squat_rear      {0.0};                                 // [0, 1] fraction
     double camber_per_roll      {0.0};                                 // [rad/rad] roll-to-camber gain
@@ -62,6 +70,19 @@ struct VehicleParams {
     static VehicleParams from_yaml(const std::string& path);
     void to_yaml(const std::string& path) const;
 };
+
+// Axle roll stiffness [N m/rad] derived from the corner springs plus the ARB.
+// Two springs at half-track produce K = (k_left + k_right) * (track/2)^2; the
+// anti-roll bar adds its own roll-only rate. axle: 0 = front, 1 = rear.
+inline double axle_roll_stiffness(const VehicleParams& vp, int axle) {
+    const int l   = axle ? WHEEL_RL : WHEEL_FL;
+    const int r   = axle ? WHEEL_RR : WHEEL_FR;
+    const double tw_half = 0.5 * (axle ? vp.track_rear : vp.track_front);
+    const double k_spring = (vp.spring_stiffness[l] + vp.spring_stiffness[r])
+                          * tw_half * tw_half;
+    const double arb = axle ? vp.arb_stiffness_rear : vp.arb_stiffness_front;
+    return k_spring + (arb > 0.0 ? arb : 0.0);
+}
 
 struct TireParams {
     // Pacejka MF96 simple form:

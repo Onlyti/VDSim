@@ -44,9 +44,12 @@ void expect_vehicle_equal(const vdsim::VehicleParams& a, const vdsim::VehiclePar
         EXPECT_NEAR(a.spring_stiffness[i],   b.spring_stiffness[i],   kTol);
         EXPECT_NEAR(a.damper_coefficient[i], b.damper_coefficient[i], kTol);
         EXPECT_NEAR(a.unsprung_mass[i],      b.unsprung_mass[i],      kTol);
+        EXPECT_NEAR(a.wheel_inertia[i],      b.wheel_inertia[i],      kTol);
     }
-    EXPECT_NEAR(a.roll_stiffness_front, b.roll_stiffness_front, kTol);
-    EXPECT_NEAR(a.roll_stiffness_rear,  b.roll_stiffness_rear,  kTol);
+    EXPECT_NEAR(a.arb_stiffness_front,  b.arb_stiffness_front,  kTol);
+    EXPECT_NEAR(a.arb_stiffness_rear,   b.arb_stiffness_rear,   kTol);
+    EXPECT_NEAR(a.roll_center_height_front, b.roll_center_height_front, kTol);
+    EXPECT_NEAR(a.roll_center_height_rear,  b.roll_center_height_rear,  kTol);
 
     EXPECT_EQ(a.drive_type, b.drive_type);
     EXPECT_NEAR(a.max_motor_torque, b.max_motor_torque, kTol);
@@ -150,8 +153,11 @@ TEST(VehicleYaml, RoundtripCustomValues) {
     a.spring_stiffness   = {{31000, 31000, 28000, 28000}};
     a.damper_coefficient = {{3100,  3100,  2800,  2800}};
     a.unsprung_mass      = {{42, 42, 38, 38}};
-    a.roll_stiffness_front = 35000.0;
-    a.roll_stiffness_rear  = 27000.0;
+    a.wheel_inertia      = {{1.1, 1.1, 1.3, 1.3}};
+    a.arb_stiffness_front = 12000.0;
+    a.arb_stiffness_rear  = 8000.0;
+    a.roll_center_height_front = 0.05;
+    a.roll_center_height_rear  = 0.08;
     a.drive_type = vdsim::VehicleParams::Drive::AWD;
     a.max_motor_torque = 450.0;
     a.max_brake_torque = 2500.0;

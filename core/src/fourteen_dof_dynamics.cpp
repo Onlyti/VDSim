@@ -81,10 +81,12 @@ public:
             const double k = std::max(1.0, vp.spring_stiffness[i]);
             static_compression_[i] = Fz_static_[i] / k;
         }
-        spdlog::debug("[L3 14-DOF] init: mass_sprung={:.0f} kg, K_phi_total={:.0f} N m/rad, "
-                      "k_tire={:.0f} N/m, anti_dive={:.2f}",
+        spdlog::debug("[L3 14-DOF] init: mass_sprung={:.0f} kg, K_phi_spring={:.0f} N m/rad, "
+                      "K_arb={:.0f} N m/rad, k_tire={:.0f} N/m, anti_dive={:.2f}",
                       vp.mass_sprung,
-                      vp.roll_stiffness_front + vp.roll_stiffness_rear,
+                      axle_roll_stiffness(vp, 0) + axle_roll_stiffness(vp, 1)
+                          - vp.arb_stiffness_front - vp.arb_stiffness_rear,
+                      vp.arb_stiffness_front + vp.arb_stiffness_rear,
                       tp.tire_vertical_stiffness, vp.anti_dive_front);
     }
 
@@ -194,11 +196,14 @@ private:
 
         // Heave + pitch via per-corner spring/damper between sprung corner
         // and unsprung mass.
-        double Fz_sum = 0.0, M_pitch_spring = 0.0;
+        // Corner deflection couples heave + pitch + roll (delta = z + ry*phi - rx*th),
+        // so the per-corner springs/dampers produce roll stiffness and roll damping
+        // naturally -- no separate lumped K_phi/C_phi. The ARB adds a roll-only term.
+        double Fz_sum = 0.0, M_pitch_spring = 0.0, M_roll_spring = 0.0;
         std::array<double, NUM_WHEELS> F_susp{};
         for (int i = 0; i < NUM_WHEELS; ++i) {
-            const double z_corner = z - rx_[i] * th;
-            const double v_corner = z_dot - rx_[i] * th_dot;
+            const double z_corner = z + ry_[i] * phi - rx_[i] * th;
+            const double v_corner = z_dot + ry_[i] * phi_dot - rx_[i] * th_dot;
             const double delta    = z_corner - zu[i];        // relative compression deviation
             const double vel      = v_corner - zu_dot[i];
             const double k        = std::max(1.0, vp_.spring_stiffness[i]);
@@ -207,16 +212,12 @@ private:
             F_susp[i]      = F;
             Fz_sum        += F;
             M_pitch_spring -= rx_[i] * F;
+            M_roll_spring  += ry_[i] * F;
         }
-
-        // Roll uses axle-level roll stiffness (springs + anti-roll bar combined).
-        const double K_phi = vp_.roll_stiffness_front + vp_.roll_stiffness_rear;
-        // Roll damping: derive from front+rear corner dampers · arm^2 (no separate ARB damper).
-        const double tw_f_half = vp_.track_front * 0.5, tw_r_half = vp_.track_rear * 0.5;
-        const double C_phi = (vp_.damper_coefficient[WHEEL_FL] +
-                              vp_.damper_coefficient[WHEEL_FR]) * tw_f_half * tw_f_half +
-                             (vp_.damper_coefficient[WHEEL_RL] +
-                              vp_.damper_coefficient[WHEEL_RR]) * tw_r_half * tw_r_half;
+        // Anti-roll bar: roll-only restoring moment (undamped), added on top of the
+        // spring-derived roll stiffness above.
+        const double K_arb = std::max(0.0, vp_.arb_stiffness_front)
+                           + std::max(0.0, vp_.arb_stiffness_rear);
 
         // Anti-dive / anti-squat reduces the longitudinal inertia moment fed
         // into pitch.  For braking (ax<0) the front anti_dive_front fraction
@@ -233,7 +234,7 @@ private:
         d.dz       = z_dot;
         d.dz_dot   = Fz_sum / std::max(1.0, m_s);
         d.dphi     = phi_dot;
-        d.dphi_dot = (- K_phi * phi - C_phi * phi_dot + m_s * ay * h) / std::max(1e-3, Ixx);
+        d.dphi_dot = (M_roll_spring - K_arb * phi + m_s * ay * h) / std::max(1e-3, Ixx);
         d.dth      = th_dot;
         d.dth_dot  = (M_pitch_spring + M_inertia_pitch) / std::max(1e-3, Iyy);
 

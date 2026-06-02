@@ -23,8 +23,12 @@ wheel_radius_nominal: 0.32   # [m]
 spring_stiffness:   [30000, 30000, 30000, 30000]   # [N/m]
 damper_coefficient: [3000,  3000,  3000,  3000]    # [N s/m]
 unsprung_mass:      [40,    40,    40,    40]      # [kg]
-roll_stiffness_front: 30000.0   # [N m/rad]
-roll_stiffness_rear:  25000.0   # [N m/rad]
+# Roll stiffness is derived from spring_stiffness x track; these are ARB-only
+# additions. Roll-center height sets the geometric/elastic load-transfer split.
+arb_stiffness_front: 0.0        # [N m/rad]
+arb_stiffness_rear:  0.0        # [N m/rad]
+roll_center_height_front: 0.0   # [m]
+roll_center_height_rear:  0.0   # [m]
 
 # ---- Drivetrain ----
 drive_type:       RWD       # FWD / RWD / AWD

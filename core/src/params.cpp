@@ -129,8 +129,11 @@ VehicleParams VehicleParams::from_yaml(const std::string& path) {
     pull_array4(root, "spring_stiffness",   p.spring_stiffness);
     pull_array4(root, "damper_coefficient", p.damper_coefficient);
     pull_array4(root, "unsprung_mass",      p.unsprung_mass);
-    pull(root, "roll_stiffness_front", p.roll_stiffness_front);
-    pull(root, "roll_stiffness_rear",  p.roll_stiffness_rear);
+    pull_array4(root, "wheel_inertia",      p.wheel_inertia);
+    pull(root, "arb_stiffness_front",  p.arb_stiffness_front);
+    pull(root, "arb_stiffness_rear",   p.arb_stiffness_rear);
+    pull(root, "roll_center_height_front", p.roll_center_height_front);
+    pull(root, "roll_center_height_rear",  p.roll_center_height_rear);
     pull(root, "anti_dive_front",      p.anti_dive_front);
     pull(root, "anti_squat_rear",      p.anti_squat_rear);
     pull(root, "camber_per_roll",      p.camber_per_roll);
@@ -189,9 +192,12 @@ void VehicleParams::to_yaml(const std::string& path) const {
     write_seq_double(out, "spring_stiffness",   spring_stiffness);
     write_seq_double(out, "damper_coefficient", damper_coefficient);
     write_seq_double(out, "unsprung_mass",      unsprung_mass);
+    write_seq_double(out, "wheel_inertia",      wheel_inertia);
 
-    out << YAML::Key << "roll_stiffness_front" << YAML::Value << roll_stiffness_front;
-    out << YAML::Key << "roll_stiffness_rear"  << YAML::Value << roll_stiffness_rear;
+    out << YAML::Key << "arb_stiffness_front"  << YAML::Value << arb_stiffness_front;
+    out << YAML::Key << "arb_stiffness_rear"   << YAML::Value << arb_stiffness_rear;
+    out << YAML::Key << "roll_center_height_front" << YAML::Value << roll_center_height_front;
+    out << YAML::Key << "roll_center_height_rear"  << YAML::Value << roll_center_height_rear;
     out << YAML::Key << "anti_dive_front"      << YAML::Value << anti_dive_front;
     out << YAML::Key << "anti_squat_rear"      << YAML::Value << anti_squat_rear;
     out << YAML::Key << "camber_per_roll"      << YAML::Value << camber_per_roll;

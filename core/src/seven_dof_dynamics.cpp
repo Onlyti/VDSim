@@ -135,10 +135,15 @@ public:
     std::array<double, NUM_WHEELS> wheel_slip_ratio()  const override { return slip_ratio_; }
     std::array<double, NUM_WHEELS> wheel_slip_angle()  const override { return slip_angle_; }
 
-    // Quasi-static roll: K_phi_total * phi = m * ay * h_cg
+    // Quasi-static roll about the roll axis: K_phi_total * phi = M_roll, where
+    // K_phi is derived from springs + ARB and M_roll = m_s * ay * (h_cg - h_ra).
     double roll_angle_qs() const override {
-        const double K = vp_.roll_stiffness_front + vp_.roll_stiffness_rear;
-        return (K > 1e-6) ? (vp_.mass * ay_prev_ * vp_.cg_height / K) : 0.0;
+        const double K = axle_roll_stiffness(vp_, 0) + axle_roll_stiffness(vp_, 1);
+        const double L = vp_.wheelbase;
+        const double h_ra = vp_.roll_center_height_front * (vp_.cg_to_rear / L)
+                          + vp_.roll_center_height_rear  * (vp_.cg_to_front / L);
+        const double Mroll = vp_.mass_sprung * ay_prev_ * (vp_.cg_height - h_ra);
+        return (K > 1e-6) ? (Mroll / K) : 0.0;
     }
     // Quasi-static pitch: anti-dive omitted; effective pitch stiffness
     // approximated by per-axle spring k * (a^2 + b^2) about CG.
@@ -215,22 +220,28 @@ private:
         const double dFz_long_total = m * ax_prev_ * h_cg / L;      // moves to rear if ax>0
         const double dFz_long_half  = dFz_long_total * 0.5;
 
-        const double k_phi_f = vp_.roll_stiffness_front;
-        const double k_phi_r = vp_.roll_stiffness_rear;
-        const double k_phi_sum = std::max(1e-6, k_phi_f + k_phi_r);
-        const double share_f = k_phi_f / k_phi_sum;
-        const double share_r = k_phi_r / k_phi_sum;
-
+        // ---- Lateral load transfer = geometric (jacking through the roll center)
+        //      + elastic (roll about the roll axis, split by axle roll stiffness)
+        //      + unsprung. Roll stiffness is derived from springs + ARB.
+        const double Kf   = axle_roll_stiffness(vp_, 0);
+        const double Kr   = axle_roll_stiffness(vp_, 1);
+        const double Ktot = std::max(1e-6, Kf + Kr);
+        const double hrc_f = vp_.roll_center_height_front;
+        const double hrc_r = vp_.roll_center_height_rear;
+        const double h_ra  = hrc_f * (b / L) + hrc_r * (a / L);   // roll axis under CG
+        const double m_s   = vp_.mass_sprung;
+        const double Fys   = m_s * ay_prev_;                      // sprung lateral force
+        const double Mroll = Fys * (h_cg - h_ra);                 // roll moment about roll axis
+        const double m_uf  = vp_.unsprung_mass[WHEEL_FL] + vp_.unsprung_mass[WHEEL_FR];
+        const double m_ur  = vp_.unsprung_mass[WHEEL_RL] + vp_.unsprung_mass[WHEEL_RR];
         const double dFz_lat_f = (Tw_f > 1e-3)
-            ? m * ay_prev_ * h_cg / Tw_f * share_f : 0.0;
+            ? (Fys * (b / L) * hrc_f + Mroll * (Kf / Ktot) + m_uf * ay_prev_ * R) / Tw_f
+            : 0.0;
         const double dFz_lat_r = (Tw_r > 1e-3)
-            ? m * ay_prev_ * h_cg / Tw_r * share_r : 0.0;
-        // Sign: ay > 0 (+y, left-turn centripetal) loads right side.
-        //   left  tire -= |dFz_lat|, right tire += |dFz_lat|
-        // Because in ISO 8855 RH, +y is leftward, and inertia load shifts to -y (right).
-        // The numeric sign of dFz_lat already encodes sign(ay) but the lateral
-        // transfer goes to the right side regardless of sign convention check.
-        // Equivalent expression: Fz_FL -= dFz_lat_f, Fz_FR += dFz_lat_f.
+            ? (Fys * (a / L) * hrc_r + Mroll * (Kr / Ktot) + m_ur * ay_prev_ * R) / Tw_r
+            : 0.0;
+        // Sign: ay > 0 (+y, left) shifts load to the right (-y); applied below as
+        //   Fz_FL -= dFz_lat_f, Fz_FR += dFz_lat_f (rear analogously).
 
         std::array<double, NUM_WHEELS> Fz;
         Fz[WHEEL_FL] = Fz_static_f - dFz_long_half - dFz_lat_f;

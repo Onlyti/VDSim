@@ -18,8 +18,10 @@ wheel_radius_nominal: 0.34
 spring_stiffness:   [120000, 120000, 110000, 110000]
 damper_coefficient: [9000,   9000,   8500,   8500]
 unsprung_mass:      [25,     25,     25,     25]
-roll_stiffness_front: 95000.0
-roll_stiffness_rear:  78000.0
+arb_stiffness_front: 0.0        # [N m/rad] (roll stiffness derived from springs x track)
+arb_stiffness_rear:  0.0        # [N m/rad]
+roll_center_height_front: 0.0   # [m]
+roll_center_height_rear:  0.0   # [m]
 anti_dive_front:      0.45
 anti_squat_rear:      0.30
 camber_per_roll:      0.0

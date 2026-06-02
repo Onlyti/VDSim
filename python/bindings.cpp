@@ -54,8 +54,10 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("track_rear",           &vdsim::VehicleParams::track_rear)
         .def_readwrite("cg_height",            &vdsim::VehicleParams::cg_height)
         .def_readwrite("wheel_radius_nominal", &vdsim::VehicleParams::wheel_radius_nominal)
-        .def_readwrite("roll_stiffness_front", &vdsim::VehicleParams::roll_stiffness_front)
-        .def_readwrite("roll_stiffness_rear",  &vdsim::VehicleParams::roll_stiffness_rear)
+        .def_readwrite("arb_stiffness_front",  &vdsim::VehicleParams::arb_stiffness_front)
+        .def_readwrite("arb_stiffness_rear",   &vdsim::VehicleParams::arb_stiffness_rear)
+        .def_readwrite("roll_center_height_front", &vdsim::VehicleParams::roll_center_height_front)
+        .def_readwrite("roll_center_height_rear",  &vdsim::VehicleParams::roll_center_height_rear)
         // Sprung-mass inertia tensor diagonal (Ixx roll, Iyy pitch, Izz yaw).
         .def_property("ixx",
             [](const vdsim::VehicleParams& p) { return p.inertia_diag.x(); },
