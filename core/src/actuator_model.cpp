@@ -28,8 +28,6 @@ inline double first_order(double y, double u, double tau, double dt) {
     return a * y + (1.0 - a) * u;
 }
 
-inline double sgn(double x) { return (x > 0.0) - (x < 0.0); }
-
 // Piecewise-linear lookup (ascending x). Empty table -> default.
 double lerp_table(const std::vector<double>& xs, const std::vector<double>& ys,
                   double x, double def) {
@@ -70,8 +68,7 @@ double ActuatorModel::push_delay(std::vector<double>& buf, double v,
 void ActuatorModel::initialize(const ActuatorParams& p, double nominal_dt) {
     p_ = p;
     nominal_dt_ = (nominal_dt > 1e-6) ? nominal_dt : 0.005;
-    brake_T_ = p_.brake.T_ambient;
-    reset();
+    reset();                                   // sets brake_T_ = T_ambient
     initialized_ = true;
 }
 
@@ -91,25 +88,41 @@ CmdL4 ActuatorModel::apply(const CmdL4& desired, double speed_mps, double dt) {
     double s_cmd = push_delay(steer_buf_, desired.steer_angle_wheel,
                               p_.steer.ch.dead_time_s, dt);
     if (p_.steer.friction.enabled) {
-        // Torque-servo steering with LuGre friction (substepped for stiffness).
+        // Torque-servo steering with LuGre friction (substepped).
         const auto& L = p_.steer.friction;
         const int nsub = std::max(1, static_cast<int>(std::ceil(dt / 1.0e-4)));
         const double h = dt / nsub;
         for (int i = 0; i < nsub; ++i) {
             const double w = steer_vel_;
             const double g = L.Tc + (L.Ts - L.Tc) * std::exp(-(w / L.ws) * (w / L.ws));
-            const double dz = w - L.sigma0 * std::fabs(w) / std::max(1e-6, g) * lugre_z_;
-            const double Tf = L.sigma0 * lugre_z_ + L.sigma1 * dz + L.sigma2 * w;
+            // Semi-implicit bristle update: unconditionally stable for the
+            // stiff sigma0 term. z_{k+1} = (z + h w)/(1 + h sigma0 |w|/g).
+            const double z_new = (lugre_z_ + h * w)
+                / (1.0 + h * L.sigma0 * std::fabs(w) / std::max(1e-6, g));
+            const double dz = (z_new - lugre_z_) / h;            // dz/dt
+            const double Tf = L.sigma0 * z_new + L.sigma1 * dz + L.sigma2 * w;
             const double Tservo = p_.steer.servo_kp * (s_cmd - steer_pos_)
                                   - p_.steer.servo_kd * w;
             const double acc = (Tservo - Tf) / std::max(1e-6, p_.steer.inertia);
-            lugre_z_  += dz * h;
+            lugre_z_   = z_new;
             steer_vel_ += acc * h;
             steer_pos_ += steer_vel_ * h;
+            // Hard travel stop with anti-windup: clamp the true servo position
+            // and kill velocity into the stop (do not corrupt with an external
+            // clip — steer_pos_ stays the physical integrator state).
+            if (steer_pos_ > p_.steer.ch.out_max) {
+                steer_pos_ = p_.steer.ch.out_max;
+                if (steer_vel_ > 0.0) steer_vel_ = 0.0;
+            } else if (steer_pos_ < p_.steer.ch.out_min) {
+                steer_pos_ = p_.steer.ch.out_min;
+                if (steer_vel_ < 0.0) steer_vel_ = 0.0;
+            }
         }
-        steer_pos_ = rate_limit(steer_out_, steer_pos_, p_.steer.ch.rate_limit, dt);
-        steer_out_ = saturate(steer_pos_, p_.steer.ch.out_min, p_.steer.ch.out_max);
-        steer_pos_ = steer_out_;
+        // Optional external slew cap on the realized output; servo state
+        // (steer_pos_) is left intact so the integrator never desyncs.
+        steer_out_ = (p_.steer.ch.rate_limit > 0.0)
+            ? rate_limit(steer_out_, steer_pos_, p_.steer.ch.rate_limit, dt)
+            : steer_pos_;
     } else {
         double y = first_order(steer_lag_, s_cmd, p_.steer.ch.tau_s, dt);
         steer_lag_ = y;
@@ -177,6 +190,9 @@ void SensorDelay::reset(const State& s) {
 State SensorDelay::apply(const State& measured, double dt) {
     if (!initialized_ || delay_s_ <= 0.0 || dt <= 0.0) return measured;
     buf_.push_back(measured);
+    // Whole-State snapshots cannot be interpolated, so the sensor delay is
+    // quantized to the nearest sample (round), unlike the scalar command delay
+    // which interpolates fractionally. Intentional.
     const int N = static_cast<int>(std::round(delay_s_ / dt));
     const int maxlen = N + 2;
     if (static_cast<int>(buf_.size()) > maxlen)

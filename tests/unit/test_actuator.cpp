@@ -107,6 +107,25 @@ TEST(Actuator, LuGreSteeringTracksAndIsFinite) {
     EXPECT_NEAR(y, 0.2, 0.05);              // converges near command
 }
 
+// LuGre steering with an active travel stop: output stays clamped and the
+// servo integrator does not wind up (regression for the rate/sat desync bug).
+TEST(Actuator, LuGreWithSaturationStaysBounded) {
+    ActuatorParams p;
+    p.steer.friction.enabled = true;
+    p.steer.ch.out_max = 0.15;
+    p.steer.ch.out_min = -0.15;
+    ActuatorModel a; a.initialize(p, 0.005);
+    double y = 0;
+    for (int k = 0; k < 600; ++k) y = a.apply(cmd(0, 0, 0.5), 0.0, 0.005).steer_angle_wheel;
+    EXPECT_LE(y, 0.15 + 1e-9);
+    EXPECT_TRUE(std::isfinite(y));
+    // Reverse command: must come off the stop and head negative (no windup lock).
+    double yr = 0;
+    for (int k = 0; k < 600; ++k) yr = a.apply(cmd(0, 0, -0.5), 0.0, 0.005).steer_angle_wheel;
+    EXPECT_LT(yr, 0.0);
+    EXPECT_GE(yr, -0.15 - 1e-9);
+}
+
 // Sensor delay returns an older state snapshot.
 TEST(Actuator, SensorDelayReturnsPast) {
     SensorDelay s; s.initialize(0.05, 0.005);  // 10-step delay
