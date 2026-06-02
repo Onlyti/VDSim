@@ -30,6 +30,26 @@
   .kv b { color:#fff; font-weight:600; }
   .sub { font-size:11px; color:var(--dim); }
   #conn { font-size:11px; }
+  .toolbar { position:fixed; top:12px; left:50%; transform:translateX(-50%); display:flex; gap:6px; z-index:20; padding:6px; }
+  .toolbar button { width:auto; padding:7px 12px; }
+  .win { position:fixed; top:84px; left:300px; width:330px; max-height:74vh; overflow:auto;
+         background:rgba(23,27,34,.97); border:1px solid #2a313b; border-radius:10px; display:none;
+         z-index:30; box-shadow:0 10px 34px rgba(0,0,0,.55); }
+  .win.open { display:block; }
+  .win-h { display:flex; justify-content:space-between; align-items:center; padding:8px 12px;
+           border-bottom:1px solid #2a313b; cursor:move; background:#1b2128; border-radius:10px 10px 0 0; }
+  .win-h b { font:600 13px Tahoma; color:#fff; }
+  .win-h .x { cursor:pointer; color:var(--dim); padding:0 6px; }
+  .win-b { padding:10px 12px; }
+  .grp { font:600 10px Tahoma; color:var(--acc); text-transform:uppercase; letter-spacing:.5px; margin:11px 0 4px; }
+  .fld { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:3px 0; }
+  .fld label { margin:0; font-size:11px; flex:1; color:var(--ink); }
+  .fld input { width:72px; background:#0e1116; color:var(--ink); border:1px solid #2a313b; border-radius:4px; padding:3px; font-size:12px; }
+  .fld .arr input { width:44px; }
+  .apply { width:100%; margin-top:12px; background:var(--acc)!important; color:#001018!important; border-color:var(--acc)!important; }
+  .speed.on { background:var(--acc); color:#001018; border-color:var(--acc); }
+  .fld.na { opacity:.35; }
+  .badge { font-size:9px; color:var(--dim); border:1px solid #2a313b; border-radius:3px; padding:0 3px; margin-left:5px; }
 </style>
 <script type="importmap">
 { "imports": {
@@ -81,6 +101,16 @@
   <h2>Fz [N] FL FR RL RR</h2>
   <div class="sub" id="h_fz">—</div>
 </div>
+
+<div class="toolbar panel">
+  <button id="tb_veh">Vehicle</button>
+  <button id="tb_tire">Tire</button>
+  <button id="tb_sim">Simulation</button>
+</div>
+
+<div id="win_veh" class="win"><div class="win-h"><b>Vehicle parameters</b><span class="x">✕</span></div><div class="win-b" id="veh_body"></div></div>
+<div id="win_tire" class="win"><div class="win-h"><b>Tire parameters</b><span class="x">✕</span></div><div class="win-b" id="tire_body"></div></div>
+<div id="win_sim" class="win"><div class="win-h"><b>Simulation</b><span class="x">✕</span></div><div class="win-b" id="sim_body"></div></div>
 
 <script type="module">
 import * as THREE from 'three';
@@ -234,15 +264,19 @@ es.onmessage=e=>{ try{ applyState(JSON.parse(e.data)); }catch(_){} };
 
 // ---- config / control ----
 async function post(url,obj){ await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(obj)}); }
+const LEVEL_LABEL={K:'L0 Kinematic', L1:'L1 Bicycle', L2:'L2 7-DOF', L3:'L3 14-DOF'};
 async function loadConfig(){
   const r=await(await fetch('/api/config')).json();
   const v=$('vehicle'); v.innerHTML=r.vehicles.map(x=>`<option ${x===r.config.vehicle?'selected':''}>${x}</option>`).join('');
-  const l=$('level'); l.innerHTML=r.levels.map(x=>`<option ${x===r.config.level?'selected':''}>${x}</option>`).join('');
+  const l=$('level'); l.innerHTML=r.levels.map(x=>`<option value="${x}" ${x===r.config.level?'selected':''}>${LEVEL_LABEL[x]||x}</option>`).join('');
   $('vt').value=r.config.v_target; $('vtv').textContent=r.config.v_target+' m/s';
 }
 loadConfig();
 $('vehicle').onchange=e=>post('/api/config',{vehicle:e.target.value});
-$('level').onchange=e=>post('/api/config',{level:e.target.value});
+$('level').onchange=async e=>{ await post('/api/config',{level:e.target.value});
+  // refresh open param panels so level-applicability updates
+  if($('win_veh').classList.contains('open')) buildForm('/api/vehicle','veh_body');
+  if($('win_tire').classList.contains('open')) buildForm('/api/tire','tire_body'); };
 $('vt').oninput=e=>{ $('vtv').textContent=e.target.value+' m/s'; };
 $('vt').onchange=e=>post('/api/config',{v_target:+e.target.value});
 $('start').onclick=()=>post('/api/control',{action:'start'});
@@ -270,6 +304,77 @@ setInterval(()=>{
     post('/api/manual',man);
   }
 },80);
+
+// ---- floating windows (draggable) ----
+function makeDraggable(win){
+  const h=win.querySelector('.win-h'); let sx,sy,ox,oy,dragging=false;
+  h.addEventListener('mousedown',e=>{ if(e.target.classList.contains('x'))return;
+    dragging=true; sx=e.clientX; sy=e.clientY; const r=win.getBoundingClientRect(); ox=r.left; oy=r.top; e.preventDefault(); });
+  addEventListener('mousemove',e=>{ if(!dragging)return;
+    win.style.left=(ox+e.clientX-sx)+'px'; win.style.top=(oy+e.clientY-sy)+'px'; });
+  addEventListener('mouseup',()=>dragging=false);
+  win.querySelector('.x').onclick=()=>win.classList.remove('open');
+}
+['win_veh','win_tire','win_sim'].forEach(id=>makeDraggable($(id)));
+
+// ---- schema-driven param form (vehicle/tire) ----
+async function buildForm(apiPath, bodyId){
+  const cfg=(await(await fetch('/api/config')).json()).config;
+  const lvl=cfg.level;
+  const r=await(await fetch(apiPath)).json();
+  const groups={}; r.fields.forEach(f=>{ (groups[f.group]=groups[f.group]||[]).push(f); });
+  const el=$(bodyId); el.innerHTML='';
+  for(const g in groups){
+    const gh=document.createElement('div'); gh.className='grp'; gh.textContent=g; el.appendChild(gh);
+    groups[g].forEach(f=>{
+      const applies = f.levels.includes(lvl);
+      const row=document.createElement('div'); row.className='fld'+(applies?'':' na');
+      const lab=document.createElement('label'); lab.textContent=f.label;
+      if(!applies){ const b=document.createElement('span'); b.className='badge'; b.textContent=f.levels.join('/'); lab.appendChild(b); }
+      row.appendChild(lab);
+      if(f.array){ const wrap=document.createElement('span'); wrap.className='arr';
+        f.value.forEach((v,i)=>{ const inp=document.createElement('input'); inp.type='number'; inp.step='any';
+          inp.value=v; inp.dataset.name=f.name; inp.dataset.idx=i; inp.disabled=!applies; wrap.appendChild(inp); });
+        row.appendChild(wrap);
+      } else { const inp=document.createElement('input'); inp.type='number'; inp.step='any';
+        inp.value=f.value; inp.dataset.name=f.name; inp.disabled=!applies; row.appendChild(inp); }
+      el.appendChild(row);
+    });
+  }
+  const btn=document.createElement('button'); btn.className='apply'; btn.textContent='Apply (rebuild sim)';
+  btn.onclick=async()=>{ const out={}, arrs={};
+    el.querySelectorAll('input[data-name]').forEach(inp=>{ const nm=inp.dataset.name;
+      if(inp.dataset.idx!==undefined){ (arrs[nm]=arrs[nm]||[])[+inp.dataset.idx]=+inp.value; }
+      else out[nm]=+inp.value; });
+    Object.assign(out, arrs); await post(apiPath, out);
+  };
+  el.appendChild(btn);
+}
+
+// ---- simulation panel ----
+async function buildSim(){
+  const c=(await(await fetch('/api/config')).json()).config;
+  const el=$('sim_body');
+  el.innerHTML=`<div class="grp">Time step</div>
+    <div class="fld"><label>dt [s]</label><input id="sim_dt" type="number" step="any" value="${c.dt}"></div>
+    <div class="grp">Playback speed (real-time ×)</div><div class="row" id="speedrow"></div>
+    <div class="grp">Run</div>
+    <div class="row"><button id="sim_start">Start</button><button id="sim_stop">Stop</button><button id="sim_reset">Reset</button></div>`;
+  const sr=$('speedrow');
+  [0.1,0.5,1,2,3].forEach(s=>{ const b=document.createElement('button');
+    b.className='speed'+(Math.abs(s-c.time_scale)<1e-6?' on':''); b.textContent=s+'×';
+    b.onclick=async()=>{ await post('/api/sim',{time_scale:s}); [...sr.children].forEach(x=>x.classList.remove('on')); b.classList.add('on'); };
+    sr.appendChild(b); });
+  $('sim_dt').onchange=e=>post('/api/sim',{dt:+e.target.value});
+  $('sim_start').onclick=()=>post('/api/control',{action:'start'});
+  $('sim_stop').onclick =()=>post('/api/control',{action:'stop'});
+  $('sim_reset').onclick=()=>{ trailPts=[]; trail.visible=false; tgt.has=false; post('/api/control',{action:'reset'}); };
+}
+
+function openWin(id, build){ const w=$(id); w.classList.toggle('open'); if(w.classList.contains('open')) build(); }
+$('tb_veh').onclick =()=>openWin('win_veh', ()=>buildForm('/api/vehicle','veh_body'));
+$('tb_tire').onclick=()=>openWin('win_tire',()=>buildForm('/api/tire','tire_body'));
+$('tb_sim').onclick =()=>openWin('win_sim', buildSim);
 </script>
 </body>
 </html>

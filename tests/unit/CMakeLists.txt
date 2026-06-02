@@ -12,6 +12,7 @@ add_executable(vdsim_unit_tests
     test_suspension_lookup.cpp
     test_actuator.cpp
     test_sim_session.cpp
+    test_kinematic.cpp
 )
 
 target_link_libraries(vdsim_unit_tests PRIVATE vdsim_carla_plugin)

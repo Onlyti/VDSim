@@ -39,6 +39,7 @@ PYBIND11_MODULE(vdsim, m) {
         .value("L1_Bicycle",     vdsim::IVehicleDynamics::Level::L1_Bicycle)
         .value("L2_SevenDOF",    vdsim::IVehicleDynamics::Level::L2_SevenDOF)
         .value("L3_FourteenDOF", vdsim::IVehicleDynamics::Level::L3_FourteenDOF)
+        .value("Lk_Kinematic",   vdsim::IVehicleDynamics::Level::Lk_Kinematic)
         .export_values();
 
     // -------- VehicleParams --------
@@ -55,6 +56,9 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("wheel_radius_nominal", &vdsim::VehicleParams::wheel_radius_nominal)
         .def_readwrite("roll_stiffness_front", &vdsim::VehicleParams::roll_stiffness_front)
         .def_readwrite("roll_stiffness_rear",  &vdsim::VehicleParams::roll_stiffness_rear)
+        .def_readwrite("spring_stiffness",     &vdsim::VehicleParams::spring_stiffness)
+        .def_readwrite("damper_coefficient",   &vdsim::VehicleParams::damper_coefficient)
+        .def_readwrite("unsprung_mass",        &vdsim::VehicleParams::unsprung_mass)
         .def_readwrite("drive_type",           &vdsim::VehicleParams::drive_type)
         .def_readwrite("differential",         &vdsim::VehicleParams::differential)
         .def_readwrite("max_motor_torque",     &vdsim::VehicleParams::max_motor_torque)
@@ -297,7 +301,8 @@ PYBIND11_MODULE(vdsim, m) {
              const std::string& level, double sensor_delay_s, double mu,
              double nominal_dt) {
               std::unique_ptr<vdsim::IVehicleDynamics> dyn =
-                  (level == "L1") ? vdsim::create_bicycle()
+                  (level == "K" || level == "L0") ? vdsim::create_kinematic()
+                  : (level == "L1") ? vdsim::create_bicycle()
                   : (level == "L3") ? vdsim::create_fourteen_dof()
                                     : vdsim::create_seven_dof();
               vdsim::SimConfig cfg;

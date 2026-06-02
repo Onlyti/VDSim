@@ -16,7 +16,7 @@ namespace vdsim {
 // =============================================================================
 class IVehicleDynamics {
 public:
-    enum class Level { L1_Bicycle, L2_SevenDOF, L3_FourteenDOF };
+    enum class Level { L1_Bicycle, L2_SevenDOF, L3_FourteenDOF, Lk_Kinematic };
 
     virtual ~IVehicleDynamics() = default;
 
@@ -67,6 +67,9 @@ public:
 std::unique_ptr<IVehicleDynamics> create_bicycle();
 std::unique_ptr<IVehicleDynamics> create_seven_dof();
 std::unique_ptr<IVehicleDynamics> create_fourteen_dof();
+// Kinematic bicycle (no tire forces / no slip): yaw_rate = v*tan(delta)/L.
+// For path-planning / kinematic-MPC use and as the simplest ladder rung.
+std::unique_ptr<IVehicleDynamics> create_kinematic();
 
 // =============================================================================
 // ITireModel — tire force model (Pacejka MF96, linear, ...)

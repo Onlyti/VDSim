@@ -5,6 +5,7 @@ add_library(vdsim_core
     src/magic_formula_tire.cpp
     src/linear_tire.cpp
     src/bicycle_dynamics.cpp
+    src/kinematic_dynamics.cpp
     src/seven_dof_dynamics.cpp
     src/fourteen_dof_dynamics.cpp
     src/contact_providers.cpp
