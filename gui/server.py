@@ -240,6 +240,7 @@ class Runner:
                     "z": float(s.position[2]),
                     "yaw": s.yaw(), "roll": o.roll, "pitch": o.pitch,
                     "vx": s.vx(), "vy": s.vy(), "r": s.yaw_rate(),
+                    "wx": float(s.angular_velocity[0]), "wy": float(s.angular_velocity[1]),
                     "ax": o.ax, "ay": o.ay, "steer": o.steer_applied,
                     "Fz": [float(v) for v in o.Fz],
                     "Ft": [[float(f[0]), float(f[1])] for f in o.tire_forces],
