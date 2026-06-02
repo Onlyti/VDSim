@@ -817,10 +817,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#roll-moment-balance" class="md-nav__link">
+  <a href="#geometric-vs-elastic" class="md-nav__link">
     <span class="md-ellipsis">
       
-        유도 — roll moment balance
+        유도 — geometric vs elastic
       
     </span>
   </a>
@@ -2202,10 +2202,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#roll-moment-balance" class="md-nav__link">
+  <a href="#geometric-vs-elastic" class="md-nav__link">
     <span class="md-ellipsis">
       
-        유도 — roll moment balance
+        유도 — geometric vs elastic
       
     </span>
   </a>
@@ -2453,8 +2453,9 @@
 <ol>
 <li>Ld2 가 Ld1 위에 더하는 것 (per-tire Fz, lateral transfer, Ackermann,
    differential) 을 정확히 열거한다.</li>
-<li>lateral weight transfer 의 roll-stiffness 분배 공식을 roll moment balance
-   로부터 유도한다.</li>
+<li>lateral weight transfer 를 geometric(roll center) + elastic(roll-stiffness
+   분배) + unsprung 성분으로 분해해 유도한다. roll stiffness 는 corner spring
+   에서 유도되고 ARB·roll-center 만 입력임을 안다.</li>
 <li>Ackermann steering geometry 의 inner/outer wheel 각도 식을 유도하고
    percent-interpolation 의 의미를 설명한다.</li>
 <li>Open / Locked / LSD differential 의 torque 분배 메커니즘과 split-mu 거동
@@ -2557,7 +2558,7 @@ fidelity.</p>
 </tr>
 <tr>
 <td>Rigid roll axis</td>
-<td>roll-stiffness 비율로만 분배</td>
+<td>geometric(roll center) + elastic(roll-stiffness 비율) + unsprung 으로 분배</td>
 <td>chapter 06 (compliance)</td>
 </tr>
 </tbody>
@@ -2573,32 +2574,36 @@ F_{z,r}^{\text{static}} = \frac{m g a}{2 L}
 <div class="arithmatex">\[
 \Delta F_{z,\text{long,half}} = \frac{m\, a_x\, h_{cg}}{2 L}
 \]</div>
-<p>Lateral transfer — 핵심 식:</p>
+<p>Lateral transfer — geometric + elastic + unsprung 분해:</p>
 <div class="arithmatex">\[
-\Delta F_{z,\text{lat},f} = \frac{m\, a_y\, h_{cg}}{T_{w,f}} \cdot s_f, \qquad
-\Delta F_{z,\text{lat},r} = \frac{m\, a_y\, h_{cg}}{T_{w,r}} \cdot s_r
+\Delta F_{z,\text{lat},f} = \frac{1}{T_{w,f}}\Big[
+\underbrace{F_{y,s}\,\tfrac{b}{L}\,h_{rc,f}}_{\text{geometric (jacking)}}
++ \underbrace{M_{\text{roll}}\, s_f}_{\text{elastic (roll)}}
++ \underbrace{m_{u,f}\, a_y\, h_{u}}_{\text{unsprung}} \Big]
+\]</div>
+<p>(rear 도 <span class="arithmatex">\(a\leftrightarrow b\)</span>, <span class="arithmatex">\(f\leftrightarrow r\)</span> 대칭). 여기서</p>
+<div class="arithmatex">\[
+F_{y,s} = m_s\, a_y, \quad
+M_{\text{roll}} = F_{y,s}\,(h_{cg}-h_{ra}), \quad
+h_{ra} = h_{rc,f}\tfrac{b}{L} + h_{rc,r}\tfrac{a}{L},
 \]</div>
 <div class="arithmatex">\[
-s_f = \frac{K_{\phi,f}}{K_{\phi,f} + K_{\phi,r}}, \qquad
-s_r = \frac{K_{\phi,r}}{K_{\phi,f} + K_{\phi,r}}
+s_f = \frac{K_{\phi,f}}{K_{\phi,f}+K_{\phi,r}}, \qquad
+K_{\phi,\text{axle}} = (k_{\text{left}}+k_{\text{right}})\left(\tfrac{T_w}{2}\right)^2 + K_{\text{ARB}}.
 \]</div>
-<p><span class="arithmatex">\(K_{\phi,f}, K_{\phi,r}\)</span> 는 front/rear axle 의 roll stiffness (spring + ARB 합성).</p>
-<p>share 의 의미: total roll moment 가 두 axle 에 stiffness 비율로 분배된다.
-front 가 더 stiff → front axle 이 더 많은 lateral transfer 흡수 → front
-outer 가 더 loaded → understeer 경향.</p>
-<h3 id="roll-moment-balance">유도 — roll moment balance<a class="headerlink" href="#roll-moment-balance" title="Permanent link">&para;</a></h3>
-<p>좌선회 (<span class="arithmatex">\(a_y &gt; 0\)</span>). sprung mass 의 inertia force <span class="arithmatex">\(= -m_s a_y \hat{y}\)</span>. CG
-height <span class="arithmatex">\(h_{cg}\)</span> lever arm 으로 roll moment <span class="arithmatex">\(M_{\text{roll}} = m a_y h_{cg}\)</span>.</p>
-<p>이 moment 가 front/rear roll spring 에 parallel 로 분배 → 각 axle share 는
-stiffness 비율. axle share 가 결정되면 좌우 tire 의 Fz 차이를 만든다:</p>
-<div class="arithmatex">\[
-F_{\text{outer}} - F_{\text{inner}} = \frac{M_{\text{roll,axle}}}{T_w / 2}
-= 2\, \Delta F_{z,\text{lat}}
-\]</div>
-<div class="arithmatex">\[
-\therefore \Delta F_{z,\text{lat}} = \frac{M_{\text{roll,axle}}}{T_w}
-= \frac{m\, a_y\, h_{cg}\, s}{T_w}
-\]</div>
+<p>핵심: axle roll stiffness <span class="arithmatex">\(K_\phi\)</span> 는 <strong>corner spring 에서 유도</strong>되며 (<span class="arithmatex">\(spring \cdot arm^2\)</span>),
+ARB 는 roll 전용 추가항이다 (입력은 ARB 와 roll-center height 만). <span class="arithmatex">\(h_u\)</span> 는 unsprung
+CG 높이 (<span class="arithmatex">\(\approx\)</span> wheel radius).</p>
+<h3 id="geometric-vs-elastic">유도 — geometric vs elastic<a class="headerlink" href="#geometric-vs-elastic" title="Permanent link">&para;</a></h3>
+<p>lateral force 가 sprung mass 에 작용할 때 전달 경로는 둘로 갈린다.
+- <strong>Geometric (jacking)</strong>: roll center 를 통해 suspension link 로 즉시 전달되는
+  성분. roll 을 일으키지 않고 <span class="arithmatex">\(F_{y,s}\,h_{rc}/T_w\)</span> 만큼 직접 Fz 차이.
+- <strong>Elastic (roll)</strong>: roll axis (front/rear roll center 를 잇는 선, CG 아래 높이
+  <span class="arithmatex">\(h_{ra}\)</span>) 둘레의 roll moment <span class="arithmatex">\(M_{\text{roll}} = F_{y,s}(h_{cg}-h_{ra})\)</span> 가 두
+  axle 의 roll spring 에 stiffness 비율 <span class="arithmatex">\(s_f\)</span> 로 분배.</p>
+<p>front 가 더 stiff (또는 front ARB↑) → front share↑ → front outer 가 더 loaded
+→ understeer 경향. <span class="arithmatex">\(h_{rc}=0\)</span> 이면 geometric=0, <span class="arithmatex">\(h_{ra}=0\)</span> 으로 elastic-only
+(<span class="arithmatex">\(M_{\text{roll}}=m_s a_y h_{cg}\)</span>) 이 되어 단순 모델로 환원된다.</p>
 <p>부호 직관: <span class="arithmatex">\(a_y &gt; 0\)</span> (좌선회, centripetal <span class="arithmatex">\(+y\)</span>) → 차체가 <span class="arithmatex">\(-y\)</span> 쪽으로 기울고
 → right side (FR, RR) loaded → <span class="arithmatex">\(F_{z,FR} &gt; F_{z,FL}\)</span>.</p>
 <h3 id="a_y"><span class="arithmatex">\(a_y\)</span> 의 정확한 정의<a class="headerlink" href="#a_y" title="Permanent link">&para;</a></h3>
@@ -2847,16 +2852,19 @@ nonlinear region. linear 에서는 lateral transfer 효과가 작아 SS yaw rate
 <blockquote>
 <p><strong>[VDSim impl] § 5.3 — Lateral transfer 코드</strong></p>
 <p><code>core/src/seven_dof_dynamics.cpp:158-176</code>:</p>
-<div class="language-cpp highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">dFz_lat_f</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">Tw_f</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">1e-3</span><span class="p">)</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="o">?</span><span class="w"> </span><span class="n">m</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">ay_prev_</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">h_cg</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">Tw_f</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">share_f</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">;</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">dFz_lat_r</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">Tw_r</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">1e-3</span><span class="p">)</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="o">?</span><span class="w"> </span><span class="n">m</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">ay_prev_</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">h_cg</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">Tw_r</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">share_r</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">;</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">Fz</span><span class="p">[</span><span class="n">WHEEL_FL</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Fz_static_f</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">dFz_long_half</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">dFz_lat_f</span><span class="p">;</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">Fz</span><span class="p">[</span><span class="n">WHEEL_FR</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Fz_static_f</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">dFz_long_half</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">dFz_lat_f</span><span class="p">;</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">Fz</span><span class="p">[</span><span class="n">WHEEL_RL</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Fz_static_r</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">dFz_long_half</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">dFz_lat_r</span><span class="p">;</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">Fz</span><span class="p">[</span><span class="n">WHEEL_RR</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Fz_static_r</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">dFz_long_half</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">dFz_lat_r</span><span class="p">;</span>
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">Kf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">axle_roll_stiffness</span><span class="p">(</span><span class="n">vp_</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span><span class="w">   </span><span class="c1">// (k_l+k_r)*(tw/2)^2 + ARB</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">Kr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">axle_roll_stiffness</span><span class="p">(</span><span class="n">vp_</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">h_ra</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">hrc_f</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="n">b</span><span class="o">/</span><span class="n">L</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">hrc_r</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="n">a</span><span class="o">/</span><span class="n">L</span><span class="p">);</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">Fys</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">vp_</span><span class="p">.</span><span class="n">mass_sprung</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">ay_prev_</span><span class="p">;</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">Mroll</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Fys</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="n">h_cg</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">h_ra</span><span class="p">);</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">dFz_lat_f</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">Tw_f</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">1e-3</span><span class="p">)</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="o">?</span><span class="w"> </span><span class="p">(</span><span class="n">Fys</span><span class="o">*</span><span class="p">(</span><span class="n">b</span><span class="o">/</span><span class="n">L</span><span class="p">)</span><span class="o">*</span><span class="n">hrc_f</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">Mroll</span><span class="o">*</span><span class="p">(</span><span class="n">Kf</span><span class="o">/</span><span class="p">(</span><span class="n">Kf</span><span class="o">+</span><span class="n">Kr</span><span class="p">))</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">m_uf</span><span class="o">*</span><span class="n">ay_prev_</span><span class="o">*</span><span class="n">R</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">Tw_f</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">;</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">Fz</span><span class="p">[</span><span class="n">WHEEL_FL</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Fz_static_f</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">dFz_long_half</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">dFz_lat_f</span><span class="p">;</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">Fz</span><span class="p">[</span><span class="n">WHEEL_FR</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Fz_static_f</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">dFz_long_half</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">dFz_lat_f</span><span class="p">;</span>
 </span></code></pre></div>
-<p><code>+dFz_lat_f</code> 가 FR 에 더해져 좌선회 시 <span class="arithmatex">\(F_{z,FR}&gt;F_{z,FL}\)</span> 부호 정확.</p>
+<p>3-성분(geometric+elastic+unsprung). <code>+dFz_lat_f</code> 가 FR 에 더해져 좌선회 시
+<span class="arithmatex">\(F_{z,FR}&gt;F_{z,FL}\)</span> 부호 정확. roll stiffness 는 spring 에서 유도되며 ARB·roll-center
+만 입력.</p>
 <p><strong>[VDSim impl] § 5.3 — ay 정의 버그 history</strong></p>
 <p>초기 구현이 <code>ay_prev = k.dvy</code> (frame 도함수). 격자 sweep 에서 lateral
 transfer 가 37 N 으로 비현실적 (예상 ~2000 N). <code>ay_prev = Fy_total/m</code> 로

@@ -878,10 +878,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#heavepitch-corner-spring-roll-axle-k_phi" class="md-nav__link">
+  <a href="#roll-corner-spring" class="md-nav__link">
     <span class="md-ellipsis">
       
-        왜 heave/pitch 는 corner spring, roll 은 axle \(K_\phi\) 인가
+        왜 roll 도 corner spring 에서 유도하는가
       
     </span>
   </a>
@@ -2207,10 +2207,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#heavepitch-corner-spring-roll-axle-k_phi" class="md-nav__link">
+  <a href="#roll-corner-spring" class="md-nav__link">
     <span class="md-ellipsis">
       
-        왜 heave/pitch 는 corner spring, roll 은 axle \(K_\phi\) 인가
+        왜 roll 도 corner spring 에서 유도하는가
       
     </span>
   </a>
@@ -2496,12 +2496,14 @@
 <p><img alt="Roll + pitch transient (actual L3)" src="../figures/06_transient.png" /></p>
 <hr />
 <h2 id="63-sprung-body-eom-heave-roll-pitch">6.3 Sprung body EoM (heave / roll / pitch)<a class="headerlink" href="#63-sprung-body-eom-heave-roll-pitch" title="Permanent link">&para;</a></h2>
-<p>corner displacement (sprung side):</p>
+<p>corner displacement (sprung side) — heave + pitch + <strong>roll</strong> 결합:</p>
 <div class="arithmatex">\[
-z_{\text{corner},i} = z_s - r_{x,i}\, \theta, \qquad
-v_{\text{corner},i} = \dot z_s - r_{x,i}\, \dot\theta
+z_{\text{corner},i} = z_s + r_{y,i}\, \phi - r_{x,i}\, \theta, \qquad
+v_{\text{corner},i} = \dot z_s + r_{y,i}\, \dot\phi - r_{x,i}\, \dot\theta
 \]</div>
-<p>(roll <span class="arithmatex">\(\phi\)</span> 는 axle-level roll stiffness 로 별도 처리 — §6.3 roll EoM.)</p>
+<p><span class="arithmatex">\(r_{y,i} = \pm T_w/2\)</span> (좌 <span class="arithmatex">\(+\)</span>, 우 <span class="arithmatex">\(-\)</span>). corner 변형에 roll arm 을 포함시키면
+per-corner spring/damper 가 roll stiffness 와 roll damping 을 <strong>자연히</strong> 생성한다
+(별도 lumped <span class="arithmatex">\(K_\phi\)</span>/<span class="arithmatex">\(C_\phi\)</span> 불필요).</p>
 <p>spring + damper force on sprung corner (upward positive):</p>
 <div class="arithmatex">\[
 \delta_i = z_{\text{corner},i} - z_{u,i}, \quad
@@ -2513,9 +2515,11 @@ F_i = - k_i\, \delta_i - c_i\, v_i
 \begin{aligned}
 m_s\, \ddot z_s &amp;= \textstyle\sum_i F_i \\
 I_{yy}\, \ddot\theta &amp;= -\textstyle\sum_i r_{x,i} F_i - m_s\, a_x\, h_{cg}\, (1 - \text{anti}) \\
-I_{xx}\, \ddot\phi &amp;= - K_{\phi,\text{total}}\, \phi - C_\phi\, \dot\phi + m_s\, a_y\, h_{cg}
+I_{xx}\, \ddot\phi &amp;= \textstyle\sum_i r_{y,i} F_i - K_{\text{ARB}}\, \phi + m_s\, a_y\, h_{cg}
 \end{aligned}
 \]</div>
+<p>좌우 대칭 spring 이면 <span class="arithmatex">\(\sum_i r_{x,i}F_i\)</span> 의 roll 성분과 <span class="arithmatex">\(\sum_i r_{y,i}F_i\)</span> 의
+pitch 성분이 상쇄되어 pitch/roll 이 분리된다.</p>
 <h3 id="heave-z_s">Heave (z_s)<a class="headerlink" href="#heave-z_s" title="Permanent link">&para;</a></h3>
 <p>spring 합력이 sprung mass 의 vertical 가속도를 만든다.</p>
 <h3 id="pitch-anti-dive">Pitch (θ) 와 anti-dive<a class="headerlink" href="#pitch-anti-dive" title="Permanent link">&para;</a></h3>
@@ -2538,21 +2542,27 @@ M_{\text{inertia,pitch}} = -m_s\, a_x\, h_{cg}\, (1 - \text{anti})
 <p><span class="arithmatex">\(\text{anti}=1\)</span> 이면 brake 시 pitch 없음, <span class="arithmatex">\(0\)</span> 이면 full pitch.</p>
 <h3 id="roll">Roll (φ)<a class="headerlink" href="#roll" title="Permanent link">&para;</a></h3>
 <div class="arithmatex">\[
-I_{xx}\, \ddot\phi = - K_{\phi,\text{total}}\, \phi - C_\phi\, \dot\phi + m_s\, a_y\, h_{cg}
+I_{xx}\, \ddot\phi = \underbrace{\textstyle\sum_i r_{y,i} F_i}_{\text{spring/damper}}
+- \underbrace{K_{\text{ARB}}\, \phi}_{\text{anti-roll bar}} + m_s\, a_y\, h_{cg}
 \]</div>
 <ul>
-<li><span class="arithmatex">\(K_{\phi,\text{total}} = K_{\phi,f} + K_{\phi,r}\)</span> (axle-level, spring + ARB).</li>
-<li><span class="arithmatex">\(C_\phi = \sum_i c_i\,\text{arm}_i^2\)</span> (damper 의 roll-equivalent).</li>
+<li><span class="arithmatex">\(\sum_i r_{y,i} F_i\)</span>: corner spring/damper 가 만드는 roll restoring moment +
+  roll damping. 대칭 spring 이면 등가 stiffness <span class="arithmatex">\(= (k_l+k_r)(T_w/2)^2\)</span>,
+  damping <span class="arithmatex">\(= (c_l+c_r)(T_w/2)^2\)</span> — 별도 항 없이 자동.</li>
+<li><span class="arithmatex">\(K_{\text{ARB}} = K_{\text{ARB},f} + K_{\text{ARB},r}\)</span>: anti-roll bar 의 roll
+  전용 stiffness (undamped). 유일한 roll 전용 입력.</li>
 </ul>
-<p>quasi-static SS:</p>
+<p>quasi-static SS (<span class="arithmatex">\(K_{\phi,\text{spring}} = (k_l+k_r)(T_w/2)^2\)</span> 의 axle 합):</p>
 <div class="arithmatex">\[
-\phi_{ss} = \frac{m_s\, a_y\, h_{cg}}{K_{\phi,\text{total}}}
+\phi_{ss} = \frac{m_s\, a_y\, h_{cg}}{K_{\phi,\text{spring}} + K_{\text{ARB}}}
 \]</div>
-<h3 id="heavepitch-corner-spring-roll-axle-k_phi">왜 heave/pitch 는 corner spring, roll 은 axle <span class="arithmatex">\(K_\phi\)</span> 인가<a class="headerlink" href="#heavepitch-corner-spring-roll-axle-k_phi" title="Permanent link">&para;</a></h3>
-<p>heave/pitch 는 per-corner spring 의 linear sum 으로 자연 표현된다. 그러나 roll
-은 ARB (anti-roll bar) 가 추가 기여를 줘서 단순 <span class="arithmatex">\(\text{spring}\cdot\text{arm}^2\)</span>
-보다 크다. 따라서 axle-level <span class="arithmatex">\(K_\phi\)</span> 를 별도 입력으로 통합 — lumped 모델의
-표준. ARB 를 누락하면 roll 이 실측보다 작아진다 (정량 사례 §6.13 box).</p>
+<h3 id="roll-corner-spring">왜 roll 도 corner spring 에서 유도하는가<a class="headerlink" href="#roll-corner-spring" title="Permanent link">&para;</a></h3>
+<p>이전 구현은 heave/pitch 만 corner spring 에서 유도하고 roll 은 별도 lumped
+<span class="arithmatex">\(K_\phi\)</span> 입력을 썼다 — spring set 과 roll 거동이 decouple 되어 부드러운 spring +
+임의의 큰 roll stiffness 같은 비물리 조합이 가능했다. corner 변형에 <span class="arithmatex">\(r_{y,i}\phi\)</span>
+를 넣으면 roll stiffness/damping 이 spring 에서 자동 유도되어 heave/pitch 와
+정합한다. ARB 는 spring 으로 표현 안 되는 roll 전용 요소이므로 <span class="arithmatex">\(K_{\text{ARB}}\)</span>
+로 분리 — spring 과 ARB 를 독립적으로 tune 할 수 있다 (motorsport setup).</p>
 <hr />
 <h2 id="64-unsprung-mass-eom">6.4 Unsprung mass EoM<a class="headerlink" href="#64-unsprung-mass-eom" title="Permanent link">&para;</a></h2>
 <p>per-corner unsprung 의 vertical:</p>
@@ -2708,11 +2718,13 @@ multibody kinematics (Ld4-Ld5) 를 다룬다.</p>
 <hr />
 <h2 id="613-self-check">6.13 Self-check<a class="headerlink" href="#613-self-check" title="Permanent link">&para;</a></h2>
 <details>
-<summary>1. roll 만 axle <code>K_phi</code> 로 따로 받는 이유?</summary>
+<summary>1. roll stiffness 를 corner spring 에서 유도하면서 ARB 만 따로 받는 이유?</summary>
 
-ARB 가 roll 에만 추가 stiffness 를 준다. heave/pitch 는 per-corner spring 의
-sum 으로 충분하지만 roll 은 $\text{spring}\cdot\text{arm}^2$ 만으로는 ARB 기여가
-누락되어 실측보다 작아진다. axle-level $K_\phi$ 로 통합해야 정확.
+corner 변형 $\delta_i = z_s + r_{y,i}\phi - r_{x,i}\theta$ 에 roll arm 을 넣으면
+spring/damper 가 roll stiffness $(k_l+k_r)(T_w/2)^2$ 와 roll damping 을 자동
+생성 — heave/pitch 와 정합. ARB 는 spring 으로 표현 안 되는 roll 전용 요소라
+$K_{\text{ARB}}$ 로 분리한다. 이렇게 해야 spring 과 ARB 를 독립 tune 할 수 있고,
+부드러운 spring + 임의의 큰 roll stiffness 같은 비물리 조합을 막는다.
 </details>
 
 <details>
@@ -2748,11 +2760,15 @@ spring 이 정적 상태보다 신장됨 — 해당 corner 가 들리거나(rebo
 <h2 id="614-vdsim">6.14 VDSim 구현 노트<a class="headerlink" href="#614-vdsim" title="Permanent link">&para;</a></h2>
 <blockquote>
 <p><strong>[VDSim impl] § 6.3 — Sprung EoM 코드</strong></p>
-<p><code>core/src/fourteen_dof_dynamics.cpp:128-156</code> 가 heave/pitch/roll EoM 그대로.</p>
-<p><strong>[VDSim impl] § 6.3 — ARB 기여 정량</strong></p>
-<p>sedan default <code>K_phi = 30 + 25 = 55 kN·m/rad</code>, 반면
-<span class="arithmatex">\(\text{spring}\cdot\text{arm}^2\cdot\text{sum} = 30000\cdot2\cdot(0.775)^2 \approx 36\)</span>
-kN·m/rad. ARB 가 약 35 % 추가 기여.</p>
+<p><code>derivatives_vertical()</code> 의 corner loop 가 <code>delta = z + ry*phi - rx*th</code> 로
+heave/pitch/roll 을 한 번에, roll EoM 은 <code>dphi_dot = (M_roll_spring -
+K_arb*phi + m_s*ay*h)/Ixx</code> (<code>M_roll_spring = sum ry_i*F_i</code>).</p>
+<p><strong>[VDSim impl] § 6.3 — spring-유도 roll stiffness 정량</strong></p>
+<p>sedan default 의 axle roll stiffness 는 spring 에서 유도:
+<span class="arithmatex">\((k_l+k_r)(T_w/2)^2 = (30000+30000)\cdot(0.775)^2 \approx 36\)</span> kN·m/rad/axle
+(front=rear, 총 <span class="arithmatex">\(\approx 72\)</span> kN·m/rad). ARB default 0. 이전의 lumped
+<code>roll_stiffness = 30+25 = 55 kN</code> 보다 오히려 큼 — 구 preset 이 spring 을
+과소계상하고 있었다. ARB 를 추가하면 그 위에 roll 전용으로 더해진다.</p>
 <p><strong>[VDSim impl] § 6.4 — Unsprung EoM 코드</strong></p>
 <p><code>core/src/fourteen_dof_dynamics.cpp:155-160</code>:</p>
 <div class="language-cpp highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">k_tire</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="n">tp_</span><span class="p">.</span><span class="n">tire_vertical_stiffness</span><span class="p">);</span>
