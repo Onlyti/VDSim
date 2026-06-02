@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/tasks/21_ackerman/">
+        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/references/actuator_nonlinearity/">
       
       
+        <link rel="prev" href="../../theory/16_fmi_integration/">
+      
+      
+        <link rel="next" href="../../tasks/T22_carla_bridge/REPORT/">
       
       
         
@@ -23,7 +27,7 @@
     
     
       
-        <title>Task 21 — Per-axle Ackerman steering geometry - VDSim</title>
+        <title>Actuator/sensor nonlinearity & delay - VDSim</title>
       
     
     
@@ -74,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#task-21-per-axle-ackerman-steering-geometry" class="md-skip">
+        <a href="#actuatorsensor-nonlinearity-delay-reference" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Task 21 — Per-axle Ackerman steering geometry
+              Actuator/sensor nonlinearity & delay
             
           </span>
         </div>
@@ -272,11 +276,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../references/actuator_nonlinearity/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
           
   
   
@@ -298,7 +304,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../T22_carla_bridge/REPORT/" class="md-tabs__link">
+        <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-tabs__link">
           
   
   
@@ -320,7 +326,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../" class="md-tabs__link">
+        <a href="../../tasks/" class="md-tabs__link">
           
   
   
@@ -1032,8 +1038,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -1043,21 +1051,22 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
             
   
   
@@ -1075,7 +1084,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1090,10 +1099,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../references/actuator_nonlinearity/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Actuator/sensor nonlinearity & delay
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1109,6 +1145,109 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-typical" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 적용 항목 카탈로그 (모델 형태 + typical)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-wevj-2024-lee-jo-powertrain-delay" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. WEVJ 2024 (Lee &amp; Jo) — powertrain delay 실측 파라미터
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-bibliography" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Bibliography
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Bibliography">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#steering-epssbw" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Steering (EPS/SBW)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#brake-hydraulic-ehb-emb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Brake (hydraulic / EHB / EMB)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#powertrain-driveline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Powertrain / driveline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        일반 / 표현법
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1196,7 +1335,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T22_carla_bridge/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-nav__link">
         
   
   
@@ -1224,7 +1363,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T23_jump_14dof/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T23_jump_14dof/REPORT/" class="md-nav__link">
         
   
   
@@ -1252,7 +1391,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T27_ld4_dw/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T27_ld4_dw/REPORT/" class="md-nav__link">
         
   
   
@@ -1280,7 +1419,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T28_ld4_mp/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T28_ld4_mp/REPORT/" class="md-nav__link">
         
   
   
@@ -1308,7 +1447,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T29_ld4_ta/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T29_ld4_ta/REPORT/" class="md-nav__link">
         
   
   
@@ -1336,7 +1475,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T30_ld4_5link/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T30_ld4_5link/REPORT/" class="md-nav__link">
         
   
   
@@ -1414,7 +1553,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../" class="md-nav__link ">
+            <a href="../../tasks/" class="md-nav__link ">
               
   
   
@@ -1458,7 +1597,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../68_poc_summary_v3/" class="md-nav__link">
+      <a href="../../tasks/68_poc_summary_v3/" class="md-nav__link">
         
   
   
@@ -1486,7 +1625,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../69_competitive_matrix/" class="md-nav__link">
+      <a href="../../tasks/69_competitive_matrix/" class="md-nav__link">
         
   
   
@@ -1514,7 +1653,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../62_cycles_overview/" class="md-nav__link">
+      <a href="../../tasks/62_cycles_overview/" class="md-nav__link">
         
   
   
@@ -1542,7 +1681,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../50_benchmark_matrix/" class="md-nav__link">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
         
   
   
@@ -1570,7 +1709,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../20_l1_l2_grid_sweep/" class="md-nav__link">
+      <a href="../../tasks/20_l1_l2_grid_sweep/" class="md-nav__link">
         
   
   
@@ -1598,7 +1737,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../30_l3_dynamic_suspension/" class="md-nav__link">
+      <a href="../../tasks/30_l3_dynamic_suspension/" class="md-nav__link">
         
   
   
@@ -1626,7 +1765,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../31_l6_l7_l8_control/" class="md-nav__link">
+      <a href="../../tasks/31_l6_l7_l8_control/" class="md-nav__link">
         
   
   
@@ -1654,7 +1793,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../57_58_59_driver_skidpad/" class="md-nav__link">
+      <a href="../../tasks/57_58_59_driver_skidpad/" class="md-nav__link">
         
   
   
@@ -1682,7 +1821,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../50_benchmark_matrix/" class="md-nav__link">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
         
   
   
@@ -1808,10 +1947,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1" class="md-nav__link">
+  <a href="#1-typical" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. 목적
+        1. 적용 항목 카탈로그 (모델 형태 + typical)
       
     </span>
   </a>
@@ -1819,22 +1958,33 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2" class="md-nav__link">
+  <a href="#2-wevj-2024-lee-jo-powertrain-delay" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. 구현 방법
+        2. WEVJ 2024 (Lee &amp; Jo) — powertrain delay 실측 파라미터
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="2. 구현 방법">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-bibliography" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Bibliography
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Bibliography">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#21" class="md-nav__link">
+  <a href="#steering-epssbw" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2.1 코드 변경
+        Steering (EPS/SBW)
       
     </span>
   </a>
@@ -1842,10 +1992,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#22-ackerman-100" class="md-nav__link">
+  <a href="#brake-hydraulic-ehb-emb" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2.2 Ackerman 식 (100%)
+        Brake (hydraulic / EHB / EMB)
       
     </span>
   </a>
@@ -1853,10 +2003,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#23" class="md-nav__link">
+  <a href="#powertrain-driveline" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2.3 설계 결정
+        Powertrain / driveline
       
     </span>
   </a>
@@ -1864,10 +2014,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#24" class="md-nav__link">
+  <a href="#_1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2.4 한계
+        일반 / 표현법
       
     </span>
   </a>
@@ -1876,106 +2026,6 @@
         
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. 검증 방법 (근거)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="3. 검증 방법 (근거)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#31-3-test" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3.1 3 새 test
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#32-sweep-figure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3.2 외부 sweep (figure)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#4" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. 검증 결과
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="4. 검증 결과">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#41-test-suite" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4.1 Test suite
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#42-ackerman-sweep-tight-low-speed-turn" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4.2 Ackerman sweep — tight low-speed turn
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#43" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4.3 이론 일치 점검
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#5" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        5. 판단
-      
-    </span>
-  </a>
   
 </li>
       
@@ -1999,217 +2049,271 @@
   
 
 
-<h1 id="task-21-per-axle-ackerman-steering-geometry">Task 21 — Per-axle Ackerman steering geometry<a class="headerlink" href="#task-21-per-axle-ackerman-steering-geometry" title="Permanent link">&para;</a></h1>
+<h1 id="actuatorsensor-nonlinearity-delay-reference">Actuator/Sensor Nonlinearity &amp; Delay — Reference<a class="headerlink" href="#actuatorsensor-nonlinearity-delay-reference" title="Permanent link">&para;</a></h1>
+<p>actuator/sensor 의 물리 비선형성·지연을 VDSim 에 반영하기 위한 조사 레퍼런스.
+모델 형태(식), typical parameter, 학술/산업 근거(DOI), 그리고 control 사다리
+Lc1-Lc8 별 적용 방식을 정리한다. 구현 전 spec 근거 문서이며, thesis 인용 시
+flag 표시된 항목은 publisher 페이지로 재확인할 것.</p>
+<p>신뢰도 표기: [S] 출처 확인 수치 · [E] engineering 추정 · [F] citation 미확정(재확인 필요).</p>
+<hr />
+<h2 id="1-typical">1. 적용 항목 카탈로그 (모델 형태 + typical)<a class="headerlink" href="#1-typical" title="Permanent link">&para;</a></h2>
+<p>handling 영향도: P0 필수 · P1 선택 · P2 대역밖(NVH/feel flag).</p>
 <table>
 <thead>
 <tr>
-<th>Field</th>
-<th>Value</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Task ID</td>
-<td>IM-W5-7</td>
-</tr>
-<tr>
-<td>Type</td>
-<td>Impl</td>
-</tr>
-<tr>
-<td>Date</td>
-<td>2026-05-29</td>
-</tr>
-<tr>
-<td>Commit</td>
-<td>TBD</td>
-</tr>
-<tr>
-<td>Status</td>
-<td>completed</td>
-</tr>
-</tbody>
-</table>
-<h2 id="1">1. 목적<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
-<p>L2 의 좌우 front wheel 에 <strong>Ackerman 기하</strong> 적용. parallel steer (현재 default) 는 tight low-speed turning 에서 inner/outer wheel 의 path radius 차이를 무시 → 불필요한 slip.</p>
-<p>이게 빠지면:
-- 주차 / 직각 회전 시 inner wheel 의 slip 이 비현실적으로 큼.
-- 실차 의 turning circle 데이터와 비교 시 sim 이 over-predict.
-- low-speed maneuver (FSK 시작 직선, 주차 task) 의 정확도 떨어짐.</p>
-<h2 id="2">2. 구현 방법<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
-<h3 id="21">2.1 코드 변경<a class="headerlink" href="#21" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>위치</th>
-<th>변경</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>core/include/vdsim/params.hpp</code></td>
-<td><code>VehicleParams</code> 에 <code>ackerman_percent</code> (double, default 0) 추가</td>
-</tr>
-<tr>
-<td><code>core/src/params.cpp</code></td>
-<td>YAML pull / emit 에 새 필드</td>
-</tr>
-<tr>
-<td><code>core/src/seven_dof_dynamics.cpp</code></td>
-<td><code>derivatives()</code> 에서 <code>δ_FL</code>, <code>δ_FR</code> 계산 후 wheel 별 적용</td>
-</tr>
-<tr>
-<td><code>tests/integration/test_seven_dof.cpp</code></td>
-<td>2 새 test: turning radius / zero-Ackerman baseline reproduction</td>
-</tr>
-<tr>
-<td><code>tests/unit/test_params_yaml.cpp</code></td>
-<td>1 새 test: YAML roundtrip</td>
-</tr>
-</tbody>
-</table>
-<h3 id="22-ackerman-100">2.2 Ackerman 식 (100%)<a class="headerlink" href="#22-ackerman-100" title="Permanent link">&para;</a></h3>
-<p><code>δ</code> 가 명령된 average steer, <code>R = L / tan(δ)</code> 가 그 결과 turning radius.</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>δ_inner = atan(L / (R − Tw_f/2))
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>δ_outer = atan(L / (R + Tw_f/2))
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>δ_FL = δ + (ackerman/100) · (δ_inner − δ)   if δ &gt; 0 (left turn, inner = FL)
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>δ_FR = δ + (ackerman/100) · (δ_outer − δ)
-</span></code></pre></div>
-<p><code>δ &lt; 0</code> (right turn): inner/outer 부호 반전 (<code>inner = FR</code>).</p>
-<p><code>ackerman_percent = 0</code> → δ_FL = δ_FR = δ (parallel, 기존 거동).
-<code>ackerman_percent = 100</code> → 정밀 kinematic Ackerman.
-0 ~ 100 linear interpolation.</p>
-<h3 id="23">2.3 설계 결정<a class="headerlink" href="#23" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>결정</th>
-<th>채택</th>
-<th>근거</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Default 0%</td>
-<td>parallel steer</td>
-<td>기존 test 영향 없음 (backward-compat)</td>
-</tr>
-<tr>
-<td>100% 한도</td>
-<td>그 이상 (over-Ackerman) 불허</td>
-<td>차종 별로 60-100% 가 realistic 범위, 그 이상은 misuse</td>
-</tr>
-<tr>
-<td>Per-tire slip 재계산</td>
-<td><code>cd_i, sd_i</code> per-wheel</td>
-<td>좌우 다른 회전각 직접 반영</td>
-</tr>
-<tr>
-<td>Rear wheel</td>
-<td>항상 0</td>
-<td>non-steered axle 가정 (4WS 는 별도 task)</td>
-</tr>
-<tr>
-<td>Steering ratio</td>
-<td>unchanged</td>
-<td>input 은 wheel angle (Task 02 결정 일관)</td>
-</tr>
-</tbody>
-</table>
-<h3 id="24">2.4 한계<a class="headerlink" href="#24" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Dynamic Ackerman</strong> (속도 의존) 미반영. 실차 일부 (BMW Active Steering) 는 속도 별 동적 percent.</li>
-<li><strong>Bump steer</strong> (susp travel 에 따른 toe 변화) 미반영.</li>
-<li><strong>Tire smaller scrub radius</strong> 효과 무시.</li>
-<li><strong>L1 bicycle</strong> 은 axle 평균 인터페이스 → Ackerman 영향 없음. L1 의 Ackerman 은 정의상 의미 없음.</li>
-</ul>
-<h2 id="3">3. 검증 방법 (근거)<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
-<h3 id="31-3-test">3.1 3 새 test<a class="headerlink" href="#31-3-test" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Test</th>
+<th>class</th>
 <th>항목</th>
-<th>Pass 기준</th>
+<th>모델 (ASCII)</th>
+<th>typical</th>
+<th>P</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>SevenDOF.AckermanInfluencesTurningRadiusLowSpeed</td>
-<td>vx=2, δ=0.35, 8 s. parallel vs 100% Ackerman</td>
-<td><code>r_ack ≥ 0.97 × r_par</code> (Ackerman 이 더 efficient 또는 동등)</td>
+<td>delay</td>
+<td>transport delay (pure)</td>
+<td><code>y[k]=u[k-N]</code>, <code>N=round(L/dt)</code>, fractional <code>f=L/dt-N</code></td>
+<td>CAN+compute 수~100 ms</td>
+<td>P0</td>
 </tr>
 <tr>
-<td>SevenDOF.AckermanZeroReproducesBaseline</td>
-<td>default vs <code>ackerman_percent=0</code></td>
-<td><code>r_default == r_zero</code> (bit-equal)</td>
+<td>delay</td>
+<td>first-order lag</td>
+<td><code>tau*dy/dt + y = u</code></td>
+<td>tau 0.05–0.15 s</td>
+<td>P0</td>
 </tr>
 <tr>
-<td>VehicleYaml.AckermanRoundtrip</td>
-<td><code>ackerman_percent = 75</code> save/load</td>
-<td>exact 회복</td>
+<td>delay</td>
+<td>FOPDT</td>
+<td><code>G(s)=K e^{-Ds}/(1+tau s)</code></td>
+<td>powertrain D=0.1 s, tau=0.15 s</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>delay</td>
+<td>Pade(1,2) of e^{-Ds}</td>
+<td><code>(1-Ds/2)/(1+Ds/2)</code> 등</td>
+<td>MPC/linearization 용</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>hyst</td>
+<td>steering friction (LuGre)</td>
+<td><code>dz/dt=w-(|w|/g)z</code>, <code>T=s0 z+s1 dz/dt+s2 w</code>, <code>g=Tc+(Ts-Tc)e^{-(w/ws)^2}</code></td>
+<td>Tc 0.5–2 Nm, Ts/Tc 1.3–2</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>hyst</td>
+<td>backlash/lash</td>
+<td>deadband-hysteresis, gap <code>2b</code></td>
+<td>steer 0.05–0.3°@wheel; driveline gap</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>hyst</td>
+<td>brake mu(T)</td>
+<td><code>mu=mu(T)</code> lookup</td>
+<td>0.4→0.6(180°C)→0.2(350°C)</td>
+<td>P0(long)</td>
+</tr>
+<tr>
+<td>hyst</td>
+<td>EHB pressure hysteresis</td>
+<td>위치의존 Coulomb+viscous (reversal jump)</td>
+<td>—</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>nonlin</td>
+<td>saturation + rate limit</td>
+<td><code>clip(u,-umax,umax)</code>, <code>|du/dt|&lt;=R</code></td>
+<td>steer rate ~2 rad/s</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>nonlin</td>
+<td>dead-zone</td>
+<td><code>sgn(u)*max(|u|-d,0)</code></td>
+<td>brake fill, throttle tip-in</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>nonlin</td>
+<td>drive/coast 비대칭 (regen)</td>
+<td>drive≠coast torque map</td>
+<td>EV regen 한계</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>noise</td>
+<td>motor torque ripple/cogging</td>
+<td><code>sum_k a_k cos(k*theta_e+phi_k)</code>, k=6,12</td>
+<td>3.5–10% rated</td>
+<td>P2</td>
+</tr>
+<tr>
+<td>noise</td>
+<td>PWM/inverter ripple</td>
+<td>switching 8–20 kHz</td>
+<td>few %</td>
+<td>P2</td>
+</tr>
+<tr>
+<td>noise</td>
+<td>sensor quantize+noise</td>
+<td>round-to-step + white</td>
+<td>steer 0.05–0.1°</td>
+<td>P1(steer)/P2</td>
 </tr>
 </tbody>
 </table>
-<h3 id="32-sweep-figure">3.2 외부 sweep (figure)<a class="headerlink" href="#32-sweep-figure" title="Permanent link">&para;</a></h3>
-<p><code>vdsim_l1_vs_l2</code> 를 sedan + ackerman ∈ {0, 50, 100} 으로 동일 tight-turn scenario 실행.</p>
-<h2 id="4">4. 검증 결과<a class="headerlink" href="#4" title="Permanent link">&para;</a></h2>
-<h3 id="41-test-suite">4.1 Test suite<a class="headerlink" href="#41-test-suite" title="Permanent link">&para;</a></h3>
-<p>90/90 통과 (이전 87 + 본 task 3 새 test).</p>
-<h3 id="42-ackerman-sweep-tight-low-speed-turn">4.2 Ackerman sweep — tight low-speed turn<a class="headerlink" href="#42-ackerman-sweep-tight-low-speed-turn" title="Permanent link">&para;</a></h3>
-<p><code>vx0 = 2 m/s, δ = 0.35 rad, 8 s SS</code>.</p>
+<p>handling 대역(~1–3 Hz) 유효 = P0: steering friction(LuGre), 전 채널 saturation+rate
+limit, brake mu(T)+pressure dead-zone, powertrain FOPDT. ripple/cogging/PWM/고주파
+noise(P2)는 회전관성 low-pass 로 무의미.</p>
+<hr />
+<h2 id="2-wevj-2024-lee-jo-powertrain-delay">2. WEVJ 2024 (Lee &amp; Jo) — powertrain delay 실측 파라미터<a class="headerlink" href="#2-wevj-2024-lee-jo-powertrain-delay" title="Permanent link">&para;</a></h2>
+<p>Lee, J.; Jo, K. "MPC with Powertrain Delay Consideration for Longitudinal Speed
+Tracking of Autonomous EVs," World Electric Vehicle Journal 15(10):433, 2024.
+DOI 10.3390/wevj15100433. [S]</p>
+<ul>
+<li>plant 측 actuator(CarMaker IONIQ5): pure delay D=0.1 s (queue/ring buffer) +
+  first-order lag tau=0.15 s, throttle/brake 입력 직전 적용. 실측 총지연 ~0.2 s.</li>
+<li>MPC 측 보상: state augmentation <code>x=[v,F]→[v,F_lag,F_{Nd-1},...,F_0,F]</code>,
+  N_d=5, dt=0.02 s. Taylor 선형화 → QP → HPIPM(BLASFEO).</li>
+<li>MPC param: dt 0.02, T 100, N_d 5, tau 0.15, Q diag(300,0,..), R 1e-4,
+  F_max 10819 N, F_min -14485 N.</li>
+<li>IONIQ5 (public): m 2300 kg, f 0.015, rho 1.21, A 2.88 m², Cd 0.35, r_wheel 0.32 m.</li>
+<li>결과: real-vehicle mean speed error 0.54 km/h, compute 1.32 ms.</li>
+</ul>
+<p>이 값들이 VDSim powertrain actuator 채널 + thesis MPC augmentation 의 seed.</p>
+<hr />
+<h2 id="3-bibliography">3. Bibliography<a class="headerlink" href="#3-bibliography" title="Permanent link">&para;</a></h2>
+<h3 id="steering-epssbw">Steering (EPS/SBW)<a class="headerlink" href="#steering-epssbw" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Beal, C.E.; Brennan, S. "Modeling and friction estimation for automotive steering torque at very low speeds." Vehicle System Dynamics 59(3) 458–484, 2021. DOI 10.1080/00423114.2019.1708416. [S] — load·rate 의존 steering friction, LuGre, 실차 ID. HIGH.</li>
+<li>Canudas de Wit, C.; Olsson, H.; Åström, K.J.; Lischinsky, P. "A new model for control of systems with friction." IEEE TAC 40(3) 1995. DOI 10.1109/9.376053. [S] — LuGre 원전. 모델 토대.</li>
+<li>Al-Bender, F.; Lampaert, V.; Swevers, J. "The Generalized Maxwell-Slip Model." IEEE TAC 50(11) 2005. DOI 10.1109/TAC.2005.858676. [S] — presliding hysteresis + nonlocal memory. MED.</li>
+<li>Huang, X.; Wang, J. "Identification of Ground Vehicle Steering System Backlash." ASME JDSMC 135(1) 011014, 2013. DOI 10.1115/1.4007558. [S] — steering lash 실측 ID. HIGH.</li>
+<li>Zhou, X.; Wang, Z.; Shen, H.; Wang, J. "Robust Adaptive Path-Tracking Control ... Steering System Backlash." IEEE T-IV 7(2) 2022. DOI 10.1109/TIV.2022.3146167. [S] — backlash↔tracking + inverse 보상. HIGH.</li>
+<li>Liang, X. et al. "A novel steer-by-wire system with road sense adaptive friction compensation." MSSP 169:108741, 2022. DOI 10.1016/j.ymssp.2021.108741. [S] — SBW LuGre FF 보상. HIGH.</li>
+<li>Lee, M.H. et al. "Improvement of the steering feel of an EPS ... by torque map modification." J. Mech. Sci. Tech. 19(3) 2005. DOI 10.1007/BF02916127. [S] — assist-map nonlinearity + dead-zone. MED.</li>
+<li>(flag) "Adaptive steering control with dead-zone compensation for autonomous vehicles." MSSP 2025, S0888-3270(25)00373-5. [F] — SBW dead-zone↔tracking.</li>
+</ol>
+<h3 id="brake-hydraulic-ehb-emb">Brake (hydraulic / EHB / EMB)<a class="headerlink" href="#brake-hydraulic-ehb-emb" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Han, W.; Xiong, L.; Yu, Z. "Braking pressure control in EHB based on pressure estimation with nonlinearities and uncertainties." MSSP 131, 2019. DOI 10.1016/j.ymssp.2019.02.009. [S] — EHB pressure-position hysteresis + LuGre. HIGH.</li>
+<li>Han, W. et al. "Integrated Pressure Estimation and Control for EHB of EVs ..." IEEE/ASME T-Mech 2023. DOI 10.1109/TMECH.2021.3119414. [S] — actuator 비선형↔longitudinal decel tracking. HIGH.</li>
+<li>Park, G.; Choi, S.B.; Hyun, D. "Clamping force estimation based on hysteresis modeling for EMB." Int. J. Automotive Technology 18(5) 2017. DOI 10.1007/s12239-017-0086-5. [S] — clamp-force/motor-angle hysteresis + clearance dead-zone. HIGH.</li>
+<li>Park, G.; Choi, S.B. "Clamping force control based on dynamic model estimation for EMB." Proc. IMechE Part D 2017. DOI 10.1177/0954407017738394. [S] — EMB friction + dead-zone. HIGH.</li>
+<li>Li, Y. et al. "A Review of EMB System: Structure, Control and Application." Sustainability 15(5):4514, 2023. DOI 10.3390/su15054514. [S] — EMB 비선형 taxonomy(survey). HIGH(orient).</li>
+<li>Bellini, C. et al. "Temperature Influence on Brake Pad Friction Coefficient Modelisation." Materials 17(1):189, 2023. DOI 10.3390/ma17010189. [S] — mu(T) fade. HIGH(decel gain).</li>
+</ol>
+<h3 id="powertrain-driveline">Powertrain / driveline<a class="headerlink" href="#powertrain-driveline" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Lagerberg, A.; Egardt, B. "Backlash Estimation With Application to Automotive Powertrains." IEEE TCST 15(3) 2007. DOI 10.1109/TCST.2007.894643. [S] — driveline backlash gap + EKF(PWA). HIGH(canonical).</li>
+<li>Nordin, M.; Gutman, P.-O. "Controlling mechanical systems with backlash — a survey." Automatica 38(10) 2002. DOI 10.1016/S0005-1098(02)00047-X. [S] — backlash 제어 survey(taxonomy). HIGH.</li>
+<li>Templin, P.; Egardt, B. "An LQR torque compensator for driveline oscillation damping." IEEE CCA 2009. DOI 10.1109/CCA.2009.5281020. [S] — shaft compliance/shuffle anti-jerk. HIGH.</li>
+<li>Petit, N. et al. "Control-Oriented Modeling of a Vehicle Drivetrain for Shuffle and Clunk Mitigation." SAE 2019-01-0345. DOI 10.4271/2019-01-0345. [S] — torque source + dead-zone backlash + compliant half-shaft. HIGH(sim spec).</li>
+<li>Lee &amp; Jo, WEVJ 2024 15(10):433 (§2). [S] — FOPDT delay in MPC. HIGH(thesis).</li>
+<li>Qian, W.; Panda, S.K.; Xu, J.X. "Torque ripple minimization in PMSM using ILC." IEEE TPEL 19(2) 2004. DOI 10.1109/TPEL.2003.823312. [S] — cogging+ripple angle-domain ILC. MED.</li>
+<li>Lagerberg, A. "Control and Estimation of Automotive Powertrains with Backlash." PhD thesis, Chalmers, 2004. [S] — PWA model + gap estimation 종합. HIGH(textbook급).</li>
+</ol>
+<h3 id="_1">일반 / 표현법<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Bagheri, P.; Sedigh, A.K. "Analytical approach to tuning of MPC for first-order plus dead time models." IET Control Theory Appl. 7, 2013. DOI 10.1049/iet-cta.2012.0026. [S] — FOPDT MPC 튜닝(WEVJ ref [21]).</li>
+<li>(flag) HEV launch backlash DOB FF-FB, IEEE 2022 doc 9709676 [F]; PWA-MPC backlash IFAC 2005 [F]; regen torque limiting CEP 2026 in-press [F].</li>
+</ol>
+<p>먼저 읽을 것: #2(LuGre) · #1(steering friction physics) · #4(steering backlash ID) ·</p>
+<h1 id="9ehb-nonlinear-pressure-11emb-clamp-hysteresis-1516driveline-backlash">9(EHB nonlinear pressure) · #11(EMB clamp hysteresis) · #15+#16(driveline backlash) ·<a class="headerlink" href="#9ehb-nonlinear-pressure-11emb-clamp-hysteresis-1516driveline-backlash" title="Permanent link">&para;</a></h1>
+<h1 id="19delay-aware-mpc">19(delay-aware MPC).<a class="headerlink" href="#19delay-aware-mpc" title="Permanent link">&para;</a></h1>
+<hr />
+<h2 id="4-lc1-lc8">4. Lc1-Lc8 별 적용 표<a class="headerlink" href="#4-lc1-lc8" title="Permanent link">&para;</a></h2>
+<p>핵심 원리: 물리 비선형성(friction/backlash/ripple/saturation)은 actuator 의 물리
+인터페이스(torque/force/steer-angle)에 존재한다. 따라서 plant-side actuator layer 는
+가장 낮은 물리 레벨(Lc1 등가)에 한 번 두고, 상위 레벨은 lowering 으로 그 인터페이스에
+도달하며 자동 상속한다. 레벨에 따라 달라지는 것은 (a) 명령을 물리 인터페이스로
+내리는 경로, (b) 그 결과 지연을 controller 가 보상할 수 있는지다 (optimization 레벨만 가능).</p>
 <table>
 <thead>
 <tr>
-<th style="text-align: right;">Ackerman %</th>
-<th style="text-align: right;">r_ss [rad/s]</th>
-<th style="text-align: right;">turning radius [m]</th>
-<th style="text-align: right;">vy(T) [m/s]</th>
+<th>Lc</th>
+<th>명령 quantity</th>
+<th>직접 노출되는 actuator 항목</th>
+<th>actuator layer 삽입 위치</th>
+<th>delay 보상</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td style="text-align: right;">0 (parallel)</td>
-<td style="text-align: right;">0.182</td>
-<td style="text-align: right;">7.63</td>
-<td style="text-align: right;">0.276</td>
+<td>Lc1</td>
+<td>per-wheel motor τ, brake τ, steer δ</td>
+<td>motor lag/ripple/cogging, driveline backlash, brake clamp-hyst+dead-zone+mu(T), steer EPS friction+backlash+rate+lag — 전부 직접</td>
+<td>각 wheel torque·steer 에 직접 (자연 삽입 레벨)</td>
+<td>없음 (open-loop)</td>
 </tr>
 <tr>
-<td style="text-align: right;">50</td>
-<td style="text-align: right;">0.230</td>
-<td style="text-align: right;">7.51</td>
-<td style="text-align: right;">0.342</td>
+<td>Lc2</td>
+<td>axle drive τ, brake τ, steer δ</td>
+<td>동일, axle 단위 (diff 분배 후 per-wheel)</td>
+<td>axle→per-wheel torque, steer</td>
+<td>없음</td>
 </tr>
 <tr>
-<td style="text-align: right;">100 (perfect)</td>
-<td style="text-align: right;">0.249</td>
-<td style="text-align: right;">7.41</td>
-<td style="text-align: right;">0.365</td>
+<td>Lc3</td>
+<td>Fx_total, steer δ</td>
+<td>Fx→torque lowering 후 motor+brake+driveline; steer EPS</td>
+<td>force→torque 변환 뒤 + steer</td>
+<td>없음</td>
+</tr>
+<tr>
+<td>Lc4</td>
+<td>throttle/brake pedal, steer δ</td>
+<td>pedal→torque map(WEVJ table); pedal tip-in/brake-fill dead-zone, FOPDT lag, mu(T); steer EPS</td>
+<td>pedal→torque map 직후 + steer</td>
+<td>없음 (CARLA 호환 직결)</td>
+</tr>
+<tr>
+<td>Lc5</td>
+<td>ax target, steer δ</td>
+<td>ax→force→torque cascade; powertrain FOPDT (WEVJ 레벨); steer EPS</td>
+<td>cascade 하류 plant interface</td>
+<td>가능 (MPC state augmentation) — thesis 레벨</td>
+</tr>
+<tr>
+<td>Lc6</td>
+<td>v target, steer δ</td>
+<td>v→ax→... 동일</td>
+<td>동일</td>
+<td>가능 (MPC)</td>
+</tr>
+<tr>
+<td>Lc7</td>
+<td>curvature κ, v target</td>
+<td>steer 내부 생성(PP/MPC)→steer EPS; 종방향 Lc6 와 동일</td>
+<td>생성된 steer + 종방향 cascade 하류</td>
+<td>가능 (양 채널, MPC)</td>
+</tr>
+<tr>
+<td>Lc8</td>
+<td>waypoint path</td>
+<td>path→κ,v 생성→Lc7; 양 채널 actuator</td>
+<td>Lc7 와 동일, 최상위</td>
+<td>가능 (양 채널, MPC)</td>
 </tr>
 </tbody>
 </table>
-<p>Δ r (0% → 100%) = +37%. turning radius -3%. Ackerman 적용 시 같은 명령 δ 로 더 큰 yaw rate 가 나옴 — inner wheel 의 slip 감소 효과로 cornering efficiency 향상.</p>
-<p><img alt="Trajectory" src="figures/trajectory_vs_ackerman.png" />
-<img alt="Yaw rate transient" src="figures/yaw_rate_vs_ackerman.png" /></p>
-<h3 id="43">4.3 이론 일치 점검<a class="headerlink" href="#43" title="Permanent link">&para;</a></h3>
-<p><code>δ = 0.35</code> 에서 100% Ackerman:
-- R = L / tan(δ) = 2.7 / 0.365 ≈ 7.40 m → δ_in = atan(2.7/(7.4-0.775)) = atan(0.408) = 0.388 rad
-- δ_out = atan(2.7/(7.4+0.775)) = atan(0.330) = 0.319 rad
-- Δδ (inner-outer) ≈ 4°. Pacejka linear region 안에서 slip 감소 → 실측 yaw rate 향상.</p>
-<h2 id="5">5. 판단<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
-<ul>
-<li>결과: <strong>pass</strong></li>
-<li>근거:</li>
-<li>3/3 새 test 통과, 누적 90/90.</li>
-<li>0% Ackerman 가 기존 동작과 bit-equal — backward compat.</li>
-<li>100% 가 tight turn 의 yaw rate 를 +37% 증가시키며 실차의 Ackerman 효과와 정성 일치.</li>
-<li>미해결 / Follow-up:</li>
-<li><strong>Dynamic Ackerman</strong> (vx 의존) — Phase 2.</li>
-<li><strong>4WS (rear steering)</strong> — 별도 task.</li>
-<li><strong>Bump steer</strong> — L3 의 suspension 동역학과 함께.</li>
-<li><strong>차종 별 sedan/sports 의 ackerman_percent 측정값</strong> — TUR / FSK 실차에서 가져와 example config 갱신.</li>
-</ul>
+<p>요지:
+- plant-side actuator nonlinearity 는 단일 <code>IActuatorModel</code> 로 물리 인터페이스에 한 번
+  구현 → Lc1-Lc8 이 lowering 으로 상속. 레벨마다 재구현 불필요.
+- steering actuator 모델은 steer 를 내보내는 모든 레벨(Lc1-Lc6 직접, Lc7-Lc8 생성 steer)에 적용.
+- controller-side delay 보상(state augmentation)은 optimization 레벨(Lc5-Lc8 이 MPC 일 때)만
+  활용 가능. Lc1-Lc4 는 feedforward/직접 명령이라 지연을 그대로 겪는다.
+- 따라서 actuator 카탈로그는 plant interface 에서 균일 적용, Lc 레벨이 바꾸는 것은
+  lowering 경로와 delay 보상 가능성뿐이다.</p>
+<p>sensor delay layer(feedback): 모든 레벨 공통으로 state 읽기 경로에 transport delay
+(+옵션 lag). MPC 레벨은 augmented state 로 sensor delay 도 함께 보상 가능.</p>
 
 
 
