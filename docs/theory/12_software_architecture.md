@@ -254,7 +254,9 @@ auto provider = vdsim_carla::create_raycast_provider(
 ```cpp
 auto provider = create_raycast_provider(
     [](const Vec3&, double, double& z, Vec3& n, int& sid) {
-        z = 0; n = Vec3::UnitZ(); sid = 7;
+        z   = 0;
+        n   = Vec3::UnitZ();
+        sid = 7;
         return true;
     },
     materials, 2);

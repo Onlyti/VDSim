@@ -265,14 +265,25 @@ vdsim::SolverParams  sp;
 auto dyn = vdsim::create_bicycle();
 dyn->initialize(vp, tp, sp);
 
-vdsim::State s0; s0.velocity = {10, 0, 0};
+vdsim::State s0;
+s0.velocity = {10, 0, 0};
 dyn->reset(s0);
 
-vdsim::ContactArray contacts;          // flat ground, mu = 1
-for (auto& p : contacts) { p.is_valid = true; p.normal = {0,0,1}; p.mu_long = p.mu_lat = 1; }
+// flat ground, mu = 1
+vdsim::ContactArray contacts;
+for (auto& p : contacts) {
+    p.is_valid = true;
+    p.normal   = {0, 0, 1};
+    p.mu_long  = 1;
+    p.mu_lat   = 1;
+}
 
-vdsim::CmdL4 cmd; cmd.steer_angle_wheel = 0.05;
-for (int i = 0; i < 1000; ++i) dyn->step(cmd, contacts, 0.005);
+vdsim::CmdL4 cmd;
+cmd.steer_angle_wheel = 0.05;
+
+for (int i = 0; i < 1000; ++i) {
+    dyn->step(cmd, contacts, 0.005);
+}
 
 std::cout << "yaw rate = " << dyn->state().yaw_rate() << "\n";
 ```
