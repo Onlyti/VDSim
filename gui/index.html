@@ -58,8 +58,11 @@
     <button id="stop">Stop</button>
     <button id="reset">Reset</button>
   </div>
+  <h2>Camera</h2>
   <div class="row">
-    <button id="follow" class="on">Follow cam</button>
+    <button id="cam_orbit" class="on">Orbit</button>
+    <button id="cam_chase">Chase</button>
+    <button id="cam_top">Top</button>
   </div>
   <div class="sub" style="margin-top:8px">Manual: ↑/↓ throttle/brake, ←/→ steer</div>
 </div>
@@ -95,6 +98,12 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(devicePixelRatio);
 view.appendChild(renderer.domElement);
 const controls = new OrbitControls(camera, renderer.domElement);
+// Orthographic camera for the top-down mode.
+const orthoSize = 70;
+let _a0 = innerWidth/innerHeight;
+const orthoCam = new THREE.OrthographicCamera(
+  -orthoSize*_a0/2, orthoSize*_a0/2, orthoSize/2, -orthoSize/2, 0.1, 2000);
+orthoCam.position.set(0,120,0); orthoCam.up.set(0,0,-1); orthoCam.lookAt(0,0,0);
 
 scene.add(new THREE.HemisphereLight(0xcfe8ff, 0x202830, 1.1));
 const dir = new THREE.DirectionalLight(0xffffff, 0.8); dir.position.set(20,40,15); scene.add(dir);
@@ -128,16 +137,26 @@ for(const [wx,wz] of wxz){ const w=new THREE.Mesh(wheelGeo,wheelMat);
   w.rotation.x=Math.PI/2; w.position.set(wx,0.34,wz); car.add(w); }
 scene.add(car);
 
-// trail
-const MAXT=2000; const tg=new THREE.BufferGeometry();
-const tpos=new Float32Array(MAXT*3); tg.setAttribute('position',new THREE.BufferAttribute(tpos,3));
-let thead=0, tcount=0;
-const trail=new THREE.Line(tg,new THREE.LineBasicMaterial({color:0xffa500})); scene.add(trail);
+// trail — drawn ON TOP of the grid (depthTest off + high renderOrder) and raised,
+// so it stays visible from any view angle. setFromPoints rebuilds a connected
+// line each update (reliable for a growing path).
+const MAXT=1500;
+let trailPts=[];
+const trailGeo=new THREE.BufferGeometry();
+const trailMat=new THREE.LineBasicMaterial({color:0xffb020, depthTest:false,
+                                            transparent:true, opacity:0.95});
+const trail=new THREE.Line(trailGeo, trailMat);
+trail.renderOrder=2; trail.frustumCulled=false; trail.visible=false; scene.add(trail);
+function pushTrail(x,z){
+  trailPts.push(new THREE.Vector3(x, 0.12, z));
+  if(trailPts.length>MAXT) trailPts.shift();
+  if(trailPts.length>=2){ trailGeo.setFromPoints(trailPts); trail.visible=true; }
+}
 
 // VDSim ENU (x east, y north, z up) -> three (x, z_up, -y)
 function toThree(x,y,z){ return new THREE.Vector3(x, z, -y); }
 
-let follow=true;
+let camMode='orbit';   // 'orbit' (track + free orbit) | 'chase' (third-person) | 'top' (ortho)
 // Interpolation target (set from the SSE stream); the render loop eases the car
 // toward it every frame so motion is smooth regardless of the stream rate.
 const tgt={pos:new THREE.Vector3(), yaw:0, roll:0, pitch:0, vx:0, vy:0, r:0, has:false};
@@ -163,13 +182,32 @@ function frame(){ requestAnimationFrame(frame);
   }
   const cp=car.position;
   if(!prevInit){ prevCarPos.copy(cp); prevInit=true; }
-  if(follow){ const d=cp.clone().sub(prevCarPos);
-    camera.position.add(d); controls.target.add(d); }
+  let activeCam=camera;
+  if(camMode==='orbit'){
+    // track car translation; OrbitControls still free for angle/zoom
+    const d=cp.clone().sub(prevCarPos);
+    camera.position.add(d); controls.target.add(d);
+    controls.enabled=true; controls.update();
+  } else if(camMode==='chase'){
+    // third-person chase: locked behind the car heading
+    controls.enabled=false;
+    const yaw=car.rotation.y, fx=Math.cos(yaw), fz=-Math.sin(yaw);  // forward (three)
+    camera.position.lerp(new THREE.Vector3(cp.x-fx*11, cp.y+5, cp.z-fz*11), 0.12);
+    camera.lookAt(cp.x, cp.y+1.2, cp.z);
+  } else { // top-down orthographic
+    controls.enabled=false;
+    orthoCam.position.set(cp.x, 120, cp.z);
+    orthoCam.lookAt(cp.x, 0, cp.z);
+    activeCam=orthoCam;
+  }
   prevCarPos.copy(cp);
-  controls.update(); renderer.render(scene,camera);
+  renderer.render(scene, activeCam);
 }
 frame();
-addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+addEventListener('resize',()=>{ const a=innerWidth/innerHeight;
+  camera.aspect=a; camera.updateProjectionMatrix();
+  orthoCam.left=-orthoSize*a/2; orthoCam.right=orthoSize*a/2;
+  orthoCam.top=orthoSize/2; orthoCam.bottom=-orthoSize/2; orthoCam.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight); });
 
 // ---- HUD + state stream ----
@@ -181,10 +219,7 @@ function applyState(s){
   tgt.pos.copy(toThree(s.x,s.y,0)); tgt.yaw=s.yaw; tgt.roll=s.roll||0; tgt.pitch=s.pitch||0;
   tgt.vx=s.vx||0; tgt.vy=s.vy||0; tgt.r=s.r||0;   // for dead-reckoning between updates
   if(!tgt.has){ car.position.copy(tgt.pos); car.rotation.set(0,tgt.yaw,0); tgt.has=true; }
-  // trail (at stream rate, from the target position)
-  tpos[thead*3]=tgt.pos.x; tpos[thead*3+1]=0.05; tpos[thead*3+2]=tgt.pos.z;
-  thead=(thead+1)%MAXT; tcount=Math.min(tcount+1,MAXT);
-  tg.setDrawRange(0,tcount); tg.attributes.position.needsUpdate=true;
+  pushTrail(tgt.pos.x, tgt.pos.z);   // trail at stream rate, from target position
   $('h_t').textContent=f(s.t); $('h_vx').textContent=f(s.vx)+' m/s';
   $('h_vy').textContent=f(s.vy); $('h_r').textContent=f(s.r,3)+' rad/s';
   $('h_ax').textContent=f(s.ax); $('h_ay').textContent=f(s.ay);
@@ -212,9 +247,14 @@ $('vt').oninput=e=>{ $('vtv').textContent=e.target.value+' m/s'; };
 $('vt').onchange=e=>post('/api/config',{v_target:+e.target.value});
 $('start').onclick=()=>post('/api/control',{action:'start'});
 $('stop').onclick =()=>post('/api/control',{action:'stop'});
-$('reset').onclick=()=>{ thead=tcount=0; tg.setDrawRange(0,0); tgt.has=false; post('/api/control',{action:'reset'}); };
-$('follow').onclick=e=>{ follow=!follow; e.target.classList.toggle('on',follow);
-  if(follow) controls.target.copy(car.position); };  // re-frame on enable; drag still orbits
+$('reset').onclick=()=>{ trailPts=[]; trail.visible=false; tgt.has=false; post('/api/control',{action:'reset'}); };
+function setCam(m){ camMode=m;
+  ['orbit','chase','top'].forEach(id=>$('cam_'+id).classList.toggle('on', id===m));
+  if(m==='orbit') controls.target.copy(car.position);   // re-frame; drag still orbits
+}
+$('cam_orbit').onclick=()=>setCam('orbit');
+$('cam_chase').onclick=()=>setCam('chase');
+$('cam_top').onclick=()=>setCam('top');
 function setMode(driver){ post('/api/config',{driver}); $('drv').classList.toggle('on',driver); $('man').classList.toggle('on',!driver); }
 $('drv').onclick=()=>setMode(true);
 $('man').onclick=()=>setMode(false);
