@@ -38,6 +38,12 @@ VDSim 의 spring/damper system 의 stiffness ratio (k_tire = 220 kN/m, m_u = 40 
 `SolverParams::Integrator::Euler` — benchmark / fairness 비교 용. default 는 RK4.
 `configs/solvers/euler_10ms.yaml` 같은 coarse Euler config 으로 integrator 의 numerical error 시범 가능.
 
+![Euler vs RK4 step-steer (actual model)](figures/11_integrator.png)
+
+*동일 step-steer 를 RK4 1ms (reference) vs Euler 20ms vs RK4 20ms 로. stiff
+suspension 에서 Euler 20ms 는 불안정해지고, RK4 는 큰 dt 에서도 reference 에
+근접.*
+
 ## 11.3 Runge-Kutta 4 (RK4) — 본 PoC 의 default
 
 $$

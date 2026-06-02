@@ -89,6 +89,8 @@ public:
 };
 ```
 
+![Four suspension topologies](figures/13_suspension_types.png)
+
 ## 13.3 6 가지 standard suspension topology
 
 `configs/suspensions/`:

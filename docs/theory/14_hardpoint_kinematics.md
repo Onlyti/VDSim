@@ -104,6 +104,11 @@ active M = 1 (wheel travel). steer 입력 1개로 닫힘.
 샘플 (sports DW, 정적): instant center (0.167, 0.059) m, roll center 7.5 cm,
 camber gain −0.094 °/mm — sports car 표준 범위.
 
+![DW wheel-travel × steer sweep (camber/toe/track/caster)](../tasks/T27_ld4_dw/run3d/sweep_3d.png)
+
+*DW 의 (travel, steer) sweep — camber/toe/track/caster 4 곡선. 이게 lookup
+table 의 source.*
+
 ## 14.4 MacPherson — cylindrical joint 제약
 
 `tools/kinematics/mp_3d_solver.py`, `core/src/mp_native_kinematics.cpp`.

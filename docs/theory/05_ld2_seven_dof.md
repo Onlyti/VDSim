@@ -116,6 +116,8 @@ rear wheels: wheel frame = body frame.
 
 이게 chapter 03 의 Pacejka input (alpha, kappa) 의 source.
 
+![Ackerman inner/outer wheel angle vs interpolation %](figures/05_ackermann.png)
+
 ## 5.4 Ackerman steering geometry
 
 ### 문제

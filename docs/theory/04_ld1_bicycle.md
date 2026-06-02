@@ -218,6 +218,8 @@ $$
 
 *VDSim L2 (sports) 의 실제 sweep — yaw-rate gain 이 고속에서 neutral 선 (v/L) 아래로 처지고 saturate. understeer 차량의 교과서적 거동.*
 
+![Step-steer transient yaw rate (actual Ld1)](figures/04_step_response.png)
+
 ## 4.8 검증 — analytical vs simulator
 
 `BicycleSteadyState.LeftTurnYawRateMatchesAnalytical`:

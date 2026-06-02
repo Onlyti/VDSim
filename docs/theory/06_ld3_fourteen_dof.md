@@ -30,6 +30,8 @@ planar 7 + vertical 7 = **14 DOF (= 14 second-order ODE 또는 28 first-order)**
 
 본격 multibody (Ld4-Ld5) 는 lumped 가정을 풀고 hardpoint + joint + bushing 으로 분해. 본 챕터는 lumped 14-DOF.
 
+![Roll + pitch transient (actual L3)](figures/06_transient.png)
+
 ## 6.3 Sprung body EoM (heave / roll / pitch)
 
 Per-corner spring/damper between sprung corner and unsprung mass.

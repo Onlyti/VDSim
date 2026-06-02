@@ -101,6 +101,8 @@ pure-slip 케이스 (`κ = 0` or `α = 0`) 에서는 `Fy_pure = 0` or `Fx_pure =
 
 MF2002 는 normalized slip `σ_x = κ / (1 + κ)`, `σ_y = tan(α) / (1 + κ)` 으로 통합 후 한 식으로 푼다. 이게 더 정확하지만 (1) `κ = -1` 의 brake-locked 발산 처리 필요, (2) 파라미터 5 개 더, (3) implementation complexity. PoC 는 friction-ellipse rescale 로 충분.
 
+![Mz aligning moment + Fx longitudinal (actual model)](figures/03b_tire_mz_fx.png)
+
 ## 3.5 Aligning moment Mz
 
 ### 정의

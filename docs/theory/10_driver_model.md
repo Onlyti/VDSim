@@ -15,6 +15,8 @@ VDSim 의 `DriverModel` 은 minimal driver:
 - **Reaction time delay** (ring buffer).
 - **Gaussian noise** (steer / throttle / brake 별).
 
+![Driver model: reaction delay + noise](figures/10_driver.png)
+
 ## 10.2 Reaction time delay — ring buffer
 
 인간의 visual-to-motor latency ≈ 150-300 ms (도시 driving 영역).
