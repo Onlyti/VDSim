@@ -12,6 +12,7 @@ add_library(vdsim_core
     src/params.cpp
     src/scenario.cpp
     src/control_converter.cpp
+    src/actuator_model.cpp
     src/suspension_lookup.cpp
     src/dw_native_kinematics.cpp
     src/ta_native_kinematics.cpp
