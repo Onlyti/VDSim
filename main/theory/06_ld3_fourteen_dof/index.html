@@ -2225,6 +2225,7 @@
 - Planar motion (x, y, ψ, vx, vy, r) + 4 wheel spin — Ld2 inner 로 위임.
 - 추가로 sprung vertical 3 (z_s, φ, θ) + unsprung vertical 4 (z_u_i) — 본 챕터의 핵심.</p>
 <p>planar 7 + vertical 7 = <strong>14 DOF (= 14 second-order ODE 또는 28 first-order)</strong>.</p>
+<p><img alt="Quarter-car model" src="../figures/06_quarter_car.png" /></p>
 <h2 id="62-lumped-vs-full-multibody">6.2 Lumped vs full multibody<a class="headerlink" href="#62-lumped-vs-full-multibody" title="Permanent link">&para;</a></h2>
 <p>본 PoC 는 <strong>lumped suspension</strong>:
 - sprung body 의 corner displacement = <code>z_s + ry_i · φ − rx_i · θ</code> (small-angle linearized).

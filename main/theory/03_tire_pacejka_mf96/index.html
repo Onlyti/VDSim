@@ -2386,6 +2386,8 @@
 <p>차량 동역학은 본질적으로 <strong>타이어 한계 동역학</strong> 이다. 정상적 운전 조건 (linear region) 에서는 거의 모든 차량이 비슷하게 거동한다. cornering 한계, brake 한계, traction 한계 — 모두 타이어의 비선형 saturation 에서 결정된다.</p>
 <p>vehicle dynamics 의 sensitivity 를 따져보면, mass / wheelbase / aero 보다 <strong>tire 의 (D, μ, Cα)</strong> 에 훨씬 강하게 의존. 그래서 Pacejka 가 타이어 modeling 에 한 평생을 쓴 것이다.</p>
 <p>VDSim 은 Pacejka MF96 의 <strong>simple form (semi-empirical, simplified)</strong> 을 채택. MF2002 의 full form (combined slip 의 자체 식, Mzr 잔류 모멘트, camber-Mz 결합 등) 은 Phase 2.</p>
+<p><img alt="Pacejka Fy-alpha + friction ellipse (actual VDSim model output)" src="../figures/03_tire.png" /></p>
+<p><em>위 그림은 VDSim 의 실제 Pacejka 모델 출력 — load sensitivity (8 kN 이 4 kN 의 1.7배, 선형이면 2배) 와 friction ellipse 의 boundary saturation 이 보인다.</em></p>
 <h2 id="32-magic-formula">3.2 Magic Formula 의 모양<a class="headerlink" href="#32-magic-formula" title="Permanent link">&para;</a></h2>
 <p>기본형:</p>
 <div class="arithmatex">\[

@@ -2247,6 +2247,7 @@ Rajamani 의 <code>δ - atan(v_y / v_x)</code> 같은 식은 SAE convention 이�
 <li>본 PoC 에서 flat ground 가정이라 contact = wheel frame.</li>
 </ul>
 <h2 id="13-quaternion">1.3 Quaternion 변환<a class="headerlink" href="#13-quaternion" title="Permanent link">&para;</a></h2>
+<p><img alt="ISO 8855 frame, wheel index, slip angle" src="../figures/01_frames.png" /></p>
 <p>VDSim 은 Eigen <code>Quaterniond</code> 사용. <strong>body → world</strong> 변환:</p>
 <div class="arithmatex">\[
 v_{\text{world}} = q \otimes v_{\text{body}} \otimes q^{-1}

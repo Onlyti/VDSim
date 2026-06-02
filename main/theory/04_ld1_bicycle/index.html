@@ -2129,6 +2129,7 @@
 <h2 id="41-single-track">4.1 왜 Single-Track 부터 시작하나<a class="headerlink" href="#41-single-track" title="Permanent link">&para;</a></h2>
 <p>차량 dynamics 의 모든 핵심 거동 (cornering, braking, accel) 이 single-track 만으로 정성 정확하게 표현된다. 4-wheel per-tire (Ld2) 는 weight transfer 의 quantitative 정확도를 더하지만, <strong>policy / controller 개발 단계에서는 Ld1 이면 충분</strong>. controller 가 Ld1 에서 동작하면 Ld2-Ld3 로 옮겨도 거의 그대로 동작 (안 그러면 controller 가 invariance 가 부족).</p>
 <p>VDSim 의 Ld1 = "the L4 controller can drive any vehicle" 의 testbed.</p>
+<p><img alt="Single-track geometry" src="../figures/04_bicycle_geom.png" /></p>
 <h2 id="42">4.2 가정 (정리)<a class="headerlink" href="#42" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2295,6 +2296,8 @@ K_{us} = \frac{m}{L}\left(\frac{b}{C_f} - \frac{a}{C_r}\right)
 r_{ss} = \frac{v_x\, \delta}{L\,(1 + K_{us}\, v_x^2)}
 \]</div>
 <p><code>vx → ∞</code> 한계 — understeer 차량은 r 의 증가가 둔화, oversteer 는 발산.</p>
+<p><img alt="Understeer: yaw-rate gain vs speed (actual VDSim L2 sweep)" src="../figures/04_understeer.png" /></p>
+<p><em>VDSim L2 (sports) 의 실제 sweep — yaw-rate gain 이 고속에서 neutral 선 (v/L) 아래로 처지고 saturate. understeer 차량의 교과서적 거동.</em></p>
 <h2 id="48-analytical-vs-simulator">4.8 검증 — analytical vs simulator<a class="headerlink" href="#48-analytical-vs-simulator" title="Permanent link">&para;</a></h2>
 <p><code>BicycleSteadyState.LeftTurnYawRateMatchesAnalytical</code>:
 - vx0 = 10 m/s, δ = 0.05 rad, 5 s 적분.
