@@ -134,6 +134,7 @@ private:
     // Steering delay buffer: simple ring with size = round(reaction / dt_nominal).
     std::vector<double> steer_buffer_;
     int                 steer_idx_ {0};
+    int                 prev_idx_  {0};   // Pure-Pursuit lookahead progress (monotonic)
     double              prev_dt_   {0.005};
 };
 

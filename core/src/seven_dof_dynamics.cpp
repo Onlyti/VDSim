@@ -138,9 +138,10 @@ public:
     }
     double ax_body_est() const override { return ax_prev_; }
     double ay_body_est() const override { return ay_prev_; }
-    // Steering rack torque: front-wheel Mz summed and divided by steering_ratio.
+    // Hand-wheel feedback torque: front-axle aligning moment reduced through the
+    // steering ratio (large ratio -> small torque at the hand wheel).
     double steering_rack_torque() const override {
-        return (mz_front_sum_ * vp_.steering_ratio);
+        return mz_front_sum_ / std::max(1e-6, vp_.steering_ratio);
     }
 
     void set_camber_per_wheel(
@@ -340,10 +341,10 @@ private:
             }
         };
         split_axle(T_front_axle,
-                   state_.wheel_spin[WHEEL_FL], state_.wheel_spin[WHEEL_FR],
+                   s.wheel_spin[WHEEL_FL], s.wheel_spin[WHEEL_FR],
                    Td[WHEEL_FL], Td[WHEEL_FR]);
         split_axle(T_rear_axle,
-                   state_.wheel_spin[WHEEL_RL], state_.wheel_spin[WHEEL_RR],
+                   s.wheel_spin[WHEEL_RL], s.wheel_spin[WHEEL_RR],
                    Td[WHEEL_RL], Td[WHEEL_RR]);
         if (cmd.gear < 0) for (auto& x : Td) x = -x;
         double bias = std::clamp(vp_.brake_bias_front, 0.0, 1.0);

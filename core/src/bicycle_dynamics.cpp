@@ -150,6 +150,7 @@ private:
         double dr       {0.0};
         double domega_f {0.0};
         double domega_r {0.0};
+        double ax_body  {0.0};   // pure longitudinal accel Fx/m (weight-transfer lag)
     };
 
     Deriv derivatives(const State& s,
@@ -294,6 +295,7 @@ private:
         d_out.dyaw     = r;
         d_out.dvx      = Fx_total / m + vy * r;
         d_out.dvy      = Fy_total / m - vx * r;
+        d_out.ax_body  = Fx_total / m;   // longitudinal accel (no vy*r) for Fz lag
         d_out.dr       = Mz_total / Izz;
         d_out.domega_f = (Td_f + Tb_f - F_f.Fx * R) / I_wheel_;
         d_out.domega_r = (Td_r + Tb_r - F_r.Fx * R) / I_wheel_;
@@ -332,7 +334,7 @@ private:
         if (sp_.integrator == SolverParams::Integrator::Euler) {
             const Deriv k = derivatives(s0, cmd, contacts);
             state_   = apply(s0, k, h);
-            ax_prev_ = k.dvx;
+            ax_prev_ = k.ax_body;
             return;
         }
         // RK4
@@ -350,9 +352,10 @@ private:
         k.dr       = (k1.dr       + 2.0 * k2.dr       + 2.0 * k3.dr       + k4.dr)       / 6.0;
         k.domega_f = (k1.domega_f + 2.0 * k2.domega_f + 2.0 * k3.domega_f + k4.domega_f) / 6.0;
         k.domega_r = (k1.domega_r + 2.0 * k2.domega_r + 2.0 * k3.domega_r + k4.domega_r) / 6.0;
+        k.ax_body  = (k1.ax_body  + 2.0 * k2.ax_body  + 2.0 * k3.ax_body  + k4.ax_body)  / 6.0;
 
         state_   = apply(s0, k, h);
-        ax_prev_ = k.dvx;
+        ax_prev_ = k.ax_body;
         // Transient slip-angle relaxation (per axle, between substeps).
         if (tp_.relaxation_length_lat > 1e-6) {
             const double sigma = tp_.relaxation_length_lat;

@@ -119,6 +119,7 @@ void DriverModel::initialize(const Gains& g) noexcept {
 void DriverModel::reset() noexcept {
     steer_buffer_.assign(8, 0.0);
     steer_idx_ = 0;
+    prev_idx_  = 0;
     vxc_.reset();
     axc_.reset();
 }
@@ -132,8 +133,10 @@ DriverModel::Output DriverModel::update(double x, double y, double psi, double v
     if (!(dt > 0.0) || n <= 0) return out;
     prev_dt_ = dt;
 
-    // L7 raw steer
-    const auto pp_out = pp_.update(x, y, psi, vx, px, py, n, 0);
+    // L7 raw steer. Resume the lookahead search from the last index so progress
+    // is monotonic (avoids locking onto an earlier near-start segment on loops).
+    const auto pp_out = pp_.update(x, y, psi, vx, px, py, n, prev_idx_);
+    prev_idx_ = pp_out.idx;
 
     // Reaction time delay via ring buffer
     const int buf_size = std::max(1, (int)std::round(g_.reaction_time_s / dt));
@@ -142,19 +145,28 @@ DriverModel::Output DriverModel::update(double x, double y, double psi, double v
     steer_idx_ = (steer_idx_ + 1) % buf_size;
     double delayed_steer = steer_buffer_[steer_idx_];
 
-    // Add Gaussian-ish noise via 2 uniforms (Box-Muller)
+    // Two independent normals from one Box-Muller draw (cos + sin): z1 for steer,
+    // z2 for the pedals, so steering and pedal noise are decorrelated.
     const double u1 = std::clamp(rand_a, 1e-6, 1.0 - 1e-6);
     const double u2 = rand_b;
-    const double z  = std::sqrt(-2.0 * std::log(u1)) * std::cos(2.0 * 3.141592653589793 * u2);
-    delayed_steer += g_.steer_noise_rms * z;
+    const double mag = std::sqrt(-2.0 * std::log(u1));
+    const double z1  = mag * std::cos(2.0 * 3.141592653589793 * u2);
+    const double z2  = mag * std::sin(2.0 * 3.141592653589793 * u2);
+    delayed_steer += g_.steer_noise_rms * z1;
     delayed_steer = std::clamp(delayed_steer, -g_.max_steer, g_.max_steer);
 
-    // L6 vx -> L5 ax -> throttle/brake
+    // L6 vx -> L5 ax -> throttle/brake. Noise applied only to the active pedal so
+    // it cannot spawn phantom simultaneous throttle+brake.
     const double ax_tgt = vxc_.update(v_target, vx, dt);
     const auto [thr, brk] = axc_.update(ax_tgt, 0.0, dt);   // No ax_meas feedback (simplified)
-    out.throttle = std::clamp(thr + g_.thr_noise_rms * z, 0.0, 1.0);
-    out.brake    = std::clamp(brk + g_.thr_noise_rms * z, 0.0, 1.0);
-    out.steer    = delayed_steer;
+    if (brk > 0.0) {
+        out.brake    = std::clamp(brk + g_.thr_noise_rms * z2, 0.0, 1.0);
+        out.throttle = 0.0;
+    } else {
+        out.throttle = std::clamp(thr + g_.thr_noise_rms * z2, 0.0, 1.0);
+        out.brake    = 0.0;
+    }
+    out.steer = delayed_steer;
     return out;
 }
 
