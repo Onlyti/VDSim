@@ -182,7 +182,54 @@ path tracking 을 상세히 전개한다.
 
 ---
 
-## 7.10 VDSim 구현 노트
+## 7.10 참고문헌
+
+- **Vandevoorde, Josuttis, Gregor**, *C++ Templates: The Complete Guide*, 2nd ed., 2017 — `variant`/`visit`/`if constexpr`.
+- cppreference.com — `std::variant`, `std::visit`.
+
+---
+
+## 7.11 Self-check
+
+<details>
+<summary>1. 8 tier 를 명시적으로 두는 것의 이점은?</summary>
+
+각 control layer (ECU per-wheel ~ behavior planner) 가 자연스러운 입력 단위를
+갖는다. 한 tier (Lc4) 만 노출하면 상위/하위 layer 의 controller 가 매번 수동
+변환해야 하지만, 사다리는 어느 tier 로든 동일 plant 를 구동한다.
+</details>
+
+<details>
+<summary>2. variant + if constexpr 가 runtime 다형성보다 나은 점?</summary>
+
+closed set (8 tier) 에서 heap allocation 없이 stack 값으로 담기고 compile-time
+dispatch + exhaustive check. virtual 상속의 vtable/heap 비용이 없다.
+</details>
+
+<details>
+<summary>3. m × n ABI claim 이 "검증 가능" 하다는 것의 의미?</summary>
+
+각 cell (Ld_i, Lc_j) 이 통합 test 로 동작 확인된다 (현재 24 verified). 단순
+주장이 아니라 회귀로 보장되는 controller-portability.
+</details>
+
+<details>
+<summary>4. lowering 이 정확한 inverse mapping 이 아니어도 되는 이유?</summary>
+
+목적이 dispatch/API 동작 검증이다. 정확한 per-wheel/force 역변환은 Phase 2 의
+direct dispatch 영역이고, lowering 은 typical max 로 normalize 한 근사다.
+</details>
+
+<details>
+<summary>5. Lc1 direct dispatch 가 lowering 으로 안 되는 use case 는?</summary>
+
+traction control / torque vectoring — wheel 별 독립 torque 가 필요한데
+lowering 은 axle 평균이라 좌우 차등을 표현 못 한다. ABI 는 ready, 구현이 Phase 2.
+</details>
+
+---
+
+## 7.12 VDSim 구현 노트
 
 > **[VDSim impl] § 7.3 — CmdL1-CmdL8 + variant**
 >
