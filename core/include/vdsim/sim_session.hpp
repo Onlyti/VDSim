@@ -42,6 +42,7 @@ struct SimOutput {
     double roll {0.0}, pitch {0.0};      // roll_angle_qs / pitch_angle_qs
     std::array<double, NUM_WHEELS> Fz {{0,0,0,0}};
     double rack_torque {0.0};
+    double steer_applied {0.0};   // realized steer after actuator [rad]
 };
 
 class SimSession {
@@ -78,7 +79,7 @@ private:
     CmdL4  latched_ {};
     State  true_state_ {};
     State  meas_state_ {};
-    double ax_ {0.0}, ay_ {0.0}, roll_ {0.0}, pitch_ {0.0}, rack_ {0.0};
+    double ax_ {0.0}, ay_ {0.0}, roll_ {0.0}, pitch_ {0.0}, rack_ {0.0}, steer_applied_ {0.0};
     std::array<double, NUM_WHEELS> Fz_ {{0,0,0,0}};
     double sim_time_ {0.0};
     std::chrono::steady_clock::time_point last_input_tp_ {std::chrono::steady_clock::now()};

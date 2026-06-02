@@ -65,6 +65,7 @@ void SimSession::tick(double dt) {
         true_state_ = next;
         meas_state_ = meas;
         ax_ = ax; ay_ = ay; roll_ = roll; pitch_ = pitch; rack_ = rack;
+        steer_applied_ = realized.steer_angle_wheel;
         Fz_ = Fz;
         sim_time_  += dt;
     }
@@ -78,6 +79,7 @@ SimOutput SimSession::output() const {
     o.sim_time = sim_time_;
     o.ax = ax_; o.ay = ay_; o.roll = roll_; o.pitch = pitch_;
     o.rack_torque = rack_;
+    o.steer_applied = steer_applied_;
     o.Fz = Fz_;
     return o;
 }

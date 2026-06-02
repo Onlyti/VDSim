@@ -13,6 +13,7 @@ option(VDSIM_BUILD_TESTS         "Build unit/integration tests" ON)
 option(VDSIM_BUILD_EXAMPLES      "Build CLI examples"           ON)
 option(VDSIM_BUILD_PYTHON        "Build Python bindings"        OFF)
 option(VDSIM_BUILD_CARLA_PLUGIN  "Build CARLA integration"      ON)
+option(VDSIM_BUILD_COSIM         "Build UDP co-simulation server" ON)
 option(VDSIM_WITH_ERGACCESS      "Build with CarMaker ERGAccess" OFF)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
@@ -43,6 +44,10 @@ endif()
 
 if(VDSIM_BUILD_CARLA_PLUGIN)
     add_subdirectory(carla_integration)
+endif()
+
+if(VDSIM_BUILD_COSIM)
+    add_subdirectory(cosim)
 endif()
 
 message(STATUS "VDSim version       : ${PROJECT_VERSION}")
