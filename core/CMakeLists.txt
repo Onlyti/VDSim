@@ -12,6 +12,7 @@ add_library(vdsim_core
     src/scenario.cpp
     src/control_converter.cpp
     src/actuator_model.cpp
+    src/sim_session.cpp
     src/suspension_lookup.cpp
     src/dw_native_kinematics.cpp
     src/ta_native_kinematics.cpp
@@ -24,10 +25,13 @@ target_include_directories(vdsim_core PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
+find_package(Threads REQUIRED)
+
 target_link_libraries(vdsim_core PUBLIC
     Eigen3::Eigen
     yaml-cpp::yaml-cpp
     spdlog::spdlog
+    Threads::Threads
 )
 
 target_compile_features(vdsim_core PUBLIC cxx_std_17)
