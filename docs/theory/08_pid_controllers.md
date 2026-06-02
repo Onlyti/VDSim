@@ -5,11 +5,12 @@
 ## 8.1 왜 PI + FF 인가 (not PID, not pure FF)
 
 차량의 longitudinal dynamics 는 (PoC range 내에서) **1차에 가까운 비선형 시스템**:
-```
-v̇x  ≈  (T_drive · η_drivetrain − F_aero − F_rr) / m
-```
 
-`F_aero ~ vx²` 는 weak nonlinearity. 작은 perturbation 영역에서는 1차 system.
+$$
+\dot v_x \approx \frac{T_{\text{drive}}\, \eta_{\text{drivetrain}} - F_{\text{aero}} - F_{rr}}{m}
+$$
+
+$F_{\text{aero}} \sim v_x^2$ 는 weak nonlinearity. 작은 perturbation 영역에서는 1차 system.
 
 - **Pure P** — steady-state error 존재 (drag 보상 못 함).
 - **PI** — integrator 가 SS error 0 으로 만듦.
@@ -17,11 +18,12 @@ v̇x  ≈  (T_drive · η_drivetrain − F_aero − F_rr) / m
 - **PI + FF** — feed-forward 가 transient 부분, integrator 가 SS bias.
 
 본 PoC 의 `LongAxController` (Lc5):
-```
-u  =  Kp · e  +  Ki · ∫e dt  +  Kd · ė  +  Kff · ax_target
-```
 
-PoC default `Kd = 0`. Kff = 0.10 (typical).
+$$
+u = K_p\, e + K_i \int e\, dt + K_d\, \dot e + K_{ff}\, a_{x,\text{target}}
+$$
+
+PoC default $K_d = 0$, $K_{ff} = 0.10$ (typical).
 
 ## 8.2 Lc5-AxTarget 의 식
 
@@ -70,9 +72,10 @@ i_max = 2.5
 직관: ax_target = 3 m/s² 입력 시, 모델이 throttle ≈ 0.6 (sedan 추정) 가 필요함을 미리 안다. FF 가 0.10 · 3 = 0.30 을 즉시 출력 + PI 가 보정.
 
 FF gain 결정:
-```
-Kff  ≈  m · R / T_max  ≈  1500 · 0.32 / 300  ≈  1.6 s²/m
-```
+
+$$
+K_{ff} \approx \frac{m R}{T_{\max}} \approx \frac{1500 \cdot 0.32}{300} \approx 1.6 \;\text{s}^2/\text{m}
+$$
 
 이 값을 normalized throttle 으로 변환: throttle = T / T_max → Kff_norm = 0.10 정도.
 
@@ -109,9 +112,10 @@ v_target  →  Lc6 PI  →  ax_target  →  Lc5 PI+FF  →  throttle/brake  → 
 ### Inner / outer bandwidth 분리
 
 empirical guide:
-```
-ω_inner  ≥  3 · ω_outer    (transient decoupling)
-```
+
+$$
+\omega_{\text{inner}} \ge 3\, \omega_{\text{outer}} \quad (\text{transient decoupling})
+$$
 
 본 PoC default:
 - Lc5: Kp = 0.4 (ax control loop dominant pole ~ 5-10 rad/s)

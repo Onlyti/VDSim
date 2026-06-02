@@ -14,29 +14,31 @@ geometry 가 모든 것을 결정 — feedback 도 없고 optimization 도 없�
 ## 9.2 Geometry derivation
 
 차량의 body frame: x_b forward, y_b leftward.
-lookahead point 를 body frame 으로 변환:
-```
-ψ 적용: 회전 R(−ψ).
-(dx_w, dy_w) = (x_target − x, y_target − y)         // world
-(dx_b, dy_b) = ( cos(ψ)·dx_w + sin(ψ)·dy_w,
-                −sin(ψ)·dx_w + cos(ψ)·dy_w )       // body
-```
+lookahead point 를 body frame 으로 변환 (회전 $R(-\psi)$):
 
-`dx_b` 는 lookahead 까지의 forward distance, `dy_b` 는 lateral offset (좌가 +).
+$$
+\begin{aligned}
+(dx_w, dy_w) &= (x_{\text{target}} - x,\; y_{\text{target}} - y) \\
+dx_b &= \cos\psi\, dx_w + \sin\psi\, dy_w \\
+dy_b &= -\sin\psi\, dx_w + \cos\psi\, dy_w
+\end{aligned}
+$$
+
+$dx_b$ 는 lookahead 까지의 forward distance, $dy_b$ 는 lateral offset (좌가 +).
 
 **원의 기하**: rear axle 위치 (= body origin in bicycle model) 를 통과하는 원 + lookahead point 통과. 그 원의 반지름 `R_path` 와 곡률 `κ = 1/R_path`.
 
 이등변삼각형 + 원의 정리 (또는 Pythagoras):
-```
-R_path  =  Ld² / (2 · dy_b)   ←   대수적 유도 결과
-```
 
-(`Ld² = dx_b² + dy_b²`.)
+$$
+R_{\text{path}} = \frac{L_d^2}{2\, dy_b}, \qquad L_d^2 = dx_b^2 + dy_b^2
+$$
 
 따라서 curvature:
-```
-κ  =  2 · dy_b / Ld²
-```
+
+$$
+\kappa = \frac{2\, dy_b}{L_d^2}
+$$
 
 코드 `core/src/control_converter.cpp` 의 `PurePursuitController::update`:
 ```cpp
@@ -49,14 +51,13 @@ const double steer = std::atan(kappa * g_.wheelbase);
 ### Bicycle 모델에서 steer angle
 
 kinematic bicycle:
-```
-κ  =  tan(δ) / L
-→ δ  =  atan(κ · L)
-```
 
-여기서 `δ` 는 front wheel angle, `L` 은 wheelbase.
+$$
+\kappa = \frac{\tan\delta}{L} \;\Rightarrow\; \delta = \arctan(\kappa L)
+$$
 
-작은 angle 영역: `δ ≈ κ · L = 2 · dy_b · L / Ld²`.
+여기서 $\delta$ 는 front wheel angle, $L$ 은 wheelbase.
+작은 angle 영역: $\delta \approx \kappa L = 2\, dy_b\, L / L_d^2$.
 
 ## 9.3 Lookahead distance Ld 의 scheduling
 
@@ -65,12 +66,13 @@ constant Ld 의 문제:
 - **너무 큼**: corner 입장에서 일찍 cut, late-apex, 부드럽지만 path 추적 부정확.
 
 VDSim 의 standard scheduling:
-```
-Ld  =  max(Ld_min, k · vx)
-```
 
-low vx → Ld_min (default 1.5 m) — 정지 근처 진동 방지.
-high vx → k · vx (default k = 0.40 s) — vx 비례, 시야가 더 멀리.
+$$
+L_d = \max(L_{d,\min},\; k\, v_x)
+$$
+
+low vx → $L_{d,\min}$ (default 1.5 m) — 정지 근처 진동 방지.
+high vx → $k\, v_x$ (default $k = 0.40$ s) — vx 비례, 시야가 더 멀리.
 
 `k = 0.40` 의 의미: 0.4 초 후 위치를 예측.
 
