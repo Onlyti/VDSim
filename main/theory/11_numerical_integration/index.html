@@ -2216,6 +2216,10 @@ y_{n+1} = y_n + dt \cdot f(y_n, t_n)
 <h3 id="poc-euler">본 PoC 의 Euler 옵션<a class="headerlink" href="#poc-euler" title="Permanent link">&para;</a></h3>
 <p><code>SolverParams::Integrator::Euler</code> — benchmark / fairness 비교 용. default 는 RK4.
 <code>configs/solvers/euler_10ms.yaml</code> 같은 coarse Euler config 으로 integrator 의 numerical error 시범 가능.</p>
+<p><img alt="Euler vs RK4 step-steer (actual model)" src="../figures/11_integrator.png" /></p>
+<p><em>동일 step-steer 를 RK4 1ms (reference) vs Euler 20ms vs RK4 20ms 로. stiff
+suspension 에서 Euler 20ms 는 불안정해지고, RK4 는 큰 dt 에서도 reference 에
+근접.</em></p>
 <h2 id="113-runge-kutta-4-rk4-poc-default">11.3 Runge-Kutta 4 (RK4) — 본 PoC 의 default<a class="headerlink" href="#113-runge-kutta-4-rk4-poc-default" title="Permanent link">&para;</a></h2>
 <div class="arithmatex">\[
 \begin{aligned}

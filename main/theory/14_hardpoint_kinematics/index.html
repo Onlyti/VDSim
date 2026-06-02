@@ -2133,6 +2133,9 @@ active M = 1 (wheel travel). steer 입력 1개로 닫힘.</p>
 </ol>
 <p>샘플 (sports DW, 정적): instant center (0.167, 0.059) m, roll center 7.5 cm,
 camber gain −0.094 °/mm — sports car 표준 범위.</p>
+<p><img alt="DW wheel-travel × steer sweep (camber/toe/track/caster)" src="../../tasks/T27_ld4_dw/run3d/sweep_3d.png" /></p>
+<p><em>DW 의 (travel, steer) sweep — camber/toe/track/caster 4 곡선. 이게 lookup
+table 의 source.</em></p>
 <h2 id="144-macpherson-cylindrical-joint">14.4 MacPherson — cylindrical joint 제약<a class="headerlink" href="#144-macpherson-cylindrical-joint" title="Permanent link">&para;</a></h2>
 <p><code>tools/kinematics/mp_3d_solver.py</code>, <code>core/src/mp_native_kinematics.cpp</code>.</p>
 <p>DW 와 결정적 차이: UCA 가 없고 <strong>strut</strong> 이 그 역할. strut tube 는 knuckle 에

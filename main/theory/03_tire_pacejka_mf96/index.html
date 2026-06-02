@@ -2447,6 +2447,7 @@ r^2 = \left(\frac{F_{x,\text{pure}}}{F_{x,\max}}\right)^2 + \left(\frac{F_{y,\te
 <p>검증: <code>core/tests/unit/test_tire_models.cpp:170-186</code> 의 <code>FrictionEllipseBound</code> 가 1024 점 격자에서 <code>(Fx/Fx_max)² + (Fy/Fy_max)²  ≤ 1 + 1e-9</code> 통과.</p>
 <h3 id="mf2002">MF2002 의 더 정확한 모델<a class="headerlink" href="#mf2002" title="Permanent link">&para;</a></h3>
 <p>MF2002 는 normalized slip <code>σ_x = κ / (1 + κ)</code>, <code>σ_y = tan(α) / (1 + κ)</code> 으로 통합 후 한 식으로 푼다. 이게 더 정확하지만 (1) <code>κ = -1</code> 의 brake-locked 발산 처리 필요, (2) 파라미터 5 개 더, (3) implementation complexity. PoC 는 friction-ellipse rescale 로 충분.</p>
+<p><img alt="Mz aligning moment + Fx longitudinal (actual model)" src="../figures/03b_tire_mz_fx.png" /></p>
 <h2 id="35-aligning-moment-mz">3.5 Aligning moment Mz<a class="headerlink" href="#35-aligning-moment-mz" title="Permanent link">&para;</a></h2>
 <h3 id="_2">정의<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
 <p>타이어가 받는 lateral force 의 application point 가 contact patch 중심에서 <strong><span class="arithmatex">\(t_p\)</span> (pneumatic trail)</strong> 만큼 뒤에 있다. 따라서:</p>
