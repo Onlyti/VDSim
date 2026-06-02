@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VDSim Web GUI</title>
+<style>
+  :root { --bg:#0e1116; --panel:#171b22; --ink:#e6edf3; --acc:#01A0E9; --dim:#8b949e; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--ink);
+              font-family:Calibri,Segoe UI,system-ui,sans-serif; overflow:hidden; }
+  #view { position:fixed; inset:0; }
+  .panel { position:fixed; background:rgba(23,27,34,.92); border:1px solid #2a313b;
+           border-radius:10px; padding:12px 14px; backdrop-filter:blur(4px); }
+  #cfg { top:12px; left:12px; width:260px; }
+  #hud { top:12px; right:12px; width:210px; font-variant-numeric:tabular-nums; }
+  h1 { font:600 15px Tahoma; margin:0 0 8px; color:#fff; }
+  h2 { font:600 11px Tahoma; margin:10px 0 4px; color:var(--dim); letter-spacing:.5px;
+       text-transform:uppercase; }
+  label { display:block; font-size:12px; margin:6px 0 2px; color:var(--dim); }
+  select,input[type=range]{ width:100%; }
+  select { background:#0e1116; color:var(--ink); border:1px solid #2a313b; border-radius:6px;
+           padding:4px; }
+  .row { display:flex; gap:6px; margin-top:8px; }
+  button { flex:1; background:#222a35; color:var(--ink); border:1px solid #2a313b;
+           border-radius:6px; padding:7px; cursor:pointer; font-size:12px; }
+  button:hover { border-color:var(--acc); }
+  button.on { background:var(--acc); color:#001018; border-color:var(--acc); }
+  .kv { display:flex; justify-content:space-between; font-size:13px; padding:2px 0; }
+  .kv b { color:#fff; font-weight:600; }
+  .sub { font-size:11px; color:var(--dim); }
+  #conn { font-size:11px; }
+</style>
+<script type="importmap">
+{ "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+</script>
+</head>
+<body>
+<div id="view"></div>
+
+<div id="cfg" class="panel">
+  <h1>VDSim</h1>
+  <div id="conn" class="sub">connecting…</div>
+  <h2>Vehicle</h2>
+  <select id="vehicle"></select>
+  <h2>Dynamics level</h2>
+  <select id="level"></select>
+  <h2>Target speed <span id="vtv" class="sub"></span></h2>
+  <input id="vt" type="range" min="0" max="30" step="0.5">
+  <div class="row">
+    <button id="drv" class="on">Autopilot</button>
+    <button id="man">Manual</button>
+  </div>
+  <div class="row">
+    <button id="start">Start</button>
+    <button id="stop">Stop</button>
+    <button id="reset">Reset</button>
+  </div>
+  <div class="row">
+    <button id="follow" class="on">Follow cam</button>
+  </div>
+  <div class="sub" style="margin-top:8px">Manual: ↑/↓ throttle/brake, ←/→ steer</div>
+</div>
+
+<div id="hud" class="panel">
+  <h2>State</h2>
+  <div class="kv"><span>t</span><b id="h_t">—</b></div>
+  <div class="kv"><span>vx</span><b id="h_vx">—</b></div>
+  <div class="kv"><span>vy</span><b id="h_vy">—</b></div>
+  <div class="kv"><span>yaw rate</span><b id="h_r">—</b></div>
+  <div class="kv"><span>ax</span><b id="h_ax">—</b></div>
+  <div class="kv"><span>ay</span><b id="h_ay">—</b></div>
+  <div class="kv"><span>roll</span><b id="h_roll">—</b></div>
+  <div class="kv"><span>pitch</span><b id="h_pitch">—</b></div>
+  <div class="kv"><span>steer</span><b id="h_steer">—</b></div>
+  <h2>Fz [N] FL FR RL RR</h2>
+  <div class="sub" id="h_fz">—</div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ---- scene ----
+const view = document.getElementById('view');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0e1116);
+const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 2000);
+camera.position.set(15, 14, 22);
+// WebGL2 renderer for the demo; WebGPURenderer is a later (quality) swap.
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(devicePixelRatio);
+view.appendChild(renderer.domElement);
+const controls = new OrbitControls(camera, renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xcfe8ff, 0x202830, 1.1));
+const dir = new THREE.DirectionalLight(0xffffff, 0.8); dir.position.set(20,40,15); scene.add(dir);
+const grid = new THREE.GridHelper(120, 60, 0x2a313b, 0x1b2027); scene.add(grid);
+
+// figure-eight reference path (R=20, matches server driver) in ground plane.
+function fig8(R=20, n=160){
+  const pts=[];
+  for(let i=0;i<=n;i++){ const t=2*Math.PI*i/n; pts.push(new THREE.Vector3(R-R*Math.cos(t),0.02,-(R*Math.sin(t)))); }
+  for(let i=0;i<=n;i++){ const t=2*Math.PI*i/n; pts.push(new THREE.Vector3(-R+R*Math.cos(t),0.02,-(R*Math.sin(t)))); }
+  return pts;
+}
+scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(fig8()),
+          new THREE.LineBasicMaterial({color:0x2f6d8f})));
+
+// ---- car ----
+const car = new THREE.Group();
+const body = new THREE.Mesh(new THREE.BoxGeometry(4.2,1.1,1.8),
+              new THREE.MeshStandardMaterial({color:0x01A0E9, metalness:.3, roughness:.5}));
+body.position.y = 0.75; car.add(body);
+const cabin = new THREE.Mesh(new THREE.BoxGeometry(2.0,0.7,1.5),
+              new THREE.MeshStandardMaterial({color:0x9fd8f5}));
+cabin.position.set(-0.2,1.45,0); car.add(cabin);
+const wheelGeo = new THREE.CylinderGeometry(0.34,0.34,0.25,16);
+const wheelMat = new THREE.MeshStandardMaterial({color:0x14181f});
+const wxz = [[1.4,0.75],[1.4,-0.75],[-1.4,0.75],[-1.4,-0.75]]; // FL FR RL RR (x fwd, z=-left)
+for(const [wx,wz] of wxz){ const w=new THREE.Mesh(wheelGeo,wheelMat);
+  w.rotation.x=Math.PI/2; w.position.set(wx,0.34,wz); car.add(w); }
+scene.add(car);
+
+// trail
+const MAXT=2000; const tg=new THREE.BufferGeometry();
+const tpos=new Float32Array(MAXT*3); tg.setAttribute('position',new THREE.BufferAttribute(tpos,3));
+let thead=0, tcount=0;
+const trail=new THREE.Line(tg,new THREE.LineBasicMaterial({color:0xffa500})); scene.add(trail);
+
+// VDSim ENU (x east, y north, z up) -> three (x, z_up, -y)
+function toThree(x,y,z){ return new THREE.Vector3(x, z, -y); }
+
+let follow=true;
+function frame(){ requestAnimationFrame(frame);
+  if(follow){ const o=car.position;
+    const back=new THREE.Vector3(Math.sin(carYaw),0,Math.cos(carYaw)).multiplyScalar(-12);
+    const want=o.clone().add(new THREE.Vector3(back.x,8,back.z));
+    camera.position.lerp(want,0.06); controls.target.lerp(o,0.1); }
+  controls.update(); renderer.render(scene,camera);
+}
+let carYaw=0;
+frame();
+addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight); });
+
+// ---- HUD + state stream ----
+const $=id=>document.getElementById(id);
+const f=(v,p=2)=> (v==null?'—':(+v).toFixed(p));
+function applyState(s){
+  if(s.x==null) return;
+  car.position.copy(toThree(s.x,s.y,0));
+  carYaw = s.yaw;
+  car.rotation.set(0, s.yaw, 0);
+  body.rotation.set(s.pitch||0, 0, s.roll||0);  // subtle attitude cue
+  // trail
+  tpos[thead*3]=car.position.x; tpos[thead*3+1]=0.05; tpos[thead*3+2]=car.position.z;
+  thead=(thead+1)%MAXT; tcount=Math.min(tcount+1,MAXT);
+  tg.setDrawRange(0,tcount); tg.attributes.position.needsUpdate=true;
+  $('h_t').textContent=f(s.t); $('h_vx').textContent=f(s.vx)+' m/s';
+  $('h_vy').textContent=f(s.vy); $('h_r').textContent=f(s.r,3)+' rad/s';
+  $('h_ax').textContent=f(s.ax); $('h_ay').textContent=f(s.ay);
+  $('h_roll').textContent=f(s.roll,3); $('h_pitch').textContent=f(s.pitch,3);
+  $('h_steer').textContent=f(s.steer,3)+' rad';
+  if(s.Fz) $('h_fz').textContent=s.Fz.map(v=>Math.round(v)).join('  ');
+}
+const es=new EventSource('/api/stream');
+es.onopen=()=> $('conn').textContent='● live';
+es.onerror=()=> $('conn').textContent='● disconnected';
+es.onmessage=e=>{ try{ applyState(JSON.parse(e.data)); }catch(_){} };
+
+// ---- config / control ----
+async function post(url,obj){ await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(obj)}); }
+async function loadConfig(){
+  const r=await(await fetch('/api/config')).json();
+  const v=$('vehicle'); v.innerHTML=r.vehicles.map(x=>`<option ${x===r.config.vehicle?'selected':''}>${x}</option>`).join('');
+  const l=$('level'); l.innerHTML=r.levels.map(x=>`<option ${x===r.config.level?'selected':''}>${x}</option>`).join('');
+  $('vt').value=r.config.v_target; $('vtv').textContent=r.config.v_target+' m/s';
+}
+loadConfig();
+$('vehicle').onchange=e=>post('/api/config',{vehicle:e.target.value});
+$('level').onchange=e=>post('/api/config',{level:e.target.value});
+$('vt').oninput=e=>{ $('vtv').textContent=e.target.value+' m/s'; };
+$('vt').onchange=e=>post('/api/config',{v_target:+e.target.value});
+$('start').onclick=()=>post('/api/control',{action:'start'});
+$('stop').onclick =()=>post('/api/control',{action:'stop'});
+$('reset').onclick=()=>{ thead=tcount=0; tg.setDrawRange(0,0); post('/api/control',{action:'reset'}); };
+$('follow').onclick=e=>{ follow=!follow; e.target.classList.toggle('on',follow); };
+function setMode(driver){ post('/api/config',{driver}); $('drv').classList.toggle('on',driver); $('man').classList.toggle('on',!driver); }
+$('drv').onclick=()=>setMode(true);
+$('man').onclick=()=>setMode(false);
+
+// manual keyboard control
+const man={throttle:0,brake:0,steer:0}; const keys={};
+addEventListener('keydown',e=>keys[e.key]=true);
+addEventListener('keyup',e=>keys[e.key]=false);
+setInterval(()=>{
+  if($('man').classList.contains('on')){
+    man.throttle=keys['ArrowUp']?0.7:0; man.brake=keys['ArrowDown']?0.6:0;
+    man.steer=(keys['ArrowLeft']?0.25:0)+(keys['ArrowRight']?-0.25:0);
+    post('/api/manual',man);
+  }
+},80);
+</script>
+</body>
+</html>
