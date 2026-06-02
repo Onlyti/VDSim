@@ -107,3 +107,18 @@ fall back to 0 / displayed as `—`.
 | `viewer/index.html`           | Single-page Three.js viewer.               |
 | `viewer/realtime_server.py`   | asyncio + websockets + vdsim live sim.     |
 | `viewer/README.md`            | This file.                                 |
+
+## Planned GUI requirements (to discuss separately)
+
+향후 별도 논의 예정. 여기엔 합의된 요구사항만 기록한다.
+
+### Actuator nonlinearity tuner (planned)
+- 각 비선형성(dead time, 1st-order lag, friction, hysteresis, dead-zone,
+  rate/saturation 등)의 정도를 슬라이더(bar)로 조절.
+- step 입력에 대한 예측 응답을 실시간 plot 으로 표시(파라미터 ↔ 거동 즉시 확인).
+- 대상: `IActuatorModel` 파라미터 (cf. `docs/references/actuator_nonlinearity.md`).
+
+### 공통 GUI 기술 방향 (all GUIs)
+- 모든 GUI 는 웹페이지 기반.
+- 3D rendering 은 WebGPU 사용.
+- headless 환경에서도 web 으로 접근해 시각화 가능해야 함(서버는 headless, 클라이언트는 브라우저).
