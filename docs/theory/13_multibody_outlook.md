@@ -11,6 +11,7 @@
 ## 13.1 왜 lumped 14-DOF 로 부족한가
 
 Chapter 06 의 Ld3 는:
+
 - sprung body 의 corner displacement 가 `z_s + ry · φ − rx · θ` 로 표현 — small-angle linear.
 - per-corner spring/damper 가 sprung corner ↔ unsprung mass 사이에 작용.
 - unsprung mass 가 single-DOF (vertical) 의 point mass.
@@ -111,6 +112,7 @@ public:
 bodies: chassis (reference), lower_control_arm (mass 8.5, inertia diag), strut (12.0), knuckle (6.5), tie_rod (1.8).
 
 hardpoints:
+
 - lca_inner_front
 - lca_inner_rear
 - lca_outer_ball
@@ -121,6 +123,7 @@ hardpoints:
 - wheel_center
 
 joints:
+
 - lca_inner_front: revolute (axis = body-x) between chassis and LCA.
 - lca_inner_rear: revolute (axis = body-x) between chassis and LCA.
 - lca_outer_ball: ball joint between LCA and knuckle.
@@ -136,11 +139,13 @@ joints:
 ### Problem definition
 
 given:
+
 - `SuspensionTopology` (모든 hardpoint, joint).
 - `travel_z` — suspension vertical travel input.
 - `steer_rad` — steering wheel angle (steering rack 위치).
 
 output:
+
 - `WheelPose`: wheel center 의 world 위치 + orientation + toe, camber, caster.
 
 ### MacPherson 의 simplified FK
@@ -175,6 +180,7 @@ closed-form 또는 12-line analytical 가능. M1 의 1차 구현.
 ### K&C chart (M5)
 
 travel_z 를 ±100mm sweep, steer 를 ±0.5 rad sweep:
+
 - toe(travel) — bump steer
 - camber(travel) — camber gain
 - caster(steer) — caster trail change
@@ -190,10 +196,12 @@ VDSim Phase 2: forward kinematics 후 sweep → matplotlib chart 자동 생성.
 ### Problem
 
 given:
+
 - topology + travel (FK 결과).
 - WheelLoad (Fx, Fy, Fz at wheel center).
 
 output:
+
 - bushing 의 deflection (compliance).
 - updated wheel pose (compliance steer / camber).
 
@@ -255,6 +263,7 @@ HARDPOINTS:
 ```
 
 parser:
+
 - regex 또는 yacc 으로 hardpoint coord 추출.
 - joint topology (revolute axes, ball joints) 도 별도 키워드.
 - bushing parameter (Adams 의 bushing curve) 는 linear 부분만 import (nonlinear curve 는 polynomial fit 옵션).

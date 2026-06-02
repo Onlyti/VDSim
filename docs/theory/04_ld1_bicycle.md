@@ -31,6 +31,7 @@ $$
 실제 DOF count 는 5 ($v_x, v_y, \psi$ + 2 wheel spin), 적분기 입장에서는 8 개 first-order ODE (포지션 3 개는 kinematic).
 
 `State` struct 매핑:
+
 - `position.x`, `position.y` ← `x_w`, `y_w`
 - `orientation` (quat) ← `quat_from_euler(0, 0, ψ)`
 - `velocity.x`, `velocity.y` ← `vx`, `vy`
@@ -55,6 +56,7 @@ I_w\, \dot\omega_r &= T_{\text{drive},r} + T_{\text{brake},r} - F_{x,\text{wheel
 $$
 
 여기서:
+
 - `Fx_total = Fx_body_f + Fx_body_r − F_aero − F_rr` (drag + rolling 합쳐서).
 - `Fy_total = Fy_body_f + Fy_body_r`.
 - `Fx_body_f = Fx_wheel_f · cos(δ) − Fy_wheel_f · sin(δ)` (wheel frame → body frame, 회전).
@@ -85,6 +87,7 @@ F_{z,r} = \frac{m g a}{L} + F_{z,\text{aero},r} + \Delta F_{z,\text{long}}
 $$
 
 부호 직관:
+
 - 가속 (ax > 0) → ΔFz_long > 0 → rear 가 더 loaded, front 가 덜 loaded.
 - 제동 (ax < 0) → ΔFz_long < 0 → front 가 더 loaded (nose dive).
 
@@ -122,6 +125,7 @@ default Cl_f = Cl_r = 0 (sedan 은 거의 효과 없음). sports / race / FSK �
 ## 4.6 Drive / brake torque 분배
 
 Drive split 은 `drive_type`:
+
 - FWD: front axle 만.
 - RWD: rear axle 만 (default for sedan).
 - AWD: front/rear 50:50.
@@ -148,6 +152,7 @@ Smooth sign 함수 `tanh(ω / w)` 로 wheel spin 부호 부드럽게 처리 — 
 검증 baseline 이 되는 식. **Cornering 의 linear region** 에서 SS yaw rate.
 
 가정:
+
 - 작은 α (linear region) → `Fy = −Cα · α` (Pacejka 의 linear-region slope, `Cα = B·C·D·Fz·μ`).
 - `vx = const`.
 - v̇y = 0, ṙ = 0 (SS).
@@ -223,14 +228,17 @@ $$
 ## 4.8 검증 — analytical vs simulator
 
 `BicycleSteadyState.LeftTurnYawRateMatchesAnalytical`:
+
 - vx0 = 10 m/s, δ = 0.05 rad, 5 s 적분.
 - `r_sim ≈ 0.176 rad/s`, `r_ana ≈ 0.185 rad/s`. 오차 −5 %.
 - analytical 이 linear bicycle (no Mz aggregation) 이라 −2.6 % 는 Mz 기여, 나머지 −2-3 % 는 small non-linearity 영역에 들어선 효과.
 
 `StepSteerSweep.LinearRegionWithinTenPercent`:
+
 - 3 × 5 grid (vx, δ) 에서 ay < 3 m/s² 인 cell 모두 `|err| ≤ 10 %`.
 
 `LongScenarios.DragCoastMatchesAnalytical`:
+
 - aero drag only (RR=0). 20 m/s 에서 10 s coast. analytical `vx(t) = vx0 / (1 + vx0 · k · t)` (k = ½ρCdA / m) 과 ±5 %.
 
 이런 closed-form 비교가 simulator-side 의 "correctness" 의 강한 evidence.

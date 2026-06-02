@@ -106,6 +106,7 @@ $$
   $$
 
 부호 직관:
+
 - 좌선회 (r > 0, δ > 0). rear 의 경우 `v_y_wheel = v_y − b·r`. SS 에서 `v_y` 가 약간 음수, `b·r` 가 양수 → 합쳐서 음수. `v_x` 양수 → `α_r = atan2(− , +) < 0`.
 - 그러므로 **좌선회에서 alpha < 0**. ISO 8855 RH 의 약속.
 - 그리고 Pacejka 에서 `Fy = − D · sin(...)` 로 leading minus 부호. `α < 0` → `sin(...) < 0` → `Fy > 0` (i.e., +y_body = leftward = inside of left turn). 즉 cornering force 가 차량을 안쪽으로 잡아준다.
@@ -129,6 +130,7 @@ $$
 - `ε = 0.5 m/s` 의 floor — 정지 근처에서 발산 방지.
 
 부호 직관:
+
 - 가속 (drive): `R · omega > v_x` → κ > 0 → `Fx > 0` (drive force).
 - 제동 (brake): `R · omega < v_x` → κ < 0 → `Fx < 0`.
 - 정지: `omega = v_x = 0` → κ = 0.
@@ -189,6 +191,7 @@ Ld3-FourteenDOF 는 roll/pitch 도 함께 quat 에 encoding.
 ## 1.9 검증
 
 VDSim 의 `test_headers_compile.cpp` 와 `test_coordinate.cpp` 에서:
+
 - `Vec3::UnitZ()` 가 contact normal 의 default 와 일치.
 - `quat_from_euler({0,0,0}).isApprox(Quat::Identity())`.
 - `yaw_from_quat(quat_from_euler({0,0,π/2}))` ≈ π/2.

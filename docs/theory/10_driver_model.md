@@ -5,12 +5,14 @@
 ## 10.1 왜 Driver model 인가
 
 차량 시뮬레이션의 controller 측은 두 영역:
+
 1. **Autonomous controller** (Pure Pursuit / Stanley / MPC) — perfect, instant.
 2. **Human driver** — imperfect (reaction delay, jitter), bounded actuation.
 
 ADAS / autonomous 의 성능 평가 시 인간 driver baseline 이 필요. 또는 driver-in-the-loop simulation 의 surrogate.
 
 VDSim 의 `DriverModel` 은 minimal driver:
+
 - Pure Pursuit + Lc6 + Lc5 의 ideal cascade 위에:
 - **Reaction time delay** (ring buffer).
 - **Gaussian noise** (steer / throttle / brake 별).
@@ -60,6 +62,7 @@ z = \sqrt{-2 \ln u_1} \cdot \cos(2\pi u_2)
 $$
 
 derivation:
+
 - 2D Gaussian 의 polar form: r² = −2 log(u1), θ = 2π · u2.
 - (r cos θ, r sin θ) 두 독립 Gaussian.
 - 본 PoC 는 첫 번째만 사용 (cos).
@@ -135,10 +138,12 @@ const auto out = drv.update(..., a, b);
 ## 10.6 검증 (Task 53)
 
 `DriverModel.*` 2 tests:
+
 - `ReactionTimeDelaysSteer` — 100 ms 동안 buffer 가 0 의 steer 출력 후 실제 steer release.
 - `NoiseIsBoundedByRMS` — 200 ticks, σ = 0.005, max steer ≤ 0.04 (8σ).
 
 `vdsim_driver_demo` (end-to-end):
+
 - sedan + figure-8 + v_target = 10.
 - DriverModel (latency 150 ms, σ_steer = 0.005, σ_thr = 0.02) 가 PP perfect 대비 더 거친 steer 출력.
 - 차량 trajectory 는 path 추적 잘 함 (saturation 의 sedan 한계).

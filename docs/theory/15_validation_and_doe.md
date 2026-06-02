@@ -108,6 +108,7 @@ VDSim 은 Pure Pursuit (Chapter 09) 로 center-line 추종 + 비례 vx 제어.
 Pass 기준 (단순화): speed loss < 2 km/h **AND** excursion < 1 m.
 
 샘플 (sports L3):
+
 - 60 km/h: FAIL (excursion 1.3 m, speed loss 5.5 km/h).
 - 40 km/h: PASS (excursion 0.3 m, speed loss 1.0 km/h).
 
@@ -136,6 +137,7 @@ metrics:
 16 combos × 2 scenarios = 32 runs 가 수 초.
 
 출력 자동 분기:
+
 - 1-param sweep → line plot.
 - 2-param → heatmap (response surface).
 - 3+ param → sensitivity bar (각 param 의 `std/mean` 상대 민감도).

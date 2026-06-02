@@ -55,6 +55,7 @@ F_y(\alpha) = - D \sin\!\Big( C \arctan\big( B\alpha - E (B\alpha - \arctan(B\al
 $$
 
 leading minus. 이유:
+
 - α > 0 (위치상 wheel 의 velocity 가 +y_wheel 쪽으로 기울어진 상황) → tire 가 restoring force 를 −y 방향 으로 생성 → `Fy < 0`.
 - VDSim 이 `Fy = −Dy · sin(...)` 로 구현하면 부호 자동.
 
@@ -271,6 +272,7 @@ $$
 ## 3.9 검증
 
 `test_tire_models.cpp` 의 검증:
+
 - `ZeroSlipZeroForce`, `ZeroFzZeroForce` — 기본 boundary.
 - `LinearRegionLateralSlope`, `LinearRegionLongitudinalSlope` — α=1e-4 에서 `Fy/α ≈ −B·C·D·Fz·μ` 의 ±1 %.
 - `SignConventions` — α > 0 → Fy < 0, κ > 0 → Fx > 0, etc.
@@ -279,6 +281,7 @@ $$
 - `FzScalesLinearlyInLinearRegion` — Fz 절반 → Fy 절반.
 
 `PacejkaCombinedFixture`:
+
 - `FrictionEllipseBound` (Task 15) — 1024 점에서 `(Fx/Fx_max)² + (Fy/Fy_max)² ≤ 1`.
 - `PureSlipUnchangedByCombinedFlag` — pure slip 케이스 backward-compat.
 - `MzZeroWhenAlphaZero`, `MzSignOppositeFy`.

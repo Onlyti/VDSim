@@ -5,6 +5,7 @@
 ## 6.1 왜 14-DOF 라고 부르나
 
 D8 명세에서 14-DOF 의 분해:
+
 - Sprung body translation (x, y, z) — 3
 - Sprung body rotation (φ, θ, ψ) — 3
 - Unsprung vertical z (FL, FR, RL, RR) — 4
@@ -13,6 +14,7 @@ D8 명세에서 14-DOF 의 분해:
 합계 14.
 
 본 VDSim 의 Ld3 는 위의 14 DOF 중:
+
 - Planar motion (x, y, ψ, vx, vy, r) + 4 wheel spin — Ld2 inner 로 위임.
 - 추가로 sprung vertical 3 (z_s, φ, θ) + unsprung vertical 4 (z_u_i) — 본 챕터의 핵심.
 
@@ -23,6 +25,7 @@ planar 7 + vertical 7 = **14 DOF (= 14 second-order ODE 또는 28 first-order)**
 ## 6.2 Lumped vs full multibody
 
 본 PoC 는 **lumped suspension**:
+
 - sprung body 의 corner displacement = `z_s + ry_i · φ − rx_i · θ` (small-angle linearized).
 - unsprung mass = lumped point mass, vertical 1 DOF.
 - spring + damper 가 sprung corner 와 unsprung mass 사이에 작용.
@@ -226,10 +229,12 @@ ride 분석에서 이 두 값이 핵심 진단.
 ## 6.8 Ld2 ↔ Ld3 의 거동 차이
 
 quasi-static 의 SS yaw rate / Fz 는 Ld2 와 Ld3 가 일치 (분석값 동일). 차이는:
+
 - **Transient**: Ld3 가 roll overshoot, settle 시간, wheel-hop oscillation 표현 가능.
 - **dynamic Fz**: Ld3 의 Fz 가 매 step 마다 spring 의 transient 반영. Ld2 는 quasi-static.
 
 검증 (Task 30 FourteenDOF dynamic):
+
 - step steer (sports, vx=10, δ=0.05): Ld3 의 roll oscillation, settle ~ 1.5 s.
 - DLC: roll range ±4° (sport 거동).
 - brake step: pitch transient + nose dive.
@@ -268,6 +273,7 @@ dyn->state().susp_velocity[WHEEL_FL];      // FL ride velocity (m/s)
 ## 6.11 검증
 
 `FourteenDOF.*` (Task 24, 30, 41 통합):
+
 - `ConstructionAndLevel`
 - `StaticSuspensionPopulatedAtRest` — `susp_compression = static_compression` at rest.
 - `CompressionGrowsUnderBrakeOnFront`

@@ -215,6 +215,7 @@ vdsim::CmdL4 cmd; cmd.steer_angle_wheel = out.steer;
 ## 7.7 검증 (Task 43)
 
 `ControlDispatch.*`:
+
 - `BicycleHandlesCmdL2Drive` — Lc2 drive_torque > 0 → vx 증가.
 - `BicycleHandlesCmdL3BrakeNegativeFx` — Lc3 Fx < 0 → vx 감소.
 - `SevenDOFHandlesCmdL1PerWheelTorque` — Lc1 RL/RR torque → vx 증가.
@@ -228,6 +229,7 @@ vdsim::CmdL4 cmd; cmd.steer_angle_wheel = out.steer;
 본 PoC 의 `lower_to_l4` 는 lowering. 그러나 **per-wheel torque 의 직접 적용** (variant visit 으로 Lc1 의 motor_torque 가 wheel-spin EoM 에 직접 들어가는 path) 는 미구현.
 
 Phase 2 의 Lc1 direct dispatch:
+
 - `CmdL1::motor_torque[i]` → wheel-spin EoM 의 `T_drive_i` 에 직접 사용.
 - differential 의 결과를 직접 override (low-level controller 가 per-wheel 결정).
 - traction control / torque vectoring 시뮬 가능.

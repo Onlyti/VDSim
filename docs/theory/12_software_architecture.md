@@ -87,6 +87,7 @@ std::unique_ptr<IVehicleDynamics> create_bicycle() {
 1. **Implementation 이 anonymous namespace 안**. external code 가 `BicycleDynamics` 클래스 자체에 접근 불가 → 내부 멤버 변경이 ABI 변화로 외부에 영향 없음.
 2. **Factory function 반환 `unique_ptr`** — heap allocation, ownership 명확. shared lib 경계에서 안전.
 3. **Pure virtual + final**:
+
    - `virtual` 로 derived dispatch 가능.
    - `final` 로 implementation class 가 더 inherit 불가 (vtable 최적화 + 의도 명확).
 
@@ -148,6 +149,7 @@ CmdL8 가 `std::vector<PathPoint>` 포함이라 heap에서 데이터, ControlInp
 ## 12.4 YAML I/O — backward compat
 
 VDSim 의 YAML schema 규칙:
+
 - top-level keys map 1:1 to struct members (flat, no nesting).
 - missing keys → default 유지 (forward-compat).
 - unknown keys → silently ignored (backward-compat).
@@ -270,6 +272,7 @@ wet asphalt = 4 (0.8, 0.8).
 ### Test (Task 42)
 
 4 mock tests:
+
 - `FlatGroundLookupYieldsKnownMu`
 - `UnknownSurfaceFallsBackToDefault`
 - `MissedRaycastInvalidatesContact`
@@ -291,6 +294,7 @@ VDSim/
 ```
 
 FetchContent 의 효과:
+
 - 사용자 system 의 Eigen / yaml-cpp 버전 의존성 없음.
 - git submodule 보다 간단 (cmake 가 자동 처리).
 - offline build 시 `_deps/` 캐시 사용.
@@ -303,6 +307,7 @@ FetchContent 의 효과:
 ## 12.8 Test 구조
 
 `tests/unit/` 와 `tests/integration/` 분리:
+
 - **Unit**: 단일 module 의 함수 / class 의 boundary case. typical < 100 ms.
 - **Integration**: 여러 module 결합 (e.g., dyn + tire + contact). 1 시나리오 SS 까지 적분.
 

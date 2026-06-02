@@ -69,6 +69,7 @@ C ABI wrapper 가 내부에 VDSim dynamics 인스턴스를 소유:
 - `fmi2GetReal` — VR 10-17 (L2) / 10-43 (L3: + roll/pitch/susp/Fz) 출력.
 
 빌드 (`build_fmu.sh`):
+
 1. `libvdsim_core.a` + yaml-cpp + spdlog 정적 링크하여 .so 컴파일.
 2. `-fvisibility=hidden` + `--version-script` 로 `fmi2*` 심볼만 노출.
 3. configs YAML 을 resources/ 로 복사.
@@ -96,6 +97,7 @@ print(fmu.get("vx"))
 ```
 
 구현:
+
 1. ZIP 해제 → tempdir → `modelDescription.xml` 파싱 (이름→VR 맵).
 2. `binaries/<platform>/<modelIdentifier>.so` 를 ctypes 로 로드.
 3. FMI 2.0 CS 라이프사이클 함수 시그니처 바인딩.

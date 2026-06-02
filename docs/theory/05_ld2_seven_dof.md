@@ -98,6 +98,7 @@ v_{y,\text{body},i} = v_y + r\, r_{x,i}
 $$
 
 여기서 $(r_{x,i}, r_{y,i})$ 는 wheel 의 body-frame 위치:
+
 - FL: `(+a, +Tw_f/2)`
 - FR: `(+a, −Tw_f/2)`
 - RL: `(−b, +Tw_r/2)`
@@ -156,6 +157,7 @@ $$
 VDSim 코드 `core/src/seven_dof_dynamics.cpp:212-228`. 좌선회 (`δ > 0`) 일 때 inside = FL, outside = FR.
 
 차종 별 default:
+
 - sedan: 60 % (typical street car partial Ackerman).
 - sports: 85 %.
 - FSK formula: 100 %.
@@ -201,6 +203,7 @@ preload = 0.10, ramp = 0.20 (sedan default).
 실제 LSD ramp angle 모델은 더 복잡 (drive vs coast 비대칭), 본 PoC 는 대칭.
 
 검증 (Task 26 split-mu accel):
+
 - Open: Δω_end = 0.605 rad/s
 - LSD: Δω_end = 0.353
 - Locked: Δω_end = 0.207
@@ -264,6 +267,7 @@ drive split → differential → per-wheel `T_drive_i`. brake split → axle bia
 Linear region (ay 작음) 에서 lateral transfer 가 작고 differential 차이 미미. Ld2 SS yaw rate 가 Ld1 SS 와 거의 같다.
 
 검증 (Task 20 격자 sweep):
+
 - vx ≤ 15, |δ| ≤ 0.04: `|r_L2 − r_L1| / r_L1 ≤ 0.5 %`.
 - vx = 20, δ = 0.10 (nonlinear): up to 89 % 차이. 이는 outer-tire saturation 의 본격 효과.
 
@@ -284,6 +288,7 @@ Linear region (ay 작음) 에서 lateral transfer 가 작고 differential 차이
 ## 5.11 검증 (Task 19, 20 등)
 
 `SevenDOF.*` 18 tests:
+
 - ConstructionAndLevel
 - AtRestStaticFz — sum = m·g, per-axle 정확.
 - HardBrakeLoadsBothFrontWheels — Fz_F > 1.05 · static_F.

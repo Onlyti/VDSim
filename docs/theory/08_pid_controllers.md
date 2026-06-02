@@ -46,10 +46,12 @@ else:       throttle = 0,                brake = clamp(−u, 0, 1)
 `u` 의 sign 으로 dispatch. throttle 과 brake 가 동시에 0 이 아닌 경우 없음 (mutually exclusive).
 
 이게 단순한 가정. 실제로는:
+
 - regenerative brake 가 있는 EV 에서 `throttle < 0` 의미 가능.
 - 갑작스러운 sign 전환 시 actuator dead-time 으로 진동 가능.
 
 본 PoC 는 simple bang-bang 분기. follow-up:
+
 - `throttle_brake_overlap_band` — sign 전환 시 dead-zone.
 - regen mode (negative throttle).
 
@@ -118,6 +120,7 @@ $$
 $$
 
 본 PoC default:
+
 - Lc5: Kp = 0.4 (ax control loop dominant pole ~ 5-10 rad/s)
 - Lc6: Kp = 0.8 (v control loop ~ 1-2 rad/s)
 
@@ -126,15 +129,18 @@ ratio ~ 5. 충분 separation.
 ## 8.4 Cascade 의 한계 — saturation 의 전파
 
 만약 ax_target > 실제 차량의 max ax (e.g., FSK 의 가속 한계 ~ 6 m/s²) 이면:
+
 - Lc5 가 throttle = 1.0 saturate.
 - Lc6 의 integrator 가 계속 누적 (실제 ax 가 못 따라가니 vx error 누적).
 - Anti-windup 으로 cap 되지만 outer-loop wind-down 까지 시간 지연.
 
 본 PoC 의 `vdsim_ax_track_demo` (Task 25) 의 결과:
+
 - accel phase (ax_target=+2): mean 0.58 (cap), RMSE 1.42.
 - 차량 한계 노출.
 
 해결책 (follow-up):
+
 - Lc6 의 `ax_clamp` 를 차종 max ax 로 자동 조정.
 - Conditional integration (saturation 영역에서 integrator hold).
 - back-calculation anti-windup.
@@ -142,6 +148,7 @@ ratio ~ 5. 충분 separation.
 ## 8.5 Driver model 의 PI gain (참고)
 
 `DriverModel` (Chapter 10 상세) 가 내부에서 cascade 사용:
+
 - vx PID: Kp = 0.6, Ki = 0.15 (slower than auto cascade)
 - ax PID: default (Lc5 default 그대로)
 
@@ -150,6 +157,7 @@ ratio ~ 5. 충분 separation.
 ## 8.6 검증 (Task 25)
 
 `LongAxController.*` 7 tests:
+
 - `ZeroErrorZeroOutput`
 - `PositiveTargetUsesThrottle`
 - `NegativeTargetUsesBrake`
@@ -159,6 +167,7 @@ ratio ~ 5. 충분 separation.
 - `IntegratorAntiwindup` — sustain error 입력 후 `|integ| ≤ i_max`.
 
 `LongVxController.*` 4 tests:
+
 - `ZeroErrorZeroOutput`
 - `PositiveErrorPositiveAx`
 - `NegativeErrorNegativeAx`

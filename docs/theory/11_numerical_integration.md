@@ -69,6 +69,7 @@ $$
 ### RK4 의 cost
 
 4 evaluations of `f` per step. Euler 의 4 배. 하지만:
+
 - error 가 `O(dt⁴)` 이므로 같은 정확도에 더 큰 dt 가능.
 - 결과적으로 Euler 보다 빠를 수도 (정확도가 같다는 가정).
 
@@ -99,6 +100,7 @@ for (int i = 0; i < N; ++i) substep(cmd, contacts, h);
 ```
 
 default: `max_substep_dt = 0.001 s`, `max_substeps = 10`.
+
 - outer dt = 5 ms → 5 substeps of 1 ms.
 - outer dt = 20 ms → cap 에 10 substeps of 2 ms.
 
@@ -168,6 +170,7 @@ Anti-dive: pitch 의 inertia term 에 `ax` 사용 — 동일 lag.
 ## 11.6 RK4 substep + 1-step lag 의 combination
 
 각 substep 마다:
+
 1. `ax_prev`, `ay_prev` 사용해 Fz 계산.
 2. RK4 4 stage 진행 (`f` 4번 evaluation).
 3. substep 끝에서 `ax_prev = k.dvx − vy · r` (= `Fx_total / m`), `ay_prev = k.dvy + vx · r` 갱신.
@@ -201,6 +204,7 @@ step_steer (δ=0.05, vx=10, 5s):
 | Euler | 10 ms (= outer dt) | 0.17950 | 9.693 |
 
 차이 +0.24 %, +0.21 %. 작지만 측정 가능.
+
 - outer dt 가 5 ms 같으면 Euler 가 잘 동작.
 - 큰 outer dt (50 ms 이상) 면 Euler 가 진동 시작.
 

@@ -64,6 +64,7 @@ $$
 ## 9.3 Lookahead distance Ld 의 scheduling
 
 constant Ld 의 문제:
+
 - **너무 작음**: 작은 lateral error 에 큰 steer 반응 → 진동 (특히 정지 근처).
 - **너무 큼**: corner 입장에서 일찍 cut, late-apex, 부드럽지만 path 추적 부정확.
 
@@ -79,6 +80,7 @@ high vx → $k\, v_x$ (default $k = 0.40$ s) — vx 비례, 시야가 더 멀리
 `k = 0.40` 의 의미: 0.4 초 후 위치를 예측.
 
 검증 (Task 32 + figure-8 demo):
+
 - vx = 8 m/s, Ld = max(1.5, 3.2) = 3.2 m.
 - figure-8 의 R = 20 corner 에서 sedan max_steer 0.5 rad 에 도달.
 
@@ -152,6 +154,7 @@ double lookahead_distance;
 ## 9.8 Implementation 의 한 가지 주의 — Frame
 
 path 가 어느 frame 에 있는가?
+
 - world frame (ENU, X north, Y east) — 본 PoC 의 가정.
 - vehicle relative — controller 내부에서 변환.
 - Frenet (s, d) — path 진행 방향 + lateral offset.
@@ -161,11 +164,13 @@ path 가 어느 frame 에 있는가?
 ## 9.9 검증 (Task 32)
 
 `PurePursuit.*` 3 tests:
+
 - `StraightAheadZeroSteer` — x-axis 직선 path, steer ≈ 0.
 - `LeftCircleProducesPositiveSteer` — R = 20 원호, steer > 0, κ > 0.
 - `MaxSteerClamped` — tight (R = 1) turn, |steer| ≤ max_steer (saturation).
 
 End-to-end `vdsim_path_tracking`:
+
 - sedan + figure-8 (R = 20) + v_target = 8.
 - 결과: vx mean 5.79 ± 0.37 (under-tracking), steer max = 0.50 (saturated), 25 s.
 - sedan max_steer 0.5 한계로 corner 에서 saturate. Pure Pursuit 자체는 정상.

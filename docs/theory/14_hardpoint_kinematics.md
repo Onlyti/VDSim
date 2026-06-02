@@ -151,6 +151,7 @@ tie rod 거리 제약 1 scalar 추가 → knuckle 3 회전 DOF 가 닫힘.
 `M = 6·1 − 5 = 1` (wheel travel). steer 없음.
 
 axis 방향이 camber/toe gain 을 결정:
+
 - pure trailing (axis ∥ +y): camber/toe gain 0.
 - semi-trailing (axis 가 x 또는 z 성분): gain 발생.
 
