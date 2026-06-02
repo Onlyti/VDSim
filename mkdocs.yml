@@ -113,6 +113,8 @@ nav:
       - "14 — Hardpoint kinematics": theory/14_hardpoint_kinematics.md
       - "15 — Validation & DOE": theory/15_validation_and_doe.md
       - "16 — FMI 2.0 integration": theory/16_fmi_integration.md
+  - References:
+      - "Actuator/sensor nonlinearity & delay": references/actuator_nonlinearity.md
   - "Phase 2 — Multibody & Integration":
       - "T22 — CARLA Python bridge": tasks/T22_carla_bridge/REPORT.md
       - "T23 — Jump 14-DOF (world-z)": tasks/T23_jump_14dof/REPORT.md
