@@ -13,15 +13,16 @@ VDSim 은 Pacejka MF96 의 **simple form (semi-empirical, simplified)** 을 채�
 ## 3.2 Magic Formula 의 모양
 
 기본형:
-```
-F(s) = D · sin( C · atan( B · s − E · (B · s − atan(B · s)) ) )
-```
 
-- `s` — 입력 (lateral 의 경우 slip angle α, longitudinal 의 경우 slip ratio κ).
-- `D` — 피크 force amplitude. `D = D_param · Fz · μ`.
-- `B` — stiffness factor. linear-region slope 결정. `slope_0 = B · C · D`.
-- `C` — shape factor. 곡선의 폭 / 비선형 정도.
-- `E` — curvature factor. 피크 주변의 형상.
+$$
+F(s) = D \sin\!\Big( C \arctan\big( B s - E (B s - \arctan(B s)) \big) \Big)
+$$
+
+- $s$ — 입력 (lateral 의 경우 slip angle $\alpha$, longitudinal 의 경우 slip ratio $\kappa$).
+- $D$ — 피크 force amplitude. $D = D_{\text{param}} \cdot F_z \cdot \mu$.
+- $B$ — stiffness factor. linear-region slope 결정. $\text{slope}_0 = B C D$.
+- $C$ — shape factor. 곡선의 폭 / 비선형 정도.
+- $E$ — curvature factor. 피크 주변의 형상.
 
 ### 왜 sin(atan(...))?
 
@@ -44,9 +45,10 @@ B_lat  =  8.0,  C_lat  = 1.30,  D_lat  = 1.0,  E_lat  = -1.00
 ## 3.3 부호 약속 (lateral)
 
 ISO 8855 RH 에서 lateral 식은:
-```
-Fy(α) = − D · sin( C · atan( B·α − E · (B·α − atan(B·α)) ) )
-```
+
+$$
+F_y(\alpha) = - D \sin\!\Big( C \arctan\big( B\alpha - E (B\alpha - \arctan(B\alpha)) \big) \Big)
+$$
 
 leading minus. 이유:
 - α > 0 (위치상 wheel 의 velocity 가 +y_wheel 쪽으로 기울어진 상황) → tire 가 restoring force 를 −y 방향 으로 생성 → `Fy < 0`.
@@ -70,16 +72,18 @@ decoupled `Fx(κ)` and `Fy(α)` 가 동시에 비-zero 일 때 `(Fx, Fy)` 의 �
 
 ### 해법 — friction-ellipse rescale (VDSim 채택)
 
-각 축의 peak: `Fx_max = D_long · Fz · μ_long`, `Fy_max = D_lat · Fz · μ_lat`.
+각 축의 peak: $F_{x,\max} = D_{\text{long}} F_z \mu_{\text{long}}$, $F_{y,\max} = D_{\text{lat}} F_z \mu_{\text{lat}}$.
 
-```
-r² = (Fx_pure / Fx_max)² + (Fy_pure / Fy_max)²
-if r² > 1:
-    scale = 1 / sqrt(r²)
-    Fx, Fy *= scale
-else:
-    Fx = Fx_pure, Fy = Fy_pure
-```
+$$
+r^2 = \left(\frac{F_{x,\text{pure}}}{F_{x,\max}}\right)^2 + \left(\frac{F_{y,\text{pure}}}{F_{y,\max}}\right)^2
+$$
+
+$$
+(F_x, F_y) = \begin{cases}
+(F_{x,\text{pure}}, F_{y,\text{pure}}) & r^2 \le 1 \\[4pt]
+\dfrac{1}{r}\,(F_{x,\text{pure}}, F_{y,\text{pure}}) & r^2 > 1
+\end{cases}
+$$
 
 ellipse (or circle if `Fx_max = Fy_max`) 내부면 그대로, 외부면 가장 가까운 ellipse boundary 로 끌어당김.
 
@@ -97,25 +101,26 @@ MF2002 는 normalized slip `σ_x = κ / (1 + κ)`, `σ_y = tan(α) / (1 + κ)` �
 
 ### 정의
 
-타이어가 받는 lateral force 의 application point 가 contact patch 중심에서 **t_p (pneumatic trail)** 만큼 뒤에 있다. 따라서:
+타이어가 받는 lateral force 의 application point 가 contact patch 중심에서 **$t_p$ (pneumatic trail)** 만큼 뒤에 있다. 따라서:
 
-```
-Mz_wheel = − t_p(α) · Fy
-```
+$$
+M_{z,\text{wheel}} = - t_p(\alpha) \cdot F_y
+$$
 
-- `Mz > 0` (위에서 본 CCW) when `α > 0` (Fy < 0). 즉 self-aligning — wheel 을 α 가 줄어드는 방향으로 회전시킨다.
+- $M_z > 0$ (위에서 본 CCW) when $\alpha > 0$ ($F_y < 0$). 즉 self-aligning — wheel 을 $\alpha$ 가 줄어드는 방향으로 회전시킨다.
 
-### t_p 의 falloff
+### $t_p$ 의 falloff
 
-low α 영역에서는 `t_p ≈ t_p_0` (constant, 보통 50 mm).
-α 가 커지면 contact patch 의 pressure distribution 이 앞쪽으로 이동 → t_p 감소.
+low $\alpha$ 영역에서는 $t_p \approx t_{p,0}$ (constant, 보통 50 mm).
+$\alpha$ 가 커지면 contact patch 의 pressure distribution 이 앞쪽으로 이동 → $t_p$ 감소.
 
 VDSim 모델:
-```
-t_p(α) = t_p_0 / sqrt(1 + (α / α_falloff)²)
-```
 
-이건 `cos(atan(α/α_fo))` 와 등가. 단순하지만 textbook 의 일반 trend (`α` 작을 때 거의 일정, 큰 α 에서 단조 감소) 잘 표현.
+$$
+t_p(\alpha) = \frac{t_{p,0}}{\sqrt{1 + (\alpha / \alpha_{\text{falloff}})^2}}
+$$
+
+이건 $\cos(\arctan(\alpha/\alpha_{\text{fo}}))$ 와 등가. 단순하지만 textbook 의 일반 trend ($\alpha$ 작을 때 거의 일정, 큰 $\alpha$ 에서 단조 감소) 잘 표현.
 
 VDSim default:
 ```
@@ -127,10 +132,10 @@ t_p_0 = 0.05 m,  α_falloff = 0.20 rad (≈ 11.5°)
 Mz 가 단순히 tire 가 받는 self-aligning torque 가 아니라, body 의 yaw moment 에 더해진다 (steered wheel 이 받는 torque 가 steering 시스템 통해 chassis 로 전달).
 
 VDSim 의 Mz aggregation:
-```
-Mz_body = Σ (rx_i · Fy_body_i − ry_i · Fx_body_i)   (force translation)
-        + Σ Mz_wheel_i                                (per-tire intrinsic Mz)
-```
+
+$$
+M_{z,\text{body}} = \underbrace{\sum_i \big(r_{x,i} F_{y,\text{body},i} - r_{y,i} F_{x,\text{body},i}\big)}_{\text{force translation}} + \underbrace{\sum_i M_{z,\text{wheel},i}}_{\text{per-tire intrinsic } M_z}
+$$
 
 코드 `core/src/seven_dof_dynamics.cpp:336-340`:
 ```cpp
@@ -146,25 +151,28 @@ for (int i = 0; i < NUM_WHEELS; ++i) Mz_total += mz_wheel[i];
 
 ### 정의
 
-wheel 이 vertical 에서 γ 만큼 기울었을 때 추가 lateral force 가 생성된다.
+wheel 이 vertical 에서 $\gamma$ 만큼 기울었을 때 추가 lateral force 가 생성된다.
 
-```
-Fy_camber = − C_γ · γ · Fz · μ_lat
-```
+$$
+F_{y,\text{camber}} = - C_\gamma \cdot \gamma \cdot F_z \cdot \mu_{\text{lat}}
+$$
 
-`TireParams::camber_stiffness` default `0`. enable 시 위 식이 `Fy_lat` 에 가산.
+`TireParams::camber_stiffness` ($C_\gamma$) default `0`. enable 시 위 식이 $F_{y,\text{lat}}$ 에 가산.
 
 ### camber 가 Mz 에도 기여
 
 camber thrust 의 application point 도 contact patch 중심에서 약간 벗어나 작은
 aligning moment 를 만든다. VDSim 의 추가 (`pacejka_mf96.cpp`):
 
-```
-Mz_camber = − pneumatic_trail · 0.25 · camber_stiffness · γ · Fz · μ
-Mz_total  = − trail · Fy + Mz_camber
-```
+$$
+M_{z,\text{camber}} = - t_{p,0} \cdot 0.25 \cdot C_\gamma \cdot \gamma \cdot F_z \cdot \mu
+$$
 
-`0.25 · trail` 은 camber arm 의 근사. γ 에 anti-symmetric — `±γ` 가 `∓Mz`
+$$
+M_{z,\text{total}} = - t_p \cdot F_y + M_{z,\text{camber}}
+$$
+
+$0.25 \cdot t_{p,0}$ 은 camber arm 의 근사. $\gamma$ 에 anti-symmetric — $\pm\gamma$ 가 $\mp M_z$
 (test `CamberContributesToMz` 검증).
 
 ### γ 가 이제 자동 계산됨 (Ld4 연결)
@@ -185,22 +193,26 @@ hardpoint kinematics 가 attach 안 됐으면 legacy fallback (`camber_per_roll 
 
 ## 3.7 Fz 의 mu scaling + load sensitivity
 
-```
-Fx = (D_long · Fz · μ_eff_long) · sin(C_long · atan(...))
-Fy = − (D_lat · Fz · μ_eff_lat) · sin(C_lat · atan(...))
-```
+$$
+\begin{aligned}
+F_x &= (D_{\text{long}} F_z \mu_{\text{eff,long}}) \sin(C_{\text{long}} \arctan(\cdots)) \\
+F_y &= -(D_{\text{lat}}  F_z \mu_{\text{eff,lat}})  \sin(C_{\text{lat}}  \arctan(\cdots))
+\end{aligned}
+$$
 
-`μ_long`, `μ_lat` 는 `ContactPoint` 에서 받는 surface mu (per wheel). 노면 변화 (icy patch 등) 표현.
+$\mu_{\text{long}}$, $\mu_{\text{lat}}$ 는 `ContactPoint` 에서 받는 surface mu (per wheel). 노면 변화 (icy patch 등) 표현.
 
 ### Load sensitivity — μ 가 Fz 에 따라 감소
 
 실제 타이어는 수직 하중이 클수록 *단위 하중당 grip* 이 감소한다 (rubber 의
 load sensitivity). VDSim 의 `μ_eff`:
 
-```
-μ_eff(Fz) = μ_nominal · (1 − load_sensitivity · (Fz/Fz_nominal − 1))
-            (0.3·μ_nominal 로 floor — 극한 Fz 에서 수치 안정)
-```
+$$
+\mu_{\text{eff}}(F_z) = \mu_{\text{nominal}} \cdot \big(1 - k_{\text{load}} \cdot (F_z/F_{z,\text{nominal}} - 1)\big)
+$$
+
+(단, $0.3\,\mu_{\text{nominal}}$ 로 floor — 극한 $F_z$ 에서 수치 안정.
+$k_{\text{load}}$ = `load_sensitivity`.)
 
 - `Fz = Fz_nominal` 이면 `μ_eff = μ_nominal`.
 - `Fz > Fz_nominal`: grip 감소 → 코너링 시 외측 휠이 안쪽보다 *상대적으로
@@ -215,18 +227,17 @@ load sensitivity). VDSim 의 `μ_eff`:
 이전 PoC 는 quasi-static — slip 이 바뀌면 force 가 즉시 따라갔다. 실제 타이어는
 carcass 변형 때문에 **rolling distance σ** 만큼 지연된다 (relaxation length).
 
-transient slip angle `α_dyn` 이 geometric slip `α_geom` 을 1차 시스템으로 추종:
+transient slip angle $\alpha_{\text{dyn}}$ 이 geometric slip $\alpha_{\text{geom}}$ 을 1차 시스템으로 추종:
 
-```
-(σ / |v_long|) · α̇_dyn  =  α_geom − α_dyn
-```
+$$
+\frac{\sigma}{|v_{\text{long}}|}\,\dot\alpha_{\text{dyn}} = \alpha_{\text{geom}} - \alpha_{\text{dyn}}
+$$
 
-force 는 `α_dyn` 으로 계산 (instantaneous α 가 아니라). 닫힌형 적분 (substep
-사이):
+force 는 $\alpha_{\text{dyn}}$ 으로 계산 (instantaneous $\alpha$ 가 아니라). 닫힌형 적분 (substep 사이):
 
-```
-α_dyn(t+h) = α_geom + (α_dyn(t) − α_geom) · exp(−|v|·h/σ)
-```
+$$
+\alpha_{\text{dyn}}(t+h) = \alpha_{\text{geom}} + \big(\alpha_{\text{dyn}}(t) - \alpha_{\text{geom}}\big)\, e^{-|v|\,h/\sigma}
+$$
 
 구현 위치: tire model 이 아니라 **host dynamics** 의 state (`seven_dof`,
 `bicycle` 의 `alpha_dyn_[4]`). tire `compute()` 는 stateless 유지.
