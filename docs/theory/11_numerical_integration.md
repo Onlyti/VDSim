@@ -5,30 +5,31 @@
 ## 11.1 ODE 의 일반형
 
 차량 dynamics 를 1차 ODE 로 표현:
-```
-ẏ  =  f(y, u, t)
-```
 
-`y` 는 state vector, `u` 는 input (control), `t` 는 time.
+$$
+\dot y = f(y, u, t)
+$$
+
+$y$ 는 state vector, $u$ 는 input (control), $t$ 는 time.
 Ld1 의 경우 `y ∈ R^8` (x_w, y_w, ψ, vx, vy, r, ω_f, ω_r), Ld3 의 경우 더 크다.
 
 수치 적분은 `y(t + dt)` 를 `y(t)`, `f(y, t)` 로부터 추정.
 
 ## 11.2 Explicit Euler — 단순 / 부정확
 
-```
-y_{n+1}  =  y_n  +  dt · f(y_n, t_n)
-```
+$$
+y_{n+1} = y_n + dt \cdot f(y_n, t_n)
+$$
 
-local error: `O(dt²)` per step.
-global error: `O(dt)` over [0, T].
+local error $O(dt^2)$ per step, global error $O(dt)$ over $[0, T]$.
 
-**stable region**:
-```
-|1 + dt · λ| ≤ 1     (linear ODE ẏ = λ y 의 경우)
-```
+**stable region** (linear ODE $\dot y = \lambda y$):
 
-`λ = −1000` (stiff) 이면 `dt < 0.002` 필요. 매우 작아야 stable.
+$$
+|1 + dt\, \lambda| \le 1
+$$
+
+$\lambda = -1000$ (stiff) 이면 $dt < 0.002$ 필요. 매우 작아야 stable.
 
 VDSim 의 spring/damper system 의 stiffness ratio (k_tire = 220 kN/m, m_u = 40 kg) → ω² ≈ 5500, ω ≈ 74 rad/s, 그리고 underdamped 모드 cluster. Euler 는 stable region 좁아 작은 dt 강제.
 
@@ -39,22 +40,23 @@ VDSim 의 spring/damper system 의 stiffness ratio (k_tire = 220 kN/m, m_u = 40 
 
 ## 11.3 Runge-Kutta 4 (RK4) — 본 PoC 의 default
 
-```
-k1  =  f(y_n, t_n)
-k2  =  f(y_n + (dt/2) · k1,  t_n + dt/2)
-k3  =  f(y_n + (dt/2) · k2,  t_n + dt/2)
-k4  =  f(y_n + dt · k3,        t_n + dt)
+$$
+\begin{aligned}
+k_1 &= f(y_n, t_n) \\
+k_2 &= f(y_n + \tfrac{dt}{2} k_1,\; t_n + \tfrac{dt}{2}) \\
+k_3 &= f(y_n + \tfrac{dt}{2} k_2,\; t_n + \tfrac{dt}{2}) \\
+k_4 &= f(y_n + dt\, k_3,\; t_n + dt) \\
+y_{n+1} &= y_n + \tfrac{dt}{6}(k_1 + 2k_2 + 2k_3 + k_4)
+\end{aligned}
+$$
 
-y_{n+1}  =  y_n  +  (dt / 6) · (k1 + 2·k2 + 2·k3 + k4)
-```
-
-local error: `O(dt^5)`.
-global error: `O(dt^4)`.
+local error $O(dt^5)$, global error $O(dt^4)$.
 
 stable region (linear test problem):
-```
-|R(z)| ≤ 1,  R(z) = 1 + z + z²/2 + z³/6 + z⁴/24
-```
+
+$$
+|R(z)| \le 1, \qquad R(z) = 1 + z + \tfrac{z^2}{2} + \tfrac{z^3}{6} + \tfrac{z^4}{24}
+$$
 
 훨씬 넓다. RK4 는 stiff system 의 일부 범위까지 stable.
 
@@ -71,10 +73,13 @@ VDSim 의 inner substep dt = 1 ms 의 RK4 는 차량 dynamics 에서 numerical e
 CARLA / 외부 host 의 tick 이 보통 20 ms (50 Hz) 정도. 그러나 차량 spring 의 frequency 가 10-15 Hz 이라 outer dt 20 ms 으로 직접 RK4 하면 oscillation 인접에서 numerical artifact.
 
 VDSim 의 처리:
-```
-substep_dt = min(outer_dt, sp_.max_substep_dt)   // 1 ms
-N_substeps = ceil(outer_dt / substep_dt)         // capped at sp_.max_substeps
-```
+
+$$
+dt_{\text{sub}} = \min(dt_{\text{outer}},\, dt_{\max}), \qquad
+N_{\text{sub}} = \lceil dt_{\text{outer}} / dt_{\text{sub}} \rceil
+$$
+
+(capped at `max_substeps`)
 
 매 outer step 안에서 N_substeps 회의 RK4 inner step.
 
@@ -93,11 +98,11 @@ default: `max_substep_dt = 0.001 s`, `max_substeps = 10`.
 
 ### Inner dt 의 선택 기준
 
-```
-dt_inner  ≤  1 / (10 · f_max)
-```
+$$
+dt_{\text{inner}} \le \frac{1}{10\, f_{\max}}
+$$
 
-`f_max` 는 가장 빠른 system mode 의 frequency.
+$f_{\max}$ 는 가장 빠른 system mode 의 frequency.
 sedan default: spring k = 30000, m_u = 40 → ω ≈ 27 rad/s ≈ 4.3 Hz. dt_inner ≤ 23 ms 면 충분.
 하지만 tire-vertical mode k_tire = 220000, m_u = 40 → ω ≈ 74 → f ≈ 12 Hz. dt_inner ≤ 8 ms.
 
@@ -108,12 +113,13 @@ sedan default: spring k = 30000, m_u = 40 → ω ≈ 27 rad/s ≈ 4.3 Hz. dt_inn
 ### 문제
 
 Ld1 의 longitudinal weight transfer:
-```
-Fz_f(t)  =  Fz_f_static  −  m · ax(t) · h_cg / L
-ax(t)    =  Fx_total(Fz_f(t), Fz_r(t), ...) / m
-```
 
-`Fz` 는 `ax` 의 함수, `ax` 는 `Fz` 의 함수. **self-referential**.
+$$
+F_{z,f}(t) = F_{z,f}^{\text{static}} - \frac{m\, a_x(t)\, h_{cg}}{L}, \qquad
+a_x(t) = \frac{F_{x,\text{total}}(F_{z,f}(t), F_{z,r}(t), \ldots)}{m}
+$$
+
+$F_z$ 는 $a_x$ 의 함수, $a_x$ 는 $F_z$ 의 함수. **self-referential**.
 
 엄밀하게 풀려면 fixed-point iteration:
 ```
@@ -128,12 +134,13 @@ ax^{(1)}  =  compute(Fz^{(1)})
 
 ### 1-Step Lag 의 해
 
-직전 substep 의 `ax_prev` 를 사용:
-```
-Fz_f(t)  =  Fz_f_static  −  m · ax_prev · h_cg / L
-ax(t)    =  compute(Fz(t))  // 계산
-ax_prev_next  =  ax(t)        // 다음 substep 용으로 저장
-```
+직전 substep 의 $a_{x,\text{prev}}$ 를 사용:
+
+$$
+F_{z,f}(t) = F_{z,f}^{\text{static}} - \frac{m\, a_{x,\text{prev}}\, h_{cg}}{L}, \qquad
+a_x(t) = \text{compute}(F_z(t)), \qquad
+a_{x,\text{prev}} \leftarrow a_x(t)
+$$
 
 - bias: 직전 step 의 ax 사용 → transient 동안 small lag.
 - substep dt = 1 ms 면 bias 가 `~ dt · |dax/dt|`. brake 의 ax = −5 m/s², 시간 도함수 ~ 100 m/s³ 이라도 bias = 100 · 0.001 = 0.1 m/s². ΔFz 영향 = `m · 0.1 · h / L ≈ 30 N` (sedan 의 경우). 무시 가능.
