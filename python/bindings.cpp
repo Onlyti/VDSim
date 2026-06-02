@@ -56,11 +56,25 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("wheel_radius_nominal", &vdsim::VehicleParams::wheel_radius_nominal)
         .def_readwrite("roll_stiffness_front", &vdsim::VehicleParams::roll_stiffness_front)
         .def_readwrite("roll_stiffness_rear",  &vdsim::VehicleParams::roll_stiffness_rear)
+        // Sprung-mass inertia tensor diagonal (Ixx roll, Iyy pitch, Izz yaw).
+        .def_property("ixx",
+            [](const vdsim::VehicleParams& p) { return p.inertia_diag.x(); },
+            [](vdsim::VehicleParams& p, double v) { p.inertia_diag.x() = v; })
+        .def_property("iyy",
+            [](const vdsim::VehicleParams& p) { return p.inertia_diag.y(); },
+            [](vdsim::VehicleParams& p, double v) { p.inertia_diag.y() = v; })
+        .def_property("izz",
+            [](const vdsim::VehicleParams& p) { return p.inertia_diag.z(); },
+            [](vdsim::VehicleParams& p, double v) { p.inertia_diag.z() = v; })
         .def_readwrite("spring_stiffness",     &vdsim::VehicleParams::spring_stiffness)
         .def_readwrite("damper_coefficient",   &vdsim::VehicleParams::damper_coefficient)
         .def_readwrite("unsprung_mass",        &vdsim::VehicleParams::unsprung_mass)
+        .def_readwrite("wheel_inertia",        &vdsim::VehicleParams::wheel_inertia)
+        .def_readwrite("camber_per_roll",      &vdsim::VehicleParams::camber_per_roll)
         .def_readwrite("drive_type",           &vdsim::VehicleParams::drive_type)
         .def_readwrite("differential",         &vdsim::VehicleParams::differential)
+        .def_readwrite("lsd_preload",          &vdsim::VehicleParams::lsd_preload)
+        .def_readwrite("lsd_ramp",             &vdsim::VehicleParams::lsd_ramp)
         .def_readwrite("max_motor_torque",     &vdsim::VehicleParams::max_motor_torque)
         .def_readwrite("max_brake_torque",     &vdsim::VehicleParams::max_brake_torque)
         .def_readwrite("brake_bias_front",     &vdsim::VehicleParams::brake_bias_front)
@@ -273,6 +287,46 @@ PYBIND11_MODULE(vdsim, m) {
         .def("reset",      &vdsim::LongVxController::reset)
         .def("update",     &vdsim::LongVxController::update);
 
+    // -------- Actuator dynamics + sensor delay --------
+    py::class_<vdsim::ChannelActuator>(m, "ChannelActuator")
+        .def(py::init<>())
+        .def_readwrite("dead_time_s", &vdsim::ChannelActuator::dead_time_s)
+        .def_readwrite("tau_s",       &vdsim::ChannelActuator::tau_s)
+        .def_readwrite("rate_limit",  &vdsim::ChannelActuator::rate_limit)
+        .def_readwrite("out_min",     &vdsim::ChannelActuator::out_min)
+        .def_readwrite("out_max",     &vdsim::ChannelActuator::out_max);
+    py::class_<vdsim::LuGreParams>(m, "LuGreParams")
+        .def(py::init<>())
+        .def_readwrite("enabled", &vdsim::LuGreParams::enabled)
+        .def_readwrite("sigma0",  &vdsim::LuGreParams::sigma0)
+        .def_readwrite("sigma1",  &vdsim::LuGreParams::sigma1)
+        .def_readwrite("sigma2",  &vdsim::LuGreParams::sigma2)
+        .def_readwrite("Tc",      &vdsim::LuGreParams::Tc)
+        .def_readwrite("Ts",      &vdsim::LuGreParams::Ts)
+        .def_readwrite("ws",      &vdsim::LuGreParams::ws);
+    py::class_<vdsim::SteerActuator>(m, "SteerActuator")
+        .def(py::init<>())
+        .def_readwrite("ch",       &vdsim::SteerActuator::ch)
+        .def_readwrite("friction", &vdsim::SteerActuator::friction)
+        .def_readwrite("inertia",  &vdsim::SteerActuator::inertia)
+        .def_readwrite("servo_kp", &vdsim::SteerActuator::servo_kp)
+        .def_readwrite("servo_kd", &vdsim::SteerActuator::servo_kd);
+    py::class_<vdsim::BrakeActuator>(m, "BrakeActuator")
+        .def(py::init<>())
+        .def_readwrite("ch",              &vdsim::BrakeActuator::ch)
+        .def_readwrite("dead_zone",       &vdsim::BrakeActuator::dead_zone)
+        .def_readwrite("thermal_enabled", &vdsim::BrakeActuator::thermal_enabled)
+        .def_readwrite("heat_coeff",      &vdsim::BrakeActuator::heat_coeff)
+        .def_readwrite("cool_coeff",      &vdsim::BrakeActuator::cool_coeff)
+        .def_readwrite("T_ambient",       &vdsim::BrakeActuator::T_ambient)
+        .def_readwrite("mu_T_temp",       &vdsim::BrakeActuator::mu_T_temp)
+        .def_readwrite("mu_T_scale",      &vdsim::BrakeActuator::mu_T_scale);
+    py::class_<vdsim::ActuatorParams>(m, "ActuatorParams")
+        .def(py::init<>())
+        .def_readwrite("steer",    &vdsim::ActuatorParams::steer)
+        .def_readwrite("throttle", &vdsim::ActuatorParams::throttle)
+        .def_readwrite("brake",    &vdsim::ActuatorParams::brake);
+
     // -------- SimSession kernel (Phase 1: web backend access) --------
     py::class_<vdsim::SimOutput>(m, "SimOutput")
         .def_readonly("state",         &vdsim::SimOutput::state)
@@ -300,21 +354,24 @@ PYBIND11_MODULE(vdsim, m) {
     m.def("make_sim_session",
           [](const vdsim::VehicleParams& vp, const vdsim::TireParams& tp,
              const std::string& level, double sensor_delay_s, double mu,
-             double nominal_dt) {
+             double nominal_dt, const vdsim::ActuatorParams& actuator,
+             const vdsim::SolverParams& solver) {
               std::unique_ptr<vdsim::IVehicleDynamics> dyn =
                   (level == "K" || level == "L0") ? vdsim::create_kinematic()
                   : (level == "L1") ? vdsim::create_bicycle()
                   : (level == "L3") ? vdsim::create_fourteen_dof()
                                     : vdsim::create_seven_dof();
               vdsim::SimConfig cfg;
+              cfg.actuator       = actuator;
               cfg.sensor_delay_s = sensor_delay_s;
               cfg.nominal_dt     = nominal_dt;
-              vdsim::SolverParams sp;
               return std::make_unique<vdsim::SimSession>(
                   std::move(dyn), vdsim::create_flat_ground(0.0, mu),
-                  vp, tp, sp, cfg);
+                  vp, tp, solver, cfg);
           },
           py::arg("vehicle"), py::arg("tire"), py::arg("level") = "L2",
           py::arg("sensor_delay_s") = 0.0, py::arg("mu") = 1.0,
-          py::arg("nominal_dt") = 0.005);
+          py::arg("nominal_dt") = 0.005,
+          py::arg("actuator") = vdsim::ActuatorParams{},
+          py::arg("solver") = vdsim::SolverParams{});
 }
