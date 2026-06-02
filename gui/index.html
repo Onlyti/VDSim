@@ -403,7 +403,31 @@ function makeDraggable(win){
 ['win_veh','win_sim','win_act'].forEach(id=>makeDraggable($(id)));
 
 // ---- 2-level Vehicle window (category -> fields), tire folded in ----
+// ARB: two linked inputs — roll stiffness [N·m/rad] (canonical, sent to backend)
+// and wheel rate [N/m] (CarMaker/setup convention). Edit either; the other is
+// derived through the axle track:  K_roll = k_wheel * track^2 / 2.
+function arbRow(f, lvl){
+  const applies=f.levels.includes(lvl);
+  const axle=f.name.endsWith('front')?'front':'rear', trackName='track_'+axle;
+  const row=document.createElement('div'); row.className='fld'+(applies?'':' na');
+  const lab=document.createElement('label'); lab.textContent=f.label;
+  if(!applies){ const b=document.createElement('span'); b.className='badge'; b.textContent=f.levels.join('/'); lab.appendChild(b); }
+  row.appendChild(lab);
+  const wrap=document.createElement('span'); wrap.className='arr';
+  const roll=document.createElement('input'); roll.type='number'; roll.step='any';
+  roll.value=f.value; roll.dataset.name=f.name; roll.disabled=!applies; roll.title='roll stiffness [N·m/rad]';
+  const wh=document.createElement('input'); wh.type='number'; wh.step='any';
+  wh.disabled=!applies; wh.title='ARB wheel rate [N/m]';
+  const unit=(t)=>{ const s=document.createElement('span'); s.style.cssText='font:10px Tahoma;color:var(--dim);align-self:center'; s.textContent=t; return s; };
+  const tw=()=>{ const t=document.querySelector(`[data-name="${trackName}"]`); return t?+t.value:1.55; };
+  const toWh  =()=>{ const w=tw(); wh.value  = w>1e-6 ? (2*(+roll.value)/(w*w)).toFixed(1) : 0; };
+  const toRoll=()=>{ const w=tw(); roll.value= ((+wh.value)*w*w/2).toFixed(1); };
+  toWh(); roll.oninput=toWh; wh.oninput=toRoll;
+  wrap.appendChild(roll); wrap.appendChild(unit('N·m/rad =')); wrap.appendChild(wh); wrap.appendChild(unit('N/m'));
+  row.appendChild(wrap); return row;
+}
 function fieldRow(f, lvl){
+  if(f.name==='arb_stiffness_front'||f.name==='arb_stiffness_rear') return arbRow(f,lvl);
   const applies=f.levels.includes(lvl);
   const row=document.createElement('div'); row.className='fld'+(applies?'':' na');
   const lab=document.createElement('label'); lab.textContent=f.label;
