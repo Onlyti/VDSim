@@ -41,18 +41,20 @@ knuckle 은 강체. 정적 상태에서 body frame 의 wheel center 를 기준�
 삼고, hardpoint 들의 정적 offset 을 knuckle frame 에 고정. wheel travel 에
 따라 knuckle 이 회전·평행이동하면:
 
-```
-p_world(R, t)  =  LK + R · (p_static − LK_static)
-```
+$$
+p_{\text{world}}(R, t) = LK + R\,(p_{\text{static}} - LK_{\text{static}})
+$$
 
-여기서 `R` 은 knuckle 의 회전 (정적 대비), `LK` 는 현재 lower-knuckle 위치.
+여기서 $R$ 은 knuckle 의 회전 (정적 대비), $LK$ 는 현재 lower-knuckle 위치.
 camber/toe 는 회전된 spin axis 로부터:
 
-```
-spin_axis_world = R · spin_axis_body
-camber = atan2(−spin_z, |spin_y|)      (좌측 기준; 우측은 부호 반전)
-toe    = atan2( spin_x,  spin_y)
-```
+$$
+\begin{aligned}
+\text{spin}_{\text{world}} &= R \cdot \text{spin}_{\text{body}} \\
+\text{camber} &= \operatorname{atan2}(-\text{spin}_z,\; |\text{spin}_y|) \quad (\text{좌측; 우측 부호 반전}) \\
+\text{toe} &= \operatorname{atan2}(\text{spin}_x,\; \text{spin}_y)
+\end{aligned}
+$$
 
 문제는 **각 topology 가 R 을 어떻게 결정하느냐** — joint 제약의 차이.
 
@@ -80,10 +82,12 @@ active M = 1 (wheel travel). steer 입력 1개로 닫힘.
 
 **풀이 순서** (sequential, no global solve 필요):
 
-1. **LCA 각도 θ_l** — wheel travel 목표로 Newton:
-   ```
-   wheel_z(θ_l) = (LK(θ_l) + R(θ_l)·off_wheel)_z   =!  z_static + travel
-   ```
+1. **LCA 각도 $\theta_l$** — wheel travel 목표로 Newton:
+
+   $$
+   \text{wheel}_z(\theta_l) = \big(LK(\theta_l) + R(\theta_l)\, \text{off}_{\text{wheel}}\big)_z \overset{!}{=} z_{\text{static}} + \text{travel}
+   $$
+
    여기서 *진짜 wheel z* 를 쓰는 게 핵심. 초기 구현은 `LK_z + off_z` 의
    small-angle 근사를 썼는데 ±50 mm 에서 ~3 mm 오차 (`fix(ld4): Newton on
    TRUE wheel z` commit).
@@ -113,14 +117,16 @@ DW 와 결정적 차이: UCA 가 없고 **strut** 이 그 역할. strut tube 는
 strut compression 길이는 자유 (스프링이 결정), 방향만 구속.
 
 tube 축 방향은 body frame 에 고정:
-```
-tube_axis_body = (ST_static − SK_static).normalized
-```
+
+$$
+\text{tube\_axis}_{\text{body}} = \frac{ST_{\text{static}} - SK_{\text{static}}}{\|ST_{\text{static}} - SK_{\text{static}}\|}
+$$
 
 회전 후 cross-product 제약 (3 scalar, 1 redundant):
-```
-(SK_world − ST_chassis) × (R · tube_axis_body)  =  0
-```
+
+$$
+(SK_{\text{world}} - ST_{\text{chassis}}) \times (R \cdot \text{tube\_axis}_{\text{body}}) = 0
+$$
 
 tie rod 거리 제약 1 scalar 추가 → knuckle 3 회전 DOF 가 닫힘.
 `scipy.optimize.least_squares` (Python) / Eigen LM (C++) 으로 풀이.
@@ -155,11 +161,14 @@ axis 방향이 camber/toe gain 을 결정:
 rigid link. knuckle 6-DOF, 각 link 1 length 제약 → 5 제약 + wheel-z 입력 1 →
 6 제약 on 6 DOF, 닫힘.
 
-knuckle pose = `(x, y, z, axis-angle 3-vec)` 6-vector. 잔차:
-```
-r_i = |pos + R·off_knuckle_i − chassis_i| − L_link_i     (i = 1..5)
-r_6 = pos_z − (z_static + travel)
-```
+knuckle pose = $(x, y, z, \text{axis-angle})$ 6-vector. 잔차:
+
+$$
+\begin{aligned}
+r_i &= \|\text{pos} + R\, \text{off}_{\text{knuckle},i} - \text{chassis}_i\| - L_{\text{link},i}, \quad i = 1\ldots5 \\
+r_6 &= \text{pos}_z - (z_{\text{static}} + \text{travel})
+\end{aligned}
+$$
 
 Levenberg–Marquardt (Python scipy / C++ Eigen 직접 구현). continuation
 (이전 sweep 해를 warm-start) 으로 부드러운 단조 해 family.

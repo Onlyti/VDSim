@@ -54,9 +54,9 @@ constexpr int NUM_WHEELS = 4;
 
 VDSim 은 Eigen `Quaterniond` 사용. **body → world** 변환:
 
-```
-v_world = q ⊗ v_body ⊗ q^{-1}
-```
+$$
+v_{\text{world}} = q \otimes v_{\text{body}} \otimes q^{-1}
+$$
 
 코드: `core/src/coordinate.cpp` 의 `yaw_from_quat`, `quat_from_euler` 두 함수.
 
@@ -73,9 +73,9 @@ inline double yaw_from_quat(const Quat& q) {
 
 VDSim 은 ZYX intrinsic 사용. order 가 다르면 동일 angle 이라도 결과 다름. **Tait-Bryan vs proper Euler** 차이 — VDSim 은 Tait-Bryan (ZYX, no axis repetition).
 
-```
-R(roll, pitch, yaw) = Rz(yaw) · Ry(pitch) · Rx(roll)
-```
+$$
+R(\text{roll}, \text{pitch}, \text{yaw}) = R_z(\text{yaw}) \cdot R_y(\text{pitch}) \cdot R_x(\text{roll})
+$$
 
 `quat_from_euler({roll, pitch, yaw})` 의 입력 순서가 (x, y, z) 회전이 아니라 (φ, θ, ψ) — 즉 (roll, pitch, yaw) 라는 점에 주의.
 
@@ -83,23 +83,25 @@ R(roll, pitch, yaw) = Rz(yaw) · Ry(pitch) · Rx(roll)
 
 ### Slip angle `alpha` (lateral)
 
-```
-alpha = atan2(v_y_wheel, v_x_wheel)
-```
+$$
+\alpha = \operatorname{atan2}(v_{y,\text{wheel}},\; v_{x,\text{wheel}})
+$$
 
-여기서 `v_x_wheel`, `v_y_wheel` 은 wheel center 의 velocity 를 **wheel frame** 으로 변환한 값.
+여기서 $v_{x,\text{wheel}}, v_{y,\text{wheel}}$ 은 wheel center 의 velocity 를 **wheel frame** 으로 변환한 값.
 
 - **Front wheel (steered)**:
-  ```
-  v_x_wheel =  v_x_body · cos(δ) + v_y_body · sin(δ)
-  v_y_wheel = -v_x_body · sin(δ) + v_y_body · cos(δ)
-  ```
-  여기서 `v_y_body = v_y_cg + a · r` (wheel position 의 lever arm 적용).
+
+  $$
+  v_{x,\text{wheel}} =  v_{x,\text{body}} \cos\delta + v_{y,\text{body}} \sin\delta, \qquad
+  v_{y,\text{wheel}} = -v_{x,\text{body}} \sin\delta + v_{y,\text{body}} \cos\delta
+  $$
+
+  여기서 $v_{y,\text{body}} = v_{y,cg} + a r$ (wheel position 의 lever arm 적용).
 - **Rear wheel** (un-steered): wheel frame = body frame.
-  ```
-  v_x_wheel = v_x_body
-  v_y_wheel = v_y_cg − b · r
-  ```
+
+  $$
+  v_{x,\text{wheel}} = v_{x,\text{body}}, \qquad v_{y,\text{wheel}} = v_{y,cg} - b r
+  $$
 
 부호 직관:
 - 좌선회 (r > 0, δ > 0). rear 의 경우 `v_y_wheel = v_y − b·r`. SS 에서 `v_y` 가 약간 음수, `b·r` 가 양수 → 합쳐서 음수. `v_x` 양수 → `α_r = atan2(− , +) < 0`.
@@ -114,9 +116,9 @@ const double alpha_r = std::atan2(v_ry_body, v_rx_body);
 
 ### Slip ratio `kappa` (longitudinal)
 
-```
-kappa = (R · omega − v_x_wheel) / max(|v_x_wheel|, ε)
-```
+$$
+\kappa = \frac{R\, \omega - v_{x,\text{wheel}}}{\max(|v_{x,\text{wheel}}|,\; \varepsilon)}
+$$
 
 - `omega` — wheel angular velocity [rad/s], positive when rolling forward.
 - `R` — kinematic (loaded) wheel radius.
@@ -139,18 +141,18 @@ const double kappa_r = (R * or_ - v_rx_body)  / denom_r;
 
 차량의 world position 을 적분할 때, body velocity 를 world 로 회전시킨다.
 
-```
-ẋ_w = vx · cos(ψ) − vy · sin(ψ)
-ẏ_w = vx · sin(ψ) + vy · cos(ψ)
-ψ̇  = r
-```
+$$
+\dot x_w = v_x \cos\psi - v_y \sin\psi, \qquad
+\dot y_w = v_x \sin\psi + v_y \cos\psi, \qquad
+\dot\psi = r
+$$
 
-여기서 ψ 는 yaw. roll / pitch 가 작은 경우의 simplified.
+여기서 $\psi$ 는 yaw. roll / pitch 가 작은 경우의 simplified.
 정확히는 quaternion ODE:
 
-```
-q̇ = (1/2) · q ⊗ [0, ω_body]   (ω_body = (p, q, r))
-```
+$$
+\dot q = \tfrac{1}{2}\, q \otimes [0,\; \omega_{\text{body}}], \qquad \omega_{\text{body}} = (p, q, r)
+$$
 
 VDSim 의 Ld1-Bicycle 은 yaw-only 적분 (planar) — 단순한 ψ 적분 후 quat reconstruct.
 Ld3-FourteenDOF 는 roll/pitch 도 함께 quat 에 encoding.

@@ -51,10 +51,11 @@ driver 의 steer 와 throttle 에 zero-mean Gaussian noise 추가.
 
 ### Box-Muller 변환
 
-두 uniform `u1, u2 ∈ (0, 1)` 로 한 Gaussian `z ~ N(0, 1)`:
-```
-z  =  sqrt(−2 · log(u1)) · cos(2π · u2)
-```
+두 uniform $u_1, u_2 \in (0, 1)$ 로 한 Gaussian $z \sim N(0, 1)$:
+
+$$
+z = \sqrt{-2 \ln u_1} \cdot \cos(2\pi u_2)
+$$
 
 derivation:
 - 2D Gaussian 의 polar form: r² = −2 log(u1), θ = 2π · u2.

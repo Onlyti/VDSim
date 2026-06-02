@@ -54,10 +54,10 @@ a_y_ss = 0.82 g
 정상상태 선회의 handling 특성. 일정 속도로 steer 를 천천히 ramp 하며
 `a_y` 를 0 → 한계까지 sweep. 핵심 metric 은 **understeer gradient**:
 
-```
-K  =  d(δ − δ_kin) / d(a_y)
-δ_kin  =  L / R  =  L · ψ̇ / v        (kinematic ackermann steer)
-```
+$$
+K = \frac{d(\delta - \delta_{\text{kin}})}{d(a_y)}, \qquad
+\delta_{\text{kin}} = \frac{L}{R} = \frac{L\, \dot\psi}{v} \quad (\text{kinematic ackermann steer})
+$$
 
 - `δ` — 실제 road-wheel steer.
 - `δ_kin` — 그 선회 반경을 위한 운동학적 최소 steer.
@@ -89,9 +89,10 @@ E 탈출 12.0 m (y=0)
 ```
 
 전환 구간은 raised-cosine S-curve waypoint 로 부드럽게:
-```
-y_B(x) = OFF · 0.5 · (1 − cos(π·x/L_B))
-```
+
+$$
+y_B(x) = \text{OFF} \cdot 0.5 \cdot \big(1 - \cos(\pi x / L_B)\big)
+$$
 (초기 linear ramp 는 Pure Pursuit follower 가 overshoot — 부드러운 곡선이
 실제 운전자 궤적에 더 가깝고 follower 도 안정).
 
