@@ -2,6 +2,7 @@ add_library(vdsim_core
     src/version.cpp
     src/coordinate.cpp
     src/pacejka_mf96.cpp
+    src/magic_formula_tire.cpp
     src/linear_tire.cpp
     src/bicycle_dynamics.cpp
     src/seven_dof_dynamics.cpp
