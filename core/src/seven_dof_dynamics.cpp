@@ -84,10 +84,16 @@ public:
         tp_ = tp;
         sp_ = sp;
         tire_->initialize(tp);
-        const double m_wheel = vp.unsprung_mass[WHEEL_FL] > 0.0
-                              ? vp.unsprung_mass[WHEEL_FL] : 25.0;
         const double R = vp.wheel_radius_nominal;
-        I_wheel_ = std::max(0.01, 0.5 * m_wheel * R * R);
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            // Explicit wheel_inertia overrides the solid-disk approximation.
+            if (vp.wheel_inertia[i] > 0.0) {
+                I_wheel_[i] = vp.wheel_inertia[i];
+            } else {
+                const double m_w = vp.unsprung_mass[i] > 0.0 ? vp.unsprung_mass[i] : 25.0;
+                I_wheel_[i] = std::max(0.01, 0.5 * m_w * R * R);
+            }
+        }
         spdlog::debug("[L2 7-DOF] init: mass={:.0f} kg, L={:.2f} m, Tw_f={:.2f} m, "
                       "diff={}, ackerman={:.0f}%, EBD={}",
                       vp.mass, vp.wheelbase, vp.track_front,
@@ -412,7 +418,7 @@ private:
             const double cd_i = std::cos(d_wheel[i]);
             const double sd_i = std::sin(d_wheel[i]);
             const double Fx_wheel = F_body[i].x() * cd_i + F_body[i].y() * sd_i;
-            d_out.domega[i] = (Td[i] + Tb[i] - Fx_wheel * R) / I_wheel_;
+            d_out.domega[i] = (Td[i] + Tb[i] - Fx_wheel * R) / I_wheel_[i];
         }
 
         // ---- Diagnostics ----
@@ -486,7 +492,7 @@ private:
     TireParams    tp_;
     SolverParams  sp_;
     std::unique_ptr<ITireModel> tire_;
-    double I_wheel_ {1.0};
+    std::array<double, NUM_WHEELS> I_wheel_ {{1.0, 1.0, 1.0, 1.0}};
 
     State state_;
     double ax_prev_ {0.0};

@@ -26,6 +26,10 @@ struct VehicleParams {
     std::array<double, NUM_WHEELS> spring_stiffness   {{30000, 30000, 30000, 30000}};  // [N/m]
     std::array<double, NUM_WHEELS> damper_coefficient {{3000,  3000,  3000,  3000}};   // [N s/m]
     std::array<double, NUM_WHEELS> unsprung_mass      {{40,    40,    40,    40}};     // [kg]
+    // Wheel rotational inertia about spin axis [kg m^2]. 0 = auto-derive from the
+    // solid-disk approximation 0.5 * unsprung_mass * wheel_radius^2; a positive
+    // value overrides it (rim+tire is not a uniform disk, so measured I differs).
+    std::array<double, NUM_WHEELS> wheel_inertia      {{0, 0, 0, 0}};
     double roll_stiffness_front {30000.0};                             // [N m/rad]
     double roll_stiffness_rear  {25000.0};                             // [N m/rad]
     double anti_dive_front      {0.0};                                 // [0, 1] fraction

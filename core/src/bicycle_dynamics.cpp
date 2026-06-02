@@ -91,12 +91,16 @@ public:
                       vp.mass, vp.wheelbase, vp.wheel_radius_nominal,
                       vp.drive_type == VehicleParams::Drive::RWD, vp.ackerman_percent);
 
-        // Wheel rotational inertia: solid disk approximation 0.5 * m * R^2.
-        const double m_wheel = vp.unsprung_mass[WHEEL_FL] > 0.0
-                              ? vp.unsprung_mass[WHEEL_FL] : 25.0;
+        // Wheel rotational inertia per axle. Use the explicit wheel_inertia param
+        // when set (>0); otherwise the solid-disk approximation 0.5 * m * R^2.
         const double R = vp.wheel_radius_nominal;
-        I_wheel_ = 0.5 * m_wheel * R * R;
-        if (I_wheel_ < 0.01) I_wheel_ = 0.01;
+        auto I_axle = [&](int w) {
+            if (vp.wheel_inertia[w] > 0.0) return vp.wheel_inertia[w];
+            const double m_w = vp.unsprung_mass[w] > 0.0 ? vp.unsprung_mass[w] : 25.0;
+            return std::max(0.01, 0.5 * m_w * R * R);
+        };
+        I_wheel_f_ = I_axle(WHEEL_FL);
+        I_wheel_r_ = I_axle(WHEEL_RL);
     }
 
     void reset(const State& s) noexcept override {
@@ -302,8 +306,8 @@ private:
         d_out.dvy      = Fy_total / m - vx * r;
         d_out.ax_body  = Fx_total / m;   // longitudinal accel (no vy*r) for Fz lag
         d_out.dr       = Mz_total / Izz;
-        d_out.domega_f = (Td_f + Tb_f - F_f.Fx * R) / I_wheel_;
-        d_out.domega_r = (Td_r + Tb_r - F_r.Fx * R) / I_wheel_;
+        d_out.domega_f = (Td_f + Tb_f - F_f.Fx * R) / I_wheel_f_;
+        d_out.domega_r = (Td_r + Tb_r - F_r.Fx * R) / I_wheel_r_;
 
         // ---- Diagnostics ----
         // Split axle force evenly across the two co-axial tires.
@@ -379,7 +383,8 @@ private:
     TireParams    tp_;
     SolverParams  sp_;
     std::unique_ptr<ITireModel> tire_;
-    double I_wheel_ {1.0};
+    double I_wheel_f_ {1.0};
+    double I_wheel_r_ {1.0};
 
     State state_;
     double ax_prev_ {0.0};
