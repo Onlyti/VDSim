@@ -329,6 +329,35 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("throttle", &vdsim::ActuatorParams::throttle)
         .def_readwrite("brake",    &vdsim::ActuatorParams::brake);
 
+    // Step response of one actuator channel: applies a step command and returns
+    // {t, cmd, out} so a GUI can plot the realized vs commanded signal.
+    m.def("actuator_step_response",
+          [](const vdsim::ActuatorParams& p, const std::string& channel,
+             double amplitude, double dt, double duration, double speed_mps) {
+              vdsim::ActuatorModel act;
+              act.initialize(p, dt);
+              act.reset();
+              const int n = std::max(1, static_cast<int>(duration / dt));
+              std::vector<double> t, cmd, out;
+              t.reserve(n); cmd.reserve(n); out.reserve(n);
+              for (int i = 0; i < n; ++i) {
+                  vdsim::CmdL4 d{};
+                  if (channel == "steer")         d.steer_angle_wheel = amplitude;
+                  else if (channel == "throttle") d.throttle          = amplitude;
+                  else                            d.brake             = amplitude;
+                  const vdsim::CmdL4 r = act.apply(d, speed_mps, dt);
+                  const double o = (channel == "steer") ? r.steer_angle_wheel
+                                 : (channel == "throttle") ? r.throttle : r.brake;
+                  t.push_back(i * dt); cmd.push_back(amplitude); out.push_back(o);
+              }
+              py::dict res;
+              res["t"] = t; res["cmd"] = cmd; res["out"] = out;
+              return res;
+          },
+          py::arg("params"), py::arg("channel"), py::arg("amplitude") = 1.0,
+          py::arg("dt") = 0.002, py::arg("duration") = 1.0,
+          py::arg("speed_mps") = 15.0);
+
     // -------- SimSession kernel (Phase 1: web backend access) --------
     py::class_<vdsim::SimOutput>(m, "SimOutput")
         .def_readonly("state",         &vdsim::SimOutput::state)

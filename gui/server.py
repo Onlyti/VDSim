@@ -284,6 +284,55 @@ class Runner:
                         "value": val})
         return out
 
+    def tire_curves(self):
+        with self.lock:
+            tp = self.tp
+            t = vdsim.create_pacejka_mf96()
+            t.initialize(tp)
+            Fz0, mu = tp.Fz_nominal, tp.mu_nominal
+
+            def F(kappa, alpha, Fz):
+                inp = vdsim.TireInput()
+                inp.Fz, inp.kappa, inp.alpha = Fz, kappa, alpha
+                inp.mu_long = inp.mu_lat = mu
+                inp.Vx_wheel, inp.gamma = 15.0, 0.0
+                o = t.compute(inp)
+                return o.Fx, o.Fy
+
+            ks = [i / 100.0 for i in range(-25, 26)]
+            deg = 57.29578
+            loads = [(0.5, "#9bbcff"), (1.0, "#01A0E9"), (1.5, "#002060")]
+            sx = [{"label": f"{int(L*100)}% Fz", "color": c, "x": ks,
+                   "y": [F(k, 0.0, Fz0 * L)[0] for k in ks]} for L, c in loads]
+            # Negate Fy so +alpha -> +cornering force (intuitive reading).
+            sy = [{"label": f"{int(L*100)}% Fz", "color": c, "x": [a * deg for a in ks],
+                   "y": [-F(0.0, a, Fz0 * L)[1] for a in ks]} for L, c in loads]
+            kappas = [(0.0, "#002060"), (0.05, "#01A0E9"), (0.10, "#f5a623"), (0.20, "#DC291E")]
+            sc = [{"label": f"κ={k:g}", "color": c, "x": [a * deg for a in ks],
+                   "y": [-F(k, a, Fz0)[1] for a in ks]} for k, c in kappas]
+            return [
+                {"title": "Longitudinal Fx(κ)", "xlabel": "slip ratio κ", "ylabel": "Fx [N]", "series": sx},
+                {"title": "Lateral Fy(α)", "xlabel": "slip angle α [deg]", "ylabel": "Fy [N]", "series": sy},
+                {"title": "Combined slip — Fy(α) at fixed κ", "xlabel": "slip angle α [deg]", "ylabel": "Fy [N]", "series": sc},
+            ]
+
+    def actuator_step(self):
+        with self.lock:
+            act = self.act
+        chans = [("steer", 0.3, "rad", "#01A0E9"),
+                 ("throttle", 1.0, "", "#34c759"),
+                 ("brake", 1.0, "", "#DC291E")]
+        plots = []
+        for ch, amp, unit, col in chans:
+            r = vdsim.actuator_step_response(act, ch, amp, 0.002, 0.8, 15.0)
+            plots.append({"title": f"{ch} step → {amp}{unit}", "xlabel": "t [s]", "ylabel": ch,
+                          "series": [
+                              {"label": "cmd", "color": "#b6c2cf", "dash": True,
+                               "x": list(r["t"]), "y": list(r["cmd"])},
+                              {"label": "realized", "color": col,
+                               "x": list(r["t"]), "y": list(r["out"])}]})
+        return plots
+
     def _apply_actuator(self, data):
         kinds = {f[0]: f[3] for f in ACTUATOR_FIELDS}
         for k, v in data.items():
@@ -406,6 +455,10 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"fields": _serialize(RUNNER.tp, TIRE_FIELDS)})
         elif self.path == "/api/actuator":
             self._json({"fields": RUNNER.serialize_actuator()})
+        elif self.path == "/api/tire/curves":
+            self._json({"plots": RUNNER.tire_curves()})
+        elif self.path == "/api/actuator/step":
+            self._json({"plots": RUNNER.actuator_step()})
         elif self.path == "/api/state":
             self._json(RUNNER.snapshot())
         elif self.path == "/api/stream":

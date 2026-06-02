@@ -460,6 +460,38 @@ function section(title, open){
   const b=document.createElement('div'); b.className='secb'; d.appendChild(b);
   return {sec:d, body:b};
 }
+// ---- minimal canvas line plot (no deps) ----
+function plotChart(cv, p){
+  const dpr=devicePixelRatio||1, W=cv.clientWidth||300, H=cv.clientHeight||150;
+  cv.width=W*dpr; cv.height=H*dpr; const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
+  g.clearRect(0,0,W,H);
+  const ml=44,mr=8,mt=18,mb=22, pw=W-ml-mr, ph=H-mt-mb;
+  let xmin=1/0,xmax=-1/0,ymin=1/0,ymax=-1/0;
+  p.series.forEach(s=>s.x.forEach((x,i)=>{const y=s.y[i]; if(x<xmin)xmin=x;if(x>xmax)xmax=x;if(y<ymin)ymin=y;if(y>ymax)ymax=y;}));
+  if(!isFinite(xmin)){return;} if(ymin===ymax){ymin-=1;ymax+=1;} if(xmin===xmax){xmax=xmin+1;}
+  const padY=(ymax-ymin)*0.08; ymin-=padY; ymax+=padY;
+  const X=x=>ml+(x-xmin)/(xmax-xmin)*pw, Y=y=>mt+(1-(y-ymin)/(ymax-ymin))*ph;
+  g.strokeStyle='#d2dae3'; g.lineWidth=1; g.strokeRect(ml,mt,pw,ph);
+  g.strokeStyle='#eef1f5';
+  if(ymin<0&&ymax>0){const y0=Y(0);g.beginPath();g.moveTo(ml,y0);g.lineTo(ml+pw,y0);g.stroke();}
+  if(xmin<0&&xmax>0){const x0=X(0);g.beginPath();g.moveTo(x0,mt);g.lineTo(x0,mt+ph);g.stroke();}
+  g.fillStyle='#6b7480'; g.font='9px Tahoma'; g.textAlign='right'; g.textBaseline='middle';
+  [ymin,(ymin+ymax)/2,ymax].forEach(v=>g.fillText(Math.abs(v)>=1000?(v/1000).toFixed(1)+'k':v.toFixed(2),ml-3,Y(v)));
+  g.textAlign='center'; g.textBaseline='top';
+  [xmin,(xmin+xmax)/2,xmax].forEach(v=>g.fillText(v.toFixed(2),X(v),mt+ph+3));
+  g.fillStyle='#2a2f37'; g.font='600 10px Tahoma'; g.textAlign='left'; g.textBaseline='alphabetic';
+  g.fillText(p.title,ml,12);
+  p.series.forEach(s=>{ g.strokeStyle=s.color; g.lineWidth=1.6; g.setLineDash(s.dash?[4,3]:[]);
+    g.beginPath(); s.x.forEach((x,i)=>{const px=X(x),py=Y(s.y[i]); i?g.lineTo(px,py):g.moveTo(px,py);}); g.stroke(); });
+  g.setLineDash([]);
+  g.font='9px Tahoma'; g.textAlign='left'; g.textBaseline='middle'; let lx=ml+4; const ly=mt+8;
+  p.series.forEach(s=>{ g.fillStyle=s.color; g.fillRect(lx,ly-2,9,3); g.fillStyle='#6b7480';
+    g.fillText(s.label,lx+12,ly); lx+=12+g.measureText(s.label).width+9; });
+}
+function renderPlots(box, plots){ box.innerHTML='';
+  plots.forEach(p=>{ const cv=document.createElement('canvas');
+    cv.style.cssText='width:100%;height:148px;display:block;margin:4px 0;background:#fff;border:1px solid #e3e9ef;border-radius:5px';
+    box.appendChild(cv); requestAnimationFrame(()=>plotChart(cv,p)); }); }
 function selectRow(label, opts, cur, onChange, labelMap){
   const row=document.createElement('div'); row.className='fld';
   const lab=document.createElement('label'); lab.textContent=label; row.appendChild(lab);
@@ -482,13 +514,17 @@ async function buildVehicle(){
   const vg={}; veh.forEach(f=>{(vg[f.group]=vg[f.group]||[]).push(f);});
   for(const g in vg){ const s=section(RENAME[g]||g,false); vg[g].forEach(f=>s.body.appendChild(fieldRow(f,lvl))); el.appendChild(s.sec); }
   const ts=section('Tire', false);
+  const tcurves=document.createElement('div'); ts.body.appendChild(tcurves);
+  const tireRefresh=async()=>renderPlots(tcurves,(await(await fetch('/api/tire/curves')).json()).plots);
   const tg={}; tire.forEach(f=>{(tg[f.group]=tg[f.group]||[]).push(f);});
   for(const g in tg){ const l=document.createElement('div'); l.className='subgrp'; l.textContent=g; ts.body.appendChild(l);
     tg[g].forEach(f=>ts.body.appendChild(fieldRow(f,lvl))); }
+  ts.sec.addEventListener('toggle',()=>{ if(ts.sec.open) tireRefresh(); },{once:true});
   el.appendChild(ts.sec);
   const vnames=new Set(veh.map(f=>f.name)), tnames=new Set(tire.map(f=>f.name));
   const btn=document.createElement('button'); btn.className='apply'; btn.textContent='Apply (rebuild sim)';
-  btn.onclick=async()=>{ await post('/api/vehicle', collectFields(el,vnames)); await post('/api/tire', collectFields(el,tnames)); };
+  btn.onclick=async()=>{ await post('/api/vehicle', collectFields(el,vnames));
+    await post('/api/tire', collectFields(el,tnames)); if(ts.sec.open) tireRefresh(); };
   el.appendChild(btn);
 }
 
@@ -496,13 +532,16 @@ async function buildVehicle(){
 async function buildActuator(){
   const fields=(await(await fetch('/api/actuator')).json()).fields;
   const el=$('act_body'); el.innerHTML='';
+  const plotBox=document.createElement('div'); el.appendChild(plotBox);
+  const stepRefresh=async()=>renderPlots(plotBox,(await(await fetch('/api/actuator/step')).json()).plots);
   const g={}; fields.forEach(f=>{(g[f.group]=g[f.group]||[]).push(f);});
   let first=true;
   for(const grp in g){ const s=section(grp,first); first=false;
     g[grp].forEach(f=>s.body.appendChild(fieldRow(f,'L2'))); el.appendChild(s.sec); }
   const btn=document.createElement('button'); btn.className='apply'; btn.textContent='Apply (rebuild sim)';
-  btn.onclick=()=>post('/api/actuator', collectFields(el,null));
+  btn.onclick=async()=>{ await post('/api/actuator', collectFields(el,null)); stepRefresh(); };
   el.appendChild(btn);
+  stepRefresh();
 }
 
 // ---- simulation panel (consolidated run controls) ----
