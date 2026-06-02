@@ -2552,6 +2552,15 @@ I_{xx}\, \ddot\phi = \underbrace{\textstyle\sum_i r_{y,i} F_i}_{\text{spring/dam
 <li><span class="arithmatex">\(K_{\text{ARB}} = K_{\text{ARB},f} + K_{\text{ARB},r}\)</span>: anti-roll bar 의 roll
   전용 stiffness (undamped). 유일한 roll 전용 입력.</li>
 </ul>
+<blockquote>
+<p><strong>단위 두 관례</strong>: <span class="arithmatex">\(K_{\text{ARB}}\)</span> 는 차체 roll 각 기준 roll stiffness
+[N·m/rad] (Milliken RCVD 표준). 시뮬레이터/setup 에서 흔한 wheel-rate
+[N/m] 와는 axle track 으로 환산된다:
+<span class="arithmatex">\(K_{\text{ARB,axle}} = k_{\text{wheel}}\cdot T_w^2/2\)</span>, 즉
+<span class="arithmatex">\(k_{\text{wheel}} = 2 K_{\text{ARB,axle}}/T_w^2\)</span>. spring 유도식
+<span class="arithmatex">\((k_l+k_r)(T_w/2)^2\)</span> 와 동일 factor. GUI 는 두 입력을 track 으로 양방향
+링크해 한쪽 입력 시 나머지를 자동 계산하고, 저장은 roll stiffness 가 canonical.</p>
+</blockquote>
 <p>quasi-static SS (<span class="arithmatex">\(K_{\phi,\text{spring}} = (k_l+k_r)(T_w/2)^2\)</span> 의 axle 합):</p>
 <div class="arithmatex">\[
 \phi_{ss} = \frac{m_s\, a_y\, h_{cg}}{K_{\phi,\text{spring}} + K_{\text{ARB}}}
