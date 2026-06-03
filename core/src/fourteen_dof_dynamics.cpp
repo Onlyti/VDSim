@@ -140,6 +140,25 @@ public:
         inner_->set_camber_per_wheel(gamma);
         inner_->set_toe_per_wheel(toe);
 
+        // Dynamic per-corner tire load from the 14-DOF ride state (suspension
+        // transfer via z_u + road/terrain via road_dz), fed to the inner grip
+        // calc in place of its quasi-static Fz. z_u_ is the previous step's value
+        // (1-step lag, consistent with the inner's lagged transfer). Static uses
+        // the full corner share; aero/cos(slope) are left to the inner default
+        // when not coupled (small for typical tracks).
+        {
+            const double k_tire = std::max(1.0, tp_.tire_vertical_stiffness);
+            const double Lwb = vp_.wheelbase;
+            const double st_f = vp_.mass * kGravity * vp_.cg_to_rear  / (2.0 * Lwb);
+            const double st_r = vp_.mass * kGravity * vp_.cg_to_front / (2.0 * Lwb);
+            std::array<double, NUM_WHEELS> fz_dyn;
+            for (int i = 0; i < NUM_WHEELS; ++i) {
+                const double st = (i < 2) ? st_f : st_r;
+                fz_dyn[i] = std::max(0.0, st + k_tire * (contacts[i].road_dz - z_u_[i]));
+            }
+            inner_->set_external_fz(fz_dyn);
+        }
+
         inner_->step(u, contacts, dt);
         state_ = inner_->state();
         for (int i = 0; i < NUM_WHEELS; ++i) road_dz_[i] = contacts[i].road_dz;

@@ -63,6 +63,12 @@ public:
     // steer angle on front; affects all wheels (bump-steer / kinematic toe).
     virtual void set_toe_per_wheel(
         const std::array<double, NUM_WHEELS>& /*toe*/) noexcept {}
+    // External per-wheel vertical load [N] for the NEXT step's tire grip, in
+    // place of the model's own quasi-static Fz.  Used by L3 to feed its dynamic
+    // (ride/road-coupled) tire load into the grip calc.  One-shot: consumed by
+    // the next step().  Default no-op.
+    virtual void set_external_fz(
+        const std::array<double, NUM_WHEELS>& /*fz*/) noexcept {}
 };
 
 std::unique_ptr<IVehicleDynamics> create_bicycle();

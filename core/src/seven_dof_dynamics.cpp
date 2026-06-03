@@ -158,6 +158,11 @@ public:
         toe_ext_ = toe;
     }
 
+    void set_external_fz(
+        const std::array<double, NUM_WHEELS>& fz) noexcept override {
+        ext_fz_ = fz; use_ext_fz_ = true;
+    }
+
 private:
     struct Deriv {
         double dx_world {0.0};
@@ -269,6 +274,9 @@ private:
         Fz[WHEEL_RL] = Fz_static_r + dFz_long_half - dFz_lat_r;
         Fz[WHEEL_RR] = Fz_static_r + dFz_long_half + dFz_lat_r;
         for (auto& v : Fz) if (v < 0.0) v = 0.0;
+        // L3 may supply a dynamic (ride/road-coupled) tire load for grip in place
+        // of this quasi-static Fz. One-shot: consumed here, re-set each L3 step.
+        if (use_ext_fz_) { Fz = ext_fz_; use_ext_fz_ = false; }
 
         // ---- Per-wheel steer angle with Ackerman correction ----
         // Average steer d -> per-axle inner/outer split.  Ackerman 0% = parallel,
@@ -547,6 +555,9 @@ private:
     std::array<double, NUM_WHEELS> camber_ext_      {{0.0, 0.0, 0.0, 0.0}};
     // External per-wheel toe input (additive to Ackerman steer angle).
     std::array<double, NUM_WHEELS> toe_ext_         {{0.0, 0.0, 0.0, 0.0}};
+    // External per-wheel Fz for grip (L3 dynamic load), one-shot per step.
+    std::array<double, NUM_WHEELS> ext_fz_          {{0.0, 0.0, 0.0, 0.0}};
+    bool use_ext_fz_ {false};
 };
 
 }  // namespace
