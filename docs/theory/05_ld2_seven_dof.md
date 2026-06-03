@@ -59,12 +59,19 @@ fidelity.
 
 노면(grade/bank/지형)이 거동에 들어오는 통로는 level 마다 다르다:
 
-- **L1 (Bicycle) / L2 (7DOF)**: **planar 모델 — body pitch/roll 자유도가 없다.**
-  contact normal 은 **중력의 접선분해(slope-gravity)와 $F_z \propto \cos(\text{slope})$
-  스케일**로만 들어간다. 즉 오르막은 감속력, 뱅크는 횡력으로 **나타나지만 차체가
-  노면을 따라 기울지는 않는다**. 뷰어에서 차가 경사에 기울어 보이는 것은 순수
-  **시각 표현**이며 물리 state 의 attitude 가 아니다. 노면 기울기를 차체 자세로
-  반영하는 것은 L2 이하에서는 **불가능**하다 (설계상 한계).
+- **L1 (Bicycle)**: planar, slope 는 slope-gravity + $F_z\propto\cos(\text{slope})$
+  만. roll/pitch·하중이동 없음.
+- **L2 (7DOF)**: **roll/pitch 자유도(state)는 없다** (transient 동특성 없음). 그러나
+  noise 기울기는 두 경로로 들어간다: (1) slope-gravity + $\cos(\text{slope})$ 수직하중
+  스케일, (2) **quasi-static 하중이동·roll/pitch 추정에 specific force**
+  $a_\text{felt}=a_\text{kin}-g_\text{tangential}$ 를 사용. 일정 bank 직진처럼
+  $a_y^\text{kin}\to0$ 이라도 타이어가 중력 횡성분을 받치는 $a_y^\text{felt}=-g_{y,b}$
+  가 남아 **bank 에 의한 좌우 하중이동과 quasi-static roll 추정**이 생긴다 (예: 8°
+  bank → downhill 측 +660 N, roll≈0.76°). 단 이는 정상상태 대수해이며 **차체 자세를
+  state 로 적분하지 않는다** — transient·실제 attitude state 는 L3 의 몫. 뷰어가 차를
+  노면에 기울여 그리는 것은 시각 표현이다.
+  - 자유 coasting incline 은 종방향 하중이동 0 (중력·관성이 CG 에서 상쇄, $\cos$
+    재분배만), 제동/등판 유지 시 종방향 이동 발생 — specific-force 정식화에서 자동.
 - **L3 (14DOF)**: 바퀴별 `road_dz` 가 unsprung↔노면 tire spring 에 들어가 sprung
   body 의 roll/pitch 가 노면 평면을 **자세로** 따라간다 (chapter 06 §6.4). 단
   grip $F_z$ 는 아직 quasi-static (같은 chapter 한계 box).
