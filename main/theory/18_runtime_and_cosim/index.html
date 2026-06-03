@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/tasks/22_roll_pitch_diag/">
+        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/theory/18_runtime_and_cosim/">
       
       
+        <link rel="prev" href="../17_actuator_and_sensing/">
+      
+      
+        <link rel="next" href="../../references/actuator_nonlinearity/">
       
       
         
@@ -23,7 +27,7 @@
     
     
       
-        <title>Task 22 — Quasi-static roll/pitch diagnostics + balance check - VDSim</title>
+        <title>18 — Runtime kernel & co-simulation - VDSim</title>
       
     
     
@@ -74,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#task-22-quasi-static-rollpitch-diagnostics-balance-check" class="md-skip">
+        <a href="#18-runtime-kernel-co-simulation" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Task 22 — Quasi-static roll/pitch diagnostics + balance check
+              18 — Runtime kernel & co-simulation
             
           </span>
         </div>
@@ -250,11 +254,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../theory/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
           
   
   
@@ -298,7 +304,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../T22_carla_bridge/REPORT/" class="md-tabs__link">
+        <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-tabs__link">
           
   
   
@@ -320,7 +326,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../" class="md-tabs__link">
+        <a href="../../tasks/" class="md-tabs__link">
           
   
   
@@ -476,6 +482,8 @@
       
   
   
+    
+  
   
   
     
@@ -525,22 +533,23 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../theory/" class="md-nav__link ">
+            <a href="../" class="md-nav__link ">
               
   
   
@@ -558,13 +567,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -584,7 +593,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/01_frames_and_conventions/" class="md-nav__link">
+      <a href="../01_frames_and_conventions/" class="md-nav__link">
         
   
   
@@ -612,7 +621,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/02_rigid_body_dynamics/" class="md-nav__link">
+      <a href="../02_rigid_body_dynamics/" class="md-nav__link">
         
   
   
@@ -640,7 +649,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/03_tire_pacejka_mf96/" class="md-nav__link">
+      <a href="../03_tire_pacejka_mf96/" class="md-nav__link">
         
   
   
@@ -668,7 +677,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/04_ld1_bicycle/" class="md-nav__link">
+      <a href="../04_ld1_bicycle/" class="md-nav__link">
         
   
   
@@ -696,7 +705,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/05_ld2_seven_dof/" class="md-nav__link">
+      <a href="../05_ld2_seven_dof/" class="md-nav__link">
         
   
   
@@ -724,7 +733,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/06_ld3_fourteen_dof/" class="md-nav__link">
+      <a href="../06_ld3_fourteen_dof/" class="md-nav__link">
         
   
   
@@ -752,7 +761,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/07_control_ladder/" class="md-nav__link">
+      <a href="../07_control_ladder/" class="md-nav__link">
         
   
   
@@ -780,7 +789,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/08_pid_controllers/" class="md-nav__link">
+      <a href="../08_pid_controllers/" class="md-nav__link">
         
   
   
@@ -808,7 +817,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/09_pure_pursuit_path/" class="md-nav__link">
+      <a href="../09_pure_pursuit_path/" class="md-nav__link">
         
   
   
@@ -836,7 +845,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/10_driver_model/" class="md-nav__link">
+      <a href="../10_driver_model/" class="md-nav__link">
         
   
   
@@ -864,7 +873,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/11_numerical_integration/" class="md-nav__link">
+      <a href="../11_numerical_integration/" class="md-nav__link">
         
   
   
@@ -892,7 +901,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/12_software_architecture/" class="md-nav__link">
+      <a href="../12_software_architecture/" class="md-nav__link">
         
   
   
@@ -920,7 +929,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/13_multibody_outlook/" class="md-nav__link">
+      <a href="../13_multibody_outlook/" class="md-nav__link">
         
   
   
@@ -948,7 +957,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/14_hardpoint_kinematics/" class="md-nav__link">
+      <a href="../14_hardpoint_kinematics/" class="md-nav__link">
         
   
   
@@ -976,7 +985,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/15_validation_and_doe/" class="md-nav__link">
+      <a href="../15_validation_and_doe/" class="md-nav__link">
         
   
   
@@ -1004,7 +1013,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/16_fmi_integration/" class="md-nav__link">
+      <a href="../16_fmi_integration/" class="md-nav__link">
         
   
   
@@ -1032,7 +1041,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/17_actuator_and_sensing/" class="md-nav__link">
+      <a href="../17_actuator_and_sensing/" class="md-nav__link">
         
   
   
@@ -1057,10 +1066,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../theory/18_runtime_and_cosim/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18 — Runtime kernel & co-simulation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1076,6 +1112,164 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#learning-objectives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Learning objectives
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#181-kernel-run-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        18.1 동기 — 하나의 kernel, 여러 run mode
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#182-simsession-mode-agnostic-kernel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        18.2 SimSession — mode-agnostic kernel
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#183-run-modes-kernel-wiring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        18.3 Run modes — kernel 위의 얇은 wiring
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#184-realtimerunner-wall-clock-pacing-watchdog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        18.4 RealTimeRunner — wall-clock pacing + watchdog
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#185-udp-co-sim-wire-protocol-binary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        18.5 UDP co-sim wire protocol (binary)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#186-gui-data-port-json-over-httpudp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        18.6 GUI data port (JSON over HTTP/UDP)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="18.6 GUI data port (JSON over HTTP/UDP)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        언제 무엇을
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#187" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        18.7 한계 / 다음
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#188-self-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        18.8 Self-check
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1256,7 +1450,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T22_carla_bridge/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-nav__link">
         
   
   
@@ -1284,7 +1478,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T23_jump_14dof/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T23_jump_14dof/REPORT/" class="md-nav__link">
         
   
   
@@ -1312,7 +1506,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T27_ld4_dw/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T27_ld4_dw/REPORT/" class="md-nav__link">
         
   
   
@@ -1340,7 +1534,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T28_ld4_mp/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T28_ld4_mp/REPORT/" class="md-nav__link">
         
   
   
@@ -1368,7 +1562,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T29_ld4_ta/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T29_ld4_ta/REPORT/" class="md-nav__link">
         
   
   
@@ -1396,7 +1590,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T30_ld4_5link/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T30_ld4_5link/REPORT/" class="md-nav__link">
         
   
   
@@ -1474,7 +1668,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../" class="md-nav__link ">
+            <a href="../../tasks/" class="md-nav__link ">
               
   
   
@@ -1518,7 +1712,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../68_poc_summary_v3/" class="md-nav__link">
+      <a href="../../tasks/68_poc_summary_v3/" class="md-nav__link">
         
   
   
@@ -1546,7 +1740,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../69_competitive_matrix/" class="md-nav__link">
+      <a href="../../tasks/69_competitive_matrix/" class="md-nav__link">
         
   
   
@@ -1574,7 +1768,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../62_cycles_overview/" class="md-nav__link">
+      <a href="../../tasks/62_cycles_overview/" class="md-nav__link">
         
   
   
@@ -1602,7 +1796,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../50_benchmark_matrix/" class="md-nav__link">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
         
   
   
@@ -1630,7 +1824,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../20_l1_l2_grid_sweep/" class="md-nav__link">
+      <a href="../../tasks/20_l1_l2_grid_sweep/" class="md-nav__link">
         
   
   
@@ -1658,7 +1852,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../30_l3_dynamic_suspension/" class="md-nav__link">
+      <a href="../../tasks/30_l3_dynamic_suspension/" class="md-nav__link">
         
   
   
@@ -1686,7 +1880,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../31_l6_l7_l8_control/" class="md-nav__link">
+      <a href="../../tasks/31_l6_l7_l8_control/" class="md-nav__link">
         
   
   
@@ -1714,7 +1908,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../57_58_59_driver_skidpad/" class="md-nav__link">
+      <a href="../../tasks/57_58_59_driver_skidpad/" class="md-nav__link">
         
   
   
@@ -1742,7 +1936,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../50_benchmark_matrix/" class="md-nav__link">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
         
   
   
@@ -1868,10 +2062,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1" class="md-nav__link">
+  <a href="#learning-objectives" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. 목적
+        Learning objectives
       
     </span>
   </a>
@@ -1879,55 +2073,88 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2" class="md-nav__link">
+  <a href="#prerequisites" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. 구현 방법
+        Prerequisites
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="2. 구현 방법">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#181-kernel-run-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        18.1 동기 — 하나의 kernel, 여러 run mode
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#182-simsession-mode-agnostic-kernel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        18.2 SimSession — mode-agnostic kernel
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#183-run-modes-kernel-wiring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        18.3 Run modes — kernel 위의 얇은 wiring
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#184-realtimerunner-wall-clock-pacing-watchdog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        18.4 RealTimeRunner — wall-clock pacing + watchdog
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#185-udp-co-sim-wire-protocol-binary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        18.5 UDP co-sim wire protocol (binary)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#186-gui-data-port-json-over-httpudp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        18.6 GUI data port (JSON over HTTP/UDP)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="18.6 GUI data port (JSON over HTTP/UDP)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#21" class="md-nav__link">
+  <a href="#_1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2.1 코드 변경
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#22" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2.2 식
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#23" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2.3 결정
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#24" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2.4 한계
+        언제 무엇을
       
     </span>
   </a>
@@ -1940,110 +2167,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3" class="md-nav__link">
+  <a href="#187" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. 검증 방법 (근거)
+        18.7 한계 / 다음
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="3. 검증 방법 (근거)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#31-3-test" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3.1 3 새 test
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#32-3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3.2 시각화 (3 시나리오)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#4" class="md-nav__link">
+  <a href="#188-self-check" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. 검증 결과
+        18.8 Self-check
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="4. 검증 결과">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#41-test-suite" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4.1 Test suite
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#42-step-steer-roll-transient" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4.2 Step steer roll transient
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#43-pitch-during-throttle-brake" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4.3 Pitch during throttle → brake
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#44-roll-pitch-during-dlc" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4.4 Roll + pitch during DLC
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#5" class="md-nav__link">
+  <a href="#references" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. 판단
+        References
       
     </span>
   </a>
@@ -2070,182 +2219,188 @@
   
 
 
-<h1 id="task-22-quasi-static-rollpitch-diagnostics-balance-check">Task 22 — Quasi-static roll/pitch diagnostics + balance check<a class="headerlink" href="#task-22-quasi-static-rollpitch-diagnostics-balance-check" title="Permanent link">&para;</a></h1>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Value</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Task ID</td>
-<td>IM-W5-8</td>
-</tr>
-<tr>
-<td>Type</td>
-<td>Impl</td>
-</tr>
-<tr>
-<td>Date</td>
-<td>2026-05-29</td>
-</tr>
-<tr>
-<td>Commit</td>
-<td>TBD</td>
-</tr>
-<tr>
-<td>Status</td>
-<td>completed</td>
-</tr>
-</tbody>
-</table>
-<h2 id="1">1. 목적<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
-<p>L2 는 quasi-static weight transfer 만 모델링 (suspension 동역학 없음 — Task 19 한계). 그러나 roll/pitch angle 은 사용자가 명백히 보고 싶어 하는 dynamics 신호이고, L3 (Task 24+ 의 14-DOF) 와의 비교 baseline 으로도 필요하다.</p>
-<p>본 task 는 <strong>suspension 동역학을 풀지 않고</strong> 단순 quasi-static 식으로 추정:
-- <code>phi = m · ay · h_cg / (K_phi_f + K_phi_r)</code>
-- <code>theta = m · ax · h_cg / K_pitch</code> where <code>K_pitch ≈ k_spring · (a² + b²) · 2</code></p>
-<p>이게 빠지면:
-- L2 의 cornering / brake 결과 가시화 시 직관적 차체 자세가 안 보임.
-- L3 도입 시 동역학 roll/pitch 와 quasi-static 추정 차이를 정량 비교할 reference 없음.
-- CarMaker / 실차 비교 metric (D17 Phase 2) 에서 roll/pitch RMS 항목 충족 어려움.</p>
-<h2 id="2">2. 구현 방법<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
-<h3 id="21">2.1 코드 변경<a class="headerlink" href="#21" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>위치</th>
-<th>변경</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>core/include/vdsim/interfaces.hpp</code></td>
-<td><code>IVehicleDynamics</code> 에 4 virtual default method 추가: <code>roll_angle_qs</code>, <code>pitch_angle_qs</code>, <code>ax_body_est</code>, <code>ay_body_est</code>. 기본값 0 (L1 대응)</td>
-</tr>
-<tr>
-<td><code>core/src/seven_dof_dynamics.cpp</code></td>
-<td>위 4 method override</td>
-</tr>
-<tr>
-<td><code>examples/scenario_run.cpp</code></td>
-<td>CSV 에 <code>ax,ay,roll,pitch</code> 4 열 추가</td>
-</tr>
-<tr>
-<td><code>examples/l1_vs_l2_run.cpp</code></td>
-<td>동일</td>
-</tr>
-<tr>
-<td><code>tests/integration/test_seven_dof.cpp</code></td>
-<td>3 새 test</td>
-</tr>
-</tbody>
-</table>
-<h3 id="22">2.2 식<a class="headerlink" href="#22" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>phi   = m · ay_body · h_cg / (K_phi_f + K_phi_r)
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>theta = m · ax_body · h_cg / K_pitch
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>K_pitch ≈ avg(k_spring) · 2 · (a² + b²)
+<h1 id="18-runtime-kernel-co-simulation">18. Runtime Kernel &amp; Co-simulation<a class="headerlink" href="#18-runtime-kernel-co-simulation" title="Permanent link">&para;</a></h1>
+<h2 id="learning-objectives">Learning objectives<a class="headerlink" href="#learning-objectives" title="Permanent link">&para;</a></h2>
+<p>이 chapter 를 마치면 다음을 할 수 있다.</p>
+<ol>
+<li>SimSession kernel 의 한 tick (latched cmd → actuator → step → sensor) 과 그것이
+   왜 mode-agnostic 한지 설명한다.</li>
+<li>free-run (real-time), external-step (third-party stepping), scenario replay
+   세 가지 run mode 가 같은 kernel 위의 얇은 wiring 임을 안다.</li>
+<li>RealTimeRunner 의 wall-clock pacing 과 command-timeout fail-safe(ECU
+   watchdog) 의 역할을 기술한다.</li>
+<li>UDP co-sim wire protocol (24B header + CMD/STATE + CRC32) 과 GUI data port
+   (JSON HTTP/UDP) 의 역할 분담 — 언제 바이너리, 언제 JSON 인지 판단한다.</li>
+</ol>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Chapter 17</strong> — actuator/sensor layer (kernel 이 wrap 하는 대상).</li>
+<li><strong>Chapter 12</strong> — software architecture (factory, ABI).</li>
+<li><strong>Reference</strong> — <code>docs/vdsim_bridge_interface_requirements.md</code> (wire contract),
+  <code>docs/gui_architecture.md</code>.</li>
+</ul>
+<hr />
+<h2 id="181-kernel-run-mode">18.1 동기 — 하나의 kernel, 여러 run mode<a class="headerlink" href="#181-kernel-run-mode" title="Permanent link">&para;</a></h2>
+<p>실차 경계(real-vehicle-equivalent)는 "고정 dt 로 도는 plant + 비동기 명령 stream +
+지연된 feedback" 이다. 이걸 한 군데(SimSession)에 모으면, 실행 방식(실시간/외부
+스텝/리플레이)은 그 위의 얇은 wiring 으로 갈린다. clock 과 I/O 를 kernel 에서
+빼냄으로써 동일 plant 코드가 모든 mode 에서 재사용된다.</p>
+<hr />
+<h2 id="182-simsession-mode-agnostic-kernel">18.2 SimSession — mode-agnostic kernel<a class="headerlink" href="#182-simsession-mode-agnostic-kernel" title="Permanent link">&para;</a></h2>
+<p>한 tick 의 순서 (clock 없음, I/O 없음):</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>set_input(u)   # 비동기 명령을 ZOH 로 latch (mutex)
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>tick(dt):
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    contacts = ground.query(state)
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    realized = actuator.apply(latched_cmd, speed, dt)   # ch17
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    dyn.step(realized, contacts, dt)                     # ch04-06
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    measured = sensor.apply(dyn.state(), dt)             # ch17 sensor delay
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    # diagnostics(ax, ay, roll, pitch, Fz, tire_forces, rack) 스냅샷
 </span></code></pre></div>
-<p><code>ax_body, ay_body</code> 는 Task 20 에서 수정된 정의 (<code>Fx_total / m</code>, <code>Fy_total / m</code>) 의 1-step lag 값.</p>
-<h3 id="23">2.3 결정<a class="headerlink" href="#23" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>ZOH latch</strong>: <code>set_input</code> 은 명령을 보관만 한다. 비동기 producer(UDP/HTTP/스크립트)
+  와 고정-dt tick 이 <strong>decoupled</strong> — ECU/actuator 가 마지막 명령을 hold 하는 것과
+  동일. <code>set_input</code>/<code>state</code>/<code>output</code> 은 mutex 로 보호되어 producer 스레드와 sim
+  스레드가 동시 동작.</li>
+<li><strong>출력</strong>: <code>state()</code>(true plant), <code>measured_state()</code>(controller feedback, 지연됨),
+  <code>output()</code>(전체 스냅샷). pull 방식.</li>
+</ul>
+<hr />
+<h2 id="183-run-modes-kernel-wiring">18.3 Run modes — kernel 위의 얇은 wiring<a class="headerlink" href="#183-run-modes-kernel-wiring" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>결정</th>
-<th>채택</th>
-<th>근거</th>
+<th>mode</th>
+<th>누가 tick 을 모나</th>
+<th>용도</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Virtual default 0</td>
-<td>yes</td>
-<td>L1 / future stubs 가 override 안 해도 빌드. ABI 안전</td>
+<td><strong>experiment / external-step</strong></td>
+<td>외부가 <code>set_input()+tick()</code> 을 자기 루프에서 호출</td>
+<td>결정론적 co-sim, HIL, batch DoE</td>
 </tr>
 <tr>
-<td>Interface 확장</td>
-<td>yes</td>
-<td>tire_Fz 등 기존 진단 API 와 일관성</td>
+<td><strong>free-run (real-time)</strong></td>
+<td><code>RealTimeRunner</code> 가 wall-clock 으로 tick 페이싱</td>
+<td>실시간 시각화·UDP co-sim</td>
 </tr>
 <tr>
-<td>Pitch stiffness 추정</td>
-<td>단순 spring · 거리²</td>
-<td>anti-dive / anti-squat geometry 미반영 (L3 에서)</td>
-</tr>
-<tr>
-<td>Sign convention</td>
-<td><code>phi &gt; 0 ↔ ay &gt; 0</code>, <code>theta &lt; 0 ↔ ax &lt; 0</code> (nose-dive 부호)</td>
-<td>부호 convention 은 차후 SAE J670 일치 검토</td>
+<td><strong>scenario replay</strong></td>
+<td>루프가 파일에서 <code>set_input</code> 피드</td>
+<td>시나리오 재현</td>
 </tr>
 </tbody>
 </table>
-<h3 id="24">2.4 한계<a class="headerlink" href="#24" title="Permanent link">&para;</a></h3>
+<p>세 mode 가 같은 SimSession 을 공유하므로 plant·actuator·sensor 동작이 일관된다.</p>
+<hr />
+<h2 id="184-realtimerunner-wall-clock-pacing-watchdog">18.4 RealTimeRunner — wall-clock pacing + watchdog<a class="headerlink" href="#184-realtimerunner-wall-clock-pacing-watchdog" title="Permanent link">&para;</a></h2>
+<p>free-run mode 의 페이서. <code>sleep_until</code> 로 고정 dt 를 벽시계에 맞춰 tick 하고,
+명령이 <code>cmd_timeout_s</code> 동안 안 오면 <strong>fail-safe</strong> 명령으로 latch (ECU watchdog):</p>
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">struct</span><span class="w"> </span><span class="nc">Config</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">dt</span><span class="p">{</span><span class="mf">0.005</span><span class="p">};</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">cmd_timeout_s</span><span class="p">{</span><span class="mf">0.1</span><span class="p">};</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">                </span><span class="n">CmdL4</span><span class="w"> </span><span class="n">failsafe</span><span class="p">{</span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="mf">0.3</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nb">false</span><span class="p">};</span><span class="w"> </span><span class="p">};</span><span class="w">  </span><span class="c1">// throttle0, 적당 brake</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1">// 루프: cmd 없은 지 timeout 초과 -&gt; set_input(failsafe); tick(dt); sleep_until(next)</span>
+</span></code></pre></div>
 <ul>
-<li><strong>suspension 동역학 없음</strong> — bump / damper 의 high-frequency 영향 미반영. quasi-static 만.</li>
-<li><strong>anti-dive / anti-squat</strong> 미반영 — 실측 nose-dive 보다 약간 작거나 크게 추정 가능.</li>
-<li><strong>roll center 변동</strong> — L3 의 정확한 roll center kinematics 미반영, h_cg 만 사용 (lumped).</li>
-<li><strong>Pitch stiffness 식</strong> — 매우 단순. 정확한 값은 차종별 fitting 필요.</li>
+<li>fail-safe = "명령 끊기면 적당히 제동하고 직진" — 통신 두절 시 안전.</li>
+<li>pacing 은 <code>next += dt</code> 누적 + <code>sleep_until</code> 로 drift 없이.</li>
 </ul>
-<h2 id="3">3. 검증 방법 (근거)<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
-<h3 id="31-3-test">3.1 3 새 test<a class="headerlink" href="#31-3-test" title="Permanent link">&para;</a></h3>
+<hr />
+<h2 id="185-udp-co-sim-wire-protocol-binary">18.5 UDP co-sim wire protocol (binary)<a class="headerlink" href="#185-udp-co-sim-wire-protocol-binary" title="Permanent link">&para;</a></h2>
+<p>결정론적·고빈도 외부 제어를 위한 바이너리 contract
+(<code>cosim/cosim_protocol.hpp</code>, 상세 <code>docs/vdsim_bridge_interface_requirements.md</code>).</p>
+<ul>
+<li><strong>공통 24B header</strong>: magic <code>0x56445331</code>("VDS1"), version(u16), msg_type(u16),
+  seq(u32), pad(u32), timestamp(f64). little-endian, tightly-packed.</li>
+<li><strong>CMD 76B</strong> (controller → sim): steer_tire, throttle, brake, gear, handbrake,
+  aux_accel, aux_speed + trailing CRC32.</li>
+<li><strong>STATE 220B</strong> (sim → controller): x,y,z / roll,pitch,yaw / vx,vy,vz /
+  roll·pitch·yaw rate / ax,ay / wheel_spin[4] / steer_applied / wheel_radius /
+  Fz[4] + CRC32.</li>
+<li><strong>CRC32</strong> = IEEE 802.3, Python <code>zlib.crc32</code> 호환 (헤더+payload 전체).</li>
+<li>seq 로 out-of-order/stale 폐기. <code>vdsim_udp_server &lt;veh.yaml&gt; &lt;tire.yaml&gt;
+  [--level --cmd-port --state-ip --state-port --rate --vx0 --cmd-timeout]</code> 가
+  SimSession+RealTimeRunner 를 띄워 이 프로토콜을 말한다.</li>
+</ul>
+<hr />
+<h2 id="186-gui-data-port-json-over-httpudp">18.6 GUI data port (JSON over HTTP/UDP)<a class="headerlink" href="#186-gui-data-port-json-over-httpudp" title="Permanent link">&para;</a></h2>
+<p>접근성·툴링용 경량 경계. 실시간 결정론은 §18.5 바이너리가 담당하고, JSON 은
+설정·대시보드·agent 제어용.</p>
+<ul>
+<li><strong>inbound</strong> <code>POST /api/io {vehicle,throttle,brake,steer}</code> → 명령 라우팅(차량 id
+  별) + 현재 state JSON 반환 (command-in / state-out, free-run).</li>
+<li><strong>outbound telemetry</strong> <code>/api/io/targets</code> — 차량별로 설정한 ip:port 들에 state(+
+  cmd 확인용)를 JSON UDP fan-out.</li>
+<li><strong>co-sim 구동 front-end</strong>: GUI 가 현재 vehicle/tire 설정을 temp yaml 로 써서
+  <code>vdsim_udp_server</code> 를 subprocess 로 띄우고, 그 바이너리 STATE 를 받아 3D 로
+  시각화하며 제어를 바이너리 CMD 로 relay (single source of truth).</li>
+</ul>
+<h3 id="_1">언제 무엇을<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
-<th>Test</th>
-<th>항목</th>
-<th>Pass 기준</th>
+<th></th>
+<th>바이너리 UDP (§18.5)</th>
+<th>JSON HTTP/UDP (§18.6)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>SevenDOF.RollAngleSignAndScale</td>
-<td>vx=15, δ=0.04, 4 s SS</td>
-<td>ay &gt; 0, phi &gt; 0, 0.06° &lt; |phi| &lt; 6°</td>
+<td>지연/결정론</td>
+<td>최저, seq+CRC</td>
+<td>중, 편의</td>
 </tr>
 <tr>
-<td>SevenDOF.PitchAngleSignDuringBrake</td>
-<td>brake=0.8, vx0=20</td>
-<td>ax &lt; 0, pitch &lt; 0 (nose-dive)</td>
+<td>적합</td>
+<td>≥100Hz 폐루프·HIL·다차량</td>
+<td>설정·대시보드·agent·≤60Hz</td>
 </tr>
 <tr>
-<td>BicycleDefaultDiagnostics.RollPitchZero</td>
-<td>L1 dyn 호출</td>
-<td>4 method 모두 0 반환 (default impl)</td>
+<td>장점</td>
+<td>compact, jitter↓</td>
+<td>self-describing, 다언어, 디버깅</td>
 </tr>
 </tbody>
 </table>
-<h3 id="32-3">3.2 시각화 (3 시나리오)<a class="headerlink" href="#32-3" title="Permanent link">&para;</a></h3>
+<hr />
+<h2 id="187">18.7 한계 / 다음<a class="headerlink" href="#187" title="Permanent link">&para;</a></h2>
 <ul>
-<li>step_steer: max roll = <strong>2.23°</strong> (ay ≈ 2 m/s²) — 차종 일반 1-3°/g 의 범위.</li>
-<li>brake step (throttle/brake sequence): max |pitch| = <strong>0.68°</strong> (ax ≈ -3 m/s²).</li>
-<li>double_lane_change: roll range <strong>±4.07°</strong> — sport-style maneuver 으로 합리적.</li>
+<li>현재 <code>vdsim_udp_server</code> 는 vehicle/tire yaml 만 받아 <strong>actuator/solver 설정은
+  미전달</strong> (CLI 확장 여지).</li>
+<li>STATE 목적지가 단일 → 외부 controller 와 GUI 동시 수신은 GUI relay 또는
+  state-ip 노출 필요.</li>
+<li>multi-vehicle: 데이터 포트는 차량 id 로 keyed 되어 있으나 sim 엔진은 현재 단일
+  (SimSession N개 확장 시 wire/GUI 재작업 불요).</li>
 </ul>
-<h2 id="4">4. 검증 결과<a class="headerlink" href="#4" title="Permanent link">&para;</a></h2>
-<h3 id="41-test-suite">4.1 Test suite<a class="headerlink" href="#41-test-suite" title="Permanent link">&para;</a></h3>
-<p>93/93 통과 (이전 90 + 본 task 3 새 test).</p>
-<h3 id="42-step-steer-roll-transient">4.2 Step steer roll transient<a class="headerlink" href="#42-step-steer-roll-transient" title="Permanent link">&para;</a></h3>
-<p><img alt="Roll step steer" src="figures/roll_step_steer.png" /></p>
-<p>좌: time-trace, 우: roll vs ay scatter — quasi-static 식이므로 정확히 선형.</p>
-<h3 id="43-pitch-during-throttle-brake">4.3 Pitch during throttle → brake<a class="headerlink" href="#43-pitch-during-throttle-brake" title="Permanent link">&para;</a></h3>
-<p><img alt="Pitch during brake" src="figures/pitch_during_brake.png" /></p>
-<p>3 s coast → 4 s brake 전환 에서 pitch 부호 변화. 정확히 ax 와 일대일.</p>
-<h3 id="44-roll-pitch-during-dlc">4.4 Roll + pitch during DLC<a class="headerlink" href="#44-roll-pitch-during-dlc" title="Permanent link">&para;</a></h3>
-<p><img alt="Roll/pitch DLC" src="figures/roll_pitch_dlc.png" /></p>
-<p>ISO 3888 유사 lane change 에서 roll oscillation, 동시 pitch ~ 0 (가/감속 없음).</p>
-<h2 id="5">5. 판단<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
+<hr />
+<h2 id="188-self-check">18.8 Self-check<a class="headerlink" href="#188-self-check" title="Permanent link">&para;</a></h2>
+<details>
+<summary>1. SimSession 이 clock 을 안 갖는 이유?</summary>
+
+clock·I/O 를 빼면 동일 kernel 이 free-run / external-step / replay 에 그대로
+쓰인다. 페이싱은 RealTimeRunner 같은 얇은 wiring 이 담당.
+</details>
+
+<details>
+<summary>2. ZOH latch 가 필요한 이유?</summary>
+
+비동기 명령 stream(UDP/HTTP)과 고정-dt tick 을 분리. tick 은 항상 마지막 명령을
+사용 — 실제 ECU/actuator 의 sample-and-hold 와 동일.
+</details>
+
+<details>
+<summary>3. 폐루프 제어에 HTTP /api/io 가 부적합한 이유?</summary>
+
+step 마다 요청/응답 round-trip + JSON 파싱이 지연·jitter 를 키운다. 결정론적
+고빈도는 바이너리 UDP(§18.5).
+</details>
+
+<hr />
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
 <ul>
-<li>결과: <strong>pass</strong></li>
-<li>근거:</li>
-<li>3/3 새 test 통과, 누적 93/93.</li>
-<li>부호 / 크기 정량 모두 textbook 일치 (linear region quasi-static 식).</li>
-<li>L1 default 0 반환으로 backward-compat 보장.</li>
-<li>CSV 에 ax/ay/roll/pitch 4 신호 추가 → 외부 분석 / animation 용 데이터 확보.</li>
-<li>미해결 / Follow-up:</li>
-<li><strong>L3 동적 roll/pitch</strong> — Task 24 에서 suspension 동역학과 비교.</li>
-<li><strong>anti-dive / anti-squat</strong> — L3 의 suspension geometry 옵션.</li>
-<li><strong>Camber from roll</strong> — roll 이 wheel camber 에 영향 (L3).</li>
-<li><strong>CarMaker ERG 의 Vehicle.Roll / Vehicle.Pitch</strong> 비교 — Phase 2.</li>
+<li><code>docs/vdsim_bridge_interface_requirements.md</code> — wire contract (§3-5).</li>
+<li><code>docs/gui_architecture.md</code> — data port / 시각화 분리.</li>
+<li>Chapter 17 (actuator/sensor), Chapter 16 (FMI co-simulation).</li>
 </ul>
 
 

@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/tasks/22_roll_pitch_diag/">
+        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/theory/17_actuator_and_sensing/">
       
       
+        <link rel="prev" href="../16_fmi_integration/">
+      
+      
+        <link rel="next" href="../18_runtime_and_cosim/">
       
       
         
@@ -23,7 +27,7 @@
     
     
       
-        <title>Task 22 — Quasi-static roll/pitch diagnostics + balance check - VDSim</title>
+        <title>17 — Actuator dynamics & sensing - VDSim</title>
       
     
     
@@ -74,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#task-22-quasi-static-rollpitch-diagnostics-balance-check" class="md-skip">
+        <a href="#17-actuator-dynamics-sensing" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Task 22 — Quasi-static roll/pitch diagnostics + balance check
+              17 — Actuator dynamics & sensing
             
           </span>
         </div>
@@ -250,11 +254,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../theory/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
           
   
   
@@ -298,7 +304,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../T22_carla_bridge/REPORT/" class="md-tabs__link">
+        <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-tabs__link">
           
   
   
@@ -320,7 +326,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../" class="md-tabs__link">
+        <a href="../../tasks/" class="md-tabs__link">
           
   
   
@@ -476,6 +482,8 @@
       
   
   
+    
+  
   
   
     
@@ -525,22 +533,23 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../theory/" class="md-nav__link ">
+            <a href="../" class="md-nav__link ">
               
   
   
@@ -558,13 +567,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -584,7 +593,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/01_frames_and_conventions/" class="md-nav__link">
+      <a href="../01_frames_and_conventions/" class="md-nav__link">
         
   
   
@@ -612,7 +621,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/02_rigid_body_dynamics/" class="md-nav__link">
+      <a href="../02_rigid_body_dynamics/" class="md-nav__link">
         
   
   
@@ -640,7 +649,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/03_tire_pacejka_mf96/" class="md-nav__link">
+      <a href="../03_tire_pacejka_mf96/" class="md-nav__link">
         
   
   
@@ -668,7 +677,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/04_ld1_bicycle/" class="md-nav__link">
+      <a href="../04_ld1_bicycle/" class="md-nav__link">
         
   
   
@@ -696,7 +705,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/05_ld2_seven_dof/" class="md-nav__link">
+      <a href="../05_ld2_seven_dof/" class="md-nav__link">
         
   
   
@@ -724,7 +733,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/06_ld3_fourteen_dof/" class="md-nav__link">
+      <a href="../06_ld3_fourteen_dof/" class="md-nav__link">
         
   
   
@@ -752,7 +761,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/07_control_ladder/" class="md-nav__link">
+      <a href="../07_control_ladder/" class="md-nav__link">
         
   
   
@@ -780,7 +789,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/08_pid_controllers/" class="md-nav__link">
+      <a href="../08_pid_controllers/" class="md-nav__link">
         
   
   
@@ -808,7 +817,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/09_pure_pursuit_path/" class="md-nav__link">
+      <a href="../09_pure_pursuit_path/" class="md-nav__link">
         
   
   
@@ -836,7 +845,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/10_driver_model/" class="md-nav__link">
+      <a href="../10_driver_model/" class="md-nav__link">
         
   
   
@@ -864,7 +873,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/11_numerical_integration/" class="md-nav__link">
+      <a href="../11_numerical_integration/" class="md-nav__link">
         
   
   
@@ -892,7 +901,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/12_software_architecture/" class="md-nav__link">
+      <a href="../12_software_architecture/" class="md-nav__link">
         
   
   
@@ -920,7 +929,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/13_multibody_outlook/" class="md-nav__link">
+      <a href="../13_multibody_outlook/" class="md-nav__link">
         
   
   
@@ -948,7 +957,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/14_hardpoint_kinematics/" class="md-nav__link">
+      <a href="../14_hardpoint_kinematics/" class="md-nav__link">
         
   
   
@@ -976,7 +985,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/15_validation_and_doe/" class="md-nav__link">
+      <a href="../15_validation_and_doe/" class="md-nav__link">
         
   
   
@@ -1004,7 +1013,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/16_fmi_integration/" class="md-nav__link">
+      <a href="../16_fmi_integration/" class="md-nav__link">
         
   
   
@@ -1029,10 +1038,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../theory/17_actuator_and_sensing/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    17 — Actuator dynamics & sensing
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1048,6 +1084,208 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#learning-objectives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Learning objectives
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#171-plant-side-actuator-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17.1 동기 — plant-side actuator boundary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#172" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17.2 가정
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#173-per-channel-fopdt-rate-limit-saturation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17.3 Per-channel: FOPDT + rate limit + saturation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#174-dead-zone-pedal-tip-in-pad-clearance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17.4 Dead-zone — pedal tip-in / pad clearance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#175-steering-lag-vs-torque-servo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17.5 Steering — 두 모드 (lag vs torque servo)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="17.5 Steering — 두 모드 (lag vs torque servo)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mode-a-first-order-lag-lugre-off" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode A — first-order lag (LuGre off)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mode-b-torque-servo-inertia-lugre" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode B — torque servo + inertia + LuGre (권장)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inertia-ratio2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        등가 inertia 의 구성 (ratio² 환산)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#176-lugre-dynamic-friction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17.6 LuGre dynamic friction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#177-brake-thermal-fade-mut" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17.7 Brake thermal fade — mu(T)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#178-sensor-delay-feedback-transport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17.8 Sensor delay — feedback transport
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#179-vdsim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17.9 VDSim 구현 노트
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1710-self-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17.10 Self-check
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1060,7 +1298,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/18_runtime_and_cosim/" class="md-nav__link">
+      <a href="../18_runtime_and_cosim/" class="md-nav__link">
         
   
   
@@ -1256,7 +1494,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T22_carla_bridge/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-nav__link">
         
   
   
@@ -1284,7 +1522,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T23_jump_14dof/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T23_jump_14dof/REPORT/" class="md-nav__link">
         
   
   
@@ -1312,7 +1550,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T27_ld4_dw/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T27_ld4_dw/REPORT/" class="md-nav__link">
         
   
   
@@ -1340,7 +1578,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T28_ld4_mp/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T28_ld4_mp/REPORT/" class="md-nav__link">
         
   
   
@@ -1368,7 +1606,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T29_ld4_ta/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T29_ld4_ta/REPORT/" class="md-nav__link">
         
   
   
@@ -1396,7 +1634,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T30_ld4_5link/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T30_ld4_5link/REPORT/" class="md-nav__link">
         
   
   
@@ -1474,7 +1712,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../" class="md-nav__link ">
+            <a href="../../tasks/" class="md-nav__link ">
               
   
   
@@ -1518,7 +1756,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../68_poc_summary_v3/" class="md-nav__link">
+      <a href="../../tasks/68_poc_summary_v3/" class="md-nav__link">
         
   
   
@@ -1546,7 +1784,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../69_competitive_matrix/" class="md-nav__link">
+      <a href="../../tasks/69_competitive_matrix/" class="md-nav__link">
         
   
   
@@ -1574,7 +1812,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../62_cycles_overview/" class="md-nav__link">
+      <a href="../../tasks/62_cycles_overview/" class="md-nav__link">
         
   
   
@@ -1602,7 +1840,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../50_benchmark_matrix/" class="md-nav__link">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
         
   
   
@@ -1630,7 +1868,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../20_l1_l2_grid_sweep/" class="md-nav__link">
+      <a href="../../tasks/20_l1_l2_grid_sweep/" class="md-nav__link">
         
   
   
@@ -1658,7 +1896,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../30_l3_dynamic_suspension/" class="md-nav__link">
+      <a href="../../tasks/30_l3_dynamic_suspension/" class="md-nav__link">
         
   
   
@@ -1686,7 +1924,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../31_l6_l7_l8_control/" class="md-nav__link">
+      <a href="../../tasks/31_l6_l7_l8_control/" class="md-nav__link">
         
   
   
@@ -1714,7 +1952,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../57_58_59_driver_skidpad/" class="md-nav__link">
+      <a href="../../tasks/57_58_59_driver_skidpad/" class="md-nav__link">
         
   
   
@@ -1742,7 +1980,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../50_benchmark_matrix/" class="md-nav__link">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
         
   
   
@@ -1868,10 +2106,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1" class="md-nav__link">
+  <a href="#learning-objectives" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. 목적
+        Learning objectives
       
     </span>
   </a>
@@ -1879,22 +2117,77 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2" class="md-nav__link">
+  <a href="#prerequisites" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. 구현 방법
+        Prerequisites
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="2. 구현 방법">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#171-plant-side-actuator-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17.1 동기 — plant-side actuator boundary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#172" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17.2 가정
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#173-per-channel-fopdt-rate-limit-saturation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17.3 Per-channel: FOPDT + rate limit + saturation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#174-dead-zone-pedal-tip-in-pad-clearance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17.4 Dead-zone — pedal tip-in / pad clearance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#175-steering-lag-vs-torque-servo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17.5 Steering — 두 모드 (lag vs torque servo)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="17.5 Steering — 두 모드 (lag vs torque servo)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#21" class="md-nav__link">
+  <a href="#mode-a-first-order-lag-lugre-off" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2.1 코드 변경
+        Mode A — first-order lag (LuGre off)
       
     </span>
   </a>
@@ -1902,10 +2195,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#22" class="md-nav__link">
+  <a href="#mode-b-torque-servo-inertia-lugre" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2.2 식
+        Mode B — torque servo + inertia + LuGre (권장)
       
     </span>
   </a>
@@ -1913,21 +2206,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#23" class="md-nav__link">
+  <a href="#inertia-ratio2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2.3 결정
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#24" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2.4 한계
+        등가 inertia 의 구성 (ratio² 환산)
       
     </span>
   </a>
@@ -1940,110 +2222,65 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3" class="md-nav__link">
+  <a href="#176-lugre-dynamic-friction" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. 검증 방법 (근거)
+        17.6 LuGre dynamic friction
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="3. 검증 방법 (근거)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#31-3-test" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3.1 3 새 test
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#32-3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3.2 시각화 (3 시나리오)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#4" class="md-nav__link">
+  <a href="#177-brake-thermal-fade-mut" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. 검증 결과
+        17.7 Brake thermal fade — mu(T)
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="4. 검증 결과">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#41-test-suite" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4.1 Test suite
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#42-step-steer-roll-transient" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4.2 Step steer roll transient
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#43-pitch-during-throttle-brake" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4.3 Pitch during throttle → brake
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#44-roll-pitch-during-dlc" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4.4 Roll + pitch during DLC
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#5" class="md-nav__link">
+  <a href="#178-sensor-delay-feedback-transport" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. 판단
+        17.8 Sensor delay — feedback transport
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#179-vdsim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17.9 VDSim 구현 노트
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1710-self-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17.10 Self-check
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
       
     </span>
   </a>
@@ -2070,183 +2307,288 @@
   
 
 
-<h1 id="task-22-quasi-static-rollpitch-diagnostics-balance-check">Task 22 — Quasi-static roll/pitch diagnostics + balance check<a class="headerlink" href="#task-22-quasi-static-rollpitch-diagnostics-balance-check" title="Permanent link">&para;</a></h1>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Value</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Task ID</td>
-<td>IM-W5-8</td>
-</tr>
-<tr>
-<td>Type</td>
-<td>Impl</td>
-</tr>
-<tr>
-<td>Date</td>
-<td>2026-05-29</td>
-</tr>
-<tr>
-<td>Commit</td>
-<td>TBD</td>
-</tr>
-<tr>
-<td>Status</td>
-<td>completed</td>
-</tr>
-</tbody>
-</table>
-<h2 id="1">1. 목적<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
-<p>L2 는 quasi-static weight transfer 만 모델링 (suspension 동역학 없음 — Task 19 한계). 그러나 roll/pitch angle 은 사용자가 명백히 보고 싶어 하는 dynamics 신호이고, L3 (Task 24+ 의 14-DOF) 와의 비교 baseline 으로도 필요하다.</p>
-<p>본 task 는 <strong>suspension 동역학을 풀지 않고</strong> 단순 quasi-static 식으로 추정:
-- <code>phi = m · ay · h_cg / (K_phi_f + K_phi_r)</code>
-- <code>theta = m · ax · h_cg / K_pitch</code> where <code>K_pitch ≈ k_spring · (a² + b²) · 2</code></p>
-<p>이게 빠지면:
-- L2 의 cornering / brake 결과 가시화 시 직관적 차체 자세가 안 보임.
-- L3 도입 시 동역학 roll/pitch 와 quasi-static 추정 차이를 정량 비교할 reference 없음.
-- CarMaker / 실차 비교 metric (D17 Phase 2) 에서 roll/pitch RMS 항목 충족 어려움.</p>
-<h2 id="2">2. 구현 방법<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
-<h3 id="21">2.1 코드 변경<a class="headerlink" href="#21" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>위치</th>
-<th>변경</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>core/include/vdsim/interfaces.hpp</code></td>
-<td><code>IVehicleDynamics</code> 에 4 virtual default method 추가: <code>roll_angle_qs</code>, <code>pitch_angle_qs</code>, <code>ax_body_est</code>, <code>ay_body_est</code>. 기본값 0 (L1 대응)</td>
-</tr>
-<tr>
-<td><code>core/src/seven_dof_dynamics.cpp</code></td>
-<td>위 4 method override</td>
-</tr>
-<tr>
-<td><code>examples/scenario_run.cpp</code></td>
-<td>CSV 에 <code>ax,ay,roll,pitch</code> 4 열 추가</td>
-</tr>
-<tr>
-<td><code>examples/l1_vs_l2_run.cpp</code></td>
-<td>동일</td>
-</tr>
-<tr>
-<td><code>tests/integration/test_seven_dof.cpp</code></td>
-<td>3 새 test</td>
-</tr>
-</tbody>
-</table>
-<h3 id="22">2.2 식<a class="headerlink" href="#22" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>phi   = m · ay_body · h_cg / (K_phi_f + K_phi_r)
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>theta = m · ax_body · h_cg / K_pitch
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>K_pitch ≈ avg(k_spring) · 2 · (a² + b²)
+<h1 id="17-actuator-dynamics-sensing">17. Actuator Dynamics &amp; Sensing<a class="headerlink" href="#17-actuator-dynamics-sensing" title="Permanent link">&para;</a></h1>
+<h2 id="learning-objectives">Learning objectives<a class="headerlink" href="#learning-objectives" title="Permanent link">&para;</a></h2>
+<p>이 chapter 를 마치면 다음을 할 수 있다.</p>
+<ol>
+<li>제어기와 plant 사이의 actuator boundary 가 commanded → realized 명령을 어떤
+   비선형으로 변형하는지 (transport delay, lag, rate, saturation, dead-zone) 를
+   식 단위로 기술한다.</li>
+<li>스티어링 액추에이터의 <strong>두 모드</strong> — first-order lag vs <strong>torque servo (PD +
+   inertia + LuGre)</strong> — 가 무엇이 입력/출력/오차이고 왜 PD(적분 없음)인지 설명한다.</li>
+<li>LuGre friction 의 bristle/Stribeck 항과 semi-implicit 적분이 stick-slip·
+   presliding 을 어떻게 표현하는지 안다.</li>
+<li>brake dead-zone(pad clearance) + mu(T) thermal fade, throttle dead-zone
+   (pedal tip-in), sensor feedback delay 의 물리적 의미와 식을 기술한다.</li>
+</ol>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Chapter 11</strong> — first-order lag, transport delay, substep 적분.</li>
+<li><strong>Chapter 07/08</strong> — control ladder 가 actuator 상류에서 CmdL4 를 만드는 구조.</li>
+<li><strong>Reference</strong> — <code>docs/references/actuator_nonlinearity.md</code> (taxonomy + 실측 ID
+  문헌: LuGre #2, steering friction #1, backlash #4/#15, EMB clamp #11).</li>
+</ul>
+<hr />
+<h2 id="171-plant-side-actuator-boundary">17.1 동기 — plant-side actuator boundary<a class="headerlink" href="#171-plant-side-actuator-boundary" title="Permanent link">&para;</a></h2>
+<p>제어기는 이상적 명령(throttle/brake/steer)을 내지만, 실제 차량은 그 명령을 즉시·
+정확히 따르지 못한다. 모터·유압·EPS 가 유한 대역폭·마찰·지연·포화를 가진다. VDSim
+은 이 비선형을 plant 직전의 <strong>actuator layer</strong> 로 모은다 (plant-non-invasive):</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>controller --(CmdL4)--&gt; [ActuatorModel.apply] --(realized CmdL4)--&gt; dyn.step()
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>                                                                        |
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>controller &lt;--(measured State)-- [SensorDelay.apply] &lt;--(true State)---+
 </span></code></pre></div>
-<p><code>ax_body, ay_body</code> 는 Task 20 에서 수정된 정의 (<code>Fx_total / m</code>, <code>Fy_total / m</code>) 의 1-step lag 값.</p>
-<h3 id="23">2.3 결정<a class="headerlink" href="#23" title="Permanent link">&para;</a></h3>
+<p>핵심 원리: 물리 비선형성은 actuator 의 물리 인터페이스(torque/force/steer-angle)에
+존재하므로, 어떤 control ladder 레벨이든 lowering 후 같은 CmdL4 경계에서 한 번만
+적용하면 된다. 모든 효과의 default 는 OFF(identity) 이라 backward-compatible.</p>
+<hr />
+<h2 id="172">17.2 가정<a class="headerlink" href="#172" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>결정</th>
-<th>채택</th>
-<th>근거</th>
+<th>가정</th>
+<th>의미</th>
+<th>깨지는 case</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Virtual default 0</td>
-<td>yes</td>
-<td>L1 / future stubs 가 override 안 해도 빌드. ABI 안전</td>
+<td>채널 독립</td>
+<td>throttle/brake/steer 가 서로 결합 없음</td>
+<td>brake-steer torque-steer 결합</td>
 </tr>
 <tr>
-<td>Interface 확장</td>
-<td>yes</td>
-<td>tire_Fz 등 기존 진단 API 와 일관성</td>
+<td>1D per-channel</td>
+<td>각 명령은 scalar</td>
+<td>4-corner 개별 brake/torque (Lc1 에서 분배)</td>
 </tr>
 <tr>
-<td>Pitch stiffness 추정</td>
-<td>단순 spring · 거리²</td>
-<td>anti-dive / anti-squat geometry 미반영 (L3 에서)</td>
+<td>ZOH 명령 latch</td>
+<td>tick 사이 명령 유지</td>
+<td>고주파 명령 손실</td>
 </tr>
 <tr>
-<td>Sign convention</td>
-<td><code>phi &gt; 0 ↔ ay &gt; 0</code>, <code>theta &lt; 0 ↔ ax &lt; 0</code> (nose-dive 부호)</td>
-<td>부호 convention 은 차후 SAE J670 일치 검토</td>
+<td>등가 steering inertia</td>
+<td>조향계를 단일 관성으로 환산</td>
+<td>컬럼 compliance·다물체</td>
+</tr>
+<tr>
+<td>마찰 = LuGre</td>
+<td>presliding+Stribeck+viscous</td>
+<td>온도·마모 의존 마찰</td>
 </tr>
 </tbody>
 </table>
-<h3 id="24">2.4 한계<a class="headerlink" href="#24" title="Permanent link">&para;</a></h3>
+<hr />
+<h2 id="173-per-channel-fopdt-rate-limit-saturation">17.3 Per-channel: FOPDT + rate limit + saturation<a class="headerlink" href="#173-per-channel-fopdt-rate-limit-saturation" title="Permanent link">&para;</a></h2>
+<p>각 채널의 기본 파이프라인 (throttle 이 순수 예):</p>
+<div class="arithmatex">\[
+u_d(t) = u_{\text{cmd}}(t - L) \quad\text{(transport delay, ring buffer)}
+$$
+$$
+\tau\,\dot y + y = u_d \quad\text{(first-order lag)}
+$$
+$$
+\dot y_{\text{rl}} = \mathrm{clip}\!\left(\frac{y - y_{\text{prev}}}{\Delta t},\, -r,\, +r\right),\quad
+y_{\text{sat}} = \mathrm{clip}(y_{\text{rl}},\, y_{\min},\, y_{\max})
+\]</div>
 <ul>
-<li><strong>suspension 동역학 없음</strong> — bump / damper 의 high-frequency 영향 미반영. quasi-static 만.</li>
-<li><strong>anti-dive / anti-squat</strong> 미반영 — 실측 nose-dive 보다 약간 작거나 크게 추정 가능.</li>
-<li><strong>roll center 변동</strong> — L3 의 정확한 roll center kinematics 미반영, h_cg 만 사용 (lumped).</li>
-<li><strong>Pitch stiffness 식</strong> — 매우 단순. 정확한 값은 차종별 fitting 필요.</li>
+<li><span class="arithmatex">\(L\)</span> = <code>dead_time_s</code> (순수 수송 지연), <span class="arithmatex">\(\tau\)</span> = <code>tau_s</code> (1차 lag), <span class="arithmatex">\(r\)</span> =
+  <code>rate_limit</code> (slew, ≤0 이면 off), <span class="arithmatex">\([y_{\min}, y_{\max}]\)</span> = saturation.</li>
+<li><span class="arithmatex">\(L\)</span> 과 <span class="arithmatex">\(\tau\)</span> 의 조합 = <strong>FOPDT</strong> <span class="arithmatex">\(G(s)=e^{-Ls}/(1+\tau s)\)</span> — powertrain 의
+  표준 저차 모델 (ch15 ref #19, #22).</li>
 </ul>
-<h2 id="3">3. 검증 방법 (근거)<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
-<h3 id="31-3-test">3.1 3 새 test<a class="headerlink" href="#31-3-test" title="Permanent link">&para;</a></h3>
+<hr />
+<h2 id="174-dead-zone-pedal-tip-in-pad-clearance">17.4 Dead-zone — pedal tip-in / pad clearance<a class="headerlink" href="#174-dead-zone-pedal-tip-in-pad-clearance" title="Permanent link">&para;</a></h2>
+<p>명령 크기가 임계 <span class="arithmatex">\(d\)</span> 이하면 출력 0, 초과분은 0..1 로 <strong>재정규화</strong>:</p>
+<div class="arithmatex">\[
+u' = \begin{cases} \dfrac{u - d}{1 - d} &amp; u &gt; d \\[4pt] 0 &amp; u \le d \end{cases}
+\]</div>
+<ul>
+<li>throttle: 페달 초기 유격 / 모터 torque threshold (tip-in).</li>
+<li>brake: 패드가 디스크에 닿기 전 채워지는 유격 (pad clearance fill).</li>
+<li>0..1 one-sided 신호 전용 (부호 있는 steer 에는 부적용 — 그건 backlash 의 영역,
+  ch15 ref #4/#16 참조, 현재 미구현).</li>
+<li><span class="arithmatex">\(d\)</span> 직후는 0 에서 연속 출발하고 full 명령 1.0 은 여전히 full 출력.</li>
+</ul>
+<hr />
+<h2 id="175-steering-lag-vs-torque-servo">17.5 Steering — 두 모드 (lag vs torque servo)<a class="headerlink" href="#175-steering-lag-vs-torque-servo" title="Permanent link">&para;</a></h2>
+<p>스티어링은 마찰(LuGre) on/off 로 모델이 갈린다.</p>
+<h3 id="mode-a-first-order-lag-lugre-off">Mode A — first-order lag (LuGre off)<a class="headerlink" href="#mode-a-first-order-lag-lugre-off" title="Permanent link">&para;</a></h3>
+<div class="arithmatex">\[
+\tau\,\dot\delta + \delta = \delta_{\text{cmd}}(t-L), \quad
+\delta \leftarrow \mathrm{clip}(\delta, \delta_{\min}, \delta_{\max})
+\]</div>
+<p>수동적 1차 추종. 빠른 근사가 필요할 때.</p>
+<h3 id="mode-b-torque-servo-inertia-lugre">Mode B — torque servo + inertia + LuGre (권장)<a class="headerlink" href="#mode-b-torque-servo-inertia-lugre" title="Permanent link">&para;</a></h3>
+<p>조향계를 road-wheel 각 <span class="arithmatex">\(\theta\)</span> 기준 등가 관성 <span class="arithmatex">\(I\)</span> 로 보고, <strong>PD 위치 서보</strong>가
+명령각으로 끌고 가며 LuGre 마찰 <span class="arithmatex">\(T_f\)</span> 가 저항한다.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a> cmd ─►(+)─ e=cmd−theta ─►[kp]──┐                         Tf (LuGre)
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>        ▲                       +                            │
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>        │                    (sum)─► Tservo ─►(−)─► acc=(Tservo−Tf)/I ─►∫─► theta_dot ─►∫─► theta
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>        │                       −                                                          │
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>        │                    [kd]◄─ theta_dot                                              │
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>        └──────────────── feedback: theta ◄────────────────────────────────────────────────┘
+</span></code></pre></div>
+<ul>
+<li><strong>입력(reference)</strong>: <span class="arithmatex">\(\delta_{\text{cmd}}\)</span> (dead-time 지연 후 명령각).</li>
+<li><strong>출력</strong>: <span class="arithmatex">\(\theta\)</span> = 실제 road-wheel 각 → tire 모델로 전달.</li>
+<li><strong>오차 → 출력</strong>: 위치오차 <span class="arithmatex">\(e=\delta_{\text{cmd}}-\theta\)</span> 로 <strong>토크</strong>를 낸다.</li>
+</ul>
+<div class="arithmatex">\[
+T_{\text{servo}} = k_p\,(\delta_{\text{cmd}} - \theta) - k_d\,\dot\theta
+$$
+$$
+I\,\ddot\theta = T_{\text{servo}} - T_f
+\]</div>
+<p>닫힌 루프는 <strong>mass–spring–damper</strong>:</p>
+<div class="arithmatex">\[
+I\,\ddot\theta + k_d\,\dot\theta + k_p\,\theta = k_p\,\delta_{\text{cmd}} - T_f
+$$
+$$
+\omega_n = \sqrt{k_p/I}, \qquad \zeta = \frac{k_d}{2\sqrt{k_p\,I}}
+\]</div>
+<p>정상상태 (<span class="arithmatex">\(\ddot\theta=\dot\theta=0\)</span>):</p>
+<div class="arithmatex">\[
+\theta_{ss} = \delta_{\text{cmd}} - \frac{T_f}{k_p}
+\]</div>
+<p><strong>왜 PD(적분 없음)인가</strong>: <span class="arithmatex">\(I\)</span>(적분)항을 넣으면 정상오차 <span class="arithmatex">\(T_f/k_p\)</span> 를 0 으로 강제해
+마찰을 지운다. PD 로 두면 마찰이 만드는 작은 정적 조향오차(stiction, on-center
+dead-band) 가 그대로 남아 실제 EPS 거동을 표현한다. travel stop 은 위치 clamp +
+속도 kill (anti-windup) 로 처리하고 적분기 상태 <span class="arithmatex">\(\theta\)</span> 는 보존한다.</p>
+<h3 id="inertia-ratio2">등가 inertia 의 구성 (ratio² 환산)<a class="headerlink" href="#inertia-ratio2" title="Permanent link">&para;</a></h3>
+<p><code>steer.inertia</code> 는 모든 조향부품을 <span class="arithmatex">\(\theta\)</span> 좌표로 환산한 등가값: <span class="arithmatex">\(I_{\text{eff}} =
+\sum_i I_i\,(\omega_i/\dot\theta)^2\)</span>.</p>
 <table>
 <thead>
 <tr>
-<th>Test</th>
-<th>항목</th>
-<th>Pass 기준</th>
+<th>요소</th>
+<th>환산</th>
+<th>비중</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>SevenDOF.RollAngleSignAndScale</td>
-<td>vx=15, δ=0.04, 4 s SS</td>
-<td>ay &gt; 0, phi &gt; 0, 0.06° &lt; |phi| &lt; 6°</td>
+<td>앞바퀴+허브+너클 (kingpin yaw)</td>
+<td>×1</td>
+<td>load 측 주관성</td>
 </tr>
 <tr>
-<td>SevenDOF.PitchAngleSignDuringBrake</td>
-<td>brake=0.8, vx0=20</td>
-<td>ax &lt; 0, pitch &lt; 0 (nose-dive)</td>
+<td>rack (병진 <span class="arithmatex">\(m\)</span>)</td>
+<td><span class="arithmatex">\(m\,(\partial x_{\text{rack}}/\partial\theta)^2\)</span></td>
+<td>중</td>
 </tr>
 <tr>
-<td>BicycleDefaultDiagnostics.RollPitchZero</td>
-<td>L1 dyn 호출</td>
-<td>4 method 모두 0 반환 (default impl)</td>
+<td>컬럼·핸들 (steering ratio <span class="arithmatex">\(G\)</span>)</td>
+<td><span class="arithmatex">\(\times G^2\)</span></td>
+<td><span class="arithmatex">\(G^2{\approx}225\)</span> 로 증폭</td>
+</tr>
+<tr>
+<td><strong>EPS 모터 rotor</strong></td>
+<td><span class="arithmatex">\(\times G_{\text{motor}}^2\)</span></td>
+<td><strong>보통 지배적</strong></td>
 </tr>
 </tbody>
 </table>
-<h3 id="32-3">3.2 시각화 (3 시나리오)<a class="headerlink" href="#32-3" title="Permanent link">&para;</a></h3>
+<p>작은 모터 rotor(~<span class="arithmatex">\(10^{-4}\)</span>)도 기어비 수백의 제곱이면 수 kg·m² 급이 되어 등가관성을
+지배한다. default 0.02 kg·m² 는 이 합을 <span class="arithmatex">\(\theta\)</span> 기준으로 모은 작은 값.</p>
+<hr />
+<h2 id="176-lugre-dynamic-friction">17.6 LuGre dynamic friction<a class="headerlink" href="#176-lugre-dynamic-friction" title="Permanent link">&para;</a></h2>
+<p>bristle 변형 <span class="arithmatex">\(z\)</span> 의 internal state 로 presliding hysteresis + Stribeck + stick-slip
+을 표현한다.</p>
+<div class="arithmatex">\[
+g(\omega) = T_c + (T_s - T_c)\,e^{-(\omega/\omega_s)^2}
+$$
+$$
+T_f = \sigma_0\,z + \sigma_1\,\dot z + \sigma_2\,\omega
+\]</div>
+<p>stiff 한 <span class="arithmatex">\(\sigma_0\)</span> 항 때문에 explicit Euler 는 불안정 → <strong>semi-implicit</strong> bristle
+업데이트 (무조건 안정):</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>z_{k+1} = (z + h*w) / (1 + h*sigma0*|w|/g(w))
+</span></code></pre></div>
 <ul>
-<li>step_steer: max roll = <strong>2.23°</strong> (ay ≈ 2 m/s²) — 차종 일반 1-3°/g 의 범위.</li>
-<li>brake step (throttle/brake sequence): max |pitch| = <strong>0.68°</strong> (ax ≈ -3 m/s²).</li>
-<li>double_lane_change: roll range <strong>±4.07°</strong> — sport-style maneuver 으로 합리적.</li>
+<li><span class="arithmatex">\(\sigma_0\)</span> bristle stiffness, <span class="arithmatex">\(\sigma_1\)</span> bristle damping, <span class="arithmatex">\(\sigma_2\)</span> viscous,
+  <span class="arithmatex">\(T_c\)</span> Coulomb, <span class="arithmatex">\(T_s\)</span> static(breakaway), <span class="arithmatex">\(\omega_s\)</span> Stribeck velocity.</li>
+<li><span class="arithmatex">\(\dot z = (z_{k+1}-z)/h\)</span> 로 <span class="arithmatex">\(T_f\)</span> 계산. (참고: ch15 ref #2 Canudas-de-Wit LuGre,
+  #1 Beal&amp;Brennan 의 실차 steering friction ID.)</li>
 </ul>
-<h2 id="4">4. 검증 결과<a class="headerlink" href="#4" title="Permanent link">&para;</a></h2>
-<h3 id="41-test-suite">4.1 Test suite<a class="headerlink" href="#41-test-suite" title="Permanent link">&para;</a></h3>
-<p>93/93 통과 (이전 90 + 본 task 3 새 test).</p>
-<h3 id="42-step-steer-roll-transient">4.2 Step steer roll transient<a class="headerlink" href="#42-step-steer-roll-transient" title="Permanent link">&para;</a></h3>
-<p><img alt="Roll step steer" src="figures/roll_step_steer.png" /></p>
-<p>좌: time-trace, 우: roll vs ay scatter — quasi-static 식이므로 정확히 선형.</p>
-<h3 id="43-pitch-during-throttle-brake">4.3 Pitch during throttle → brake<a class="headerlink" href="#43-pitch-during-throttle-brake" title="Permanent link">&para;</a></h3>
-<p><img alt="Pitch during brake" src="figures/pitch_during_brake.png" /></p>
-<p>3 s coast → 4 s brake 전환 에서 pitch 부호 변화. 정확히 ax 와 일대일.</p>
-<h3 id="44-roll-pitch-during-dlc">4.4 Roll + pitch during DLC<a class="headerlink" href="#44-roll-pitch-during-dlc" title="Permanent link">&para;</a></h3>
-<p><img alt="Roll/pitch DLC" src="figures/roll_pitch_dlc.png" /></p>
-<p>ISO 3888 유사 lane change 에서 roll oscillation, 동시 pitch ~ 0 (가/감속 없음).</p>
-<h2 id="5">5. 판단<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
+<hr />
+<h2 id="177-brake-thermal-fade-mut">17.7 Brake thermal fade — mu(T)<a class="headerlink" href="#177-brake-thermal-fade-mut" title="Permanent link">&para;</a></h2>
+<p>연속·강한 제동에서 디스크 온도가 올라 마찰계수가 떨어지는 fade:</p>
+<div class="arithmatex">\[
+\dot T = c_{\text{heat}}\,|u_b|\,|v| - c_{\text{cool}}\,(T - T_{\text{amb}})
+$$
+$$
+\mu_{\text{scale}} = \mathrm{lerp}\big(T;\ \{T_k\}, \{\mu_k\}\big)
+\]</div>
 <ul>
-<li>결과: <strong>pass</strong></li>
-<li>근거:</li>
-<li>3/3 새 test 통과, 누적 93/93.</li>
-<li>부호 / 크기 정량 모두 textbook 일치 (linear region quasi-static 식).</li>
-<li>L1 default 0 반환으로 backward-compat 보장.</li>
-<li>CSV 에 ax/ay/roll/pitch 4 신호 추가 → 외부 분석 / animation 용 데이터 확보.</li>
-<li>미해결 / Follow-up:</li>
-<li><strong>L3 동적 roll/pitch</strong> — Task 24 에서 suspension 동역학과 비교.</li>
-<li><strong>anti-dive / anti-squat</strong> — L3 의 suspension geometry 옵션.</li>
-<li><strong>Camber from roll</strong> — roll 이 wheel camber 에 영향 (L3).</li>
-<li><strong>CarMaker ERG 의 Vehicle.Roll / Vehicle.Pitch</strong> 비교 — Phase 2.</li>
+<li>발열 ∝ brake 명령 × 속도, 냉각 ∝ 온도차. <span class="arithmatex">\(\mu_{\text{scale}}\)</span> 는 breakpoint
+  테이블 보간 (비면 1.0). disabled 면 fade 없음. (ch15 ref #11/#12 EMB clamp.)</li>
 </ul>
+<hr />
+<h2 id="178-sensor-delay-feedback-transport">17.8 Sensor delay — feedback transport<a class="headerlink" href="#178-sensor-delay-feedback-transport" title="Permanent link">&para;</a></h2>
+<p>제어기가 보는 상태는 측정·통신 지연만큼 과거다. State snapshot 을 ring buffer 에
+담아 <code>delay_s</code> 만큼 지연시켜 반환한다 (controller feedback path).</p>
+<div class="arithmatex">\[
+x_{\text{meas}}(t) = x_{\text{true}}(t - \tau_{\text{sensor}})
+\]</div>
+<p>UKF/MPC 의 feedback latency robustness 시험에 직결 (thesis 연계).</p>
+<hr />
+<h2 id="179-vdsim">17.9 VDSim 구현 노트<a class="headerlink" href="#179-vdsim" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p><strong>[VDSim impl] § 17.5 — steering servo (LuGre on)</strong></p>
+<p><code>core/src/actuator_model.cpp</code>:
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">Tservo</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">p_</span><span class="p">.</span><span class="n">steer</span><span class="p">.</span><span class="n">servo_kp</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="n">s_cmd</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">steer_pos_</span><span class="p">)</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">                    </span><span class="o">-</span><span class="w"> </span><span class="n">p_</span><span class="p">.</span><span class="n">steer</span><span class="p">.</span><span class="n">servo_kd</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">w</span><span class="p">;</span><span class="w">            </span><span class="c1">// w = steer_vel_</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">acc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">Tservo</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">Tf</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">max</span><span class="p">(</span><span class="mf">1e-6</span><span class="p">,</span><span class="w"> </span><span class="n">p_</span><span class="p">.</span><span class="n">steer</span><span class="p">.</span><span class="n">inertia</span><span class="p">);</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">steer_vel_</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">acc</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">h</span><span class="p">;</span><span class="w">  </span><span class="n">steer_pos_</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">steer_vel_</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">h</span><span class="p">;</span><span class="w">   </span><span class="c1">// double integrator</span>
+</span></code></pre></div>
+LuGre off 이면 <code>first_order(steer_lag_, s_cmd, tau_s, dt)</code> 경로.</p>
+<p><strong>[VDSim impl] § 17.4 — dead-zone (throttle 와 brake 공통)</strong></p>
+<p><code>ChannelActuator::dead_zone</code> 한 곳에 통합: <code>(u - dz)/(1 - dz)</code>. throttle 은
+<code>p_.throttle.dead_zone</code>, brake 는 <code>p_.brake.ch.dead_zone</code> (pad clearance).</p>
+<p><strong>[VDSim impl] § 17.6 — semi-implicit LuGre</strong></p>
+<p>explicit Euler 가 sigma0 로 발산해 bristle 만 implicit:
+<code>z=(z+h*w)/(1+h*sigma0*|w|/g)</code>. 나머지(servo 적분)는 명시적.</p>
+<p><strong>[VDSim impl] — GUI</strong></p>
+<p>Plant 창 "Actuator &amp; feedback" 에서 채널별 파라미터 편집 + <strong>step-response
+plot</strong> (명령 대 realized). LuGre 토글로 servo/lag 모드가 바뀌며 무관 파라미터는
+grey-out (tau ↔ servo kp/kd).</p>
+</blockquote>
+<hr />
+<h2 id="1710-self-check">17.10 Self-check<a class="headerlink" href="#1710-self-check" title="Permanent link">&para;</a></h2>
+<details>
+<summary>1. 서보가 PID 아니라 PD 인 이유?</summary>
+
+적분항은 정상오차 $T_f/k_p$ 를 0 으로 강제해 마찰의 정적 조향오차(stiction)를
+지운다. PD 로 두어야 on-center dead-band 같은 실제 EPS 거동이 남는다.
+</details>
+
+<details>
+<summary>2. 작은 EPS 모터 rotor 가 왜 등가 steering inertia 를 지배할 수 있나?</summary>
+
+$\theta$ 기준 환산이 속도비의 제곱이라, 모터가 road-wheel 보다 $G_{\text{motor}}$
+(수백) 배 빨리 돌면 $I_{\text{motor}}\,G_{\text{motor}}^2$ 로 증폭된다.
+</details>
+
+<details>
+<summary>3. dead-zone 을 steer 에 그대로 쓰면 안 되는 이유?</summary>
+
+dead-zone 식 $(u-d)/(1-d)$ 은 0..1 one-sided 신호용. 부호 있는 steer 의 방향
+반전 lost-motion 은 backlash 연산자가 필요 (별개 물리, 현재 미구현).
+</details>
+
+<details>
+<summary>4. LuGre 를 semi-implicit 으로 적분하는 이유?</summary>
+
+$\sigma_0$ 가 매우 커서 explicit Euler 의 안정영역을 벗어난다. bristle 항만
+implicit 으로 풀면 무조건 안정.
+</details>
+
+<hr />
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<p>상세 bibliography 와 실측 ID 문헌은 <code>docs/references/actuator_nonlinearity.md</code>.
+핵심: LuGre(#2), steering friction physics(#1), steering/driveline backlash
+(#4·#15·#16), EMB/EHB clamp+dead-zone(#9·#11·#12), FOPDT for MPC(#19·#22).</p>
 
 
 

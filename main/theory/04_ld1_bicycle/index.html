@@ -525,6 +525,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -942,6 +946,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#414-lk-kinematic-bicycle-the-precursor-rung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.14 Lk — Kinematic bicycle (the precursor rung)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1274,6 +1289,62 @@
     
   
     16 — FMI 2.0 integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../17_actuator_and_sensing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    17 — Actuator dynamics & sensing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../18_runtime_and_cosim/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18 — Runtime kernel & co-simulation
   
 
     
@@ -2283,6 +2354,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#414-lk-kinematic-bicycle-the-precursor-rung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.14 Lk — Kinematic bicycle (the precursor rung)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2313,6 +2395,8 @@
    유도하고, 그것이 simulator 검증의 baseline 이 되는 이유를 설명한다.</li>
 <li>longitudinal weight transfer 의 self-referential 구조와 1-step lag 처리의
    타당성을 판단한다.</li>
+<li>Ld1 아래 rung 인 <strong>Lk-Kinematic</strong>(타이어·slip 없는 기하 모델)의 식과 적용
+   범위를 구분한다 (§4.14).</li>
 </ol>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <ul>
@@ -2694,6 +2778,32 @@ ground truth.</p>
 </span></code></pre></div>
 <p>minimal controller-on-bicycle 루프 (Lc4-Pedal level). 상위 제어 cascade 는
 chapter 07-09.</p>
+</blockquote>
+<hr />
+<h2 id="414-lk-kinematic-bicycle-the-precursor-rung">4.14 Lk — Kinematic bicycle (the precursor rung)<a class="headerlink" href="#414-lk-kinematic-bicycle-the-precursor-rung" title="Permanent link">&para;</a></h2>
+<p>Ld1 아래의 가장 단순한 사다리 rung. <strong>타이어 힘도 slip 도 없다</strong> — 순수 기하·운동학
+으로만 차량을 움직인다. path-planning / kinematic-MPC / 가장 가벼운 시각화에 쓴다.</p>
+<div class="arithmatex">\[
+\dot v = a, \qquad \dot\psi = \frac{v\,\tan\delta}{L}, \qquad
+\dot x = v\cos\psi, \quad \dot y = v\sin\psi, \qquad v_y \equiv 0
+\]</div>
+<ul>
+<li><strong>longitudinal</strong>: 가속도 <span class="arithmatex">\(a\)</span> 는 pedal 에서 — 모터/브레이크 토크를 질량으로 환산한
+  cap 으로. <span class="arithmatex">\(a = \text{thr}\cdot A - \text{brk}\cdot B\)</span>, <span class="arithmatex">\(A = T_{\text{motor,max}}/(R\,m)\)</span>,
+  <span class="arithmatex">\(B = T_{\text{brake,max}}/(R\,m)\)</span>. forward gear 면 <span class="arithmatex">\(v\ge0\)</span> 로 clip(역주행 방지).</li>
+<li><strong>lateral/yaw</strong>: <span class="arithmatex">\(\dot\psi = v\tan\delta/L\)</span> — sideslip 없는 <strong>kinematic steering</strong>.
+  따라서 <span class="arithmatex">\(v_y=0\)</span>, <span class="arithmatex">\(a_y = v\dot\psi\)</span> (구심).</li>
+<li><strong>Fz</strong>: 동역학 없이 정적 배분 <span class="arithmatex">\(m g\,b/(2L)\)</span>(front), <span class="arithmatex">\(m g\,a/(2L)\)</span>(rear) 만 보고
+  (slip/transfer 없음).</li>
+</ul>
+<p>Ld1(동역학 bicycle)과의 차이: Lk 는 tire 모델·slip·weight transfer 가 전부 없어
+한계주행·제동 거동을 표현 못 한다. 대신 결정론적이고 빠르며, 경로 추종 기하의
+baseline 이다. ISO 8855 frame.</p>
+<blockquote>
+<p><strong>[VDSim impl] § 4.14 — Lk 코드</strong></p>
+<p><code>core/src/kinematic_dynamics.cpp</code> 의 <code>KinematicBicycle</code> (<code>Level::Lk_Kinematic</code>,
+<code>create_kinematic()</code>). substep Euler 적분, <code>tire_forces</code>/<code>slip</code> 은 빈 배열.
+make_sim_session 의 level <code>"K"</code>/<code>"L0"</code> 가 이 모델.</p>
 </blockquote>
 
 

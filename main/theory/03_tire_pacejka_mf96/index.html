@@ -525,6 +525,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1086,6 +1090,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#316-full-magic-formula-tir-measured-data-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.16 Full Magic Formula (.tir) — measured-data path
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1446,6 +1461,62 @@
     
   
     16 — FMI 2.0 integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../17_actuator_and_sensing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    17 — Actuator dynamics & sensing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../18_runtime_and_cosim/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18 — Runtime kernel & co-simulation
   
 
     
@@ -2627,6 +2698,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#316-full-magic-formula-tir-measured-data-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.16 Full Magic Formula (.tir) — measured-data path
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2733,7 +2815,8 @@ boundary saturation 이 함께 보인다.</p>
 F(s) = D \sin\!\Big( C \arctan\big( B s - E (B s - \arctan(B s)) \big) \Big)
 \]</div>
 <p>여기서 <code>s</code> 는 입력 — lateral 의 경우 slip angle <code>α</code>, longitudinal 의 경우 slip
-ratio <code>κ</code>. 네 계수의 역할:</p>
+ratio <code>κ</code>. (이 simplified BCDE 형 외에, 실측 <code>.tir</code> 계수셋을 쓰는 full MF2002
+평가기가 §3.16 에 있다.) 네 계수의 역할:</p>
 <table>
 <thead>
 <tr>
@@ -3213,6 +3296,34 @@ camber 가능. 상세: chapter 14 §14.8.</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">relaxation_length_lat</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.6</span>
 </span></code></pre></div>
 <p>시상수 = <code>σ / v</code> → <code>v = 15 m/s</code> 에서 <code>τ ≈ 40 ms</code>.</p>
+</blockquote>
+<hr />
+<h2 id="316-full-magic-formula-tir-measured-data-path">3.16 Full Magic Formula (<code>.tir</code>) — measured-data path<a class="headerlink" href="#316-full-magic-formula-tir-measured-data-path" title="Permanent link">&para;</a></h2>
+<p>본 chapter 의 식들은 <strong>simplified MF96</strong> 형(BCDE 4-계수 + friction-ellipse)이다.
+한계주행·실측 대응이 필요하면 VDSim 은 <strong>full Magic Formula (Pacejka 2002 /
+MF-Tyre 5.2 coefficient set)</strong> 평가기를 별도로 제공한다 — 표준 <code>.tir</code> property
+파일을 읽어 pure + combined slip <span class="arithmatex">\(F_x, F_y\)</span> 와 aligning <span class="arithmatex">\(M_z\)</span> 를 평가.</p>
+<p>generic 구조 (계수 <em>값</em>이 아니라 식 형태만 — 값은 §보안 주의):</p>
+<ul>
+<li><strong>pure slip</strong>: 각 방향이 같은 BCDE 형이되 계수가 <span class="arithmatex">\(F_z\)</span>·camber 의존 다항식
+  (<span class="arithmatex">\(p_{Dx1}, p_{Dx2}, p_{Ky1}, \dots\)</span>). <span class="arithmatex">\(D = \mu(F_z)\,F_z\)</span>, <span class="arithmatex">\(B = K/(C D)\)</span> 등.</li>
+<li><strong>combined slip</strong>: pure <span class="arithmatex">\(F_{x0}, F_{y0}\)</span> 에 가중함수 <span class="arithmatex">\(G_{x\alpha}, G_{y\kappa}\)</span> 와
+  <span class="arithmatex">\(S_{Vy\kappa}\)</span> 를 곱해 상호 영향을 표현 (friction-ellipse 의 일반화).</li>
+<li><strong>aligning <span class="arithmatex">\(M_z\)</span></strong>: pneumatic trail <span class="arithmatex">\(t(\alpha)\)</span> + residual <span class="arithmatex">\(M_{zr}\)</span> + 등가 slip,
+  <span class="arithmatex">\(M_z = -t\,F_y + M_{zr}\)</span>.</li>
+<li><strong>scaling coefficients</strong> (<span class="arithmatex">\(\lambda\)</span>): 계수셋을 일괄 보정.</li>
+<li>turn-slip·inflation·thermal block 은 범위 밖 (isothermal coefficient set).</li>
+</ul>
+<p>파서는 계수를 이름→값 map 으로 저장(대소문자 무시)해 어떤 optional 계수가 있든
+agnostic; 평가기는 이름으로 default 와 함께 pull 한다.</p>
+<blockquote>
+<p><strong>[VDSim impl] § 3.16 — full MF 코드 + 보안</strong></p>
+<p><code>core/include/vdsim/magic_formula.hpp</code>, <code>core/src/magic_formula_tire.cpp</code>:
+<code>parse_tir()</code> → <code>MFCoeffs</code>, <code>create_magic_formula_tire(coeffs)</code> /
+<code>create_magic_formula_tire_from_tir(path)</code>. Ld1/Ld2/Ld3 factory 에
+<code>create_*_from_tir(path)</code> 로 주입.</p>
+<p><strong>보안</strong>: <code>.tir</code> 의 계수 <em>값</em>은 대외비일 수 있다. <code>.tir</code> 파일과 계수 dump 는
+repo 밖(<code>.gitignore</code>)에 두고, 소스에는 평가 <strong>식만</strong> 존재한다.</p>
 <p>State 위치: tire model 이 아니라 host dynamics. <code>seven_dof_dynamics</code> 와
 <code>bicycle_dynamics</code> 의 멤버 <code>alpha_dyn_[4]</code>. tire <code>compute()</code> 는 stateless 유지.
 검증 <code>RelaxationLengthDelaysLateralForce</code>: <code>t = σ/v</code> 시점 Fy 가 instant
