@@ -35,8 +35,12 @@ class TANativeKinematics final : public ISuspensionKinematics {
 public:
     explicit TANativeKinematics(const std::string& yaml_path) {
         YAML::Node root = YAML::LoadFile(yaml_path);
-        if (root["type"].as<std::string>() != "trailing_arm")
-            throw std::runtime_error("TANative: expected type=trailing_arm");
+        const std::string type = root["type"] ? root["type"].as<std::string>() : "";
+        if (type != "trailing_arm")
+            throw std::runtime_error(
+                "TANative: expected a 3D hardpoint config with type=trailing_arm (got '"
+                + type + "'). Configs keyed 'topology:' are 2D-legacy (side-view "
+                "analyzer); use a 'type:'-schema config such as ta_rear_sedan.yaml.");
         side_ = root["side"] ? root["side"].as<std::string>() : "left";
         wheel_static_    = yaml_vec(root["wheel"]["center"]);
         wheel_spin_axis_ = yaml_vec(root["wheel"]["spin_axis"]);

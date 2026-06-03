@@ -67,8 +67,11 @@ public:
         const std::string type = root["type"]
             ? root["type"].as<std::string>() : "";
         if (type != "double_wishbone") {
-            throw std::runtime_error("DWNative: expected type=double_wishbone "
-                                     "(got '" + type + "')");
+            throw std::runtime_error(
+                "DWNative: expected a 3D hardpoint config with type=double_wishbone "
+                "(got '" + type + "'). Configs keyed 'topology:' are 2D-legacy "
+                "(side-view analyzer); use a 'type:'-schema config such as "
+                "dw_front_sports.yaml.");
         }
         side_ = root["side"] ? root["side"].as<std::string>() : "left";
 

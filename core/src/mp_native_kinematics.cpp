@@ -83,8 +83,12 @@ class MPNativeKinematics final : public ISuspensionKinematics {
 public:
     explicit MPNativeKinematics(const std::string& yaml_path) {
         YAML::Node root = YAML::LoadFile(yaml_path);
-        if (root["type"].as<std::string>() != "macpherson")
-            throw std::runtime_error("MPNative: expected type=macpherson");
+        const std::string type = root["type"] ? root["type"].as<std::string>() : "";
+        if (type != "macpherson")
+            throw std::runtime_error(
+                "MPNative: expected a 3D hardpoint config with type=macpherson (got '"
+                + type + "'). Configs keyed 'topology:' are 2D-legacy (side-view "
+                "analyzer); use a 'type:'-schema config such as mp_front_sedan.yaml.");
         side_ = root["side"] ? root["side"].as<std::string>() : "left";
         wheel_static_    = yaml_vec(root["wheel"]["center"]);
         wheel_spin_axis_ = yaml_vec(root["wheel"]["spin_axis"]);

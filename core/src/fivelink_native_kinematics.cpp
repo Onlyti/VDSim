@@ -81,8 +81,12 @@ class FiveLinkNativeKinematics final : public ISuspensionKinematics {
 public:
     explicit FiveLinkNativeKinematics(const std::string& yaml_path) {
         YAML::Node root = YAML::LoadFile(yaml_path);
-        if (root["type"].as<std::string>() != "five_link")
-            throw std::runtime_error("5LinkNative: expected type=five_link");
+        const std::string type = root["type"] ? root["type"].as<std::string>() : "";
+        if (type != "five_link")
+            throw std::runtime_error(
+                "5LinkNative: expected a 3D hardpoint config with type=five_link (got '"
+                + type + "'). Configs keyed 'topology:' are 2D-legacy (side-view "
+                "analyzer); use a 'type:'-schema config such as 5link_rear_sports.yaml.");
         side_ = root["side"] ? root["side"].as<std::string>() : "left";
         wheel_static_    = yaml_vec(root["wheel"]["center"]);
         wheel_spin_axis_ = yaml_vec(root["wheel"]["spin_axis"]);
