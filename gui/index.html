@@ -195,8 +195,29 @@ async function drawTerrain(){
   g.setAttribute('position', new THREE.BufferAttribute(pos,3));
   g.setIndex(idx); g.computeVertexNormals();
   terrainMesh=new THREE.Mesh(g, new THREE.MeshStandardMaterial(
-    {color:0x9fb0a4, roughness:.95, metalness:0, side:THREE.DoubleSide}));
+    {color:0x88965a, roughness:.97, metalness:0, side:THREE.DoubleSide}));  // dirt-earth
   scene.add(terrainMesh);
+}
+// Buildings / structures (CarMaker speedway_3d .obj), parsed server-side.
+let sceneryGroup=null;
+async function drawScenery(){
+  const s=await (await fetch('/api/scenery')).json();
+  if(sceneryGroup){ scene.remove(sceneryGroup);
+    sceneryGroup.traverse(o=>{ if(o.geometry) o.geometry.dispose(); }); sceneryGroup=null; }
+  if(!s.loaded) return;
+  sceneryGroup=new THREE.Group();
+  const V=s.verts;
+  for(const grp of s.groups){
+    const pos=new Float32Array(grp.idx.length*3);
+    for(let i=0;i<grp.idx.length;i++){ const v=V[grp.idx[i]]; const p=toThree(v[0],v[1],v[2]);
+      pos[i*3]=p.x; pos[i*3+1]=p.y; pos[i*3+2]=p.z; }
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos,3)); geo.computeVertexNormals();
+    const mat=new THREE.MeshStandardMaterial({color:grp.color, roughness:.85, metalness:.05, side:THREE.DoubleSide});
+    if(grp.color===0x88aacc){ mat.transparent=true; mat.opacity=.45; }   // glass
+    sceneryGroup.add(new THREE.Mesh(geo, mat));
+  }
+  scene.add(sceneryGroup);
 }
 function sampleTerrain(wx,wy){
   const t=terrainGrid; if(!t) return 0;
@@ -207,6 +228,7 @@ function sampleTerrain(wx,wy){
   return (z[iy][ix]*(1-ax)+z[iy][ix+1]*ax)*(1-ay)+(z[iy+1][ix]*(1-ax)+z[iy+1][ix+1]*ax)*ay;
 }
 drawTerrain();
+drawScenery();
 
 // ---- car (rebuilt per dynamics level) ----
 // car (group): heading (yaw) + position. sprung (child): body+cabin, gets
@@ -379,7 +401,7 @@ function applyState(s){
   tgt.pos.copy(toThree(s.x,s.y,0)); tgt.yaw=s.yaw;
   if(s.grade!=null && (s.grade!==roadGrade || s.bank!==roadBank)){ roadGrade=s.grade; roadBank=s.bank||0; updateRoadTilt(); }
   if(s.npath!=null && s.npath!==lastNpath){ lastNpath=s.npath; drawPath(); }
-  if(s.terrain!=null && s.terrain!==lastTerrain){ lastTerrain=s.terrain; drawTerrain(); }
+  if(s.terrain!=null && s.terrain!==lastTerrain){ lastTerrain=s.terrain; drawTerrain(); drawScenery(); }
   // Body lean only for L3 (true roll/pitch DOF). L1/L2/K are planar — their
   // roll/pitch are quasi-static estimates, so the rendered body stays flat.
   // (Future: when a road surface is imported, add the road's roll/pitch here.)
@@ -839,6 +861,8 @@ async function buildSim(){
     <div class="grp">CarMaker route (.rd5 Route_0)</div>
     <div class="fld"><input id="sim_rd5" type="text" value="/home/ailab-12/git/carmaker-ros-bridge/Data/Road/2023_Speedway_Road_v1_2.rd5" style="flex:1;font-size:10px"></div>
     <div class="fld"><label><input id="sim_rd5terr" type="checkbox" checked> drive on terrain mesh below</label></div>
+    <div class="fld"><label><input id="sim_rd5bld" type="checkbox" checked> show buildings</label></div>
+    <div class="fld"><input id="sim_bld" type="text" value="/home/ailab-12/git/carmaker-ros-bridge/Movie/3D/SPEEDWAY/speedway_3d_r31_am.obj" style="flex:1;font-size:10px"></div>
     <div class="row"><button id="sim_loadrd5">Load &amp; drive</button></div>
     <div class="sub" id="sim_rd5txt" style="margin:3px 0"></div>
     <div class="grp">Terrain mesh (.obj heightmap)</div>
@@ -893,9 +917,10 @@ async function buildSim(){
     trailPts=[]; trail.visible=false; tgt.has=false; };
   $('sim_loadrd5').onclick=async()=>{ $('sim_rd5txt').textContent='parsing .rd5…';
     const obj = $('sim_rd5terr').checked ? $('sim_obj').value : '';
-    const r=await (await fetch('/api/map/rd5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rd5:$('sim_rd5').value,obj:obj,cell:+$('sim_objcell').value})})).json();
-    $('sim_rd5txt').textContent = r.ok ? (`Route_0 ${r.pts} pts, ${r.length} m`+(r.terrain?` on terrain z[${r.terrain.z[0]},${r.terrain.z[1]}]`:'')+' — driving') : ('failed: '+(r.msg||''));
-    trailPts=[]; trail.visible=false; tgt.has=false; drawTerrain(); };
+    const bld = $('sim_rd5bld').checked ? $('sim_bld').value : '';
+    const r=await (await fetch('/api/map/rd5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rd5:$('sim_rd5').value,obj:obj,cell:+$('sim_objcell').value,buildings:bld})})).json();
+    $('sim_rd5txt').textContent = r.ok ? (`Route_0 ${r.pts} pts, ${r.length} m`+(r.terrain?` +terrain z[${r.terrain.z[0]},${r.terrain.z[1]}]`:'')+(r.buildings?` +${r.buildings} bld groups`:'')+' — driving') : ('failed: '+(r.msg||''));
+    trailPts=[]; trail.visible=false; tgt.has=false; drawTerrain(); drawScenery(); };
   $('sim_loadobj').onclick=async()=>{ $('sim_objtxt').textContent='baking heightmap…';
     const r=await (await fetch('/api/terrain/load',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({obj:$('sim_obj').value,cell:+$('sim_objcell').value})})).json();
     $('sim_objtxt').textContent = r.ok ? `${r.nx}×${r.ny} grid, z [${r.z[0]},${r.z[1]}] m — driving` : ('failed: '+(r.msg||''));
