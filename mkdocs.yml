@@ -92,6 +92,15 @@ extra:
     provider: mike
     default: latest
 
+# Task logs and the refactor handoff are intentionally not in the nav.
+not_in_nav: |
+  /tasks/**
+  /theory/_REFACTOR_HANDOFF.md
+  /REPORT_TEMPLATE.md
+  /README.md
+  /SUMMARY.md
+  /figures_src/**
+
 nav:
   - Home:
       - index.md
@@ -117,6 +126,9 @@ nav:
       - "18 — Runtime kernel & co-simulation": theory/18_runtime_and_cosim.md
   - References:
       - "Actuator/sensor nonlinearity & delay": references/actuator_nonlinearity.md
+      - "GUI architecture": gui_architecture.md
+      - "Co-sim bridge interface": vdsim_bridge_interface_requirements.md
+      - "Map import strategy": map_import_strategy.md
   - "Phase 2 — Multibody & Integration":
       - "T22 — CARLA Python bridge": tasks/T22_carla_bridge/REPORT.md
       - "T23 — Jump 14-DOF (world-z)": tasks/T23_jump_14dof/REPORT.md

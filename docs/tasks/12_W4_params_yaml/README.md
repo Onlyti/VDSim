@@ -37,7 +37,7 @@
 | 구조 | 평면(flat), 키 == struct 멤버 이름 1:1 | nested grouping (`mass: {total, sprung}`) 보다 grep / git diff 단순. CARLA plugin / Python 에서 같은 schema 그대로 emit 가능. |
 | 누락 키 | 그 멤버는 default 유지 | 향후 멤버 추가 시 구버전 YAML 그대로 동작 (forward-compat). |
 | 미지정 추가 키 | 무시 + warn 없음 | 후방 호환. 단 형식 오류는 명확히 throw. |
-| Per-wheel 배열 | length-4 sequence, 순서 [FL, FR, RL, RR] | 전역 convention 일치 ([CLAUDE.md](../../../CLAUDE.md), Task 02). |
+| Per-wheel 배열 | length-4 sequence, 순서 [FL, FR, RL, RR] | 전역 convention 일치 (CLAUDE.md, Task 02). |
 | `inertia_diag` | length-3 sequence [Ixx, Iyy, Izz] | sprung body diagonal 가정, off-diagonal 은 PoC 범위 밖. |
 | `drive_type` | 문자열 "FWD" / "RWD" / "AWD" | YAML 자체 enum 부재, 정수 매핑은 디버깅 어려움. unknown 시 throw. |
 | 형식 오류 시 동작 | `std::runtime_error` throw | silent 무시는 stochastic MPC 같은 후속 분석에서 미묘한 버그 유발. |

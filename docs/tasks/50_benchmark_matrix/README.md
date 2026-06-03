@@ -63,7 +63,7 @@ f_hop = sqrt(k_tire / m_u) / (2pi) = sqrt(220000 / 40) / 6.28 = 11.8 Hz
 
 실차 (BMW 5 series 등) 의 일반적 ζ ~ 0.3-0.5 (sprung body), unsprung 0.1-0.3. 본 PoC 의 댐퍼 coefficient 가 wheel hop 영역에서 너무 큼. **차종 default 의 damper_coefficient 가 sprung damper 기준**임을 명시 — unsprung damper 는 별도 분리가 W12 의 follow-up.
 
-![L3 ride FFT](figures/ride_fft.png)
+![L3 ride FFT](../51_l3_ride_freq/figures/ride_fft.png)
 
 좌: time-domain susp deviation. 우: frequency spectrum + 이론 wheel-hop dotted line.
 
