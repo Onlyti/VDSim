@@ -142,6 +142,7 @@ public:
 
         inner_->step(u, contacts, dt);
         state_ = inner_->state();
+        for (int i = 0; i < NUM_WHEELS; ++i) road_dz_[i] = contacts[i].road_dz;
         if (dt > 0.0) integrate_vertical(dt);
         write_pose_and_suspension();
     }
@@ -245,7 +246,7 @@ private:
         for (int i = 0; i < NUM_WHEELS; ++i) {
             const double m_u = std::max(1.0, vp_.unsprung_mass[i]);
             d.dz_u[i]     = zu_dot[i];
-            d.dz_u_dot[i] = (- F_susp[i] - k_tire * zu[i]) / m_u;
+            d.dz_u_dot[i] = (- F_susp[i] - k_tire * (zu[i] - road_dz_[i])) / m_u;
         }
         return d;
     }
@@ -345,6 +346,7 @@ private:
     double th_  {0.0}, th_dot_  {0.0};
     std::array<double, NUM_WHEELS> z_u_     {{0.0, 0.0, 0.0, 0.0}};
     std::array<double, NUM_WHEELS> z_u_dot_ {{0.0, 0.0, 0.0, 0.0}};
+    std::array<double, NUM_WHEELS> road_dz_ {{0.0, 0.0, 0.0, 0.0}};  // road roughness input
 
     // Optional hardpoint kinematics (Ld4 Stage D).  When attached, replaces
     // the lumped vp_.camber_per_roll · phi heuristic for the corresponding axle.

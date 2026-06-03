@@ -403,7 +403,8 @@ class Runner:
                     "driver": True, "running": True,
                     "init_x": 0.0, "init_y": 0.0, "init_yaw": 0.0, "init_v": 10.0,
                     "road_mu": 1.0, "road_mu_right": -1.0, "road_boundary": 0.0,
-                    "road_grade": 0.0, "road_bank": 0.0}
+                    "road_grade": 0.0, "road_bank": 0.0,
+                    "road_rough_amp": 0.0, "road_rough_wl": 4.0}
         self.dt = 0.005
         self.time_scale = 1.0
         self.live_vid = 0                  # vehicle id backed by the (single) sim
@@ -433,7 +434,8 @@ class Runner:
             solver=self.solver, sensors=self.sensors,
             mu=self.cfg["road_mu"], mu_right=self.cfg["road_mu_right"],
             mu_boundary_y=self.cfg["road_boundary"],
-            grade=self.cfg["road_grade"], bank=self.cfg["road_bank"])
+            grade=self.cfg["road_grade"], bank=self.cfg["road_bank"],
+            rough_amp=self.cfg["road_rough_amp"], rough_wavelength=self.cfg["road_rough_wl"])
         s0 = vdsim.make_init_state(
             x=self.cfg["init_x"], y=self.cfg["init_y"], yaw=self.cfg["init_yaw"],
             v=max(0.0, self.cfg["init_v"]), wheel_radius=self.vp.wheel_radius_nominal)
@@ -469,7 +471,7 @@ class Runner:
                 rebuild = True
             for k in ("init_x", "init_y", "init_yaw", "init_v",
                       "road_mu", "road_mu_right", "road_boundary",
-                      "road_grade", "road_bank"):
+                      "road_grade", "road_bank", "road_rough_amp", "road_rough_wl"):
                 if init.get(k) is not None:
                     self.cfg[k] = float(init[k])
                     rebuild = True
@@ -939,7 +941,9 @@ class Handler(BaseHTTPRequestHandler):
                            road_mu_right=body.get("road_mu_right"),
                            road_boundary=body.get("road_boundary"),
                            road_grade=body.get("road_grade"),
-                           road_bank=body.get("road_bank"))
+                           road_bank=body.get("road_bank"),
+                           road_rough_amp=body.get("road_rough_amp"),
+                           road_rough_wl=body.get("road_rough_wl"))
             self._json({"ok": True, "config": RUNNER.config()})
         elif self.path == "/api/vehicle":
             RUNNER.set_params("vehicle", body)

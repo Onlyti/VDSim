@@ -15,6 +15,8 @@ struct ContactPoint {
     double mu_long     {1.0};            // Pacejka mu_x scaling [-]
     double mu_lat      {1.0};            // Pacejka mu_y scaling [-]
     double penetration {0.0};            // [m] from suspension nominal (+: compressed)
+    double road_dz     {0.0};            // [m] road height deviation for ride
+                                         //     (roughness; 0 on smooth surfaces)
 };
 
 using ContactArray = std::array<ContactPoint, NUM_WHEELS>;

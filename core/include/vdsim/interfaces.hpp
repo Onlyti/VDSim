@@ -128,6 +128,10 @@ std::unique_ptr<IContactProvider> create_split_mu_ground(
 std::unique_ptr<IContactProvider> create_inclined_ground(
     double z0, double grade, double bank, double mu = 1.0);
 
+// Rough flat plane: two-tone road profile -> road_dz (L3 ride excitation).
+std::unique_ptr<IContactProvider> create_rough_ground(
+    double z, double mu, double amp, double wavelength = 4.0);
+
 // =============================================================================
 // IRoughnessProvider — terrain roughness (Phase 2; reserved)
 // =============================================================================
