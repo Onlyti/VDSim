@@ -110,6 +110,26 @@ front 가 더 stiff (또는 front ARB↑) → front share↑ → front outer 가
 → understeer 경향. $h_{rc}=0$ 이면 geometric=0, $h_{ra}=0$ 으로 elastic-only
 ($M_{\text{roll}}=m_s a_y h_{cg}$) 이 되어 단순 모델로 환원된다.
 
+### roll-DOF 없는 L2 가 roll stiffness 를 쓰는 근거 (중요)
+
+elastic 분배 $s_f = K_{\phi,f}/(K_{\phi,f}+K_{\phi,r})$ 는 **sprung mass 의 roll 이
+front/rear roll spring 에 분배되는** roll 매개 효과다. L2 는 roll 자유도를 적분하지
+않는데 이걸 쓰는 것이 모순처럼 보이지만, 다음으로 정당화된다:
+
+- **total transfer (front+rear 합)** 은 순수 statics — roll 무관.
+- **front/rear 분배** 는 정상상태에서 실제로 roll-stiffness 비율로 결정된다
+  (**TLLTD**, total lateral load transfer distribution — 측정 가능한 실물리량).
+  따라서 **정상상태에서는 근사가 아니라 정확**하다.
+- L2 는 "roll 이 무한히 빠르게 정상상태로 settle 한다"는 **quasi-static roll
+  가정**(§5.2) 하에 그 정상상태 결과만 대수적으로 가져온다. roll 이 없다고 보는 게
+  아니라 transient 를 무시(즉시 settle)하는 것.
+- **transient 한계**: turn-in 같은 빠른 과도에서 실제 elastic transfer 는 roll
+  시상수만큼 지연되며 쌓이는데 L2 는 lag 없이 즉시 full split 을 건다 → 과도
+  구간에서 약간 aggressive. 이 lag 는 roll 을 상태로 갖는 chapter 06 (Ld3) 가 메운다.
+- "순수 2D" 를 원하면 분배를 정적하중 $b/L, a/L$ 로 바꿀 수 있으나, ARB·spring 의
+  front/rear balance 튜닝(understeer 의 #1 손잡이)이 L2 에서 무력화된다. 본 시리즈는
+  balance tunability 를 위해 roll-stiffness 분배(TLLTD)를 채택한다.
+
 부호 직관: $a_y > 0$ (좌선회, centripetal $+y$) → 차체가 $-y$ 쪽으로 기울고
 → right side (FR, RR) loaded → $F_{z,FR} > F_{z,FL}$.
 
