@@ -26,6 +26,9 @@ struct ChannelActuator {
     double dead_time_s {0.0};      // pure transport delay L [s] (0 = none)
     double tau_s       {0.0};      // first-order lag time constant [s] (0 = none)
     double rate_limit  {0.0};      // max |d(output)/dt| per s (<=0 = disabled)
+    double dead_zone   {0.0};      // input dead-band [-]; cmd below it -> 0, then
+                                   // rescaled (throttle pedal tip-in / brake pad
+                                   // clearance). Applies to one-sided 0..1 channels.
     double out_min     {-1e12};    // saturation
     double out_max     { 1e12};
 };
@@ -50,10 +53,9 @@ struct SteerActuator {
     double servo_kd {6.0};         // servo damping (torque per rad/s)
 };
 
-// Brake actuator: dead-time + lag + rate + sat, plus dead-zone and mu(T) fade.
+// Brake actuator: channel (incl. dead-zone for pad clearance) + mu(T) fade.
 struct BrakeActuator {
-    ChannelActuator ch;
-    double dead_zone {0.0};        // command threshold (pad clearance fill) [-]
+    ChannelActuator ch;            // ch.dead_zone models pad clearance fill
     // Temperature-dependent friction (brake fade). Disabled -> mu scale = 1.
     bool   thermal_enabled {false};
     double heat_coeff {0.0};       // dT += heat_coeff * brake_cmd * |speed| * dt

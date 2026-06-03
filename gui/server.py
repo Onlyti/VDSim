@@ -124,9 +124,10 @@ ACTUATOR_FIELDS = [
     ("throttle.dead_time_s", "Throttle dead time [s]", "Throttle", "num"),
     ("throttle.tau_s", "Throttle lag τ [s]", "Throttle", "num"),
     ("throttle.rate_limit", "Throttle rate limit [1/s] (0=off)", "Throttle", "num"),
+    ("throttle.dead_zone", "Throttle dead-zone [-] (pedal tip-in)", "Throttle", "num"),
     ("brake.ch.dead_time_s", "Brake dead time [s]", "Brake", "num"),
     ("brake.ch.tau_s", "Brake lag τ [s]", "Brake", "num"),
-    ("brake.dead_zone", "Brake dead-zone [-]", "Brake", "num"),
+    ("brake.ch.dead_zone", "Brake dead-zone [-] (pad clearance)", "Brake", "num"),
     ("brake.thermal_enabled", "Brake thermal fade", "Brake", "bool"),
     ("@sensor_delay_s", "Sensor feedback delay [s]", "Feedback", "num"),
 ]

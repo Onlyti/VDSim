@@ -134,7 +134,13 @@ CmdL4 ActuatorModel::apply(const CmdL4& desired, double speed_mps, double dt) {
 
     // ---------------- Throttle ----------------
     {
-        double t_cmd = push_delay(throttle_buf_, desired.throttle,
+        double t_in = desired.throttle;
+        // Dead-zone (pedal tip-in / motor torque threshold): below it -> no effect.
+        const double tdz = p_.throttle.dead_zone;
+        if (tdz > 0.0) {
+            t_in = (t_in > tdz) ? (t_in - tdz) / std::max(1e-6, 1.0 - tdz) : 0.0;
+        }
+        double t_cmd = push_delay(throttle_buf_, t_in,
                                   p_.throttle.dead_time_s, dt);
         double y = first_order(throttle_lag_, t_cmd, p_.throttle.tau_s, dt);
         throttle_lag_ = y;
@@ -149,7 +155,7 @@ CmdL4 ActuatorModel::apply(const CmdL4& desired, double speed_mps, double dt) {
     {
         double b_in = desired.brake;
         // Dead-zone (pad clearance fill): below threshold -> no effect.
-        const double dz = p_.brake.dead_zone;
+        const double dz = p_.brake.ch.dead_zone;
         if (dz > 0.0) {
             b_in = (b_in > dz) ? (b_in - dz) / std::max(1e-6, 1.0 - dz) : 0.0;
         }

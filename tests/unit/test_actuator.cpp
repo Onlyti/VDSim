@@ -69,7 +69,7 @@ TEST(Actuator, SaturationClamps) {
 // Brake dead-zone: small command below threshold yields zero brake.
 TEST(Actuator, BrakeDeadZone) {
     ActuatorParams p;
-    p.brake.dead_zone = 0.1;
+    p.brake.ch.dead_zone = 0.1;
     ActuatorModel a; a.initialize(p, 0.005);
     double y_small = 0, y_big = 0;
     for (int k = 0; k < 50; ++k) y_small = a.apply(cmd(0, 0.05, 0), 0.0, 0.005).brake;

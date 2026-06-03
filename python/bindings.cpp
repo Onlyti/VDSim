@@ -295,6 +295,7 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("dead_time_s", &vdsim::ChannelActuator::dead_time_s)
         .def_readwrite("tau_s",       &vdsim::ChannelActuator::tau_s)
         .def_readwrite("rate_limit",  &vdsim::ChannelActuator::rate_limit)
+        .def_readwrite("dead_zone",   &vdsim::ChannelActuator::dead_zone)
         .def_readwrite("out_min",     &vdsim::ChannelActuator::out_min)
         .def_readwrite("out_max",     &vdsim::ChannelActuator::out_max);
     py::class_<vdsim::LuGreParams>(m, "LuGreParams")
@@ -316,7 +317,6 @@ PYBIND11_MODULE(vdsim, m) {
     py::class_<vdsim::BrakeActuator>(m, "BrakeActuator")
         .def(py::init<>())
         .def_readwrite("ch",              &vdsim::BrakeActuator::ch)
-        .def_readwrite("dead_zone",       &vdsim::BrakeActuator::dead_zone)
         .def_readwrite("thermal_enabled", &vdsim::BrakeActuator::thermal_enabled)
         .def_readwrite("heat_coeff",      &vdsim::BrakeActuator::heat_coeff)
         .def_readwrite("cool_coeff",      &vdsim::BrakeActuator::cool_coeff)
