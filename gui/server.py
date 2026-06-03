@@ -129,7 +129,6 @@ ACTUATOR_FIELDS = [
     ("brake.dead_zone", "Brake dead-zone [-]", "Brake", "num"),
     ("brake.thermal_enabled", "Brake thermal fade", "Brake", "bool"),
     ("@sensor_delay_s", "Sensor feedback delay [s]", "Feedback", "num"),
-    ("@max_substeps", "Solver max substeps", "Solver", "num"),
 ]
 
 
@@ -410,12 +409,21 @@ class Runner:
                     self.cfg[k] = kw[k]
             self._build()
 
-    def set_sim(self, dt=None, time_scale=None):
+    def set_sim(self, dt=None, time_scale=None, integrator=None, max_substeps=None):
         with self.lock:
             if dt is not None and dt > 1e-5:
                 self.dt = float(dt)
             if time_scale is not None and time_scale > 0:
                 self.time_scale = float(time_scale)
+            rebuild = False
+            if integrator in ENUM_MAPS["integrator"]:
+                self.solver.integrator = ENUM_MAPS["integrator"][integrator]
+                rebuild = True
+            if max_substeps is not None:
+                self.solver.max_substeps = max(1, int(float(max_substeps)))
+                rebuild = True
+            if rebuild:
+                self._build()
 
     def set_params(self, which, data):
         with self.lock:
@@ -432,8 +440,6 @@ class Runner:
         for attr, label, group, kind in ACTUATOR_FIELDS:
             if attr == "@sensor_delay_s":
                 val = float(self.sensor_delay)
-            elif attr == "@max_substeps":
-                val = float(self.solver.max_substeps)
             elif kind == "bool":
                 val = bool(_get_dotted(self.act, attr))
             else:
@@ -500,8 +506,6 @@ class Runner:
                 continue
             if k == "@sensor_delay_s":
                 self.sensor_delay = max(0.0, float(v))
-            elif k == "@max_substeps":
-                self.solver.max_substeps = max(1, int(float(v)))
             elif kind == "bool":
                 _set_dotted(self.act, k, bool(v))
             else:
@@ -704,6 +708,8 @@ class Runner:
             c = dict(self.cfg)
             c["dt"] = self.dt
             c["time_scale"] = self.time_scale
+            c["integrator"] = self.solver.integrator.name
+            c["max_substeps"] = self.solver.max_substeps
             return c
 
 
@@ -772,7 +778,9 @@ class Handler(BaseHTTPRequestHandler):
             RUNNER.reconfigure(**body)
             self._json({"ok": True, "config": RUNNER.config()})
         elif self.path == "/api/sim":
-            RUNNER.set_sim(dt=body.get("dt"), time_scale=body.get("time_scale"))
+            RUNNER.set_sim(dt=body.get("dt"), time_scale=body.get("time_scale"),
+                           integrator=body.get("integrator"),
+                           max_substeps=body.get("max_substeps"))
             self._json({"ok": True, "config": RUNNER.config()})
         elif self.path == "/api/vehicle":
             RUNNER.set_params("vehicle", body)

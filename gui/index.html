@@ -115,15 +115,13 @@
 </div>
 
 <div class="toolbar panel">
-  <button id="tb_veh">Vehicle</button>
+  <button id="tb_plant">Plant</button>
   <button id="tb_sim">Simulation</button>
-  <button id="tb_act">Actuator</button>
   <button id="tb_io">Data port</button>
 </div>
 
-<div id="win_veh" class="win"><div class="win-h"><b>Vehicle</b><span class="x">✕</span></div><div class="win-b" id="veh_body"></div></div>
+<div id="win_plant" class="win"><div class="win-h"><b>Plant (vehicle · tire · actuator)</b><span class="x">✕</span></div><div class="win-b" id="plant_body"></div></div>
 <div id="win_sim" class="win"><div class="win-h"><b>Simulation</b><span class="x">✕</span></div><div class="win-b" id="sim_body"></div></div>
-<div id="win_act" class="win"><div class="win-h"><b>Actuator &amp; feedback</b><span class="x">✕</span></div><div class="win-b" id="act_body"></div></div>
 <div id="win_io" class="win"><div class="win-h"><b>Data port (external I/O)</b><span class="x">✕</span></div><div class="win-b" id="io_body"></div></div>
 
 <div id="manbar" class="panel" style="display:none">
@@ -404,7 +402,7 @@ function makeDraggable(win){
   ['mouseup','touchend','touchcancel'].forEach(ev=>addEventListener(ev,()=>dragging=false));
   win.querySelector('.x').onclick=()=>win.classList.remove('open');
 }
-['win_veh','win_sim','win_act','win_io'].forEach(id=>makeDraggable($(id)));
+['win_plant','win_sim','win_io'].forEach(id=>makeDraggable($(id)));
 
 // ---- 2-level Vehicle window (category -> fields), tire folded in ----
 // ARB: two linked inputs — roll stiffness [N·m/rad] (canonical, sent to backend)
@@ -503,20 +501,23 @@ function selectRow(label, opts, cur, onChange, labelMap){
   sel.innerHTML=opts.map(v=>`<option value="${v}" ${v===cur?'selected':''}>${labelMap?(labelMap[v]||v):v}</option>`).join('');
   sel.onchange=e=>onChange(e.target.value); row.appendChild(sel); return row;
 }
-async function buildVehicle(){
+// ---- Plant window: vehicle params + tire + actuator/feedback (one place) ----
+async function buildPlant(){
   const cf=await(await fetch('/api/config')).json(); const cfg=cf.config, lvl=cfg.level;
   const veh =(await(await fetch('/api/vehicle')).json()).fields;
   const tire=(await(await fetch('/api/tire')).json()).fields;
-  const el=$('veh_body'); el.innerHTML='';
-  const ps=section('Preset & model', true);
+  const act =(await(await fetch('/api/actuator')).json()).fields;
+  const el=$('plant_body'); el.innerHTML='';
+  const ps=section('Preset', true);
   ps.body.appendChild(selectRow('Vehicle type', cf.vehicles, cfg.vehicle,
-    v=>post('/api/config',{vehicle:v}).then(buildVehicle)));
-  ps.body.appendChild(selectRow('Dynamics model', cf.levels, cfg.level,
-    v=>post('/api/config',{level:v}).then(buildVehicle), LEVEL_LABEL));
+    v=>post('/api/config',{vehicle:v}).then(buildPlant)));
+  const note=document.createElement('div'); note.className='sub'; note.textContent='Dynamics level → Simulation window.';
+  ps.body.appendChild(note);
   el.appendChild(ps.sec);
-  const RENAME={Mass:'Inertia & mass'};
+  // vehicle parameter groups
   const vg={}; veh.forEach(f=>{(vg[f.group]=vg[f.group]||[]).push(f);});
-  for(const g in vg){ const s=section(RENAME[g]||g,false); vg[g].forEach(f=>s.body.appendChild(fieldRow(f,lvl))); el.appendChild(s.sec); }
+  for(const g in vg){ const s=section(g,false); vg[g].forEach(f=>s.body.appendChild(fieldRow(f,lvl))); el.appendChild(s.sec); }
+  // tire (Magic Formula plots)
   const ts=section('Tire', false);
   const tcurves=document.createElement('div'); ts.body.appendChild(tcurves);
   const tireRefresh=async()=>renderPlots(tcurves,(await(await fetch('/api/tire/curves')).json()).plots);
@@ -525,27 +526,23 @@ async function buildVehicle(){
     tg[g].forEach(f=>ts.body.appendChild(fieldRow(f,lvl))); }
   ts.sec.addEventListener('toggle',()=>{ if(ts.sec.open) tireRefresh(); },{once:true});
   el.appendChild(ts.sec);
-  const vnames=new Set(veh.map(f=>f.name)), tnames=new Set(tire.map(f=>f.name));
+  // actuator + feedback (step-response plots)
+  const as=section('Actuator & feedback', false);
+  const stepBox=document.createElement('div'); as.body.appendChild(stepBox);
+  const stepRefresh=async()=>renderPlots(stepBox,(await(await fetch('/api/actuator/step')).json()).plots);
+  const ag={}; act.forEach(f=>{(ag[f.group]=ag[f.group]||[]).push(f);});
+  for(const g in ag){ const l=document.createElement('div'); l.className='subgrp'; l.textContent=g; as.body.appendChild(l);
+    ag[g].forEach(f=>as.body.appendChild(fieldRow(f,'L2'))); }
+  as.sec.addEventListener('toggle',()=>{ if(as.sec.open) stepRefresh(); },{once:true});
+  el.appendChild(as.sec);
+  // apply (vehicle + tire + actuator)
+  const vnames=new Set(veh.map(f=>f.name)), tnames=new Set(tire.map(f=>f.name)), anames=new Set(act.map(f=>f.name));
   const btn=document.createElement('button'); btn.className='apply'; btn.textContent='Apply (rebuild sim)';
   btn.onclick=async()=>{ await post('/api/vehicle', collectFields(el,vnames));
-    await post('/api/tire', collectFields(el,tnames)); if(ts.sec.open) tireRefresh(); };
+    await post('/api/tire', collectFields(el,tnames));
+    await post('/api/actuator', collectFields(el,anames));
+    if(ts.sec.open) tireRefresh(); if(as.sec.open) stepRefresh(); };
   el.appendChild(btn);
-}
-
-// ---- Actuator & feedback window ----
-async function buildActuator(){
-  const fields=(await(await fetch('/api/actuator')).json()).fields;
-  const el=$('act_body'); el.innerHTML='';
-  const plotBox=document.createElement('div'); el.appendChild(plotBox);
-  const stepRefresh=async()=>renderPlots(plotBox,(await(await fetch('/api/actuator/step')).json()).plots);
-  const g={}; fields.forEach(f=>{(g[f.group]=g[f.group]||[]).push(f);});
-  let first=true;
-  for(const grp in g){ const s=section(grp,first); first=false;
-    g[grp].forEach(f=>s.body.appendChild(fieldRow(f,'L2'))); el.appendChild(s.sec); }
-  const btn=document.createElement('button'); btn.className='apply'; btn.textContent='Apply (rebuild sim)';
-  btn.onclick=async()=>{ await post('/api/actuator', collectFields(el,null)); stepRefresh(); };
-  el.appendChild(btn);
-  stepRefresh();
 }
 
 // ---- Data port: external command-in / state-out over HTTP (free-run) ----
@@ -665,15 +662,25 @@ async function buildSim(){
   const cf=await(await fetch('/api/config')).json(); const c=cf.config;
   manualMode=!c.driver; toggleManualBar(manualMode);
   const el=$('sim_body');
-  el.innerHTML=`<div class="grp">Mode</div>
+  el.innerHTML=`<div class="grp">Dynamics model</div>
+    <div class="fld"><label>level</label><select id="sim_lvl" style="width:130px"></select></div>
+    <div class="grp">Mode</div>
     <div class="row"><button id="sim_drv">Autopilot</button><button id="sim_man">Manual</button></div>
     <div class="grp">Target speed <span id="sim_vtv" class="sub"></span></div>
     <input id="sim_vt" type="range" min="0" max="40" step="0.5" style="width:100%">
-    <div class="grp">Time step</div>
+    <div class="grp">Numerics</div>
+    <div class="fld"><label>integrator</label><select id="sim_int" style="width:130px"><option>RK4</option><option>Euler</option></select></div>
+    <div class="fld"><label>max substeps</label><input id="sim_sub" type="number" step="1" min="1" value="${c.max_substeps}"></div>
     <div class="fld"><label>dt [s]</label><input id="sim_dt" type="number" step="any" value="${c.dt}"></div>
     <div class="grp">Playback speed (real-time ×)</div><div class="row" id="speedrow"></div>
     <div class="grp">Run</div>
     <div class="row"><button id="sim_start">Start</button><button id="sim_stop">Stop</button><button id="sim_reset">Reset</button></div>`;
+  $('sim_lvl').innerHTML=cf.levels.map(v=>`<option value="${v}" ${v===c.level?'selected':''}>${LEVEL_LABEL[v]||v}</option>`).join('');
+  $('sim_lvl').onchange=async e=>{ await post('/api/config',{level:e.target.value});
+    if($('win_plant').classList.contains('open')) buildPlant(); };
+  $('sim_int').value=c.integrator||'RK4';
+  $('sim_int').onchange=e=>post('/api/sim',{integrator:e.target.value});
+  $('sim_sub').onchange=e=>post('/api/sim',{max_substeps:+e.target.value});
   const setMode=(drv)=>{ manualMode=!drv; post('/api/config',{driver:drv});
     $('sim_drv').classList.toggle('on',drv); $('sim_man').classList.toggle('on',!drv); toggleManualBar(!drv); };
   $('sim_drv').onclick=()=>setMode(true); $('sim_man').onclick=()=>setMode(false);
@@ -693,10 +700,9 @@ async function buildSim(){
 }
 
 function openWin(id, build){ const w=$(id); w.classList.toggle('open'); if(w.classList.contains('open')) build(); }
-$('tb_veh').onclick =()=>openWin('win_veh', buildVehicle);
-$('tb_sim').onclick =()=>openWin('win_sim', buildSim);
-$('tb_act').onclick =()=>openWin('win_act', buildActuator);
-$('tb_io').onclick  =()=>openWin('win_io', buildDataPort);
+$('tb_plant').onclick=()=>openWin('win_plant', buildPlant);
+$('tb_sim').onclick  =()=>openWin('win_sim', buildSim);
+$('tb_io').onclick   =()=>openWin('win_io', buildDataPort);
 </script>
 </body>
 </html>
