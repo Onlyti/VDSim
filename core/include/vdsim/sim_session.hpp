@@ -22,12 +22,14 @@
 #include "vdsim/control.hpp"
 #include "vdsim/interfaces.hpp"
 #include "vdsim/params.hpp"
+#include "vdsim/sensors.hpp"
 #include "vdsim/state.hpp"
 
 namespace vdsim {
 
 struct SimConfig {
     ActuatorParams actuator     {};      // default: all effects off (identity)
+    SensorParams   sensors      {};      // default: disabled -> measured == truth
     double         sensor_delay_s {0.0}; // feedback transport delay (0 = none)
     double         nominal_dt   {0.005}; // for delay-buffer sizing
 };
@@ -44,6 +46,7 @@ struct SimOutput {
     std::array<Vec3, NUM_WHEELS>   tire_forces {};   // body-frame (Fx,Fy,*) per wheel [N]
     double rack_torque {0.0};
     double steer_applied {0.0};   // realized steer after actuator [rad]
+    SensorMeas sensors {};        // noisy/biased measured signals (identity if disabled)
 };
 
 class SimSession {
@@ -74,6 +77,7 @@ private:
     std::unique_ptr<IContactProvider> ground_;
     ActuatorModel actuator_;
     SensorDelay   sensor_;
+    SensorModel   sensors_;
     VehicleParams vp_;
 
     mutable std::mutex mtx_;
@@ -83,6 +87,7 @@ private:
     double ax_ {0.0}, ay_ {0.0}, roll_ {0.0}, pitch_ {0.0}, rack_ {0.0}, steer_applied_ {0.0};
     std::array<double, NUM_WHEELS> Fz_ {{0,0,0,0}};
     std::array<Vec3, NUM_WHEELS>   tire_forces_ {};
+    SensorMeas sensors_meas_ {};
     double sim_time_ {0.0};
     std::chrono::steady_clock::time_point last_input_tp_ {std::chrono::steady_clock::now()};
 };

@@ -408,6 +408,37 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("throttle", &vdsim::ActuatorParams::throttle)
         .def_readwrite("brake",    &vdsim::ActuatorParams::brake);
 
+    // -------- Sensor models --------
+    py::class_<vdsim::SensorNoise>(m, "SensorNoise")
+        .def(py::init<>())
+        .def_readwrite("noise_std", &vdsim::SensorNoise::noise_std)
+        .def_readwrite("bias",      &vdsim::SensorNoise::bias)
+        .def_readwrite("bias_rw",   &vdsim::SensorNoise::bias_rw);
+    py::class_<vdsim::SensorParams>(m, "SensorParams")
+        .def(py::init<>())
+        .def_readwrite("enabled",     &vdsim::SensorParams::enabled)
+        .def_readwrite("seed",        &vdsim::SensorParams::seed)
+        .def_readwrite("imu_accel",   &vdsim::SensorParams::imu_accel)
+        .def_readwrite("imu_gyro",    &vdsim::SensorParams::imu_gyro)
+        .def_readwrite("wheel_speed", &vdsim::SensorParams::wheel_speed)
+        .def_readwrite("steer",       &vdsim::SensorParams::steer)
+        .def_readwrite("gnss_pos",    &vdsim::SensorParams::gnss_pos)
+        .def_readwrite("gnss_vel",    &vdsim::SensorParams::gnss_vel);
+    py::class_<vdsim::SensorMeas>(m, "SensorMeas")
+        .def(py::init<>())
+        .def_readonly("ax", &vdsim::SensorMeas::ax)
+        .def_readonly("ay", &vdsim::SensorMeas::ay)
+        .def_readonly("az", &vdsim::SensorMeas::az)
+        .def_readonly("wx", &vdsim::SensorMeas::wx)
+        .def_readonly("wy", &vdsim::SensorMeas::wy)
+        .def_readonly("wz", &vdsim::SensorMeas::wz)
+        .def_readonly("wheel_speed", &vdsim::SensorMeas::wheel_speed)
+        .def_readonly("steer",   &vdsim::SensorMeas::steer)
+        .def_readonly("gnss_x",  &vdsim::SensorMeas::gnss_x)
+        .def_readonly("gnss_y",  &vdsim::SensorMeas::gnss_y)
+        .def_readonly("gnss_vx", &vdsim::SensorMeas::gnss_vx)
+        .def_readonly("gnss_vy", &vdsim::SensorMeas::gnss_vy);
+
     // Step response of one actuator channel: applies a step command and returns
     // {t, cmd, out} so a GUI can plot the realized vs commanded signal.
     m.def("actuator_step_response",
@@ -454,7 +485,8 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readonly("Fz",            &vdsim::SimOutput::Fz)
         .def_readonly("tire_forces",   &vdsim::SimOutput::tire_forces)
         .def_readonly("steer_applied", &vdsim::SimOutput::steer_applied)
-        .def_readonly("rack_torque",   &vdsim::SimOutput::rack_torque);
+        .def_readonly("rack_torque",   &vdsim::SimOutput::rack_torque)
+        .def_readonly("sensors",       &vdsim::SimOutput::sensors);
 
     py::class_<vdsim::SimSession>(m, "SimSession")
         .def("reset",          &vdsim::SimSession::reset)
@@ -470,7 +502,7 @@ PYBIND11_MODULE(vdsim, m) {
           [](const vdsim::VehicleParams& vp, const vdsim::TireParams& tp,
              const std::string& level, double sensor_delay_s, double mu,
              double nominal_dt, const vdsim::ActuatorParams& actuator,
-             const vdsim::SolverParams& solver) {
+             const vdsim::SolverParams& solver, const vdsim::SensorParams& sensors) {
               std::unique_ptr<vdsim::IVehicleDynamics> dyn =
                   (level == "K" || level == "L0") ? vdsim::create_kinematic()
                   : (level == "L1") ? vdsim::create_bicycle()
@@ -478,6 +510,7 @@ PYBIND11_MODULE(vdsim, m) {
                                     : vdsim::create_seven_dof();
               vdsim::SimConfig cfg;
               cfg.actuator       = actuator;
+              cfg.sensors        = sensors;
               cfg.sensor_delay_s = sensor_delay_s;
               cfg.nominal_dt     = nominal_dt;
               return std::make_unique<vdsim::SimSession>(
@@ -488,5 +521,6 @@ PYBIND11_MODULE(vdsim, m) {
           py::arg("sensor_delay_s") = 0.0, py::arg("mu") = 1.0,
           py::arg("nominal_dt") = 0.005,
           py::arg("actuator") = vdsim::ActuatorParams{},
-          py::arg("solver") = vdsim::SolverParams{});
+          py::arg("solver") = vdsim::SolverParams{},
+          py::arg("sensors") = vdsim::SensorParams{});
 }
