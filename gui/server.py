@@ -146,6 +146,23 @@ def _set_dotted(obj, path, value):
     setattr(obj, parts[-1], value)
 
 
+# Recorded CSV columns (ground truth + measured-ish + command).
+LOG_COLS = ["t", "x", "y", "z", "yaw", "roll", "pitch", "vx", "vy", "r",
+            "wx", "wy", "ax", "ay", "steer", "Fz0", "Fz1", "Fz2", "Fz3",
+            "cmd_throttle", "cmd_brake", "cmd_steer", "source", "level"]
+
+
+def euler_to_quat(roll, pitch, yaw):
+    """ZYX intrinsic (yaw->pitch->roll) Euler -> (qx,qy,qz,qw), matching coordinate.hpp."""
+    cy, sy = math.cos(yaw * 0.5), math.sin(yaw * 0.5)
+    cp, sp = math.cos(pitch * 0.5), math.sin(pitch * 0.5)
+    cr, sr = math.cos(roll * 0.5), math.sin(roll * 0.5)
+    return (sr * cp * cy - cr * sp * sy,   # qx
+            cr * sp * cy + sr * cp * sy,   # qy
+            cr * cp * sy - sr * sp * cy,   # qz
+            cr * cp * cy + sr * sp * sy)   # qw
+
+
 def _field_value(obj, attr, kind):
     if kind == "enum":
         return getattr(obj, attr).name
@@ -376,6 +393,9 @@ class Runner:
         self.ports = {0: VehiclePort()}    # data-port config keyed by vehicle id
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.cosim = CosimBridge()         # binary co-sim server (configured + launched here)
+        self.rec_on = False                # logging recorder
+        self.rec_rows = []
+        self.rec_last = {}
         self.latest = {}
         self.path = FigureEight()
         self.vp = vdsim.VehicleParams.from_yaml(
@@ -685,6 +705,19 @@ class Runner:
                         "v_target": vt, "dt": dt, "time_scale": ts, "source": "sim"}
             with self.lock:
                 self.latest = snap
+            if self.rec_on and len(self.rec_rows) < 200000:
+                Fz = snap.get("Fz", [0, 0, 0, 0])
+                cmd = self.ports[self.live_vid].applied
+                roll, pitch, yaw = snap["roll"], snap["pitch"], snap["yaw"]
+                self.rec_rows.append({
+                    "t": snap["t"], "pos": (snap["x"], snap["y"], snap.get("z", 0.0)),
+                    "quat": euler_to_quat(roll, pitch, yaw),
+                    "row": [snap["t"], snap["x"], snap["y"], snap.get("z", 0.0), yaw, roll, pitch,
+                            snap["vx"], snap["vy"], snap["r"], snap.get("wx", 0.0), snap.get("wy", 0.0),
+                            snap["ax"], snap["ay"], snap["steer"],
+                            Fz[0], Fz[1], Fz[2], Fz[3],
+                            cmd["throttle"], cmd["brake"], cmd["steer"],
+                            snap.get("source", "sim"), snap["level"]]})
             self._telemetry_send(snap)
             nxt += 1.0 / fps
             time.sleep(max(0.0, nxt - time.monotonic()))
@@ -700,6 +733,44 @@ class Runner:
                               if p.io_last_t is not None else None)
             snap["cosim"] = self.cosim.running()
             return snap
+
+    def log_start(self):
+        with self.lock:
+            self.rec_rows = []
+            self.rec_on = True
+        return self.log_status()
+
+    def log_stop(self):
+        with self.lock:
+            self.rec_on = False
+            rows = self.rec_rows
+            self.rec_rows = []
+        if not rows:
+            return {"ok": False, "msg": "no rows recorded"}
+        import csv as _csv
+        d = REPO / "logs"
+        d.mkdir(exist_ok=True)
+        ts = time.strftime("%Y%m%d_%H%M%S")
+        csvp, tump = d / f"run_{ts}.csv", d / f"run_{ts}.tum"
+        with open(csvp, "w", newline="") as fc:
+            w = _csv.writer(fc)
+            w.writerow(LOG_COLS)
+            for r in rows:
+                w.writerow(r["row"])
+        with open(tump, "w") as ft:   # evo TUM: t x y z qx qy qz qw
+            for r in rows:
+                p, q = r["pos"], r["quat"]
+                ft.write("%.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n"
+                         % (r["t"], p[0], p[1], p[2], q[0], q[1], q[2], q[3]))
+        info = {"ok": True, "csv": str(csvp), "tum": str(tump), "rows": len(rows)}
+        with self.lock:
+            self.rec_last = {"csv": str(csvp), "tum": str(tump), "rows": len(rows)}
+        return info
+
+    def log_status(self):
+        with self.lock:
+            return {"recording": self.rec_on, "rows": len(self.rec_rows),
+                    "last": dict(self.rec_last)}
 
     def start_cosim(self, over):
         with self.lock:
@@ -763,6 +834,22 @@ class Handler(BaseHTTPRequestHandler):
             self._json(RUNNER.telemetry_config())
         elif self.path == "/api/cosim":
             self._json(RUNNER.cosim.status())
+        elif self.path == "/api/log/status":
+            self._json(RUNNER.log_status())
+        elif self.path.startswith("/api/log/download"):
+            which = "tum" if self.path.endswith("tum") else "csv"
+            path = RUNNER.rec_last.get(which)
+            if not path or not Path(path).is_file():
+                self.send_error(404)
+                return
+            data = Path(path).read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Disposition",
+                             f'attachment; filename="{Path(path).name}"')
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
         elif self.path == "/api/stream":
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
@@ -817,6 +904,10 @@ class Handler(BaseHTTPRequestHandler):
             self._json(RUNNER.start_cosim(body))
         elif self.path == "/api/cosim/stop":
             self._json(RUNNER.stop_cosim())
+        elif self.path == "/api/log/start":
+            self._json(RUNNER.log_start())
+        elif self.path == "/api/log/stop":
+            self._json(RUNNER.log_stop())
         else:
             self.send_error(404)
 

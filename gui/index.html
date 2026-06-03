@@ -770,7 +770,10 @@ async function buildSim(){
     <div class="fld"><label>dt [s]</label><input id="sim_dt" type="number" step="any" value="${c.dt}"></div>
     <div class="grp">Playback speed (real-time ×)</div><div class="row" id="speedrow"></div>
     <div class="grp">Run</div>
-    <div class="row"><button id="sim_start">Start</button><button id="sim_stop">Stop</button><button id="sim_reset">Reset</button></div>`;
+    <div class="row"><button id="sim_start">Start</button><button id="sim_stop">Stop</button><button id="sim_reset">Reset</button></div>
+    <div class="grp" id="g_log">Logging</div>
+    <div class="row"><button id="sim_rec">● Record</button><span id="sim_recst" class="sub">idle</span></div>
+    <div class="sub" id="sim_recdl" style="margin:3px 0"></div>`;
   $('sim_lvl').innerHTML=cf.levels.map(v=>`<option value="${v}" ${v===c.level?'selected':''}>${LEVEL_LABEL[v]||v}</option>`).join('');
   $('sim_lvl').onchange=async e=>{ await post('/api/config',{level:e.target.value});
     if($('win_plant').classList.contains('open')) buildPlant(); };
@@ -798,6 +801,16 @@ async function buildSim(){
   ['sim_ix','sim_iy','sim_iyaw','sim_iv'].forEach(id=>$(id).onchange=pushInit);
   addHelp($('g_model'),'model'); addHelp($('g_mode'),'run'); addHelp($('g_num'),'numerics');
   addHelp($('g_init'),'frames');
+  // Logging: record selectable signals to CSV + TUM (evo) trajectory.
+  let recOn=false;
+  const updRec=st=>{ recOn=!!st.recording; $('sim_rec').textContent=recOn?'■ Stop':'● Record';
+    $('sim_recst').textContent=recOn?('recording… '+st.rows+' rows'):'idle';
+    const L=st.last||{}; $('sim_recdl').innerHTML = (L.rows?`saved ${L.rows} rows — `+
+      `<a href="/api/log/download.csv" target="_blank">CSV</a> · `+
+      `<a href="/api/log/download.tum" target="_blank">TUM (evo)</a>`:''); };
+  $('sim_rec').onclick=async()=>{ await post(recOn?'/api/log/stop':'/api/log/start',{});
+    updRec(await (await fetch('/api/log/status')).json()); };
+  updRec(await (await fetch('/api/log/status')).json());
 }
 
 function openWin(id, build){ const w=$(id); w.classList.toggle('open'); if(w.classList.contains('open')) build(); }
