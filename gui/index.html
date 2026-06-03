@@ -543,6 +543,29 @@ async function buildPlant(){
     await post('/api/actuator', collectFields(el,anames));
     if(ts.sec.open) tireRefresh(); if(as.sec.open) stepRefresh(); };
   el.appendChild(btn);
+  linkPlantFields(el);
+}
+// Live-link dependent params: mass = sprung + sum(unsprung); wheelbase = a + b.
+// Editing one member updates the others (skips the field being typed in).
+function linkPlantFields(el){
+  const q=n=>el.querySelector(`input[data-name="${n}"]`);
+  const setIf=(inp,v)=>{ if(inp && document.activeElement!==inp) inp.value=(+v).toFixed(3); };
+  const mass=q('mass'), sprung=q('mass_sprung');
+  const uns=[...el.querySelectorAll('input[data-name="unsprung_mass"]')];
+  const sumU=()=>uns.reduce((s,i)=>s+(+i.value||0),0);
+  if(mass&&sprung){
+    const fromParts=()=>setIf(mass,(+sprung.value||0)+sumU());
+    sprung.addEventListener('input',fromParts);
+    uns.forEach(i=>i.addEventListener('input',fromParts));
+    mass.addEventListener('input',()=>setIf(sprung,Math.max(0,(+mass.value||0)-sumU())));
+  }
+  const wb=q('wheelbase'), a=q('cg_to_front'), b=q('cg_to_rear');
+  if(wb&&a&&b){
+    const fromAB=()=>setIf(wb,(+a.value||0)+(+b.value||0));
+    a.addEventListener('input',fromAB); b.addEventListener('input',fromAB);
+    wb.addEventListener('input',()=>{ const L0=(+a.value||0)+(+b.value||0), W=+wb.value||0;
+      if(L0>1e-6){ const af=(+a.value)/L0; setIf(a,W*af); setIf(b,W*(1-af)); } });
+  }
 }
 
 // ---- Data port: external command-in / state-out over HTTP (free-run) ----
