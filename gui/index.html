@@ -198,24 +198,28 @@ async function drawTerrain(){
     {color:0x88965a, roughness:.97, metalness:0, side:THREE.DoubleSide}));  // dirt-earth
   scene.add(terrainMesh);
 }
-// Buildings / structures (CarMaker speedway_3d .obj), parsed server-side.
+// Buildings / structures (CarMaker speedway_3d .obj), parsed server-side with
+// per-material UVs + map_Kd textures (served from /tex/).
 let sceneryGroup=null;
+const texLoader=new THREE.TextureLoader();
 async function drawScenery(){
   const s=await (await fetch('/api/scenery')).json();
   if(sceneryGroup){ scene.remove(sceneryGroup);
     sceneryGroup.traverse(o=>{ if(o.geometry) o.geometry.dispose(); }); sceneryGroup=null; }
   if(!s.loaded) return;
   sceneryGroup=new THREE.Group();
-  const V=s.verts;
   for(const grp of s.groups){
-    const pos=new Float32Array(grp.idx.length*3);
-    for(let i=0;i<grp.idx.length;i++){ const v=V[grp.idx[i]]; const p=toThree(v[0],v[1],v[2]);
-      pos[i*3]=p.x; pos[i*3+1]=p.y; pos[i*3+2]=p.z; }
+    const raw=grp.pos, pos=new Float32Array(raw.length);
+    for(let i=0;i<raw.length;i+=3){ pos[i]=raw[i]; pos[i+1]=raw[i+2]; pos[i+2]=-raw[i+1]; } // toThree
     const geo=new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(pos,3)); geo.computeVertexNormals();
-    const mat=new THREE.MeshStandardMaterial({color:grp.color, roughness:.85, metalness:.05, side:THREE.DoubleSide});
-    if(grp.color===0x88aacc){ mat.transparent=true; mat.opacity=.45; }   // glass
-    sceneryGroup.add(new THREE.Mesh(geo, mat));
+    geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+    if(grp.uv) geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(grp.uv),2));
+    geo.computeVertexNormals();
+    const opt={color:0xffffff, roughness:.9, metalness:.05, side:THREE.DoubleSide};
+    if(grp.texture){ const t=texLoader.load('/tex/'+grp.texture);
+      t.wrapS=t.wrapT=THREE.RepeatWrapping; opt.map=t; }
+    else { opt.color=grp.color; if(grp.color===0x88aacc){ opt.transparent=true; opt.opacity=.45; } }
+    sceneryGroup.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial(opt)));
   }
   scene.add(sceneryGroup);
 }

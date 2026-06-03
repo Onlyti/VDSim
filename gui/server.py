@@ -450,6 +450,7 @@ class Runner:
         self.sensor_delay = 0.0
         self.terrain = None                      # baked heightmap terrain (or None)
         self.scenery = None                      # parsed building meshes (or None)
+        self.tex_dir = None                      # dir holding building textures
         self._build()
         threading.Thread(target=self._loop, daemon=True).start()
 
@@ -863,13 +864,15 @@ class Runner:
             import obj_to_heightmap as ob
             H, tx0, ty0, dx, dy, bb = ob.bake_heightmap(obj, cell)
             terr = {"H": H, "x0": tx0, "y0": ty0, "dx": dx, "dy": dy, "bb": bb}
-        scn = None
+        scn, texdir = None, None
         if buildings and os.path.exists(buildings):
             scn = self._parse_obj_meshes(buildings)
+            texdir = scn.pop("_texdir", None)
             scn["loaded"] = True
         with self.lock:
             self.terrain = terr                 # drive the route on the real elevation
             self.scenery = scn                  # buildings/structures (same frame)
+            self.tex_dir = texdir               # dir to serve building textures from
             self.path = WaypointPath(route)
             x0, y0 = route[0]
             x1, y1 = route[1]
@@ -925,23 +928,61 @@ class Runner:
         "cp_pole": 0x555555, "pole_simple": 0x555555, "plastic_gray": 0x808080,
     }
 
+    @staticmethod
+    def _parse_mtl(path):
+        # material name -> texture file basename (from map_Kd)
+        tex = {}
+        if not os.path.exists(path):
+            return tex
+        cur = None
+        with open(path) as f:
+            for line in f:
+                if line.startswith("newmtl"):
+                    cur = line.split()[1]
+                elif line.startswith("map_Kd") and cur:
+                    tex[cur] = os.path.basename(line.split()[-1])
+        return tex
+
     def _parse_obj_meshes(self, obj):
-        verts, groups, cur = [], {}, "default"
+        # expand to non-indexed per-material groups carrying position + uv, so a
+        # vertex shared across faces with different uv stays correct; map each
+        # material to its map_Kd texture (served via /tex/<name>).
+        verts, uvs, faces, cur, mtllib = [], [], {}, "default", None
         with open(obj) as f:
             for line in f:
                 if line.startswith("v "):
-                    p = line.split()
-                    verts.append((float(p[1]), float(p[2]), float(p[3])))
+                    p = line.split(); verts.append((float(p[1]), float(p[2]), float(p[3])))
+                elif line.startswith("vt "):
+                    p = line.split(); uvs.append((float(p[1]), float(p[2])))
+                elif line.startswith("mtllib"):
+                    mtllib = line.split()[1]
                 elif line.startswith("usemtl"):
                     cur = line.split()[1] if len(line.split()) > 1 else "default"
                 elif line.startswith("f "):
-                    fi = [int(t.split("/")[0]) - 1 for t in line.split()[1:]]
-                    g = groups.setdefault(cur, [])
-                    for k in range(1, len(fi) - 1):       # fan-triangulate polygons
-                        g += [fi[0], fi[k], fi[k + 1]]
-        return {"verts": [[round(v, 3) for v in xyz] for xyz in verts],
-                "groups": [{"color": self._MAT_COLOR.get(m, 0x999999), "idx": idx}
-                           for m, idx in groups.items() if idx]}
+                    vt = []
+                    for t in line.split()[1:]:
+                        a = t.split("/")
+                        vi = int(a[0]) - 1
+                        ti = int(a[1]) - 1 if len(a) > 1 and a[1] else -1
+                        vt.append((vi, ti))
+                    g = faces.setdefault(cur, [])
+                    for k in range(1, len(vt) - 1):       # fan-triangulate
+                        g += [vt[0], vt[k], vt[k + 1]]
+        tex = self._parse_mtl(os.path.join(os.path.dirname(obj), mtllib)) if mtllib else {}
+        groups = []
+        for m, fl in faces.items():
+            if not fl:
+                continue
+            pos, uv = [], []
+            for vi, ti in fl:
+                x, y, z = verts[vi]; pos += [round(x, 3), round(y, 3), round(z, 3)]
+                if ti >= 0 and ti < len(uvs):
+                    uv += [round(uvs[ti][0], 4), round(uvs[ti][1], 4)]
+                else:
+                    uv += [0.0, 0.0]
+            groups.append({"color": self._MAT_COLOR.get(m, 0x999999),
+                           "texture": tex.get(m), "pos": pos, "uv": uv})
+        return {"groups": groups, "_texdir": os.path.join(os.path.dirname(obj), "textures")}
 
     def scenery_meshes(self):
         with self.lock:
@@ -1071,6 +1112,19 @@ class Handler(BaseHTTPRequestHandler):
             self._json(RUNNER.terrain_grid())
         elif self.path == "/api/scenery":
             self._json(RUNNER.scenery_meshes())
+        elif self.path.startswith("/tex/"):
+            name = os.path.basename(self.path[len("/tex/"):].split("?")[0])
+            tdir = RUNNER.tex_dir
+            fp = os.path.join(tdir, name) if tdir else ""
+            if fp and os.path.isfile(fp):
+                data = Path(fp).read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", "image/png")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+            else:
+                self.send_response(404); self.end_headers()
         elif self.path.startswith("/api/log/download"):
             which = "tum" if self.path.endswith("tum") else "csv"
             path = RUNNER.rec_last.get(which)
