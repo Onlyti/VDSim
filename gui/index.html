@@ -175,6 +175,39 @@ async function drawPath(){
 }
 drawPath();
 
+// Baked terrain heightmap surface (from a loaded .obj). Replaces the flat grid.
+let terrainGrid=null, terrainMesh=null, lastTerrain=-1;
+async function drawTerrain(){
+  const t=await (await fetch('/api/terrain')).json();
+  if(terrainMesh){ scene.remove(terrainMesh); terrainMesh.geometry.dispose(); terrainMesh=null; }
+  if(!t.loaded){ terrainGrid=null; grid.visible=true; return; }
+  terrainGrid=t; grid.visible=false;
+  const nx=t.nx, ny=t.ny, pos=new Float32Array(nx*ny*3);
+  for(let iy=0;iy<ny;iy++) for(let ix=0;ix<nx;ix++){
+    const p=toThree(t.x0+ix*t.dx, t.y0+iy*t.dy, t.z[iy][ix]); const k=(iy*nx+ix)*3;
+    pos[k]=p.x; pos[k+1]=p.y; pos[k+2]=p.z;
+  }
+  const idx=[];
+  for(let iy=0;iy<ny-1;iy++) for(let ix=0;ix<nx-1;ix++){
+    const a=iy*nx+ix, b=a+1, c=a+nx, d=c+1; idx.push(a,c,b, b,c,d);
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  g.setIndex(idx); g.computeVertexNormals();
+  terrainMesh=new THREE.Mesh(g, new THREE.MeshStandardMaterial(
+    {color:0x9fb0a4, roughness:.95, metalness:0, side:THREE.DoubleSide}));
+  scene.add(terrainMesh);
+}
+function sampleTerrain(wx,wy){
+  const t=terrainGrid; if(!t) return 0;
+  const fx=(wx-t.x0)/t.dx, fy=(wy-t.y0)/t.dy;
+  const ix=Math.max(0,Math.min(t.nx-2,Math.floor(fx))), iy=Math.max(0,Math.min(t.ny-2,Math.floor(fy)));
+  const ax=Math.max(0,Math.min(1,fx-ix)), ay=Math.max(0,Math.min(1,fy-iy));
+  const z=t.z;
+  return (z[iy][ix]*(1-ax)+z[iy][ix+1]*ax)*(1-ay)+(z[iy+1][ix]*(1-ax)+z[iy+1][ix+1]*ax)*ay;
+}
+drawTerrain();
+
 // ---- car (rebuilt per dynamics level) ----
 // car (group): heading (yaw) + position. sprung (child): body+cabin, gets
 // roll/pitch. wheels / springs / force arrows are children of car (grounded).
@@ -299,7 +332,8 @@ function frame(){ requestAnimationFrame(frame);
     car.position.lerp(tgt.pos, 0.10);    // drift correction toward latest state
     const nyaw=lerpAngle(yaw + tgt.r*dt, tgt.yaw, 0.15);
     // road tilt: sit the car on the plane + project world grade/bank onto car axes.
-    car.position.y = roadGrade*car.position.x + roadBank*(-car.position.z);
+    car.position.y = terrainGrid ? sampleTerrain(car.position.x, -car.position.z)
+                                 : roadGrade*car.position.x + roadBank*(-car.position.z);
     const rPitch = roadGrade*Math.cos(nyaw) + roadBank*Math.sin(nyaw);
     const rRoll  = -roadGrade*Math.sin(nyaw) + roadBank*Math.cos(nyaw);
     car.rotation.set(rRoll, nyaw, -rPitch);   // YXZ: x=roll, y=yaw, z=-pitch
@@ -345,6 +379,7 @@ function applyState(s){
   tgt.pos.copy(toThree(s.x,s.y,0)); tgt.yaw=s.yaw;
   if(s.grade!=null && (s.grade!==roadGrade || s.bank!==roadBank)){ roadGrade=s.grade; roadBank=s.bank||0; updateRoadTilt(); }
   if(s.npath!=null && s.npath!==lastNpath){ lastNpath=s.npath; drawPath(); }
+  if(s.terrain!=null && s.terrain!==lastTerrain){ lastTerrain=s.terrain; drawTerrain(); }
   // Body lean only for L3 (true roll/pitch DOF). L1/L2/K are planar — their
   // roll/pitch are quasi-static estimates, so the rendered body stays flat.
   // (Future: when a road surface is imported, add the road's roll/pitch here.)
@@ -801,6 +836,11 @@ async function buildSim(){
     <div class="fld"><input id="sim_xodr" type="text" value="/home/ailab-12/git/carmaker-ros-bridge/Data/Road/raceway_full.xodr" style="flex:1;font-size:10px"></div>
     <div class="row"><button id="sim_loadmap">Load &amp; drive</button></div>
     <div class="sub" id="sim_maptxt" style="margin:3px 0"></div>
+    <div class="grp">Terrain mesh (.obj heightmap)</div>
+    <div class="fld"><input id="sim_obj" type="text" value="/home/ailab-12/git/carmaker-ros-bridge/Movie/3D/Terrain/speedway_r11_0227.obj" style="flex:1;font-size:10px"></div>
+    <div class="fld"><label>cell [m]</label><input id="sim_objcell" type="number" step="any" min="1" value="5"></div>
+    <div class="row"><button id="sim_loadobj">Load &amp; drive</button><button id="sim_clrobj">Clear</button></div>
+    <div class="sub" id="sim_objtxt" style="margin:3px 0"></div>
     <div class="grp" id="g_num">Numerics</div>
     <div class="fld"><label>integrator</label><select id="sim_int" style="width:130px"><option>RK4</option><option>Euler</option></select></div>
     <div class="fld"><label>max substeps</label><input id="sim_sub" type="number" step="1" min="1" value="${c.max_substeps}"></div>
@@ -846,6 +886,12 @@ async function buildSim(){
     const r=await (await fetch('/api/map/load',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({xodr:$('sim_xodr').value})})).json();
     $('sim_maptxt').textContent = r.ok ? `route ${r.pts} pts, ${r.length} m — driving` : ('failed: '+(r.msg||''));
     trailPts=[]; trail.visible=false; tgt.has=false; };
+  $('sim_loadobj').onclick=async()=>{ $('sim_objtxt').textContent='baking heightmap…';
+    const r=await (await fetch('/api/terrain/load',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({obj:$('sim_obj').value,cell:+$('sim_objcell').value})})).json();
+    $('sim_objtxt').textContent = r.ok ? `${r.nx}×${r.ny} grid, z [${r.z[0]},${r.z[1]}] m — driving` : ('failed: '+(r.msg||''));
+    trailPts=[]; trail.visible=false; tgt.has=false; drawTerrain(); };
+  $('sim_clrobj').onclick=async()=>{ await fetch('/api/terrain/clear',{method:'POST'});
+    $('sim_objtxt').textContent='cleared'; trailPts=[]; trail.visible=false; drawTerrain(); };
   // Logging: record selectable signals to CSV + TUM (evo) trajectory.
   let recOn=false;
   const updRec=st=>{ recOn=!!st.recording; $('sim_rec').textContent=recOn?'■ Stop':'● Record';

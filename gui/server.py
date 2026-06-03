@@ -254,16 +254,20 @@ class WaypointPath:
         return max(-0.6, min(0.6, math.atan(2.0 * dy / l2 * wb))), near
 
 
+def fig8_pts(cx=0.0, cy=0.0, R=20.0, n=80):
+    pts = []
+    for i in range(n):
+        t = 2 * math.pi * i / n
+        pts.append((cx + R - R * math.cos(t), cy + R * math.sin(t)))
+    for i in range(n):
+        t = 2 * math.pi * i / n
+        pts.append((cx - R + R * math.cos(t), cy + R * math.sin(t)))
+    return pts
+
+
 class FigureEight(WaypointPath):
     def __init__(self, R=20.0, n=80):
-        pts = []
-        for i in range(n):
-            t = 2 * math.pi * i / n
-            pts.append((R - R * math.cos(t), R * math.sin(t)))
-        for i in range(n):
-            t = 2 * math.pi * i / n
-            pts.append((-R + R * math.cos(t), R * math.sin(t)))
-        super().__init__(pts)
+        super().__init__(fig8_pts(0.0, 0.0, R, n))
 
 
 COSIM_BIN = REPO / "build" / "bin" / "vdsim_udp_server"
@@ -444,18 +448,26 @@ class Runner:
         self.sensors = vdsim.SensorParams()      # disabled -> measured == truth
         self.solver = vdsim.SolverParams()
         self.sensor_delay = 0.0
+        self.terrain = None                      # baked heightmap terrain (or None)
         self._build()
         threading.Thread(target=self._loop, daemon=True).start()
 
     def _build(self):
-        self.sim = vdsim.make_sim_session(
-            self.vp, self.tp, self.cfg["level"], nominal_dt=self.dt,
-            sensor_delay_s=self.sensor_delay, actuator=self.act,
-            solver=self.solver, sensors=self.sensors,
-            mu=self.cfg["road_mu"], mu_right=self.cfg["road_mu_right"],
-            mu_boundary_y=self.cfg["road_boundary"],
-            grade=self.cfg["road_grade"], bank=self.cfg["road_bank"],
-            rough_amp=self.cfg["road_rough_amp"], rough_wavelength=self.cfg["road_rough_wl"])
+        if self.terrain is not None:             # drive on a baked terrain heightmap
+            t = self.terrain
+            self.sim = vdsim.make_sim_session_heightmap(
+                self.vp, self.tp, self.cfg["level"], t["H"],
+                x0=t["x0"], y0=t["y0"], dx=t["dx"], dy=t["dy"],
+                mu=self.cfg["road_mu"], nominal_dt=self.dt, solver=self.solver)
+        else:
+            self.sim = vdsim.make_sim_session(
+                self.vp, self.tp, self.cfg["level"], nominal_dt=self.dt,
+                sensor_delay_s=self.sensor_delay, actuator=self.act,
+                solver=self.solver, sensors=self.sensors,
+                mu=self.cfg["road_mu"], mu_right=self.cfg["road_mu_right"],
+                mu_boundary_y=self.cfg["road_boundary"],
+                grade=self.cfg["road_grade"], bank=self.cfg["road_bank"],
+                rough_amp=self.cfg["road_rough_amp"], rough_wavelength=self.cfg["road_rough_wl"])
         s0 = vdsim.make_init_state(
             x=self.cfg["init_x"], y=self.cfg["init_y"], yaw=self.cfg["init_yaw"],
             v=max(0.0, self.cfg["init_v"]), wheel_radius=self.vp.wheel_radius_nominal)
@@ -778,6 +790,7 @@ class Runner:
             snap["grade"] = self.cfg["road_grade"]
             snap["bank"] = self.cfg["road_bank"]
             snap["npath"] = len(self.path.pts)
+            snap["terrain"] = 1 if self.terrain is not None else 0
             with self.lock:
                 self.latest = snap
             if self.rec_on and len(self.rec_rows) < 200000:
@@ -834,6 +847,46 @@ class Runner:
     def path_points(self):
         with self.lock:
             return [[float(p[0]), float(p[1])] for p in self.path.pts]
+
+    def load_terrain(self, obj, cell=5.0):
+        sys.path.insert(0, str(REPO / "examples"))
+        import obj_to_heightmap as ob
+        H, x0, y0, dx, dy, bb = ob.bake_heightmap(obj, cell)
+        cx, cy = 0.5 * (bb[0] + bb[2]), 0.5 * (bb[1] + bb[3])
+        pts = fig8_pts(cx, cy, 35.0)                 # autopilot loop on terrain
+        yaw0 = math.atan2(pts[1][1] - pts[0][1], pts[1][0] - pts[0][0])
+        with self.lock:
+            self.terrain = {"H": H, "x0": x0, "y0": y0, "dx": dx, "dy": dy, "bb": bb}
+            self.cfg["init_x"], self.cfg["init_y"] = pts[0][0], pts[0][1]
+            self.cfg["init_yaw"], self.cfg["init_v"] = yaw0, 5.0   # roll onto the path
+            self.cfg["v_target"], self.cfg["driver"] = 6.0, True   # slope-limited
+            self.path = WaypointPath(pts)
+            self._build()
+        return {"ok": True, "nx": int(H.shape[1]), "ny": int(H.shape[0]),
+                "z": [round(float(bb[4]), 1), round(float(bb[5]), 1)],
+                "center": [round(cx, 1), round(cy, 1)]}
+
+    def clear_terrain(self):
+        with self.lock:
+            self.terrain = None
+            self.path = FigureEight()
+            self.cfg["init_x"] = self.cfg["init_y"] = self.cfg["init_yaw"] = 0.0
+            self._build()
+        return {"ok": True}
+
+    def terrain_grid(self, maxn=100):
+        with self.lock:
+            if self.terrain is None:
+                return {"loaded": False}
+            t = self.terrain
+            H = t["H"]
+            ny, nx = H.shape
+            sx, sy = max(1, nx // maxn), max(1, ny // maxn)
+            Hs = H[::sy, ::sx]
+            return {"loaded": True, "x0": float(t["x0"]), "y0": float(t["y0"]),
+                    "dx": float(t["dx"] * sx), "dy": float(t["dy"] * sy),
+                    "nx": int(Hs.shape[1]), "ny": int(Hs.shape[0]),
+                    "z": [[round(float(v), 3) for v in row] for row in Hs]}
 
     def log_start(self):
         with self.lock:
@@ -941,6 +994,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json(RUNNER.log_status())
         elif self.path == "/api/path":
             self._json({"pts": RUNNER.path_points()})
+        elif self.path == "/api/terrain":
+            self._json(RUNNER.terrain_grid())
         elif self.path.startswith("/api/log/download"):
             which = "tum" if self.path.endswith("tum") else "csv"
             path = RUNNER.rec_last.get(which)
@@ -1021,6 +1076,11 @@ class Handler(BaseHTTPRequestHandler):
             self._json(RUNNER.stop_cosim())
         elif self.path == "/api/map/load":
             self._json(RUNNER.load_map(body.get("xodr", "")))
+        elif self.path == "/api/terrain/load":
+            self._json(RUNNER.load_terrain(body.get("obj", ""),
+                                           float(body.get("cell", 5.0))))
+        elif self.path == "/api/terrain/clear":
+            self._json(RUNNER.clear_terrain())
         elif self.path == "/api/log/start":
             self._json(RUNNER.log_start())
         elif self.path == "/api/log/stop":
