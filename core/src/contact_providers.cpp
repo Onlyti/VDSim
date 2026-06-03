@@ -103,6 +103,9 @@ public:
         const Vec3 body_offsets[NUM_WHEELS] = {
             Vec3(a, tf2, 0.0), Vec3(a, -tf2, 0.0),
             Vec3(-b, tr2, 0.0), Vec3(-b, -tr2, 0.0)};
+        // per-wheel road height relative to the CG ground point: the tilt part of
+        // this differential drives the L3 ride model's roll/pitch attitude.
+        const double z_cg = z0_ + sx_ * vehicle.position.x() + sy_ * vehicle.position.y();
         for (int i = 0; i < NUM_WHEELS; ++i) {
             const Vec3 pw = vehicle.position + vehicle.orientation * body_offsets[i];
             const double z = z0_ + sx_ * pw.x() + sy_ * pw.y();
@@ -113,6 +116,7 @@ public:
             out[i].surface_id  = 0;
             out[i].position    = Vec3(pw.x(), pw.y(), z);
             out[i].penetration = std::max(0.0, vehicle.position.z() - z);
+            out[i].road_dz     = z - z_cg;
         }
     }
 
@@ -189,6 +193,7 @@ public:
             Vec3(a, tf2, 0.0), Vec3(a, -tf2, 0.0),
             Vec3(-b, tr2, 0.0), Vec3(-b, -tr2, 0.0)};
         const double e = 0.25 * std::min(dx_, dy_);   // gradient finite-diff step
+        const double z_cg = height(vehicle.position.x(), vehicle.position.y());
         for (int i = 0; i < NUM_WHEELS; ++i) {
             const Vec3 pw = vehicle.position + vehicle.orientation * body_offsets[i];
             const double z = height(pw.x(), pw.y());
@@ -201,6 +206,8 @@ public:
             out[i].surface_id  = 0;
             out[i].position    = Vec3(pw.x(), pw.y(), z);
             out[i].penetration = std::max(0.0, vehicle.position.z() - z);
+            // per-wheel road height relative to the CG ground point -> L3 attitude
+            out[i].road_dz     = z - z_cg;
         }
     }
 
