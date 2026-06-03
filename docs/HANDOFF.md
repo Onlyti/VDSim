@@ -1,6 +1,6 @@
 # VDSim 핸드오프 — research-infra arc + road-surface (#131)
 
-작성: 2026-06-03. 다음 세션은 이 문서로 인계받아 **slice 1 (slope-gravity EoM)** 부터 시작.
+작성: 2026-06-03 (갱신). #131 road-surface v1 전 슬라이스 완료. 다음=refinement(§4).
 
 ## 1. 목표
 VDSim 을 실제 연구(TUR Fz/μ/Cα UKF, NHCalib, slip-tolerant SMPC, FSK)에서 쓸 수
@@ -34,24 +34,25 @@ research-infra (task #124–#130) — 전부 완료·push:
 - #131 **slice 0 (split-μ)**: `create_split_mu_ground`, make_sim_session(mu_right,
   mu_boundary_y), GUI Simulation "Road/surface"(uniform μ + split). 검증됨.
 
-## 4. 미완 — 다음 할 일 (#131 잔여 슬라이스)
-slice 0 (split-μ) · slice 1 (slope-gravity + 3D tilt render, #123) **완료**.
-- split-μ: `create_split_mu_ground`, make_sim_session(mu_right, mu_boundary_y).
-- slope-gravity: `create_inclined_ground(z0, grade, bank, mu)`; L1/L2/L3 EoM 가
-  contact normal 로 접선중력 + cos(slope) 수직하중. GUI Road/surface grade/bank,
-  뷰어 grid tilt + 차량 안착. flat 게이트로 125+57 test 보존.
+## 4. #131 road-surface — v1 전 슬라이스 완료 (#117/#118/#123 포함)
+- **slice 0 split-μ**: `create_split_mu_ground`, make_sim_session(mu_right, mu_boundary_y).
+- **slice 1 slope-gravity (#123)**: `create_inclined_ground(z0,grade,bank,mu)`; L1/L2/L3
+  EoM 가 contact normal 로 접선중력 + cos(slope) 수직하중. GUI grade/bank, 뷰어 grid
+  tilt + 차량 안착. flat 게이트로 test 보존.
+- **slice 2 roughness**: `ContactPoint.road_dz` + `create_rough_ground`; L3 unsprung
+  `k_tire*(zu - road_dz)` 가진. GUI rough amp/wavelength.
+- **slice 3 heightmap (#118)**: `HeightmapGround`(bilinear h + gradient normal),
+  `make_sim_session_heightmap(...,heightmap[2D np],x0,y0,dx,dy,mu)`. ramp=inclined 검증.
+- **slice 4 OpenDRIVE (#117)**: `examples/opendrive.py` — planView(line+arc) →
+  reference polyline + elevation(grade)/superelevation(bank). 합성 .xodr self-test.
 
-**다음 (slice 2~):**
-1. **roughness** — `IRoughnessProvider`(ISO 8608 PSD 는 stub-NotImplemented). 구현 후
-   L3 unsprung 의 road-z 입력 plumbing 필요(현재 zu 는 z=0 기준; per-wheel road
-   height 를 unsprung EoM `k_tire*(zu - z_road)` 로 먹여 ride 가진).
-2. **OpenDRIVE (#117)** — road network 파서 → reference path + 기하에서 grade/bank.
-   대부분 파서 작업. examples/maneuvers·pure-pursuit 와 연결.
-3. **mesh/heightmap (#118)** — Blender mesh → height-lookup ContactProvider
-   (per-wheel z/normal/μ). IP: Assetto Corsa 등 상용 mesh 참조 금지.
-4. **렌더 보강** — fig8 path/trail 도 road plane 에 tilt(현재 grid·차량만).
-
-권장 순서: roughness(1, L3 plumbing) → mesh(3) → OpenDRIVE(2, 큰 파서).
+**남은 refinement (enhancement, 비차단):**
+1. OpenDRIVE spiral(clothoid)/poly3/paramPoly3 + lane logic.
+2. triangle-mesh raycast provider (heightmap 으론 overhang 불가) + per-vertex μ/material.
+3. **L3 ride ↔ grip Fz coupling** — 현재 L3 tire Fz 는 inner seven_dof quasi-static.
+   14DOF k_tire*zu 의 동적하중을 tire Fz 로 환류하면 roughness/지형이 grip 에도 반영.
+4. GUI: heightmap/OpenDRIVE 로드 UI, fig8 path/trail 도 road plane tilt.
+5. road grade/bank/heightmap 을 데이터포트·co-sim·logging 에도 노출.
 
 ## 5. 주의 · 함정
 - **flat-road 거동 보존**: normal≈+z 면 slope 항 skip(gate)해서 182 test 가 안 깨지게.
