@@ -527,6 +527,7 @@ async function buildPlant(){
   const veh =(await(await fetch('/api/vehicle')).json()).fields;
   const tire=(await(await fetch('/api/tire')).json()).fields;
   const act =(await(await fetch('/api/actuator')).json()).fields;
+  const sens=(await(await fetch('/api/sensors')).json()).fields;
   const el=$('plant_body'); el.innerHTML='';
   const ps=section('Preset', true, 'Preset');
   ps.body.appendChild(selectRow('Vehicle type', cf.vehicles, cfg.vehicle,
@@ -555,12 +556,20 @@ async function buildPlant(){
     ag[g].forEach(f=>as.body.appendChild(fieldRow(f,'L2'))); }
   as.sec.addEventListener('toggle',()=>{ if(as.sec.open) stepRefresh(); },{once:true});
   el.appendChild(as.sec);
-  // apply (vehicle + tire + actuator)
-  const vnames=new Set(veh.map(f=>f.name)), tnames=new Set(tire.map(f=>f.name)), anames=new Set(act.map(f=>f.name));
+  // sensors (noise / bias / drift)
+  const ss=section('Sensors (noise · bias)', false, 'Actuator & feedback');
+  const sg={}; sens.forEach(f=>{(sg[f.group]=sg[f.group]||[]).push(f);});
+  for(const g in sg){ const l=document.createElement('div'); l.className='subgrp'; l.textContent=g; ss.body.appendChild(l);
+    sg[g].forEach(f=>ss.body.appendChild(fieldRow(f,'L2'))); }
+  el.appendChild(ss.sec);
+  // apply (vehicle + tire + actuator + sensors)
+  const vnames=new Set(veh.map(f=>f.name)), tnames=new Set(tire.map(f=>f.name)),
+        anames=new Set(act.map(f=>f.name)), snames=new Set(sens.map(f=>f.name));
   const btn=document.createElement('button'); btn.className='apply'; btn.textContent='Apply (rebuild sim)';
   btn.onclick=async()=>{ await post('/api/vehicle', collectFields(el,vnames));
     await post('/api/tire', collectFields(el,tnames));
     await post('/api/actuator', collectFields(el,anames));
+    await post('/api/sensors', collectFields(el,snames));
     if(ts.sec.open) tireRefresh(); if(as.sec.open) stepRefresh(); };
   el.appendChild(btn);
   linkPlantFields(el);

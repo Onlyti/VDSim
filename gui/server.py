@@ -131,6 +131,20 @@ ACTUATOR_FIELDS = [
     ("brake.thermal_enabled", "Brake thermal fade", "Brake", "bool"),
     ("@sensor_delay_s", "Sensor feedback delay [s]", "Feedback", "num"),
 ]
+# Sensor noise/bias schema (dotted paths into SensorParams). "enabled" is a bool.
+SENSOR_FIELDS = [
+    ("enabled", "Sensors enabled (off → truth)", "General", "bool"),
+    ("imu_accel.noise_std", "IMU accel noise [m/s²]", "IMU", "num"),
+    ("imu_accel.bias", "IMU accel bias [m/s²]", "IMU", "num"),
+    ("imu_gyro.noise_std", "IMU gyro noise [rad/s]", "IMU", "num"),
+    ("imu_gyro.bias", "IMU gyro bias [rad/s]", "IMU", "num"),
+    ("imu_gyro.bias_rw", "IMU gyro bias random-walk", "IMU", "num"),
+    ("wheel_speed.noise_std", "Wheel-speed noise [rad/s]", "Wheel", "num"),
+    ("steer.noise_std", "Steer noise [rad]", "Steer", "num"),
+    ("steer.bias", "Steer bias [rad]", "Steer", "num"),
+    ("gnss_pos.noise_std", "GNSS position noise [m]", "GNSS", "num"),
+    ("gnss_vel.noise_std", "GNSS velocity noise [m/s]", "GNSS", "num"),
+]
 
 
 def _get_dotted(obj, path):
@@ -149,7 +163,8 @@ def _set_dotted(obj, path, value):
 # Recorded CSV columns (ground truth + measured-ish + command).
 LOG_COLS = ["t", "x", "y", "z", "yaw", "roll", "pitch", "vx", "vy", "r",
             "wx", "wy", "ax", "ay", "steer", "Fz0", "Fz1", "Fz2", "Fz3",
-            "cmd_throttle", "cmd_brake", "cmd_steer", "source", "level"]
+            "cmd_throttle", "cmd_brake", "cmd_steer", "source", "level",
+            "m_gnss_x", "m_gnss_y", "m_ax", "m_ay", "m_wz", "m_steer"]
 
 
 def euler_to_quat(roll, pitch, yaw):
@@ -403,6 +418,7 @@ class Runner:
         self.tp = vdsim.TireParams.from_yaml(
             str(REPO / "configs/tires/default_pacejka.yaml"))
         self.act = vdsim.ActuatorParams()        # all effects off by default
+        self.sensors = vdsim.SensorParams()      # disabled -> measured == truth
         self.solver = vdsim.SolverParams()
         self.sensor_delay = 0.0
         self._build()
@@ -412,7 +428,7 @@ class Runner:
         self.sim = vdsim.make_sim_session(
             self.vp, self.tp, self.cfg["level"], nominal_dt=self.dt,
             sensor_delay_s=self.sensor_delay, actuator=self.act,
-            solver=self.solver)
+            solver=self.solver, sensors=self.sensors)
         s0 = vdsim.make_init_state(
             x=self.cfg["init_x"], y=self.cfg["init_y"], yaw=self.cfg["init_yaw"],
             v=max(0.0, self.cfg["init_v"]), wheel_radius=self.vp.wheel_radius_nominal)
@@ -459,9 +475,33 @@ class Runner:
                 _apply(self.vp, VEHICLE_FIELDS, data)
             elif which == "tire":
                 _apply(self.tp, TIRE_FIELDS, data)
+            elif which == "sensors":
+                self._apply_sensors(data)
             else:
                 self._apply_actuator(data)
             self._build()
+
+    def serialize_sensors(self):
+        out = []
+        for attr, label, group, kind in SENSOR_FIELDS:
+            if kind == "bool":
+                val = bool(getattr(self.sensors, attr))
+            else:
+                val = float(_get_dotted(self.sensors, attr))
+            out.append({"name": attr, "label": label, "group": group,
+                        "kind": kind, "levels": ["K", "L1", "L2", "L3"], "value": val})
+        return out
+
+    def _apply_sensors(self, data):
+        kinds = {f[0]: f[3] for f in SENSOR_FIELDS}
+        for k, v in data.items():
+            kind = kinds.get(k)
+            if kind is None:
+                continue
+            if kind == "bool":
+                setattr(self.sensors, k, bool(v))
+            else:
+                _set_dotted(self.sensors, k, float(v))
 
     def serialize_actuator(self):
         out = []
@@ -702,7 +742,10 @@ class Runner:
                         "Ft": [[float(f[0]), float(f[1])] for f in o.tire_forces],
                         "susp": [float(v) for v in s.susp_compression],
                         "level": self.cfg["level"], "vehicle": self.cfg["vehicle"],
-                        "v_target": vt, "dt": dt, "time_scale": ts, "source": "sim"}
+                        "v_target": vt, "dt": dt, "time_scale": ts, "source": "sim",
+                        "m_gx": o.sensors.gnss_x, "m_gy": o.sensors.gnss_y,
+                        "m_ax": o.sensors.ax, "m_ay": o.sensors.ay,
+                        "m_wz": o.sensors.wz, "m_steer": o.sensors.steer}
             with self.lock:
                 self.latest = snap
             if self.rec_on and len(self.rec_rows) < 200000:
@@ -717,7 +760,10 @@ class Runner:
                             snap["ax"], snap["ay"], snap["steer"],
                             Fz[0], Fz[1], Fz[2], Fz[3],
                             cmd["throttle"], cmd["brake"], cmd["steer"],
-                            snap.get("source", "sim"), snap["level"]]})
+                            snap.get("source", "sim"), snap["level"],
+                            snap.get("m_gx", ""), snap.get("m_gy", ""),
+                            snap.get("m_ax", ""), snap.get("m_ay", ""),
+                            snap.get("m_wz", ""), snap.get("m_steer", "")]})
             self._telemetry_send(snap)
             nxt += 1.0 / fps
             time.sleep(max(0.0, nxt - time.monotonic()))
@@ -824,6 +870,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"fields": _serialize(RUNNER.tp, TIRE_FIELDS)})
         elif self.path == "/api/actuator":
             self._json({"fields": RUNNER.serialize_actuator()})
+        elif self.path == "/api/sensors":
+            self._json({"fields": RUNNER.serialize_sensors()})
         elif self.path == "/api/tire/curves":
             self._json({"plots": RUNNER.tire_curves()})
         elif self.path == "/api/actuator/step":
@@ -887,6 +935,9 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"ok": True})
         elif self.path == "/api/actuator":
             RUNNER.set_params("actuator", body)
+            self._json({"ok": True})
+        elif self.path == "/api/sensors":
+            RUNNER.set_params("sensors", body)
             self._json({"ok": True})
         elif self.path == "/api/control":
             RUNNER.control(body.get("action", ""))
