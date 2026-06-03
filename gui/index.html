@@ -162,15 +162,18 @@ function updateRoadTilt(){     // tilt the grid to the road plane
   grid.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), n);
 }
 
-// figure-eight reference path (R=20, matches server driver) in ground plane.
-function fig8(R=20, n=160){
-  const pts=[];
-  for(let i=0;i<=n;i++){ const t=2*Math.PI*i/n; pts.push(new THREE.Vector3(R-R*Math.cos(t),0.02,-(R*Math.sin(t)))); }
-  for(let i=0;i<=n;i++){ const t=2*Math.PI*i/n; pts.push(new THREE.Vector3(-R+R*Math.cos(t),0.02,-(R*Math.sin(t)))); }
-  return pts;
+// Reference path from the server (figure-8 default, or a loaded OpenDRIVE route).
+let pathLine=null, lastNpath=-1;
+async function drawPath(){
+  const r=await (await fetch('/api/path')).json();
+  const v=(r.pts||[]).map(p=>toThree(p[0],p[1],0.02));
+  if(v.length){ v.push(v[0].clone()); }   // close the loop visually
+  if(pathLine){ scene.remove(pathLine); pathLine.geometry.dispose(); }
+  pathLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints(v),
+                          new THREE.LineBasicMaterial({color:0x2f6d8f}));
+  scene.add(pathLine);
 }
-scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(fig8()),
-          new THREE.LineBasicMaterial({color:0x2f6d8f})));
+drawPath();
 
 // ---- car (rebuilt per dynamics level) ----
 // car (group): heading (yaw) + position. sprung (child): body+cabin, gets
@@ -341,6 +344,7 @@ function applyState(s){
   // Store as interpolation target; the render loop eases toward it (smooth).
   tgt.pos.copy(toThree(s.x,s.y,0)); tgt.yaw=s.yaw;
   if(s.grade!=null && (s.grade!==roadGrade || s.bank!==roadBank)){ roadGrade=s.grade; roadBank=s.bank||0; updateRoadTilt(); }
+  if(s.npath!=null && s.npath!==lastNpath){ lastNpath=s.npath; drawPath(); }
   // Body lean only for L3 (true roll/pitch DOF). L1/L2/K are planar — their
   // roll/pitch are quasi-static estimates, so the rendered body stays flat.
   // (Future: when a road surface is imported, add the road's roll/pitch here.)
@@ -793,6 +797,10 @@ async function buildSim(){
     <div class="fld"><label>bank [deg] (+y up)</label><input id="sim_bank" type="number" step="any" value="${(c.road_bank*57.29578).toFixed(2)}"></div>
     <div class="fld"><label>roughness amp [m] (L3)</label><input id="sim_ra" type="number" step="any" value="${c.road_rough_amp}"></div>
     <div class="fld"><label>roughness wavelength [m]</label><input id="sim_rwl" type="number" step="any" value="${c.road_rough_wl}"></div>
+    <div class="grp">OpenDRIVE map (autopilot route)</div>
+    <div class="fld"><input id="sim_xodr" type="text" value="/home/ailab-12/git/carmaker-ros-bridge/Data/Road/raceway_full.xodr" style="flex:1;font-size:10px"></div>
+    <div class="row"><button id="sim_loadmap">Load &amp; drive</button></div>
+    <div class="sub" id="sim_maptxt" style="margin:3px 0"></div>
     <div class="grp" id="g_num">Numerics</div>
     <div class="fld"><label>integrator</label><select id="sim_int" style="width:130px"><option>RK4</option><option>Euler</option></select></div>
     <div class="fld"><label>max substeps</label><input id="sim_sub" type="number" step="1" min="1" value="${c.max_substeps}"></div>
@@ -834,6 +842,10 @@ async function buildSim(){
     road_boundary:+$('sim_mub').value, road_grade:(+$('sim_grade').value)/57.29578, road_bank:(+$('sim_bank').value)/57.29578,
     road_rough_amp:+$('sim_ra').value, road_rough_wl:+$('sim_rwl').value});
   ['sim_mu','sim_mur','sim_mub','sim_grade','sim_bank','sim_ra','sim_rwl'].forEach(id=>$(id).onchange=pushRoad);
+  $('sim_loadmap').onclick=async()=>{ $('sim_maptxt').textContent='loading…';
+    const r=await (await fetch('/api/map/load',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({xodr:$('sim_xodr').value})})).json();
+    $('sim_maptxt').textContent = r.ok ? `route ${r.pts} pts, ${r.length} m — driving` : ('failed: '+(r.msg||''));
+    trailPts=[]; trail.visible=false; tgt.has=false; };
   // Logging: record selectable signals to CSV + TUM (evo) trajectory.
   let recOn=false;
   const updRec=st=>{ recOn=!!st.recording; $('sim_rec').textContent=recOn?'■ Stop':'● Record';

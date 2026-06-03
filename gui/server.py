@@ -216,17 +216,15 @@ def _apply(obj, fields, data):
             setattr(obj, k, float(v))
 
 
-class FigureEight:
-    def __init__(self, R=20.0, n=80):
-        self.pts = []
-        for i in range(n):
-            t = 2 * math.pi * i / n
-            self.pts.append((R - R * math.cos(t), R * math.sin(t)))
-        for i in range(n):
-            t = 2 * math.pi * i / n
-            self.pts.append((-R + R * math.cos(t), R * math.sin(t)))
+class WaypointPath:
+    """Pure-pursuit over an ordered polyline (loops). Reused for the figure-8
+    default and for loaded OpenDRIVE routes."""
+    def __init__(self, pts):
+        self.pts = list(pts)
 
     def steer(self, x, y, yaw, vx, wb, prev_idx):
+        if len(self.pts) < 2:
+            return 0.0, prev_idx
         Ld = max(2.0, 0.45 * max(vx, 1.0))
         n = len(self.pts)
         idx = prev_idx
@@ -244,6 +242,18 @@ class FigureEight:
         if l2 < 1e-6:
             return 0.0, idx
         return max(-0.6, min(0.6, math.atan(2.0 * dy / l2 * wb))), idx
+
+
+class FigureEight(WaypointPath):
+    def __init__(self, R=20.0, n=80):
+        pts = []
+        for i in range(n):
+            t = 2 * math.pi * i / n
+            pts.append((R - R * math.cos(t), R * math.sin(t)))
+        for i in range(n):
+            t = 2 * math.pi * i / n
+            pts.append((-R + R * math.cos(t), R * math.sin(t)))
+        super().__init__(pts)
 
 
 COSIM_BIN = REPO / "build" / "bin" / "vdsim_udp_server"
@@ -757,6 +767,7 @@ class Runner:
                         "m_wz": o.sensors.wz, "m_steer": o.sensors.steer}
             snap["grade"] = self.cfg["road_grade"]
             snap["bank"] = self.cfg["road_bank"]
+            snap["npath"] = len(self.path.pts)
             with self.lock:
                 self.latest = snap
             if self.rec_on and len(self.rec_rows) < 200000:
@@ -790,6 +801,29 @@ class Runner:
                               if p.io_last_t is not None else None)
             snap["cosim"] = self.cosim.running()
             return snap
+
+    def load_map(self, xodr):
+        sys.path.insert(0, str(REPO / "examples"))
+        import opendrive as od
+        roads = od.parse_xodr(xodr)
+        route = od.chain_route(roads, step=3.0, gap_tol=50.0)
+        if len(route) < 2:
+            return {"ok": False, "msg": "no drivable route from " + xodr}
+        with self.lock:
+            self.path = WaypointPath(route)
+            x0, y0 = route[0]
+            x1, y1 = route[1]
+            self.cfg["init_x"], self.cfg["init_y"] = x0, y0
+            self.cfg["init_yaw"] = math.atan2(y1 - y0, x1 - x0)
+            self.cfg["driver"] = True
+            self._build()
+        L = sum(math.hypot(route[i + 1][0] - route[i][0], route[i + 1][1] - route[i][1])
+                for i in range(len(route) - 1))
+        return {"ok": True, "pts": len(route), "length": round(L, 1)}
+
+    def path_points(self):
+        with self.lock:
+            return [[float(p[0]), float(p[1])] for p in self.path.pts]
 
     def log_start(self):
         with self.lock:
@@ -895,6 +929,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json(RUNNER.cosim.status())
         elif self.path == "/api/log/status":
             self._json(RUNNER.log_status())
+        elif self.path == "/api/path":
+            self._json({"pts": RUNNER.path_points()})
         elif self.path.startswith("/api/log/download"):
             which = "tum" if self.path.endswith("tum") else "csv"
             path = RUNNER.rec_last.get(which)
@@ -973,6 +1009,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json(RUNNER.start_cosim(body))
         elif self.path == "/api/cosim/stop":
             self._json(RUNNER.stop_cosim())
+        elif self.path == "/api/map/load":
+            self._json(RUNNER.load_map(body.get("xodr", "")))
         elif self.path == "/api/log/start":
             self._json(RUNNER.log_start())
         elif self.path == "/api/log/stop":

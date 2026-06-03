@@ -140,6 +140,38 @@ def parse_xodr(src):
     return roads
 
 
+def chain_route(roads, step=2.0, gap_tol=30.0):
+    """Recover one ordered drivable polyline [(x,y)] from a road network by
+    greedily chaining segments end-to-start (reversing where needed). Seeds at
+    the longest road; stops when no unused road starts within gap_tol."""
+    polys = [[(p[0], p[1]) for p in r.sample(step)] for r in roads]
+    polys = [p for p in polys if len(p) >= 2]
+    if not polys:
+        return []
+    seed = max(range(len(polys)), key=lambda i: len(polys[i]))
+    used = {seed}
+    route = list(polys[seed])
+    def d(a, b):
+        return math.hypot(a[0] - b[0], a[1] - b[1])
+    while True:
+        end = route[-1]
+        best, best_d, rev = -1, gap_tol, False
+        for i, p in enumerate(polys):
+            if i in used:
+                continue
+            ds, de = d(end, p[0]), d(end, p[-1])
+            if ds < best_d:
+                best, best_d, rev = i, ds, False
+            if de < best_d:
+                best, best_d, rev = i, de, True
+        if best < 0:
+            break
+        seg = polys[best][::-1] if rev else polys[best]
+        route.extend(seg)
+        used.add(best)
+    return route
+
+
 def _synthetic_xodr():
     # one road: 50 m straight, then a quarter circle R=30 (curvature +1/30),
     # +2% grade, 3 deg bank on the arc portion.
