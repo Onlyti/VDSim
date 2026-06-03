@@ -552,6 +552,8 @@ async function buildActuator(){
 async function buildDataPort(){
   const el=$('io_body'), base=location.origin;
   el.innerHTML=`
+   <div class="grp">Co-sim server (vdsim_udp_server)</div>
+   <div id="cosim_ctl"></div>
    <div class="grp">Endpoints</div>
    <div style="font:11px Tahoma;line-height:1.6">
      <div><b>POST</b> /api/io <span class="sub">{throttle,brake,steer} → state JSON</span></div>
@@ -591,8 +593,33 @@ async function buildDataPort(){
     post('/api/io',{vehicle:vid,throttle:th,brake:br,steer:st}); };
   ['ci_th','ci_br','ci_st'].forEach(id=>$(id).oninput=ciSend);
   $('ci_zero').onclick=()=>{ $('ci_th').value=0; $('ci_br').value=0; $('ci_st').value=0; ciSend(); };
+  renderCosim($('cosim_ctl'));
   if(window._lastState) updateIoMonitor(window._lastState);
   renderTx($('tx_ctl'), await (await fetch('/api/io/targets')).json());
+}
+// Co-sim server panel: configure + launch the binary vdsim_udp_server.
+async function renderCosim(box){
+  const st=await (await fetch('/api/cosim')).json(); box.innerHTML='';
+  if(!st.available){ box.innerHTML='<div class="sub">vdsim_udp_server not built — configure CMake with -DVDSIM_BUILD_COSIM=ON.</div>'; return; }
+  const c=st.cfg||{};
+  const num=(v,w)=>{const i=document.createElement('input');i.type='number';i.step='any';i.value=v;i.style.width=(w||70)+'px';return i;};
+  const fld=(label,node)=>{const d=document.createElement('div');d.className='fld';const l=document.createElement('label');l.textContent=label;d.appendChild(l);d.appendChild(node);box.appendChild(d);};
+  const lvl=document.createElement('select'); lvl.style.width='90px';
+  lvl.innerHTML=['L1','L2','L3'].map(v=>`<option ${v===c.level?'selected':''}>${v}</option>`).join('');
+  const cp=num(c.cmd_port,80), spp=num(c.state_port,80), rate=num(c.rate,70), vx0=num(c.vx0,70), cto=num(c.cmd_timeout,70);
+  fld('Level',lvl); fld('cmd port',cp); fld('state port',spp); fld('rate [Hz]',rate); fld('vx0 [m/s]',vx0); fld('cmd timeout [s]',cto);
+  const status=document.createElement('div'); status.className='sub'; status.style.margin='4px 0';
+  status.textContent = st.running ? `● running pid ${st.pid}, up ${(st.uptime||0).toFixed(0)}s, state age ${st.state_age!=null?st.state_age.toFixed(2)+'s':'—'}` : 'stopped';
+  status.style.color = st.running ? '#34c759' : 'var(--dim)'; box.appendChild(status);
+  const row=document.createElement('div'); row.className='row';
+  const start=document.createElement('button'); start.textContent='Start server';
+  const stop=document.createElement('button'); stop.textContent='Stop';
+  start.onclick=async()=>{ await post('/api/cosim/start',{level:lvl.value,cmd_port:+cp.value,state_port:+spp.value,rate:+rate.value,vx0:+vx0.value,cmd_timeout:+cto.value}); renderCosim(box); };
+  stop.onclick=async()=>{ await post('/api/cosim/stop'); renderCosim(box); };
+  row.appendChild(start); row.appendChild(stop); box.appendChild(row);
+  const note=document.createElement('div'); note.className='sub'; note.style.margin='4px 0';
+  note.textContent='Launches with the current GUI vehicle/tire config. While running, the 3D view shows the co-sim vehicle and control input relays as binary CMD.';
+  box.appendChild(note);
 }
 // Per-vehicle telemetry config. cfg = {vehicles, live, configs:{vid:{tx,targets}}}.
 function renderTx(box, cfg, vid){

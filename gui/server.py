@@ -13,10 +13,15 @@ Usage:
 import argparse
 import json
 import math
+import os
 import socket
+import struct
+import subprocess
 import sys
+import tempfile
 import threading
 import time
+import zlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -209,6 +214,140 @@ class FigureEight:
         return max(-0.6, min(0.6, math.atan(2.0 * dy / l2 * wb))), idx
 
 
+COSIM_BIN = REPO / "build" / "bin" / "vdsim_udp_server"
+_CO_MAGIC, _CO_VER, _CO_CMD, _CO_STATE = 0x56445331, 1, 1, 2
+
+
+class CosimBridge:
+    """Launches the binary vdsim_udp_server, consumes its STATE packets for the
+    3D view, and relays control as CMD packets (per cosim_protocol.hpp).
+
+    The GUI configures and runs the real co-sim server; the Python playground sim
+    is bypassed while the bridge is active so there is one source of truth.
+    """
+    DEFAULT = {"level": "L2", "cmd_port": 7001, "state_port": 7002,
+               "rate": 200.0, "vx0": 0.0, "cmd_timeout": 0.1}
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.proc = None
+        self.cfg = dict(self.DEFAULT)
+        self.started_t = None
+        self.last_state = None
+        self.last_state_t = None
+        self._seq = 0
+        self._rx = None
+        self._tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._tmp = tempfile.mkdtemp(prefix="vdsim_cosim_")
+        self._stop = threading.Event()
+
+    def available(self):
+        return COSIM_BIN.exists()
+
+    def running(self):
+        with self.lock:
+            return self.proc is not None and self.proc.poll() is None
+
+    def start(self, vp, tp, over):
+        if self.running():
+            self.stop()
+        with self.lock:
+            for k in self.cfg:
+                if k in over:
+                    self.cfg[k] = over[k]
+            self.cfg["level"] = str(self.cfg["level"])
+            vy = os.path.join(self._tmp, "vehicle.yaml")
+            ty = os.path.join(self._tmp, "tire.yaml")
+            vp.to_yaml(vy)
+            tp.to_yaml(ty)
+            c = self.cfg
+            args = [str(COSIM_BIN), vy, ty, f"--level={c['level']}",
+                    f"--cmd-port={int(c['cmd_port'])}", "--state-ip=127.0.0.1",
+                    f"--state-port={int(c['state_port'])}", f"--rate={float(c['rate'])}",
+                    f"--vx0={float(c['vx0'])}", f"--cmd-timeout={float(c['cmd_timeout'])}"]
+            self._rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self._rx.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self._rx.bind(("127.0.0.1", int(c["state_port"])))
+            self._rx.settimeout(0.2)
+            self._stop.clear()
+            self.proc = subprocess.Popen(args, stdout=subprocess.DEVNULL,
+                                         stderr=subprocess.DEVNULL)
+            self.started_t = time.monotonic()
+            self.last_state = None
+            threading.Thread(target=self._rx_loop, args=(self._rx,), daemon=True).start()
+        return self.status()
+
+    def stop(self):
+        with self.lock:
+            self._stop.set()
+            if self.proc and self.proc.poll() is None:
+                self.proc.terminate()
+                try:
+                    self.proc.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    self.proc.kill()
+            self.proc = None
+            self.started_t = None
+            if self._rx is not None:
+                try:
+                    self._rx.close()
+                except OSError:
+                    pass
+                self._rx = None
+            self.last_state = None
+        return self.status()
+
+    def status(self):
+        run = self.proc is not None and self.proc.poll() is None
+        return {"available": self.available(), "running": run, "cfg": dict(self.cfg),
+                "pid": (self.proc.pid if run else None),
+                "uptime": (time.monotonic() - self.started_t if run and self.started_t else None),
+                "state_age": (time.monotonic() - self.last_state_t if self.last_state_t else None),
+                "binary": str(COSIM_BIN)}
+
+    def send_cmd(self, throttle, brake, steer, gear=1):
+        if not self.running():
+            return
+        self._seq += 1
+        body = struct.pack("<IHHIId", _CO_MAGIC, _CO_VER, _CO_CMD, self._seq, 0, time.time())
+        body += struct.pack("<ddd", float(steer), float(throttle), float(brake))
+        body += struct.pack("<iB3x", int(gear), 0)
+        body += struct.pack("<dd", 0.0, 0.0)
+        body += struct.pack("<I", zlib.crc32(body) & 0xFFFFFFFF)
+        try:
+            self._tx.sendto(body, ("127.0.0.1", int(self.cfg["cmd_port"])))
+        except OSError:
+            pass
+
+    def _rx_loop(self, sock):
+        while not self._stop.is_set():
+            try:
+                data, _ = sock.recvfrom(512)
+            except (socket.timeout, OSError):
+                continue
+            st = self._decode_state(data)
+            if st:
+                self.last_state = st
+                self.last_state_t = time.monotonic()
+
+    @staticmethod
+    def _decode_state(buf):
+        if len(buf) < 220:
+            return None
+        if (zlib.crc32(buf[:216]) & 0xFFFFFFFF) != struct.unpack_from("<I", buf, 216)[0]:
+            return None
+        magic, _ver, mtype, _seq, _pad, ts = struct.unpack_from("<IHHIId", buf, 0)
+        if magic != _CO_MAGIC or mtype != _CO_STATE:
+            return None
+        v = struct.unpack_from("<14d", buf, 24)   # x,y,z,roll,pitch,yaw,vx,vy,vz,rr,pr,yr,ax,ay
+        steer, _radius = struct.unpack_from("<2d", buf, 168)
+        Fz = struct.unpack_from("<4d", buf, 184)
+        return {"t": ts, "x": v[0], "y": v[1], "z": v[2],
+                "roll": v[3], "pitch": v[4], "yaw": v[5],
+                "vx": v[6], "vy": v[7], "r": v[11], "wx": v[9], "wy": v[10],
+                "ax": v[12], "ay": v[13], "steer": steer, "Fz": list(Fz)}
+
+
 class VehiclePort:
     """Per-vehicle data-port config: telemetry output + control input.
 
@@ -235,6 +374,7 @@ class Runner:
         self.live_vid = 0                  # vehicle id backed by the (single) sim
         self.ports = {0: VehiclePort()}    # data-port config keyed by vehicle id
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.cosim = CosimBridge()         # binary co-sim server (configured + launched here)
         self.latest = {}
         self.path = FigureEight()
         self.vp = vdsim.VehicleParams.from_yaml(
@@ -464,7 +604,25 @@ class Runner:
                 vt, dt, ts = self.cfg["v_target"], self.dt, self.time_scale
                 man = dict(self.ports[self.live_vid].in_cmd)
                 wb = self.vp.wheelbase
-            if run:
+            cosim_on = self.cosim.running()
+            cs = self.cosim.last_state if cosim_on else None
+            if run and cosim_on:
+                # Co-sim mode: the binary server is the plant. Build the command
+                # (autopilot uses the server's state for feedback) and relay it as
+                # a binary CMD; the Python sim is bypassed.
+                t = b = st = 0.0
+                if cs:
+                    if driver:
+                        st, self.prev_idx = self.path.steer(
+                            cs["x"], cs["y"], cs["yaw"], cs["vx"], wb, self.prev_idx)
+                        ax = max(-3.0, min(3.0, 0.8 * (vt - cs["vx"])))
+                        t = min(1.0, ax / 3.0) if ax >= 0 else 0.0
+                        b = min(1.0, -ax / 3.0) if ax < 0 else 0.0
+                    else:
+                        t, b, st = man["throttle"], man["brake"], man["steer"]
+                self.cosim.send_cmd(t, b, st)
+                self.ports[self.live_vid].applied = {"throttle": t, "brake": b, "steer": st}
+            elif run:
                 pending = min(pending + (1.0 / fps) * ts, 0.5)  # cap to avoid spiral
                 while pending >= dt:
                     s = self.sim.state()
@@ -488,20 +646,31 @@ class Runner:
                     self.ports[self.live_vid].applied = {
                         "throttle": cmd.throttle, "brake": cmd.brake,
                         "steer": cmd.steer_angle_wheel}
-            o = self.sim.output()
-            s = o.state
-            snap = {"t": o.sim_time, "running": run, "driver": driver,
-                    "x": float(s.position[0]), "y": float(s.position[1]),
-                    "z": float(s.position[2]),
-                    "yaw": s.yaw(), "roll": o.roll, "pitch": o.pitch,
-                    "vx": s.vx(), "vy": s.vy(), "r": s.yaw_rate(),
-                    "wx": float(s.angular_velocity[0]), "wy": float(s.angular_velocity[1]),
-                    "ax": o.ax, "ay": o.ay, "steer": o.steer_applied,
-                    "Fz": [float(v) for v in o.Fz],
-                    "Ft": [[float(f[0]), float(f[1])] for f in o.tire_forces],
-                    "susp": [float(v) for v in s.susp_compression],
-                    "level": self.cfg["level"], "vehicle": self.cfg["vehicle"],
-                    "v_target": vt, "dt": dt, "time_scale": ts}
+            if cosim_on and cs:
+                snap = {"t": cs["t"], "running": run, "driver": driver,
+                        "x": cs["x"], "y": cs["y"], "z": cs["z"],
+                        "yaw": cs["yaw"], "roll": cs["roll"], "pitch": cs["pitch"],
+                        "vx": cs["vx"], "vy": cs["vy"], "r": cs["r"],
+                        "wx": cs["wx"], "wy": cs["wy"], "ax": cs["ax"], "ay": cs["ay"],
+                        "steer": cs["steer"], "Fz": cs["Fz"], "Ft": [], "susp": [],
+                        "level": self.cosim.cfg["level"], "vehicle": self.cfg["vehicle"],
+                        "v_target": vt, "dt": 1.0 / max(1.0, self.cosim.cfg["rate"]),
+                        "time_scale": 1.0, "source": "cosim"}
+            else:
+                o = self.sim.output()
+                s = o.state
+                snap = {"t": o.sim_time, "running": run, "driver": driver,
+                        "x": float(s.position[0]), "y": float(s.position[1]),
+                        "z": float(s.position[2]),
+                        "yaw": s.yaw(), "roll": o.roll, "pitch": o.pitch,
+                        "vx": s.vx(), "vy": s.vy(), "r": s.yaw_rate(),
+                        "wx": float(s.angular_velocity[0]), "wy": float(s.angular_velocity[1]),
+                        "ax": o.ax, "ay": o.ay, "steer": o.steer_applied,
+                        "Fz": [float(v) for v in o.Fz],
+                        "Ft": [[float(f[0]), float(f[1])] for f in o.tire_forces],
+                        "susp": [float(v) for v in s.susp_compression],
+                        "level": self.cfg["level"], "vehicle": self.cfg["vehicle"],
+                        "v_target": vt, "dt": dt, "time_scale": ts, "source": "sim"}
             with self.lock:
                 self.latest = snap
             self._telemetry_send(snap)
@@ -517,7 +686,18 @@ class Runner:
             snap["cmd_in"] = dict(p.applied)
             snap["io_age"] = (time.monotonic() - p.io_last_t
                               if p.io_last_t is not None else None)
+            snap["cosim"] = self.cosim.running()
             return snap
+
+    def start_cosim(self, over):
+        with self.lock:
+            vp, tp = self.vp, self.tp
+            over.setdefault("level", self.cfg["level"])
+            over.setdefault("vx0", self.cfg["v_target"])
+        return self.cosim.start(vp, tp, over)
+
+    def stop_cosim(self):
+        return self.cosim.stop()
 
     def config(self):
         with self.lock:
@@ -567,6 +747,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json(RUNNER.snapshot())
         elif self.path == "/api/io/targets":
             self._json(RUNNER.telemetry_config())
+        elif self.path == "/api/cosim":
+            self._json(RUNNER.cosim.status())
         elif self.path == "/api/stream":
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
@@ -613,6 +795,10 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/api/io/targets":
             RUNNER.set_telemetry(body)
             self._json({"ok": True, **RUNNER.telemetry_config()})
+        elif self.path == "/api/cosim/start":
+            self._json(RUNNER.start_cosim(body))
+        elif self.path == "/api/cosim/stop":
+            self._json(RUNNER.stop_cosim())
         else:
             self.send_error(404)
 
