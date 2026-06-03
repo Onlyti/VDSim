@@ -14,6 +14,11 @@ if(pybind11_FOUND)
     set_target_properties(vdsim_py PROPERTIES
         OUTPUT_NAME vdsim
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/python)
+    # Wheel build (scikit-build-core): install the module at the wheel root so
+    # `import vdsim` works after `pip install`.
+    if(DEFINED SKBUILD)
+        install(TARGETS vdsim_py LIBRARY DESTINATION ".")
+    endif()
     message(STATUS "Python bindings: ENABLED")
 else()
     message(STATUS "Python bindings: DISABLED (pybind11 not found)")

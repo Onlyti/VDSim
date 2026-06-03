@@ -1,0 +1,33 @@
+[build-system]
+requires = ["scikit-build-core>=0.10", "pybind11>=2.10"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "vdsim"
+version = "0.1.0"
+description = "VDSim — open-core vehicle-dynamics simulator (validated L1–L3 dynamics, Pacejka MF, hardpoint kinematics, FMI 2.0)"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Jiwon Seok" }]
+keywords = ["vehicle-dynamics", "simulation", "pacejka", "fmi", "autonomous-driving"]
+dependencies = ["numpy"]
+
+[project.urls]
+Homepage = "https://onlyti.github.io/VDSim/"
+
+[tool.scikit-build]
+minimum-version = "0.10"
+build-dir = "build/skbuild"
+# build only the pybind module; skip tests/examples/carla/cosim for a lean wheel
+cmake.args = [
+    "-DVDSIM_BUILD_PYTHON=ON",
+    "-DVDSIM_BUILD_TESTS=OFF",
+    "-DVDSIM_BUILD_EXAMPLES=OFF",
+    "-DVDSIM_BUILD_CARLA_PLUGIN=OFF",
+    "-DVDSIM_BUILD_COSIM=OFF",
+]
+wheel.install-dir = "."
+
+[tool.scikit-build.cmake.define]
+CMAKE_BUILD_TYPE = "Release"

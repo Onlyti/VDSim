@@ -27,7 +27,16 @@ autonomous-driving evaluation.
 | `configs/` | `vehicles/`, `tires/`, `suspensions/` (DW/MP/TA/5-link YAML), `scenarios/`. |
 | `tests/` | `unit/` + `integration/` (165 tests). |
 
-## Build
+## Install (Python)
+
+```bash
+pip install .                 # builds the vdsim extension (scikit-build-core)
+python -c "import vdsim; print(vdsim.__version__ if hasattr(vdsim,'__version__') else 'ok')"
+```
+`import vdsim` then gives the full API (`make_sim_session`, `VehicleParams`,
+`create_*_ground`, `make_sim_session_psd`, hardpoint kinematics, `linearize`, …).
+
+## Build (full tree: C++ tests, examples, CARLA, co-sim)
 
 ```bash
 cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release \
