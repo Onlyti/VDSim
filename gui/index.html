@@ -456,9 +456,28 @@ function collectFields(el, names){ const out={}, arrs={};
     else if(inp.tagName==='SELECT') out[nm]=inp.value;
     else out[nm]=+inp.value; });
   Object.assign(out,arrs); return out; }
-function section(title, open){
+// Settings <-> docs link. Deployed theory chapters (mike version "main").
+const DOCS='https://onlyti.github.io/VDSim/main/theory/';
+const DOC_MAP={
+  'Preset':'', 'Mass & inertia':'02_rigid_body_dynamics', 'Geometry':'04_ld1_bicycle',
+  'Suspension':'05_ld2_seven_dof', 'Drivetrain':'05_ld2_seven_dof', 'Steering':'05_ld2_seven_dof',
+  'Aero':'04_ld1_bicycle', 'Tire':'03_tire_pacejka_mf96', 'Actuator & feedback':'17_actuator_and_sensing',
+  'model':'', 'numerics':'11_numerical_integration', 'run':'09_pure_pursuit_path', 'cosim':'18_runtime_and_cosim'};
+function docHref(key){ const f=DOC_MAP[key]; return f===undefined ? null : DOCS + (f ? f + '/' : ''); }
+function helpIcon(href){
+  if(!href) return null;
+  const a=document.createElement('a'); a.href=href; a.target='_blank'; a.rel='noopener';
+  a.textContent='?'; a.title='관련 문서 열기';
+  a.style.cssText='display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;margin-left:6px;'+
+    'border:1px solid var(--dim);border-radius:50%;font:bold 10px Tahoma;color:var(--dim);text-decoration:none;cursor:help;vertical-align:middle';
+  a.onclick=e=>e.stopPropagation();   // open doc without toggling the <details>
+  return a;
+}
+function addHelp(node, key){ const a=helpIcon(docHref(key)); if(a&&node) node.appendChild(a); }
+function section(title, open, helpKey){
   const d=document.createElement('details'); d.className='sec'; d.open=!!open;
   const s=document.createElement('summary'); s.textContent=title; d.appendChild(s);
+  if(helpKey!==undefined) addHelp(s, helpKey);
   const b=document.createElement('div'); b.className='secb'; d.appendChild(b);
   return {sec:d, body:b};
 }
@@ -508,7 +527,7 @@ async function buildPlant(){
   const tire=(await(await fetch('/api/tire')).json()).fields;
   const act =(await(await fetch('/api/actuator')).json()).fields;
   const el=$('plant_body'); el.innerHTML='';
-  const ps=section('Preset', true);
+  const ps=section('Preset', true, 'Preset');
   ps.body.appendChild(selectRow('Vehicle type', cf.vehicles, cfg.vehicle,
     v=>post('/api/config',{vehicle:v}).then(buildPlant)));
   const note=document.createElement('div'); note.className='sub'; note.textContent='Dynamics level → Simulation window.';
@@ -516,9 +535,9 @@ async function buildPlant(){
   el.appendChild(ps.sec);
   // vehicle parameter groups
   const vg={}; veh.forEach(f=>{(vg[f.group]=vg[f.group]||[]).push(f);});
-  for(const g in vg){ const s=section(g,false); vg[g].forEach(f=>s.body.appendChild(fieldRow(f,lvl))); el.appendChild(s.sec); }
+  for(const g in vg){ const s=section(g,false,g); vg[g].forEach(f=>s.body.appendChild(fieldRow(f,lvl))); el.appendChild(s.sec); }
   // tire (Magic Formula plots)
-  const ts=section('Tire', false);
+  const ts=section('Tire', false, 'Tire');
   const tcurves=document.createElement('div'); ts.body.appendChild(tcurves);
   const tireRefresh=async()=>renderPlots(tcurves,(await(await fetch('/api/tire/curves')).json()).plots);
   const tg={}; tire.forEach(f=>{(tg[f.group]=tg[f.group]||[]).push(f);});
@@ -527,7 +546,7 @@ async function buildPlant(){
   ts.sec.addEventListener('toggle',()=>{ if(ts.sec.open) tireRefresh(); },{once:true});
   el.appendChild(ts.sec);
   // actuator + feedback (step-response plots)
-  const as=section('Actuator & feedback', false);
+  const as=section('Actuator & feedback', false, 'Actuator & feedback');
   const stepBox=document.createElement('div'); as.body.appendChild(stepBox);
   const stepRefresh=async()=>renderPlots(stepBox,(await(await fetch('/api/actuator/step')).json()).plots);
   const ag={}; act.forEach(f=>{(ag[f.group]=ag[f.group]||[]).push(f);});
@@ -619,7 +638,7 @@ function linkPlantFields(el){
 async function buildDataPort(){
   const el=$('io_body'), base=location.origin;
   el.innerHTML=`
-   <div class="grp">Co-sim server (vdsim_udp_server)</div>
+   <div class="grp" id="g_cosim">Co-sim server (vdsim_udp_server)</div>
    <div id="cosim_ctl"></div>
    <div class="grp">Endpoints</div>
    <div style="font:11px Tahoma;line-height:1.6">
@@ -660,6 +679,7 @@ async function buildDataPort(){
     post('/api/io',{vehicle:vid,throttle:th,brake:br,steer:st}); };
   ['ci_th','ci_br','ci_st'].forEach(id=>$(id).oninput=ciSend);
   $('ci_zero').onclick=()=>{ $('ci_th').value=0; $('ci_br').value=0; $('ci_st').value=0; ciSend(); };
+  addHelp($('g_cosim'),'cosim');
   renderCosim($('cosim_ctl'));
   if(window._lastState) updateIoMonitor(window._lastState);
   renderTx($('tx_ctl'), await (await fetch('/api/io/targets')).json());
@@ -732,13 +752,13 @@ async function buildSim(){
   const cf=await(await fetch('/api/config')).json(); const c=cf.config;
   manualMode=!c.driver; toggleManualBar(manualMode);
   const el=$('sim_body');
-  el.innerHTML=`<div class="grp">Dynamics model</div>
+  el.innerHTML=`<div class="grp" id="g_model">Dynamics model</div>
     <div class="fld"><label>level</label><select id="sim_lvl" style="width:130px"></select></div>
-    <div class="grp">Mode</div>
+    <div class="grp" id="g_mode">Mode</div>
     <div class="row"><button id="sim_drv">Autopilot</button><button id="sim_man">Manual</button></div>
     <div class="grp">Target speed <span id="sim_vtv" class="sub"></span></div>
     <input id="sim_vt" type="range" min="0" max="40" step="0.5" style="width:100%">
-    <div class="grp">Numerics</div>
+    <div class="grp" id="g_num">Numerics</div>
     <div class="fld"><label>integrator</label><select id="sim_int" style="width:130px"><option>RK4</option><option>Euler</option></select></div>
     <div class="fld"><label>max substeps</label><input id="sim_sub" type="number" step="1" min="1" value="${c.max_substeps}"></div>
     <div class="fld"><label>dt [s]</label><input id="sim_dt" type="number" step="any" value="${c.dt}"></div>
@@ -767,6 +787,7 @@ async function buildSim(){
   $('sim_start').onclick=()=>post('/api/control',{action:'start'});
   $('sim_stop').onclick =()=>post('/api/control',{action:'stop'});
   $('sim_reset').onclick=()=>{ trailPts=[]; trail.visible=false; tgt.has=false; post('/api/control',{action:'reset'}); };
+  addHelp($('g_model'),'model'); addHelp($('g_mode'),'run'); addHelp($('g_num'),'numerics');
 }
 
 function openWin(id, build){ const w=$(id); w.classList.toggle('open'); if(w.classList.contains('open')) build(); }
