@@ -145,6 +145,13 @@ std::unique_ptr<IContactProvider> create_heightmap_ground(
     std::vector<double> h, int nx, int ny,
     double x0, double y0, double dx, double dy, double mu = 1.0);
 
+// ISO 8608 road roughness: a random profile synthesized from the standard
+// spatial PSD Gd(n) = Gd(n0)*(n/n0)^-2 for road class 0=A (very good) .. 7=H
+// (very poor). Independent left/right tracks (seeded) excite roll; the wheelbase
+// gap between front/rear samples excites pitch. Feeds road_dz for the L3 ride.
+std::unique_ptr<IContactProvider> create_iso8608_ground(
+    double z, double mu, int road_class, unsigned seed = 1u);
+
 // =============================================================================
 // IRoughnessProvider — terrain roughness (Phase 2; reserved)
 // =============================================================================

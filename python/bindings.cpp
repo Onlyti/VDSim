@@ -346,6 +346,9 @@ PYBIND11_MODULE(vdsim, m) {
     m.def("create_rough_ground", &vdsim::create_rough_ground,
           py::arg("z") = 0.0, py::arg("mu") = 1.0, py::arg("amp") = 0.01,
           py::arg("wavelength") = 4.0);
+    m.def("create_iso8608_ground", &vdsim::create_iso8608_ground,
+          py::arg("z") = 0.0, py::arg("mu") = 1.0, py::arg("road_class") = 2,
+          py::arg("seed") = 1u);
 
     // Dynamics driven by a full Magic Formula tire loaded from a .tir file.
     // Keep .tir files (which may hold confidential measured data) out of the repo.
@@ -520,7 +523,7 @@ PYBIND11_MODULE(vdsim, m) {
              double nominal_dt, const vdsim::ActuatorParams& actuator,
              const vdsim::SolverParams& solver, const vdsim::SensorParams& sensors,
              double mu_right, double mu_boundary_y, double grade, double bank,
-             double rough_amp, double rough_wavelength) {
+             double rough_amp, double rough_wavelength, int iso_class) {
               std::unique_ptr<vdsim::IVehicleDynamics> dyn =
                   (level == "K" || level == "L0") ? vdsim::create_kinematic()
                   : (level == "L1") ? vdsim::create_bicycle()
@@ -531,9 +534,12 @@ PYBIND11_MODULE(vdsim, m) {
               cfg.sensors        = sensors;
               cfg.sensor_delay_s = sensor_delay_s;
               cfg.nominal_dt     = nominal_dt;
-              // rough_amp>0 -> rough; grade/bank -> inclined; mu_right>=0 -> split; else flat.
+              // iso_class>=0 -> ISO 8608; rough_amp>0 -> two-tone rough;
+              // grade/bank -> inclined; mu_right>=0 -> split; else flat.
               std::unique_ptr<vdsim::IContactProvider> ground;
-              if (rough_amp > 0.0)
+              if (iso_class >= 0)
+                  ground = vdsim::create_iso8608_ground(0.0, mu, iso_class, 1u);
+              else if (rough_amp > 0.0)
                   ground = vdsim::create_rough_ground(0.0, mu, rough_amp, rough_wavelength);
               else if (grade != 0.0 || bank != 0.0)
                   ground = vdsim::create_inclined_ground(0.0, grade, bank, mu);
@@ -552,7 +558,8 @@ PYBIND11_MODULE(vdsim, m) {
           py::arg("sensors") = vdsim::SensorParams{},
           py::arg("mu_right") = -1.0, py::arg("mu_boundary_y") = 0.0,
           py::arg("grade") = 0.0, py::arg("bank") = 0.0,
-          py::arg("rough_amp") = 0.0, py::arg("rough_wavelength") = 4.0);
+          py::arg("rough_amp") = 0.0, py::arg("rough_wavelength") = 4.0,
+          py::arg("iso_class") = -1);
 
     // Build a SimSession on a heightmap terrain (2D array h[ny][nx]). Per-wheel
     // bilinear height + gradient normal -> slope-gravity works on arbitrary

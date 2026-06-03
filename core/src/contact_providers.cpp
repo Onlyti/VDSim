@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cmath>
 #include <memory>
+#include <random>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -217,9 +218,90 @@ private:
     double x0_, y0_, dx_, dy_, mu_;
 };
 
+// ISO 8608 road profile synthesizer. The standard one-sided displacement PSD is
+//   Gd(n) = Gd(n0) * (n/n0)^-w,   n0 = 0.1 cycles/m, w = 2,
+// with Gd(n0) the road-class roughness coefficient. A profile with that PSD is
+// built as a sum of sinusoids z(x) = sum_i sqrt(2 Gd(n_i) dn_i) cos(2 pi n_i x +
+// phi_i) over log-spaced spatial frequencies, phases random (seeded). Two
+// independent tracks (left/right) so the road excites roll as well as bounce.
+class Iso8608Profile {
+public:
+    Iso8608Profile(int road_class, unsigned seed) {
+        // geometric-mean Gd(n0) per class A..H [m^3] (each class x4)
+        static const double GD[8] = {16e-6, 64e-6, 256e-6, 1024e-6,
+                                      4096e-6, 16384e-6, 65536e-6, 262144e-6};
+        const double gd0 = GD[std::clamp(road_class, 0, 7)];
+        const double n0 = 0.1, n_min = 0.011, n_max = 4.0;   // wavelength ~0.25..90 m
+        std::mt19937 rng(seed);
+        std::uniform_real_distribution<double> uni(0.0, 2.0 * M_PI);
+        const double logmin = std::log(n_min), logmax = std::log(n_max);
+        for (int i = 0; i < N_; ++i) {
+            // log-spaced band centers + bin width for the sqrt(2 Gd dn) amplitude
+            const double f0 = std::exp(logmin + (logmax - logmin) * i / N_);
+            const double f1 = std::exp(logmin + (logmax - logmin) * (i + 1) / N_);
+            const double ni = 0.5 * (f0 + f1), dni = f1 - f0;
+            const double gd = gd0 * std::pow(ni / n0, -2.0);
+            n_[i]  = ni;
+            amp_[i] = std::sqrt(2.0 * gd * dni);
+            phL_[i] = uni(rng);
+            phR_[i] = uni(rng);
+        }
+    }
+    double height(double x, bool right) const {
+        double z = 0.0;
+        for (int i = 0; i < N_; ++i)
+            z += amp_[i] * std::cos(2.0 * M_PI * n_[i] * x + (right ? phR_[i] : phL_[i]));
+        return z;
+    }
+private:
+    static constexpr int N_ = 200;
+    double n_[N_], amp_[N_], phL_[N_], phR_[N_];
+};
+
+class Iso8608Ground final : public IContactProvider {
+public:
+    Iso8608Ground(double z, double mu, int road_class, unsigned seed)
+        : z_(z), mu_(mu), prof_(road_class, seed) {}
+    void query(const State& vehicle, const VehicleParams& vp,
+               ContactArray& out) override {
+        const double a = vp.cg_to_front, b = vp.cg_to_rear;
+        const double tf2 = 0.5 * vp.track_front, tr2 = 0.5 * vp.track_rear;
+        const Vec3 body_offsets[NUM_WHEELS] = {
+            Vec3(a, tf2, 0.0), Vec3(a, -tf2, 0.0),
+            Vec3(-b, tr2, 0.0), Vec3(-b, -tr2, 0.0)};
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            const Vec3 pw = vehicle.position + vehicle.orientation * body_offsets[i];
+            const bool right = (i == WHEEL_FR || i == WHEEL_RR);
+            const double dz = prof_.height(pw.x(), right);   // profile along travel
+            out[i].is_valid    = true;
+            out[i].normal      = Vec3::UnitZ();
+            out[i].mu_long     = mu_;
+            out[i].mu_lat      = mu_;
+            out[i].surface_id  = 0;
+            out[i].position    = Vec3(pw.x(), pw.y(), z_ + dz);
+            out[i].penetration = std::max(0.0, vehicle.position.z() - z_);
+            out[i].road_dz     = dz;
+        }
+    }
+private:
+    double z_, mu_;
+    Iso8608Profile prof_;
+};
+
 class FlatRoughness final : public IRoughnessProvider {
 public:
     double sample_height(const Vec2& /*world_xy*/) const override { return 0.0; }
+};
+
+// 1-D ISO 8608 roughness as an IRoughnessProvider (sample_height along world x).
+class Iso8608Roughness final : public IRoughnessProvider {
+public:
+    Iso8608Roughness(int road_class, unsigned seed) : prof_(road_class, seed) {}
+    double sample_height(const Vec2& world_xy) const override {
+        return prof_.height(world_xy.x(), false);
+    }
+private:
+    Iso8608Profile prof_;
 };
 
 }  // namespace
@@ -250,13 +332,18 @@ std::unique_ptr<IContactProvider> create_heightmap_ground(
         std::move(h), nx, ny, x0, y0, dx, dy, mu);
 }
 
+std::unique_ptr<IContactProvider> create_iso8608_ground(
+    double z, double mu, int road_class, unsigned seed) {
+    return std::make_unique<Iso8608Ground>(z, mu, road_class, seed);
+}
+
 std::unique_ptr<IRoughnessProvider> create_flat() {
     return std::make_unique<FlatRoughness>();
 }
 
-std::unique_ptr<IRoughnessProvider> create_iso8608_psd(int /*grade*/) {
-    throw std::runtime_error(
-        "vdsim::create_iso8608_psd: ISO 8608 PSD roughness not yet implemented");
+std::unique_ptr<IRoughnessProvider> create_iso8608_psd(int grade) {
+    // grade as 0=A..7=H; legacy callers may pass 1=A..5=E, clamp handles both.
+    return std::make_unique<Iso8608Roughness>(std::clamp(grade, 0, 7), 1u);
 }
 
 }  // namespace vdsim

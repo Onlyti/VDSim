@@ -13,6 +13,7 @@ add_executable(vdsim_unit_tests
     test_actuator.cpp
     test_sim_session.cpp
     test_kinematic.cpp
+    test_road_roughness.cpp
 )
 
 target_link_libraries(vdsim_unit_tests PRIVATE vdsim_carla_plugin)
