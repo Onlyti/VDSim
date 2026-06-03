@@ -829,7 +829,12 @@ class Runner:
         sys.path.insert(0, str(REPO / "examples"))
         import opendrive as od
         roads = od.parse_xodr(xodr)
-        route = od.chain_route(roads, step=3.0, gap_tol=50.0)
+        try:                                    # follow OpenDRIVE links (handles junctions)
+            route = od.route_by_links(roads, od.parse_junctions(xodr))
+        except Exception:
+            route = []
+        if len(route) < 2:                      # fall back to greedy geometric chaining
+            route = od.chain_route(roads, step=3.0, gap_tol=50.0)
         if len(route) < 2:
             return {"ok": False, "msg": "no drivable route from " + xodr}
         with self.lock:

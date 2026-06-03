@@ -6,9 +6,10 @@ to a polyline (x, y, heading, s, curvature) usable as a tracking reference for
 the pure-pursuit / maneuvers / Monte-Carlo harnesses, plus elevation (grade) and
 superelevation (bank) along s for the road surface (feeds slope-gravity).
 
-Supported geometry: line, arc (constant curvature). spiral (clothoid) and
-poly3/paramPoly3 are not yet implemented (raise NotImplementedError) — the
-common straight+arc roads and the self-test below work today.
+Supported geometry: line, arc (constant curvature), spiral (clothoid).
+poly3/paramPoly3 are not yet implemented (raise NotImplementedError).
+route_by_links() follows predecessor/successor links through junctions to trace
+one continuous drivable centerline (chain_route is a geometric-proximity fallback).
 
 Usage:
     python3 examples/opendrive.py            # self-test on a synthetic .xodr
@@ -68,6 +69,10 @@ class _Poly:                                  # cubic a+b*ds+c*ds^2+d*ds^3 from 
 class Road:
     def __init__(self, geoms, elevs, supers, length):
         self.geoms, self.elevs, self.supers, self.length = geoms, elevs, supers, length
+        self.id = None          # OpenDRIVE road id (str)
+        self.junction = "-1"    # owning junction id, or "-1" for a through road
+        self.pred = None        # (elementType, elementId) at s=0, or None
+        self.succ = None        # (elementType, elementId) at s=length, or None
 
     @staticmethod
     def _pick(polys, s):
@@ -136,8 +141,77 @@ def parse_xodr(src):
             return out
         elevs = polys("elevationProfile", "elevation")
         supers = polys("lateralProfile", "superelevation")
-        roads.append(Road(geoms, elevs, supers, length))
+        ro = Road(geoms, elevs, supers, length)
+        ro.id = road.get("id")
+        ro.junction = road.get("junction", "-1")
+        ln = road.find("link")
+        def _lk(tag):
+            e = ln.find(tag) if ln is not None else None
+            return (e.get("elementType"), e.get("elementId")) if e is not None else None
+        ro.pred, ro.succ = _lk("predecessor"), _lk("successor")
+        roads.append(ro)
     return roads
+
+
+def parse_junctions(src):
+    """junction id -> list of (incomingRoad, connectingRoad, contactPoint)."""
+    root = ET.fromstring(src) if src.lstrip().startswith("<") else ET.parse(src).getroot()
+    out = {}
+    for j in root.findall("junction"):
+        out[j.get("id")] = [(c.get("incomingRoad"), c.get("connectingRoad"),
+                             c.get("contactPoint", "start"))
+                            for c in j.findall("connection")]
+    return out
+
+
+def route_by_links(roads, junctions, start_id=None, max_roads=400):
+    """Trace one continuous drivable polyline by following OpenDRIVE
+    predecessor/successor links (through junctions), instead of greedy geometric
+    chaining. Seeds at the longest through road (junction == -1) and walks the
+    successor chain, picking a junction connection per hop, until a road repeats
+    (loop closure) or the chain dead-ends. Returns [(x, y)]."""
+    by_id = {r.id: r for r in roads}
+    through = [r for r in roads if r.junction == "-1"] or roads
+    cur = by_id.get(start_id) or max(through, key=lambda r: r.length)
+    fwd, visited, route = True, set(), []
+
+    def ends(r):
+        a, b = r.pose(0.0), r.pose(r.length)
+        return (a[0], a[1]), (b[0], b[1])
+
+    def orient(nr, exit_pt):
+        # face the next road so its near end meets where we just exited
+        if exit_pt is None:
+            return True
+        a, b = ends(nr)
+        return math.hypot(a[0]-exit_pt[0], a[1]-exit_pt[1]) <= \
+               math.hypot(b[0]-exit_pt[0], b[1]-exit_pt[1])
+
+    def pick(road, link):
+        if not link:
+            return None
+        etype, eid = link
+        if etype == "road":
+            return by_id.get(eid)
+        for inc, con, _ in junctions.get(eid, []):             # junction
+            if inc == road.id and con not in visited and con in by_id:
+                return by_id[con]
+        return None
+
+    exit_pt = None
+    while cur is not None and cur.id not in visited and len(visited) < max_roads:
+        visited.add(cur.id)
+        fwd = orient(cur, exit_pt)                              # face previous exit
+        pts = [(p[0], p[1]) for p in cur.sample(2.0)]
+        if not fwd:
+            pts = pts[::-1]
+        route.extend(pts)
+        exit_pt = pts[-1]
+        nxt = pick(cur, cur.succ if fwd else cur.pred)
+        if nxt is None:                                        # try the other link end
+            nxt = pick(cur, cur.pred if fwd else cur.succ)
+        cur = nxt
+    return route
 
 
 def chain_route(roads, step=2.0, gap_tol=30.0):
