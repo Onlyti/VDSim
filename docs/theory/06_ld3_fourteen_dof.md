@@ -201,8 +201,9 @@ bit-identical 아님)하고, 차이는 **transient(turn-in roll lag)과 rough/�
 드러난다. 예: rough road 에서 FL grip $F_z$ std 2.9 N (Ld2 는 0.4 N). Fz/μ 추정기
 검증 데이터 생성에 유용.
 
-> **근사**: 결합 load 의 static 항에 aero·$\cos(\text{slope})$, unsprung 횡
-> 하중이동은 생략 (일반 트랙에서 작음). 미결합 시 inner 기본값(aero 포함) 사용.
+결합 load 의 static 항은 per-wheel $\cos(\text{slope})$ 스케일 + aero downforce 를
+포함한다 (60 m/s 에서 race_car total $F_z$ 8.8→24.5 kN, 10° 경사에서 $\cos$ 스케일
+확인). 남은 근사는 **unsprung 횡 하중이동** 한 항뿐 (일반 트랙에서 작음).
 
 ### Wheel-hop frequency
 

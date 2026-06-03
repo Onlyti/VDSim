@@ -143,17 +143,24 @@ public:
         // Dynamic per-corner tire load from the 14-DOF ride state (suspension
         // transfer via z_u + road/terrain via road_dz), fed to the inner grip
         // calc in place of its quasi-static Fz. z_u_ is the previous step's value
-        // (1-step lag, consistent with the inner's lagged transfer). Static uses
-        // the full corner share; aero/cos(slope) are left to the inner default
-        // when not coupled (small for typical tracks).
+        // (1-step lag, consistent with the inner's lagged transfer). Static is the
+        // full corner share scaled by the per-wheel contact-normal cos(slope) plus
+        // aero downforce, matching the inner's static (only the unsprung lateral
+        // transfer term is omitted).
         {
+            constexpr double kAirDensity = 1.225;
             const double k_tire = std::max(1.0, tp_.tire_vertical_stiffness);
             const double Lwb = vp_.wheelbase;
+            const double vx  = state_.velocity.x();
+            const double q_aero = 0.5 * kAirDensity * vp_.frontal_area * vx * std::abs(vx);
+            const double aero_f = 0.5 * vp_.aero_lift_front * q_aero;
+            const double aero_r = 0.5 * vp_.aero_lift_rear  * q_aero;
             const double st_f = vp_.mass * kGravity * vp_.cg_to_rear  / (2.0 * Lwb);
             const double st_r = vp_.mass * kGravity * vp_.cg_to_front / (2.0 * Lwb);
             std::array<double, NUM_WHEELS> fz_dyn;
             for (int i = 0; i < NUM_WHEELS; ++i) {
-                const double st = (i < 2) ? st_f : st_r;
+                const double cos_slope = std::max(0.1, contacts[i].normal.z());
+                const double st   = ((i < 2) ? st_f : st_r) * cos_slope + ((i < 2) ? aero_f : aero_r);
                 fz_dyn[i] = std::max(0.0, st + k_tire * (contacts[i].road_dz - z_u_[i]));
             }
             inner_->set_external_fz(fz_dyn);
