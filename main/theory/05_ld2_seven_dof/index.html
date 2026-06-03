@@ -832,6 +832,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#roll-dof-l2-roll-stiffness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        roll-DOF 없는 L2 가 roll stiffness 를 쓰는 근거 (중요)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#a_y" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2363,6 +2374,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#roll-dof-l2-roll-stiffness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        roll-DOF 없는 L2 가 roll stiffness 를 쓰는 근거 (중요)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#a_y" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2754,6 +2776,25 @@ CG 높이 (<span class="arithmatex">\(\approx\)</span> wheel radius).</p>
 <p>front 가 더 stiff (또는 front ARB↑) → front share↑ → front outer 가 더 loaded
 → understeer 경향. <span class="arithmatex">\(h_{rc}=0\)</span> 이면 geometric=0, <span class="arithmatex">\(h_{ra}=0\)</span> 으로 elastic-only
 (<span class="arithmatex">\(M_{\text{roll}}=m_s a_y h_{cg}\)</span>) 이 되어 단순 모델로 환원된다.</p>
+<h3 id="roll-dof-l2-roll-stiffness">roll-DOF 없는 L2 가 roll stiffness 를 쓰는 근거 (중요)<a class="headerlink" href="#roll-dof-l2-roll-stiffness" title="Permanent link">&para;</a></h3>
+<p>elastic 분배 <span class="arithmatex">\(s_f = K_{\phi,f}/(K_{\phi,f}+K_{\phi,r})\)</span> 는 <strong>sprung mass 의 roll 이
+front/rear roll spring 에 분배되는</strong> roll 매개 효과다. L2 는 roll 자유도를 적분하지
+않는데 이걸 쓰는 것이 모순처럼 보이지만, 다음으로 정당화된다:</p>
+<ul>
+<li><strong>total transfer (front+rear 합)</strong> 은 순수 statics — roll 무관.</li>
+<li><strong>front/rear 분배</strong> 는 정상상태에서 실제로 roll-stiffness 비율로 결정된다
+  (<strong>TLLTD</strong>, total lateral load transfer distribution — 측정 가능한 실물리량).
+  따라서 <strong>정상상태에서는 근사가 아니라 정확</strong>하다.</li>
+<li>L2 는 "roll 이 무한히 빠르게 정상상태로 settle 한다"는 <strong>quasi-static roll
+  가정</strong>(§5.2) 하에 그 정상상태 결과만 대수적으로 가져온다. roll 이 없다고 보는 게
+  아니라 transient 를 무시(즉시 settle)하는 것.</li>
+<li><strong>transient 한계</strong>: turn-in 같은 빠른 과도에서 실제 elastic transfer 는 roll
+  시상수만큼 지연되며 쌓이는데 L2 는 lag 없이 즉시 full split 을 건다 → 과도
+  구간에서 약간 aggressive. 이 lag 는 roll 을 상태로 갖는 chapter 06 (Ld3) 가 메운다.</li>
+<li>"순수 2D" 를 원하면 분배를 정적하중 <span class="arithmatex">\(b/L, a/L\)</span> 로 바꿀 수 있으나, ARB·spring 의
+  front/rear balance 튜닝(understeer 의 #1 손잡이)이 L2 에서 무력화된다. 본 시리즈는
+  balance tunability 를 위해 roll-stiffness 분배(TLLTD)를 채택한다.</li>
+</ul>
 <p>부호 직관: <span class="arithmatex">\(a_y &gt; 0\)</span> (좌선회, centripetal <span class="arithmatex">\(+y\)</span>) → 차체가 <span class="arithmatex">\(-y\)</span> 쪽으로 기울고
 → right side (FR, RR) loaded → <span class="arithmatex">\(F_{z,FR} &gt; F_{z,FL}\)</span>.</p>
 <h3 id="a_y"><span class="arithmatex">\(a_y\)</span> 의 정확한 정의<a class="headerlink" href="#a_y" title="Permanent link">&para;</a></h3>
