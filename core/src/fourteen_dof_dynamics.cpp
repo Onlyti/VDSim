@@ -223,9 +223,9 @@ private:
         // into pitch.  For braking (ax<0) the front anti_dive_front fraction
         // is bypassed; for accel (ax>0) the rear anti_squat_rear fraction is
         // bypassed.  Effective scaling on inertial pitch moment:
-        const double anti = (ax < 0.0)
-                            ? std::clamp(vp_.anti_dive_front, 0.0, 1.0)
-                            : std::clamp(vp_.anti_squat_rear, 0.0, 1.0);
+        // Not clamped to [0,1]: >1 (over-100% anti, lifts under braking) or <0
+        // (pro-dive) are valid suspension-geometry design choices.
+        const double anti = (ax < 0.0) ? vp_.anti_dive_front : vp_.anti_squat_rear;
         // ISO sign: +theta = nose-down. Braking (ax<0) must dive (front compress),
         // i.e. theta>0, so the inertial pitch moment is -m_s*ax*h.
         const double M_inertia_pitch = -m_s * ax * h * (1.0 - anti);
