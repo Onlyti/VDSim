@@ -78,6 +78,8 @@ python3 apps/validation/run_validation.py \
         --out     /tmp/validation_report
 # → REPORT.md + ISO 7401 + ISO 4138 + ISO 3888-2 metrics + plots
 ```
+What "validated dynamics" means, the reproducible benchmark matrix (analytic /
+ISO / cross-model / FMI / ISO 8608) and the honest limits: [docs/VALIDATION.md](docs/VALIDATION.md).
 
 ### 5. FMI export (industrial co-simulation)
 ```bash
