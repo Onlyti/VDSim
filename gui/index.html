@@ -563,13 +563,18 @@ async function buildDataPort(){
   -H 'Content-Type: application/json' \\
   -d '{"vehicle":0,"throttle":0.5,"steer":0.05}'</pre>
    <div class="sub" style="margin:4px 0">POST takes manual control (free-run); throttle/brake 0–1, steer in rad, vehicle id (default 0). Response is that vehicle's state. Outbound packets carry "veh".</div>
-   <div class="grp">Live I/O monitor <span id="io_conn" class="sub">—</span></div>
+   <div class="grp">Control input (you → sim) <span class="sub">input-only</span></div>
+   <div class="fld"><label>throttle</label><input id="ci_th" type="range" min="0" max="1" step="0.01" value="0" style="flex:1"><b id="ci_thv" style="width:36px;text-align:right">0.00</b></div>
+   <div class="fld"><label>brake</label><input id="ci_br" type="range" min="0" max="1" step="0.01" value="0" style="flex:1"><b id="ci_brv" style="width:36px;text-align:right">0.00</b></div>
+   <div class="fld"><label>steer</label><input id="ci_st" type="range" min="-0.5" max="0.5" step="0.01" value="0" style="flex:1"><b id="ci_stv" style="width:36px;text-align:right">0.00</b></div>
+   <div class="row"><button id="ci_zero">neutral</button></div>
+   <div class="grp">Vehicle state out (sim → you) <span id="io_conn" class="sub">—</span></div>
    <div style="display:flex;gap:10px">
-     <div style="flex:1"><div class="subgrp">command in</div>
+     <div style="flex:1"><div class="subgrp">applied cmd (confirm)</div>
        <div class="kv"><span>throttle</span><b id="io_th">—</b></div>
        <div class="kv"><span>brake</span><b id="io_br">—</b></div>
        <div class="kv"><span>steer</span><b id="io_st">—</b></div></div>
-     <div style="flex:1"><div class="subgrp">state out</div>
+     <div style="flex:1"><div class="subgrp">state</div>
        <div class="kv"><span>vx</span><b id="io_vx">—</b></div>
        <div class="kv"><span>vy</span><b id="io_vy">—</b></div>
        <div class="kv"><span>yaw rate</span><b id="io_r">—</b></div>
@@ -579,6 +584,13 @@ async function buildDataPort(){
    <div class="grp">Outbound UDP telemetry (push)</div>
    <div class="sub" style="margin:2px 0 4px">Push state/command as JSON UDP to one or more destinations.</div>
    <div id="tx_ctl"></div>`;
+  // Control input (input-only): sliders POST /api/io to the live vehicle.
+  const ciSend=()=>{ const th=+$('ci_th').value, br=+$('ci_br').value, st=+$('ci_st').value;
+    $('ci_thv').textContent=th.toFixed(2); $('ci_brv').textContent=br.toFixed(2); $('ci_stv').textContent=st.toFixed(2);
+    const vid=(window._lastState&&window._lastState.veh)||0;
+    post('/api/io',{vehicle:vid,throttle:th,brake:br,steer:st}); };
+  ['ci_th','ci_br','ci_st'].forEach(id=>$(id).oninput=ciSend);
+  $('ci_zero').onclick=()=>{ $('ci_th').value=0; $('ci_br').value=0; $('ci_st').value=0; ciSend(); };
   if(window._lastState) updateIoMonitor(window._lastState);
   renderTx($('tx_ctl'), await (await fetch('/api/io/targets')).json());
 }
