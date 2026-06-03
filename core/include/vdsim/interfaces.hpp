@@ -2,6 +2,7 @@
 
 #include <array>
 #include <memory>
+#include <vector>
 
 #include "vdsim/contact.hpp"
 #include "vdsim/control.hpp"
@@ -131,6 +132,12 @@ std::unique_ptr<IContactProvider> create_inclined_ground(
 // Rough flat plane: two-tone road profile -> road_dz (L3 ride excitation).
 std::unique_ptr<IContactProvider> create_rough_ground(
     double z, double mu, double amp, double wavelength = 4.0);
+
+// Heightmap terrain: grid h[iy*nx+ix] at (x0+ix*dx, y0+iy*dy). Bilinear height +
+// gradient normal per wheel (drives slope-gravity on arbitrary terrain).
+std::unique_ptr<IContactProvider> create_heightmap_ground(
+    std::vector<double> h, int nx, int ny,
+    double x0, double y0, double dx, double dy, double mu = 1.0);
 
 // =============================================================================
 // IRoughnessProvider — terrain roughness (Phase 2; reserved)

@@ -6,9 +6,12 @@
 
 #include "vdsim/interfaces.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <memory>
 #include <stdexcept>
+#include <utility>
+#include <vector>
 
 namespace vdsim {
 
@@ -156,6 +159,57 @@ private:
     double z_, mu_, amp_, k1_, k2_;
 };
 
+// Heightmap terrain: a regular grid h[iy*nx+ix] at (x0+ix*dx, y0+iy*dy).
+// Per-wheel bilinear height + surface normal from the local gradient (so the
+// slope-gravity in the dynamics works on arbitrary terrain). A Blender mesh is
+// used by baking it to a heightmap. Queries outside the grid clamp to the edge.
+class HeightmapGround final : public IContactProvider {
+public:
+    HeightmapGround(std::vector<double> h, int nx, int ny,
+                    double x0, double y0, double dx, double dy, double mu)
+        : h_(std::move(h)), nx_(nx), ny_(ny), x0_(x0), y0_(y0),
+          dx_(dx), dy_(dy), mu_(mu) {}
+
+    double height(double x, double y) const {
+        double fx = (x - x0_) / dx_, fy = (y - y0_) / dy_;
+        int ix = std::clamp(int(std::floor(fx)), 0, nx_ - 2);
+        int iy = std::clamp(int(std::floor(fy)), 0, ny_ - 2);
+        const double tx = std::clamp(fx - ix, 0.0, 1.0);
+        const double ty = std::clamp(fy - iy, 0.0, 1.0);
+        const double h00 = h_[iy * nx_ + ix],       h10 = h_[iy * nx_ + ix + 1];
+        const double h01 = h_[(iy + 1) * nx_ + ix], h11 = h_[(iy + 1) * nx_ + ix + 1];
+        return (h00 * (1 - tx) + h10 * tx) * (1 - ty)
+             + (h01 * (1 - tx) + h11 * tx) * ty;
+    }
+    void query(const State& vehicle, const VehicleParams& vp,
+               ContactArray& out) override {
+        const double a = vp.cg_to_front, b = vp.cg_to_rear;
+        const double tf2 = 0.5 * vp.track_front, tr2 = 0.5 * vp.track_rear;
+        const Vec3 body_offsets[NUM_WHEELS] = {
+            Vec3(a, tf2, 0.0), Vec3(a, -tf2, 0.0),
+            Vec3(-b, tr2, 0.0), Vec3(-b, -tr2, 0.0)};
+        const double e = 0.25 * std::min(dx_, dy_);   // gradient finite-diff step
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            const Vec3 pw = vehicle.position + vehicle.orientation * body_offsets[i];
+            const double z = height(pw.x(), pw.y());
+            const double dhdx = (height(pw.x() + e, pw.y()) - height(pw.x() - e, pw.y())) / (2 * e);
+            const double dhdy = (height(pw.x(), pw.y() + e) - height(pw.x(), pw.y() - e)) / (2 * e);
+            out[i].is_valid    = true;
+            out[i].normal      = Vec3(-dhdx, -dhdy, 1.0).normalized();
+            out[i].mu_long     = mu_;
+            out[i].mu_lat      = mu_;
+            out[i].surface_id  = 0;
+            out[i].position    = Vec3(pw.x(), pw.y(), z);
+            out[i].penetration = std::max(0.0, vehicle.position.z() - z);
+        }
+    }
+
+private:
+    std::vector<double> h_;
+    int nx_, ny_;
+    double x0_, y0_, dx_, dy_, mu_;
+};
+
 class FlatRoughness final : public IRoughnessProvider {
 public:
     double sample_height(const Vec2& /*world_xy*/) const override { return 0.0; }
@@ -180,6 +234,13 @@ std::unique_ptr<IContactProvider> create_inclined_ground(
 std::unique_ptr<IContactProvider> create_rough_ground(
     double z, double mu, double amp, double wavelength) {
     return std::make_unique<RoughGround>(z, mu, amp, wavelength);
+}
+
+std::unique_ptr<IContactProvider> create_heightmap_ground(
+    std::vector<double> h, int nx, int ny,
+    double x0, double y0, double dx, double dy, double mu) {
+    return std::make_unique<HeightmapGround>(
+        std::move(h), nx, ny, x0, y0, dx, dy, mu);
 }
 
 std::unique_ptr<IRoughnessProvider> create_flat() {

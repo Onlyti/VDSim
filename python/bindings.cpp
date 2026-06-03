@@ -2,6 +2,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/eigen.h>
+#include <pybind11/numpy.h>
 
 #include "vdsim/contact.hpp"
 #include "vdsim/control.hpp"
@@ -330,6 +331,9 @@ PYBIND11_MODULE(vdsim, m) {
     m.def("create_bicycle",      static_cast<DynFactory>(&vdsim::create_bicycle));
     m.def("create_seven_dof",    static_cast<DynFactory>(&vdsim::create_seven_dof));
     m.def("create_fourteen_dof", static_cast<DynFactory>(&vdsim::create_fourteen_dof));
+    // Opaque holder so create_*_ground can return providers to Python and be
+    // handed to make_sim_session_ground (ownership transfers on that call).
+    py::class_<vdsim::IContactProvider>(m, "ContactProvider");
     m.def("create_flat_ground",  &vdsim::create_flat_ground,
           py::arg("z") = 0.0, py::arg("mu") = 1.0);
     m.def("create_split_mu_ground", &vdsim::create_split_mu_ground,
@@ -546,4 +550,35 @@ PYBIND11_MODULE(vdsim, m) {
           py::arg("mu_right") = -1.0, py::arg("mu_boundary_y") = 0.0,
           py::arg("grade") = 0.0, py::arg("bank") = 0.0,
           py::arg("rough_amp") = 0.0, py::arg("rough_wavelength") = 4.0);
+
+    // Build a SimSession on a heightmap terrain (2D array h[ny][nx]). Per-wheel
+    // bilinear height + gradient normal -> slope-gravity works on arbitrary
+    // terrain (Blender mesh baked to a heightmap).
+    m.def("make_sim_session_heightmap",
+          [](const vdsim::VehicleParams& vp, const vdsim::TireParams& tp,
+             const std::string& level,
+             py::array_t<double, py::array::c_style | py::array::forcecast> arr,
+             double x0, double y0, double dx, double dy, double mu,
+             double nominal_dt, const vdsim::SolverParams& solver) {
+              auto info = arr.request();
+              if (info.ndim != 2)
+                  throw std::runtime_error("heightmap must be a 2D array [ny][nx]");
+              const int ny = (int)info.shape[0], nx = (int)info.shape[1];
+              const double* p = static_cast<double*>(info.ptr);
+              std::vector<double> h(p, p + (size_t)nx * ny);
+              std::unique_ptr<vdsim::IVehicleDynamics> dyn =
+                  (level == "K" || level == "L0") ? vdsim::create_kinematic()
+                  : (level == "L1") ? vdsim::create_bicycle()
+                  : (level == "L3") ? vdsim::create_fourteen_dof()
+                                    : vdsim::create_seven_dof();
+              vdsim::SimConfig cfg; cfg.nominal_dt = nominal_dt;
+              return std::make_unique<vdsim::SimSession>(
+                  std::move(dyn),
+                  vdsim::create_heightmap_ground(std::move(h), nx, ny, x0, y0, dx, dy, mu),
+                  vp, tp, solver, cfg);
+          },
+          py::arg("vehicle"), py::arg("tire"), py::arg("level"), py::arg("heightmap"),
+          py::arg("x0") = 0.0, py::arg("y0") = 0.0, py::arg("dx") = 1.0,
+          py::arg("dy") = 1.0, py::arg("mu") = 1.0, py::arg("nominal_dt") = 0.005,
+          py::arg("solver") = vdsim::SolverParams{});
 }
