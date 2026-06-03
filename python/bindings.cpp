@@ -218,6 +218,71 @@ PYBIND11_MODULE(vdsim, m) {
           py::arg("x") = 0.0, py::arg("y") = 0.0, py::arg("yaw") = 0.0,
           py::arg("v") = 0.0, py::arg("wheel_radius") = 0.32);
 
+    // Linearize the planar vehicle map about an operating point via central
+    // finite differences. State x=[X,Y,psi,vx,vy,r], input u=[steer, pedal]
+    // (pedal>0 -> throttle, <0 -> brake). Returns the discrete one-step Jacobian
+    // (A,B) at dt: x_{k+1} ~= A x_k + B u_k around the trim. Continuous-time
+    // approx: A_c=(A-I)/dt, B_c=B/dt.
+    m.def("linearize",
+          [](const vdsim::VehicleParams& vp, const vdsim::TireParams& tp,
+             const std::string& level, std::vector<double> x0,
+             std::vector<double> u0, double dt, double mu) {
+              auto make_dyn = [&]() -> std::unique_ptr<vdsim::IVehicleDynamics> {
+                  if (level == "K" || level == "L0") return vdsim::create_kinematic();
+                  if (level == "L1") return vdsim::create_bicycle();
+                  if (level == "L3") return vdsim::create_fourteen_dof();
+                  return vdsim::create_seven_dof();
+              };
+              auto dyn = make_dyn();
+              vdsim::SolverParams sp;
+              dyn->initialize(vp, tp, sp);
+              auto ground = vdsim::create_flat_ground(0.0, mu);
+              const double R = vp.wheel_radius_nominal;
+              x0.resize(6, 0.0); u0.resize(2, 0.0);
+
+              auto f = [&](std::vector<double> x, std::vector<double> u) {
+                  vdsim::State s;
+                  s.position = vdsim::Vec3(x[0], x[1], 0.0);
+                  s.orientation = vdsim::quat_from_euler(vdsim::Euler{0.0, 0.0, x[2]});
+                  s.velocity = vdsim::Vec3(x[3], x[4], 0.0);
+                  s.angular_velocity = vdsim::Vec3(0.0, 0.0, x[5]);
+                  const double w = (R > 1e-6) ? x[3] / R : 0.0;
+                  s.wheel_spin = {{w, w, w, w}};
+                  dyn->reset(s);
+                  vdsim::CmdL4 c; c.steer_angle_wheel = u[0];
+                  if (u[1] >= 0.0) { c.throttle = u[1]; } else { c.brake = -u[1]; }
+                  vdsim::ContactArray contacts;
+                  ground->query(dyn->state(), vp, contacts);
+                  dyn->step(vdsim::ControlInput(c), contacts, dt);
+                  const vdsim::State& o = dyn->state();
+                  return std::vector<double>{o.position.x(), o.position.y(),
+                      vdsim::yaw_from_quat(o.orientation), o.velocity.x(),
+                      o.velocity.y(), o.angular_velocity.z()};
+              };
+
+              const std::vector<double> ex{0.5, 0.5, 0.01, 0.1, 0.1, 0.02};
+              const std::vector<double> eu{0.002, 0.02};
+              std::vector<std::vector<double>> A(6, std::vector<double>(6, 0.0));
+              std::vector<std::vector<double>> B(6, std::vector<double>(2, 0.0));
+              for (int j = 0; j < 6; ++j) {
+                  auto xp = x0, xm = x0; xp[j] += ex[j]; xm[j] -= ex[j];
+                  const auto fp = f(xp, u0), fm = f(xm, u0);
+                  for (int i = 0; i < 6; ++i) A[i][j] = (fp[i] - fm[i]) / (2.0 * ex[j]);
+              }
+              for (int j = 0; j < 2; ++j) {
+                  auto up = u0, um = u0; up[j] += eu[j]; um[j] -= eu[j];
+                  const auto fp = f(x0, up), fm = f(x0, um);
+                  for (int i = 0; i < 6; ++i) B[i][j] = (fp[i] - fm[i]) / (2.0 * eu[j]);
+              }
+              py::dict r;
+              r["A"] = A; r["B"] = B; r["dt"] = dt;
+              r["state_names"] = std::vector<std::string>{"X","Y","psi","vx","vy","r"};
+              r["input_names"] = std::vector<std::string>{"steer","pedal"};
+              return r;
+          },
+          py::arg("vehicle"), py::arg("tire"), py::arg("level") = "L2",
+          py::arg("x0"), py::arg("u0"), py::arg("dt") = 0.01, py::arg("mu") = 1.0);
+
     // -------- ContactPoint --------
     py::class_<vdsim::ContactPoint>(m, "ContactPoint")
         .def(py::init<>())
