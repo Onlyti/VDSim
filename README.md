@@ -36,6 +36,21 @@ python -c "import vdsim; print(vdsim.__version__ if hasattr(vdsim,'__version__')
 `import vdsim` then gives the full API (`make_sim_session`, `VehicleParams`,
 `create_*_ground`, `make_sim_session_psd`, hardpoint kinematics, `linearize`, …).
 
+For experiments, `python/vdsim_lab.py` adds fluent builders — assemble a run from
+Vehicle / Road / Maneuver / Sensors and get a time-series with per-wheel
+ground truth (Fz, slip α/κ, tire Fx/Fy):
+
+```python
+from vdsim_lab import Experiment, Vehicle, Road, Maneuver, Sensors
+res = (Experiment(level="L3")
+       .vehicle(Vehicle.preset("sedan"))
+       .road(Road.preset("belgian_pave"))            # or .iso8608("C"), .inclined(...)
+       .maneuver(Maneuver.path(driving_line, v=15))  # or .step_steer(...), .constant_speed(...)
+       .sensors(Sensors().gnss().imu())
+       .run(duration=20.0))
+res.to_csv("run.csv");  print(res.summary())
+```
+
 ## Build (full tree: C++ tests, examples, CARLA, co-sim)
 
 ```bash
