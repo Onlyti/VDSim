@@ -34,23 +34,24 @@ research-infra (task #124–#130) — 전부 완료·push:
 - #131 **slice 0 (split-μ)**: `create_split_mu_ground`, make_sim_session(mu_right,
   mu_boundary_y), GUI Simulation "Road/surface"(uniform μ + split). 검증됨.
 
-## 4. 미완 — 다음 할 일 (#131 slice 1: slope-gravity, = #123)
-**즉시 착수 대상.** banked/graded road 의 중력 성분을 EoM 에 넣어 CG-shift/경사 거동.
+## 4. 미완 — 다음 할 일 (#131 잔여 슬라이스)
+slice 0 (split-μ) · slice 1 (slope-gravity + 3D tilt render, #123) **완료**.
+- split-μ: `create_split_mu_ground`, make_sim_session(mu_right, mu_boundary_y).
+- slope-gravity: `create_inclined_ground(z0, grade, bank, mu)`; L1/L2/L3 EoM 가
+  contact normal 로 접선중력 + cos(slope) 수직하중. GUI Road/surface grade/bank,
+  뷰어 grid tilt + 차량 안착. flat 게이트로 125+57 test 보존.
 
-설계:
-- 현재 `ContactPoint.normal` 은 있으나 **dynamics 가 무시**(flat: Fz_static=m·g·b/(2L),
-  중력 투영 없음). FlatGround/SplitMuGround 는 normal=+z 고정.
-- 할 일:
-  1. **banked/graded contact provider** — `create_inclined_ground(z, grade, bank,
-     mu)` (또는 더 일반 surface): per-wheel z(평면) + tilted normal 반환.
-  2. **EoM 중력-투영 항** — bicycle/seven_dof/fourteen_dof 의 body-frame force
-     balance 에 `Fx += -m·g·sin(grade)`, `Fy += +m·g·sin(bank)`, 수직하중
-     `Fz *= cos(slope)` 추가. grade/bank 는 4-contact normal 평균을 body frame 으로
-     회전해 추출(normal 은 WORLD frame).
-  3. L3 vertical: 경사가 static compression/normal load 바꿈.
-  4. GUI: grade/bank 입력 + road tilt 렌더(#123 render).
+**다음 (slice 2~):**
+1. **roughness** — `IRoughnessProvider`(ISO 8608 PSD 는 stub-NotImplemented). 구현 후
+   L3 unsprung 의 road-z 입력 plumbing 필요(현재 zu 는 z=0 기준; per-wheel road
+   height 를 unsprung EoM `k_tire*(zu - z_road)` 로 먹여 ride 가진).
+2. **OpenDRIVE (#117)** — road network 파서 → reference path + 기하에서 grade/bank.
+   대부분 파서 작업. examples/maneuvers·pure-pursuit 와 연결.
+3. **mesh/heightmap (#118)** — Blender mesh → height-lookup ContactProvider
+   (per-wheel z/normal/μ). IP: Assetto Corsa 등 상용 mesh 참조 금지.
+4. **렌더 보강** — fig8 path/trail 도 road plane 에 tilt(현재 grid·차량만).
 
-순서 권장: provider(1) → seven_dof EoM(2, L2 먼저) → 검증 → bicycle/L3 → 렌더.
+권장 순서: roughness(1, L3 plumbing) → mesh(3) → OpenDRIVE(2, 큰 파서).
 
 ## 5. 주의 · 함정
 - **flat-road 거동 보존**: normal≈+z 면 slope 항 skip(gate)해서 182 test 가 안 깨지게.
