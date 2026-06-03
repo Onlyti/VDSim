@@ -223,11 +223,13 @@ async function drawScenery(){
   }
   scene.add(sceneryGroup);
 }
-// Asphalt road ribbon: offset the route +/- half-width, laid on the terrain.
-let roadMesh=null, roadHalfW=6.0;
+// Track surface laid on the terrain: asphalt ribbon + red/white curbs +
+// white edge lines + dashed centre line, all offset from the route.
+let roadGroup=null, roadHalfW=6.0;
 async function drawRoad(){
   const j=await (await fetch('/api/path')).json(); let pts=j.pts;
-  if(roadMesh){ scene.remove(roadMesh); roadMesh.geometry.dispose(); roadMesh=null; }
+  if(roadGroup){ scene.remove(roadGroup);
+    roadGroup.traverse(o=>{ if(o.geometry) o.geometry.dispose(); }); roadGroup=null; }
   if(!pts || pts.length<2) return;
   // densify to ~6 m so the ribbon stays smooth through tight corners
   const dn=[pts[0]];
@@ -235,25 +237,45 @@ async function drawRoad(){
     const m=Math.max(1,Math.ceil(d/6)); for(let k=1;k<=m;k++) dn.push([a[0]+(b[0]-a[0])*k/m, a[1]+(b[1]-a[1])*k/m]); }
   pts=dn;
   const N=pts.length, hw=roadHalfW;
-  const zf=(x,y)=> (terrainGrid ? sampleTerrain(x,y)+0.15 : 0.12);
-  const arr=new Float32Array(N*2*3);
+  const zf=(x,y)=> (terrainGrid ? sampleTerrain(x,y) : 0)+0.12;
+  const nrm=[], s=[0];                         // unit normals + arc length
   for(let i=0;i<N;i++){
     const b=pts[Math.min(N-1,i+1)], c=pts[Math.max(0,i-1)];
     let tx=b[0]-c[0], ty=b[1]-c[1]; const tl=Math.hypot(tx,ty)||1; tx/=tl; ty/=tl;
-    const nx=-ty, ny=tx, a=pts[i];
-    const lx=a[0]+nx*hw, ly=a[1]+ny*hw, rx=a[0]-nx*hw, ry=a[1]-ny*hw;
-    const pl=toThree(lx,ly,zf(lx,ly)), pr=toThree(rx,ry,zf(rx,ry));
-    arr[i*6]=pl.x; arr[i*6+1]=pl.y; arr[i*6+2]=pl.z;
-    arr[i*6+3]=pr.x; arr[i*6+4]=pr.y; arr[i*6+5]=pr.z;
+    nrm.push([-ty,tx]);
+    if(i>0) s.push(s[i-1]+Math.hypot(pts[i][0]-pts[i-1][0], pts[i][1]-pts[i-1][1]));
   }
-  const idx=[];
-  for(let i=0;i<N-1;i++){ const a=i*2,b=a+1,c=a+2,d=a+3; idx.push(a,b,c, b,d,c); }
-  const g=new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(arr,3)); g.setIndex(idx); g.computeVertexNormals();
-  roadMesh=new THREE.Mesh(g, new THREE.MeshStandardMaterial(
-    {color:0x37373b, roughness:.98, metalness:0, side:THREE.DoubleSide,
-     polygonOffset:true, polygonOffsetFactor:-1, polygonOffsetUnits:-1}));
-  scene.add(roadMesh);
+  roadGroup=new THREE.Group();
+  function ribbon(oin,oout,zoff,colorFn,flat){    // strip between two lateral offsets
+    const arr=new Float32Array(N*2*3), cols=colorFn?new Float32Array(N*2*3):null;
+    for(let i=0;i<N;i++){ const a=pts[i],n=nrm[i];
+      const xi=a[0]+n[0]*oin, yi=a[1]+n[1]*oin, xo=a[0]+n[0]*oout, yo=a[1]+n[1]*oout;
+      const pi=toThree(xi,yi,zf(xi,yi)+zoff), po=toThree(xo,yo,zf(xo,yo)+zoff);
+      arr[i*6]=pi.x;arr[i*6+1]=pi.y;arr[i*6+2]=pi.z; arr[i*6+3]=po.x;arr[i*6+4]=po.y;arr[i*6+5]=po.z;
+      if(cols){ const c=colorFn(i); for(const o of [0,3]){cols[i*6+o]=c[0];cols[i*6+o+1]=c[1];cols[i*6+o+2]=c[2];} }
+    }
+    const idx=[]; for(let i=0;i<N-1;i++){ const a=i*2,b=a+1,c=a+2,d=a+3; idx.push(a,b,c, b,d,c); }
+    const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(arr,3));
+    if(cols) g.setAttribute('color',new THREE.BufferAttribute(cols,3));
+    g.setIndex(idx); g.computeVertexNormals();
+    const m=new THREE.MeshStandardMaterial({roughness:.96,metalness:0,side:THREE.DoubleSide,
+      polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
+    if(cols) m.vertexColors=true; else m.color=new THREE.Color(flat);
+    roadGroup.add(new THREE.Mesh(g,m));
+  }
+  ribbon(-hw,hw,0,null,0x37373b);                                   // asphalt
+  const RW=i=> (Math.floor(s[i]/4)%2===0)?[0.78,0.09,0.09]:[0.92,0.92,0.92]; // red/white kerb
+  ribbon(hw,hw+0.5,0.03,RW); ribbon(-hw-0.5,-hw,0.03,RW);            // curbs
+  function line(off,dashed){
+    const v=[]; for(let i=0;i<N;i++){ const a=pts[i],n=nrm[i];
+      const x=a[0]+n[0]*off, y=a[1]+n[1]*off, p=toThree(x,y,zf(x,y)+0.06); v.push(p.x,p.y,p.z); }
+    const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(v),3));
+    const m=dashed?new THREE.LineDashedMaterial({color:0xffffff,dashSize:3,gapSize:3})
+                  :new THREE.LineBasicMaterial({color:0xffffff});
+    const ln=new THREE.Line(g,m); if(dashed) ln.computeLineDistances(); roadGroup.add(ln);
+  }
+  line(hw-0.25,false); line(-(hw-0.25),false); line(0,true);        // edge + centre markings
+  scene.add(roadGroup);
 }
 function sampleTerrain(wx,wy){
   const t=terrainGrid; if(!t) return 0;
