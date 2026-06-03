@@ -166,7 +166,7 @@ function updateRoadTilt(){     // tilt the grid to the road plane
 let pathLine=null, lastNpath=-1;
 async function drawPath(){
   const r=await (await fetch('/api/path')).json();
-  const v=(r.pts||[]).map(p=>toThree(p[0],p[1],0.02));
+  const v=(r.pts||[]).map(p=>toThree(p[0],p[1],(terrainGrid?sampleTerrain(p[0],p[1]):0)+0.22));
   if(v.length>1 && v[0].distanceTo(v[v.length-1])<10) v.push(v[0].clone()); // close only true loops
   if(pathLine){ scene.remove(pathLine); pathLine.geometry.dispose(); }
   pathLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints(v),
@@ -383,7 +383,8 @@ const trailMat=new THREE.LineBasicMaterial({color:0xffb020, depthTest:false,
 const trail=new THREE.Line(trailGeo, trailMat);
 trail.renderOrder=2; trail.frustumCulled=false; trail.visible=false; scene.add(trail);
 function pushTrail(x,z){
-  trailPts.push(new THREE.Vector3(x, 0.12, z));
+  const y=(terrainGrid?sampleTerrain(x,-z):0)+0.2;   // project onto ground
+  trailPts.push(new THREE.Vector3(x, y, z));
   if(trailPts.length>MAXT) trailPts.shift();
   if(trailPts.length>=2){ trailGeo.setFromPoints(trailPts); trail.visible=true; }
 }
@@ -461,7 +462,7 @@ function applyState(s){
   if(s.grade!=null && (s.grade!==roadGrade || s.bank!==roadBank)){ roadGrade=s.grade; roadBank=s.bank||0; updateRoadTilt(); }
   if(s.npath!=null && s.npath!==lastNpath){ lastNpath=s.npath; drawPath(); drawRoad(); }
   if(s.terrain!=null && s.terrain!==lastTerrain){ lastTerrain=s.terrain; drawScenery();
-    drawTerrain().then(drawRoad); }
+    drawTerrain().then(()=>{ drawRoad(); drawPath(); }); }
   // Body lean only for L3 (true roll/pitch DOF). L1/L2/K are planar — their
   // roll/pitch are quasi-static estimates, so the rendered body stays flat.
   // (Future: when a road surface is imported, add the road's roll/pitch here.)
