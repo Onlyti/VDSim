@@ -185,10 +185,24 @@ nose-up pitch 4.86° (tire vertical compliance 로 약 2-3% undershoot, flat 은
 정확히 0). 즉 **L3 는 노면 기울기를 body attitude 로 반영한다** — L1/L2 와의
 핵심 차이 (chapter 05 §5.x 참조).
 
-> **한계 (grip Fz 미결합)**: tire grip 에 쓰는 $F_z$ 는 아직 inner Ld2 의
-> quasi-static 값이다. 즉 $z_{\text{road}}$ 는 ride·attitude 에는 반영되지만
-> tire 종/횡력 grip 의 dynamic/지형 하중이동에는 아직 환류되지 않는다.
-> follow-up: $k_{\text{tire}}(z_u - z_{\text{road}})$ 의 dynamic Fz 를 grip 으로.
+### Grip Fz coupling (dynamic tire load → 종/횡력)
+
+L3 는 매 step 동적 per-corner tire load 를 계산해 inner 의 grip 계산에 주입한다
+(`set_external_fz`):
+
+$$
+F_{z,i}^\text{dyn} = F_{z,i}^\text{static,full} + k_{\text{tire}}\,(z_{\text{road},i} - z_{u,i})
+$$
+
+이로써 suspension transient·노면/지형 하중변동이 tire 종/횡력 grip 에 반영된다
+(이전엔 inner Ld2 의 quasi-static $F_z$ 만 사용 → 환류 없음). 정상상태 transfer 는
+Ld2 와 일치하므로 L3 planar 거동은 Ld2 와 **근사 일치**(divergence ~3e-6, 더 이상
+bit-identical 아님)하고, 차이는 **transient(turn-in roll lag)과 rough/지형**에서
+드러난다. 예: rough road 에서 FL grip $F_z$ std 2.9 N (Ld2 는 0.4 N). Fz/μ 추정기
+검증 데이터 생성에 유용.
+
+> **근사**: 결합 load 의 static 항에 aero·$\cos(\text{slope})$, unsprung 횡
+> 하중이동은 생략 (일반 트랙에서 작음). 미결합 시 inner 기본값(aero 포함) 사용.
 
 ### Wheel-hop frequency
 
