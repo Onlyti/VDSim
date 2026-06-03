@@ -849,6 +849,25 @@ class Runner:
                 for i in range(len(route) - 1))
         return {"ok": True, "pts": len(route), "length": round(L, 1)}
 
+    def load_rd5(self, rd5):
+        sys.path.insert(0, str(REPO / "examples"))
+        import rd5_route as rr
+        route = [(float(p[0]), float(p[1])) for p in rr.route_polyline(rd5)]
+        if len(route) < 2:
+            return {"ok": False, "msg": "no Route_0 in " + rd5}
+        with self.lock:
+            self.terrain = None                 # rd5 route drives in its own frame
+            self.path = WaypointPath(route)
+            x0, y0 = route[0]
+            x1, y1 = route[1]
+            self.cfg["init_x"], self.cfg["init_y"] = x0, y0
+            self.cfg["init_yaw"] = math.atan2(y1 - y0, x1 - x0)
+            self.cfg["driver"] = True
+            self._build()
+        L = sum(math.hypot(route[i + 1][0] - route[i][0], route[i + 1][1] - route[i][1])
+                for i in range(len(route) - 1))
+        return {"ok": True, "pts": len(route), "length": round(L, 1)}
+
     def path_points(self):
         with self.lock:
             return [[float(p[0]), float(p[1])] for p in self.path.pts]
@@ -1081,6 +1100,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json(RUNNER.stop_cosim())
         elif self.path == "/api/map/load":
             self._json(RUNNER.load_map(body.get("xodr", "")))
+        elif self.path == "/api/map/rd5":
+            self._json(RUNNER.load_rd5(body.get("rd5", "")))
         elif self.path == "/api/terrain/load":
             self._json(RUNNER.load_terrain(body.get("obj", ""),
                                            float(body.get("cell", 5.0))))
