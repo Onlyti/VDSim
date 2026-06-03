@@ -13,6 +13,7 @@ Usage:
 import argparse
 import json
 import math
+import socket
 import sys
 import threading
 import time
@@ -218,6 +219,11 @@ class Runner:
         self.manual = {"throttle": 0.0, "brake": 0.0, "steer": 0.0}
         self.cmd_in = {"throttle": 0.0, "brake": 0.0, "steer": 0.0}  # last applied cmd
         self.io_last_t = None        # monotonic time of last /api/io call (connection)
+        # Outbound UDP telemetry: push state/command to configurable destinations.
+        self.tx = {"enabled": False, "rate": 50.0, "send_state": True, "send_cmd": True}
+        self.targets = []           # list of {"ip": str, "port": int}
+        self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._tx_last = 0.0
         self.latest = {}
         self.path = FigureEight()
         self.vp = vdsim.VehicleParams.from_yaml(
@@ -363,6 +369,52 @@ class Runner:
         with self.lock:
             self.manual.update(kw)
 
+    def telemetry_config(self):
+        with self.lock:
+            return {"tx": dict(self.tx), "targets": [dict(t) for t in self.targets]}
+
+    def set_telemetry(self, data):
+        with self.lock:
+            for k in ("enabled", "send_state", "send_cmd"):
+                if k in data:
+                    self.tx[k] = bool(data[k])
+            if "rate" in data:
+                self.tx["rate"] = max(1.0, min(200.0, float(data["rate"])))
+            if "targets" in data:
+                clean = []
+                for t in data["targets"]:
+                    ip = str(t.get("ip", "")).strip()
+                    try:
+                        port = int(t.get("port", 0))
+                    except (TypeError, ValueError):
+                        continue
+                    if ip and 0 < port < 65536:
+                        clean.append({"ip": ip, "port": port})
+                self.targets = clean
+
+    def _telemetry_send(self, snap):
+        # Called from the sim loop; paces to tx["rate"] and fans out to targets.
+        if not (self.tx["enabled"] and self.targets and snap):
+            return
+        now = time.monotonic()
+        if now - self._tx_last < 1.0 / self.tx["rate"]:
+            return
+        self._tx_last = now
+        payload = {"t": snap.get("t", 0.0)}
+        if self.tx["send_state"]:
+            for k in ("x", "y", "z", "yaw", "roll", "pitch", "vx", "vy", "r",
+                      "wx", "wy", "ax", "ay", "steer", "Fz"):
+                if k in snap:
+                    payload[k] = snap[k]
+        if self.tx["send_cmd"]:
+            payload["cmd"] = snap.get("cmd_in", {})
+        data = json.dumps(payload).encode()
+        for t in self.targets:
+            try:
+                self._sock.sendto(data, (t["ip"], t["port"]))
+            except OSError:
+                pass
+
     def io(self, cmd):
         # External data port: take manual control, latch the command, mark the
         # connection live. Returns the current state snapshot (command + state).
@@ -424,6 +476,7 @@ class Runner:
                     "cmd_in": dict(self.cmd_in)}
             with self.lock:
                 self.latest = snap
+            self._telemetry_send(snap)
             nxt += 1.0 / fps
             time.sleep(max(0.0, nxt - time.monotonic()))
 
@@ -480,6 +533,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"plots": RUNNER.actuator_step()})
         elif self.path in ("/api/state", "/api/io"):
             self._json(RUNNER.snapshot())
+        elif self.path == "/api/io/targets":
+            self._json(RUNNER.telemetry_config())
         elif self.path == "/api/stream":
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
@@ -523,6 +578,9 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/api/io":
             # External data port: command in -> state out (one round-trip).
             self._json(RUNNER.io(body))
+        elif self.path == "/api/io/targets":
+            RUNNER.set_telemetry(body)
+            self._json({"ok": True, **RUNNER.telemetry_config()})
         else:
             self.send_error(404)
 

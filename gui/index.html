@@ -549,7 +549,7 @@ async function buildActuator(){
 }
 
 // ---- Data port: external command-in / state-out over HTTP (free-run) ----
-function buildDataPort(){
+async function buildDataPort(){
   const el=$('io_body'), base=location.origin;
   el.innerHTML=`
    <div class="grp">Endpoints</div>
@@ -575,8 +575,34 @@ function buildDataPort(){
        <div class="kv"><span>yaw rate</span><b id="io_r">—</b></div>
        <div class="kv"><span>ax</span><b id="io_ax">—</b></div>
        <div class="kv"><span>ay</span><b id="io_ay">—</b></div></div>
-   </div>`;
+   </div>
+   <div class="grp">Outbound UDP telemetry (push)</div>
+   <div class="sub" style="margin:2px 0 4px">Push state/command as JSON UDP to one or more destinations.</div>
+   <div id="tx_ctl"></div>`;
   if(window._lastState) updateIoMonitor(window._lastState);
+  renderTx($('tx_ctl'), await (await fetch('/api/io/targets')).json());
+}
+function renderTx(box, cfg){
+  const tx=cfg.tx||{}, targets=cfg.targets||[]; box.innerHTML='';
+  const chk=v=>{const i=document.createElement('input');i.type='checkbox';i.checked=!!v;return i;};
+  const num=(v,w)=>{const i=document.createElement('input');i.type='number';i.step='any';i.value=v;i.style.width=w+'px';return i;};
+  const fld=(label,node)=>{const d=document.createElement('div');d.className='fld';const l=document.createElement('label');l.textContent=label;d.appendChild(l);d.appendChild(node);box.appendChild(d);};
+  const en=chk(tx.enabled), rate=num(tx.rate??50,70), sst=chk(tx.send_state!==false), scm=chk(tx.send_cmd!==false);
+  fld('Enabled',en); fld('Rate [Hz]',rate); fld('Send state',sst); fld('Send command',scm);
+  const sub=document.createElement('div'); sub.className='subgrp'; sub.textContent='Destinations'; box.appendChild(sub);
+  const list=document.createElement('div'); box.appendChild(list);
+  const addRow=(ip='127.0.0.1',port=9100)=>{ const r=document.createElement('div'); r.style.cssText='display:flex;gap:4px;margin:3px 0';
+    const ipi=document.createElement('input'); ipi.type='text'; ipi.value=ip; ipi.placeholder='ip'; ipi.style.flex='1'; ipi.dataset.k='ip';
+    const pi=num(port,64); pi.dataset.k='port'; pi.placeholder='port';
+    const rm=document.createElement('button'); rm.textContent='✕'; rm.style.width='28px'; rm.onclick=()=>r.remove();
+    r.appendChild(ipi); r.appendChild(pi); r.appendChild(rm); list.appendChild(r); };
+  targets.forEach(t=>addRow(t.ip,t.port));
+  const add=document.createElement('button'); add.textContent='+ add destination'; add.onclick=()=>addRow(); box.appendChild(add);
+  const apply=document.createElement('button'); apply.className='apply'; apply.textContent='Apply telemetry';
+  apply.onclick=async()=>{ const tgts=[...list.children].map(r=>({ip:r.querySelector('[data-k=ip]').value.trim(),port:+r.querySelector('[data-k=port]').value})).filter(t=>t.ip&&t.port>0);
+    await post('/api/io/targets',{enabled:en.checked,rate:+rate.value,send_state:sst.checked,send_cmd:scm.checked,targets:tgts});
+    renderTx(box, await (await fetch('/api/io/targets')).json()); };
+  box.appendChild(apply);
 }
 function updateIoMonitor(s){
   if(!$('io_th')) return;
