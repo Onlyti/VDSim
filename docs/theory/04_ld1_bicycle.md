@@ -10,6 +10,8 @@
    유도하고, 그것이 simulator 검증의 baseline 이 되는 이유를 설명한다.
 4. longitudinal weight transfer 의 self-referential 구조와 1-step lag 처리의
    타당성을 판단한다.
+5. Ld1 아래 rung 인 **Lk-Kinematic**(타이어·slip 없는 기하 모델)의 식과 적용
+   범위를 구분한다 (§4.14).
 
 ## Prerequisites
 
@@ -386,3 +388,33 @@ aero 힘은 $v_x^2$ 에 비례하지만 방향은 진행 방향. $v_x|v_x|$ 로 
 >
 > minimal controller-on-bicycle 루프 (Lc4-Pedal level). 상위 제어 cascade 는
 > chapter 07-09.
+
+---
+
+## 4.14 Lk — Kinematic bicycle (the precursor rung)
+
+Ld1 아래의 가장 단순한 사다리 rung. **타이어 힘도 slip 도 없다** — 순수 기하·운동학
+으로만 차량을 움직인다. path-planning / kinematic-MPC / 가장 가벼운 시각화에 쓴다.
+
+$$
+\dot v = a, \qquad \dot\psi = \frac{v\,\tan\delta}{L}, \qquad
+\dot x = v\cos\psi, \quad \dot y = v\sin\psi, \qquad v_y \equiv 0
+$$
+
+- **longitudinal**: 가속도 $a$ 는 pedal 에서 — 모터/브레이크 토크를 질량으로 환산한
+  cap 으로. $a = \text{thr}\cdot A - \text{brk}\cdot B$, $A = T_{\text{motor,max}}/(R\,m)$,
+  $B = T_{\text{brake,max}}/(R\,m)$. forward gear 면 $v\ge0$ 로 clip(역주행 방지).
+- **lateral/yaw**: $\dot\psi = v\tan\delta/L$ — sideslip 없는 **kinematic steering**.
+  따라서 $v_y=0$, $a_y = v\dot\psi$ (구심).
+- **Fz**: 동역학 없이 정적 배분 $m g\,b/(2L)$(front), $m g\,a/(2L)$(rear) 만 보고
+  (slip/transfer 없음).
+
+Ld1(동역학 bicycle)과의 차이: Lk 는 tire 모델·slip·weight transfer 가 전부 없어
+한계주행·제동 거동을 표현 못 한다. 대신 결정론적이고 빠르며, 경로 추종 기하의
+baseline 이다. ISO 8855 frame.
+
+> **[VDSim impl] § 4.14 — Lk 코드**
+>
+> `core/src/kinematic_dynamics.cpp` 의 `KinematicBicycle` (`Level::Lk_Kinematic`,
+> `create_kinematic()`). substep Euler 적분, `tire_forces`/`slip` 은 빈 배열.
+> make_sim_session 의 level `"K"`/`"L0"` 가 이 모델.

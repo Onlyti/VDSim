@@ -68,7 +68,8 @@ F(s) = D \sin\!\Big( C \arctan\big( B s - E (B s - \arctan(B s)) \big) \Big)
 $$
 
 여기서 `s` 는 입력 — lateral 의 경우 slip angle `α`, longitudinal 의 경우 slip
-ratio `κ`. 네 계수의 역할:
+ratio `κ`. (이 simplified BCDE 형 외에, 실측 `.tir` 계수셋을 쓰는 full MF2002
+평가기가 §3.16 에 있다.) 네 계수의 역할:
 
 | 계수 | 역할 | 단위 / 영향 |
 |---|---|---|
@@ -525,6 +526,39 @@ maneuver 의 lag 가 두 배.
 > ```
 >
 > 시상수 = `σ / v` → `v = 15 m/s` 에서 `τ ≈ 40 ms`.
+
+---
+
+## 3.16 Full Magic Formula (`.tir`) — measured-data path
+
+본 chapter 의 식들은 **simplified MF96** 형(BCDE 4-계수 + friction-ellipse)이다.
+한계주행·실측 대응이 필요하면 VDSim 은 **full Magic Formula (Pacejka 2002 /
+MF-Tyre 5.2 coefficient set)** 평가기를 별도로 제공한다 — 표준 `.tir` property
+파일을 읽어 pure + combined slip $F_x, F_y$ 와 aligning $M_z$ 를 평가.
+
+generic 구조 (계수 *값*이 아니라 식 형태만 — 값은 §보안 주의):
+
+- **pure slip**: 각 방향이 같은 BCDE 형이되 계수가 $F_z$·camber 의존 다항식
+  ($p_{Dx1}, p_{Dx2}, p_{Ky1}, \dots$). $D = \mu(F_z)\,F_z$, $B = K/(C D)$ 등.
+- **combined slip**: pure $F_{x0}, F_{y0}$ 에 가중함수 $G_{x\alpha}, G_{y\kappa}$ 와
+  $S_{Vy\kappa}$ 를 곱해 상호 영향을 표현 (friction-ellipse 의 일반화).
+- **aligning $M_z$**: pneumatic trail $t(\alpha)$ + residual $M_{zr}$ + 등가 slip,
+  $M_z = -t\,F_y + M_{zr}$.
+- **scaling coefficients** ($\lambda$): 계수셋을 일괄 보정.
+- turn-slip·inflation·thermal block 은 범위 밖 (isothermal coefficient set).
+
+파서는 계수를 이름→값 map 으로 저장(대소문자 무시)해 어떤 optional 계수가 있든
+agnostic; 평가기는 이름으로 default 와 함께 pull 한다.
+
+> **[VDSim impl] § 3.16 — full MF 코드 + 보안**
+>
+> `core/include/vdsim/magic_formula.hpp`, `core/src/magic_formula_tire.cpp`:
+> `parse_tir()` → `MFCoeffs`, `create_magic_formula_tire(coeffs)` /
+> `create_magic_formula_tire_from_tir(path)`. Ld1/Ld2/Ld3 factory 에
+> `create_*_from_tir(path)` 로 주입.
+>
+> **보안**: `.tir` 의 계수 *값*은 대외비일 수 있다. `.tir` 파일과 계수 dump 는
+> repo 밖(`.gitignore`)에 두고, 소스에는 평가 **식만** 존재한다.
 >
 > State 위치: tire model 이 아니라 host dynamics. `seven_dof_dynamics` 와
 > `bicycle_dynamics` 의 멤버 `alpha_dyn_[4]`. tire `compute()` 는 stateless 유지.

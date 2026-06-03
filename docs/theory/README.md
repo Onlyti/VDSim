@@ -112,6 +112,7 @@ lumped 14-DOF 의 한계 → hardpoint kinematics → ISO 표준 maneuver / DOE
 | 15 | [Validation & DOE](15_validation_and_doe.md) | 짧음 | 04, 05 | ISO 7401 / 4138 / 3888-2 표준 maneuver 와 parameter sweep |
 | 16 | [FMI 2.0 Integration](16_fmi_integration.md) | 짧음 | 12 | FMU export / import + co-simulation 의 양방향 통합 |
 | 17 | [Actuator Dynamics & Sensing](17_actuator_and_sensing.md) | 중 | 11, 07 | FOPDT·rate·sat·dead-zone, steering servo(PD+inertia+LuGre) vs lag, brake mu(T), sensor delay |
+| 18 | [Runtime Kernel & Co-simulation](18_runtime_and_cosim.md) | 중 | 17, 12 | SimSession kernel·run modes, RealTimeRunner watchdog, UDP wire protocol, GUI data port (JSON vs binary) |
 
 ---
 
