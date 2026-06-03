@@ -20,12 +20,16 @@ import xml.etree.ElementTree as ET
 
 
 class Geometry:
-    def __init__(self, s0, x0, y0, hdg0, length, kind, curvature=0.0):
+    def __init__(self, s0, x0, y0, hdg0, length, kind, curvature=0.0,
+                 curv0=0.0, curv1=0.0):
         self.s0, self.x0, self.y0, self.hdg0 = s0, x0, y0, hdg0
         self.length, self.kind, self.k = length, kind, curvature
+        self.curv0, self.curv1 = curv0, curv1   # spiral: linear curvature start->end
 
     def pose(self, s):                       # s: arc length from this geometry's start
         ds = s - self.s0
+        if self.kind == "spiral":            # clothoid: curvature linear in s
+            return self._spiral_pose(ds)
         if self.kind == "line" or abs(self.k) < 1e-9:
             return (self.x0 + ds * math.cos(self.hdg0),
                     self.y0 + ds * math.sin(self.hdg0),
@@ -34,6 +38,20 @@ class Geometry:
         x = self.x0 + (math.sin(h0 + k * ds) - math.sin(h0)) / k
         y = self.y0 - (math.cos(h0 + k * ds) - math.cos(h0)) / k
         return (x, y, h0 + k * ds)
+
+    def _spiral_pose(self, ds):              # numeric integration (trapezoidal)
+        L = max(1e-9, self.length)
+        n = max(1, int(ds / 0.2))
+        h = ds / n
+        x, y, hdg, cs = self.x0, self.y0, self.hdg0, 0.0
+        for _ in range(n):
+            k0 = self.curv0 + (self.curv1 - self.curv0) * (cs / L)
+            k1 = self.curv0 + (self.curv1 - self.curv0) * ((cs + h) / L)
+            hmid = hdg + 0.5 * k0 * h
+            x += h * math.cos(hmid); y += h * math.sin(hmid)
+            hdg += 0.5 * (k0 + k1) * h
+            cs += h
+        return (x, y, hdg)
 
 
 class _Poly:                                  # cubic a+b*ds+c*ds^2+d*ds^3 from s0
@@ -99,9 +117,14 @@ def parse_xodr(src):
             elif g.find("arc") is not None:
                 k = float(g.find("arc").get("curvature"))
                 geoms.append(Geometry(s0, x0, y0, hdg, L, "arc", k))
+            elif g.find("spiral") is not None:
+                sp = g.find("spiral")
+                geoms.append(Geometry(s0, x0, y0, hdg, L, "spiral",
+                                      curv0=float(sp.get("curvStart")),
+                                      curv1=float(sp.get("curvEnd"))))
             else:
                 raise NotImplementedError(
-                    "geometry type not supported (only line/arc); got "
+                    "geometry type not supported (line/arc/spiral); got "
                     + ",".join(c.tag for c in g))
         def polys(parent, tag):
             out = []
@@ -138,12 +161,26 @@ def _synthetic_xodr():
 
 def main():
     if len(sys.argv) > 1:
-        roads = parse_xodr(sys.argv[1])
-        print(f"=== {sys.argv[1]}: {len(roads)} road(s) ===")
-        for i, r in enumerate(roads):
-            pts = r.sample(2.0)
-            print(f"  road {i}: len {r.length:.1f} m, {len(pts)} pts, "
-                  f"end {pts[-1][0]:.1f},{pts[-1][1]:.1f}")
+        import os
+        path = sys.argv[1]
+        roads = parse_xodr(path)
+        total = sum(r.length for r in roads)
+        xs, ys, rows = [], [], []
+        for rid, r in enumerate(roads):
+            for (x, y, hdg, s, gr, bk) in r.sample(2.0):
+                xs.append(x); ys.append(y)
+                rows.append((rid, x, y, hdg, s, gr, bk))
+        print(f"=== {path} ===")
+        print(f"  roads {len(roads)} | total length {total:.1f} m | {len(rows)} pts")
+        print(f"  bbox x[{min(xs):.1f}, {max(xs):.1f}]  y[{min(ys):.1f}, {max(ys):.1f}] m")
+        out = os.path.join(os.path.dirname(__file__), "..", "logs")
+        os.makedirs(out, exist_ok=True)
+        csvp = os.path.join(out, os.path.splitext(os.path.basename(path))[0] + "_centerline.csv")
+        with open(csvp, "w") as f:
+            f.write("road,x,y,hdg,s,grade,bank\n")
+            for r in rows:
+                f.write("%d,%.4f,%.4f,%.5f,%.3f,%.5f,%.5f\n" % r)
+        print(f"  centerline CSV -> {os.path.normpath(csvp)}")
         return
     roads = parse_xodr(_synthetic_xodr())
     r = roads[0]
