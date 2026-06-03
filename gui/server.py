@@ -791,6 +791,11 @@ class Runner:
                         "m_wz": o.sensors.wz, "m_steer": o.sensors.steer}
             snap["grade"] = self.cfg["road_grade"]
             snap["bank"] = self.cfg["road_bank"]
+            if self.terrain is not None:        # live slope the contact model sees
+                gx, gy = self._terrain_slope(snap["x"], snap["y"])
+                ny = snap["yaw"]
+                snap["grade"] = gx * math.cos(ny) + gy * math.sin(ny)   # along heading
+                snap["bank"] = -gx * math.sin(ny) + gy * math.cos(ny)   # lateral
             snap["npath"] = len(self.path.pts)
             snap["terrain"] = 1 if self.terrain is not None else 0
             with self.lock:
@@ -987,6 +992,24 @@ class Runner:
     def scenery_meshes(self):
         with self.lock:
             return self.scenery if self.scenery is not None else {"loaded": False}
+
+    def _terrain_slope(self, x, y):
+        # central-difference dH/dx, dH/dy of the baked heightmap at world (x,y)
+        t = self.terrain
+        if t is None:
+            return 0.0, 0.0
+        H, x0, y0, dx, dy = t["H"], t["x0"], t["y0"], t["dx"], t["dy"]
+        ny, nx = H.shape
+
+        def h(wx, wy):
+            fx = min(max((wx - x0) / dx, 0), nx - 1.001)
+            fy = min(max((wy - y0) / dy, 0), ny - 1.001)
+            ix, iy = int(fx), int(fy)
+            ax, ay = fx - ix, fy - iy
+            return ((H[iy, ix] * (1 - ax) + H[iy, ix + 1] * ax) * (1 - ay) +
+                    (H[iy + 1, ix] * (1 - ax) + H[iy + 1, ix + 1] * ax) * ay)
+        e = 2.0
+        return (h(x + e, y) - h(x - e, y)) / (2 * e), (h(x, y + e) - h(x, y - e)) / (2 * e)
 
     def terrain_grid(self, maxn=100):
         with self.lock:

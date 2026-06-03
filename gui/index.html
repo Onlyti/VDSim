@@ -413,11 +413,18 @@ function frame(){ requestAnimationFrame(frame);
     car.position.z += -vN*dt;            // ENU y -> three -z
     car.position.lerp(tgt.pos, 0.10);    // drift correction toward latest state
     const nyaw=lerpAngle(yaw + tgt.r*dt, tgt.yaw, 0.15);
-    // road tilt: sit the car on the plane + project world grade/bank onto car axes.
-    car.position.y = terrainGrid ? sampleTerrain(car.position.x, -car.position.z)
-                                 : roadGrade*car.position.x + roadBank*(-car.position.z);
-    const rPitch = roadGrade*Math.cos(nyaw) + roadBank*Math.sin(nyaw);
-    const rRoll  = -roadGrade*Math.sin(nyaw) + roadBank*Math.cos(nyaw);
+    // sit the car on the surface + tilt it to the local slope (terrain or road plane).
+    let grade=roadGrade, bank=roadBank;
+    if(terrainGrid){
+      const wx=car.position.x, wy=-car.position.z, e=2.0;
+      car.position.y = sampleTerrain(wx,wy);
+      grade = (sampleTerrain(wx+e,wy)-sampleTerrain(wx-e,wy))/(2*e);   // dH/dx (world)
+      bank  = (sampleTerrain(wx,wy+e)-sampleTerrain(wx,wy-e))/(2*e);   // dH/dy (world)
+    } else {
+      car.position.y = roadGrade*car.position.x + roadBank*(-car.position.z);
+    }
+    const rPitch = grade*Math.cos(nyaw) + bank*Math.sin(nyaw);
+    const rRoll  = -grade*Math.sin(nyaw) + bank*Math.cos(nyaw);
     car.rotation.set(rRoll, nyaw, -rPitch);   // YXZ: x=roll, y=yaw, z=-pitch
     sprung.rotation.x += (tgt.roll     - sprung.rotation.x)*0.3;
     sprung.rotation.z += ((-tgt.pitch) - sprung.rotation.z)*0.3;
