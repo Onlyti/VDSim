@@ -13,6 +13,10 @@
         <link rel="canonical" href="https://onlyti.github.io/VDSim/main/vdsim_bridge_interface_requirements/">
       
       
+        <link rel="prev" href="../gui_architecture/">
+      
+      
+        <link rel="next" href="../map_import_strategy/">
       
       
         
@@ -23,7 +27,7 @@
     
     
       
-        <title>VDSim <-> AutoHYU-Control Interface Requirements (UDP Co-Simulation Contract) - VDSim</title>
+        <title>Co-sim bridge interface - VDSim</title>
       
     
     
@@ -112,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              VDSim &lt;-&gt; AutoHYU-Control Interface Requirements (UDP Co-Simulation Contract)
+              Co-sim bridge interface
             
           </span>
         </div>
@@ -272,10 +276,12 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
+      <li class="md-tabs__item md-tabs__item--active">
         <a href="../references/actuator_nonlinearity/" class="md-tabs__link">
           
   
@@ -1092,10 +1098,18 @@
       
   
   
+    
   
   
+  
     
     
+      
+        
+      
+        
+      
+        
       
         
       
@@ -1103,21 +1117,22 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
             
   
   
@@ -1135,7 +1150,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1161,6 +1176,297 @@
     
   
     Actuator/sensor nonlinearity & delay
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gui_architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GUI architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Co-sim bridge interface
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Co-sim bridge interface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#0-design-principle-real-vehicle-equivalent-decoupling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0. Design principle — real-vehicle-equivalent decoupling
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-responsibility-split" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Responsibility split
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Responsibility split">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-vdsim-side-deliverable-for-the-vdsim-team" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 VDSim side (deliverable for the VDSim team)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-autohyu-bridge-side-this-repo-srcbswsimulatorvdsim_bridge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 AutoHYU bridge side (this repo, src/bsw/simulator/vdsim_bridge)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-udp-transport-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. UDP transport layer
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-cmd-packet-control-vdsim-msg_type-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. CMD packet (control -&gt; VDSim), msg_type = 1
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-state-packet-vdsim-control-msg_type-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. STATE packet (VDSim -&gt; control), msg_type = 2
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-coordinate-unit-frame-conventions-binding-for-both-sides" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Coordinate / unit / frame conventions (binding for both sides)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-real-vehicle-equivalence-mapping-why-these-signals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Real-vehicle equivalence mapping (why these signals)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-timing-fail-safe-health-real-vehicle-equivalent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Timing, fail-safe, health (real-vehicle-equivalent)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-bridge-ros-contract-autohyu-internal-for-completeness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Bridge ROS contract (AutoHYU-internal, for completeness)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-versioning-extension" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Versioning &amp; extension
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendix-a-vdsim-c-api-used-on-the-sim-side-confirmed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix A. VDSim C++ API used on the sim side (confirmed)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../map_import_strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Map import strategy
   
 
     
