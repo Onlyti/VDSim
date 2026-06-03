@@ -333,22 +333,27 @@ PYBIND11_MODULE(vdsim, m) {
     // {t, cmd, out} so a GUI can plot the realized vs commanded signal.
     m.def("actuator_step_response",
           [](const vdsim::ActuatorParams& p, const std::string& channel,
-             double amplitude, double dt, double duration, double speed_mps) {
+             double amplitude, double dt, double duration, double speed_mps,
+             double pre_s) {
               vdsim::ActuatorModel act;
               act.initialize(p, dt);
               act.reset();
-              const int n = std::max(1, static_cast<int>(duration / dt));
+              // Hold zero for pre_s before the step (t<0) so the step edge and
+              // the dead-time delay are visible on the plot.
+              const int n_pre = std::max(0, static_cast<int>(pre_s / dt));
+              const int n     = std::max(1, static_cast<int>(duration / dt));
               std::vector<double> t, cmd, out;
-              t.reserve(n); cmd.reserve(n); out.reserve(n);
-              for (int i = 0; i < n; ++i) {
+              t.reserve(n_pre + n); cmd.reserve(n_pre + n); out.reserve(n_pre + n);
+              for (int i = -n_pre; i < n; ++i) {
+                  const double u = (i < 0) ? 0.0 : amplitude;
                   vdsim::CmdL4 d{};
-                  if (channel == "steer")         d.steer_angle_wheel = amplitude;
-                  else if (channel == "throttle") d.throttle          = amplitude;
-                  else                            d.brake             = amplitude;
+                  if (channel == "steer")         d.steer_angle_wheel = u;
+                  else if (channel == "throttle") d.throttle          = u;
+                  else                            d.brake             = u;
                   const vdsim::CmdL4 r = act.apply(d, speed_mps, dt);
                   const double o = (channel == "steer") ? r.steer_angle_wheel
                                  : (channel == "throttle") ? r.throttle : r.brake;
-                  t.push_back(i * dt); cmd.push_back(amplitude); out.push_back(o);
+                  t.push_back(i * dt); cmd.push_back(u); out.push_back(o);
               }
               py::dict res;
               res["t"] = t; res["cmd"] = cmd; res["out"] = out;
@@ -356,7 +361,7 @@ PYBIND11_MODULE(vdsim, m) {
           },
           py::arg("params"), py::arg("channel"), py::arg("amplitude") = 1.0,
           py::arg("dt") = 0.002, py::arg("duration") = 1.0,
-          py::arg("speed_mps") = 15.0);
+          py::arg("speed_mps") = 15.0, py::arg("pre_s") = 0.06);
 
     // -------- SimSession kernel (Phase 1: web backend access) --------
     py::class_<vdsim::SimOutput>(m, "SimOutput")
