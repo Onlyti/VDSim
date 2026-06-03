@@ -124,6 +124,10 @@ std::unique_ptr<IContactProvider> create_flat_ground(double z = 0.0,
 std::unique_ptr<IContactProvider> create_split_mu_ground(
     double z, double mu_left, double mu_right, double boundary_y = 0.0);
 
+// Inclined plane: grade [rad] (uphill toward +x), bank [rad] (up toward +y).
+std::unique_ptr<IContactProvider> create_inclined_ground(
+    double z0, double grade, double bank, double mu = 1.0);
+
 // =============================================================================
 // IRoughnessProvider — terrain roughness (Phase 2; reserved)
 // =============================================================================

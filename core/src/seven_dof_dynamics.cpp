@@ -211,12 +211,26 @@ private:
         const double R   = vp_.wheel_radius_nominal;
         const double h_cg = vp_.cg_height;
 
+        // ---- Road slope from contact normals (flat -> no effect) ----
+        // Average unit normal (world). Normal load scales by cos(slope)=n_z; the
+        // gravity component tangential to the road is felt as a body force.
+        Vec3 n_road = contacts[0].normal + contacts[1].normal
+                    + contacts[2].normal + contacts[3].normal;
+        const double nn = n_road.norm();
+        if (nn > 1e-9) n_road /= nn; else n_road = Vec3::UnitZ();
+        const double cos_slope = std::max(0.1, n_road.z());
+        const double gdotn = -kGravity * n_road.z();          // (0,0,-g) . n
+        const double gtx = -gdotn * n_road.x();               // tangential gravity (world)
+        const double gty = -gdotn * n_road.y();
+        const double gx_b =  std::cos(yaw) * gtx + std::sin(yaw) * gty;   // -> body
+        const double gy_b = -std::sin(yaw) * gtx + std::cos(yaw) * gty;
+
         // ---- Per-tire Fz with 1-step lag weight transfer + aero downforce ----
         const double q_aero  = 0.5 * kAirDensity * vp_.frontal_area * vx * std::abs(vx);
         const double Fz_aero_f_per = 0.5 * vp_.aero_lift_front * q_aero;
         const double Fz_aero_r_per = 0.5 * vp_.aero_lift_rear  * q_aero;
-        const double Fz_static_f = m * kGravity * b / (2.0 * L) + Fz_aero_f_per;
-        const double Fz_static_r = m * kGravity * a / (2.0 * L) + Fz_aero_r_per;
+        const double Fz_static_f = m * kGravity * cos_slope * b / (2.0 * L) + Fz_aero_f_per;
+        const double Fz_static_r = m * kGravity * cos_slope * a / (2.0 * L) + Fz_aero_r_per;
         const double dFz_long_total = m * ax_prev_ * h_cg / L;      // moves to rear if ax>0
         const double dFz_long_half  = dFz_long_total * 0.5;
 
@@ -412,6 +426,8 @@ private:
                             std::tanh(vx / 0.5);
         Fx_total -= F_aero;
         Fx_total -= F_rr;
+        Fx_total += m * gx_b;   // gravity tangential to the road (0 on flat)
+        Fy_total += m * gy_b;
 
         Deriv d_out;
         d_out.dx_world = vx * std::cos(yaw) - vy * std::sin(yaw);

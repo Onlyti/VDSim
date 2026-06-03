@@ -777,6 +777,8 @@ async function buildSim(){
     <div class="fld"><label>friction μ</label><input id="sim_mu" type="number" step="any" value="${c.road_mu}"></div>
     <div class="fld"><label>split μ right (−1=off)</label><input id="sim_mur" type="number" step="any" value="${c.road_mu_right}"></div>
     <div class="fld"><label>split boundary y [m]</label><input id="sim_mub" type="number" step="any" value="${c.road_boundary}"></div>
+    <div class="fld"><label>grade [deg] (uphill +)</label><input id="sim_grade" type="number" step="any" value="${(c.road_grade*57.29578).toFixed(2)}"></div>
+    <div class="fld"><label>bank [deg] (+y up)</label><input id="sim_bank" type="number" step="any" value="${(c.road_bank*57.29578).toFixed(2)}"></div>
     <div class="grp" id="g_num">Numerics</div>
     <div class="fld"><label>integrator</label><select id="sim_int" style="width:130px"><option>RK4</option><option>Euler</option></select></div>
     <div class="fld"><label>max substeps</label><input id="sim_sub" type="number" step="1" min="1" value="${c.max_substeps}"></div>
@@ -814,8 +816,9 @@ async function buildSim(){
   ['sim_ix','sim_iy','sim_iyaw','sim_iv'].forEach(id=>$(id).onchange=pushInit);
   addHelp($('g_model'),'model'); addHelp($('g_mode'),'run'); addHelp($('g_num'),'numerics');
   addHelp($('g_init'),'frames'); addHelp($('g_road'),'road');
-  const pushRoad=()=>post('/api/sim',{road_mu:+$('sim_mu').value, road_mu_right:+$('sim_mur').value, road_boundary:+$('sim_mub').value});
-  ['sim_mu','sim_mur','sim_mub'].forEach(id=>$(id).onchange=pushRoad);
+  const pushRoad=()=>post('/api/sim',{road_mu:+$('sim_mu').value, road_mu_right:+$('sim_mur').value,
+    road_boundary:+$('sim_mub').value, road_grade:(+$('sim_grade').value)/57.29578, road_bank:(+$('sim_bank').value)/57.29578});
+  ['sim_mu','sim_mur','sim_mub','sim_grade','sim_bank'].forEach(id=>$(id).onchange=pushRoad);
   // Logging: record selectable signals to CSV + TUM (evo) trajectory.
   let recOn=false;
   const updRec=st=>{ recOn=!!st.recording; $('sim_rec').textContent=recOn?'■ Stop':'● Record';

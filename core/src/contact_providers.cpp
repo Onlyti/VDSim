@@ -84,6 +84,40 @@ private:
     double z_, mu_l_, mu_r_, by_;
 };
 
+// Inclined plane: height h = z0 + tan(grade)*x + tan(bank)*y, so the surface
+// normal is (-tan grade, -tan bank, 1) normalized. grade>0 rises toward +x
+// (uphill ahead -> decel), bank>0 rises toward +y (left). grade=bank=0 -> flat.
+class InclinedGround final : public IContactProvider {
+public:
+    InclinedGround(double z0, double grade, double bank, double mu)
+        : z0_(z0), sx_(std::tan(grade)), sy_(std::tan(bank)), mu_(mu) {
+        n_ = Vec3(-sx_, -sy_, 1.0).normalized();
+    }
+    void query(const State& vehicle, const VehicleParams& vp,
+               ContactArray& out) override {
+        const double a = vp.cg_to_front, b = vp.cg_to_rear;
+        const double tf2 = 0.5 * vp.track_front, tr2 = 0.5 * vp.track_rear;
+        const Vec3 body_offsets[NUM_WHEELS] = {
+            Vec3(a, tf2, 0.0), Vec3(a, -tf2, 0.0),
+            Vec3(-b, tr2, 0.0), Vec3(-b, -tr2, 0.0)};
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            const Vec3 pw = vehicle.position + vehicle.orientation * body_offsets[i];
+            const double z = z0_ + sx_ * pw.x() + sy_ * pw.y();
+            out[i].is_valid    = true;
+            out[i].normal      = n_;
+            out[i].mu_long     = mu_;
+            out[i].mu_lat      = mu_;
+            out[i].surface_id  = 0;
+            out[i].position    = Vec3(pw.x(), pw.y(), z);
+            out[i].penetration = std::max(0.0, vehicle.position.z() - z);
+        }
+    }
+
+private:
+    double z0_, sx_, sy_, mu_;
+    Vec3 n_;
+};
+
 class FlatRoughness final : public IRoughnessProvider {
 public:
     double sample_height(const Vec2& /*world_xy*/) const override { return 0.0; }
@@ -98,6 +132,11 @@ std::unique_ptr<IContactProvider> create_flat_ground(double z, double mu) {
 std::unique_ptr<IContactProvider> create_split_mu_ground(
     double z, double mu_left, double mu_right, double boundary_y) {
     return std::make_unique<SplitMuGround>(z, mu_left, mu_right, boundary_y);
+}
+
+std::unique_ptr<IContactProvider> create_inclined_ground(
+    double z0, double grade, double bank, double mu) {
+    return std::make_unique<InclinedGround>(z0, grade, bank, mu);
 }
 
 std::unique_ptr<IRoughnessProvider> create_flat() {

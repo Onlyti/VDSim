@@ -335,6 +335,9 @@ PYBIND11_MODULE(vdsim, m) {
     m.def("create_split_mu_ground", &vdsim::create_split_mu_ground,
           py::arg("z") = 0.0, py::arg("mu_left") = 1.0, py::arg("mu_right") = 0.5,
           py::arg("boundary_y") = 0.0);
+    m.def("create_inclined_ground", &vdsim::create_inclined_ground,
+          py::arg("z0") = 0.0, py::arg("grade") = 0.0, py::arg("bank") = 0.0,
+          py::arg("mu") = 1.0);
 
     // Dynamics driven by a full Magic Formula tire loaded from a .tir file.
     // Keep .tir files (which may hold confidential measured data) out of the repo.
@@ -506,7 +509,7 @@ PYBIND11_MODULE(vdsim, m) {
              const std::string& level, double sensor_delay_s, double mu,
              double nominal_dt, const vdsim::ActuatorParams& actuator,
              const vdsim::SolverParams& solver, const vdsim::SensorParams& sensors,
-             double mu_right, double mu_boundary_y) {
+             double mu_right, double mu_boundary_y, double grade, double bank) {
               std::unique_ptr<vdsim::IVehicleDynamics> dyn =
                   (level == "K" || level == "L0") ? vdsim::create_kinematic()
                   : (level == "L1") ? vdsim::create_bicycle()
@@ -517,10 +520,14 @@ PYBIND11_MODULE(vdsim, m) {
               cfg.sensors        = sensors;
               cfg.sensor_delay_s = sensor_delay_s;
               cfg.nominal_dt     = nominal_dt;
-              // mu_right >= 0 and != mu -> split-mu ground (left = mu, right = mu_right).
-              auto ground = (mu_right >= 0.0)
-                  ? vdsim::create_split_mu_ground(0.0, mu, mu_right, mu_boundary_y)
-                  : vdsim::create_flat_ground(0.0, mu);
+              // grade/bank set -> inclined; else mu_right>=0 -> split-mu; else flat.
+              std::unique_ptr<vdsim::IContactProvider> ground;
+              if (grade != 0.0 || bank != 0.0)
+                  ground = vdsim::create_inclined_ground(0.0, grade, bank, mu);
+              else if (mu_right >= 0.0)
+                  ground = vdsim::create_split_mu_ground(0.0, mu, mu_right, mu_boundary_y);
+              else
+                  ground = vdsim::create_flat_ground(0.0, mu);
               return std::make_unique<vdsim::SimSession>(
                   std::move(dyn), std::move(ground), vp, tp, solver, cfg);
           },
@@ -530,5 +537,6 @@ PYBIND11_MODULE(vdsim, m) {
           py::arg("actuator") = vdsim::ActuatorParams{},
           py::arg("solver") = vdsim::SolverParams{},
           py::arg("sensors") = vdsim::SensorParams{},
-          py::arg("mu_right") = -1.0, py::arg("mu_boundary_y") = 0.0);
+          py::arg("mu_right") = -1.0, py::arg("mu_boundary_y") = 0.0,
+          py::arg("grade") = 0.0, py::arg("bank") = 0.0);
 }
