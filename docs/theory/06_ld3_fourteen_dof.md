@@ -160,12 +160,35 @@ $K_\phi$ 입력을 썼다 — spring set 과 roll 거동이 decouple 되어 부�
 per-corner unsprung 의 vertical:
 
 $$
-m_{u,i}\, \ddot z_{u,i} = - F_{\text{susp},i} - k_{\text{tire}}\, z_{u,i}
-= + k_i\, \delta_i + c_i\, v_i - k_{\text{tire}}\, z_{u,i}
+m_{u,i}\, \ddot z_{u,i} = - F_{\text{susp},i} - k_{\text{tire}}\, (z_{u,i} - z_{\text{road},i})
+= + k_i\, \delta_i + c_i\, v_i - k_{\text{tire}}\, (z_{u,i} - z_{\text{road},i})
 $$
 
 (Newton III: spring/damper 가 sprung 을 위로 미는 force 의 반작용이 unsprung
 을 아래로.) $k_{\text{tire}}$ = `tire_vertical_stiffness` (default 220 kN/m).
+$z_{\text{road},i}$ = `ContactPoint.road_dz`, 바퀴 접지점의 노면 높이 (roughness +
+지형).
+
+### 노면 contact 와 지형 자세 (terrain attitude)
+
+$z_{\text{road},i}$ 가 **이 모델이 노면을 받는 유일한 통로**다. contact provider
+가 바퀴별로 채운다:
+
+- `RoughGround`: 2-tone 종방향 profile (wheel-hop 가진).
+- `HeightmapGround` / `InclinedGround`: 바퀴 접지점 높이 − CG 접지점 높이, 즉
+  **CG 상대 per-wheel 편차**. 절대 고도(예: 50 m)를 그대로 넣으면 소변형 선형
+  모델이 발산하므로 상대값을 쓴다. 이 편차의 tilt 성분이 4 corner 의 $z_u$ 를
+  서로 다르게 settle 시켜 sprung body 의 roll/pitch 를 노면 평면에 맞춘다.
+
+정상상태 검증 (sedan, InclinedGround): 6° bank → body roll 5.98°, 5° grade →
+nose-up pitch 4.86° (tire vertical compliance 로 약 2-3% undershoot, flat 은
+정확히 0). 즉 **L3 는 노면 기울기를 body attitude 로 반영한다** — L1/L2 와의
+핵심 차이 (chapter 05 §5.x 참조).
+
+> **한계 (grip Fz 미결합)**: tire grip 에 쓰는 $F_z$ 는 아직 inner Ld2 의
+> quasi-static 값이다. 즉 $z_{\text{road}}$ 는 ride·attitude 에는 반영되지만
+> tire 종/횡력 grip 의 dynamic/지형 하중이동에는 아직 환류되지 않는다.
+> follow-up: $k_{\text{tire}}(z_u - z_{\text{road}})$ 의 dynamic Fz 를 grip 으로.
 
 ### Wheel-hop frequency
 

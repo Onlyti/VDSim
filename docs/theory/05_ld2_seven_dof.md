@@ -53,6 +53,21 @@ fidelity.
 | Symmetric LSD | drive/coast ramp 대칭 | 실차 LSD 비대칭 |
 | Zero camber | roll 로부터 camber 없음 ($\gamma=0$) | chapter 06 |
 | Rigid roll axis | geometric(roll center) + elastic(roll-stiffness 비율) + unsprung 으로 분배 | chapter 06 (compliance) |
+| Planar body (no road attitude) | 노면 기울기는 force 로만, body 자세로는 X | chapter 06 (Ld3) |
+
+### 노면 기울기와 ladder level (중요)
+
+노면(grade/bank/지형)이 거동에 들어오는 통로는 level 마다 다르다:
+
+- **L1 (Bicycle) / L2 (7DOF)**: **planar 모델 — body pitch/roll 자유도가 없다.**
+  contact normal 은 **중력의 접선분해(slope-gravity)와 $F_z \propto \cos(\text{slope})$
+  스케일**로만 들어간다. 즉 오르막은 감속력, 뱅크는 횡력으로 **나타나지만 차체가
+  노면을 따라 기울지는 않는다**. 뷰어에서 차가 경사에 기울어 보이는 것은 순수
+  **시각 표현**이며 물리 state 의 attitude 가 아니다. 노면 기울기를 차체 자세로
+  반영하는 것은 L2 이하에서는 **불가능**하다 (설계상 한계).
+- **L3 (14DOF)**: 바퀴별 `road_dz` 가 unsprung↔노면 tire spring 에 들어가 sprung
+  body 의 roll/pitch 가 노면 평면을 **자세로** 따라간다 (chapter 06 §6.4). 단
+  grip $F_z$ 는 아직 quasi-static (같은 chapter 한계 box).
 
 ---
 
