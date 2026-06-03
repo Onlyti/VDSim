@@ -219,6 +219,38 @@ async function drawScenery(){
   }
   scene.add(sceneryGroup);
 }
+// Asphalt road ribbon: offset the route +/- half-width, laid on the terrain.
+let roadMesh=null, roadHalfW=6.0;
+async function drawRoad(){
+  const j=await (await fetch('/api/path')).json(); let pts=j.pts;
+  if(roadMesh){ scene.remove(roadMesh); roadMesh.geometry.dispose(); roadMesh=null; }
+  if(!pts || pts.length<2) return;
+  // densify to ~6 m so the ribbon stays smooth through tight corners
+  const dn=[pts[0]];
+  for(let i=1;i<pts.length;i++){ const a=pts[i-1],b=pts[i]; const d=Math.hypot(b[0]-a[0],b[1]-a[1]);
+    const m=Math.max(1,Math.ceil(d/6)); for(let k=1;k<=m;k++) dn.push([a[0]+(b[0]-a[0])*k/m, a[1]+(b[1]-a[1])*k/m]); }
+  pts=dn;
+  const N=pts.length, hw=roadHalfW;
+  const zf=(x,y)=> (terrainGrid ? sampleTerrain(x,y)+0.15 : 0.12);
+  const arr=new Float32Array(N*2*3);
+  for(let i=0;i<N;i++){
+    const b=pts[Math.min(N-1,i+1)], c=pts[Math.max(0,i-1)];
+    let tx=b[0]-c[0], ty=b[1]-c[1]; const tl=Math.hypot(tx,ty)||1; tx/=tl; ty/=tl;
+    const nx=-ty, ny=tx, a=pts[i];
+    const lx=a[0]+nx*hw, ly=a[1]+ny*hw, rx=a[0]-nx*hw, ry=a[1]-ny*hw;
+    const pl=toThree(lx,ly,zf(lx,ly)), pr=toThree(rx,ry,zf(rx,ry));
+    arr[i*6]=pl.x; arr[i*6+1]=pl.y; arr[i*6+2]=pl.z;
+    arr[i*6+3]=pr.x; arr[i*6+4]=pr.y; arr[i*6+5]=pr.z;
+  }
+  const idx=[];
+  for(let i=0;i<N-1;i++){ const a=i*2,b=a+1,c=a+2,d=a+3; idx.push(a,b,c, b,d,c); }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(arr,3)); g.setIndex(idx); g.computeVertexNormals();
+  roadMesh=new THREE.Mesh(g, new THREE.MeshStandardMaterial(
+    {color:0x37373b, roughness:.98, metalness:0, side:THREE.DoubleSide,
+     polygonOffset:true, polygonOffsetFactor:-1, polygonOffsetUnits:-1}));
+  scene.add(roadMesh);
+}
 function sampleTerrain(wx,wy){
   const t=terrainGrid; if(!t) return 0;
   const fx=(wx-t.x0)/t.dx, fy=(wy-t.y0)/t.dy;
@@ -229,6 +261,7 @@ function sampleTerrain(wx,wy){
 }
 drawTerrain();
 drawScenery();
+drawRoad();
 
 // ---- car (rebuilt per dynamics level) ----
 // car (group): heading (yaw) + position. sprung (child): body+cabin, gets
@@ -400,8 +433,9 @@ function applyState(s){
   // Store as interpolation target; the render loop eases toward it (smooth).
   tgt.pos.copy(toThree(s.x,s.y,0)); tgt.yaw=s.yaw;
   if(s.grade!=null && (s.grade!==roadGrade || s.bank!==roadBank)){ roadGrade=s.grade; roadBank=s.bank||0; updateRoadTilt(); }
-  if(s.npath!=null && s.npath!==lastNpath){ lastNpath=s.npath; drawPath(); }
-  if(s.terrain!=null && s.terrain!==lastTerrain){ lastTerrain=s.terrain; drawTerrain(); drawScenery(); }
+  if(s.npath!=null && s.npath!==lastNpath){ lastNpath=s.npath; drawPath(); drawRoad(); }
+  if(s.terrain!=null && s.terrain!==lastTerrain){ lastTerrain=s.terrain; drawScenery();
+    drawTerrain().then(drawRoad); }
   // Body lean only for L3 (true roll/pitch DOF). L1/L2/K are planar — their
   // roll/pitch are quasi-static estimates, so the rendered body stays flat.
   // (Future: when a road surface is imported, add the road's roll/pitch here.)
@@ -920,7 +954,7 @@ async function buildSim(){
     const bld = $('sim_rd5bld').checked ? $('sim_bld').value : '';
     const r=await (await fetch('/api/map/rd5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rd5:$('sim_rd5').value,obj:obj,cell:+$('sim_objcell').value,buildings:bld})})).json();
     $('sim_rd5txt').textContent = r.ok ? (`Route_0 ${r.pts} pts, ${r.length} m`+(r.terrain?` +terrain z[${r.terrain.z[0]},${r.terrain.z[1]}]`:'')+(r.buildings?` +${r.buildings} bld groups`:'')+' — driving') : ('failed: '+(r.msg||''));
-    trailPts=[]; trail.visible=false; tgt.has=false; drawTerrain(); drawScenery(); };
+    trailPts=[]; trail.visible=false; tgt.has=false; drawScenery(); drawTerrain().then(drawRoad); };
   $('sim_loadobj').onclick=async()=>{ $('sim_objtxt').textContent='baking heightmap…';
     const r=await (await fetch('/api/terrain/load',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({obj:$('sim_obj').value,cell:+$('sim_objcell').value})})).json();
     $('sim_objtxt').textContent = r.ok ? `${r.nx}×${r.ny} grid, z [${r.z[0]},${r.z[1]}] m — driving` : ('failed: '+(r.msg||''));
