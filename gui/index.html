@@ -838,6 +838,7 @@ async function buildSim(){
     <div class="sub" id="sim_maptxt" style="margin:3px 0"></div>
     <div class="grp">CarMaker route (.rd5 Route_0)</div>
     <div class="fld"><input id="sim_rd5" type="text" value="/home/ailab-12/git/carmaker-ros-bridge/Data/Road/2023_Speedway_Road_v1_2.rd5" style="flex:1;font-size:10px"></div>
+    <div class="fld"><label><input id="sim_rd5terr" type="checkbox" checked> drive on terrain mesh below</label></div>
     <div class="row"><button id="sim_loadrd5">Load &amp; drive</button></div>
     <div class="sub" id="sim_rd5txt" style="margin:3px 0"></div>
     <div class="grp">Terrain mesh (.obj heightmap)</div>
@@ -891,8 +892,9 @@ async function buildSim(){
     $('sim_maptxt').textContent = r.ok ? `route ${r.pts} pts, ${r.length} m — driving` : ('failed: '+(r.msg||''));
     trailPts=[]; trail.visible=false; tgt.has=false; };
   $('sim_loadrd5').onclick=async()=>{ $('sim_rd5txt').textContent='parsing .rd5…';
-    const r=await (await fetch('/api/map/rd5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rd5:$('sim_rd5').value})})).json();
-    $('sim_rd5txt').textContent = r.ok ? `Route_0 ${r.pts} pts, ${r.length} m — driving` : ('failed: '+(r.msg||''));
+    const obj = $('sim_rd5terr').checked ? $('sim_obj').value : '';
+    const r=await (await fetch('/api/map/rd5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rd5:$('sim_rd5').value,obj:obj,cell:+$('sim_objcell').value})})).json();
+    $('sim_rd5txt').textContent = r.ok ? (`Route_0 ${r.pts} pts, ${r.length} m`+(r.terrain?` on terrain z[${r.terrain.z[0]},${r.terrain.z[1]}]`:'')+' — driving') : ('failed: '+(r.msg||''));
     trailPts=[]; trail.visible=false; tgt.has=false; drawTerrain(); };
   $('sim_loadobj').onclick=async()=>{ $('sim_objtxt').textContent='baking heightmap…';
     const r=await (await fetch('/api/terrain/load',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({obj:$('sim_obj').value,cell:+$('sim_objcell').value})})).json();

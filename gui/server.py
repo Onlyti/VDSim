@@ -849,14 +849,19 @@ class Runner:
                 for i in range(len(route) - 1))
         return {"ok": True, "pts": len(route), "length": round(L, 1)}
 
-    def load_rd5(self, rd5):
+    def load_rd5(self, rd5, obj="", cell=5.0):
         sys.path.insert(0, str(REPO / "examples"))
         import rd5_route as rr
         route = [(float(p[0]), float(p[1])) for p in rr.route_polyline(rd5)]
         if len(route) < 2:
             return {"ok": False, "msg": "no Route_0 in " + rd5}
+        terr = None
+        if obj and os.path.exists(obj):         # CarMaker road + terrain share one frame
+            import obj_to_heightmap as ob
+            H, tx0, ty0, dx, dy, bb = ob.bake_heightmap(obj, cell)
+            terr = {"H": H, "x0": tx0, "y0": ty0, "dx": dx, "dy": dy, "bb": bb}
         with self.lock:
-            self.terrain = None                 # rd5 route drives in its own frame
+            self.terrain = terr                 # drive the route on the real elevation
             self.path = WaypointPath(route)
             x0, y0 = route[0]
             x1, y1 = route[1]
@@ -866,7 +871,10 @@ class Runner:
             self._build()
         L = sum(math.hypot(route[i + 1][0] - route[i][0], route[i + 1][1] - route[i][1])
                 for i in range(len(route) - 1))
-        return {"ok": True, "pts": len(route), "length": round(L, 1)}
+        out = {"ok": True, "pts": len(route), "length": round(L, 1)}
+        if terr is not None:
+            out["terrain"] = {"z": [round(float(bb[4]), 1), round(float(bb[5]), 1)]}
+        return out
 
     def path_points(self):
         with self.lock:
@@ -1101,7 +1109,8 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/api/map/load":
             self._json(RUNNER.load_map(body.get("xodr", "")))
         elif self.path == "/api/map/rd5":
-            self._json(RUNNER.load_rd5(body.get("rd5", "")))
+            self._json(RUNNER.load_rd5(body.get("rd5", ""), body.get("obj", ""),
+                                       float(body.get("cell", 5.0))))
         elif self.path == "/api/terrain/load":
             self._json(RUNNER.load_terrain(body.get("obj", ""),
                                            float(body.get("cell", 5.0))))
