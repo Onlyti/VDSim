@@ -223,16 +223,26 @@ class WaypointPath:
         self.pts = list(pts)
 
     def steer(self, x, y, yaw, vx, wb, prev_idx):
-        if len(self.pts) < 2:
-            return 0.0, prev_idx
-        Ld = max(2.0, 0.45 * max(vx, 1.0))
         n = len(self.pts)
-        idx = prev_idx
-        while idx < prev_idx + n:
+        if n < 2:
+            return 0.0, prev_idx
+        # Anchor to the nearest route point (robust when off-path), then look
+        # ahead Ld from there — avoids locking onto a stale point and spinning.
+        near, nd = prev_idx, 1e18
+        for i in range(n):
+            dx = self.pts[i][0] - x
+            dy = self.pts[i][1] - y
+            d2 = dx * dx + dy * dy
+            if d2 < nd:
+                nd, near = d2, i
+        Ld = max(3.0, 0.6 * max(vx, 1.0))
+        idx, cnt = near, 0
+        while cnt < n:
             p = self.pts[idx % n]
             if math.hypot(p[0] - x, p[1] - y) >= Ld:
                 break
             idx += 1
+            cnt += 1
         idx %= n
         cp, sp = math.cos(yaw), math.sin(yaw)
         dxw, dyw = self.pts[idx][0] - x, self.pts[idx][1] - y
@@ -240,8 +250,8 @@ class WaypointPath:
         dy = -sp * dxw + cp * dyw
         l2 = dx * dx + dy * dy
         if l2 < 1e-6:
-            return 0.0, idx
-        return max(-0.6, min(0.6, math.atan(2.0 * dy / l2 * wb))), idx
+            return 0.0, near
+        return max(-0.6, min(0.6, math.atan(2.0 * dy / l2 * wb))), near
 
 
 class FigureEight(WaypointPath):

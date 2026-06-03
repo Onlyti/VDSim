@@ -167,7 +167,7 @@ let pathLine=null, lastNpath=-1;
 async function drawPath(){
   const r=await (await fetch('/api/path')).json();
   const v=(r.pts||[]).map(p=>toThree(p[0],p[1],0.02));
-  if(v.length){ v.push(v[0].clone()); }   // close the loop visually
+  if(v.length>1 && v[0].distanceTo(v[v.length-1])<10) v.push(v[0].clone()); // close only true loops
   if(pathLine){ scene.remove(pathLine); pathLine.geometry.dispose(); }
   pathLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints(v),
                           new THREE.LineBasicMaterial({color:0x2f6d8f}));
