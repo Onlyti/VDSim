@@ -113,6 +113,7 @@ nav:
       - "14 — Hardpoint kinematics": theory/14_hardpoint_kinematics.md
       - "15 — Validation & DOE": theory/15_validation_and_doe.md
       - "16 — FMI 2.0 integration": theory/16_fmi_integration.md
+      - "17 — Actuator dynamics & sensing": theory/17_actuator_and_sensing.md
   - References:
       - "Actuator/sensor nonlinearity & delay": references/actuator_nonlinearity.md
   - "Phase 2 — Multibody & Integration":
