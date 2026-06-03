@@ -216,6 +216,8 @@ class Runner:
         self.dt = 0.005
         self.time_scale = 1.0
         self.manual = {"throttle": 0.0, "brake": 0.0, "steer": 0.0}
+        self.cmd_in = {"throttle": 0.0, "brake": 0.0, "steer": 0.0}  # last applied cmd
+        self.io_last_t = None        # monotonic time of last /api/io call (connection)
         self.latest = {}
         self.path = FigureEight()
         self.vp = vdsim.VehicleParams.from_yaml(
@@ -361,6 +363,17 @@ class Runner:
         with self.lock:
             self.manual.update(kw)
 
+    def io(self, cmd):
+        # External data port: take manual control, latch the command, mark the
+        # connection live. Returns the current state snapshot (command + state).
+        with self.lock:
+            self.cfg["driver"] = False           # external command drives the plant
+            for k in ("throttle", "brake", "steer"):
+                if k in cmd:
+                    self.manual[k] = float(cmd[k])
+            self.io_last_t = time.monotonic()
+        return self.snapshot()
+
     def _loop(self):
         fps = 60.0
         pending = 0.0
@@ -392,6 +405,8 @@ class Runner:
                     self.sim.set_input(cmd)
                     self.sim.tick(dt)
                     pending -= dt
+                    self.cmd_in = {"throttle": cmd.throttle, "brake": cmd.brake,
+                                   "steer": cmd.steer_angle_wheel}
             o = self.sim.output()
             s = o.state
             snap = {"t": o.sim_time, "running": run, "driver": driver,
@@ -405,7 +420,8 @@ class Runner:
                     "Ft": [[float(f[0]), float(f[1])] for f in o.tire_forces],
                     "susp": [float(v) for v in s.susp_compression],
                     "level": self.cfg["level"], "vehicle": self.cfg["vehicle"],
-                    "v_target": vt, "dt": dt, "time_scale": ts}
+                    "v_target": vt, "dt": dt, "time_scale": ts,
+                    "cmd_in": dict(self.cmd_in)}
             with self.lock:
                 self.latest = snap
             nxt += 1.0 / fps
@@ -413,7 +429,10 @@ class Runner:
 
     def snapshot(self):
         with self.lock:
-            return dict(self.latest)
+            snap = dict(self.latest)
+            snap["io_age"] = (time.monotonic() - self.io_last_t
+                              if self.io_last_t is not None else None)
+            return snap
 
     def config(self):
         with self.lock:
@@ -459,7 +478,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"plots": RUNNER.tire_curves()})
         elif self.path == "/api/actuator/step":
             self._json({"plots": RUNNER.actuator_step()})
-        elif self.path == "/api/state":
+        elif self.path in ("/api/state", "/api/io"):
             self._json(RUNNER.snapshot())
         elif self.path == "/api/stream":
             self.send_response(200)
@@ -501,6 +520,9 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/api/manual":
             RUNNER.set_manual(**body)
             self._json({"ok": True})
+        elif self.path == "/api/io":
+            # External data port: command in -> state out (one round-trip).
+            self._json(RUNNER.io(body))
         else:
             self.send_error(404)
 

@@ -118,11 +118,13 @@
   <button id="tb_veh">Vehicle</button>
   <button id="tb_sim">Simulation</button>
   <button id="tb_act">Actuator</button>
+  <button id="tb_io">Data port</button>
 </div>
 
 <div id="win_veh" class="win"><div class="win-h"><b>Vehicle</b><span class="x">✕</span></div><div class="win-b" id="veh_body"></div></div>
 <div id="win_sim" class="win"><div class="win-h"><b>Simulation</b><span class="x">✕</span></div><div class="win-b" id="sim_body"></div></div>
 <div id="win_act" class="win"><div class="win-h"><b>Actuator &amp; feedback</b><span class="x">✕</span></div><div class="win-b" id="act_body"></div></div>
+<div id="win_io" class="win"><div class="win-h"><b>Data port (external I/O)</b><span class="x">✕</span></div><div class="win-b" id="io_body"></div></div>
 
 <div id="manbar" class="panel" style="display:none">
   <button id="m_brk" class="mbtn">◀ BRAKE</button>
@@ -346,6 +348,8 @@ function applyState(s){
   $('h_roll').textContent=f(s.roll,3); $('h_pitch').textContent=f(s.pitch,3);
   $('h_steer').textContent=f(s.steer,3)+' rad';
   if(s.Fz) $('h_fz').textContent=s.Fz.map(v=>Math.round(v)).join('  ');
+  window._lastState=s;
+  if($('win_io')&&$('win_io').classList.contains('open')) updateIoMonitor(s);
 }
 const es=new EventSource('/api/stream');
 es.onopen=()=> $('conn').textContent='● live';
@@ -400,7 +404,7 @@ function makeDraggable(win){
   ['mouseup','touchend','touchcancel'].forEach(ev=>addEventListener(ev,()=>dragging=false));
   win.querySelector('.x').onclick=()=>win.classList.remove('open');
 }
-['win_veh','win_sim','win_act'].forEach(id=>makeDraggable($(id)));
+['win_veh','win_sim','win_act','win_io'].forEach(id=>makeDraggable($(id)));
 
 // ---- 2-level Vehicle window (category -> fields), tire folded in ----
 // ARB: two linked inputs — roll stiffness [N·m/rad] (canonical, sent to backend)
@@ -544,6 +548,47 @@ async function buildActuator(){
   stepRefresh();
 }
 
+// ---- Data port: external command-in / state-out over HTTP (free-run) ----
+function buildDataPort(){
+  const el=$('io_body'), base=location.origin;
+  el.innerHTML=`
+   <div class="grp">Endpoints</div>
+   <div style="font:11px Tahoma;line-height:1.6">
+     <div><b>POST</b> /api/io <span class="sub">{throttle,brake,steer} → state JSON</span></div>
+     <div><b>GET</b> /api/io <span class="sub">state JSON (read-only)</span></div>
+     <div><b>GET</b> /api/stream <span class="sub">SSE 60 Hz state</span></div>
+   </div>
+   <div class="grp">Example</div>
+   <pre style="white-space:pre-wrap;font:10px Consolas,monospace;background:#f4f6f9;border:1px solid #e3e9ef;border-radius:5px;padding:6px;color:#2a2f37;overflow-x:auto">curl -X POST ${base}/api/io \\
+  -H 'Content-Type: application/json' \\
+  -d '{"throttle":0.5,"steer":0.05}'</pre>
+   <div class="sub" style="margin:4px 0">POST takes manual control (free-run); throttle/brake 0–1, steer in rad. Response is the current state.</div>
+   <div class="grp">Live I/O monitor <span id="io_conn" class="sub">—</span></div>
+   <div style="display:flex;gap:10px">
+     <div style="flex:1"><div class="subgrp">command in</div>
+       <div class="kv"><span>throttle</span><b id="io_th">—</b></div>
+       <div class="kv"><span>brake</span><b id="io_br">—</b></div>
+       <div class="kv"><span>steer</span><b id="io_st">—</b></div></div>
+     <div style="flex:1"><div class="subgrp">state out</div>
+       <div class="kv"><span>vx</span><b id="io_vx">—</b></div>
+       <div class="kv"><span>vy</span><b id="io_vy">—</b></div>
+       <div class="kv"><span>yaw rate</span><b id="io_r">—</b></div>
+       <div class="kv"><span>ax</span><b id="io_ax">—</b></div>
+       <div class="kv"><span>ay</span><b id="io_ay">—</b></div></div>
+   </div>`;
+  if(window._lastState) updateIoMonitor(window._lastState);
+}
+function updateIoMonitor(s){
+  if(!$('io_th')) return;
+  const c=s.cmd_in||{};
+  $('io_th').textContent=f(c.throttle); $('io_br').textContent=f(c.brake); $('io_st').textContent=f(c.steer,3);
+  $('io_vx').textContent=f(s.vx); $('io_vy').textContent=f(s.vy); $('io_r').textContent=f(s.r,3);
+  $('io_ax').textContent=f(s.ax); $('io_ay').textContent=f(s.ay);
+  const conn=$('io_conn'); if(!conn) return; const a=s.io_age;
+  conn.textContent = (a==null)?'no external client':(a<1?`● client live (${a.toFixed(1)}s)`:`idle ${a.toFixed(0)}s`);
+  conn.style.color = (a!=null&&a<1)?'#34c759':'var(--dim)';
+}
+
 // ---- simulation panel (consolidated run controls) ----
 async function buildSim(){
   const cf=await(await fetch('/api/config')).json(); const c=cf.config;
@@ -580,6 +625,7 @@ function openWin(id, build){ const w=$(id); w.classList.toggle('open'); if(w.cla
 $('tb_veh').onclick =()=>openWin('win_veh', buildVehicle);
 $('tb_sim').onclick =()=>openWin('win_sim', buildSim);
 $('tb_act').onclick =()=>openWin('win_act', buildActuator);
+$('tb_io').onclick  =()=>openWin('win_io', buildDataPort);
 </script>
 </body>
 </html>
