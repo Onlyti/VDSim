@@ -142,7 +142,7 @@ public:
         const double L = vp_.wheelbase;
         const double h_ra = vp_.roll_center_height_front * (vp_.cg_to_rear / L)
                           + vp_.roll_center_height_rear  * (vp_.cg_to_front / L);
-        const double Mroll = vp_.mass_sprung * ay_prev_ * (vp_.cg_height - h_ra);
+        const double Mroll = vp_.mass_sprung * ay_felt_ * (vp_.cg_height - h_ra);
         return (K > 1e-6) ? (Mroll / K) : 0.0;
     }
     // Quasi-static pitch: anti-dive omitted; effective pitch stiffness
@@ -156,7 +156,7 @@ public:
         const double K_pitch = k_avg * (vp_.cg_to_front * vp_.cg_to_front +
                                         vp_.cg_to_rear  * vp_.cg_to_rear) * 2.0;
         return (K_pitch > 1e-6)
-               ? (-vp_.mass * ax_prev_ * vp_.cg_height / K_pitch) : 0.0;
+               ? (-vp_.mass * ax_felt_ * vp_.cg_height / K_pitch) : 0.0;
     }
     double ax_body_est() const override { return ax_prev_; }
     double ay_body_est() const override { return ay_prev_; }
@@ -225,13 +225,21 @@ private:
         const double gx_b =  std::cos(yaw) * gtx + std::sin(yaw) * gty;   // -> body
         const double gy_b = -std::sin(yaw) * gtx + std::cos(yaw) * gty;
 
+        // Specific force the chassis feels in the road-tangent plane = inertial
+        // accel minus the tangential gravity the tires already react. On a banked
+        // straight ay_kin->0 but ay_felt = -gy_b != 0, so the bank/slope produces
+        // quasi-static load transfer (and the reported roll/pitch). Flat: ==0.
+        const double ax_felt = ax_prev_ - gx_b;
+        const double ay_felt = ay_prev_ - gy_b;
+        ax_felt_ = ax_felt; ay_felt_ = ay_felt;
+
         // ---- Per-tire Fz with 1-step lag weight transfer + aero downforce ----
         const double q_aero  = 0.5 * kAirDensity * vp_.frontal_area * vx * std::abs(vx);
         const double Fz_aero_f_per = 0.5 * vp_.aero_lift_front * q_aero;
         const double Fz_aero_r_per = 0.5 * vp_.aero_lift_rear  * q_aero;
         const double Fz_static_f = m * kGravity * cos_slope * b / (2.0 * L) + Fz_aero_f_per;
         const double Fz_static_r = m * kGravity * cos_slope * a / (2.0 * L) + Fz_aero_r_per;
-        const double dFz_long_total = m * ax_prev_ * h_cg / L;      // moves to rear if ax>0
+        const double dFz_long_total = m * ax_felt * h_cg / L;      // moves to rear if ax>0 (incl. grade)
         const double dFz_long_half  = dFz_long_total * 0.5;
 
         // ---- Lateral load transfer = geometric (jacking through the roll center)
@@ -244,15 +252,15 @@ private:
         const double hrc_r = vp_.roll_center_height_rear;
         const double h_ra  = hrc_f * (b / L) + hrc_r * (a / L);   // roll axis under CG
         const double m_s   = vp_.mass_sprung;
-        const double Fys   = m_s * ay_prev_;                      // sprung lateral force
+        const double Fys   = m_s * ay_felt;                      // sprung lateral force (incl. bank)
         const double Mroll = Fys * (h_cg - h_ra);                 // roll moment about roll axis
         const double m_uf  = vp_.unsprung_mass[WHEEL_FL] + vp_.unsprung_mass[WHEEL_FR];
         const double m_ur  = vp_.unsprung_mass[WHEEL_RL] + vp_.unsprung_mass[WHEEL_RR];
         const double dFz_lat_f = (Tw_f > 1e-3)
-            ? (Fys * (b / L) * hrc_f + Mroll * (Kf / Ktot) + m_uf * ay_prev_ * R) / Tw_f
+            ? (Fys * (b / L) * hrc_f + Mroll * (Kf / Ktot) + m_uf * ay_felt * R) / Tw_f
             : 0.0;
         const double dFz_lat_r = (Tw_r > 1e-3)
-            ? (Fys * (a / L) * hrc_r + Mroll * (Kr / Ktot) + m_ur * ay_prev_ * R) / Tw_r
+            ? (Fys * (a / L) * hrc_r + Mroll * (Kr / Ktot) + m_ur * ay_felt * R) / Tw_r
             : 0.0;
         // Sign: ay > 0 (+y, left) shifts load to the right (-y); applied below as
         //   Fz_FL -= dFz_lat_f, Fz_FR += dFz_lat_f (rear analogously).
@@ -524,6 +532,8 @@ private:
     State state_;
     double ax_prev_ {0.0};
     double ay_prev_ {0.0};
+    double ax_felt_ {0.0};   // specific force (accel - tangential gravity) for transfer/attitude
+    double ay_felt_ {0.0};
     double mz_front_sum_ {0.0};
     std::array<Vec3,   NUM_WHEELS> tire_F_     {};
     std::array<double, NUM_WHEELS> tire_Fz_    {};
