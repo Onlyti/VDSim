@@ -555,6 +555,13 @@ function plantEnhance(el){
   const diff=q('differential'), lp=q('lsd_preload'), lr=q('lsd_ramp');
   if(diff){ const upd=()=>{ const off=diff.value!=='LSD'; dim(lp,off); dim(lr,off); };
     diff.addEventListener('change',upd); upd(); }
+  // Steering: LuGre servo mode vs first-order lag — only one set applies.
+  const lug=q('steer.friction.enabled');
+  const stau=q('steer.ch.tau_s'), skp=q('steer.servo_kp'), skd=q('steer.servo_kd');
+  if(lug){ const upd=()=>{ const on=lug.checked;
+      dim(stau, on);            // lag unused when the servo (LuGre) drives steer
+      dim(skp, !on); dim(skd, !on); };  // servo gains unused without LuGre
+    lug.addEventListener('change',upd); upd(); }
   // EBD overrides static brake bias with a dynamic Fz-based split
   const ebd=q('brake_ebd_enabled'), bias=q('brake_bias_front');
   if(ebd&&bias){ const r=rowOf(bias); const upd=()=>{ if(r){ r.style.opacity=ebd.checked?0.6:1;
