@@ -120,6 +120,10 @@ public:
 std::unique_ptr<IContactProvider> create_flat_ground(double z = 0.0,
                                                      double mu = 1.0);
 
+// Split-mu plane: per-wheel friction by world-y (y >= boundary -> mu_left).
+std::unique_ptr<IContactProvider> create_split_mu_ground(
+    double z, double mu_left, double mu_right, double boundary_y = 0.0);
+
 // =============================================================================
 // IRoughnessProvider — terrain roughness (Phase 2; reserved)
 // =============================================================================

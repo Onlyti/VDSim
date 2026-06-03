@@ -463,7 +463,7 @@ const DOC_MAP={
   'Suspension':'05_ld2_seven_dof', 'Drivetrain':'05_ld2_seven_dof', 'Steering':'05_ld2_seven_dof',
   'Aero':'04_ld1_bicycle', 'Tire':'03_tire_pacejka_mf96', 'Actuator & feedback':'17_actuator_and_sensing',
   'model':'', 'numerics':'11_numerical_integration', 'run':'09_pure_pursuit_path', 'cosim':'18_runtime_and_cosim',
-  'frames':'01_frames_and_conventions'};
+  'frames':'01_frames_and_conventions', 'road':'03_tire_pacejka_mf96'};
 function docHref(key){ const f=DOC_MAP[key]; return f===undefined ? null : DOCS + (f ? f + '/' : ''); }
 function helpIcon(href){
   if(!href) return null;
@@ -773,6 +773,10 @@ async function buildSim(){
     <div class="row"><button id="sim_drv">Autopilot</button><button id="sim_man">Manual</button></div>
     <div class="grp">Target speed <span id="sim_vtv" class="sub"></span></div>
     <input id="sim_vt" type="range" min="0" max="40" step="0.5" style="width:100%">
+    <div class="grp" id="g_road">Road / surface</div>
+    <div class="fld"><label>friction μ</label><input id="sim_mu" type="number" step="any" value="${c.road_mu}"></div>
+    <div class="fld"><label>split μ right (−1=off)</label><input id="sim_mur" type="number" step="any" value="${c.road_mu_right}"></div>
+    <div class="fld"><label>split boundary y [m]</label><input id="sim_mub" type="number" step="any" value="${c.road_boundary}"></div>
     <div class="grp" id="g_num">Numerics</div>
     <div class="fld"><label>integrator</label><select id="sim_int" style="width:130px"><option>RK4</option><option>Euler</option></select></div>
     <div class="fld"><label>max substeps</label><input id="sim_sub" type="number" step="1" min="1" value="${c.max_substeps}"></div>
@@ -809,7 +813,9 @@ async function buildSim(){
     init_yaw:(+$('sim_iyaw').value)/57.29578, init_v:+$('sim_iv').value});
   ['sim_ix','sim_iy','sim_iyaw','sim_iv'].forEach(id=>$(id).onchange=pushInit);
   addHelp($('g_model'),'model'); addHelp($('g_mode'),'run'); addHelp($('g_num'),'numerics');
-  addHelp($('g_init'),'frames');
+  addHelp($('g_init'),'frames'); addHelp($('g_road'),'road');
+  const pushRoad=()=>post('/api/sim',{road_mu:+$('sim_mu').value, road_mu_right:+$('sim_mur').value, road_boundary:+$('sim_mub').value});
+  ['sim_mu','sim_mur','sim_mub'].forEach(id=>$(id).onchange=pushRoad);
   // Logging: record selectable signals to CSV + TUM (evo) trajectory.
   let recOn=false;
   const updRec=st=>{ recOn=!!st.recording; $('sim_rec').textContent=recOn?'■ Stop':'● Record';

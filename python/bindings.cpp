@@ -332,6 +332,9 @@ PYBIND11_MODULE(vdsim, m) {
     m.def("create_fourteen_dof", static_cast<DynFactory>(&vdsim::create_fourteen_dof));
     m.def("create_flat_ground",  &vdsim::create_flat_ground,
           py::arg("z") = 0.0, py::arg("mu") = 1.0);
+    m.def("create_split_mu_ground", &vdsim::create_split_mu_ground,
+          py::arg("z") = 0.0, py::arg("mu_left") = 1.0, py::arg("mu_right") = 0.5,
+          py::arg("boundary_y") = 0.0);
 
     // Dynamics driven by a full Magic Formula tire loaded from a .tir file.
     // Keep .tir files (which may hold confidential measured data) out of the repo.
@@ -502,7 +505,8 @@ PYBIND11_MODULE(vdsim, m) {
           [](const vdsim::VehicleParams& vp, const vdsim::TireParams& tp,
              const std::string& level, double sensor_delay_s, double mu,
              double nominal_dt, const vdsim::ActuatorParams& actuator,
-             const vdsim::SolverParams& solver, const vdsim::SensorParams& sensors) {
+             const vdsim::SolverParams& solver, const vdsim::SensorParams& sensors,
+             double mu_right, double mu_boundary_y) {
               std::unique_ptr<vdsim::IVehicleDynamics> dyn =
                   (level == "K" || level == "L0") ? vdsim::create_kinematic()
                   : (level == "L1") ? vdsim::create_bicycle()
@@ -513,14 +517,18 @@ PYBIND11_MODULE(vdsim, m) {
               cfg.sensors        = sensors;
               cfg.sensor_delay_s = sensor_delay_s;
               cfg.nominal_dt     = nominal_dt;
+              // mu_right >= 0 and != mu -> split-mu ground (left = mu, right = mu_right).
+              auto ground = (mu_right >= 0.0)
+                  ? vdsim::create_split_mu_ground(0.0, mu, mu_right, mu_boundary_y)
+                  : vdsim::create_flat_ground(0.0, mu);
               return std::make_unique<vdsim::SimSession>(
-                  std::move(dyn), vdsim::create_flat_ground(0.0, mu),
-                  vp, tp, solver, cfg);
+                  std::move(dyn), std::move(ground), vp, tp, solver, cfg);
           },
           py::arg("vehicle"), py::arg("tire"), py::arg("level") = "L2",
           py::arg("sensor_delay_s") = 0.0, py::arg("mu") = 1.0,
           py::arg("nominal_dt") = 0.005,
           py::arg("actuator") = vdsim::ActuatorParams{},
           py::arg("solver") = vdsim::SolverParams{},
-          py::arg("sensors") = vdsim::SensorParams{});
+          py::arg("sensors") = vdsim::SensorParams{},
+          py::arg("mu_right") = -1.0, py::arg("mu_boundary_y") = 0.0);
 }
