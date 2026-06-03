@@ -561,8 +561,8 @@ async function buildDataPort(){
    <div class="grp">Example</div>
    <pre style="white-space:pre-wrap;font:10px Consolas,monospace;background:#f4f6f9;border:1px solid #e3e9ef;border-radius:5px;padding:6px;color:#2a2f37;overflow-x:auto">curl -X POST ${base}/api/io \\
   -H 'Content-Type: application/json' \\
-  -d '{"throttle":0.5,"steer":0.05}'</pre>
-   <div class="sub" style="margin:4px 0">POST takes manual control (free-run); throttle/brake 0–1, steer in rad. Response is the current state.</div>
+  -d '{"vehicle":0,"throttle":0.5,"steer":0.05}'</pre>
+   <div class="sub" style="margin:4px 0">POST takes manual control (free-run); throttle/brake 0–1, steer in rad, vehicle id (default 0). Response is that vehicle's state. Outbound packets carry "veh".</div>
    <div class="grp">Live I/O monitor <span id="io_conn" class="sub">—</span></div>
    <div style="display:flex;gap:10px">
      <div style="flex:1"><div class="subgrp">command in</div>
@@ -582,11 +582,17 @@ async function buildDataPort(){
   if(window._lastState) updateIoMonitor(window._lastState);
   renderTx($('tx_ctl'), await (await fetch('/api/io/targets')).json());
 }
-function renderTx(box, cfg){
-  const tx=cfg.tx||{}, targets=cfg.targets||[]; box.innerHTML='';
+// Per-vehicle telemetry config. cfg = {vehicles, live, configs:{vid:{tx,targets}}}.
+function renderTx(box, cfg, vid){
+  const vehicles=cfg.vehicles||[0]; if(vid==null||!vehicles.includes(vid)) vid=cfg.live??vehicles[0];
+  const c=(cfg.configs&&cfg.configs[vid])||{tx:{},targets:[]};
+  const tx=c.tx||{}, targets=c.targets||[]; box.innerHTML='';
   const chk=v=>{const i=document.createElement('input');i.type='checkbox';i.checked=!!v;return i;};
   const num=(v,w)=>{const i=document.createElement('input');i.type='number';i.step='any';i.value=v;i.style.width=w+'px';return i;};
   const fld=(label,node)=>{const d=document.createElement('div');d.className='fld';const l=document.createElement('label');l.textContent=label;d.appendChild(l);d.appendChild(node);box.appendChild(d);};
+  const sel=document.createElement('select'); sel.style.width='110px';
+  sel.innerHTML=vehicles.map(v=>`<option value="${v}" ${v===vid?'selected':''}>veh ${v}${v===cfg.live?' (live)':''}</option>`).join('');
+  sel.onchange=e=>renderTx(box,cfg,+e.target.value); fld('Vehicle',sel);
   const en=chk(tx.enabled), rate=num(tx.rate??50,70), sst=chk(tx.send_state!==false), scm=chk(tx.send_cmd!==false);
   fld('Enabled',en); fld('Rate [Hz]',rate); fld('Send state',sst); fld('Send command',scm);
   const sub=document.createElement('div'); sub.className='subgrp'; sub.textContent='Destinations'; box.appendChild(sub);
@@ -600,8 +606,8 @@ function renderTx(box, cfg){
   const add=document.createElement('button'); add.textContent='+ add destination'; add.onclick=()=>addRow(); box.appendChild(add);
   const apply=document.createElement('button'); apply.className='apply'; apply.textContent='Apply telemetry';
   apply.onclick=async()=>{ const tgts=[...list.children].map(r=>({ip:r.querySelector('[data-k=ip]').value.trim(),port:+r.querySelector('[data-k=port]').value})).filter(t=>t.ip&&t.port>0);
-    await post('/api/io/targets',{enabled:en.checked,rate:+rate.value,send_state:sst.checked,send_cmd:scm.checked,targets:tgts});
-    renderTx(box, await (await fetch('/api/io/targets')).json()); };
+    await post('/api/io/targets',{vehicle:vid,enabled:en.checked,rate:+rate.value,send_state:sst.checked,send_cmd:scm.checked,targets:tgts});
+    renderTx(box, await (await fetch('/api/io/targets')).json(), vid); };
   box.appendChild(apply);
 }
 function updateIoMonitor(s){

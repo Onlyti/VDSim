@@ -209,6 +209,22 @@ class FigureEight:
         return max(-0.6, min(0.6, math.atan(2.0 * dy / l2 * wb))), idx
 
 
+class VehiclePort:
+    """Per-vehicle data-port config: telemetry output + control input.
+
+    Keyed by vehicle id in Runner.ports. Today only the live vehicle (id 0) is
+    backed by the single SimSession; the id-keyed structure lets multi-vehicle
+    support later add ports/sims without reworking the wire format or GUI.
+    """
+    def __init__(self):
+        self.tx = {"enabled": False, "rate": 50.0, "send_state": True, "send_cmd": True}
+        self.targets = []                                            # output: [{ip,port}]
+        self.in_cmd = {"throttle": 0.0, "brake": 0.0, "steer": 0.0}  # control input (latched)
+        self.applied = {"throttle": 0.0, "brake": 0.0, "steer": 0.0} # last applied to plant
+        self.io_last_t = None
+        self._tx_last = 0.0
+
+
 class Runner:
     def __init__(self):
         self.lock = threading.Lock()
@@ -216,14 +232,9 @@ class Runner:
                     "driver": True, "running": True}
         self.dt = 0.005
         self.time_scale = 1.0
-        self.manual = {"throttle": 0.0, "brake": 0.0, "steer": 0.0}
-        self.cmd_in = {"throttle": 0.0, "brake": 0.0, "steer": 0.0}  # last applied cmd
-        self.io_last_t = None        # monotonic time of last /api/io call (connection)
-        # Outbound UDP telemetry: push state/command to configurable destinations.
-        self.tx = {"enabled": False, "rate": 50.0, "send_state": True, "send_cmd": True}
-        self.targets = []           # list of {"ip": str, "port": int}
+        self.live_vid = 0                  # vehicle id backed by the (single) sim
+        self.ports = {0: VehiclePort()}    # data-port config keyed by vehicle id
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self._tx_last = 0.0
         self.latest = {}
         self.path = FigureEight()
         self.vp = vdsim.VehicleParams.from_yaml(
@@ -367,19 +378,28 @@ class Runner:
 
     def set_manual(self, **kw):
         with self.lock:
-            self.manual.update(kw)
+            self.ports[self.live_vid].in_cmd.update(
+                {k: float(v) for k, v in kw.items()
+                 if k in ("throttle", "brake", "steer")})
 
     def telemetry_config(self):
         with self.lock:
-            return {"tx": dict(self.tx), "targets": [dict(t) for t in self.targets]}
+            return {"vehicles": sorted(self.ports), "live": self.live_vid,
+                    "configs": {vid: {"tx": dict(p.tx),
+                                      "targets": [dict(t) for t in p.targets]}
+                                for vid, p in self.ports.items()}}
 
     def set_telemetry(self, data):
+        vid = int(data.get("vehicle", self.live_vid))
         with self.lock:
+            p = self.ports.get(vid)
+            if p is None:
+                return
             for k in ("enabled", "send_state", "send_cmd"):
                 if k in data:
-                    self.tx[k] = bool(data[k])
+                    p.tx[k] = bool(data[k])
             if "rate" in data:
-                self.tx["rate"] = max(1.0, min(200.0, float(data["rate"])))
+                p.tx["rate"] = max(1.0, min(200.0, float(data["rate"])))
             if "targets" in data:
                 clean = []
                 for t in data["targets"]:
@@ -390,40 +410,48 @@ class Runner:
                         continue
                     if ip and 0 < port < 65536:
                         clean.append({"ip": ip, "port": port})
-                self.targets = clean
+                p.targets = clean
 
     def _telemetry_send(self, snap):
-        # Called from the sim loop; paces to tx["rate"] and fans out to targets.
-        if not (self.tx["enabled"] and self.targets and snap):
-            return
+        # Called from the sim loop; per-vehicle paced fan-out. Only the live
+        # vehicle has plant state today; other ids (future) send their own.
         now = time.monotonic()
-        if now - self._tx_last < 1.0 / self.tx["rate"]:
-            return
-        self._tx_last = now
-        payload = {"t": snap.get("t", 0.0)}
-        if self.tx["send_state"]:
-            for k in ("x", "y", "z", "yaw", "roll", "pitch", "vx", "vy", "r",
-                      "wx", "wy", "ax", "ay", "steer", "Fz"):
-                if k in snap:
-                    payload[k] = snap[k]
-        if self.tx["send_cmd"]:
-            payload["cmd"] = snap.get("cmd_in", {})
-        data = json.dumps(payload).encode()
-        for t in self.targets:
-            try:
-                self._sock.sendto(data, (t["ip"], t["port"]))
-            except OSError:
-                pass
+        for vid, p in self.ports.items():
+            if not (p.tx["enabled"] and p.targets):
+                continue
+            if now - p._tx_last < 1.0 / p.tx["rate"]:
+                continue
+            p._tx_last = now
+            live = (vid == self.live_vid)
+            payload = {"veh": vid, "t": snap.get("t", 0.0) if live else 0.0}
+            if p.tx["send_state"] and live:
+                for k in ("x", "y", "z", "yaw", "roll", "pitch", "vx", "vy", "r",
+                          "wx", "wy", "ax", "ay", "steer", "Fz"):
+                    if k in snap:
+                        payload[k] = snap[k]
+            if p.tx["send_cmd"]:
+                payload["cmd"] = p.applied if live else p.in_cmd
+            data = json.dumps(payload).encode()
+            for t in p.targets:
+                try:
+                    self._sock.sendto(data, (t["ip"], t["port"]))
+                except OSError:
+                    pass
 
     def io(self, cmd):
-        # External data port: take manual control, latch the command, mark the
-        # connection live. Returns the current state snapshot (command + state).
+        # External data port: route command to the addressed vehicle's input,
+        # mark the connection live. Returns the current (live) state snapshot.
+        vid = int(cmd.get("vehicle", self.live_vid))
         with self.lock:
-            self.cfg["driver"] = False           # external command drives the plant
+            p = self.ports.get(vid)
+            if p is None:
+                return {"error": f"unknown vehicle {vid}", "vehicles": sorted(self.ports)}
             for k in ("throttle", "brake", "steer"):
                 if k in cmd:
-                    self.manual[k] = float(cmd[k])
-            self.io_last_t = time.monotonic()
+                    p.in_cmd[k] = float(cmd[k])
+            p.io_last_t = time.monotonic()
+            if vid == self.live_vid:
+                self.cfg["driver"] = False     # external command drives the plant
         return self.snapshot()
 
     def _loop(self):
@@ -434,7 +462,7 @@ class Runner:
             with self.lock:
                 run, driver = self.cfg["running"], self.cfg["driver"]
                 vt, dt, ts = self.cfg["v_target"], self.dt, self.time_scale
-                man = dict(self.manual)
+                man = dict(self.ports[self.live_vid].in_cmd)
                 wb = self.vp.wheelbase
             if run:
                 pending = min(pending + (1.0 / fps) * ts, 0.5)  # cap to avoid spiral
@@ -457,8 +485,9 @@ class Runner:
                     self.sim.set_input(cmd)
                     self.sim.tick(dt)
                     pending -= dt
-                    self.cmd_in = {"throttle": cmd.throttle, "brake": cmd.brake,
-                                   "steer": cmd.steer_angle_wheel}
+                    self.ports[self.live_vid].applied = {
+                        "throttle": cmd.throttle, "brake": cmd.brake,
+                        "steer": cmd.steer_angle_wheel}
             o = self.sim.output()
             s = o.state
             snap = {"t": o.sim_time, "running": run, "driver": driver,
@@ -472,8 +501,7 @@ class Runner:
                     "Ft": [[float(f[0]), float(f[1])] for f in o.tire_forces],
                     "susp": [float(v) for v in s.susp_compression],
                     "level": self.cfg["level"], "vehicle": self.cfg["vehicle"],
-                    "v_target": vt, "dt": dt, "time_scale": ts,
-                    "cmd_in": dict(self.cmd_in)}
+                    "v_target": vt, "dt": dt, "time_scale": ts}
             with self.lock:
                 self.latest = snap
             self._telemetry_send(snap)
@@ -483,8 +511,12 @@ class Runner:
     def snapshot(self):
         with self.lock:
             snap = dict(self.latest)
-            snap["io_age"] = (time.monotonic() - self.io_last_t
-                              if self.io_last_t is not None else None)
+            p = self.ports[self.live_vid]
+            snap["veh"] = self.live_vid
+            snap["vehicles"] = sorted(self.ports)
+            snap["cmd_in"] = dict(p.applied)
+            snap["io_age"] = (time.monotonic() - p.io_last_t
+                              if p.io_last_t is not None else None)
             return snap
 
     def config(self):
