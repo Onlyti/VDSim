@@ -1991,10 +1991,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-131" class="md-nav__link">
+  <a href="#4-131-road-surface-v1-117118123" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. 미완 — 다음 할 일 (#131 잔여 슬라이스)
+        4. #131 road-surface — v1 전 슬라이스 완료 (#117/#118/#123 포함)
       
     </span>
   </a>
@@ -2044,7 +2044,7 @@
 
 
 <h1 id="vdsim-research-infra-arc-road-surface-131">VDSim 핸드오프 — research-infra arc + road-surface (#131)<a class="headerlink" href="#vdsim-research-infra-arc-road-surface-131" title="Permanent link">&para;</a></h1>
-<p>작성: 2026-06-03. 다음 세션은 이 문서로 인계받아 <strong>slice 1 (slope-gravity EoM)</strong> 부터 시작.</p>
+<p>작성: 2026-06-03 (갱신). #131 road-surface v1 전 슬라이스 완료. 다음=refinement(§4).</p>
 <h2 id="1">1. 목표<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
 <p>VDSim 을 실제 연구(TUR Fz/μ/Cα UKF, NHCalib, slip-tolerant SMPC, FSK)에서 쓸 수
 있게 "연구 인프라"(센서·로깅·선형화·Monte Carlo·검증·maneuver·estimator)와
@@ -2076,22 +2076,26 @@ road-surface 를 깔고, 구현 물리를 전부 매뉴얼화한다. dynamics �
   per-vehicle data port, co-sim 구동·시각화, plant param live-link/applicability.
 - #131 <strong>slice 0 (split-μ)</strong>: <code>create_split_mu_ground</code>, make_sim_session(mu_right,
   mu_boundary_y), GUI Simulation "Road/surface"(uniform μ + split). 검증됨.</p>
-<h2 id="4-131">4. 미완 — 다음 할 일 (#131 잔여 슬라이스)<a class="headerlink" href="#4-131" title="Permanent link">&para;</a></h2>
-<p>slice 0 (split-μ) · slice 1 (slope-gravity + 3D tilt render, #123) <strong>완료</strong>.
-- split-μ: <code>create_split_mu_ground</code>, make_sim_session(mu_right, mu_boundary_y).
-- slope-gravity: <code>create_inclined_ground(z0, grade, bank, mu)</code>; L1/L2/L3 EoM 가
-  contact normal 로 접선중력 + cos(slope) 수직하중. GUI Road/surface grade/bank,
-  뷰어 grid tilt + 차량 안착. flat 게이트로 125+57 test 보존.</p>
-<p><strong>다음 (slice 2~):</strong>
-1. <strong>roughness</strong> — <code>IRoughnessProvider</code>(ISO 8608 PSD 는 stub-NotImplemented). 구현 후
-   L3 unsprung 의 road-z 입력 plumbing 필요(현재 zu 는 z=0 기준; per-wheel road
-   height 를 unsprung EoM <code>k_tire*(zu - z_road)</code> 로 먹여 ride 가진).
-2. <strong>OpenDRIVE (#117)</strong> — road network 파서 → reference path + 기하에서 grade/bank.
-   대부분 파서 작업. examples/maneuvers·pure-pursuit 와 연결.
-3. <strong>mesh/heightmap (#118)</strong> — Blender mesh → height-lookup ContactProvider
-   (per-wheel z/normal/μ). IP: Assetto Corsa 등 상용 mesh 참조 금지.
-4. <strong>렌더 보강</strong> — fig8 path/trail 도 road plane 에 tilt(현재 grid·차량만).</p>
-<p>권장 순서: roughness(1, L3 plumbing) → mesh(3) → OpenDRIVE(2, 큰 파서).</p>
+<h2 id="4-131-road-surface-v1-117118123">4. #131 road-surface — v1 전 슬라이스 완료 (#117/#118/#123 포함)<a class="headerlink" href="#4-131-road-surface-v1-117118123" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>slice 0 split-μ</strong>: <code>create_split_mu_ground</code>, make_sim_session(mu_right, mu_boundary_y).</li>
+<li><strong>slice 1 slope-gravity (#123)</strong>: <code>create_inclined_ground(z0,grade,bank,mu)</code>; L1/L2/L3
+  EoM 가 contact normal 로 접선중력 + cos(slope) 수직하중. GUI grade/bank, 뷰어 grid
+  tilt + 차량 안착. flat 게이트로 test 보존.</li>
+<li><strong>slice 2 roughness</strong>: <code>ContactPoint.road_dz</code> + <code>create_rough_ground</code>; L3 unsprung
+  <code>k_tire*(zu - road_dz)</code> 가진. GUI rough amp/wavelength.</li>
+<li><strong>slice 3 heightmap (#118)</strong>: <code>HeightmapGround</code>(bilinear h + gradient normal),
+  <code>make_sim_session_heightmap(...,heightmap[2D np],x0,y0,dx,dy,mu)</code>. ramp=inclined 검증.</li>
+<li><strong>slice 4 OpenDRIVE (#117)</strong>: <code>examples/opendrive.py</code> — planView(line+arc) →
+  reference polyline + elevation(grade)/superelevation(bank). 합성 .xodr self-test.</li>
+</ul>
+<p><strong>남은 refinement (enhancement, 비차단):</strong>
+1. OpenDRIVE spiral(clothoid)/poly3/paramPoly3 + lane logic.
+2. triangle-mesh raycast provider (heightmap 으론 overhang 불가) + per-vertex μ/material.
+3. <strong>L3 ride ↔ grip Fz coupling</strong> — 현재 L3 tire Fz 는 inner seven_dof quasi-static.
+   14DOF k_tire*zu 의 동적하중을 tire Fz 로 환류하면 roughness/지형이 grip 에도 반영.
+4. GUI: heightmap/OpenDRIVE 로드 UI, fig8 path/trail 도 road plane tilt.
+5. road grade/bank/heightmap 을 데이터포트·co-sim·logging 에도 노출.</p>
 <h2 id="5">5. 주의 · 함정<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>flat-road 거동 보존</strong>: normal≈+z 면 slope 항 skip(gate)해서 182 test 가 안 깨지게.
