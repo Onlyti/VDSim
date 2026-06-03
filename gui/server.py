@@ -753,6 +753,8 @@ class Runner:
                         "m_gx": o.sensors.gnss_x, "m_gy": o.sensors.gnss_y,
                         "m_ax": o.sensors.ax, "m_ay": o.sensors.ay,
                         "m_wz": o.sensors.wz, "m_steer": o.sensors.steer}
+            snap["grade"] = self.cfg["road_grade"]
+            snap["bank"] = self.cfg["road_bank"]
             with self.lock:
                 self.latest = snap
             if self.rec_on and len(self.rec_rows) < 200000:

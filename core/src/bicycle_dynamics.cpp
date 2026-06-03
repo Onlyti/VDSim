@@ -181,6 +181,19 @@ private:
         const double R   = vp_.wheel_radius_nominal;
         const double h_cg = vp_.cg_height;
 
+        // Road slope from contact normals (flat -> no effect): normal load scales
+        // by cos(slope); gravity tangential to the road is felt as a body force.
+        Vec3 n_road = contacts[WHEEL_FL].normal + contacts[WHEEL_FR].normal
+                    + contacts[WHEEL_RL].normal + contacts[WHEEL_RR].normal;
+        const double nn = n_road.norm();
+        if (nn > 1e-9) n_road /= nn; else n_road = Vec3::UnitZ();
+        const double cos_slope = std::max(0.1, n_road.z());
+        const double gdotn = -kGravity * n_road.z();
+        const double gtx = -gdotn * n_road.x();
+        const double gty = -gdotn * n_road.y();
+        const double gx_b =  std::cos(yaw) * gtx + std::sin(yaw) * gty;
+        const double gy_b = -std::sin(yaw) * gtx + std::cos(yaw) * gty;
+
         // Aerodynamic downforce per axle (positive Cl -> Fz increase).
         const double q_aero = 0.5 * kAirDensity * vp_.frontal_area * vx * std::abs(vx);
         const double Fz_aero_f = vp_.aero_lift_front * q_aero;
@@ -189,8 +202,8 @@ private:
         // Quasi-static longitudinal weight transfer (1-step lag on ax to
         // avoid self-reference).  ax > 0 (accel) -> rear loaded.
         const double dFz_long = m * ax_prev_ * h_cg / L;
-        double Fz_f = m * kGravity * b / L + Fz_aero_f - dFz_long;
-        double Fz_r = m * kGravity * a / L + Fz_aero_r + dFz_long;
+        double Fz_f = m * kGravity * cos_slope * b / L + Fz_aero_f - dFz_long;
+        double Fz_r = m * kGravity * cos_slope * a / L + Fz_aero_r + dFz_long;
         // Clamp to non-negative (extreme braking can lift rear).
         if (Fz_f < 0.0) Fz_f = 0.0;
         if (Fz_r < 0.0) Fz_r = 0.0;
@@ -293,8 +306,8 @@ private:
         // ---- Body equations of motion (ISO 8855) ----
         // m*(vx_dot - vy*r) = Fx_body  =>  vx_dot = Fx/m + vy*r
         // m*(vy_dot + vx*r) = Fy_body  =>  vy_dot = Fy/m - vx*r
-        const double Fx_total = Fx_body_f + Fx_body_r - F_aero - F_rr;
-        const double Fy_total = Fy_body_f + Fy_body_r;
+        const double Fx_total = Fx_body_f + Fx_body_r - F_aero - F_rr + m * gx_b;
+        const double Fy_total = Fy_body_f + Fy_body_r + m * gy_b;
         // Wheel-z and body-z are parallel (camber=0 assumed); Mz adds directly.
         const double Mz_total = a * Fy_body_f - b * Fy_body_r + F_f.Mz + F_r.Mz;
 

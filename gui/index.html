@@ -156,6 +156,11 @@ orthoCam.position.set(0,120,0); orthoCam.up.set(0,0,-1); orthoCam.lookAt(0,0,0);
 scene.add(new THREE.HemisphereLight(0xffffff, 0x9aa6b2, 1.15));
 const dir = new THREE.DirectionalLight(0xffffff, 0.8); dir.position.set(20,40,15); scene.add(dir);
 const grid = new THREE.GridHelper(120, 60, 0xb6c2cf, 0xd2dae3); scene.add(grid);
+let roadGrade=0, roadBank=0;   // road slope [rad] (from server config)
+function updateRoadTilt(){     // tilt the grid to the road plane
+  const n=new THREE.Vector3(-Math.tan(roadGrade), 1, Math.tan(roadBank)).normalize();
+  grid.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), n);
+}
 
 // figure-eight reference path (R=20, matches server driver) in ground plane.
 function fig8(R=20, n=160){
@@ -172,6 +177,7 @@ scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(fig8()),
 // roll/pitch. wheels / springs / force arrows are children of car (grounded).
 // Local frame: +x forward, +y up, +z = RIGHT (car-left = -z).
 const car = new THREE.Group();
+car.rotation.order = 'YXZ';   // yaw first, then road roll(x)/pitch(z)
 const sprung = new THREE.Group(); car.add(sprung); scene.add(car);
 const bodyMat  = new THREE.MeshStandardMaterial({color:0x01A0E9, metalness:.3, roughness:.5});
 const cabinMat = new THREE.MeshStandardMaterial({color:0x9fd8f5});
@@ -288,7 +294,12 @@ function frame(){ requestAnimationFrame(frame);
     car.position.x +=  vE*dt;            // ENU x -> three x
     car.position.z += -vN*dt;            // ENU y -> three -z
     car.position.lerp(tgt.pos, 0.10);    // drift correction toward latest state
-    car.rotation.set(0, lerpAngle(yaw + tgt.r*dt, tgt.yaw, 0.15), 0);
+    const nyaw=lerpAngle(yaw + tgt.r*dt, tgt.yaw, 0.15);
+    // road tilt: sit the car on the plane + project world grade/bank onto car axes.
+    car.position.y = roadGrade*car.position.x + roadBank*(-car.position.z);
+    const rPitch = roadGrade*Math.cos(nyaw) + roadBank*Math.sin(nyaw);
+    const rRoll  = -roadGrade*Math.sin(nyaw) + roadBank*Math.cos(nyaw);
+    car.rotation.set(rRoll, nyaw, -rPitch);   // YXZ: x=roll, y=yaw, z=-pitch
     sprung.rotation.x += (tgt.roll     - sprung.rotation.x)*0.3;
     sprung.rotation.z += ((-tgt.pitch) - sprung.rotation.z)*0.3;
   }
@@ -329,6 +340,7 @@ function applyState(s){
   if(s.x==null) return;
   // Store as interpolation target; the render loop eases toward it (smooth).
   tgt.pos.copy(toThree(s.x,s.y,0)); tgt.yaw=s.yaw;
+  if(s.grade!=null && (s.grade!==roadGrade || s.bank!==roadBank)){ roadGrade=s.grade; roadBank=s.bank||0; updateRoadTilt(); }
   // Body lean only for L3 (true roll/pitch DOF). L1/L2/K are planar — their
   // roll/pitch are quasi-static estimates, so the rendered body stays flat.
   // (Future: when a road surface is imported, add the road's roll/pitch here.)
