@@ -29,7 +29,43 @@ except ImportError:
 _VEH = REPO / "configs" / "vehicles"
 _TIRE = REPO / "configs" / "tires"
 _ROAD = REPO / "configs" / "roads"
+_MAP = REPO / "configs" / "maps"
+_SENS = REPO / "configs" / "sensors"
+_EXP = REPO / "configs" / "experiments"
 _ISO = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5, "G": 6, "H": 7}
+
+
+def resolve_line(dl):
+    """A map's driving_line spec -> [[x, y], ...] (shape / waypoints / xodr / rd5).
+    Shared by the authoring tool and the runner so they agree."""
+    src = dl.get("source", "shape")
+    if src == "waypoints":
+        return [[float(p[0]), float(p[1])] for p in dl.get("points", [])]
+    if src == "shape":
+        kind = dl.get("shape", "oval")
+        R = float(dl.get("R", 50.0)); n = int(dl.get("n", 160))
+        if kind == "circle":
+            return [[R*math.cos(2*math.pi*i/n), R*math.sin(2*math.pi*i/n)] for i in range(n)]
+        if kind == "figure8":
+            return [[R + R*math.sin(2*math.pi*i/n)*math.cos(2*math.pi*i/n)*2,
+                     R*math.sin(2*math.pi*i/n)] for i in range(n)]
+        L = float(dl.get("L", 150.0)); q = max(1, n // 4); pts = []
+        for i in range(q): pts.append([L*i/q - L/2, -R])
+        for i in range(q): a = -math.pi/2 + math.pi*i/q; pts.append([L/2 + R*math.cos(a), R*math.sin(a)])
+        for i in range(q): pts.append([L/2 - L*i/q, R])
+        for i in range(q): a = math.pi/2 + math.pi*i/q; pts.append([-L/2 + R*math.cos(a), R*math.sin(a)])
+        return pts
+    if src == "xodr":
+        import opendrive as od
+        roads = od.parse_xodr(dl["path"])
+        try:
+            return [list(p) for p in od.route_by_links(roads, od.parse_junctions(dl["path"]))]
+        except Exception:
+            return [list(p) for p in od.chain_route(roads)]
+    if src == "rd5":
+        import rd5_route as rr
+        return [list(p) for p in rr.route_polyline(dl["path"])]
+    return []
 
 
 # --------------------------------------------------------------------------- #
@@ -104,6 +140,24 @@ class Sensors:
     def disabled(self):
         self.sp.enabled = False
         return self
+
+    @classmethod
+    def from_suite(cls, suite):
+        """Map an authored sensor suite (list of {type, mount, noise_std, ...}) onto
+        the sim's SensorParams. gnss/imu/wheel/steer drive the in-sim noise; camera/
+        lidar mounts are kept for the (future) render coupling, not the dynamics."""
+        s = cls()
+        for sen in suite.get("sensors", []):
+            t, std = sen.get("type"), float(sen.get("noise_std", 0.0))
+            if t == "gnss":
+                s.gnss(pos_std=std)
+            elif t == "imu":
+                s.imu(accel_std=std or 0.05)
+            elif t == "wheel_speed":
+                s.wheel_speed(std=std or 0.05)
+            elif t == "steer":
+                s.steer(std=std or 0.001)
+        return s
 
 
 # --------------------------------------------------------------------------- #
@@ -284,7 +338,44 @@ class Experiment:
     def maneuver(self, m): self._man = m; return self
     def sensors(self, s): self._sensors = s; return self
 
-    def run(self, duration=10.0):
+    @classmethod
+    def from_config(cls, name_or_cfg):
+        """Build an Experiment from an authored scenario YAML (configs/experiments/
+        <name>.yaml or a dict): vehicle + tire + level + map(surface+driving line)
+        + maneuver + sensor suite. Closes the loop with the authoring tool."""
+        import yaml
+        cfg = name_or_cfg
+        if isinstance(cfg, str):
+            cfg = yaml.safe_load(open(_EXP / f"{cfg}.yaml"))
+        exp = cls(level=cfg.get("level", "L2"))
+        exp.vehicle(Vehicle.preset(cfg.get("vehicle", "sedan")))
+        exp.tire(Tire.preset(cfg.get("tire", "default_pacejka")))
+        line = None
+        if cfg.get("map"):
+            m = yaml.safe_load(open(_MAP / f"{cfg['map']}.yaml"))
+            line = resolve_line(m.get("driving_line", {}))
+            surf = (m.get("road") or {}).get("surface")
+            exp.road(Road.preset(surf["ref"]) if surf and surf.get("ref") else Road.flat())
+        mc = cfg.get("maneuver", {})
+        t, v = mc.get("type", "constant_speed"), float(mc.get("v", 20.0))
+        if t == "path" and line:
+            exp.maneuver(Maneuver.path(line, v=v))
+        elif t == "step_steer":
+            exp.maneuver(Maneuver.step_steer(v=v, steer=float(mc.get("steer", 0.03))))
+        elif t == "accel":
+            exp.maneuver(Maneuver.accel())
+        elif t == "brake":
+            exp.maneuver(Maneuver.brake())
+        else:
+            exp.maneuver(Maneuver.constant_speed(v))
+        if cfg.get("sensors"):
+            exp.sensors(Sensors.from_suite(yaml.safe_load(open(_SENS / f"{cfg['sensors']}.yaml"))))
+        exp._duration = float(cfg.get("duration", 10.0))
+        return exp
+
+    def run(self, duration=None):
+        if duration is None:
+            duration = getattr(self, "_duration", 10.0)
         vp, tp = self._veh.vp, self._tire.tp
         sp = self._sensors.sp if self._sensors else vdsim.SensorParams()
         sess = self._road._session(vp, tp, self.level, self.dt, sp)
