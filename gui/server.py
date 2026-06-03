@@ -118,7 +118,7 @@ ACTUATOR_FIELDS = [
     ("steer.ch.dead_time_s", "Steer dead time [s]", "Steering", "num"),
     ("steer.ch.tau_s", "Steer lag τ [s]", "Steering", "num"),
     ("steer.ch.rate_limit", "Steer rate limit [rad/s] (0=off)", "Steering", "num"),
-    ("steer.friction.enabled", "Steer LuGre friction", "Steering", "bool"),
+    ("steer.friction.enabled", "Servo+LuGre mode (off → first-order lag)", "Steering", "bool"),
     ("steer.servo_kp", "Servo kp", "Steering", "num"),
     ("steer.servo_kd", "Servo kd", "Steering", "num"),
     ("throttle.dead_time_s", "Throttle dead time [s]", "Throttle", "num"),
