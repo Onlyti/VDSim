@@ -72,6 +72,12 @@ fidelity.
   노면에 기울여 그리는 것은 시각 표현이다.
   - 자유 coasting incline 은 종방향 하중이동 0 (중력·관성이 CG 에서 상쇄, $\cos$
     재분배만), 제동/등판 유지 시 종방향 이동 발생 — specific-force 정식화에서 자동.
+  - **CG-migration (jacking)**: roll $\phi$ 가 sprung CG 를 횡으로
+    $(h_{cg}-h_{ra})\sin\phi$ 이동시켜 추가 중력 roll moment 를 만든다 →
+    유효 roll stiffness 가 $m_s g_\perp (h_{cg}-h_{ra})$ 만큼 감소
+    ($M_\text{roll}$·종방향 transfer 를 $1/(1-\varepsilon)$ 로 증폭,
+    $\varepsilon=m_s g_\perp\,\text{arm}/K$). pitch 도 동일. sedan flat 코너링
+    ~6-10%, 8° bank 에서 roll 0.76→0.81°, 횡 transfer 660→696 N. flat 직진은 불변.
 - **L3 (14DOF)**: 바퀴별 `road_dz` 가 unsprung↔노면 tire spring 에 들어가 sprung
   body 의 roll/pitch 가 노면 평면을 **자세로** 따라간다 (chapter 06 §6.4). 단
   grip $F_z$ 는 아직 quasi-static (같은 chapter 한계 box).
