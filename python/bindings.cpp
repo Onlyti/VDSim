@@ -349,6 +349,15 @@ PYBIND11_MODULE(vdsim, m) {
     m.def("create_iso8608_ground", &vdsim::create_iso8608_ground,
           py::arg("z") = 0.0, py::arg("mu") = 1.0, py::arg("road_class") = 2,
           py::arg("seed") = 1u);
+    m.def("create_psd_ground", &vdsim::create_psd_ground,
+          py::arg("z") = 0.0, py::arg("mu") = 1.0, py::arg("gd_n0") = 256e-6,
+          py::arg("waviness") = 2.0, py::arg("n_break") = 0.0,
+          py::arg("waviness_high") = 2.0, py::arg("n_min") = 0.011,
+          py::arg("n_max") = 4.0, py::arg("seed") = 1u);
+    m.def("create_psd_ground_table", &vdsim::create_psd_ground_table,
+          py::arg("z") = 0.0, py::arg("mu") = 1.0, py::arg("n") = std::vector<double>{},
+          py::arg("gd") = std::vector<double>{}, py::arg("n_min") = 0.011,
+          py::arg("n_max") = 10.0, py::arg("seed") = 1u);
 
     // Dynamics driven by a full Magic Formula tire loaded from a .tir file.
     // Keep .tir files (which may hold confidential measured data) out of the repo.
@@ -591,4 +600,35 @@ PYBIND11_MODULE(vdsim, m) {
           py::arg("x0") = 0.0, py::arg("y0") = 0.0, py::arg("dx") = 1.0,
           py::arg("dy") = 1.0, py::arg("mu") = 1.0, py::arg("nominal_dt") = 0.005,
           py::arg("solver") = vdsim::SolverParams{});
+
+    // Session on a PSD road. Analytic Gd0/waviness(/dual-slope), or a measured
+    // (n, Gd) table when both n and gd are non-empty.
+    m.def("make_sim_session_psd",
+          [](const vdsim::VehicleParams& vp, const vdsim::TireParams& tp,
+             const std::string& level, double gd_n0, double waviness,
+             double n_break, double waviness_high, double n_min, double n_max,
+             double mu, std::vector<double> n, std::vector<double> gd,
+             double nominal_dt, const vdsim::SolverParams& solver, unsigned seed) {
+              std::unique_ptr<vdsim::IVehicleDynamics> dyn =
+                  (level == "K" || level == "L0") ? vdsim::create_kinematic()
+                  : (level == "L1") ? vdsim::create_bicycle()
+                  : (level == "L3") ? vdsim::create_fourteen_dof()
+                                    : vdsim::create_seven_dof();
+              std::unique_ptr<vdsim::IContactProvider> ground =
+                  (!n.empty() && n.size() == gd.size())
+                  ? vdsim::create_psd_ground_table(0.0, mu, std::move(n), std::move(gd),
+                                                   n_min, n_max, seed)
+                  : vdsim::create_psd_ground(0.0, mu, gd_n0, waviness, n_break,
+                                             waviness_high, n_min, n_max, seed);
+              vdsim::SimConfig cfg; cfg.nominal_dt = nominal_dt;
+              return std::make_unique<vdsim::SimSession>(
+                  std::move(dyn), std::move(ground), vp, tp, solver, cfg);
+          },
+          py::arg("vehicle"), py::arg("tire"), py::arg("level") = "L3",
+          py::arg("gd_n0") = 256e-6, py::arg("waviness") = 2.0,
+          py::arg("n_break") = 0.0, py::arg("waviness_high") = 2.0,
+          py::arg("n_min") = 0.011, py::arg("n_max") = 4.0, py::arg("mu") = 1.0,
+          py::arg("n") = std::vector<double>{}, py::arg("gd") = std::vector<double>{},
+          py::arg("nominal_dt") = 0.005, py::arg("solver") = vdsim::SolverParams{},
+          py::arg("seed") = 1u);
 }

@@ -1,0 +1,14 @@
+# Representative road-roughness preset (tunable; replace with measured proving-
+# ground RLDA PSD). Belgian pavé: short-wavelength, high-amplitude vibration ->
+# dual-slope PSD with a gentle high-frequency rolloff (w_high < w) extended to
+# high spatial frequency (block pitch ~0.1-0.2 m -> n up to ~10 cyc/m).
+name: belgian_pave
+description: Belgian block / pavé durability surface (short-period rich)
+mu: 0.9
+psd:
+  type: analytic
+  gd_n0: 256.0e-6
+  waviness: 2.0       # low-frequency slope
+  n_break: 0.5        # cyc/m where the spectrum stops rolling off steeply
+  waviness_high: 1.2  # gentle rolloff above -> strong short-wavelength content
+  n_max: 12.0

@@ -1,0 +1,13 @@
+# Representative road-roughness preset (tunable; replace with measured RLDA PSD).
+# Washboard / corrugation: a dominant wavelength (~0.4-0.7 m, n ~ 1.5-2.5 cyc/m)
+# -> a spectral PEAK that the single-slope ISO form cannot represent. Given as a
+# measured-style (n, Gd) table with a hump near the corrugation frequency.
+name: washboard
+description: corrugated gravel / washboard (narrow-band peak)
+mu: 0.7
+psd:
+  type: table
+  # n  [cyc/m]:   long ........ peak(~2) ........ short
+  n:  [0.02, 0.1, 0.5, 1.2, 2.0, 3.0, 6.0, 10.0]
+  gd: [2.0e-4, 4.0e-5, 2.0e-5, 1.5e-4, 6.0e-4, 1.2e-4, 8.0e-6, 1.0e-6]
+  n_max: 10.0

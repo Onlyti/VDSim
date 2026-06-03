@@ -1,0 +1,9 @@
+# Representative road-roughness preset (tunable; replace with measured RLDA PSD).
+name: minor_road
+description: average secondary road, ISO 8608 class ~C
+mu: 0.95
+psd:
+  type: analytic
+  gd_n0: 256.0e-6     # class C geometric mean
+  waviness: 2.0
+  n_max: 4.0

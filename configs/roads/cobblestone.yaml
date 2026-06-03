@@ -1,0 +1,13 @@
+# Representative road-roughness preset (tunable; replace with measured RLDA PSD).
+# Cobblestone: rougher than pavé, irregular stones -> high broadband level with
+# strong short-wavelength content.
+name: cobblestone
+description: irregular cobblestone (rough, broadband)
+mu: 0.85
+psd:
+  type: analytic
+  gd_n0: 1024.0e-6    # class D level
+  waviness: 1.9
+  n_break: 0.4
+  waviness_high: 1.3
+  n_max: 12.0

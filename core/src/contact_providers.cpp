@@ -218,31 +218,28 @@ private:
     double x0_, y0_, dx_, dy_, mu_;
 };
 
-// ISO 8608 road profile synthesizer. The standard one-sided displacement PSD is
-//   Gd(n) = Gd(n0) * (n/n0)^-w,   n0 = 0.1 cycles/m, w = 2,
-// with Gd(n0) the road-class roughness coefficient. A profile with that PSD is
-// built as a sum of sinusoids z(x) = sum_i sqrt(2 Gd(n_i) dn_i) cos(2 pi n_i x +
-// phi_i) over log-spaced spatial frequencies, phases random (seeded). Two
-// independent tracks (left/right) so the road excites roll as well as bounce.
-class Iso8608Profile {
+// Road profile synthesizer from a displacement PSD Gd(n) [m^3] over spatial
+// frequency n [cycles/m]. Built as a sum of sinusoids
+//   z(x) = sum_i sqrt(2 Gd(n_i) dn_i) cos(2 pi n_i x + phi_i)
+// over log-spaced bands, with independent seeded left/right tracks (roll
+// excitation; the wheelbase gap between front/rear samples gives pitch). Gd(n)
+// is supplied as any callable -- ISO 8608 single/dual-slope analytic, or a
+// measured (n, Gd) table -- so different surfaces with the same ISO class but
+// different spectra (Belgian pavé, washboard, curb) are distinguishable.
+class PsdProfile {
 public:
-    Iso8608Profile(int road_class, unsigned seed) {
-        // geometric-mean Gd(n0) per class A..H [m^3] (each class x4)
-        static const double GD[8] = {16e-6, 64e-6, 256e-6, 1024e-6,
-                                      4096e-6, 16384e-6, 65536e-6, 262144e-6};
-        const double gd0 = GD[std::clamp(road_class, 0, 7)];
-        const double n0 = 0.1, n_min = 0.011, n_max = 4.0;   // wavelength ~0.25..90 m
+    template <class GdFn>
+    PsdProfile(GdFn gd, double n_min, double n_max, unsigned seed) {
         std::mt19937 rng(seed);
         std::uniform_real_distribution<double> uni(0.0, 2.0 * M_PI);
-        const double logmin = std::log(n_min), logmax = std::log(n_max);
+        const double lo = std::log(std::max(1e-4, n_min));
+        const double hi = std::log(std::max(n_min * 1.01, n_max));
         for (int i = 0; i < N_; ++i) {
-            // log-spaced band centers + bin width for the sqrt(2 Gd dn) amplitude
-            const double f0 = std::exp(logmin + (logmax - logmin) * i / N_);
-            const double f1 = std::exp(logmin + (logmax - logmin) * (i + 1) / N_);
+            const double f0 = std::exp(lo + (hi - lo) * i / N_);
+            const double f1 = std::exp(lo + (hi - lo) * (i + 1) / N_);
             const double ni = 0.5 * (f0 + f1), dni = f1 - f0;
-            const double gd = gd0 * std::pow(ni / n0, -2.0);
-            n_[i]  = ni;
-            amp_[i] = std::sqrt(2.0 * gd * dni);
+            n_[i]   = ni;
+            amp_[i] = std::sqrt(2.0 * std::max(0.0, gd(ni)) * dni);
             phL_[i] = uni(rng);
             phR_[i] = uni(rng);
         }
@@ -258,10 +255,48 @@ private:
     double n_[N_], amp_[N_], phL_[N_], phR_[N_];
 };
 
-class Iso8608Ground final : public IContactProvider {
+inline double iso_class_gd0(int road_class) {
+    // geometric-mean Gd(n0) per ISO 8608 class A..H [m^3] (each class x4)
+    static const double GD[8] = {16e-6, 64e-6, 256e-6, 1024e-6,
+                                  4096e-6, 16384e-6, 65536e-6, 262144e-6};
+    return GD[std::clamp(road_class, 0, 7)];
+}
+
+// Analytic PSD: single slope Gd(n)=Gd0 (n/n0)^-w, or a continuous dual-slope
+// with exponent w below n_break and w_high above (richer high-freq content,
+// e.g. Belgian pavé / cobblestone). n_break<=0 -> single slope.
+struct AnalyticGd {
+    double gd0, w, n_break, w_high;
+    static constexpr double n0 = 0.1;
+    double operator()(double n) const {
+        if (n_break > 0.0 && n > n_break) {
+            const double gdb = gd0 * std::pow(n_break / n0, -w);
+            return gdb * std::pow(n / n_break, -w_high);
+        }
+        return gd0 * std::pow(n / n0, -w);
+    }
+};
+
+// Measured PSD as a (n, Gd) table; log-log interpolation, clamp at the ends.
+// Lets users plug a proving-ground RLDA spectrum directly.
+struct TableGd {
+    std::vector<double> n, gd;   // n ascending
+    double operator()(double q) const {
+        if (n.empty()) return 0.0;
+        if (q <= n.front()) return gd.front();
+        if (q >= n.back())  return gd.back();
+        const auto it = std::lower_bound(n.begin(), n.end(), q);
+        const std::size_t j = static_cast<std::size_t>(it - n.begin());
+        const double t = (std::log(q) - std::log(n[j - 1])) /
+                         (std::log(n[j]) - std::log(n[j - 1]));
+        return std::exp(std::log(gd[j - 1]) + t * (std::log(gd[j]) - std::log(gd[j - 1])));
+    }
+};
+
+// Ground whose per-wheel road_dz comes from a PsdProfile (any Gd source).
+class PsdGround final : public IContactProvider {
 public:
-    Iso8608Ground(double z, double mu, int road_class, unsigned seed)
-        : z_(z), mu_(mu), prof_(road_class, seed) {}
+    PsdGround(double z, double mu, PsdProfile prof) : z_(z), mu_(mu), prof_(std::move(prof)) {}
     void query(const State& vehicle, const VehicleParams& vp,
                ContactArray& out) override {
         const double a = vp.cg_to_front, b = vp.cg_to_rear;
@@ -285,7 +320,7 @@ public:
     }
 private:
     double z_, mu_;
-    Iso8608Profile prof_;
+    PsdProfile prof_;
 };
 
 class FlatRoughness final : public IRoughnessProvider {
@@ -296,12 +331,13 @@ public:
 // 1-D ISO 8608 roughness as an IRoughnessProvider (sample_height along world x).
 class Iso8608Roughness final : public IRoughnessProvider {
 public:
-    Iso8608Roughness(int road_class, unsigned seed) : prof_(road_class, seed) {}
+    Iso8608Roughness(int road_class, unsigned seed)
+        : prof_(AnalyticGd{iso_class_gd0(road_class), 2.0, 0.0, 2.0}, 0.011, 4.0, seed) {}
     double sample_height(const Vec2& world_xy) const override {
         return prof_.height(world_xy.x(), false);
     }
 private:
-    Iso8608Profile prof_;
+    PsdProfile prof_;
 };
 
 }  // namespace
@@ -334,7 +370,24 @@ std::unique_ptr<IContactProvider> create_heightmap_ground(
 
 std::unique_ptr<IContactProvider> create_iso8608_ground(
     double z, double mu, int road_class, unsigned seed) {
-    return std::make_unique<Iso8608Ground>(z, mu, road_class, seed);
+    return std::make_unique<PsdGround>(
+        z, mu, PsdProfile(AnalyticGd{iso_class_gd0(road_class), 2.0, 0.0, 2.0},
+                          0.011, 4.0, seed));
+}
+
+std::unique_ptr<IContactProvider> create_psd_ground(
+    double z, double mu, double gd_n0, double waviness, double n_break,
+    double waviness_high, double n_min, double n_max, unsigned seed) {
+    return std::make_unique<PsdGround>(
+        z, mu, PsdProfile(AnalyticGd{gd_n0, waviness, n_break, waviness_high},
+                          n_min, n_max, seed));
+}
+
+std::unique_ptr<IContactProvider> create_psd_ground_table(
+    double z, double mu, std::vector<double> n, std::vector<double> gd,
+    double n_min, double n_max, unsigned seed) {
+    return std::make_unique<PsdGround>(
+        z, mu, PsdProfile(TableGd{std::move(n), std::move(gd)}, n_min, n_max, seed));
 }
 
 std::unique_ptr<IRoughnessProvider> create_flat() {

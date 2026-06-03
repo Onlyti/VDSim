@@ -1,0 +1,10 @@
+# Representative road-roughness preset (tunable; replace with measured RLDA PSD
+# for fidelity). PSD: Gd(n) = gd_n0 * (n/0.1)^-w over spatial frequency n [cyc/m].
+name: smooth_highway
+description: well-maintained highway, ISO 8608 class ~A/B
+mu: 1.0
+psd:
+  type: analytic
+  gd_n0: 16.0e-6      # m^3 at n0 = 0.1 cyc/m (class A geometric mean)
+  waviness: 2.0
+  n_max: 4.0

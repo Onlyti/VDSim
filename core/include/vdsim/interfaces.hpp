@@ -152,6 +152,20 @@ std::unique_ptr<IContactProvider> create_heightmap_ground(
 std::unique_ptr<IContactProvider> create_iso8608_ground(
     double z, double mu, int road_class, unsigned seed = 1u);
 
+// General PSD road: Gd(n)=Gd0 (n/n0)^-w single slope, or continuous dual-slope
+// (exponent w below n_break, w_high above) for surface-specific spectra (e.g.
+// Belgian pavé: small w_high -> strong short-wavelength content). n0=0.1.
+std::unique_ptr<IContactProvider> create_psd_ground(
+    double z, double mu, double gd_n0, double waviness = 2.0,
+    double n_break = 0.0, double waviness_high = 2.0,
+    double n_min = 0.011, double n_max = 4.0, unsigned seed = 1u);
+
+// PSD road from a measured (n, Gd) table (n ascending, log-log interpolated) —
+// plug a proving-ground RLDA spectrum directly.
+std::unique_ptr<IContactProvider> create_psd_ground_table(
+    double z, double mu, std::vector<double> n, std::vector<double> gd,
+    double n_min = 0.011, double n_max = 10.0, unsigned seed = 1u);
+
 // =============================================================================
 // IRoughnessProvider — terrain roughness (Phase 2; reserved)
 // =============================================================================
