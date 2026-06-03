@@ -147,6 +147,7 @@ VehicleParams VehicleParams::from_yaml(const std::string& path) {
     pull(root, "lsd_preload", p.lsd_preload);
     pull(root, "lsd_ramp",    p.lsd_ramp);
     pull(root, "max_motor_torque", p.max_motor_torque);
+    pull(root, "final_drive_ratio", p.final_drive_ratio);
     pull(root, "max_brake_torque", p.max_brake_torque);
     pull(root, "brake_bias_front",  p.brake_bias_front);
     pull(root, "brake_ebd_enabled", p.brake_ebd_enabled);
@@ -207,6 +208,7 @@ void VehicleParams::to_yaml(const std::string& path) const {
     out << YAML::Key << "lsd_preload"       << YAML::Value << lsd_preload;
     out << YAML::Key << "lsd_ramp"          << YAML::Value << lsd_ramp;
     out << YAML::Key << "max_motor_torque"  << YAML::Value << max_motor_torque;
+    out << YAML::Key << "final_drive_ratio" << YAML::Value << final_drive_ratio;
     out << YAML::Key << "max_brake_torque"  << YAML::Value << max_brake_torque;
     out << YAML::Key << "brake_bias_front"  << YAML::Value << brake_bias_front;
     out << YAML::Key << "brake_ebd_enabled" << YAML::Value << brake_ebd_enabled;

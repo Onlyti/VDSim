@@ -38,6 +38,7 @@ differential:     LSD       # mechanical LSD typical of sports trim
 lsd_preload:      0.18
 lsd_ramp:         0.40
 max_motor_torque: 480.0
+final_drive_ratio: 5.0
 max_brake_torque: 3000.0
 brake_bias_front: 0.65      # slightly more front bias
 

@@ -853,13 +853,13 @@ class Runner:
         import obj_to_heightmap as ob
         H, x0, y0, dx, dy, bb = ob.bake_heightmap(obj, cell)
         cx, cy = 0.5 * (bb[0] + bb[2]), 0.5 * (bb[1] + bb[3])
-        pts = fig8_pts(cx, cy, 35.0)                 # autopilot loop on terrain
+        pts = fig8_pts(cx, cy, 50.0)                 # autopilot loop on terrain
         yaw0 = math.atan2(pts[1][1] - pts[0][1], pts[1][0] - pts[0][0])
         with self.lock:
             self.terrain = {"H": H, "x0": x0, "y0": y0, "dx": dx, "dy": dy, "bb": bb}
             self.cfg["init_x"], self.cfg["init_y"] = pts[0][0], pts[0][1]
             self.cfg["init_yaw"], self.cfg["init_v"] = yaw0, 5.0   # roll onto the path
-            self.cfg["v_target"], self.cfg["driver"] = 6.0, True   # slope-limited
+            self.cfg["v_target"], self.cfg["driver"] = 10.0, True
             self.path = WaypointPath(pts)
             self._build()
         return {"ok": True, "nx": int(H.shape[1]), "ny": int(H.shape[0]),

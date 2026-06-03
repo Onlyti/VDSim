@@ -51,7 +51,8 @@ struct VehicleParams {
     Differential differential    {Differential::Open};
     double lsd_preload           {0.10};    // [-] 0..0.5, baseline bias magnitude
     double lsd_ramp              {0.20};    // [-] per (rad/s) bias growth
-    double max_motor_torque      {300.0};                              // [Nm]
+    double max_motor_torque      {300.0};                              // [Nm] peak motor (pre-gear)
+    double final_drive_ratio     {5.0};                                // [-] motor->wheel torque mult
     double max_brake_torque      {2000.0};                             // [Nm]
     double brake_bias_front      {0.5};                                // front share [0, 1]
     bool   brake_ebd_enabled     {false};                              // dynamic Fz-based bias

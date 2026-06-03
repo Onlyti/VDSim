@@ -79,6 +79,7 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("lsd_preload",          &vdsim::VehicleParams::lsd_preload)
         .def_readwrite("lsd_ramp",             &vdsim::VehicleParams::lsd_ramp)
         .def_readwrite("max_motor_torque",     &vdsim::VehicleParams::max_motor_torque)
+        .def_readwrite("final_drive_ratio",    &vdsim::VehicleParams::final_drive_ratio)
         .def_readwrite("max_brake_torque",     &vdsim::VehicleParams::max_brake_torque)
         .def_readwrite("brake_bias_front",     &vdsim::VehicleParams::brake_bias_front)
         .def_readwrite("brake_ebd_enabled",    &vdsim::VehicleParams::brake_ebd_enabled)

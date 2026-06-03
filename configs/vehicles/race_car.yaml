@@ -32,6 +32,7 @@ differential:     LSD
 lsd_preload:      0.25
 lsd_ramp:         0.60
 max_motor_torque: 700.0
+final_drive_ratio: 4.5
 max_brake_torque: 5000.0
 brake_bias_front: 0.62
 

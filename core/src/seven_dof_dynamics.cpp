@@ -351,7 +351,7 @@ private:
 
         // ---- Drive / brake torques ----
         std::array<double, NUM_WHEELS> Td {{0.0, 0.0, 0.0, 0.0}};
-        const double Tmot = cmd.throttle * vp_.max_motor_torque;
+        const double Tmot = cmd.throttle * vp_.max_motor_torque * vp_.final_drive_ratio;
         // Distribute per-axle then split L/R via differential model.
         double T_front_axle = 0.0, T_rear_axle = 0.0;
         switch (vp_.drive_type) {

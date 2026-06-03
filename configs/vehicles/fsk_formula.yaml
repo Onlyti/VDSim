@@ -33,6 +33,7 @@ differential:     Locked      # spool common on small formula
 lsd_preload:      0.0
 lsd_ramp:         0.0
 max_motor_torque: 150.0       # ~600 cc 4-stroke peak
+final_drive_ratio: 4.0        # light car -> grip-limited launch
 max_brake_torque: 1200.0
 brake_bias_front: 0.58
 

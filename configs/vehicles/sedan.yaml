@@ -35,7 +35,8 @@ drive_type:       RWD       # FWD / RWD / AWD
 differential:     Open      # Open / Locked / LSD
 lsd_preload:      0.10
 lsd_ramp:         0.20
-max_motor_torque: 300.0     # [Nm]
+max_motor_torque:  300.0    # [Nm]  peak motor torque (pre-gear)
+final_drive_ratio: 5.0      # [-]   motor->wheel mult (peak ~3 m/s^2)
 max_brake_torque: 2000.0    # [Nm]
 brake_bias_front: 0.62      # mid-sedan front-heavy bias
 

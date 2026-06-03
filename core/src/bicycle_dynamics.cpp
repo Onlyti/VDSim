@@ -278,16 +278,17 @@ private:
 
         // ---- Drive / brake torques ----
         double Td_f = 0.0, Td_r = 0.0;
+        const double Tmot = cmd.throttle * vp_.max_motor_torque * vp_.final_drive_ratio;
         switch (vp_.drive_type) {
             case VehicleParams::Drive::FWD:
-                Td_f = cmd.throttle * vp_.max_motor_torque;
+                Td_f = Tmot;
                 break;
             case VehicleParams::Drive::RWD:
-                Td_r = cmd.throttle * vp_.max_motor_torque;
+                Td_r = Tmot;
                 break;
             case VehicleParams::Drive::AWD:
-                Td_f = 0.5 * cmd.throttle * vp_.max_motor_torque;
-                Td_r = 0.5 * cmd.throttle * vp_.max_motor_torque;
+                Td_f = 0.5 * Tmot;
+                Td_r = 0.5 * Tmot;
                 break;
         }
         if (cmd.gear < 0) {                   // reverse
