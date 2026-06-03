@@ -462,7 +462,8 @@ const DOC_MAP={
   'Preset':'', 'Mass & inertia':'02_rigid_body_dynamics', 'Geometry':'04_ld1_bicycle',
   'Suspension':'05_ld2_seven_dof', 'Drivetrain':'05_ld2_seven_dof', 'Steering':'05_ld2_seven_dof',
   'Aero':'04_ld1_bicycle', 'Tire':'03_tire_pacejka_mf96', 'Actuator & feedback':'17_actuator_and_sensing',
-  'model':'', 'numerics':'11_numerical_integration', 'run':'09_pure_pursuit_path', 'cosim':'18_runtime_and_cosim'};
+  'model':'', 'numerics':'11_numerical_integration', 'run':'09_pure_pursuit_path', 'cosim':'18_runtime_and_cosim',
+  'frames':'01_frames_and_conventions'};
 function docHref(key){ const f=DOC_MAP[key]; return f===undefined ? null : DOCS + (f ? f + '/' : ''); }
 function helpIcon(href){
   if(!href) return null;
@@ -754,6 +755,11 @@ async function buildSim(){
   const el=$('sim_body');
   el.innerHTML=`<div class="grp" id="g_model">Dynamics model</div>
     <div class="fld"><label>level</label><select id="sim_lvl" style="width:130px"></select></div>
+    <div class="grp" id="g_init">Initial state</div>
+    <div class="fld"><label>x [m]</label><input id="sim_ix" type="number" step="any" value="${c.init_x}"></div>
+    <div class="fld"><label>y [m]</label><input id="sim_iy" type="number" step="any" value="${c.init_y}"></div>
+    <div class="fld"><label>yaw [deg]</label><input id="sim_iyaw" type="number" step="any" value="${(c.init_yaw*57.29578).toFixed(1)}"></div>
+    <div class="fld"><label>speed [m/s]</label><input id="sim_iv" type="number" step="any" value="${c.init_v}"></div>
     <div class="grp" id="g_mode">Mode</div>
     <div class="row"><button id="sim_drv">Autopilot</button><button id="sim_man">Manual</button></div>
     <div class="grp">Target speed <span id="sim_vtv" class="sub"></span></div>
@@ -787,7 +793,11 @@ async function buildSim(){
   $('sim_start').onclick=()=>post('/api/control',{action:'start'});
   $('sim_stop').onclick =()=>post('/api/control',{action:'stop'});
   $('sim_reset').onclick=()=>{ trailPts=[]; trail.visible=false; tgt.has=false; post('/api/control',{action:'reset'}); };
+  const pushInit=()=>post('/api/sim',{init_x:+$('sim_ix').value, init_y:+$('sim_iy').value,
+    init_yaw:(+$('sim_iyaw').value)/57.29578, init_v:+$('sim_iv').value});
+  ['sim_ix','sim_iy','sim_iyaw','sim_iv'].forEach(id=>$(id).onchange=pushInit);
   addHelp($('g_model'),'model'); addHelp($('g_mode'),'run'); addHelp($('g_num'),'numerics');
+  addHelp($('g_init'),'frames');
 }
 
 function openWin(id, build){ const w=$(id); w.classList.toggle('open'); if(w.classList.contains('open')) build(); }

@@ -204,6 +204,20 @@ PYBIND11_MODULE(vdsim, m) {
         .def("vy",         &vdsim::State::vy)
         .def("beta",       &vdsim::State::beta);
 
+    // Build an initial State from pose + speed (handles the yaw->quaternion).
+    m.def("make_init_state",
+          [](double x, double y, double yaw, double v, double wheel_radius) {
+              vdsim::State s;
+              s.position = vdsim::Vec3(x, y, 0.0);
+              s.orientation = vdsim::quat_from_euler(vdsim::Euler{0.0, 0.0, yaw});
+              s.velocity = vdsim::Vec3(v, 0.0, 0.0);
+              const double w = (wheel_radius > 1e-6) ? v / wheel_radius : 0.0;
+              s.wheel_spin = {{w, w, w, w}};
+              return s;
+          },
+          py::arg("x") = 0.0, py::arg("y") = 0.0, py::arg("yaw") = 0.0,
+          py::arg("v") = 0.0, py::arg("wheel_radius") = 0.32);
+
     // -------- ContactPoint --------
     py::class_<vdsim::ContactPoint>(m, "ContactPoint")
         .def(py::init<>())

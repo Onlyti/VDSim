@@ -368,7 +368,8 @@ class Runner:
     def __init__(self):
         self.lock = threading.Lock()
         self.cfg = {"level": "L2", "vehicle": "sedan", "v_target": 10.0,
-                    "driver": True, "running": True}
+                    "driver": True, "running": True,
+                    "init_x": 0.0, "init_y": 0.0, "init_yaw": 0.0, "init_v": 10.0}
         self.dt = 0.005
         self.time_scale = 1.0
         self.live_vid = 0                  # vehicle id backed by the (single) sim
@@ -392,8 +393,9 @@ class Runner:
             self.vp, self.tp, self.cfg["level"], nominal_dt=self.dt,
             sensor_delay_s=self.sensor_delay, actuator=self.act,
             solver=self.solver)
-        s0 = vdsim.State()
-        s0.velocity = [max(0.1, self.cfg["v_target"]), 0.0, 0.0]
+        s0 = vdsim.make_init_state(
+            x=self.cfg["init_x"], y=self.cfg["init_y"], yaw=self.cfg["init_yaw"],
+            v=max(0.0, self.cfg["init_v"]), wheel_radius=self.vp.wheel_radius_nominal)
         self.sim.reset(s0)
         self.prev_idx = 0
 
@@ -410,7 +412,8 @@ class Runner:
                     self.cfg[k] = kw[k]
             self._build()
 
-    def set_sim(self, dt=None, time_scale=None, integrator=None, max_substeps=None):
+    def set_sim(self, dt=None, time_scale=None, integrator=None, max_substeps=None,
+                **init):
         with self.lock:
             if dt is not None and dt > 1e-5:
                 self.dt = float(dt)
@@ -423,6 +426,10 @@ class Runner:
             if max_substeps is not None:
                 self.solver.max_substeps = max(1, int(float(max_substeps)))
                 rebuild = True
+            for k in ("init_x", "init_y", "init_yaw", "init_v"):
+                if init.get(k) is not None:
+                    self.cfg[k] = float(init[k])
+                    rebuild = True
             if rebuild:
                 self._build()
 
@@ -698,7 +705,7 @@ class Runner:
         with self.lock:
             vp, tp = self.vp, self.tp
             over.setdefault("level", self.cfg["level"])
-            over.setdefault("vx0", self.cfg["v_target"])
+            over.setdefault("vx0", self.cfg["init_v"])
         return self.cosim.start(vp, tp, over)
 
     def stop_cosim(self):
@@ -781,7 +788,9 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/api/sim":
             RUNNER.set_sim(dt=body.get("dt"), time_scale=body.get("time_scale"),
                            integrator=body.get("integrator"),
-                           max_substeps=body.get("max_substeps"))
+                           max_substeps=body.get("max_substeps"),
+                           init_x=body.get("init_x"), init_y=body.get("init_y"),
+                           init_yaw=body.get("init_yaw"), init_v=body.get("init_v"))
             self._json({"ok": True, "config": RUNNER.config()})
         elif self.path == "/api/vehicle":
             RUNNER.set_params("vehicle", body)
