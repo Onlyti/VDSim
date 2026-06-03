@@ -1991,10 +1991,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-131-slice-1-slope-gravity-123" class="md-nav__link">
+  <a href="#4-131" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. 미완 — 다음 할 일 (#131 slice 1: slope-gravity, = #123)
+        4. 미완 — 다음 할 일 (#131 잔여 슬라이스)
       
     </span>
   </a>
@@ -2076,21 +2076,22 @@ road-surface 를 깔고, 구현 물리를 전부 매뉴얼화한다. dynamics �
   per-vehicle data port, co-sim 구동·시각화, plant param live-link/applicability.
 - #131 <strong>slice 0 (split-μ)</strong>: <code>create_split_mu_ground</code>, make_sim_session(mu_right,
   mu_boundary_y), GUI Simulation "Road/surface"(uniform μ + split). 검증됨.</p>
-<h2 id="4-131-slice-1-slope-gravity-123">4. 미완 — 다음 할 일 (#131 slice 1: slope-gravity, = #123)<a class="headerlink" href="#4-131-slice-1-slope-gravity-123" title="Permanent link">&para;</a></h2>
-<p><strong>즉시 착수 대상.</strong> banked/graded road 의 중력 성분을 EoM 에 넣어 CG-shift/경사 거동.</p>
-<p>설계:
-- 현재 <code>ContactPoint.normal</code> 은 있으나 <strong>dynamics 가 무시</strong>(flat: Fz_static=m·g·b/(2L),
-  중력 투영 없음). FlatGround/SplitMuGround 는 normal=+z 고정.
-- 할 일:
-  1. <strong>banked/graded contact provider</strong> — <code>create_inclined_ground(z, grade, bank,
-     mu)</code> (또는 더 일반 surface): per-wheel z(평면) + tilted normal 반환.
-  2. <strong>EoM 중력-투영 항</strong> — bicycle/seven_dof/fourteen_dof 의 body-frame force
-     balance 에 <code>Fx += -m·g·sin(grade)</code>, <code>Fy += +m·g·sin(bank)</code>, 수직하중
-     <code>Fz *= cos(slope)</code> 추가. grade/bank 는 4-contact normal 평균을 body frame 으로
-     회전해 추출(normal 은 WORLD frame).
-  3. L3 vertical: 경사가 static compression/normal load 바꿈.
-  4. GUI: grade/bank 입력 + road tilt 렌더(#123 render).</p>
-<p>순서 권장: provider(1) → seven_dof EoM(2, L2 먼저) → 검증 → bicycle/L3 → 렌더.</p>
+<h2 id="4-131">4. 미완 — 다음 할 일 (#131 잔여 슬라이스)<a class="headerlink" href="#4-131" title="Permanent link">&para;</a></h2>
+<p>slice 0 (split-μ) · slice 1 (slope-gravity + 3D tilt render, #123) <strong>완료</strong>.
+- split-μ: <code>create_split_mu_ground</code>, make_sim_session(mu_right, mu_boundary_y).
+- slope-gravity: <code>create_inclined_ground(z0, grade, bank, mu)</code>; L1/L2/L3 EoM 가
+  contact normal 로 접선중력 + cos(slope) 수직하중. GUI Road/surface grade/bank,
+  뷰어 grid tilt + 차량 안착. flat 게이트로 125+57 test 보존.</p>
+<p><strong>다음 (slice 2~):</strong>
+1. <strong>roughness</strong> — <code>IRoughnessProvider</code>(ISO 8608 PSD 는 stub-NotImplemented). 구현 후
+   L3 unsprung 의 road-z 입력 plumbing 필요(현재 zu 는 z=0 기준; per-wheel road
+   height 를 unsprung EoM <code>k_tire*(zu - z_road)</code> 로 먹여 ride 가진).
+2. <strong>OpenDRIVE (#117)</strong> — road network 파서 → reference path + 기하에서 grade/bank.
+   대부분 파서 작업. examples/maneuvers·pure-pursuit 와 연결.
+3. <strong>mesh/heightmap (#118)</strong> — Blender mesh → height-lookup ContactProvider
+   (per-wheel z/normal/μ). IP: Assetto Corsa 등 상용 mesh 참조 금지.
+4. <strong>렌더 보강</strong> — fig8 path/trail 도 road plane 에 tilt(현재 grid·차량만).</p>
+<p>권장 순서: roughness(1, L3 plumbing) → mesh(3) → OpenDRIVE(2, 큰 파서).</p>
 <h2 id="5">5. 주의 · 함정<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>flat-road 거동 보존</strong>: normal≈+z 면 slope 항 skip(gate)해서 182 test 가 안 깨지게.
