@@ -62,6 +62,8 @@ void SimSession::tick(double dt) {
     const double rack = dyn_->steering_rack_torque();
     const auto Fz = dyn_->tire_Fz();
     const auto Ft = dyn_->tire_forces_body();
+    const auto kappa = dyn_->wheel_slip_ratio();
+    const auto alpha = dyn_->wheel_slip_angle();
     const SensorMeas sm = sensors_.apply(next, ax, ay, realized.steer_angle_wheel, dt);
 
     {
@@ -71,6 +73,7 @@ void SimSession::tick(double dt) {
         ax_ = ax; ay_ = ay; roll_ = roll; pitch_ = pitch; rack_ = rack;
         steer_applied_ = realized.steer_angle_wheel;
         Fz_ = Fz; tire_forces_ = Ft;
+        slip_ratio_ = kappa; slip_angle_ = alpha;
         sensors_meas_ = sm;
         sim_time_  += dt;
     }
@@ -87,6 +90,8 @@ SimOutput SimSession::output() const {
     o.steer_applied = steer_applied_;
     o.Fz = Fz_;
     o.tire_forces = tire_forces_;
+    o.slip_ratio = slip_ratio_;
+    o.slip_angle = slip_angle_;
     o.sensors = sensors_meas_;
     return o;
 }

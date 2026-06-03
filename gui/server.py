@@ -164,7 +164,11 @@ def _set_dotted(obj, path, value):
 LOG_COLS = ["t", "x", "y", "z", "yaw", "roll", "pitch", "vx", "vy", "r",
             "wx", "wy", "ax", "ay", "steer", "Fz0", "Fz1", "Fz2", "Fz3",
             "cmd_throttle", "cmd_brake", "cmd_steer", "source", "level",
-            "m_gnss_x", "m_gnss_y", "m_ax", "m_ay", "m_wz", "m_steer"]
+            "m_gnss_x", "m_gnss_y", "m_ax", "m_ay", "m_wz", "m_steer",
+            # per-wheel tire ground-truth (FL,FR,RL,RR) for Fz/mu/Calpha estimation
+            "Fx0", "Fx1", "Fx2", "Fx3", "Fy0", "Fy1", "Fy2", "Fy3",
+            "kappa0", "kappa1", "kappa2", "kappa3",
+            "alpha0", "alpha1", "alpha2", "alpha3"]
 
 
 def euler_to_quat(roll, pitch, yaw):
@@ -783,6 +787,8 @@ class Runner:
                         "ax": o.ax, "ay": o.ay, "steer": o.steer_applied,
                         "Fz": [float(v) for v in o.Fz],
                         "Ft": [[float(f[0]), float(f[1])] for f in o.tire_forces],
+                        "kappa": [float(v) for v in o.slip_ratio],
+                        "alpha": [float(v) for v in o.slip_angle],
                         "susp": [float(v) for v in s.susp_compression],
                         "level": self.cfg["level"], "vehicle": self.cfg["vehicle"],
                         "v_target": vt, "dt": dt, "time_scale": ts, "source": "sim",
@@ -802,6 +808,9 @@ class Runner:
                 self.latest = snap
             if self.rec_on and len(self.rec_rows) < 200000:
                 Fz = snap.get("Fz", [0, 0, 0, 0])
+                Ft = snap.get("Ft", []) or [[0.0, 0.0]] * 4
+                kap = snap.get("kappa", []) or [0.0] * 4
+                alp = snap.get("alpha", []) or [0.0] * 4
                 cmd = self.ports[self.live_vid].applied
                 roll, pitch, yaw = snap["roll"], snap["pitch"], snap["yaw"]
                 self.rec_rows.append({
@@ -815,7 +824,11 @@ class Runner:
                             snap.get("source", "sim"), snap["level"],
                             snap.get("m_gx", ""), snap.get("m_gy", ""),
                             snap.get("m_ax", ""), snap.get("m_ay", ""),
-                            snap.get("m_wz", ""), snap.get("m_steer", "")]})
+                            snap.get("m_wz", ""), snap.get("m_steer", ""),
+                            Ft[0][0], Ft[1][0], Ft[2][0], Ft[3][0],
+                            Ft[0][1], Ft[1][1], Ft[2][1], Ft[3][1],
+                            kap[0], kap[1], kap[2], kap[3],
+                            alp[0], alp[1], alp[2], alp[3]]})
             self._telemetry_send(snap)
             nxt += 1.0 / fps
             time.sleep(max(0.0, nxt - time.monotonic()))

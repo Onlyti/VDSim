@@ -44,6 +44,8 @@ struct SimOutput {
     double roll {0.0}, pitch {0.0};      // roll_angle_qs / pitch_angle_qs
     std::array<double, NUM_WHEELS> Fz {{0,0,0,0}};
     std::array<Vec3, NUM_WHEELS>   tire_forces {};   // body-frame (Fx,Fy,*) per wheel [N]
+    std::array<double, NUM_WHEELS> slip_ratio {{0,0,0,0}};   // kappa per wheel
+    std::array<double, NUM_WHEELS> slip_angle {{0,0,0,0}};   // alpha per wheel [rad]
     double rack_torque {0.0};
     double steer_applied {0.0};   // realized steer after actuator [rad]
     SensorMeas sensors {};        // noisy/biased measured signals (identity if disabled)
@@ -87,6 +89,8 @@ private:
     double ax_ {0.0}, ay_ {0.0}, roll_ {0.0}, pitch_ {0.0}, rack_ {0.0}, steer_applied_ {0.0};
     std::array<double, NUM_WHEELS> Fz_ {{0,0,0,0}};
     std::array<Vec3, NUM_WHEELS>   tire_forces_ {};
+    std::array<double, NUM_WHEELS> slip_ratio_ {{0,0,0,0}};
+    std::array<double, NUM_WHEELS> slip_angle_ {{0,0,0,0}};
     SensorMeas sensors_meas_ {};
     double sim_time_ {0.0};
     std::chrono::steady_clock::time_point last_input_tp_ {std::chrono::steady_clock::now()};
