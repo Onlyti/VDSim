@@ -135,29 +135,11 @@ public:
     std::array<double, NUM_WHEELS> wheel_slip_ratio()  const override { return slip_ratio_; }
     std::array<double, NUM_WHEELS> wheel_slip_angle()  const override { return slip_angle_; }
 
-    // Quasi-static roll about the roll axis: K_phi_total * phi = M_roll, where
-    // K_phi is derived from springs + ARB and M_roll = m_s * ay * (h_cg - h_ra).
-    double roll_angle_qs() const override {
-        const double K = axle_roll_stiffness(vp_, 0) + axle_roll_stiffness(vp_, 1);
-        const double L = vp_.wheelbase;
-        const double h_ra = vp_.roll_center_height_front * (vp_.cg_to_rear / L)
-                          + vp_.roll_center_height_rear  * (vp_.cg_to_front / L);
-        const double Mroll = vp_.mass_sprung * ay_felt_ * (vp_.cg_height - h_ra);
-        return (K > 1e-6) ? (Mroll / K) : 0.0;
-    }
-    // Quasi-static pitch: anti-dive omitted; effective pitch stiffness
-    // approximated by per-axle spring k * (a^2 + b^2) about CG.
-    // ISO sign: +theta = nose-down, so braking (ax<0) -> positive pitch (dive).
-    double pitch_angle_qs() const override {
-        const double k_avg = 0.25 * (vp_.spring_stiffness[WHEEL_FL] +
-                                     vp_.spring_stiffness[WHEEL_FR] +
-                                     vp_.spring_stiffness[WHEEL_RL] +
-                                     vp_.spring_stiffness[WHEEL_RR]);
-        const double K_pitch = k_avg * (vp_.cg_to_front * vp_.cg_to_front +
-                                        vp_.cg_to_rear  * vp_.cg_to_rear) * 2.0;
-        return (K_pitch > 1e-6)
-               ? (-vp_.mass * ax_felt_ * vp_.cg_height / K_pitch) : 0.0;
-    }
+    // Quasi-static roll/pitch incl. the CG-migration (jacking) feedback —
+    // computed in step() (needs cos_slope) and stored. See the weight-transfer
+    // block for the K_phi*phi = M_roll/(1-eps) derivation.
+    double roll_angle_qs()  const override { return roll_qs_;  }
+    double pitch_angle_qs() const override { return pitch_qs_; }
     double ax_body_est() const override { return ax_prev_; }
     double ay_body_est() const override { return ay_prev_; }
     // Hand-wheel feedback torque: front-axle aligning moment reduced through the
@@ -239,8 +221,19 @@ private:
         const double Fz_aero_r_per = 0.5 * vp_.aero_lift_rear  * q_aero;
         const double Fz_static_f = m * kGravity * cos_slope * b / (2.0 * L) + Fz_aero_f_per;
         const double Fz_static_r = m * kGravity * cos_slope * a / (2.0 * L) + Fz_aero_r_per;
-        const double dFz_long_total = m * ax_felt * h_cg / L;      // moves to rear if ax>0 (incl. grade)
+        const double g_perp = kGravity * cos_slope;               // gravity normal to road
+
+        // Longitudinal transfer + pitch, with CG-migration (jacking): a pitched
+        // body shifts the CG by h_cg*sin(theta), adding a gravity pitch moment ->
+        // effective pitch stiffness drops by m*g_perp*h_cg (amplifies by 1/(1-eps)).
+        const double k_avg = 0.25 * (vp_.spring_stiffness[WHEEL_FL] + vp_.spring_stiffness[WHEEL_FR]
+                                   + vp_.spring_stiffness[WHEEL_RL] + vp_.spring_stiffness[WHEEL_RR]);
+        const double K_pitch = std::max(1.0, k_avg * (a * a + b * b) * 2.0);
+        const double eps_pitch = std::clamp(m * g_perp * h_cg / K_pitch, 0.0, 0.8);
+        const double pitch_gain = 1.0 / (1.0 - eps_pitch);
+        const double dFz_long_total = m * ax_felt * h_cg / L * pitch_gain;  // incl. grade + jacking
         const double dFz_long_half  = dFz_long_total * 0.5;
+        pitch_qs_ = -m * ax_felt * h_cg / K_pitch * pitch_gain;   // ISO: nose-down +
 
         // ---- Lateral load transfer = geometric (jacking through the roll center)
         //      + elastic (roll about the roll axis, split by axle roll stiffness)
@@ -253,7 +246,12 @@ private:
         const double h_ra  = hrc_f * (b / L) + hrc_r * (a / L);   // roll axis under CG
         const double m_s   = vp_.mass_sprung;
         const double Fys   = m_s * ay_felt;                      // sprung lateral force (incl. bank)
-        const double Mroll = Fys * (h_cg - h_ra);                 // roll moment about roll axis
+        // CG-migration: a rolled body shifts the CG by (h_cg-h_ra)*sin(phi), adding
+        // a gravity roll moment -> effective roll stiffness drops (amplify 1/(1-eps)).
+        const double arm = h_cg - h_ra;
+        const double eps_roll = std::clamp(m_s * g_perp * arm / Ktot, 0.0, 0.8);
+        const double Mroll = Fys * arm / (1.0 - eps_roll);        // roll moment incl. jacking
+        roll_qs_ = Mroll / Ktot;
         const double m_uf  = vp_.unsprung_mass[WHEEL_FL] + vp_.unsprung_mass[WHEEL_FR];
         const double m_ur  = vp_.unsprung_mass[WHEEL_RL] + vp_.unsprung_mass[WHEEL_RR];
         const double dFz_lat_f = (Tw_f > 1e-3)
@@ -534,6 +532,8 @@ private:
     double ay_prev_ {0.0};
     double ax_felt_ {0.0};   // specific force (accel - tangential gravity) for transfer/attitude
     double ay_felt_ {0.0};
+    double roll_qs_ {0.0};   // quasi-static roll/pitch incl. CG-migration (set in step)
+    double pitch_qs_ {0.0};
     double mz_front_sum_ {0.0};
     std::array<Vec3,   NUM_WHEELS> tire_F_     {};
     std::array<double, NUM_WHEELS> tire_Fz_    {};
