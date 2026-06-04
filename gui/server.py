@@ -1260,11 +1260,42 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(404)
 
 
+def _udp_control(host, port):
+    # Low-latency control/telemetry for the racing-wheel FFB bridge: a JSON
+    # datagram {steer,throttle,brake} in -> drive the live sim; reply with
+    # {rack_torque,vx,steer,susp} for force feedback. Same sim the browser views.
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.bind((host, port))
+    print(f"[VDSim GUI] udp control/ffb on {host}:{port}")
+    while True:
+        try:
+            data, addr = s.recvfrom(1024)
+        except OSError:
+            continue
+        try:
+            c = json.loads(data)
+            RUNNER.set_manual(steer=c.get("steer", 0.0),
+                              throttle=c.get("throttle", 0.0), brake=c.get("brake", 0.0))
+        except Exception:
+            pass
+        snap = RUNNER.latest
+        try:
+            s.sendto(json.dumps({"rack_torque": snap.get("rack_torque", 0.0),
+                                 "vx": snap.get("vx", 0.0), "steer": snap.get("steer", 0.0),
+                                 "susp": snap.get("susp", [])}).encode(), addr)
+        except OSError:
+            pass
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8090)
     ap.add_argument("--host", default="0.0.0.0")
+    ap.add_argument("--udp-port", type=int, default=0,
+                    help="UDP control/FFB port (default: http port + 1)")
     args = ap.parse_args()
+    udp_port = args.udp_port or (args.port + 1)
+    threading.Thread(target=_udp_control, args=(args.host, udp_port), daemon=True).start()
     srv = ThreadingHTTPServer((args.host, args.port), Handler)
     print(f"[VDSim GUI] http://{args.host}:{args.port}  (compute here, view in browser)")
     try:

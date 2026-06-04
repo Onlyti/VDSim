@@ -5,11 +5,11 @@ WHY NATIVE: the browser Gamepad API only does rumble (dual/trigger), not the
 directional constant-force a steering wheel needs, so true FFB cannot live in the
 web viewer. This standalone process reads the wheel and writes real FFB effects.
 
-WHAT IT DOES (loop ~100 Hz):
-  - read wheel axes -> POST steer/throttle/brake to the running VDSim GUI
-    (`/api/manual`), so the wheel drives the plant;
-  - GET `/api/state` -> use `rack_torque` (VDSim's tire aligning moment / steering
-    ratio — already physically computed) as the FF_CONSTANT level, so the wheel
+WHAT IT DOES (loop ~100 Hz, one UDP round-trip/tick to the VDSim GUI at
+http-port + 1, default 8091):
+  - read wheel axes -> send {steer,throttle,brake} so the wheel drives the plant;
+  - receive `rack_torque` (VDSim's tire aligning moment / steering ratio — already
+    physically computed) and use it as the FF_CONSTANT level, so the wheel
     self-centers, lightens under understeer, and loads up with grip;
   - add an FF_SPRING autocenter and a short rumble on big suspension events (kerbs).
 
@@ -20,35 +20,19 @@ Requires: python-evdev (`pip install evdev`), a wheel exposing EV_FF, and r/w on
 its /dev/input/eventX (add your user to the `input` group or run with sudo).
 
 Usage:
-    python3 tools/wheel_ffb.py --url http://localhost:8100 [--device /dev/input/eventN]
-                               [--gain 0.8] [--autocenter 0.15] [--max-steer 0.5]
+    python3 tools/wheel_ffb.py --server localhost --udp-port 8091
+        [--device /dev/input/eventN] [--gain 0.8] [--autocenter 0.15] [--max-steer 0.5]
 """
 import argparse
 import json
+import socket
 import sys
 import time
-import urllib.request
 
 try:
     from evdev import InputDevice, ecodes, ff, list_devices
 except ImportError:
     sys.exit("needs python-evdev:  pip install evdev")
-
-
-def http_post(url, obj):
-    req = urllib.request.Request(url, data=json.dumps(obj).encode(),
-                                 headers={"Content-Type": "application/json"})
-    try:
-        urllib.request.urlopen(req, timeout=0.2).read()
-    except Exception:
-        pass
-
-
-def http_get(url):
-    try:
-        return json.loads(urllib.request.urlopen(url, timeout=0.2).read())
-    except Exception:
-        return {}
 
 
 def find_wheel():
@@ -72,7 +56,8 @@ def norm_axis(dev, code):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--url", default="http://localhost:8100")
+    ap.add_argument("--server", default="localhost", help="VDSim host")
+    ap.add_argument("--udp-port", type=int, default=8091, help="VDSim UDP control/FFB port")
     ap.add_argument("--device", default="")
     ap.add_argument("--gain", type=float, default=0.8)          # rack_torque -> FFB scale
     ap.add_argument("--autocenter", type=float, default=0.15)   # spring strength 0..1
@@ -106,6 +91,9 @@ def main():
         except Exception as e:
             print("[ffb] spring autocenter unavailable:", e)
 
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); sock.settimeout(0.05)
+    dst = (a.server, a.udp_port)
+    print(f"[ffb] udp -> {a.server}:{a.udp_port}")
     dt = 1.0 / a.rate
     prev_susp = 0.0
     while True:
@@ -121,11 +109,15 @@ def main():
         brk_raw = norm_axis(dev, ecodes.ABS_RZ)
         throttle = max(0.0, (thr_raw + 1) / 2) if thr_raw is not None else 0.0
         brake = max(0.0, (brk_raw + 1) / 2) if brk_raw is not None else 0.0
-        http_post(a.url + "/api/manual",
-                  {"steer": steer * a.max_steer, "throttle": throttle, "brake": brake})
 
-        # --- FFB from VDSim aligning torque ---
-        st = http_get(a.url + "/api/state")
+        # --- one UDP round-trip: command out, telemetry (rack_torque) back ---
+        st = {}
+        try:
+            sock.sendto(json.dumps({"steer": steer * a.max_steer,
+                                    "throttle": throttle, "brake": brake}).encode(), dst)
+            st = json.loads(sock.recv(1024))
+        except OSError:
+            pass
         rack = float(st.get("rack_torque", 0.0))
         level = int(max(-32767, min(32767, -rack * a.gain * 300.0)))  # sign: oppose turn
         const.u.ff_constant_effect.level = level

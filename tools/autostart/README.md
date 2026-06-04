@@ -1,7 +1,9 @@
 # Wheel FFB — autostart (runs on the client PC, where the wheel is plugged in)
 
 The force-feedback bridge must run **on the client** (it needs local hardware
-access); only telemetry crosses the network to the VDSim server (`--url`). Set it
+access); only telemetry crosses the network to the VDSim server over **UDP**
+(`--server` + `--udp-port`, default the GUI http port + 1 = 8091). One datagram
+round-trip per tick (command out, rack_torque back) — low latency for FFB. Set it
 to autostart so it's always running — the browser viewer then just does cockpit
 view + sound, and the wheel gets FFB in the background.
 

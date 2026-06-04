@@ -13,16 +13,20 @@ wheel is plugged in; it talks to the VDSim server over HTTP.
 STATUS: UNTESTED without an FFB wheel (no hardware here). Follows the standard
 SDL2 haptic API; verify and tune --gain / axis indices on your wheel.
 
+Talks to VDSim over UDP (one datagram round-trip per tick: command out,
+rack_torque back) — lower latency than HTTP, important for FFB. The VDSim GUI
+opens this UDP port at http-port + 1 (default 8091).
+
 Install:  pip install pysdl2 pysdl2-dll        (pysdl2-dll bundles SDL2 on Windows)
-Usage:    python wheel_ffb_sdl.py --url http://SERVER:8100 [--gain 0.8]
+Usage:    python wheel_ffb_sdl.py --server SERVER --udp-port 8091 [--gain 0.8]
           [--autocenter 0.15] [--steer-axis 0 --throttle-axis 2 --brake-axis 3]
 """
 import argparse
 import ctypes
 import json
+import socket
 import sys
 import time
-import urllib.request
 
 try:
     import sdl2
@@ -30,25 +34,10 @@ except ImportError:
     sys.exit("needs PySDL2:  pip install pysdl2 pysdl2-dll")
 
 
-def post(url, obj):
-    try:
-        urllib.request.urlopen(urllib.request.Request(
-            url, data=json.dumps(obj).encode(),
-            headers={"Content-Type": "application/json"}), timeout=0.2).read()
-    except Exception:
-        pass
-
-
-def get(url):
-    try:
-        return json.loads(urllib.request.urlopen(url, timeout=0.2).read())
-    except Exception:
-        return {}
-
-
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--url", default="http://localhost:8100")
+    ap.add_argument("--server", default="localhost", help="VDSim host")
+    ap.add_argument("--udp-port", type=int, default=8091, help="VDSim UDP control/FFB port (http port + 1)")
     ap.add_argument("--gain", type=float, default=0.8)
     ap.add_argument("--autocenter", type=float, default=0.15)   # 0..1 device spring
     ap.add_argument("--max-steer", type=float, default=0.5)     # rad at full lock
@@ -88,6 +77,11 @@ def main():
     def axis(i):  # -1..1
         return sdl2.SDL_JoystickGetAxis(joy, i) / 32767.0
 
+    # one UDP round-trip per tick: command out, telemetry (rack_torque) back
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.settimeout(0.05)
+    dst = (a.server, a.udp_port)
+    print(f"[ffb] udp -> {a.server}:{a.udp_port}")
     dt = 1.0 / a.rate
     try:
         while True:
@@ -96,10 +90,13 @@ def main():
             # pedals usually rest near +1, full near -1 -> (1-v)/2 in [0,1]
             thr = max(0.0, min(1.0, (1 - axis(a.throttle_axis)) / 2))
             brk = max(0.0, min(1.0, (1 - axis(a.brake_axis)) / 2))
-            post(a.url + "/api/manual",
-                 {"steer": steer * a.max_steer, "throttle": thr, "brake": brk})
-
-            rack = float(get(a.url + "/api/state").get("rack_torque", 0.0))
+            rack = 0.0
+            try:
+                sock.sendto(json.dumps({"steer": steer * a.max_steer,
+                                        "throttle": thr, "brake": brk}).encode(), dst)
+                rack = float(json.loads(sock.recv(1024)).get("rack_torque", 0.0))
+            except OSError:
+                pass
             lvl = int(max(-32767, min(32767, -rack * a.gain * 300.0)))   # oppose the turn
             eff.constant.level = lvl
             sdl2.SDL_HapticUpdateEffect(hap, eid, ctypes.byref(eff))
