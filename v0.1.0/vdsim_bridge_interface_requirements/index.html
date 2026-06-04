@@ -2418,7 +2418,7 @@ simulator host. VDSim is responsible for running its own dynamics loop.</p>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a> +-------------------------------------------------------------------+
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>                                |  UDP (binary)  |
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a> +-------------------------- VDSim host (no ROS) --------------------+
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a> |   vdsim_udp_server (VDSim-side, NEW deliverable)                  |
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a> |   vdsim_realtime (VDSim-side, NEW deliverable)                  |
 </span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a> |    - recv CMD packet -&gt; CmdL4 -&gt; IVehicleDynamics::step(dt)        |
 </span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a> |    - read State -&gt; pack STATE packet -&gt; send @ &gt;=100 Hz            |
 </span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a> |   create_seven_dof() + create_flat_ground() ; own real-time loop  |
@@ -2524,7 +2524,7 @@ simulator host. VDSim is responsible for running its own dynamics loop.</p>
 <td>4</td>
 <td>uint16</td>
 <td>version</td>
-<td>protocol version = 2</td>
+<td>protocol version = 3</td>
 </tr>
 <tr>
 <td>6</td>
@@ -2812,16 +2812,28 @@ origin = the world origin VDSim was configured with (Section 6). Body frame = IS
 </tr>
 <tr>
 <td>368</td>
+<td>double[4]</td>
+<td>tire_Fx</td>
+<td>[N] body per-wheel FL,FR,RL,RR — v3</td>
+</tr>
+<tr>
+<td>400</td>
+<td>double[4]</td>
+<td>tire_Fy</td>
+<td>[N] body per-wheel FL,FR,RL,RR — v3</td>
+</tr>
+<tr>
+<td>432</td>
 <td>uint32</td>
 <td>crc32</td>
-<td>over bytes [0,368)</td>
+<td>over bytes [0,432)</td>
 </tr>
 </tbody>
 </table>
-<p>Total = 372 bytes (v2). Wheel index order FL=0, FR=1, RL=2, RR=3 (repo
-convention). v1 (220 B) was the first 192 payload bytes (through tire_Fz); v2
-appends the FFB / slip / suspension / measured block. Receivers parse by version
-+ length per Section 10.</p>
+<p>Total = 436 bytes (v3). Wheel index order FL=0, FR=1, RL=2, RR=3 (repo
+convention). v1 (220 B) = first 192 payload bytes (through tire_Fz); v2 appends
+the FFB / slip / suspension / measured block (372 B); v3 appends per-wheel tire
+Fx/Fy. Receivers parse by version + length per Section 10.</p>
 <p>Bridge -&gt; <code>autohyu_msgs/VehicleState</code>: x,y,z &lt;- x/y/z_world; vx,vy,vz; roll,pitch,yaw;
 yaw_vel &lt;- yaw_rate; ax,ay &lt;- ax_body, ay_body; <code>vehicle_can.lateral_accel=ay</code>,
 <code>.longitudinal_accel=ax</code>, <code>.yaw_rate=yaw_rate</code>, <code>.steering_tire_angle=steering_tire_angle_applied</code>,

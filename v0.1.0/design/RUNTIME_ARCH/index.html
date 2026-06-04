@@ -2013,6 +2013,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#b-track-progress-2026-06-04-post-v010" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B-track progress (2026-06-04, post-v0.1.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#open-items" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2060,7 +2071,7 @@ owners of a live simulation</strong> and <strong>multiple incompatible comm path
 </thead>
 <tbody>
 <tr>
-<td><code>cosim/udp_server.cpp</code></td>
+<td><code>cosim/realtime_server.cpp</code></td>
 <td>own <code>SimSession</code> + <code>RealTimeRunner</code></td>
 <td>UDP</td>
 <td>VDS1 binary, CRC32, versioned (<code>cosim_protocol.hpp</code>) — canonical</td>
@@ -2106,7 +2117,7 @@ owners of a live simulation</strong> and <strong>multiple incompatible comm path
    this. (<code>python/vdsim_lab.py</code>, <code>tools/vdsim_batch.py</code>, the <code>vdsim</code> .so.)</p>
 </li>
 <li>
-<p><strong>[2] is the real-time runtime, not merely "comms."</strong> <code>vdsim_udp_server</code> is
+<p><strong>[2] is the real-time runtime, not merely "comms."</strong> <code>vdsim_realtime</code> is
    VDSim's real-time application: it drives the <em>same</em> SimSession core as [3],
    but paced by <code>RealTimeRunner</code> against a wall clock, with UDP as its I/O. So
    [3] and [2] are the two ways to run one core — offline/deterministic vs
@@ -2156,7 +2167,7 @@ The existing <code>cosim/</code> is branch [2].</p>
 </span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>cosim/                 # [2] the one comms layer
 </span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>  cosim_protocol.hpp   # canonical VDS1 wire format (C++)
 </span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>  protocol.py          # Python mirror of it (encode CMD / decode STATE)
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>  udp_server.cpp       # the single comms server (CMD in / STATE out)
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>  realtime_server.cpp       # the single comms server (CMD in / STATE out)
 </span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>  test_udp_client.py   # smoke test, uses protocol.py
 </span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>configs/comms/*.yaml   # routing spec (fan-out not yet realized in the server)
 </span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>gui/                   # [1] the one web viewer: SSE + static, subscribes
@@ -2166,19 +2177,27 @@ The existing <code>cosim/</code> is branch [2].</p>
 <ul>
 <li>Single web viewer: <code>gui/</code> (kept), <code>viewer/</code> retired (suspension editor folded
   into <code>builder/</code>). DONE.</li>
-<li>Single comms layer: C++ <code>vdsim_udp_server</code>. Python router (<code>vdsim_comms.py</code>)
+<li>Single comms layer: C++ <code>vdsim_realtime</code>. Python router (<code>vdsim_comms.py</code>)
   retired; its toy templates deleted. Python participants use <code>cosim/protocol.py</code>.
   DONE.</li>
 </ul>
+<h2 id="b-track-progress-2026-06-04-post-v010">B-track progress (2026-06-04, post-v0.1.0)<a class="headerlink" href="#b-track-progress-2026-06-04-post-v010" title="Permanent link">&para;</a></h2>
+<ul>
+<li>B1 STATE v2 (rack_torque/slip/susp/measured); B2 server road/terrain config;
+  B3 server SensorParams yaml; B4 <code>gui/server.py</code> now owns no sim — it auto-
+  starts <code>vdsim_realtime</code>, relays CMD, and renders its STATE. DONE.</li>
+<li>The real-time app is renamed <code>vdsim_realtime</code> (core pacing class stays
+  <code>RealTimeRunner</code>).</li>
+</ul>
 <h2 id="open-items">Open items<a class="headerlink" href="#open-items" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Branch [2] fan-out: the C++ server currently has one CMD-in port + one
-  STATE-out destination (CLI). Config-driven multi-destination fan-out (so
-  viewer + logger + HIL can all subscribe) is the configs/comms intent, not yet
-  realized in the server.</li>
-<li>Branch [1]: <code>gui/server.py</code> still owns its own sim + control + fan-out (task
-  #147). Convert it to subscribe to the udp_server STATE and drop its control
-  ownership; wheel clients send CMD to the udp_server directly.</li>
+<li>Branch [2] fan-out: one CMD-in port + one STATE-out destination (CLI).
+  Config-driven multi-destination fan-out (viewer + logger + HIL at once) is the
+  configs/comms intent, not yet realized in the server.</li>
+<li>Parity gaps deferred from B4: ActuatorParams and SolverParams
+  (integrator/substeps) are not yet passed to the server, so the GUI's
+  actuator/solver panels don't affect the plant. rack_torque is emitted at L2
+  but reads 0 at L3 (FFB on L3).</li>
 </ul>
 
 

@@ -2408,7 +2408,7 @@
   roll·pitch·yaw rate / ax,ay / wheel_spin[4] / steer_applied / wheel_radius /
   Fz[4] + CRC32.</li>
 <li><strong>CRC32</strong> = IEEE 802.3, Python <code>zlib.crc32</code> 호환 (헤더+payload 전체).</li>
-<li>seq 로 out-of-order/stale 폐기. <code>vdsim_udp_server &lt;veh.yaml&gt; &lt;tire.yaml&gt;
+<li>seq 로 out-of-order/stale 폐기. <code>vdsim_realtime &lt;veh.yaml&gt; &lt;tire.yaml&gt;
   [--level --cmd-port --state-ip --state-port --rate --vx0 --cmd-timeout]</code> 가
   SimSession+RealTimeRunner 를 띄워 이 프로토콜을 말한다.</li>
 </ul>
@@ -2422,7 +2422,7 @@
 <li><strong>outbound telemetry</strong> <code>/api/io/targets</code> — 차량별로 설정한 ip:port 들에 state(+
   cmd 확인용)를 JSON UDP fan-out.</li>
 <li><strong>co-sim 구동 front-end</strong>: GUI 가 현재 vehicle/tire 설정을 temp yaml 로 써서
-  <code>vdsim_udp_server</code> 를 subprocess 로 띄우고, 그 바이너리 STATE 를 받아 3D 로
+  <code>vdsim_realtime</code> 를 subprocess 로 띄우고, 그 바이너리 STATE 를 받아 3D 로
   시각화하며 제어를 바이너리 CMD 로 relay (single source of truth).</li>
 </ul>
 <h3 id="_1">언제 무엇을<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h3>
@@ -2455,7 +2455,7 @@
 <hr />
 <h2 id="187">18.7 한계 / 다음<a class="headerlink" href="#187" title="Permanent link">&para;</a></h2>
 <ul>
-<li>현재 <code>vdsim_udp_server</code> 는 vehicle/tire yaml 만 받아 <strong>actuator/solver 설정은
+<li>현재 <code>vdsim_realtime</code> 는 vehicle/tire yaml 만 받아 <strong>actuator/solver 설정은
   미전달</strong> (CLI 확장 여지).</li>
 <li>STATE 목적지가 단일 → 외부 controller 와 GUI 동시 수신은 GUI relay 또는
   state-ip 노출 필요.</li>
