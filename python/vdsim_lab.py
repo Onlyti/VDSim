@@ -523,7 +523,12 @@ class Simulation:
                                               wheel_radius=self._vp.wheel_radius_nominal))
         self._k = 0
         self._ext = None
-        self._types = {s["id"]: s.get("type") for s in getattr(exp, "_suite", {}).get("sensors", [])}
+        self._prev_r = 0.0
+        self._alpha = 0.0                      # yaw acceleration (for IMU lever arm)
+        suite = getattr(exp, "_suite", {}).get("sensors", [])
+        self._types = {s["id"]: s.get("type") for s in suite}
+        self._mounts = {s["id"]: {"pos": s.get("mount", [0, 0, 0]),
+                                  "yaw": math.radians(s.get("yaw", 0.0))} for s in suite}
 
     def set_control(self, steer=0.0, throttle=0.0, brake=0.0):
         c = vdsim.CmdL4(); c.steer_angle_wheel = steer; c.throttle = throttle; c.brake = brake
@@ -534,6 +539,9 @@ class Simulation:
         cmd = self._ext if self._ext is not None else self.exp._man.driver(self._k, self.sess.output(), self._vp)
         self._ext = None
         self.sess.set_input(cmd); self.sess.tick(dt); self._k += 1
+        r = self.sess.output().state.yaw_rate()
+        self._alpha = (r - self._prev_r) / dt if dt > 0 else 0.0
+        self._prev_r = r
         return self.output()
 
     def output(self):
@@ -546,14 +554,33 @@ class Simulation:
                 "Fz": list(o.Fz), "slip_angle": list(o.slip_angle), "slip_ratio": list(o.slip_ratio)}
 
     def get_data(self, sensor_id=None):
-        m = self.sess.output().sensors
-        meas = {"gnss": {"x": m.gnss_x, "y": m.gnss_y, "vx": m.gnss_vx, "vy": m.gnss_vy},
-                "imu": {"ax": m.ax, "ay": m.ay, "wz": m.wz},
-                "wheel_speed": {"w": list(m.wheel_speed)},
-                "steer": {"angle": m.steer}}
+        """Per-sensor measurement. With a sensor_id whose suite entry has a mount
+        pose, the CG measurement is transported to the mount: GNSS position by the
+        world lever arm p+Rz(yaw)*mount, GNSS velocity and IMU accel by the body
+        lever arm (centripetal -r^2*mount + tangential alpha x mount), IMU rotated
+        into the sensor frame. Gyro/wheel/steer are mount-invariant."""
+        o = self.sess.output(); m = o.sensors; s = o.state
+        cg = {"gnss": {"x": m.gnss_x, "y": m.gnss_y, "vx": m.gnss_vx, "vy": m.gnss_vy},
+              "imu": {"ax": m.ax, "ay": m.ay, "wz": m.wz},
+              "wheel_speed": {"w": list(m.wheel_speed)},
+              "steer": {"angle": m.steer}}
         if sensor_id is None:
-            return meas
-        return meas.get(self._types.get(sensor_id, sensor_id), {})
+            return cg
+        t = self._types.get(sensor_id, sensor_id)
+        mnt = self._mounts.get(sensor_id, {"pos": [0, 0, 0], "yaw": 0.0})
+        mx, my = float(mnt["pos"][0]), float(mnt["pos"][1])
+        r, a = s.yaw_rate(), self._alpha
+        if t == "gnss":
+            yaw = s.yaw(); c, sn = math.cos(yaw), math.sin(yaw)
+            rwx, rwy = c * mx - sn * my, sn * mx + c * my          # mount in world
+            return {"x": m.gnss_x + rwx, "y": m.gnss_y + rwy,
+                    "vx": m.gnss_vx - r * my, "vy": m.gnss_vy + r * mx}  # +omega x r (body)
+        if t == "imu":
+            ax = m.ax - r * r * mx - a * my                         # centripetal + tangential
+            ay = m.ay - r * r * my + a * mx
+            cm, sm = math.cos(mnt["yaw"]), math.sin(mnt["yaw"])
+            return {"ax": cm * ax + sm * ay, "ay": -sm * ax + cm * ay, "wz": m.wz}
+        return cg.get(t, {})
 
     def done(self):
         return self.sess.output().sim_time >= self.duration
