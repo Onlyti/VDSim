@@ -1,0 +1,21 @@
+# VDSim wheel force-feedback bridge — Linux systemd *user* service.
+# Install (run on the client PC where the wheel is plugged in):
+#   mkdir -p ~/.config/systemd/user
+#   cp tools/autostart/vdsim-ffb.service ~/.config/systemd/user/
+#   # edit ExecStart paths + --url below to your checkout and server
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now vdsim-ffb
+# (needs r/w on the wheel's /dev/input/eventX: add your user to the `input` group)
+
+[Unit]
+Description=VDSim racing-wheel force-feedback bridge
+After=graphical-session.target
+
+[Service]
+# evdev variant (Linux-native); swap to wheel_ffb_sdl.py for the SDL2 version
+ExecStart=/usr/bin/python3 %h/git/VDSim/tools/wheel_ffb.py --url http://localhost:8100 --gain 0.8 --autocenter 0.15
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target
