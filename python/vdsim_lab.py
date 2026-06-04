@@ -323,6 +323,84 @@ class Result:
                 f"|r|max {max(abs(v) for v in r):.3f}")
 
 
+# --------------------------------------------------------------------------- #
+# Metrics — scalar reductions on a Result. Map-path metrics (CTE / heading) use
+# the scenario's reference driving line; others are pure trajectory reductions.
+# --------------------------------------------------------------------------- #
+def _seg_dist(px, py, ax, ay, bx, by):
+    dx, dy = bx - ax, by - ay
+    L2 = dx * dx + dy * dy
+    t = 0.0 if L2 == 0 else max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / L2))
+    return math.hypot(px - (ax + t * dx), py - (ay + t * dy))
+
+
+def _cte_series(res, line):
+    if not line or len(line) < 2:
+        return []
+    xs, ys = res.col("x"), res.col("y")
+    return [min(_seg_dist(px, py, line[i][0], line[i][1], line[i+1][0], line[i+1][1])
+                for i in range(len(line) - 1)) for px, py in zip(xs, ys)]
+
+
+def m_cte_rms(res, line=None, **_):
+    c = _cte_series(res, line)
+    return (sum(v * v for v in c) / len(c)) ** 0.5 if c else float("nan")
+
+
+def m_cte_max(res, line=None, **_):
+    c = _cte_series(res, line)
+    return max(c) if c else float("nan")
+
+
+def m_peak_ay(res, **_):
+    return max(abs(v) for v in res.col("ay"))
+
+
+def m_max_fz(res, **_):
+    return max(max(res.col("Fz%d" % i)) for i in range(4))
+
+
+def m_vmax(res, **_):
+    return max(res.col("vx"))
+
+
+def m_dist(res, **_):
+    xs, ys = res.col("x"), res.col("y")
+    return sum(math.hypot(xs[i] - xs[i-1], ys[i] - ys[i-1]) for i in range(1, len(xs)))
+
+
+def m_lap_time(res, **_):
+    xs, ys, t = res.col("x"), res.col("y"), res.col("t")
+    x0, y0, left = xs[0], ys[0], False
+    for i in range(len(xs)):
+        d = math.hypot(xs[i] - x0, ys[i] - y0)
+        if d > 15: left = True
+        elif left and d < 8: return t[i]
+    return float("nan")
+
+
+def m_rms_slip(res, **_):
+    n = len(res.rows)
+    a = [max(abs(res.col("a%d" % i)[k]) for i in range(4)) for k in range(n)]
+    return (sum(v * v for v in a) / n) ** 0.5 if n else 0.0
+
+
+METRICS = {"cte_rms": m_cte_rms, "cte_max": m_cte_max, "peak_ay": m_peak_ay,
+           "max_Fz": m_max_fz, "vmax": m_vmax, "dist": m_dist,
+           "lap_time": m_lap_time, "rms_slip": m_rms_slip}
+
+
+def compute_metrics(res, names, line=None):
+    out = {}
+    for n in names:
+        fn = METRICS.get(n)
+        try:
+            out[n] = fn(res, line=line) if fn else float("nan")
+        except Exception:
+            out[n] = float("nan")
+    return out
+
+
 class Experiment:
     def __init__(self, level="L2", dt=0.005):
         self.level, self.dt = level, dt
@@ -374,6 +452,7 @@ class Experiment:
             exp._suite = suite
         exp._duration = float(cfg.get("duration", 10.0))
         exp._run = cfg.get("run", {"mode": "api"})
+        exp._line = line                      # map reference line (for CTE/lap metrics)
         return exp
 
     def run(self, duration=None):
