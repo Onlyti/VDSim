@@ -213,6 +213,7 @@ int main(int argc, char** argv) {
             s.wheel_spin[i] = o.state.wheel_spin[i]; s.Fz[i] = o.Fz[i];
             s.slip_ratio[i] = o.slip_ratio[i]; s.slip_angle[i] = o.slip_angle[i];
             s.susp[i] = o.state.susp_compression[i];
+            s.fx[i] = o.tire_forces[i].x(); s.fy[i] = o.tire_forces[i].y();
         }
         s.steer_applied = o.steer_applied; s.wheel_radius = vp.wheel_radius_nominal;
         s.rack_torque = o.rack_torque;

@@ -111,7 +111,7 @@ Every packet begins with the common 24-byte header:
 | off | type | field | meaning |
 |---|---|---|---|
 | 0  | uint32 | magic | 0x56445331 ("VDS1") |
-| 4  | uint16 | version | protocol version = 2 |
+| 4  | uint16 | version | protocol version = 3 |
 | 6  | uint16 | msg_type | 1 = CMD, 2 = STATE |
 | 8  | uint32 | seq | monotonically increasing per stream |
 | 12 | uint32 | _pad | 0 (align payload to 8) |
@@ -181,12 +181,14 @@ origin = the world origin VDSim was configured with (Section 6). Body frame = IS
 | 344 | double   | m_steer | [rad] measured — v2 |
 | 352 | double   | m_gnss_x | [m] measured ENU — v2 |
 | 360 | double   | m_gnss_y | [m] measured ENU — v2 |
-| 368 | uint32   | crc32 | over bytes [0,368) |
+| 368 | double[4]| tire_Fx | [N] body per-wheel FL,FR,RL,RR — v3 |
+| 400 | double[4]| tire_Fy | [N] body per-wheel FL,FR,RL,RR — v3 |
+| 432 | uint32   | crc32 | over bytes [0,432) |
 
-Total = 372 bytes (v2). Wheel index order FL=0, FR=1, RL=2, RR=3 (repo
-convention). v1 (220 B) was the first 192 payload bytes (through tire_Fz); v2
-appends the FFB / slip / suspension / measured block. Receivers parse by version
-+ length per Section 10.
+Total = 436 bytes (v3). Wheel index order FL=0, FR=1, RL=2, RR=3 (repo
+convention). v1 (220 B) = first 192 payload bytes (through tire_Fz); v2 appends
+the FFB / slip / suspension / measured block (372 B); v3 appends per-wheel tire
+Fx/Fy. Receivers parse by version + length per Section 10.
 
 Bridge -> `autohyu_msgs/VehicleState`: x,y,z <- x/y/z_world; vx,vy,vz; roll,pitch,yaw;
 yaw_vel <- yaw_rate; ax,ay <- ax_body, ay_body; `vehicle_can.lateral_accel=ay`,

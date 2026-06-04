@@ -15,16 +15,17 @@ Layout (little-endian, tightly packed), see cosim_protocol.hpp:
                     wheel_radius Fz[4]  (192, v1)
                     rack_torque slip_ratio[4] slip_angle[4] susp[4]
                     m_ax m_ay m_wz m_steer m_gnss_x m_gnss_y  (152, v2)
-                                                         -> 372 total incl. crc
+                    Fx[4] Fy[4]                                (64, v3)
+                                                         -> 436 total incl. crc
   trailing crc (4): crc32 over all preceding bytes
 """
 import struct
 import zlib
 
 MAGIC = 0x56445331  # "VDS1"
-VERSION = 2  # v2: STATE adds rack_torque/slip/susp/measured
+VERSION = 3  # v2: rack_torque/slip/susp/measured; v3: + per-wheel tire Fx/Fy
 MSG_CMD, MSG_STATE = 1, 2
-CMD_BYTES, STATE_BYTES = 76, 372
+CMD_BYTES, STATE_BYTES = 76, 436
 
 # default ports (server listens CMD, emits STATE)
 CMD_PORT, STATE_PORT = 7001, 7002
@@ -88,4 +89,9 @@ def decode_state(buf):
     out["susp"] = list(struct.unpack_from("<4d", buf, 288))
     (out["m_ax"], out["m_ay"], out["m_wz"], out["m_steer"],
      out["m_gnss_x"], out["m_gnss_y"]) = struct.unpack_from("<6d", buf, 320)
+    fx = struct.unpack_from("<4d", buf, 368)
+    fy = struct.unpack_from("<4d", buf, 400)
+    out["Fx"] = list(fx)
+    out["Fy"] = list(fy)
+    out["Ft"] = [[fx[i], fy[i]] for i in range(4)]   # [[Fx,Fy]] per wheel (viewer arrows)
     return out
