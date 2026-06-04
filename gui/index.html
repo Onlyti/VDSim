@@ -248,7 +248,9 @@ async function drawRoad(){
     const m=Math.max(1,Math.ceil(d/6)); for(let k=1;k<=m;k++) dn.push([a[0]+(b[0]-a[0])*k/m, a[1]+(b[1]-a[1])*k/m]); }
   pts=dn;
   const N=pts.length, hw=roadHalfW;
-  const zf=(x,y)=> (terrainGrid ? sampleTerrain(x,y) : 0)+0.12;
+  // Asphalt sits ON the physics contact plane (z=0 flat / terrain height); the
+  // material's polygonOffset wins the depth test vs the ground grid (no +lift).
+  const zf=(x,y)=> (terrainGrid ? sampleTerrain(x,y) : 0);
   const nrm=[], s=[0];                         // unit normals + arc length
   for(let i=0;i<N;i++){
     const b=pts[Math.min(N-1,i+1)], c=pts[Math.max(0,i-1)];
@@ -346,7 +348,7 @@ async function rebuildCar(level){
       const g=new THREE.Group();
       const shaft=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,1,12), m); shaft.position.y=0.5;
       const head=new THREE.Mesh(new THREE.ConeGeometry(0.14,0.30,16), m); head.position.y=1.0;
-      g.add(shaft, head); g.position.set(x,0.16,z); g.visible=false;   // above the asphalt ribbon (y=0.12)
+      g.add(shaft, head); g.position.set(x,0.02,z); g.visible=false;   // at the contact patch (just above the road)
       g.userData={shaft, head}; car.add(g); return g; };
     axx.push(mk(0xff3b30)); axy.push(mk(0x34c759)); axz.push(mk(0x0a84ff));
     if(susp){   // L3: visible coil spring (animated) + unsprung block
@@ -386,7 +388,7 @@ function renderForces(Ft, Fz, susp){
   const kin=(renderLevel==='K'), bike=(wheels.length===2);  // K: no forces; bike: Fz only
   for(let i=0;i<wheels.length;i++){
     const [Fx,Fy,Fzz]=WF[i]; const w=wheels[i].position;
-    [axx[i],axy[i],axz[i]].forEach(a=>a.position.set(w.x,0.16,w.z));
+    [axx[i],axy[i],axz[i]].forEach(a=>a.position.set(w.x,0.02,w.z));
     if(kin){ axx[i].visible=axy[i].visible=axz[i].visible=false; continue; }
     setArr(axz[i], new THREE.Vector3(0,1,0), Fzz, FZSCALE);                      // B: Fz up (always shown)
     if(bike){ axx[i].visible=false; axy[i].visible=false; }                      // single-track: no L/R lat/long
