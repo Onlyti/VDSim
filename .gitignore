@@ -76,3 +76,7 @@ apps/jump_demo/*/frames/
 *.tir
 configs/tires/measured/
 *_private/
+
+# Transient run outputs (batch / validation campaigns)
+/results/
+apps/validation/results/
