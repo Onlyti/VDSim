@@ -26,8 +26,10 @@
 #include <csignal>
 #include <cstdio>
 #include <cstring>
+#include <fstream>
 #include <string>
 #include <thread>
+#include <vector>
 
 namespace {
 std::atomic<bool> g_run {true};
@@ -52,6 +54,39 @@ double now_s() {
     return std::chrono::duration<double>(
         std::chrono::steady_clock::now().time_since_epoch()).count();
 }
+
+// Select the contact provider from road config, mirroring make_sim_session
+// (bindings.cpp). A terrain heightmap file (if given) wins; otherwise the
+// analytic surface chosen by which params are set.
+//
+// Terrain file (little-endian binary): int32 nx, int32 ny, double x0, y0, dx,
+// dy, then nx*ny doubles row-major h[iy*nx+ix]. (Written by the GUI bridge.)
+std::unique_ptr<vdsim::IContactProvider> make_ground(
+    const std::string& terrain, double mu, double mu_right, double mu_boundary,
+    double grade, double bank, double rough_amp, double rough_wl, int iso_class) {
+    if (!terrain.empty()) {
+        std::ifstream f(terrain, std::ios::binary);
+        int32_t nx = 0, ny = 0; double x0 = 0, y0 = 0, dx = 0, dy = 0;
+        if (f && f.read(reinterpret_cast<char*>(&nx), 4) &&
+            f.read(reinterpret_cast<char*>(&ny), 4) &&
+            f.read(reinterpret_cast<char*>(&x0), 8) &&
+            f.read(reinterpret_cast<char*>(&y0), 8) &&
+            f.read(reinterpret_cast<char*>(&dx), 8) &&
+            f.read(reinterpret_cast<char*>(&dy), 8) && nx > 0 && ny > 0) {
+            std::vector<double> h(static_cast<size_t>(nx) * ny);
+            if (f.read(reinterpret_cast<char*>(h.data()),
+                       static_cast<std::streamsize>(h.size()) * 8))
+                return vdsim::create_heightmap_ground(std::move(h), nx, ny, x0, y0, dx, dy, mu);
+        }
+        std::fprintf(stderr, "[vdsim_udp_server] terrain load failed: %s (flat-ground)\n",
+                     terrain.c_str());
+    }
+    if (iso_class >= 0) return vdsim::create_iso8608_ground(0.0, mu, iso_class, 1u);
+    if (rough_amp > 0.0) return vdsim::create_rough_ground(0.0, mu, rough_amp, rough_wl);
+    if (grade != 0.0 || bank != 0.0) return vdsim::create_inclined_ground(0.0, grade, bank, mu);
+    if (mu_right >= 0.0) return vdsim::create_split_mu_ground(0.0, mu, mu_right, mu_boundary);
+    return vdsim::create_flat_ground(0.0, mu);
+}
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -59,7 +94,10 @@ int main(int argc, char** argv) {
         std::fprintf(stderr,
             "usage: %s <vehicle.yaml> <tire.yaml> [--level=L1|L2|L3] "
             "[--cmd-port=7001] [--state-ip=127.0.0.1] [--state-port=7002] "
-            "[--rate=200] [--vx0=0] [--cmd-timeout=0.1]\n", argv[0]);
+            "[--rate=200] [--vx0=0] [--cmd-timeout=0.1] "
+            "[--mu=1.0] [--mu-right=-1] [--mu-boundary=0] [--grade=0] [--bank=0] "
+            "[--rough-amp=0] [--rough-wl=4] [--iso-class=-1] [--terrain=<file>]\n",
+            argv[0]);
         return 2;
     }
     const auto vp = vdsim::VehicleParams::from_yaml(argv[1]);
@@ -75,8 +113,21 @@ int main(int argc, char** argv) {
     const double cmd_to     = optd(argc, argv, "--cmd-timeout=", 0.1);
     const double dt         = 1.0 / rate;
 
+    // Road config (mirrors make_sim_session): terrain file wins, else analytic.
+    const double mu          = optd(argc, argv, "--mu=", 1.0);
+    const double mu_right    = optd(argc, argv, "--mu-right=", -1.0);
+    const double mu_boundary = optd(argc, argv, "--mu-boundary=", 0.0);
+    const double grade       = optd(argc, argv, "--grade=", 0.0);
+    const double bank        = optd(argc, argv, "--bank=", 0.0);
+    const double rough_amp   = optd(argc, argv, "--rough-amp=", 0.0);
+    const double rough_wl    = optd(argc, argv, "--rough-wl=", 4.0);
+    const int    iso_class   = (int)optd(argc, argv, "--iso-class=", -1.0);
+    const std::string terrain = opts(argc, argv, "--terrain=", "");
+
     vdsim::SimConfig cfg; cfg.nominal_dt = dt;
-    vdsim::SimSession sim(make_dyn(level), vdsim::create_flat_ground(0.0, 1.0), vp, tp, sp, cfg);
+    vdsim::SimSession sim(make_dyn(level),
+        make_ground(terrain, mu, mu_right, mu_boundary, grade, bank, rough_amp, rough_wl, iso_class),
+        vp, tp, sp, cfg);
     vdsim::State s0; s0.velocity.x() = vx0;
     const double w0 = (vp.wheel_radius_nominal > 0.0) ? vx0 / vp.wheel_radius_nominal : 0.0;
     s0.wheel_spin = {{w0, w0, w0, w0}};
