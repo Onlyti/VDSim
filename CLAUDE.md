@@ -9,7 +9,8 @@
 ## 구조
 - core/ — libvdsim_core (C++17): Ld1 Bicycle/Ld2 7DOF/Ld3 14DOF + Pacejka MF96 + Ld4 hardpoint. ISO 8855 RH
 - python/ — pybind11 (vdsim) · tools/kinematics/ — offline hardpoint solver + Adams importer + GUI
-- apps/ examples/ tests/ fmi_export/ carla_integration/ viewer/
+- apps/ examples/ tests/ fmi_export/ carla_integration/
+- 3갈래 런타임(docs/design/RUNTIME_ARCH.md): gui/(시각화 웹) · cosim/(제어·신호 UDP, canonical VDS1) · python/vdsim_lab+tools/vdsim_batch(sync API/배치) · builder/(저작)
 
 ## 빌드
 - CMake (CMakeLists.txt). docs = mkdocs (github.io 배포)

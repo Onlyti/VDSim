@@ -68,14 +68,14 @@ Frozen field names/units mirror the existing CSV/STATE-packet conventions
 
 ## 5. Frontend
 
-SPA seeded from `viewer/index.html` (Three.js). Add:
+SPA realized in `gui/index.html` (Three.js). Add:
 - WebGPU renderer + WebGL2 fallback (Three.js `WebGPURenderer` with capability
   check).
 - Config forms generated from JSON schema (so the UI stays in sync with the C++
   params instead of being hand-maintained).
 - Time-series plots (charts) for vx, yaw rate, ax/ay, susp, etc.
-- The planned actuator-nonlinearity tuner (sliders + step-response plot, see
-  `viewer/README.md`) is a panel here.
+- The planned actuator-nonlinearity tuner (sliders + step-response plot) is a
+  panel here.
 
 ## 6. Existing assets reused
 
@@ -83,8 +83,8 @@ SPA seeded from `viewer/index.html` (Three.js). Add:
 |---|---|
 | `core` SimSession (set_input/tick/output) | compute kernel the server drives |
 | `python` pybind `vdsim` module | Python access to SimSession (Phase 1) |
-| `viewer/index.html` (Three.js) | frontend seed |
-| `viewer/realtime_server.py` (ws + pybind) | backend seed -> FastAPI |
+| `gui/index.html` (Three.js) | realized frontend |
+| `gui/server.py` (HTTP/SSE + pybind) | realized backend (stdlib http.server) |
 | `cosim` STATE/CMD field set | the wire-contract field conventions |
 
 ## 7. Phased plan

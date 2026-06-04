@@ -15,14 +15,14 @@ if(pybind11_FOUND)
         OUTPUT_NAME vdsim
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/python)
     # Wheel build (scikit-build-core): install the compiled module + the pure-
-    # Python experiment layer (vdsim_lab / vdsim_comms + the map parsers) as top-
-    # level modules, plus the preset configs as bundled data, so `pip install`
-    # users get the builders / batch / API / comms — not just the .so.
+    # Python experiment layer (vdsim_lab + the comms protocol + map parsers) as
+    # top-level modules, plus the preset configs as bundled data, so `pip
+    # install` users get the API / batch / comms client — not just the .so.
     if(DEFINED SKBUILD)
         install(TARGETS vdsim_py LIBRARY DESTINATION ".")
         install(FILES
             ${CMAKE_SOURCE_DIR}/python/vdsim_lab.py
-            ${CMAKE_SOURCE_DIR}/python/vdsim_comms.py
+            ${CMAKE_SOURCE_DIR}/cosim/protocol.py
             ${CMAKE_SOURCE_DIR}/examples/opendrive.py
             ${CMAKE_SOURCE_DIR}/examples/rd5_route.py
             DESTINATION ".")

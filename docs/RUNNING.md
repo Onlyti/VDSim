@@ -43,15 +43,19 @@ res = (Experiment(level="L3").vehicle(Vehicle.preset("sedan"))
 res.to_csv("run.csv"); print(res.summary())
 ```
 
-### B. Real-time comms (UDP routing; SIL/HIL nodes in the loop)
-Scenario declares `run: {mode: rt_comms, comms: <name>}`; the comms config routes
-data (fan-out) and accepts control (fan-in).
-```python
-import sys; sys.path.insert(0, "python"); import vdsim_comms
-vdsim_comms.run_rt("yongin_lap", "example", rate=100.0)   # configs/comms/example.yaml
+### B. Real-time comms (UDP; SIL/HIL nodes in the loop)
+The C++ `vdsim_udp_server` is the single comms layer: it runs a real-time
+`SimSession`, receives CMD packets on one port, and emits STATE on another. The
+wire format is the canonical VDS1 binary protocol (`cosim/cosim_protocol.hpp`,
+CRC32, 76B CMD / 220B STATE).
+```sh
+build/bin/vdsim_udp_server configs/vehicles/sedan.yaml \
+    configs/tires/default_pacejka.yaml --level=L3 \
+    --cmd-port=7001 --state-ip=127.0.0.1 --state-port=7002 --rate=200
 ```
-Templates: `json`, `vds1_state`, `vds1_cmd`, `nmea_gga`, `imu_raw`. (Also the
-C++ `build/bin/vdsim_udp_server` for the standalone real-vehicle-equivalent port.)
+Python participants (wheel/pedal clients, viewer bridge, HIL harnesses) encode
+CMD / decode STATE through `cosim/protocol.py` — one definition of the wire
+format, byte-compatible with the server. (See `cosim/test_udp_client.py`.)
 
 ### C. Batch / campaign (headless, parallel)
 ```sh
@@ -90,7 +94,7 @@ python3 gui/server.py --port 8100              # browser viewer + live sim
 | want | mode |
 |---|---|
 | drive a controller/estimator from your own code | **A. API** |
-| connect external SIL/HIL/perception over the network | **B. rt_comms** |
+| connect external SIL/HIL/perception over the network | **B. UDP comms** |
 | sweep params / Monte Carlo / regression metrics | **C. batch** |
 | watch it, or drive with a wheel + FFB | **D. GUI** |
 | plug VDSim physics into a co-sim tool | **FMI** |

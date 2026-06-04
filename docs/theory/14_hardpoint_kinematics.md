@@ -314,7 +314,7 @@ lookup 은 고정 hardpoint 의 사전 sweep. hardpoint 가 runtime 에 변하�
 >   ├─ tools/kinematics/diagnose.py          self-consistency
 >   ├─ tools/kinematics/*_3d_solver.py       sweep CSV
 >   ├─ tools/kinematics/import_hardpoints.py Adams CSV → YAML
->   └─ viewer/suspension_editor.html         Three.js live edit (WS → native)
+>   └─ builder/suspension_editor.html        Three.js live edit (WS → native)
 > ```
 > `diagnose.py` 출력 예: DW RC 7.5cm/camber −0.094°/mm/wheel-z err <0.1μm,
 > MP strut 19.4°, TA semi-trailing 14°/anti-dive 5.5°, 5-link lengths

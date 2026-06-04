@@ -15,7 +15,7 @@ Protocol:
 Sweep payload: list of {travel, camber, toe, track_change} rows.
 Geometry payload: dict of all hardpoint world positions for 3D rendering.
 
-Run:  python3 viewer/suspension_editor_server.py [--port 8765]
+Run:  python3 builder/suspension_editor_server.py [--port 8765]
 """
 import argparse
 import asyncio

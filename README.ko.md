@@ -17,7 +17,8 @@
 | `core/` | `libvdsim_core` — C++17 standalone 라이브러리. Ld1 Bicycle / Ld2 7-DOF / Ld3 14-DOF 동역학 + Pacejka MF96 타이어 (load sensitivity + relaxation length + camber thrust/Mz) + Lc5-Lc8 control converter. Ld4 hardpoint kinematics (DW/MP/TA/5-link, lookup + native solver). ISO 8855 RH. |
 | `python/` | pybind11 바인딩 (`vdsim` 모듈): VehicleParams / TireParams / SolverParams, ITireModel, ISuspensionKinematics + attach helper, 전 동역학 + Lc 제어기. |
 | `tools/kinematics/` | Offline hardpoint solver (DW 2D/3D, MacPherson, trailing arm, 5-link), 진단 도구 + Adams CSV importer + matplotlib GUI. |
-| `viewer/` | Three.js 3D viewer + WebSocket realtime · 라이브 운동학 곡선이 있는 웹 기반 suspension editor. |
+| `gui/` | Three.js 실시간 웹 뷰어 (PoC) — 라이브 sim 을 구독해 3D 뷰 / 노면 / telemetry 렌더링. |
+| `builder/` | 실험 저작 웹 툴 (vehicle / sensor / map / comms / scenario) · 라이브 운동학 곡선이 있는 웹 기반 suspension editor. |
 | `carla_integration/` | Python bridge — CARLA actor 를 VDSim 동역학으로 구동; raycast contact; Ld4 kinematics attach 지원. |
 | `apps/jump_demo/` | T23/T24 — 2D + 3D 선회 점프 시뮬레이터 (Phase-2 14-DOF prototype, world-z + airborne + Pacejka). |
 | `apps/doe/` | Design-of-Experiments 러너 — 다중 파라미터 × 다중 시나리오 sweep → CSV + heatmap. |
@@ -57,8 +58,8 @@ python3 tools/kinematics/diagnose.py \
         --config configs/suspensions/dw_front_sports.yaml
 
 # 인터랙티브 웹 에디터
-python3 viewer/suspension_editor_server.py &
-( cd viewer && python3 -m http.server 8090 )
+python3 builder/suspension_editor_server.py &
+( cd builder && python3 -m http.server 8090 )
 # 브라우저 → http://localhost:8090/suspension_editor.html
 ```
 

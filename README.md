@@ -19,7 +19,8 @@ autonomous-driving evaluation.
 | `core/` | `libvdsim_core` — C++17 standalone library. Ld1 Bicycle / Ld2 7-DOF / Ld3 14-DOF dynamics + Pacejka MF96 tire (with load sensitivity + relaxation length + camber thrust/Mz) + Lc5-Lc8 control converters. Ld4 hardpoint kinematics (DW/MP/TA/5-link, lookup + native solvers). ISO 8855 RH. |
 | `python/` | pybind11 bindings (`vdsim` module): VehicleParams / TireParams / SolverParams, ITireModel, ISuspensionKinematics + attach helpers, all dynamics + Lc controllers. |
 | `tools/kinematics/` | Offline hardpoint solvers (DW 2D/3D, MacPherson, trailing arm, 5-link), diagnostic + Adams CSV importer + matplotlib GUI. |
-| `viewer/` | Three.js 3D viewer + WebSocket realtime · web-based suspension editor with live kinematic curves. |
+| `gui/` | Three.js real-time web viewer (PoC) — subscribes to the live sim and renders 3D view / road / telemetry. |
+| `builder/` | Experiment authoring web tool (vehicle / sensor / map / comms / scenario) · web-based suspension editor with live kinematic curves. |
 | `carla_integration/` | Python bridge — drives a CARLA actor with VDSim dynamics; raycast contacts; supports Ld4 kinematics attach. |
 | `apps/jump_demo/` | T23/T24 — 2D + 3D turning-jump simulators (Phase-2 14-DOF prototype with world-z + airborne + Pacejka). |
 | `apps/doe/` | Design-of-Experiments runner — multi-parameter × multi-scenario sweeps → CSV + heatmaps. |
@@ -83,8 +84,8 @@ python3 tools/kinematics/diagnose.py \
         --config configs/suspensions/dw_front_sports.yaml
 
 # Interactive web editor
-python3 viewer/suspension_editor_server.py &
-( cd viewer && python3 -m http.server 8090 )
+python3 builder/suspension_editor_server.py &
+( cd builder && python3 -m http.server 8090 )
 # Browser → http://localhost:8090/suspension_editor.html
 ```
 

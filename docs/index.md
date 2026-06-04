@@ -62,10 +62,9 @@ build/bin/vdsim_scenario_run \
     configs/tires/default_pacejka.yaml \
     configs/scenarios/skidpad.yaml /tmp/out.csv
 
-# Launch the 3D viewer
-python3 -m http.server -d viewer 8080 &
-python3 viewer/realtime_server.py --driver --level L2 --v_target 13 &
-# → browse http://localhost:8080
+# Launch the 3D viewer (real-time web viewer + live sim)
+python3 gui/server.py --port 8100 &
+# → browse http://localhost:8100
 ```
 
 ## What to read
