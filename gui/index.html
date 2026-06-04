@@ -89,8 +89,15 @@
     <button id="cam_orbit" class="on">Orbit</button>
     <button id="cam_chase">Chase</button>
     <button id="cam_top">Top</button>
+    <button id="cam_cockpit">Cockpit</button>
   </div>
-  <div class="sub" style="margin-top:8px">Manual: ↑/↓ throttle/brake, ←/→ steer</div>
+  <h2 style="margin-top:10px">Drive (driver-in-the-loop)</h2>
+  <div class="row">
+    <button id="drv_wheel">🎮 Wheel/pedals</button>
+    <button id="drv_sound">🔊 Sound</button>
+  </div>
+  <div class="sub" id="drv_gp" style="margin-top:6px">no gamepad — plug a wheel and press a pedal</div>
+  <div class="sub" style="margin-top:4px">Keyboard: ↑/↓ throttle/brake, ←/→ steer</div>
 </div>
 
 <div id="hud" class="panel">
@@ -443,6 +450,14 @@ function frame(){ requestAnimationFrame(frame);
     const yaw=car.rotation.y, fx=Math.cos(yaw), fz=-Math.sin(yaw);  // forward (three)
     camera.position.lerp(new THREE.Vector3(cp.x-fx*11, cp.y+5, cp.z-fz*11), 0.12);
     camera.lookAt(cp.x, cp.y+1.2, cp.z);
+  } else if(camMode==='cockpit'){
+    // first-person: eye fixed in the car frame, so it inherits yaw + roll/pitch
+    controls.enabled=false;
+    car.updateMatrixWorld();
+    const eye=car.localToWorld(new THREE.Vector3(0.2, 1.15, 0.35));   // local: fwd, up, right
+    const look=car.localToWorld(new THREE.Vector3(12.0, 1.05, 0.35));
+    camera.position.copy(eye); camera.up.copy(car.localToWorld(new THREE.Vector3(0.2,2.15,0.35)).sub(eye).normalize());
+    camera.lookAt(look);
   } else { // top-down orthographic
     controls.enabled=false;
     orthoCam.position.set(cp.x, 120, cp.z);
@@ -450,6 +465,7 @@ function frame(){ requestAnimationFrame(frame);
     activeCam=orthoCam;
   }
   prevCarPos.copy(cp);
+  updateSound(window._lastState);
   renderer.render(scene, activeCam);
 }
 frame();
@@ -501,24 +517,27 @@ const LEVEL_LABEL={K:'L0 Kinematic', L1:'L1 Bicycle', L2:'L2 7-DOF', L3:'L3 14-D
 let manualMode=false;
 
 function setCam(m){ camMode=m;
-  ['orbit','chase','top'].forEach(id=>$('cam_'+id).classList.toggle('on', id===m));
+  ['orbit','chase','top','cockpit'].forEach(id=>$('cam_'+id).classList.toggle('on', id===m));
   if(m==='orbit') controls.target.copy(car.position);   // re-frame; drag still orbits
+  if(m!=='cockpit') camera.up.set(0,1,0);               // restore world-up
 }
 $('cam_orbit').onclick=()=>setCam('orbit');
 $('cam_chase').onclick=()=>setCam('chase');
 $('cam_top').onclick=()=>setCam('top');
+$('cam_cockpit').onclick=()=>setCam('cockpit');
 
 // manual control: keyboard (desktop) + on-screen touch bar (mobile); only in manual mode
 const man={throttle:0,brake:0,steer:0}; const keys={}; let touchThr=0,touchBrk=0,touchSteer=0;
 addEventListener('keydown',e=>keys[e.key]=true);
 addEventListener('keyup',e=>keys[e.key]=false);
 setInterval(()=>{
+  if(wheelOn){ const w=readWheel(); if(w){ man.throttle=w.throttle; man.brake=w.brake; man.steer=w.steer; post('/api/manual',man); return; } }
   if(!manualMode) return;
   man.throttle=Math.max(keys['ArrowUp']?0.7:0, touchThr);
   man.brake   =Math.max(keys['ArrowDown']?0.6:0, touchBrk);
   man.steer   =Math.max(-0.4,Math.min(0.4,(keys['ArrowLeft']?0.25:0)-(keys['ArrowRight']?0.25:0)+touchSteer));
   post('/api/manual',man);
-},80);
+},40);
 function toggleManualBar(show){ $('manbar').style.display=show?'flex':'none'; }
 function holdBtn(el,on,off){
   ['pointerdown','touchstart'].forEach(ev=>el.addEventListener(ev,e=>{e.preventDefault();on();},{passive:false}));
@@ -529,6 +548,49 @@ holdBtn($('m_brk'),()=>touchBrk=0.6,()=>touchBrk=0);
 $('m_steer').addEventListener('input',e=>touchSteer=+e.target.value);
 const recenterSteer=()=>{ $('m_steer').value=0; touchSteer=0; };
 ['pointerup','touchend','pointercancel'].forEach(ev=>$('m_steer').addEventListener(ev,recenterSteer));
+
+// ---- driver-in-the-loop: racing wheel/pedals (Gamepad API) ----
+let wheelOn=false;
+const WHEEL_MAXSTEER=0.5;                 // rad at full lock
+const wheelMap={steer:0, thr:1, brk:2};   // axis indices (device-specific; see readout)
+function readWheel(){
+  const gps=navigator.getGamepads?navigator.getGamepads():[]; let gp=null;
+  for(const g of gps){ if(g && g.axes && g.axes.length){ gp=g; break; } }
+  if(!gp){ $('drv_gp').textContent='no gamepad — plug a wheel and press a pedal'; return null; }
+  $('drv_gp').textContent='['+gp.id.slice(0,22)+'] axes '+gp.axes.map((a,i)=>i+':'+a.toFixed(2)).join(' ');
+  const ped=ax=>{ const v=gp.axes[ax]; return v==null?0:Math.max(0,Math.min(1,(1-v)/2)); }; // rest≈+1, full≈-1
+  return { steer:Math.max(-1,Math.min(1,gp.axes[wheelMap.steer]||0))*WHEEL_MAXSTEER,
+           throttle:ped(wheelMap.thr), brake:ped(wheelMap.brk) };
+}
+$('drv_wheel').onclick=()=>{ wheelOn=!wheelOn; $('drv_wheel').classList.toggle('on',wheelOn);
+  if(wheelOn){ manualMode=true; post('/api/config',{driver:false}); } };
+addEventListener('gamepadconnected',()=>{ $('drv_gp').textContent='gamepad connected — press 🎮 Wheel/pedals'; });
+
+// ---- engine / tire / wind sound (Web Audio), tied to telemetry ----
+let audio=null, eng=null, engGain=null, windGain=null, screechGain=null, soundOn=false;
+function initAudio(){
+  audio=new (window.AudioContext||window.webkitAudioContext)();
+  eng=audio.createOscillator(); eng.type='sawtooth'; engGain=audio.createGain(); engGain.gain.value=0;
+  const lp=audio.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=1400;
+  eng.connect(engGain); engGain.connect(lp); lp.connect(audio.destination); eng.start();
+  const buf=audio.createBuffer(1,audio.sampleRate*2,audio.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+  const mk=(type,freq,Q)=>{ const src=audio.createBufferSource(); src.buffer=buf; src.loop=true;
+    const f=audio.createBiquadFilter(); f.type=type; f.frequency.value=freq; if(Q)f.Q.value=Q;
+    const g=audio.createGain(); g.gain.value=0; src.connect(f); f.connect(g); g.connect(audio.destination); src.start(); return g; };
+  windGain=mk('lowpass',500); screechGain=mk('bandpass',2200,6);
+}
+function updateSound(s){
+  if(!soundOn||!audio||!s) return; const t=audio.currentTime, vx=Math.abs(s.vx||0);
+  eng.frequency.setTargetAtTime(60+vx*7+(man.throttle||0)*45, t, 0.05);
+  engGain.gain.setTargetAtTime(0.035+0.10*(man.throttle||0), t, 0.08);
+  windGain.gain.setTargetAtTime(Math.min(0.18, vx*0.006), t, 0.10);
+  const slip=(s.alpha&&s.alpha.length)?Math.max.apply(null,s.alpha.map(Math.abs)):0;
+  screechGain.gain.setTargetAtTime(slip>0.12?Math.min(0.25,(slip-0.12)*1.3):0, t, 0.05);
+}
+$('drv_sound').onclick=()=>{ if(!audio) initAudio(); if(audio.state==='suspended') audio.resume();
+  soundOn=!soundOn; $('drv_sound').classList.toggle('on',soundOn);
+  if(!soundOn){ engGain.gain.value=0; windGain.gain.value=0; screechGain.gain.value=0; } };
 
 // ---- floating windows (draggable) ----
 function makeDraggable(win){

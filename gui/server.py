@@ -640,6 +640,7 @@ class Runner:
             self.ports[self.live_vid].in_cmd.update(
                 {k: float(v) for k, v in kw.items()
                  if k in ("throttle", "brake", "steer")})
+            self.cfg["driver"] = False     # wheel/pedal takes over from autopilot
 
     def telemetry_config(self):
         with self.lock:
