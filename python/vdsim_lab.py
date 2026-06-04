@@ -369,8 +369,11 @@ class Experiment:
         else:
             exp.maneuver(Maneuver.constant_speed(v))
         if cfg.get("sensors"):
-            exp.sensors(Sensors.from_suite(yaml.safe_load(open(_SENS / f"{cfg['sensors']}.yaml"))))
+            suite = yaml.safe_load(open(_SENS / f"{cfg['sensors']}.yaml"))
+            exp.sensors(Sensors.from_suite(suite))
+            exp._suite = suite
         exp._duration = float(cfg.get("duration", 10.0))
+        exp._run = cfg.get("run", {"mode": "api"})
         return exp
 
     def run(self, duration=None):
@@ -395,6 +398,70 @@ class Experiment:
                          *o.Fz, *[Ft[i][0] for i in range(4)], *[Ft[i][1] for i in range(4)],
                          *o.slip_angle, *o.slip_ratio])
         return Result(rows)
+
+
+class Simulation:
+    """Embedded synchronous API over an authored scenario (run mode "api"): the
+    sim is a plain object you step from your own code, no network.
+
+        sim = Simulation("yongin_lap")          # name / cfg dict / Experiment
+        while not sim.done():
+            sim.set_control(steer=.., throttle=.., brake=..)   # omit -> scenario autopilot
+            sim.step()
+            gnss = sim.get_data("gnss")          # per-sensor measurement
+            gt   = sim.state()                   # ground truth
+    """
+    def __init__(self, scenario, dt=None, duration=None):
+        exp = scenario if isinstance(scenario, Experiment) else Experiment.from_config(scenario)
+        self.exp = exp
+        self._vp = exp._veh.vp
+        sp = exp._sensors.sp if exp._sensors else vdsim.SensorParams()
+        self.dt = dt or exp.dt
+        self.duration = duration if duration is not None else getattr(exp, "_duration", 1e18)
+        self.sess = exp._road._session(self._vp, exp._tire.tp, exp.level, self.dt, sp)
+        man = exp._man
+        x0, y0 = getattr(man, "start", (0.0, 0.0))
+        self.sess.reset(vdsim.make_init_state(x=x0, y=y0, yaw=man.init_yaw, v=man.init_v,
+                                              wheel_radius=self._vp.wheel_radius_nominal))
+        self._k = 0
+        self._ext = None
+        self._types = {s["id"]: s.get("type") for s in getattr(exp, "_suite", {}).get("sensors", [])}
+
+    def set_control(self, steer=0.0, throttle=0.0, brake=0.0):
+        c = vdsim.CmdL4(); c.steer_angle_wheel = steer; c.throttle = throttle; c.brake = brake
+        self._ext = c
+
+    def step(self, dt=None):
+        dt = dt or self.dt
+        cmd = self._ext if self._ext is not None else self.exp._man.driver(self._k, self.sess.output(), self._vp)
+        self._ext = None
+        self.sess.set_input(cmd); self.sess.tick(dt); self._k += 1
+        return self.output()
+
+    def output(self):
+        return self.sess.output()
+
+    def state(self):
+        o = self.sess.output(); s = o.state
+        return {"t": o.sim_time, "x": s.position[0], "y": s.position[1], "yaw": s.yaw(),
+                "vx": s.vx(), "vy": s.vy(), "r": s.yaw_rate(), "ax": o.ax, "ay": o.ay,
+                "Fz": list(o.Fz), "slip_angle": list(o.slip_angle), "slip_ratio": list(o.slip_ratio)}
+
+    def get_data(self, sensor_id=None):
+        m = self.sess.output().sensors
+        meas = {"gnss": {"x": m.gnss_x, "y": m.gnss_y, "vx": m.gnss_vx, "vy": m.gnss_vy},
+                "imu": {"ax": m.ax, "ay": m.ay, "wz": m.wz},
+                "wheel_speed": {"w": list(m.wheel_speed)},
+                "steer": {"angle": m.steer}}
+        if sensor_id is None:
+            return meas
+        return meas.get(self._types.get(sensor_id, sensor_id), {})
+
+    def done(self):
+        return self.sess.output().sim_time >= self.duration
+
+    def time(self):
+        return self.sess.output().sim_time
 
 
 def main():
