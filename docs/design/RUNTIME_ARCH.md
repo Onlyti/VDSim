@@ -44,12 +44,17 @@ Three rules:
    get_data` is the only stepping path. Batch and embedded callers use only
    this. (`python/vdsim_lab.py`, `tools/vdsim_batch.py`, the `vdsim` .so.)
 
-2. **[2] UDP comms wraps [3].** Control SOURCES (autopilot, wheel, external
-   node) arrive on in-channels; signal SINKS (viewer, logger, HIL, FFB) receive
-   fan-out. The C++ `udp_server` and the Python router MUST share one wire spec.
-   Canonical = `cosim/cosim_protocol.hpp`; the Python side mirrors it (promote
-   `cosim/test_udp_client.py`'s pack/decode into a real module, retire the toy
-   templates in `vdsim_comms.py`).
+2. **[2] is the real-time runtime, not merely "comms."** `vdsim_udp_server` is
+   VDSim's real-time application: it drives the *same* SimSession core as [3],
+   but paced by `RealTimeRunner` against a wall clock, with UDP as its I/O. So
+   [3] and [2] are the two ways to run one core — offline/deterministic vs
+   real-time (CarMaker's ERG-batch vs HIL analogue). UDP is just the app's I/O
+   surface: control SOURCES (autopilot, wheel, external node, AutoHYU bridge) in,
+   signal SINKS (viewer, logger, HIL, FFB) out. One wire spec, canonical =
+   `cosim/cosim_protocol.hpp`, Python mirror = `cosim/protocol.py`. Bringing the
+   server to feature parity with the in-process sim (road/terrain/sensors,
+   extended STATE) is what makes it the *full* runtime — until then it is a
+   flat-ground half (see Open items).
 
 3. **[1] Web viewer observes only.** It subscribes to the signal stream (the
    same data branch [2] emits, or a read-only state feed) and renders. It holds
