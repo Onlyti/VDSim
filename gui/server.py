@@ -278,6 +278,20 @@ class FigureEight(WaypointPath):
 COSIM_BIN = REPO / "build" / "bin" / "vdsim_udp_server"
 
 
+def _write_terrain(path, terrain):
+    """Write a baked heightmap to the udp_server's binary terrain format:
+    int32 nx, ny, double x0,y0,dx,dy, then nx*ny doubles row-major h[iy*nx+ix]."""
+    import struct
+    import numpy as np
+    H = np.asarray(terrain["H"], dtype="<f8")
+    ny, nx = H.shape
+    with open(path, "wb") as f:
+        f.write(struct.pack("<ii", int(nx), int(ny)))
+        f.write(struct.pack("<dddd", float(terrain["x0"]), float(terrain["y0"]),
+                            float(terrain["dx"]), float(terrain["dy"])))
+        f.write(H.tobytes())   # C-order row-major == h[iy*nx+ix]
+
+
 class CosimBridge:
     """Launches the binary vdsim_udp_server, consumes its STATE packets for the
     3D view, and relays control as CMD packets (per cosim_protocol.hpp).
@@ -308,7 +322,7 @@ class CosimBridge:
         with self.lock:
             return self.proc is not None and self.proc.poll() is None
 
-    def start(self, vp, tp, over):
+    def start(self, vp, tp, over, road=None, sensors=None, terrain=None, sensor_delay=0.0):
         if self.running():
             self.stop()
         with self.lock:
@@ -325,6 +339,25 @@ class CosimBridge:
                     f"--cmd-port={int(c['cmd_port'])}", "--state-ip=127.0.0.1",
                     f"--state-port={int(c['state_port'])}", f"--rate={float(c['rate'])}",
                     f"--vx0={float(c['vx0'])}", f"--cmd-timeout={float(c['cmd_timeout'])}"]
+            # road / terrain / sensors -> full real-time runtime parity with the
+            # in-process sim (terrain wins over analytic surface, server-side).
+            if terrain is not None:
+                tf = os.path.join(self._tmp, "terrain.bin")
+                _write_terrain(tf, terrain)
+                args.append(f"--terrain={tf}")
+            elif road:
+                for flag, key in (("--mu=", "mu"), ("--mu-right=", "mu_right"),
+                                  ("--mu-boundary=", "mu_boundary"), ("--grade=", "grade"),
+                                  ("--bank=", "bank"), ("--rough-amp=", "rough_amp"),
+                                  ("--rough-wl=", "rough_wl")):
+                    if road.get(key) is not None:
+                        args.append(f"{flag}{float(road[key])}")
+            if sensors is not None:
+                sf = os.path.join(self._tmp, "sensors.yaml")
+                sensors.to_yaml(sf)
+                args.append(f"--sensors={sf}")
+            if sensor_delay:
+                args.append(f"--sensor-delay={float(sensor_delay)}")
             self._rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self._rx.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self._rx.bind(("127.0.0.1", int(c["state_port"])))
@@ -398,7 +431,11 @@ class CosimBridge:
                 "vx": s["vx"], "vy": s["vy"], "r": s["yaw_rate"],
                 "wx": s["roll_rate"], "wy": s["pitch_rate"],
                 "ax": s["ax"], "ay": s["ay"],
-                "steer": s["steer_applied"], "Fz": s["Fz"]}
+                "steer": s["steer_applied"], "Fz": s["Fz"],
+                "rack_torque": s["rack_torque"], "kappa": s["slip_ratio"],
+                "alpha": s["slip_angle"], "susp": s["susp"],
+                "m_gx": s["m_gnss_x"], "m_gy": s["m_gnss_y"], "m_ax": s["m_ax"],
+                "m_ay": s["m_ay"], "m_wz": s["m_wz"], "m_steer": s["m_steer"]}
 
 
 class VehiclePort:
@@ -765,7 +802,13 @@ class Runner:
                         "yaw": cs["yaw"], "roll": cs["roll"], "pitch": cs["pitch"],
                         "vx": cs["vx"], "vy": cs["vy"], "r": cs["r"],
                         "wx": cs["wx"], "wy": cs["wy"], "ax": cs["ax"], "ay": cs["ay"],
-                        "steer": cs["steer"], "Fz": cs["Fz"], "Ft": [], "susp": [],
+                        "steer": cs["steer"], "Fz": cs["Fz"], "Ft": [],
+                        "susp": cs.get("susp", []),
+                        "rack_torque": cs.get("rack_torque", 0.0),
+                        "kappa": cs.get("kappa", []), "alpha": cs.get("alpha", []),
+                        "m_gx": cs.get("m_gx", 0.0), "m_gy": cs.get("m_gy", 0.0),
+                        "m_ax": cs.get("m_ax", 0.0), "m_ay": cs.get("m_ay", 0.0),
+                        "m_wz": cs.get("m_wz", 0.0), "m_steer": cs.get("m_steer", 0.0),
                         "level": self.cosim.cfg["level"], "vehicle": self.cfg["vehicle"],
                         "v_target": vt, "dt": 1.0 / max(1.0, self.cosim.cfg["rate"]),
                         "time_scale": 1.0, "source": "cosim"}
@@ -1076,7 +1119,15 @@ class Runner:
             vp, tp = self.vp, self.tp
             over.setdefault("level", self.cfg["level"])
             over.setdefault("vx0", self.cfg["init_v"])
-        return self.cosim.start(vp, tp, over)
+            road = {"mu": self.cfg["road_mu"], "mu_right": self.cfg["road_mu_right"],
+                    "mu_boundary": self.cfg["road_boundary"], "grade": self.cfg["road_grade"],
+                    "bank": self.cfg["road_bank"], "rough_amp": self.cfg["road_rough_amp"],
+                    "rough_wl": self.cfg["road_rough_wl"]}
+            sensors = self.sensors if self.sensors.enabled else None
+            terrain = self.terrain
+            sensor_delay = self.sensor_delay
+        return self.cosim.start(vp, tp, over, road=road, sensors=sensors,
+                                terrain=terrain, sensor_delay=sensor_delay)
 
     def stop_cosim(self):
         return self.cosim.stop()
