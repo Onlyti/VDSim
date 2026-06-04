@@ -6,6 +6,7 @@ An open-core vehicle-dynamics simulation platform bridging chassis design and
 autonomous-driving evaluation.
 
 📖 **Documentation (theory + reports):** https://onlyti.github.io/VDSim/
+🏃 **How to run every mode (API / rt-comms / batch / GUI / FMI):** [docs/RUNNING.md](docs/RUNNING.md)
 
 > *Positioning*: external visualization / sensors are delegated (CARLA, etc.);
 > VDSim owns **accurate, validated vehicle dynamics** + **hardpoint-based design
