@@ -32,7 +32,7 @@ the last section.
 | 11 | FMI round-trip | native VDSim | max \|Δvx\| = 0 (machine precision) | 1e-9 | `python3 fmi_export/test_roundtrip.py` |
 | 12 | ISO 8608 roughness | PSD Gd(n)=Gd(n0)(n/n0)⁻² | RMS doubles/class: A 3.5, B 7.0, C 14.1, D 28 mm | 15% | `ctest -R Iso8608` |
 
-Full automated suite: `cd build && ctest` (128 unit + 57 integration = 185).
+Full automated suite: `cd build && ctest` — 187 checks, 100% green (measured 2026-06-04).
 
 ## Notes on specific results
 
