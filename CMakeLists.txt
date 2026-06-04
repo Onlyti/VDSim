@@ -20,6 +20,13 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     add_compile_options(-Wall -Wextra -Wpedantic -Wno-unused-parameter)
 endif()
 
+if(MSVC)
+    # Read sources as UTF-8 regardless of the system code page (e.g. cp949 on a
+    # Korean Windows), so UTF-8 comments/strings aren't misread — also silences
+    # the spdlog C4819 warnings.
+    add_compile_options(/utf-8)
+endif()
+
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
