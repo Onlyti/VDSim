@@ -7,6 +7,7 @@
 //   - Unknown extra keys are silently ignored.
 
 #include "vdsim/params.hpp"
+#include "vdsim/sensors.hpp"
 
 #include <yaml-cpp/yaml.h>
 #include <spdlog/spdlog.h>
@@ -341,6 +342,56 @@ void SolverParams::to_yaml(const std::string& path) const {
     out << YAML::Key << "integrator"     << YAML::Value << integrator_to_string(integrator);
     out << YAML::Key << "max_substep_dt" << YAML::Value << max_substep_dt;
     out << YAML::Key << "max_substeps"   << YAML::Value << max_substeps;
+    out << YAML::EndMap;
+    std::ofstream ofs(path);
+    if (!ofs) throw std::runtime_error("Cannot open YAML file for write: " + path);
+    ofs << out.c_str() << "\n";
+}
+
+// ---- SensorParams ----
+namespace {
+void pull_noise(const YAML::Node& root, const char* key, SensorNoise& n) {
+    const auto g = root[key];
+    if (!g || !g.IsMap()) return;
+    pull(g, "noise_std", n.noise_std);
+    pull(g, "bias",      n.bias);
+    pull(g, "bias_rw",   n.bias_rw);
+}
+void emit_noise(YAML::Emitter& out, const char* key, const SensorNoise& n) {
+    out << YAML::Key << key << YAML::Value << YAML::BeginMap
+        << YAML::Key << "noise_std" << YAML::Value << n.noise_std
+        << YAML::Key << "bias"      << YAML::Value << n.bias
+        << YAML::Key << "bias_rw"   << YAML::Value << n.bias_rw
+        << YAML::EndMap;
+}
+}  // namespace
+
+SensorParams SensorParams::from_yaml(const std::string& path) {
+    const auto root = load_root(path);
+    SensorParams p;
+    pull(root, "enabled", p.enabled);
+    pull(root, "seed",    p.seed);
+    pull_noise(root, "imu_accel",   p.imu_accel);
+    pull_noise(root, "imu_gyro",    p.imu_gyro);
+    pull_noise(root, "wheel_speed", p.wheel_speed);
+    pull_noise(root, "steer",       p.steer);
+    pull_noise(root, "gnss_pos",    p.gnss_pos);
+    pull_noise(root, "gnss_vel",    p.gnss_vel);
+    return p;
+}
+
+void SensorParams::to_yaml(const std::string& path) const {
+    YAML::Emitter out;
+    out.SetIndent(2);
+    out << YAML::BeginMap;
+    out << YAML::Key << "enabled" << YAML::Value << enabled;
+    out << YAML::Key << "seed"    << YAML::Value << seed;
+    emit_noise(out, "imu_accel",   imu_accel);
+    emit_noise(out, "imu_gyro",    imu_gyro);
+    emit_noise(out, "wheel_speed", wheel_speed);
+    emit_noise(out, "steer",       steer);
+    emit_noise(out, "gnss_pos",    gnss_pos);
+    emit_noise(out, "gnss_vel",    gnss_vel);
     out << YAML::EndMap;
     std::ofstream ofs(path);
     if (!ofs) throw std::runtime_error("Cannot open YAML file for write: " + path);

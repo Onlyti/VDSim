@@ -449,7 +449,9 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("wheel_speed", &vdsim::SensorParams::wheel_speed)
         .def_readwrite("steer",       &vdsim::SensorParams::steer)
         .def_readwrite("gnss_pos",    &vdsim::SensorParams::gnss_pos)
-        .def_readwrite("gnss_vel",    &vdsim::SensorParams::gnss_vel);
+        .def_readwrite("gnss_vel",    &vdsim::SensorParams::gnss_vel)
+        .def_static("from_yaml", &vdsim::SensorParams::from_yaml, py::arg("path"))
+        .def("to_yaml", &vdsim::SensorParams::to_yaml, py::arg("path"));
     py::class_<vdsim::SensorMeas>(m, "SensorMeas")
         .def(py::init<>())
         .def_readonly("ax", &vdsim::SensorMeas::ax)

@@ -14,6 +14,7 @@
 #include "vdsim/coordinate.hpp"
 #include "vdsim/interfaces.hpp"
 #include "vdsim/realtime_runner.hpp"
+#include "vdsim/sensors.hpp"
 #include "vdsim/sim_session.hpp"
 
 #include <arpa/inet.h>
@@ -96,7 +97,8 @@ int main(int argc, char** argv) {
             "[--cmd-port=7001] [--state-ip=127.0.0.1] [--state-port=7002] "
             "[--rate=200] [--vx0=0] [--cmd-timeout=0.1] "
             "[--mu=1.0] [--mu-right=-1] [--mu-boundary=0] [--grade=0] [--bank=0] "
-            "[--rough-amp=0] [--rough-wl=4] [--iso-class=-1] [--terrain=<file>]\n",
+            "[--rough-amp=0] [--rough-wl=4] [--iso-class=-1] [--terrain=<file>] "
+            "[--sensors=<yaml>] [--sensor-delay=0]\n",
             argv[0]);
         return 2;
     }
@@ -123,8 +125,12 @@ int main(int argc, char** argv) {
     const double rough_wl    = optd(argc, argv, "--rough-wl=", 4.0);
     const int    iso_class   = (int)optd(argc, argv, "--iso-class=", -1.0);
     const std::string terrain = opts(argc, argv, "--terrain=", "");
+    const std::string sensors_yaml = opts(argc, argv, "--sensors=", "");
+    const double sensor_delay = optd(argc, argv, "--sensor-delay=", 0.0);
 
     vdsim::SimConfig cfg; cfg.nominal_dt = dt;
+    if (!sensors_yaml.empty()) cfg.sensors = vdsim::SensorParams::from_yaml(sensors_yaml);
+    cfg.sensor_delay_s = sensor_delay;
     vdsim::SimSession sim(make_dyn(level),
         make_ground(terrain, mu, mu_right, mu_boundary, grade, bank, rough_amp, rough_wl, iso_class),
         vp, tp, sp, cfg);

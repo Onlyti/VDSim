@@ -11,6 +11,7 @@
 
 #include <array>
 #include <random>
+#include <string>
 
 #include "vdsim/state.hpp"
 
@@ -32,6 +33,9 @@ struct SensorParams {
     SensorNoise steer;        // road-wheel steer angle [rad]
     SensorNoise gnss_pos;     // world x, y [m]
     SensorNoise gnss_vel;     // world (ENU) vx, vy [m/s]
+
+    static SensorParams from_yaml(const std::string& path);
+    void to_yaml(const std::string& path) const;
 };
 
 // Measured sensor bundle (alongside ground truth in SimOutput).
