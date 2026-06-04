@@ -3,6 +3,12 @@ include(FetchContent)
 # Make all FetchContent targets PIC so they can link into shared objects.
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# CMake >= 3.31 errors on subprojects whose cmake_minimum_required(<3.5)
+# (yaml-cpp 0.8.0 = 3.4, Eigen 3.4 = 2.8). Clamp the effective minimum so the
+# pinned third-party releases keep configuring. Harmless on older CMake (the
+# variable is simply unused). Scoped to this directory + the fetched subdirs.
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+
 # Eigen3 (MPL2, headers only)
 FetchContent_Declare(
     eigen
