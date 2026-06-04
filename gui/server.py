@@ -275,7 +275,8 @@ class FigureEight(WaypointPath):
         super().__init__(fig8_pts(0.0, 0.0, R, n))
 
 
-COSIM_BIN = REPO / "build" / "bin" / "vdsim_realtime"
+COSIM_BIN = REPO / "build" / "bin" / ("vdsim_realtime.exe" if os.name == "nt"
+                                      else "vdsim_realtime")
 
 
 def _write_terrain(path, terrain):

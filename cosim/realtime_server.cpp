@@ -17,10 +17,21 @@
 #include "vdsim/sensors.hpp"
 #include "vdsim/sim_session.hpp"
 
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
+// Cross-platform UDP sockets: Winsock2 on Windows, BSD sockets elsewhere.
+#ifdef _WIN32
+  #include <winsock2.h>
+  #include <ws2tcpip.h>
+  using socket_t = SOCKET;
+  static int close_socket(socket_t s) { return ::closesocket(s); }
+#else
+  #include <arpa/inet.h>
+  #include <netinet/in.h>
+  #include <sys/socket.h>
+  #include <unistd.h>
+  using socket_t = int;
+  static constexpr socket_t INVALID_SOCKET = -1;
+  static int close_socket(socket_t s) { return ::close(s); }
+#endif
 
 #include <atomic>
 #include <chrono>
@@ -102,6 +113,12 @@ int main(int argc, char** argv) {
             argv[0]);
         return 2;
     }
+#ifdef _WIN32
+    WSADATA wsa;
+    if (::WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
+        std::fprintf(stderr, "WSAStartup failed\n"); return 1;
+    }
+#endif
     const auto vp = vdsim::VehicleParams::from_yaml(argv[1]);
     const auto tp = vdsim::TireParams::from_yaml(argv[2]);
     vdsim::SolverParams sp;
@@ -146,16 +163,21 @@ int main(int argc, char** argv) {
     sim.reset(s0);
 
     // UDP socket: bind cmd_port for recv, sendto state dest.
-    int sock = ::socket(AF_INET, SOCK_DGRAM, 0);
-    if (sock < 0) { std::perror("socket"); return 1; }
+    socket_t sock = ::socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock == INVALID_SOCKET) { std::perror("socket"); return 1; }
     sockaddr_in bind_addr{}; bind_addr.sin_family = AF_INET;
     bind_addr.sin_addr.s_addr = INADDR_ANY; bind_addr.sin_port = htons((uint16_t)cmd_port);
-    if (::bind(sock, (sockaddr*)&bind_addr, sizeof(bind_addr)) < 0) {
-        std::perror("bind"); ::close(sock); return 1;
+    if (::bind(sock, (sockaddr*)&bind_addr, (int)sizeof(bind_addr)) < 0) {
+        std::perror("bind"); close_socket(sock); return 1;
     }
-    // Recv timeout so the recv thread can observe shutdown and join cleanly.
-    timeval rcvto{}; rcvto.tv_sec = 0; rcvto.tv_usec = 100000;  // 100 ms
+    // Recv timeout (100 ms) so the recv thread can observe shutdown and join.
+#ifdef _WIN32
+    DWORD rcvto = 100;  // milliseconds
+    ::setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&rcvto, sizeof(rcvto));
+#else
+    timeval rcvto{}; rcvto.tv_sec = 0; rcvto.tv_usec = 100000;
     ::setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &rcvto, sizeof(rcvto));
+#endif
     sockaddr_in dst{}; dst.sin_family = AF_INET; dst.sin_port = htons((uint16_t)st_port);
     ::inet_pton(AF_INET, st_ip.c_str(), &dst.sin_addr);
 
@@ -173,7 +195,7 @@ int main(int argc, char** argv) {
     std::thread recv_thread([&] {
         uint8_t buf[256];
         while (g_run.load()) {
-            const ssize_t n = ::recv(sock, buf, sizeof(buf), 0);
+            const int n = ::recv(sock, (char*)buf, (int)sizeof(buf), 0);
             if (n <= 0) continue;
             vdsim::cosim::CmdFields f;
             if (!vdsim::cosim::decode_cmd(buf, (size_t)n, f)) continue;   // bad magic/crc
@@ -220,14 +242,17 @@ int main(int argc, char** argv) {
         s.m_ax = o.sensors.ax; s.m_ay = o.sensors.ay; s.m_wz = o.sensors.wz;
         s.m_steer = o.sensors.steer; s.m_gnss_x = o.sensors.gnss_x; s.m_gnss_y = o.sensors.gnss_y;
         const int len = vdsim::cosim::encode_state(out, s);
-        ::sendto(sock, out, (size_t)len, 0, (sockaddr*)&dst, sizeof(dst));
+        ::sendto(sock, (const char*)out, len, 0, (sockaddr*)&dst, (int)sizeof(dst));
         next += period;
         std::this_thread::sleep_until(next);
     }
 
     runner.stop();
     recv_thread.join();
-    ::close(sock);
+    close_socket(sock);
+#ifdef _WIN32
+    ::WSACleanup();
+#endif
     std::fprintf(stderr, "[vdsim_realtime] stopped. sim_time=%.2fs, cmds=%llu\n",
                  sim.sim_time(), (unsigned long long)cmd_count.load());
     return 0;
