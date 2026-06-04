@@ -453,6 +453,13 @@ class Experiment:
         exp._duration = float(cfg.get("duration", 10.0))
         exp._run = cfg.get("run", {"mode": "api"})
         exp._line = line                      # map reference line (for CTE/lap metrics)
+        for k, v in (cfg.get("_overrides") or {}).items():   # batch sweep/MC overrides
+            if k.startswith("vehicle."):
+                setattr(exp._veh.vp, k.split(".", 1)[1], v)
+            elif k.startswith("tire."):
+                setattr(exp._tire.tp, k.split(".", 1)[1], v)
+            elif k == "mu":
+                exp._road.p["mu"] = v
         return exp
 
     def run(self, duration=None):
