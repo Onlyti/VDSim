@@ -299,7 +299,10 @@ class CosimBridge:
     The GUI configures and runs the real co-sim server; the Python playground sim
     is bypassed while the bridge is active so there is one source of truth.
     """
-    DEFAULT = {"level": "L2", "cmd_port": 7001, "state_port": 7002,
+    # Private loopback ports for the GUI's own real-time runtime instance. NOT
+    # the canonical 7001/7002 (those are the external AutoHYU contract and can
+    # collide with other local services, e.g. NoMachine's nxnode).
+    DEFAULT = {"level": "L2", "cmd_port": 7401, "state_port": 7402,
                "rate": 200.0, "vx0": 0.0, "cmd_timeout": 0.1}
 
     def __init__(self):
