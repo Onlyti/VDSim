@@ -11,7 +11,10 @@ requires-python = ">=3.8"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Jiwon Seok" }]
 keywords = ["vehicle-dynamics", "simulation", "pacejka", "fmi", "autonomous-driving"]
-dependencies = ["numpy"]
+dependencies = ["numpy", "pyyaml"]
+
+[project.optional-dependencies]
+plot = ["matplotlib"]
 
 [project.urls]
 Homepage = "https://onlyti.github.io/VDSim/"
