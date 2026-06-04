@@ -12,8 +12,9 @@ Description=VDSim racing-wheel force-feedback bridge
 After=graphical-session.target
 
 [Service]
-# evdev variant (Linux-native); swap to wheel_ffb_sdl.py for the SDL2 version
-ExecStart=/usr/bin/python3 %h/git/VDSim/tools/wheel_ffb.py --url http://localhost:8100 --gain 0.8 --autocenter 0.15
+# Cross-platform SDL2 helper (same one Windows uses). For a no-SDL Linux setup,
+# swap wheel_ffb_sdl.py -> wheel_ffb.py (evdev variant).
+ExecStart=/usr/bin/python3 %h/git/VDSim/tools/wheel_ffb_sdl.py --url http://localhost:8100 --gain 0.8 --autocenter 0.15
 Restart=on-failure
 RestartSec=3
 
