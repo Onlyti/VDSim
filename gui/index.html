@@ -412,6 +412,9 @@ const clock=new THREE.Clock();
 // Follow = translate camera + orbit target by the car's motion each frame, so
 // the car stays framed while OrbitControls still lets you change view angle/zoom.
 const prevCarPos=new THREE.Vector3(); let prevInit=false;
+// Sound state declared before the animation loop: frame() calls updateSound()
+// which reads soundOn, so it must be initialized first (avoid let TDZ).
+let audio=null, eng=null, engGain=null, windGain=null, screechGain=null, soundOn=false;
 function frame(){ requestAnimationFrame(frame);
   const dt=Math.min(clock.getDelta(), 0.1);
   if(tgt.has){
@@ -573,7 +576,7 @@ $('drv_wheel').onclick=()=>{ wheelOn=!wheelOn; $('drv_wheel').classList.toggle('
 addEventListener('gamepadconnected',()=>{ $('drv_gp').textContent='gamepad connected — press 🎮 Wheel/pedals'; });
 
 // ---- engine / tire / wind sound (Web Audio), tied to telemetry ----
-let audio=null, eng=null, engGain=null, windGain=null, screechGain=null, soundOn=false;
+// (audio/eng/.../soundOn declared above the frame loop to avoid TDZ)
 function initAudio(){
   audio=new (window.AudioContext||window.webkitAudioContext)();
   eng=audio.createOscillator(); eng.type='sawtooth'; engGain=audio.createGain(); engGain.gain.value=0;
