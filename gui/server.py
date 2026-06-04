@@ -1118,6 +1118,7 @@ class Handler(BaseHTTPRequestHandler):
             html = (HERE / "index.html").read_bytes()
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
             self.send_header("Content-Length", str(len(html)))
             self.end_headers()
             self.wfile.write(html)
