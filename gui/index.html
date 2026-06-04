@@ -346,7 +346,7 @@ async function rebuildCar(level){
       const g=new THREE.Group();
       const shaft=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,1,12), m); shaft.position.y=0.5;
       const head=new THREE.Mesh(new THREE.ConeGeometry(0.14,0.30,16), m); head.position.y=1.0;
-      g.add(shaft, head); g.position.set(x,0.06,z); g.visible=false;
+      g.add(shaft, head); g.position.set(x,0.16,z); g.visible=false;   // above the asphalt ribbon (y=0.12)
       g.userData={shaft, head}; car.add(g); return g; };
     axx.push(mk(0xff3b30)); axy.push(mk(0x34c759)); axz.push(mk(0x0a84ff));
     if(susp){   // L3: visible coil spring (animated) + unsprung block
@@ -386,7 +386,7 @@ function renderForces(Ft, Fz, susp){
   const kin=(renderLevel==='K'), bike=(wheels.length===2);  // K: no forces; bike: Fz only
   for(let i=0;i<wheels.length;i++){
     const [Fx,Fy,Fzz]=WF[i]; const w=wheels[i].position;
-    [axx[i],axy[i],axz[i]].forEach(a=>a.position.set(w.x,0.06,w.z));
+    [axx[i],axy[i],axz[i]].forEach(a=>a.position.set(w.x,0.16,w.z));
     if(kin){ axx[i].visible=axy[i].visible=axz[i].visible=false; continue; }
     setArr(axz[i], new THREE.Vector3(0,1,0), Fzz, FZSCALE);                      // B: Fz up (always shown)
     if(bike){ axx[i].visible=false; axy[i].visible=false; }                      // single-track: no L/R lat/long
