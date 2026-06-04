@@ -35,6 +35,7 @@ KIND_DIR = {
     "sensors": REPO / "configs" / "sensors",
     "maps": REPO / "configs" / "maps",
     "experiments": REPO / "configs" / "experiments",
+    "comms": REPO / "configs" / "comms",
 }
 
 
@@ -86,6 +87,14 @@ def validate(kind, data):
             if len(pts) < 2:
                 return {"ok": False, "msg": "driving line has < 2 points"}
             return {"ok": True, "pts": len(pts)}
+        if kind == "comms":
+            for c in data.get("channels", []):
+                if c.get("direction") == "in":
+                    if not c.get("listen", {}).get("port"):
+                        return {"ok": False, "msg": "in-channel needs listen.port"}
+                elif not c.get("source") or not c.get("to"):
+                    return {"ok": False, "msg": "out-channel needs source + to[]"}
+            return {"ok": True, "channels": len(data.get("channels", []))}
         return {"ok": True}
     except Exception as e:
         return {"ok": False, "msg": str(e)[:200]}

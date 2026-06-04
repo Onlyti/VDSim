@@ -37,7 +37,7 @@ const api={
  post:(p,b)=>fetch(p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json())
 };
 let TAB='vehicle';
-const TABS=['vehicle','sensors','map','scenario'];
+const TABS=['vehicle','sensors','map','comms','scenario'];
 function tabbar(){ $('#tabs').innerHTML=TABS.map(t=>`<div class="tab ${t===TAB?'on':''}" onclick="setTab('${t}')">${t[0].toUpperCase()+t.slice(1)}</div>`).join(''); }
 function setTab(t){ TAB=t; tabbar(); render(); }
 
@@ -55,6 +55,7 @@ async function render(){
  if(TAB==='vehicle') return renderVehicle();
  if(TAB==='sensors') return renderSensors();
  if(TAB==='map')     return renderMap();
+ if(TAB==='comms')   return renderComms();
  if(TAB==='scenario')return renderScenario();
 }
 const VEH_DEF={name:'my_vehicle',mass:1500,mass_sprung:1350,wheelbase:2.70,cg_to_front:1.20,cg_to_rear:1.50,
@@ -173,16 +174,56 @@ async function saveMap(){ const r=await api.post('/api/save',{kind:'maps',name:$
   $('#m_stat').textContent=r.ok?('saved → '+r.path):('FAILED: '+r.msg); }
 
 // ===========================================================================
+// COMMS (data routing)
+// ===========================================================================
+let CHANNELS=[];
+const TEMPLATES=['json','vds1_state','vds1_cmd','nmea_gga','imu_raw'];
+async function renderComms(){
+ const presets=await options('comms'), sens=await options('sensors');
+ $('#form').innerHTML=`<h3>Comms builder</h3>
+  <div class="fld"><label>load preset</label><select id="c_load"><option value=""></option>${presets.map(p=>`<option>${p}</option>`).join('')}</select></div>
+  ${txt('name','c_name','my_comms')}
+  <div class="grp">Add channel</div>
+  ${sel('direction','c_dir',['out','in'],'out')}
+  ${sel('source','c_src',['ego.state','ego.cmd','ego.sensor.gnss','ego.sensor.imu0'],'ego.state')}
+  ${sel('template','c_tmpl',TEMPLATES,'json')}
+  <div id="c_out">${txt('to ip','c_ip','127.0.0.1')}${num('to port','c_port',7100)}</div>
+  <div id="c_in" class="hide">${num('listen port','c_lport',7001)}</div>
+  <div class="row"><button onclick="addChannel()">+ Add</button><button onclick="saveComms()">Save</button></div>
+  <div class="stat" id="c_stat"></div>`;
+ $('#c_dir').onchange=e=>{ const out=e.target.value==='out'; $('#c_out').classList.toggle('hide',!out); $('#c_in').classList.toggle('hide',out); };
+ $('#c_load').onchange=async e=>{ if(!e.target.value)return; const d=(await api.get('/api/load?kind=comms&name='+e.target.value)).data; CHANNELS=(d&&d.channels)||[]; $('#c_name').value=e.target.value; drawComms(); };
+ drawComms();
+}
+function addChannel(){
+ if(val('c_dir')==='in') CHANNELS.push({direction:'in',template:val('c_tmpl'),listen:{port:val('c_lport')}});
+ else CHANNELS.push({source:val('c_src'),template:val('c_tmpl'),to:[{ip:$('#c_ip').value,port:val('c_port')}]});
+ drawComms();
+}
+function rmChannel(i){ CHANNELS.splice(i,1); drawComms(); }
+function addDest(i){ const ip=prompt('dest ip','127.0.0.1'); const p=prompt('dest port','7101'); if(ip&&p){ CHANNELS[i].to.push({ip,port:+p}); drawComms(); } }
+function drawComms(){ $('#side').innerHTML=`<h3>Channels (${CHANNELS.length})</h3>
+  <table><tr><th>dir</th><th>source</th><th>template</th><th>to / listen</th><th></th></tr>
+  ${CHANNELS.map((c,i)=>`<tr><td>${c.direction||'out'}</td><td>${c.source||'-'}</td><td>${c.template}</td>
+    <td>${c.direction==='in'?(':'+c.listen.port):c.to.map(d=>d.ip+':'+d.port).join(', ')+` <button class="ghost" onclick="addDest(${i})">+ip</button>`}</td>
+    <td><button class="ghost" onclick="rmChannel(${i})">×</button></td></tr>`).join('')}</table>
+  <div class="stat" style="margin-top:8px">out = source → destinations (fan-out). in = listen for control (fan-in). Template fixes the packet layout.</div>`; }
+async function saveComms(){ const r=await api.post('/api/save',{kind:'comms',name:$('#c_name').value,data:{name:$('#c_name').value,channels:CHANNELS}});
+  $('#c_stat').textContent=r.ok?('saved → '+r.path):('FAILED: '+r.msg); }
+
+// ===========================================================================
 // SCENARIO (compose)
 // ===========================================================================
 async function renderScenario(){
- const veh=await options('vehicles'),tire=await options('tires'),maps=await options('maps'),sens=await options('sensors');
+ const veh=await options('vehicles'),tire=await options('tires'),maps=await options('maps'),sens=await options('sensors'),comms=await options('comms');
  $('#form').innerHTML=`<h3>Scenario builder</h3>
   ${txt('name','x_name','my_experiment')}
   <div class="grp">Plant</div>
   ${sel('vehicle','x_veh',veh,veh[0]||'')}${sel('tire','x_tire',tire,tire[0]||'')}${sel('level','x_level',['K','L1','L2','L3'],'L3')}
   <div class="grp">Environment</div>
   ${sel('map','x_map',['(none)'].concat(maps),'(none)')}${sel('sensors','x_sens',['(none)'].concat(sens),'(none)')}
+  <div class="grp">Run</div>
+  ${sel('mode','x_mode',['api','rt_comms'],'api')}${sel('comms','x_comms',['(none)'].concat(comms),'(none)')}
   <div class="grp">Maneuver</div>
   ${sel('type','x_mtype',['path','constant_speed','step_steer','accel','brake'],'path')}
   ${num('target speed [m/s]','x_v',20)}${num('laps / hold [s]','x_p',5)}${num('steer [rad]','x_steer',0.03)}
@@ -193,7 +234,8 @@ async function renderScenario(){
 }
 function scenData(){ const d={name:$('#x_name').value,vehicle:val('x_veh'),tire:val('x_tire'),level:val('x_level'),
    maneuver:{type:val('x_mtype'),v:val('x_v'),param:val('x_p'),steer:val('x_steer')},duration:val('x_dur')};
-  if(val('x_map')!=='(none)') d.map=val('x_map'); if(val('x_sens')!=='(none)') d.sensors=val('x_sens'); return d; }
+  if(val('x_map')!=='(none)') d.map=val('x_map'); if(val('x_sens')!=='(none)') d.sensors=val('x_sens');
+  const run={mode:val('x_mode')}; if(val('x_comms')!=='(none)') run.comms=val('x_comms'); d.run=run; return d; }
 async function saveScenario(){ const r=await api.post('/api/save',{kind:'experiments',name:$('#x_name').value,data:scenData()});
   $('#x_stat').textContent=r.ok?('saved → '+r.path):('FAILED: '+r.msg); }
 
