@@ -78,16 +78,52 @@ res = (Experiment(level="L3")
 res.to_csv("run.csv");  print(res.summary())
 ```
 
-## Build (full tree: C++ tests, examples, CARLA, co-sim)
+## Build & run (Linux / Windows)
 
+Cross-platform: C++ core, the `vdsim` Python wheel, the real-time runtime
+(`vdsim_realtime`, Winsock2 on Windows / BSD sockets elsewhere), the web GUI, and
+batch/FMI all run on both. Only `tools/wheel_ffb.py` (evdev) is Linux-only — use
+`tools/wheel_ffb_sdl.py` on Windows. `yaml-cpp`/`spdlog`/`Eigen`/`GoogleTest` are
+fetched automatically (FetchContent).
+
+Prerequisites: CMake ≥ 3.20, a C++17 compiler, Python ≥ 3.10 with a modern `pip`.
+- Linux: `g++ ≥ 9` or `clang ≥ 10` (`ninja` recommended).
+- Windows: Visual Studio 2019+ with "Desktop development with C++" (MSVC), or the
+  standalone Build Tools for Visual Studio.
+
+### Full C++ tree (tests, apps, real-time runtime, CARLA bridge)
+
+Linux:
 ```bash
-cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release \
-    -DVDSIM_BUILD_PYTHON=ON -DVDSIM_BUILD_CARLA_PLUGIN=ON
+cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release -DVDSIM_BUILD_PYTHON=ON
 cmake --build build -j
-(cd build && ctest --output-on-failure)
+(cd build && ctest --output-on-failure)              # 187 checks
 ```
 
-Requires cmake ≥ 3.16, ninja, g++ ≥ 9 / clang ≥ 8, python3 + pybind11.
+Windows (x64 Native Tools / Developer PowerShell):
+```powershell
+cmake -B build -DVDSIM_BUILD_PYTHON=ON
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
+```
+Binaries land in `build/bin/` on both (a flat dir is forced for VS multi-config).
+
+### Web GUI — real-time viewer (auto-starts `vdsim_realtime`)
+
+```bash
+python3 gui/server.py --port 8100      # Linux
+python  gui\server.py --port 8100      # Windows
+```
+Open `http://localhost:8100`. Drive with keyboard / a gamepad-wheel; force
+feedback via `python tools/wheel_ffb_sdl.py --server <host> --udp-port 8101`
+(Win + Linux).
+
+### Real-time runtime standalone (SIL / HIL / co-sim)
+
+```bash
+build/bin/vdsim_realtime     configs/vehicles/sedan.yaml configs/tires/default_pacejka.yaml --level=L3   # Linux
+build\bin\vdsim_realtime.exe configs\vehicles\sedan.yaml configs\tires\default_pacejka.yaml --level=L3   # Windows
+```
 
 ## Quick tour
 

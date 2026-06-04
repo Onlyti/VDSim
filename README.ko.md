@@ -27,16 +27,49 @@
 | `configs/` | `vehicles/`, `tires/`, `suspensions/` (DW/MP/TA/5-link YAML), `scenarios/`. |
 | `tests/` | `unit/` + `integration/` (187 tests, 100% 통과). |
 
-## 빌드
+## 빌드 & 실행 (Linux / Windows)
 
+크로스플랫폼: C++ core · `vdsim` 파이썬 wheel · real-time runtime
+(`vdsim_realtime`, Windows=Winsock2 / 그 외=BSD socket) · 웹 GUI · batch/FMI 모두
+양쪽에서 동작. `tools/wheel_ffb.py`(evdev)만 Linux 전용 — Windows 는
+`tools/wheel_ffb_sdl.py` 사용. yaml-cpp/spdlog/Eigen/GoogleTest 는 FetchContent 로 자동.
+
+전제: CMake ≥ 3.20, C++17 컴파일러, Python ≥ 3.10 + 최신 `pip`.
+- Linux: `g++ ≥ 9` 또는 `clang ≥ 10` (ninja 권장)
+- Windows: Visual Studio 2019+ "C++ 데스크톱 개발"(MSVC) 또는 Build Tools
+
+### 전체 C++ 트리 (tests, apps, real-time runtime, CARLA bridge)
+
+Linux:
 ```bash
-cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release \
-    -DVDSIM_BUILD_PYTHON=ON -DVDSIM_BUILD_CARLA_PLUGIN=ON
+cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release -DVDSIM_BUILD_PYTHON=ON
 cmake --build build -j
-(cd build && ctest --output-on-failure)
+(cd build && ctest --output-on-failure)              # 187 checks
 ```
 
-요구사항: cmake ≥ 3.16, ninja, g++ ≥ 9 / clang ≥ 8, python3 + pybind11.
+Windows (x64 Native Tools / Developer PowerShell):
+```powershell
+cmake -B build -DVDSIM_BUILD_PYTHON=ON
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
+```
+바이너리는 양쪽 다 `build/bin/` (VS multi-config 도 flat 으로 고정).
+
+### 웹 GUI — 실시간 뷰어 (`vdsim_realtime` 자동 기동)
+
+```bash
+python3 gui/server.py --port 8100      # Linux
+python  gui\server.py --port 8100      # Windows
+```
+`http://localhost:8100`. 키보드/게임패드-휠로 운전, FFB 는
+`python tools/wheel_ffb_sdl.py --server <host> --udp-port 8101` (Win+Linux).
+
+### real-time runtime 단독 (SIL/HIL/co-sim)
+
+```bash
+build/bin/vdsim_realtime     configs/vehicles/sedan.yaml configs/tires/default_pacejka.yaml --level=L3   # Linux
+build\bin\vdsim_realtime.exe configs\vehicles\sedan.yaml configs\tires\default_pacejka.yaml --level=L3   # Windows
+```
 
 ## 빠른 둘러보기
 
