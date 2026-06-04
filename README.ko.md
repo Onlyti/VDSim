@@ -25,7 +25,7 @@
 | `apps/validation/` | ISO 7401 (step steer), ISO 4138 (정상상태 선회), ISO 3888-2 (double lane change) — metric 자동 추출 + 리포트. |
 | `fmi_export/` | FMI 2.0 Co-Simulation export (L2 + L3 FMU) 와 import (`fmu_master.py` — ctypes 로 임의 FMI 2.0 CS FMU 로드). |
 | `configs/` | `vehicles/`, `tires/`, `suspensions/` (DW/MP/TA/5-link YAML), `scenarios/`. |
-| `tests/` | `unit/` + `integration/` (165 tests). |
+| `tests/` | `unit/` + `integration/` (187 tests, 100% 통과). |
 
 ## 빌드
 
@@ -163,7 +163,7 @@ python3 carla_integration/python/run_demo.py \
 | ISO 3888-2 DLC @ 60 km/h | FAIL (excursion 1.3 m, speed loss 5.5 km/h) |
 | ISO 3888-2 DLC @ 40 km/h | PASS (excursion 0.3 m, speed loss 1.0 km/h) |
 | FMU export round-trip | max \|Δoutput\| = 0 (수치 정밀도) |
-| ctest | **165 / 165 통과** |
+| ctest | **187 / 187 통과** |
 
 ## 문서
 

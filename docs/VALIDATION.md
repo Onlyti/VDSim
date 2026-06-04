@@ -1,8 +1,26 @@
 # VDSim validation & credibility
 
+> **v0.1.0 experimental / pre-release.** The claims below rest on open evidence
+> (analytic + ISO standard + cross-model/cross-tool self-consistency). There is
+> no published cross-validation against a commercial reference on real-vehicle
+> data — see "Honest limitations". Not for production use.
+
 What "validated dynamics" means here, and how to reproduce every claim. VDSim is
 validated on four layers that need no proprietary data; the honest limits are in
 the last section.
+
+## At a glance — validated / not yet
+
+| Validated (open, reproducible) | NOT yet validated |
+|---|---|
+| L1–L3 dynamics vs analytic (linear-bicycle yaw, drag coast, weight transfer) | Cross-validation vs CarMaker/CarSim/Adams on real-vehicle data (data confidential, not redistributable) |
+| ISO 7401 step-steer / 4138 understeer / 3888-2 DLC — run + measured | Tire thermal, wear, full transient beyond first-order relaxation |
+| L1↔L2↔L3 cross-model consistency where physics overlaps | Dependent axles (twist-beam / solid beam) — configs are stubs |
+| FMI round-trip Δ=0 (machine precision); ISO 8608 PSD RMS per class | L3 unsprung lateral-transfer term (small) |
+| Full suite: **187/187 ctest green** | — |
+
+Note: ISO 3888-2 DLC@60 not meeting the 1.0 m gate is a default-preset
+vehicle/controller property, not a sim defect (see "Notes on specific results").
 
 ## Validation layers
 

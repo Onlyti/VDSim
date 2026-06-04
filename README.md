@@ -2,8 +2,24 @@
 
 **English** · [한국어](README.ko.md)
 
+[![build](https://github.com/Onlyti/VDSim/actions/workflows/build.yml/badge.svg)](https://github.com/Onlyti/VDSim/actions/workflows/build.yml)
+[![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+![status](https://img.shields.io/badge/status-experimental%20pre--release-orange.svg)
+
 An open-core vehicle-dynamics simulation platform bridging chassis design and
 autonomous-driving evaluation.
+
+**Why not just CARLA?** CARLA gives you a world and sensors but a game-engine
+vehicle. VDSim gives you the vehicle: validated L1–L3 dynamics with a real
+Pacejka tire, hardpoint suspension kinematics you can design against, and
+bidirectional FMI 2.0 so it drops into a co-simulation — while delegating
+rendering/sensors to CARLA. It is the chassis-accurate half that perception
+stacks lack.
+
+> **Status:** v0.1.0, experimental / pre-release. Validated on analytic + ISO
+> standard + cross-model/cross-tool self-consistency evidence
+> (see [VALIDATION](docs/VALIDATION.md)); not yet cross-validated against a
+> commercial reference on real-vehicle data. Not for production use.
 
 📖 **Documentation (theory + reports):** https://onlyti.github.io/VDSim/
 🏃 **How to run every mode (API / rt-comms / batch / GUI / FMI):** [docs/RUNNING.md](docs/RUNNING.md)
@@ -27,14 +43,23 @@ autonomous-driving evaluation.
 | `apps/validation/` | ISO 7401 (step steer), ISO 4138 (steady-state circular), ISO 3888-2 (double lane change) — automated metric extraction + report. |
 | `fmi_export/` | FMI 2.0 Co-Simulation export (L2 + L3 FMUs) and import (`fmu_master.py` — load any FMI 2.0 CS FMU via ctypes). |
 | `configs/` | `vehicles/`, `tires/`, `suspensions/` (DW/MP/TA/5-link YAML), `scenarios/`. |
-| `tests/` | `unit/` + `integration/` (165 tests). |
+| `tests/` | `unit/` + `integration/` (187 tests, 100% green). |
 
 ## Install (Python)
 
+Prerequisites: a C++17 compiler + CMake ≥ 3.20, and **Python ≥ 3.10 with a
+modern `pip`** (on Ubuntu 20.04's stock 3.8 you must `apt install python3-venv`
+and `pip install -U pip` first — older pip can't drive the scikit-build-core
+backend).
+
 ```bash
-pip install .                 # builds the vdsim extension (scikit-build-core)
-python -c "import vdsim; print(vdsim.__version__ if hasattr(vdsim,'__version__') else 'ok')"
+pip install ".[plot]"         # builds the vdsim extension (scikit-build-core); [plot] adds matplotlib
+python -c "import vdsim; print('ok')"
 ```
+
+Quickstart, measured end-to-end (clean venv → `pip install` → run a scenario →
+CSV → trajectory plot): **first result in ~16 s** on a warm dev machine (cold
+first build compiles the core, still well under a minute).
 `import vdsim` then gives the full API (`make_sim_session`, `VehicleParams`,
 `create_*_ground`, `make_sim_session_psd`, hardpoint kinematics, `linearize`, …).
 
@@ -47,9 +72,9 @@ from vdsim_lab import Experiment, Vehicle, Road, Maneuver, Sensors
 res = (Experiment(level="L3")
        .vehicle(Vehicle.preset("sedan"))
        .road(Road.preset("belgian_pave"))            # or .iso8608("C"), .inclined(...)
-       .maneuver(Maneuver.path(driving_line, v=15))  # or .step_steer(...), .constant_speed(...)
+       .maneuver(Maneuver.step_steer(v=20, steer=0.03))  # or .path(line, v=15), .constant_speed(...)
        .sensors(Sensors().gnss().imu())
-       .run(duration=20.0))
+       .run(duration=8.0))
 res.to_csv("run.csv");  print(res.summary())
 ```
 
