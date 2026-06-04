@@ -1102,6 +1102,10 @@ RUNNER = Runner()
 
 
 class Handler(BaseHTTPRequestHandler):
+    # HTTP/1.1 so the SSE stream (/api/stream) is a persistent connection the
+    # browser EventSource can hold open (HTTP/1.0 closes -> stuck "connecting").
+    protocol_version = "HTTP/1.1"
+
     def log_message(self, *a):
         pass
 
