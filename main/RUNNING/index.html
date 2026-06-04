@@ -2116,11 +2116,11 @@ Or assemble inline with the fluent builders and collect a time-series:
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">res</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s2">&quot;run.csv&quot;</span><span class="p">);</span> <span class="nb">print</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">summary</span><span class="p">())</span>
 </span></code></pre></div></p>
 <h3 id="b-real-time-comms-udp-silhil-nodes-in-the-loop">B. Real-time comms (UDP; SIL/HIL nodes in the loop)<a class="headerlink" href="#b-real-time-comms-udp-silhil-nodes-in-the-loop" title="Permanent link">&para;</a></h3>
-<p>The C++ <code>vdsim_udp_server</code> is the single comms layer: it runs a real-time
+<p>The C++ <code>vdsim_realtime</code> is the single comms layer: it runs a real-time
 <code>SimSession</code>, receives CMD packets on one port, and emits STATE on another. The
 wire format is the canonical VDS1 binary protocol (<code>cosim/cosim_protocol.hpp</code>,
 CRC32, 76B CMD / 220B STATE).
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>build/bin/vdsim_udp_server<span class="w"> </span>configs/vehicles/sedan.yaml<span class="w"> </span><span class="se">\</span>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>build/bin/vdsim_realtime<span class="w"> </span>configs/vehicles/sedan.yaml<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span>configs/tires/default_pacejka.yaml<span class="w"> </span>--level<span class="o">=</span>L3<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span>--cmd-port<span class="o">=</span><span class="m">7001</span><span class="w"> </span>--state-ip<span class="o">=</span><span class="m">127</span>.0.0.1<span class="w"> </span>--state-port<span class="o">=</span><span class="m">7002</span><span class="w"> </span>--rate<span class="o">=</span><span class="m">200</span>
 </span></code></pre></div>
