@@ -15,24 +15,25 @@ import json
 import math
 import os
 import socket
-import struct
 import subprocess
 import sys
 import tempfile
 import threading
 import time
-import zlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "build" / "python"))
+sys.path.insert(0, str(REPO / "cosim"))
 HERE = Path(__file__).resolve().parent
 
 try:
     import vdsim
 except ImportError as e:
     sys.exit(f"import vdsim failed ({e}). Build with -DVDSIM_BUILD_PYTHON=ON.")
+
+import protocol as vds1   # canonical VDS1 wire format (one definition, cosim/protocol.py)
 
 VEHICLES = ["sedan", "sports", "fsk_formula", "race_car"]
 LEVELS = ["K", "L1", "L2", "L3"]   # K = kinematic bicycle (no tire/slip)
@@ -275,7 +276,6 @@ class FigureEight(WaypointPath):
 
 
 COSIM_BIN = REPO / "build" / "bin" / "vdsim_udp_server"
-_CO_MAGIC, _CO_VER, _CO_CMD, _CO_STATE = 0x56445331, 1, 1, 2
 
 
 class CosimBridge:
@@ -369,11 +369,9 @@ class CosimBridge:
         if not self.running():
             return
         self._seq += 1
-        body = struct.pack("<IHHIId", _CO_MAGIC, _CO_VER, _CO_CMD, self._seq, 0, time.time())
-        body += struct.pack("<ddd", float(steer), float(throttle), float(brake))
-        body += struct.pack("<iB3x", int(gear), 0)
-        body += struct.pack("<dd", 0.0, 0.0)
-        body += struct.pack("<I", zlib.crc32(body) & 0xFFFFFFFF)
+        body = vds1.pack_cmd(self._seq, steer=steer, throttle=throttle, brake=brake,
+                             gear=gear, aux_accel=0.0, aux_speed=0.0,
+                             timestamp=time.time())
         try:
             self._tx.sendto(body, ("127.0.0.1", int(self.cfg["cmd_port"])))
         except OSError:
@@ -392,20 +390,15 @@ class CosimBridge:
 
     @staticmethod
     def _decode_state(buf):
-        if len(buf) < 220:
+        s = vds1.decode_state(buf)
+        if s is None:
             return None
-        if (zlib.crc32(buf[:216]) & 0xFFFFFFFF) != struct.unpack_from("<I", buf, 216)[0]:
-            return None
-        magic, _ver, mtype, _seq, _pad, ts = struct.unpack_from("<IHHIId", buf, 0)
-        if magic != _CO_MAGIC or mtype != _CO_STATE:
-            return None
-        v = struct.unpack_from("<14d", buf, 24)   # x,y,z,roll,pitch,yaw,vx,vy,vz,rr,pr,yr,ax,ay
-        steer, _radius = struct.unpack_from("<2d", buf, 168)
-        Fz = struct.unpack_from("<4d", buf, 184)
-        return {"t": ts, "x": v[0], "y": v[1], "z": v[2],
-                "roll": v[3], "pitch": v[4], "yaw": v[5],
-                "vx": v[6], "vy": v[7], "r": v[11], "wx": v[9], "wy": v[10],
-                "ax": v[12], "ay": v[13], "steer": steer, "Fz": list(Fz)}
+        return {"t": s["timestamp"], "x": s["x"], "y": s["y"], "z": s["z"],
+                "roll": s["roll"], "pitch": s["pitch"], "yaw": s["yaw"],
+                "vx": s["vx"], "vy": s["vy"], "r": s["yaw_rate"],
+                "wx": s["roll_rate"], "wy": s["pitch_rate"],
+                "ax": s["ax"], "ay": s["ay"],
+                "steer": s["steer_applied"], "Fz": s["Fz"]}
 
 
 class VehiclePort:
