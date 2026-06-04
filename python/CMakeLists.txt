@@ -14,10 +14,24 @@ if(pybind11_FOUND)
     set_target_properties(vdsim_py PROPERTIES
         OUTPUT_NAME vdsim
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/python)
-    # Wheel build (scikit-build-core): install the module at the wheel root so
-    # `import vdsim` works after `pip install`.
+    # Wheel build (scikit-build-core): install the compiled module + the pure-
+    # Python experiment layer (vdsim_lab / vdsim_comms + the map parsers) as top-
+    # level modules, plus the preset configs as bundled data, so `pip install`
+    # users get the builders / batch / API / comms — not just the .so.
     if(DEFINED SKBUILD)
         install(TARGETS vdsim_py LIBRARY DESTINATION ".")
+        install(FILES
+            ${CMAKE_SOURCE_DIR}/python/vdsim_lab.py
+            ${CMAKE_SOURCE_DIR}/python/vdsim_comms.py
+            ${CMAKE_SOURCE_DIR}/examples/opendrive.py
+            ${CMAKE_SOURCE_DIR}/examples/rd5_route.py
+            DESTINATION ".")
+        install(DIRECTORY
+            ${CMAKE_SOURCE_DIR}/configs/vehicles
+            ${CMAKE_SOURCE_DIR}/configs/tires
+            ${CMAKE_SOURCE_DIR}/configs/roads
+            DESTINATION "vdsim_configs"
+            FILES_MATCHING PATTERN "*.yaml")
     endif()
     message(STATUS "Python bindings: ENABLED")
 else()

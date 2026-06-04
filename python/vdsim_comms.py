@@ -24,7 +24,8 @@ from pathlib import Path
 import yaml
 
 REPO = Path(__file__).resolve().parent.parent
-_COMMS = REPO / "configs" / "comms"
+_COMMS = next((c for c in (REPO / "configs" / "comms", Path.cwd() / "configs" / "comms")
+               if c.is_dir()), REPO / "configs" / "comms")
 _VDS1 = 0x56445331  # "VDS1"
 
 

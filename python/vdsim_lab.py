@@ -26,12 +26,24 @@ except ImportError:
     sys.path.insert(0, str(REPO / "build" / "python"))
     import vdsim
 
-_VEH = REPO / "configs" / "vehicles"
-_TIRE = REPO / "configs" / "tires"
-_ROAD = REPO / "configs" / "roads"
-_MAP = REPO / "configs" / "maps"
-_SENS = REPO / "configs" / "sensors"
-_EXP = REPO / "configs" / "experiments"
+
+def _conf_root():
+    """Config root: dev tree (REPO/configs), else the caller's project
+    (./configs), else the presets bundled into the wheel (vdsim_configs)."""
+    for c in (REPO / "configs", Path.cwd() / "configs",
+              Path(__file__).resolve().parent / "vdsim_configs"):
+        if c.is_dir():
+            return c
+    return REPO / "configs"
+
+
+_CONF = _conf_root()
+_VEH = _CONF / "vehicles"
+_TIRE = _CONF / "tires"
+_ROAD = _CONF / "roads"
+_MAP = _CONF / "maps"
+_SENS = _CONF / "sensors"
+_EXP = _CONF / "experiments"
 _ISO = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5, "G": 6, "H": 7}
 
 
