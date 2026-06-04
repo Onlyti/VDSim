@@ -2524,7 +2524,7 @@ simulator host. VDSim is responsible for running its own dynamics loop.</p>
 <td>4</td>
 <td>uint16</td>
 <td>version</td>
-<td>protocol version = 1</td>
+<td>protocol version = 2</td>
 </tr>
 <tr>
 <td>6</td>
@@ -2748,17 +2748,80 @@ origin = the world origin VDSim was configured with (Section 6). Body frame = IS
 <td>184</td>
 <td>double[4]</td>
 <td>tire_Fz</td>
-<td>[N] FL,FR,RL,RR (0 if not modeled) — reserved/L3</td>
+<td>[N] FL,FR,RL,RR (0 if not modeled)</td>
 </tr>
 <tr>
 <td>216</td>
+<td>double</td>
+<td>rack_torque</td>
+<td>[N·m] steering aligning torque (FFB) — v2</td>
+</tr>
+<tr>
+<td>224</td>
+<td>double[4]</td>
+<td>slip_ratio</td>
+<td>kappa FL,FR,RL,RR — v2</td>
+</tr>
+<tr>
+<td>256</td>
+<td>double[4]</td>
+<td>slip_angle</td>
+<td>alpha [rad] FL,FR,RL,RR — v2</td>
+</tr>
+<tr>
+<td>288</td>
+<td>double[4]</td>
+<td>susp_compression</td>
+<td>[m] +compressed FL,FR,RL,RR (L3) — v2</td>
+</tr>
+<tr>
+<td>320</td>
+<td>double</td>
+<td>m_ax</td>
+<td>[m/s^2] measured (sensor model; == truth if disabled) — v2</td>
+</tr>
+<tr>
+<td>328</td>
+<td>double</td>
+<td>m_ay</td>
+<td>[m/s^2] measured — v2</td>
+</tr>
+<tr>
+<td>336</td>
+<td>double</td>
+<td>m_yaw_rate</td>
+<td>[rad/s] measured — v2</td>
+</tr>
+<tr>
+<td>344</td>
+<td>double</td>
+<td>m_steer</td>
+<td>[rad] measured — v2</td>
+</tr>
+<tr>
+<td>352</td>
+<td>double</td>
+<td>m_gnss_x</td>
+<td>[m] measured ENU — v2</td>
+</tr>
+<tr>
+<td>360</td>
+<td>double</td>
+<td>m_gnss_y</td>
+<td>[m] measured ENU — v2</td>
+</tr>
+<tr>
+<td>368</td>
 <td>uint32</td>
 <td>crc32</td>
-<td>over bytes [0,216)</td>
+<td>over bytes [0,368)</td>
 </tr>
 </tbody>
 </table>
-<p>Total = 220 bytes. Wheel index order FL=0, FR=1, RL=2, RR=3 (repo convention).</p>
+<p>Total = 372 bytes (v2). Wheel index order FL=0, FR=1, RL=2, RR=3 (repo
+convention). v1 (220 B) was the first 192 payload bytes (through tire_Fz); v2
+appends the FFB / slip / suspension / measured block. Receivers parse by version
++ length per Section 10.</p>
 <p>Bridge -&gt; <code>autohyu_msgs/VehicleState</code>: x,y,z &lt;- x/y/z_world; vx,vy,vz; roll,pitch,yaw;
 yaw_vel &lt;- yaw_rate; ax,ay &lt;- ax_body, ay_body; <code>vehicle_can.lateral_accel=ay</code>,
 <code>.longitudinal_accel=ax</code>, <code>.yaw_rate=yaw_rate</code>, <code>.steering_tire_angle=steering_tire_angle_applied</code>,

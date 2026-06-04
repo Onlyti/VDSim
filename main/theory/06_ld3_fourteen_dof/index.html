@@ -910,6 +910,28 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#contact-terrain-attitude" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        노면 contact 와 지형 자세 (terrain attitude)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#grip-fz-coupling-dynamic-tire-load" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grip Fz coupling (dynamic tire load → 종/횡력)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#wheel-hop-frequency" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2385,6 +2407,28 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#contact-terrain-attitude" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        노면 contact 와 지형 자세 (terrain attitude)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#grip-fz-coupling-dynamic-tire-load" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grip Fz coupling (dynamic tire load → 종/횡력)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#wheel-hop-frequency" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2726,11 +2770,42 @@ I_{xx}\, \ddot\phi = \underbrace{\textstyle\sum_i r_{y,i} F_i}_{\text{spring/dam
 <h2 id="64-unsprung-mass-eom">6.4 Unsprung mass EoM<a class="headerlink" href="#64-unsprung-mass-eom" title="Permanent link">&para;</a></h2>
 <p>per-corner unsprung 의 vertical:</p>
 <div class="arithmatex">\[
-m_{u,i}\, \ddot z_{u,i} = - F_{\text{susp},i} - k_{\text{tire}}\, z_{u,i}
-= + k_i\, \delta_i + c_i\, v_i - k_{\text{tire}}\, z_{u,i}
+m_{u,i}\, \ddot z_{u,i} = - F_{\text{susp},i} - k_{\text{tire}}\, (z_{u,i} - z_{\text{road},i})
+= + k_i\, \delta_i + c_i\, v_i - k_{\text{tire}}\, (z_{u,i} - z_{\text{road},i})
 \]</div>
 <p>(Newton III: spring/damper 가 sprung 을 위로 미는 force 의 반작용이 unsprung
-을 아래로.) <span class="arithmatex">\(k_{\text{tire}}\)</span> = <code>tire_vertical_stiffness</code> (default 220 kN/m).</p>
+을 아래로.) <span class="arithmatex">\(k_{\text{tire}}\)</span> = <code>tire_vertical_stiffness</code> (default 220 kN/m).
+<span class="arithmatex">\(z_{\text{road},i}\)</span> = <code>ContactPoint.road_dz</code>, 바퀴 접지점의 노면 높이 (roughness +
+지형).</p>
+<h3 id="contact-terrain-attitude">노면 contact 와 지형 자세 (terrain attitude)<a class="headerlink" href="#contact-terrain-attitude" title="Permanent link">&para;</a></h3>
+<p><span class="arithmatex">\(z_{\text{road},i}\)</span> 가 <strong>이 모델이 노면을 받는 유일한 통로</strong>다. contact provider
+가 바퀴별로 채운다:</p>
+<ul>
+<li><code>RoughGround</code>: 2-tone 종방향 profile (wheel-hop 가진).</li>
+<li><code>HeightmapGround</code> / <code>InclinedGround</code>: 바퀴 접지점 높이 − CG 접지점 높이, 즉
+  <strong>CG 상대 per-wheel 편차</strong>. 절대 고도(예: 50 m)를 그대로 넣으면 소변형 선형
+  모델이 발산하므로 상대값을 쓴다. 이 편차의 tilt 성분이 4 corner 의 <span class="arithmatex">\(z_u\)</span> 를
+  서로 다르게 settle 시켜 sprung body 의 roll/pitch 를 노면 평면에 맞춘다.</li>
+</ul>
+<p>정상상태 검증 (sedan, InclinedGround): 6° bank → body roll 5.98°, 5° grade →
+nose-up pitch 4.86° (tire vertical compliance 로 약 2-3% undershoot, flat 은
+정확히 0). 즉 <strong>L3 는 노면 기울기를 body attitude 로 반영한다</strong> — L1/L2 와의
+핵심 차이 (chapter 05 §5.x 참조).</p>
+<h3 id="grip-fz-coupling-dynamic-tire-load">Grip Fz coupling (dynamic tire load → 종/횡력)<a class="headerlink" href="#grip-fz-coupling-dynamic-tire-load" title="Permanent link">&para;</a></h3>
+<p>L3 는 매 step 동적 per-corner tire load 를 계산해 inner 의 grip 계산에 주입한다
+(<code>set_external_fz</code>):</p>
+<div class="arithmatex">\[
+F_{z,i}^\text{dyn} = F_{z,i}^\text{static,full} + k_{\text{tire}}\,(z_{\text{road},i} - z_{u,i})
+\]</div>
+<p>이로써 suspension transient·노면/지형 하중변동이 tire 종/횡력 grip 에 반영된다
+(이전엔 inner Ld2 의 quasi-static <span class="arithmatex">\(F_z\)</span> 만 사용 → 환류 없음). 정상상태 transfer 는
+Ld2 와 일치하므로 L3 planar 거동은 Ld2 와 <strong>근사 일치</strong>(divergence ~3e-6, 더 이상
+bit-identical 아님)하고, 차이는 <strong>transient(turn-in roll lag)과 rough/지형</strong>에서
+드러난다. 예: rough road 에서 FL grip <span class="arithmatex">\(F_z\)</span> std 2.9 N (Ld2 는 0.4 N). Fz/μ 추정기
+검증 데이터 생성에 유용.</p>
+<p>결합 load 의 static 항은 per-wheel <span class="arithmatex">\(\cos(\text{slope})\)</span> 스케일 + aero downforce 를
+포함한다 (60 m/s 에서 race_car total <span class="arithmatex">\(F_z\)</span> 8.8→24.5 kN, 10° 경사에서 <span class="arithmatex">\(\cos\)</span> 스케일
+확인). 남은 근사는 <strong>unsprung 횡 하중이동</strong> 한 항뿐 (일반 트랙에서 작음).</p>
 <h3 id="wheel-hop-frequency">Wheel-hop frequency<a class="headerlink" href="#wheel-hop-frequency" title="Permanent link">&para;</a></h3>
 <p>tire 가 vertical spring 으로 작용 (radial deformation <span class="arithmatex">\(= F_z / k_{\text{tire}}\)</span>,
 승용 200-300 kN/m). 이것이 unsprung resonance 의 dominant stiffness:</p>

@@ -10,13 +10,9 @@
       
       
       
-        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/gui_architecture/">
+        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/RUNNING/">
       
       
-        <link rel="prev" href="../references/actuator_nonlinearity/">
-      
-      
-        <link rel="next" href="../vdsim_bridge_interface_requirements/">
       
       
         
@@ -27,7 +23,7 @@
     
     
       
-        <title>GUI architecture - VDSim</title>
+        <title>Running VDSim - VDSim</title>
       
     
     
@@ -78,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#vdsim-gui-web-architecture" class="md-skip">
+        <a href="#running-vdsim" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              GUI architecture
+              Running VDSim
             
           </span>
         </div>
@@ -276,12 +272,10 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
+      <li class="md-tabs__item">
         <a href="../references/actuator_nonlinearity/" class="md-tabs__link">
           
   
@@ -1098,10 +1092,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -1117,22 +1109,21 @@
     
     
       
-        
-        
-      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
             
   
   
@@ -1150,7 +1141,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1193,37 +1184,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    GUI architecture
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../gui_architecture/" class="md-nav__link">
         
   
   
@@ -1239,114 +1203,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#1-decisions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. Decisions
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#2-the-migration-proof-principle-python-c" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. The migration-proof principle (Python -&gt; C++)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#3-architecture" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. Architecture
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#4-wire-contract-to-be-frozen-as-the-migration-boundary" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. Wire contract (to be frozen as the migration boundary)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#5-frontend" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        5. Frontend
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#6-existing-assets-reused" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        6. Existing assets reused
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#7-phased-plan" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        7. Phased plan
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#8-risks-open-items" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        8. Risks / open items
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2102,10 +1958,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-decisions" class="md-nav__link">
+  <a href="#0-install" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Decisions
+        0. Install
       
     </span>
   </a>
@@ -2113,10 +1969,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-the-migration-proof-principle-python-c" class="md-nav__link">
+  <a href="#1-author-the-configs-web-tool" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. The migration-proof principle (Python -&gt; C++)
+        1. Author the configs (web tool)
       
     </span>
   </a>
@@ -2124,10 +1980,71 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-architecture" class="md-nav__link">
+  <a href="#2-run-an-experiment-four-modes-same-scenario" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Architecture
+        2. Run an experiment — four modes (same scenario)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Run an experiment — four modes (same scenario)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-embedded-api-synchronous-no-network-for-experiment-code-notebooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A. Embedded API (synchronous, no network) — for experiment code &amp; notebooks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-real-time-comms-udp-silhil-nodes-in-the-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B. Real-time comms (UDP; SIL/HIL nodes in the loop)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-batch-campaign-headless-parallel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        C. Batch / campaign (headless, parallel)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d-interactive-gui-real-time-viewer-drive-by-feel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D. Interactive GUI (real-time viewer, drive-by-feel)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-industrial-interop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Industrial / interop
       
     </span>
   </a>
@@ -2135,54 +2052,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-wire-contract-to-be-frozen-as-the-migration-boundary" class="md-nav__link">
+  <a href="#4-which-mode" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Wire contract (to be frozen as the migration boundary)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#5-frontend" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        5. Frontend
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#6-existing-assets-reused" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        6. Existing assets reused
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#7-phased-plan" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        7. Phased plan
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#8-risks-open-items" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        8. Risks / open items
+        4. Which mode?
       
     </span>
   </a>
@@ -2209,140 +2082,109 @@
   
 
 
-<h1 id="vdsim-gui-web-architecture">VDSim GUI / Web Architecture<a class="headerlink" href="#vdsim-gui-web-architecture" title="Permanent link">&para;</a></h1>
-<p>Status: DESIGN (decided). Concept: VDSim computes only; all visualization and
-configuration happen in a web browser on the receiving device. The simulator
-sends/receives physics + config over the network and renders nothing itself.</p>
-<p>This is an accessibility / deployment differentiator vs license-locked desktop
-VD tools (CarMaker / CarSim / Adams), not a research novelty. The technical fit
-is that VDSim's output is compact physics state (not pixels), so the client
-reconstructs the visualization locally — lightweight, unlike rendered-video
-streaming.</p>
-<hr />
-<h2 id="1-decisions">1. Decisions<a class="headerlink" href="#1-decisions" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Backend: Python first (FastAPI + websockets, wrapping the <code>vdsim</code> pybind
-  module / SimSession), migrate to C++ later. The hard real-time loop stays in
-  C++ (SimSession); Python orchestrates, serves, relays.</li>
-<li>3D: Three.js with the WebGPU renderer and automatic WebGL2 fallback (WebGPU
-  not hard-required; the vehicle scene is light).</li>
-<li>MVP scope: run on a server, configure + watch from another PC's browser.
-  Single client, no auth. (Multi-client read-only + auth are later, product.)</li>
-</ul>
-<h2 id="2-the-migration-proof-principle-python-c">2. The migration-proof principle (Python -&gt; C++)<a class="headerlink" href="#2-the-migration-proof-principle-python-c" title="Permanent link">&para;</a></h2>
-<p>The frontend depends ONLY on a stable wire contract — REST endpoints + WS
-message schema — never on the backend implementation. Same decoupling as the
-UDP co-sim protocol. Define the API spec first, implement it in Python, and a
-future C++ server implements the identical contract -&gt; frontend unchanged.
-Migration = backend swap, no frontend change.</p>
-<h2 id="3-architecture">3. Architecture<a class="headerlink" href="#3-architecture" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>[VDSim compute server]                         [any device: browser]
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  C++ core: SimSession (set_input / tick / output)   &lt;- hard real-time loop
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>        |
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  Web/API server (Python: FastAPI + websockets, pybind vdsim)
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>        |  REST  : config CRUD, scenario, start/stop/reset  &lt;--- config UI (forms)
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        |  WS    : state stream (binary/JSON) @ sim rate     ---&gt; 3D viz (Three.js)
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        |  WS    : time-series                               ---&gt; plots
+<h1 id="running-vdsim">Running VDSim<a class="headerlink" href="#running-vdsim" title="Permanent link">&para;</a></h1>
+<p>A run book for every way to drive the simulator. Setup is configuration-only
+(see <a href="../design/SIM_CONFIG_ARCH/">SIM_CONFIG_ARCH</a>); this page is <em>how to execute</em>.</p>
+<h2 id="0-install">0. Install<a class="headerlink" href="#0-install" title="Permanent link">&para;</a></h2>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>.<span class="w">            </span><span class="c1"># Python API (scikit-build-core builds the vdsim extension)</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="c1"># or full C++ tree:</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>cmake<span class="w"> </span>-G<span class="w"> </span>Ninja<span class="w"> </span>-B<span class="w"> </span>build<span class="w"> </span>-DVDSIM_BUILD_PYTHON<span class="o">=</span>ON<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>cmake<span class="w"> </span>--build<span class="w"> </span>build<span class="w"> </span>-j
 </span></code></pre></div>
-<p>Three concerns, same split as the udp_server:</p>
-<table>
-<thead>
-<tr>
-<th>Concern</th>
-<th>Transport</th>
-<th>Direction</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Configuration (vehicle/tire/solver/scenario/actuator)</td>
-<td>REST (HTTP)</td>
-<td>browser -&gt; server; validate -&gt; YAML</td>
-</tr>
-<tr>
-<td>Control (start/stop/reset/manual input)</td>
-<td>REST or WS</td>
-<td>browser -&gt; server -&gt; set_input</td>
-</tr>
-<tr>
-<td>State stream (viz/plots)</td>
-<td>WebSocket (high-rate)</td>
-<td>server -&gt; browser, from output()</td>
-</tr>
-</tbody>
-</table>
-<h2 id="4-wire-contract-to-be-frozen-as-the-migration-boundary">4. Wire contract (to be frozen as the migration boundary)<a class="headerlink" href="#4-wire-contract-to-be-frozen-as-the-migration-boundary" title="Permanent link">&para;</a></h2>
-<p>REST (draft):
-- <code>GET  /api/config/vehicle</code> / <code>PUT /api/config/vehicle</code> — VehicleParams (JSON)
-- <code>GET/PUT /api/config/tire</code>, <code>/api/config/solver</code>, <code>/api/config/scenario</code>
-- <code>POST /api/sim/start</code>, <code>/api/sim/stop</code>, <code>/api/sim/reset</code>
-- <code>POST /api/sim/input</code> — manual CmdL4 (throttle/brake/steer/gear)
-- <code>GET  /api/schema/vehicle</code> ... — JSON schema driving the config forms</p>
-<p>WS:
-- <code>/ws/state</code> — server pushes SimOutput frames (state + ax/ay/roll/pitch/Fz/
-  steer_applied) at the sim rate. Binary preferred for high rate.</p>
-<p>Frozen field names/units mirror the existing CSV/STATE-packet conventions
-(ENU world [m], ISO 8855 body, wheel FL=0..RR=3).</p>
-<h2 id="5-frontend">5. Frontend<a class="headerlink" href="#5-frontend" title="Permanent link">&para;</a></h2>
-<p>SPA realized in <code>gui/index.html</code> (Three.js). Add:
-- WebGPU renderer + WebGL2 fallback (Three.js <code>WebGPURenderer</code> with capability
-  check).
-- Config forms generated from JSON schema (so the UI stays in sync with the C++
-  params instead of being hand-maintained).
-- Time-series plots (charts) for vx, yaw rate, ax/ay, susp, etc.
-- The planned actuator-nonlinearity tuner (sliders + step-response plot) is a
-  panel here.</p>
-<h2 id="6-existing-assets-reused">6. Existing assets reused<a class="headerlink" href="#6-existing-assets-reused" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Asset</th>
-<th>Role in this design</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>core</code> SimSession (set_input/tick/output)</td>
-<td>compute kernel the server drives</td>
-</tr>
-<tr>
-<td><code>python</code> pybind <code>vdsim</code> module</td>
-<td>Python access to SimSession (Phase 1)</td>
-</tr>
-<tr>
-<td><code>gui/index.html</code> (Three.js)</td>
-<td>realized frontend</td>
-</tr>
-<tr>
-<td><code>gui/server.py</code> (HTTP/SSE + pybind)</td>
-<td>realized backend (stdlib http.server)</td>
-</tr>
-<tr>
-<td><code>cosim</code> STATE/CMD field set</td>
-<td>the wire-contract field conventions</td>
-</tr>
-</tbody>
-</table>
-<h2 id="7-phased-plan">7. Phased plan<a class="headerlink" href="#7-phased-plan" title="Permanent link">&para;</a></h2>
-<ol>
-<li>Expose SimSession to pybind (<code>make_sim_session</code>, set_input/tick/output). [Phase 1]</li>
-<li>FastAPI server: REST (config CRUD + start/stop) + WS (state stream), single client.</li>
-<li>Frontend: schema-driven config forms + 3D viz (WebGPU/WebGL2) + plots.</li>
-<li>Param JSON schema auto/derived from C++ params (UI sync).</li>
-<li>Multi-client read-only broadcast + auth (product stage).</li>
-<li>(Later) C++ backend implementing the same wire contract; retire Python server.</li>
-</ol>
-<h2 id="8-risks-open-items">8. Risks / open items<a class="headerlink" href="#8-risks-open-items" title="Permanent link">&para;</a></h2>
+<h2 id="1-author-the-configs-web-tool">1. Author the configs (web tool)<a class="headerlink" href="#1-author-the-configs-web-tool" title="Permanent link">&para;</a></h2>
+<p><div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python3<span class="w"> </span>builder/server.py<span class="w"> </span>--port<span class="w"> </span><span class="m">8200</span><span class="w">          </span><span class="c1"># http://&lt;host&gt;:8200</span>
+</span></code></pre></div>
+Tabs save validated YAML: <strong>Vehicle</strong> → <code>configs/vehicles/</code>, <strong>Sensors</strong> (suite) →
+<code>configs/sensors/</code>, <strong>Map</strong> (driving line + surface) → <code>configs/maps/</code>, <strong>Comms</strong>
+(data routing) → <code>configs/comms/</code>, <strong>Scenario</strong> (composes all + run mode) →
+<code>configs/experiments/</code>. (See <a href="../builder/README.md">builder/README</a>.)</p>
+<h2 id="2-run-an-experiment-four-modes-same-scenario">2. Run an experiment — four modes (same scenario)<a class="headerlink" href="#2-run-an-experiment-four-modes-same-scenario" title="Permanent link">&para;</a></h2>
+<h3 id="a-embedded-api-synchronous-no-network-for-experiment-code-notebooks">A. Embedded API (synchronous, no network) — for experiment code &amp; notebooks<a class="headerlink" href="#a-embedded-api-synchronous-no-network-for-experiment-code-notebooks" title="Permanent link">&para;</a></h3>
+<p><div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">sys</span><span class="p">;</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;python&quot;</span><span class="p">)</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">vdsim_lab</span><span class="w"> </span><span class="kn">import</span> <span class="n">Simulation</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">sim</span> <span class="o">=</span> <span class="n">Simulation</span><span class="p">(</span><span class="s2">&quot;yongin_lap&quot;</span><span class="p">)</span>                 <span class="c1"># configs/experiments/yongin_lap.yaml</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">while</span> <span class="ow">not</span> <span class="n">sim</span><span class="o">.</span><span class="n">done</span><span class="p">():</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">sim</span><span class="o">.</span><span class="n">set_control</span><span class="p">(</span><span class="n">steer</span><span class="o">=..</span><span class="p">,</span> <span class="n">throttle</span><span class="o">=..</span><span class="p">,</span> <span class="n">brake</span><span class="o">=..</span><span class="p">)</span>   <span class="c1"># omit -&gt; scenario autopilot</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">sim</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">gnss</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;gnss&quot;</span><span class="p">)</span>                <span class="c1"># per-sensor measurement</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="n">gt</span>   <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">state</span><span class="p">()</span>                         <span class="c1"># ground truth (x,y,vx,Fz,slip,…)</span>
+</span></code></pre></div>
+Or assemble inline with the fluent builders and collect a time-series:
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">vdsim_lab</span><span class="w"> </span><span class="kn">import</span> <span class="n">Experiment</span><span class="p">,</span> <span class="n">Vehicle</span><span class="p">,</span> <span class="n">Road</span><span class="p">,</span> <span class="n">Maneuver</span><span class="p">,</span> <span class="n">Sensors</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">res</span> <span class="o">=</span> <span class="p">(</span><span class="n">Experiment</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="s2">&quot;L3&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">vehicle</span><span class="p">(</span><span class="n">Vehicle</span><span class="o">.</span><span class="n">preset</span><span class="p">(</span><span class="s2">&quot;sedan&quot;</span><span class="p">))</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>       <span class="o">.</span><span class="n">road</span><span class="p">(</span><span class="n">Road</span><span class="o">.</span><span class="n">preset</span><span class="p">(</span><span class="s2">&quot;belgian_pave&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">maneuver</span><span class="p">(</span><span class="n">Maneuver</span><span class="o">.</span><span class="n">step_steer</span><span class="p">(</span><span class="n">v</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">steer</span><span class="o">=</span><span class="mf">.03</span><span class="p">))</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>       <span class="o">.</span><span class="n">sensors</span><span class="p">(</span><span class="n">Sensors</span><span class="p">()</span><span class="o">.</span><span class="n">gnss</span><span class="p">()</span><span class="o">.</span><span class="n">imu</span><span class="p">())</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="mf">8.0</span><span class="p">))</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">res</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s2">&quot;run.csv&quot;</span><span class="p">);</span> <span class="nb">print</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">summary</span><span class="p">())</span>
+</span></code></pre></div></p>
+<h3 id="b-real-time-comms-udp-silhil-nodes-in-the-loop">B. Real-time comms (UDP; SIL/HIL nodes in the loop)<a class="headerlink" href="#b-real-time-comms-udp-silhil-nodes-in-the-loop" title="Permanent link">&para;</a></h3>
+<p>The C++ <code>vdsim_udp_server</code> is the single comms layer: it runs a real-time
+<code>SimSession</code>, receives CMD packets on one port, and emits STATE on another. The
+wire format is the canonical VDS1 binary protocol (<code>cosim/cosim_protocol.hpp</code>,
+CRC32, 76B CMD / 220B STATE).
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>build/bin/vdsim_udp_server<span class="w"> </span>configs/vehicles/sedan.yaml<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span>configs/tires/default_pacejka.yaml<span class="w"> </span>--level<span class="o">=</span>L3<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span>--cmd-port<span class="o">=</span><span class="m">7001</span><span class="w"> </span>--state-ip<span class="o">=</span><span class="m">127</span>.0.0.1<span class="w"> </span>--state-port<span class="o">=</span><span class="m">7002</span><span class="w"> </span>--rate<span class="o">=</span><span class="m">200</span>
+</span></code></pre></div>
+Python participants (wheel/pedal clients, viewer bridge, HIL harnesses) encode
+CMD / decode STATE through <code>cosim/protocol.py</code> — one definition of the wire
+format, byte-compatible with the server. (See <code>cosim/test_udp_client.py</code>.)</p>
+<h3 id="c-batch-campaign-headless-parallel">C. Batch / campaign (headless, parallel)<a class="headerlink" href="#c-batch-campaign-headless-parallel" title="Permanent link">&para;</a></h3>
+<p><div class="language-sh highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>python3<span class="w"> </span>tools/vdsim_batch.py<span class="w"> </span>run<span class="w"> </span>campaign.yaml<span class="w">          </span><span class="c1"># run</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>python3<span class="w"> </span>tools/vdsim_batch.py<span class="w"> </span>run<span class="w"> </span>campaign.yaml<span class="w"> </span>--dry<span class="w">    </span><span class="c1"># list expanded runs</span>
+</span></code></pre></div>
+A campaign expands explicit scenarios + parameter <code>sweep</code> (cartesian grid) +
+<code>monte_carlo</code> into runs, executes them in a process pool, and writes per-run CSV +
+<code>summary.csv</code> (params + metrics). Metrics: <code>cte_rms, cte_max, peak_ay, max_Fz,
+vmax, dist, lap_time, rms_slip</code>. (See <a href="../design/BATCH_RUNNER/">BATCH_RUNNER</a>.)</p>
+<h3 id="d-interactive-gui-real-time-viewer-drive-by-feel">D. Interactive GUI (real-time viewer, drive-by-feel)<a class="headerlink" href="#d-interactive-gui-real-time-viewer-drive-by-feel" title="Permanent link">&para;</a></h3>
+<p><div class="language-sh highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>python3<span class="w"> </span>gui/server.py<span class="w"> </span>--port<span class="w"> </span><span class="m">8100</span><span class="w">              </span><span class="c1"># browser viewer + live sim</span>
+</span></code></pre></div>
+- Browser: 3D view (Orbit/Chase/Top/<strong>Cockpit</strong>), road/terrain, telemetry; <strong>🎮
+  Wheel/pedals</strong> (Gamepad API), <strong>🔊 Sound</strong> (engine/tire/wind).
+- <strong>Force feedback</strong> (real wheel, on the client PC) — UDP to the GUI at http-port+1:
+  <div class="language-sh highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>python3<span class="w"> </span>tools/wheel_ffb_sdl.py<span class="w"> </span>--server<span class="w"> </span>&lt;host&gt;<span class="w"> </span>--udp-port<span class="w"> </span><span class="m">8101</span><span class="w">   </span><span class="c1"># Windows+Linux (pysdl2)</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>python3<span class="w"> </span>tools/wheel_ffb.py<span class="w">     </span>--server<span class="w"> </span>&lt;host&gt;<span class="w"> </span>--udp-port<span class="w"> </span><span class="m">8101</span><span class="w">   </span><span class="c1"># Linux evdev</span>
+</span></code></pre></div>
+  Autostart units in <code>tools/autostart/</code>. FFB torque = VDSim aligning moment
+  (<code>rack_torque</code>). (See <a href="../tools/autostart/README.md">tools/autostart/README</a>.)</p>
+<h2 id="3-industrial-interop">3. Industrial / interop<a class="headerlink" href="#3-industrial-interop" title="Permanent link">&para;</a></h2>
 <ul>
-<li>WebGPU maturity -&gt; WebGL2 fallback mandatory (decided).</li>
-<li>Full param-surface config UI is significant work; schema-driven generation
-  contains it.</li>
-<li>Source of truth: web UI reads/writes YAML via the API; YAML files remain the
-  canonical store.</li>
-<li>Security: lab use over Tailscale is fine; product needs auth + TLS.</li>
-<li>Sensor/camera/lidar visualization stays delegated to CARLA (out of scope);
-  VDSim streams physics only.</li>
+<li><strong>FMI 2.0</strong>: build <code>vdsim_l2.fmu</code> / <code>vdsim_l3.fmu</code> (<code>fmi_export/build_*.sh</code>),
+  import any CS FMU via <code>fmi_export/fmu_master.py</code>. See theory ch16.</li>
+<li><strong>CARLA bridge</strong>: <code>carla_integration/</code> (VDSim physics ↔ CARLA render/sensors).</li>
+<li><strong>ISO maneuver validation</strong>: <code>python3 apps/validation/run_validation.py</code> →
+  ISO 7401/4138/3888-2 metrics + plots. Credibility: <a href="../VALIDATION/">VALIDATION</a>.</li>
 </ul>
+<h2 id="4-which-mode">4. Which mode?<a class="headerlink" href="#4-which-mode" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>want</th>
+<th>mode</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>drive a controller/estimator from your own code</td>
+<td><strong>A. API</strong></td>
+</tr>
+<tr>
+<td>connect external SIL/HIL/perception over the network</td>
+<td><strong>B. UDP comms</strong></td>
+</tr>
+<tr>
+<td>sweep params / Monte Carlo / regression metrics</td>
+<td><strong>C. batch</strong></td>
+</tr>
+<tr>
+<td>watch it, or drive with a wheel + FFB</td>
+<td><strong>D. GUI</strong></td>
+</tr>
+<tr>
+<td>plug VDSim physics into a co-sim tool</td>
+<td><strong>FMI</strong></td>
+</tr>
+</tbody>
+</table>
 
 
 

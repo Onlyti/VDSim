@@ -2178,10 +2178,9 @@ single C++17 + Python ABI.</p>
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span>configs/tires/default_pacejka.yaml<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span>configs/scenarios/skidpad.yaml<span class="w"> </span>/tmp/out.csv
 </span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1"># Launch the 3D viewer</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>python3<span class="w"> </span>-m<span class="w"> </span>http.server<span class="w"> </span>-d<span class="w"> </span>viewer<span class="w"> </span><span class="m">8080</span><span class="w"> </span><span class="p">&amp;</span>
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>python3<span class="w"> </span>viewer/realtime_server.py<span class="w"> </span>--driver<span class="w"> </span>--level<span class="w"> </span>L2<span class="w"> </span>--v_target<span class="w"> </span><span class="m">13</span><span class="w"> </span><span class="p">&amp;</span>
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="c1"># → browse http://localhost:8080</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1"># Launch the 3D viewer (real-time web viewer + live sim)</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>python3<span class="w"> </span>gui/server.py<span class="w"> </span>--port<span class="w"> </span><span class="m">8100</span><span class="w"> </span><span class="p">&amp;</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="c1"># → browse http://localhost:8100</span>
 </span></code></pre></div>
 <h2 id="what-to-read">What to read<a class="headerlink" href="#what-to-read" title="Permanent link">&para;</a></h2>
 <ul>

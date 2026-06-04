@@ -10,31 +10,27 @@
       
       
       
-        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/gui_architecture/">
+        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/design/COSIM_PLATFORM/">
       
       
-        <link rel="prev" href="../references/actuator_nonlinearity/">
-      
-      
-        <link rel="next" href="../vdsim_bridge_interface_requirements/">
       
       
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>GUI architecture - VDSim</title>
+        <title>Design: component-test co-sim platform (subsystem modularization) - VDSim</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -53,7 +49,7 @@
       
     
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -78,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#vdsim-gui-web-architecture" class="md-skip">
+        <a href="#design-component-test-co-sim-platform-subsystem-modularization" class="md-skip">
           Skip to content
         </a>
       
@@ -96,7 +92,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="VDSim" class="md-header__button md-logo" aria-label="VDSim" data-md-component="logo">
+    <a href="../.." title="VDSim" class="md-header__button md-logo" aria-label="VDSim" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -116,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              GUI architecture
+              Design: component-test co-sim platform (subsystem modularization)
             
           </span>
         </div>
@@ -236,7 +232,7 @@
     
     
       <li class="md-tabs__item">
-        <a href=".." class="md-tabs__link">
+        <a href="../.." class="md-tabs__link">
           
   
   
@@ -258,7 +254,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../theory/" class="md-tabs__link">
+        <a href="../../theory/" class="md-tabs__link">
           
   
   
@@ -276,13 +272,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../references/actuator_nonlinearity/" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../references/actuator_nonlinearity/" class="md-tabs__link">
           
   
   
@@ -304,7 +298,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../tasks/T22_carla_bridge/REPORT/" class="md-tabs__link">
+        <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-tabs__link">
           
   
   
@@ -326,7 +320,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../tasks/" class="md-tabs__link">
+        <a href="../../tasks/" class="md-tabs__link">
           
   
   
@@ -348,7 +342,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../examples/" class="md-tabs__link">
+        <a href="../../examples/" class="md-tabs__link">
           
   
   
@@ -384,7 +378,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="VDSim" class="md-nav__button md-logo" aria-label="VDSim" data-md-component="logo">
+    <a href="../.." title="VDSim" class="md-nav__button md-logo" aria-label="VDSim" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -439,7 +433,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href=".." class="md-nav__link ">
+            <a href="../.." class="md-nav__link ">
               
   
   
@@ -546,7 +540,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../theory/" class="md-nav__link ">
+            <a href="../../theory/" class="md-nav__link ">
               
   
   
@@ -590,7 +584,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/01_frames_and_conventions/" class="md-nav__link">
+      <a href="../../theory/01_frames_and_conventions/" class="md-nav__link">
         
   
   
@@ -618,7 +612,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/02_rigid_body_dynamics/" class="md-nav__link">
+      <a href="../../theory/02_rigid_body_dynamics/" class="md-nav__link">
         
   
   
@@ -646,7 +640,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/03_tire_pacejka_mf96/" class="md-nav__link">
+      <a href="../../theory/03_tire_pacejka_mf96/" class="md-nav__link">
         
   
   
@@ -674,7 +668,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/04_ld1_bicycle/" class="md-nav__link">
+      <a href="../../theory/04_ld1_bicycle/" class="md-nav__link">
         
   
   
@@ -702,7 +696,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/05_ld2_seven_dof/" class="md-nav__link">
+      <a href="../../theory/05_ld2_seven_dof/" class="md-nav__link">
         
   
   
@@ -730,7 +724,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/06_ld3_fourteen_dof/" class="md-nav__link">
+      <a href="../../theory/06_ld3_fourteen_dof/" class="md-nav__link">
         
   
   
@@ -758,7 +752,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/07_control_ladder/" class="md-nav__link">
+      <a href="../../theory/07_control_ladder/" class="md-nav__link">
         
   
   
@@ -786,7 +780,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/08_pid_controllers/" class="md-nav__link">
+      <a href="../../theory/08_pid_controllers/" class="md-nav__link">
         
   
   
@@ -814,7 +808,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/09_pure_pursuit_path/" class="md-nav__link">
+      <a href="../../theory/09_pure_pursuit_path/" class="md-nav__link">
         
   
   
@@ -842,7 +836,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/10_driver_model/" class="md-nav__link">
+      <a href="../../theory/10_driver_model/" class="md-nav__link">
         
   
   
@@ -870,7 +864,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/11_numerical_integration/" class="md-nav__link">
+      <a href="../../theory/11_numerical_integration/" class="md-nav__link">
         
   
   
@@ -898,7 +892,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/12_software_architecture/" class="md-nav__link">
+      <a href="../../theory/12_software_architecture/" class="md-nav__link">
         
   
   
@@ -926,7 +920,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/13_multibody_outlook/" class="md-nav__link">
+      <a href="../../theory/13_multibody_outlook/" class="md-nav__link">
         
   
   
@@ -954,7 +948,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/14_hardpoint_kinematics/" class="md-nav__link">
+      <a href="../../theory/14_hardpoint_kinematics/" class="md-nav__link">
         
   
   
@@ -982,7 +976,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/15_validation_and_doe/" class="md-nav__link">
+      <a href="../../theory/15_validation_and_doe/" class="md-nav__link">
         
   
   
@@ -1010,7 +1004,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/16_fmi_integration/" class="md-nav__link">
+      <a href="../../theory/16_fmi_integration/" class="md-nav__link">
         
   
   
@@ -1038,7 +1032,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/17_actuator_and_sensing/" class="md-nav__link">
+      <a href="../../theory/17_actuator_and_sensing/" class="md-nav__link">
         
   
   
@@ -1066,7 +1060,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/18_runtime_and_cosim/" class="md-nav__link">
+      <a href="../../theory/18_runtime_and_cosim/" class="md-nav__link">
         
   
   
@@ -1098,10 +1092,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -1117,22 +1109,21 @@
     
     
       
-        
-        
-      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
             
   
   
@@ -1150,7 +1141,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1168,7 +1159,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../references/actuator_nonlinearity/" class="md-nav__link">
+      <a href="../../references/actuator_nonlinearity/" class="md-nav__link">
         
   
   
@@ -1193,37 +1184,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    GUI architecture
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../gui_architecture/" class="md-nav__link">
         
   
   
@@ -1239,114 +1203,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#1-decisions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. Decisions
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#2-the-migration-proof-principle-python-c" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. The migration-proof principle (Python -&gt; C++)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#3-architecture" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. Architecture
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#4-wire-contract-to-be-frozen-as-the-migration-boundary" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. Wire contract (to be frozen as the migration boundary)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#5-frontend" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        5. Frontend
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#6-existing-assets-reused" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        6. Existing assets reused
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#7-phased-plan" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        7. Phased plan
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#8-risks-open-items" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        8. Risks / open items
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1359,7 +1215,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../vdsim_bridge_interface_requirements/" class="md-nav__link">
+      <a href="../../vdsim_bridge_interface_requirements/" class="md-nav__link">
         
   
   
@@ -1387,7 +1243,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../map_import_strategy/" class="md-nav__link">
+      <a href="../../map_import_strategy/" class="md-nav__link">
         
   
   
@@ -1490,7 +1346,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T22_carla_bridge/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-nav__link">
         
   
   
@@ -1518,7 +1374,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T23_jump_14dof/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T23_jump_14dof/REPORT/" class="md-nav__link">
         
   
   
@@ -1546,7 +1402,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T27_ld4_dw/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T27_ld4_dw/REPORT/" class="md-nav__link">
         
   
   
@@ -1574,7 +1430,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T28_ld4_mp/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T28_ld4_mp/REPORT/" class="md-nav__link">
         
   
   
@@ -1602,7 +1458,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T29_ld4_ta/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T29_ld4_ta/REPORT/" class="md-nav__link">
         
   
   
@@ -1630,7 +1486,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T30_ld4_5link/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T30_ld4_5link/REPORT/" class="md-nav__link">
         
   
   
@@ -1708,7 +1564,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../tasks/" class="md-nav__link ">
+            <a href="../../tasks/" class="md-nav__link ">
               
   
   
@@ -1752,7 +1608,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/68_poc_summary_v3/" class="md-nav__link">
+      <a href="../../tasks/68_poc_summary_v3/" class="md-nav__link">
         
   
   
@@ -1780,7 +1636,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/69_competitive_matrix/" class="md-nav__link">
+      <a href="../../tasks/69_competitive_matrix/" class="md-nav__link">
         
   
   
@@ -1808,7 +1664,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/62_cycles_overview/" class="md-nav__link">
+      <a href="../../tasks/62_cycles_overview/" class="md-nav__link">
         
   
   
@@ -1836,7 +1692,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/50_benchmark_matrix/" class="md-nav__link">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
         
   
   
@@ -1864,7 +1720,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/20_l1_l2_grid_sweep/" class="md-nav__link">
+      <a href="../../tasks/20_l1_l2_grid_sweep/" class="md-nav__link">
         
   
   
@@ -1892,7 +1748,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/30_l3_dynamic_suspension/" class="md-nav__link">
+      <a href="../../tasks/30_l3_dynamic_suspension/" class="md-nav__link">
         
   
   
@@ -1920,7 +1776,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/31_l6_l7_l8_control/" class="md-nav__link">
+      <a href="../../tasks/31_l6_l7_l8_control/" class="md-nav__link">
         
   
   
@@ -1948,7 +1804,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/57_58_59_driver_skidpad/" class="md-nav__link">
+      <a href="../../tasks/57_58_59_driver_skidpad/" class="md-nav__link">
         
   
   
@@ -1976,7 +1832,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/50_benchmark_matrix/" class="md-nav__link">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
         
   
   
@@ -2036,7 +1892,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../examples/" class="md-nav__link ">
+            <a href="../../examples/" class="md-nav__link ">
               
   
   
@@ -2102,10 +1958,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-decisions" class="md-nav__link">
+  <a href="#1-goal-philosophy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Decisions
+        1. Goal &amp; philosophy
       
     </span>
   </a>
@@ -2113,10 +1969,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-the-migration-proof-principle-python-c" class="md-nav__link">
+  <a href="#2-current-state" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. The migration-proof principle (Python -&gt; C++)
+        2. Current state
       
     </span>
   </a>
@@ -2124,10 +1980,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-architecture" class="md-nav__link">
+  <a href="#3-proposed-subsystem-interfaces" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Architecture
+        3. Proposed subsystem interfaces
       
     </span>
   </a>
@@ -2135,10 +1991,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-wire-contract-to-be-frozen-as-the-migration-boundary" class="md-nav__link">
+  <a href="#4-plug-mechanisms-how-a-team-swaps-their-scope" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Wire contract (to be frozen as the migration boundary)
+        4. Plug mechanisms (how a team swaps their scope)
       
     </span>
   </a>
@@ -2146,10 +2002,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#5-frontend" class="md-nav__link">
+  <a href="#5-worked-example-brake-disc-thermal-closed-loop" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. Frontend
+        5. Worked example — brake-disc thermal closed loop
       
     </span>
   </a>
@@ -2157,10 +2013,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#6-existing-assets-reused" class="md-nav__link">
+  <a href="#6-sandbox-scenario-schema-builds-on-vdsim_lab-experiment" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6. Existing assets reused
+        6. Sandbox scenario schema (builds on vdsim_lab Experiment)
       
     </span>
   </a>
@@ -2168,10 +2024,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#7-phased-plan" class="md-nav__link">
+  <a href="#7-phasing" class="md-nav__link">
     <span class="md-ellipsis">
       
-        7. Phased plan
+        7. Phasing
       
     </span>
   </a>
@@ -2179,10 +2035,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#8-risks-open-items" class="md-nav__link">
+  <a href="#8-open-decisions-need-alignment" class="md-nav__link">
     <span class="md-ellipsis">
       
-        8. Risks / open items
+        8. Open decisions (need alignment)
       
     </span>
   </a>
@@ -2209,140 +2065,145 @@
   
 
 
-<h1 id="vdsim-gui-web-architecture">VDSim GUI / Web Architecture<a class="headerlink" href="#vdsim-gui-web-architecture" title="Permanent link">&para;</a></h1>
-<p>Status: DESIGN (decided). Concept: VDSim computes only; all visualization and
-configuration happen in a web browser on the receiving device. The simulator
-sends/receives physics + config over the network and renders nothing itself.</p>
-<p>This is an accessibility / deployment differentiator vs license-locked desktop
-VD tools (CarMaker / CarSim / Adams), not a research novelty. The technical fit
-is that VDSim's output is compact physics state (not pixels), so the client
-reconstructs the visualization locally — lightweight, unlike rendered-video
-streaming.</p>
-<hr />
-<h2 id="1-decisions">1. Decisions<a class="headerlink" href="#1-decisions" title="Permanent link">&para;</a></h2>
+<h1 id="design-component-test-co-sim-platform-subsystem-modularization">Design: component-test co-sim platform (subsystem modularization)<a class="headerlink" href="#design-component-test-co-sim-platform-subsystem-modularization" title="Permanent link">&para;</a></h1>
+<p>Status: DRAFT for alignment. Task #138.</p>
+<h2 id="1-goal-philosophy">1. Goal &amp; philosophy<a class="headerlink" href="#1-goal-philosophy" title="Permanent link">&para;</a></h2>
+<p>VDSim is the <strong>platform</strong>, not the high-fidelity component models. An OEM
+component team should be able to <strong>replace only their subsystem</strong> (steering box,
+suspension, powertrain, brakes, tire) with their own model — in-process plugin
+or an external co-sim solver (e.g. brake-disc thermal CFD) — while every other
+subsystem keeps a <strong>good-enough VDSim default</strong>. VDSim does not ship a brake-fade
+or vapor-lock model; it ships the brake subsystem <em>interface</em> with the hooks that
+let a fade model (theirs) drive it.</p>
+<p>Revenue thesis (separate doc): sell the validated platform + turnkey coupling,
+not the component models.</p>
+<h2 id="2-current-state">2. Current state<a class="headerlink" href="#2-current-state" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>subsystem</th>
+<th>today</th>
+<th>modular?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tire</td>
+<td><code>ITireModel</code> (Pacejka MF / linear)</td>
+<td><strong>yes</strong> — clean interface</td>
+</tr>
+<tr>
+<td>Suspension kinematics</td>
+<td><code>ISuspensionKinematics</code> (Ld4 native/lookup)</td>
+<td><strong>yes</strong></td>
+</tr>
+<tr>
+<td>Suspension ride</td>
+<td>L3 spring/damper inline</td>
+<td>partial</td>
+</tr>
+<tr>
+<td>Steering</td>
+<td>ackerman + ratio inline in dynamics (<code>seven_dof_dynamics.cpp:285</code>)</td>
+<td>no</td>
+</tr>
+<tr>
+<td>Powertrain</td>
+<td><code>throttle*max_motor_torque*final_drive</code> inline (<code>:368</code>)</td>
+<td>no</td>
+</tr>
+<tr>
+<td>Brakes</td>
+<td><code>brake*max_brake_torque*bias</code> inline (<code>:417</code>)</td>
+<td>no</td>
+</tr>
+</tbody>
+</table>
+<p>So the B work = give <strong>steering / powertrain / brakes</strong> the same pluggable
+treatment tire/suspension already have, plus a <strong>bidirectional coupling port</strong> so
+a subsystem can be an external solver with feedback.</p>
+<h2 id="3-proposed-subsystem-interfaces">3. Proposed subsystem interfaces<a class="headerlink" href="#3-proposed-subsystem-interfaces" title="Permanent link">&para;</a></h2>
+<p>Each is a small <code>compute(in)-&gt;out</code> contract with a built-in default. Signals are
+named (so a coupling can map them). Per-wheel where relevant (FL,FR,RL,RR).</p>
 <ul>
-<li>Backend: Python first (FastAPI + websockets, wrapping the <code>vdsim</code> pybind
-  module / SimSession), migrate to C++ later. The hard real-time loop stays in
-  C++ (SimSession); Python orchestrates, serves, relays.</li>
-<li>3D: Three.js with the WebGPU renderer and automatic WebGL2 fallback (WebGPU
-  not hard-required; the vehicle scene is light).</li>
-<li>MVP scope: run on a server, configure + watch from another PC's browser.
-  Single client, no auth. (Multi-client read-only + auth are later, product.)</li>
+<li><strong>IPowertrain</strong>: in <code>{throttle, gear, wheel_speed[4], dt}</code> → out
+  <code>{drive_torque[4]}</code>. Default = current throttle·max_motor·final_drive + diff.</li>
+<li><strong>IBrakes</strong>: in <code>{brake_cmd, wheel_speed[4], Fz[4], dt, feedback{...}}</code> → out
+  <code>{brake_torque[4], heat_power[4]}</code>. Default = current bias·max_brake, constant
+  μ, <code>heat_power = torque·ω</code>. <strong>The <code>feedback</code> channel</strong> carries externally
+  supplied values (e.g. disc temperature or a μ-scale) so a fade model can act —
+  VDSim just applies whatever μ-scale/torque-limit the feedback provides.</li>
+<li><strong>ISteering</strong>: in <code>{driver_steer, v, dt}</code> → out <code>{road_wheel_angle[2], toe[4]}</code>.
+  Default = ratio + ackerman (+ optional rack-force/servo already in actuator).</li>
 </ul>
-<h2 id="2-the-migration-proof-principle-python-c">2. The migration-proof principle (Python -&gt; C++)<a class="headerlink" href="#2-the-migration-proof-principle-python-c" title="Permanent link">&para;</a></h2>
-<p>The frontend depends ONLY on a stable wire contract — REST endpoints + WS
-message schema — never on the backend implementation. Same decoupling as the
-UDP co-sim protocol. Define the API spec first, implement it in Python, and a
-future C++ server implements the identical contract -&gt; frontend unchanged.
-Migration = backend swap, no frontend change.</p>
-<h2 id="3-architecture">3. Architecture<a class="headerlink" href="#3-architecture" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>[VDSim compute server]                         [any device: browser]
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  C++ core: SimSession (set_input / tick / output)   &lt;- hard real-time loop
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>        |
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  Web/API server (Python: FastAPI + websockets, pybind vdsim)
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>        |  REST  : config CRUD, scenario, start/stop/reset  &lt;--- config UI (forms)
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        |  WS    : state stream (binary/JSON) @ sim rate     ---&gt; 3D viz (Three.js)
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        |  WS    : time-series                               ---&gt; plots
-</span></code></pre></div>
-<p>Three concerns, same split as the udp_server:</p>
-<table>
-<thead>
-<tr>
-<th>Concern</th>
-<th>Transport</th>
-<th>Direction</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Configuration (vehicle/tire/solver/scenario/actuator)</td>
-<td>REST (HTTP)</td>
-<td>browser -&gt; server; validate -&gt; YAML</td>
-</tr>
-<tr>
-<td>Control (start/stop/reset/manual input)</td>
-<td>REST or WS</td>
-<td>browser -&gt; server -&gt; set_input</td>
-</tr>
-<tr>
-<td>State stream (viz/plots)</td>
-<td>WebSocket (high-rate)</td>
-<td>server -&gt; browser, from output()</td>
-</tr>
-</tbody>
-</table>
-<h2 id="4-wire-contract-to-be-frozen-as-the-migration-boundary">4. Wire contract (to be frozen as the migration boundary)<a class="headerlink" href="#4-wire-contract-to-be-frozen-as-the-migration-boundary" title="Permanent link">&para;</a></h2>
-<p>REST (draft):
-- <code>GET  /api/config/vehicle</code> / <code>PUT /api/config/vehicle</code> — VehicleParams (JSON)
-- <code>GET/PUT /api/config/tire</code>, <code>/api/config/solver</code>, <code>/api/config/scenario</code>
-- <code>POST /api/sim/start</code>, <code>/api/sim/stop</code>, <code>/api/sim/reset</code>
-- <code>POST /api/sim/input</code> — manual CmdL4 (throttle/brake/steer/gear)
-- <code>GET  /api/schema/vehicle</code> ... — JSON schema driving the config forms</p>
-<p>WS:
-- <code>/ws/state</code> — server pushes SimOutput frames (state + ax/ay/roll/pitch/Fz/
-  steer_applied) at the sim rate. Binary preferred for high rate.</p>
-<p>Frozen field names/units mirror the existing CSV/STATE-packet conventions
-(ENU world [m], ISO 8855 body, wheel FL=0..RR=3).</p>
-<h2 id="5-frontend">5. Frontend<a class="headerlink" href="#5-frontend" title="Permanent link">&para;</a></h2>
-<p>SPA realized in <code>gui/index.html</code> (Three.js). Add:
-- WebGPU renderer + WebGL2 fallback (Three.js <code>WebGPURenderer</code> with capability
-  check).
-- Config forms generated from JSON schema (so the UI stays in sync with the C++
-  params instead of being hand-maintained).
-- Time-series plots (charts) for vx, yaw rate, ax/ay, susp, etc.
-- The planned actuator-nonlinearity tuner (sliders + step-response plot) is a
-  panel here.</p>
-<h2 id="6-existing-assets-reused">6. Existing assets reused<a class="headerlink" href="#6-existing-assets-reused" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Asset</th>
-<th>Role in this design</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>core</code> SimSession (set_input/tick/output)</td>
-<td>compute kernel the server drives</td>
-</tr>
-<tr>
-<td><code>python</code> pybind <code>vdsim</code> module</td>
-<td>Python access to SimSession (Phase 1)</td>
-</tr>
-<tr>
-<td><code>gui/index.html</code> (Three.js)</td>
-<td>realized frontend</td>
-</tr>
-<tr>
-<td><code>gui/server.py</code> (HTTP/SSE + pybind)</td>
-<td>realized backend (stdlib http.server)</td>
-</tr>
-<tr>
-<td><code>cosim</code> STATE/CMD field set</td>
-<td>the wire-contract field conventions</td>
-</tr>
-</tbody>
-</table>
-<h2 id="7-phased-plan">7. Phased plan<a class="headerlink" href="#7-phased-plan" title="Permanent link">&para;</a></h2>
+<p>(Tire, suspension stay as-is. Suspension-ride extraction is later.)</p>
+<h2 id="4-plug-mechanisms-how-a-team-swaps-their-scope">4. Plug mechanisms (how a team swaps their scope)<a class="headerlink" href="#4-plug-mechanisms-how-a-team-swaps-their-scope" title="Permanent link">&para;</a></h2>
+<p>A subsystem slot accepts one of:</p>
 <ol>
-<li>Expose SimSession to pybind (<code>make_sim_session</code>, set_input/tick/output). [Phase 1]</li>
-<li>FastAPI server: REST (config CRUD + start/stop) + WS (state stream), single client.</li>
-<li>Frontend: schema-driven config forms + 3D viz (WebGPU/WebGL2) + plots.</li>
-<li>Param JSON schema auto/derived from C++ params (UI sync).</li>
-<li>Multi-client read-only broadcast + auth (product stage).</li>
-<li>(Later) C++ backend implementing the same wire contract; retire Python server.</li>
+<li><strong>built-in default</strong> (C++) — nothing to do.</li>
+<li><strong>in-process plugin</strong> — a Python (pybind trampoline) or C++ class implementing
+   the interface. Good for prototyping / 1-D models. Python-in-loop is slow but
+   fine offline.</li>
+<li><strong>external co-sim port</strong> — the subsystem is backed by an external solver
+   exchanging <strong>named signals per macro-step</strong>. Two transports:</li>
+<li><strong>FMI 2.0 co-sim</strong> (preferred): the team exports their model as an FMU;
+     VDSim acts as FMI master for that slot. (We have FMI <em>export</em> + <code>fmu_master.py</code>;
+     this needs FMI <em>import</em> of a slave FMU.)</li>
+<li><strong>socket / shared-mem bridge</strong> for solvers that can't be FMUs.</li>
 </ol>
-<h2 id="8-risks-open-items">8. Risks / open items<a class="headerlink" href="#8-risks-open-items" title="Permanent link">&para;</a></h2>
-<ul>
-<li>WebGPU maturity -&gt; WebGL2 fallback mandatory (decided).</li>
-<li>Full param-surface config UI is significant work; schema-driven generation
-  contains it.</li>
-<li>Source of truth: web UI reads/writes YAML via the API; YAML files remain the
-  canonical store.</li>
-<li>Security: lab use over Tailscale is fine; product needs auth + TLS.</li>
-<li>Sensor/camera/lidar visualization stays delegated to CARLA (out of scope);
-  VDSim streams physics only.</li>
-</ul>
+<p>The port is <strong>bidirectional</strong>: VDSim writes subsystem inputs (e.g. brake
+   heat_power, slip, Fz) and reads outputs/feedback (e.g. disc temperature) each
+   macro-step. Macro-step ≠ micro-step: the heavy solver runs at a coarser rate;
+   VDSim holds/extrapolates feedback between exchanges (offline co-sim, not RT).</p>
+<h2 id="5-worked-example-brake-disc-thermal-closed-loop">5. Worked example — brake-disc thermal closed loop<a class="headerlink" href="#5-worked-example-brake-disc-thermal-closed-loop" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>VDSim (track laps, micro-step ~5 ms)
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  brake subsystem (proxy) ── macro-step (e.g. 50–100 ms) ──▶
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>      out: brake_torque, heat_power[4], slip, Fz, v
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  thermal/CFD FMU  ──▶  disc_temp[4]
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  brake proxy feedback: μ_scale = user_fade_curve(disc_temp)   ← user&#39;s model
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>  -&gt; brake_torque limited by μ_scale, vapor-lock flag, etc.
+</span></code></pre></div>
+<p>VDSim supplies the <strong>loads and the hook</strong>; the fade curve <code>μ(T)</code> and the thermal
+model are the team's. VDSim's brake default (no feedback) = constant μ.</p>
+<h2 id="6-sandbox-scenario-schema-builds-on-vdsim_lab-experiment">6. Sandbox scenario schema (builds on vdsim_lab Experiment)<a class="headerlink" href="#6-sandbox-scenario-schema-builds-on-vdsim_lab-experiment" title="Permanent link">&para;</a></h2>
+<p>Declarative run = the #139 Experiment + subsystem overrides + coupling:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">vehicle</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sedan</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nt">level</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">L3</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nt">road</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> preset</span><span class="p">:</span><span class="w"> </span><span class="nv">minor_road</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">       </span><span class="c1"># or a track / driving line</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nt">maneuver</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> path</span><span class="p">:</span><span class="w"> </span><span class="nv">laps.csv</span><span class="p p-Indicator">,</span><span class="nt"> v</span><span class="p">:</span><span class="w"> </span><span class="nv">30</span><span class="p p-Indicator">,</span><span class="nt"> laps</span><span class="p">:</span><span class="w"> </span><span class="nv">20</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nt">subsystems</span><span class="p">:</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="nt">brakes</span><span class="p">:</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nt">coupling</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fmu</span><span class="w">                  </span><span class="c1"># default | plugin | fmu | socket</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="nt">fmu</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">brake_thermal.fmu</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="nt">macro_dt</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.05</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span><span class="nt">map_out</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> heat_power</span><span class="p">:</span><span class="w"> </span><span class="nv">q_in</span><span class="p p-Indicator">,</span><span class="nt"> slip</span><span class="p">:</span><span class="w"> </span><span class="nv">slip</span><span class="p p-Indicator">,</span><span class="nt"> Fz</span><span class="p">:</span><span class="w"> </span><span class="nv">Fz</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">   </span><span class="c1"># VDSim -&gt; solver</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="nt">map_in</span><span class="p">:</span><span class="w">  </span><span class="p p-Indicator">{</span><span class="nt"> disc_temp</span><span class="p">:</span><span class="w"> </span><span class="nv">T</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">                            </span><span class="c1"># solver -&gt; VDSim</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="nt">log</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">t</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">v</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">Fz</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">brake_torque</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">heat_power</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">disc_temp</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">mu_scale</span><span class="p p-Indicator">]</span>
+</span></code></pre></div>
+<h2 id="7-phasing">7. Phasing<a class="headerlink" href="#7-phasing" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>P1</strong> — extract <strong>IBrakes</strong> (the example): interface + C++ default +
+   Python-plugin trampoline + a <code>feedback{μ_scale}</code> input. Wire into L1/L2/L3.
+   Tests: default == current behavior (re-baseline gate); a Python fade plugin
+   changes stopping behavior.</li>
+<li><strong>P2</strong> — bidirectional coupling port + a reference 1-D thermal <strong>plugin</strong> (not
+   shipped as product, just to demo/test the loop) and the sandbox YAML runner.</li>
+<li><strong>P3</strong> — <strong>IPowertrain</strong>, <strong>ISteering</strong> extraction (same pattern).</li>
+<li><strong>P4</strong> — FMI <em>import</em> (slave FMU) transport; socket bridge.</li>
+</ol>
+<h2 id="8-open-decisions-need-alignment">8. Open decisions (need alignment)<a class="headerlink" href="#8-open-decisions-need-alignment" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Macro-step coupling</strong> confirmed offline (not real-time)? CFD/thermal is slow,
+   so yes by default — agree?</li>
+<li><strong>First subsystem = brakes</strong> (matches the example), then powertrain/steering?</li>
+<li><strong>Transport priority</strong>: in-process Python plugin first (fast to ship, lets us
+   demo the brake loop end-to-end), FMI-import next? Or FMI-import first because
+   that's what OEM solvers actually are?</li>
+<li><strong>Feedback granularity</strong> for brakes: pass raw <code>disc_temp</code> and let the plugin
+   hold the μ(T) curve, or pass a ready <code>μ_scale</code>? (Former is more general.)</li>
+<li>Keep subsystem interfaces <strong>C++ with pybind trampolines</strong> (so both C++ and
+   Python plugins work), agreed?</li>
+</ol>
 
 
 
@@ -2411,12 +2272,12 @@ Migration = backend swap, no frontend change.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.expand", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.expand", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
-        <script src="../javascripts/mathjax.js"></script>
+        <script src="../../javascripts/mathjax.js"></script>
       
         <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
       

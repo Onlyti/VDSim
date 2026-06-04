@@ -806,6 +806,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="5.2 가정">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ladder-level" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        노면 기울기와 ladder level (중요)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2348,6 +2365,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="5.2 가정">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ladder-level" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        노면 기울기와 ladder level (중요)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2733,8 +2767,39 @@ fidelity.</p>
 <td>geometric(roll center) + elastic(roll-stiffness 비율) + unsprung 으로 분배</td>
 <td>chapter 06 (compliance)</td>
 </tr>
+<tr>
+<td>Planar body (no road attitude)</td>
+<td>노면 기울기는 force 로만, body 자세로는 X</td>
+<td>chapter 06 (Ld3)</td>
+</tr>
 </tbody>
 </table>
+<h3 id="ladder-level">노면 기울기와 ladder level (중요)<a class="headerlink" href="#ladder-level" title="Permanent link">&para;</a></h3>
+<p>노면(grade/bank/지형)이 거동에 들어오는 통로는 level 마다 다르다:</p>
+<ul>
+<li><strong>L1 (Bicycle)</strong>: planar, slope 는 slope-gravity + <span class="arithmatex">\(F_z\propto\cos(\text{slope})\)</span>
+  만. roll/pitch·하중이동 없음.</li>
+<li><strong>L2 (7DOF)</strong>: <strong>roll/pitch 자유도(state)는 없다</strong> (transient 동특성 없음). 그러나
+  noise 기울기는 두 경로로 들어간다: (1) slope-gravity + <span class="arithmatex">\(\cos(\text{slope})\)</span> 수직하중
+  스케일, (2) <strong>quasi-static 하중이동·roll/pitch 추정에 specific force</strong>
+  <span class="arithmatex">\(a_\text{felt}=a_\text{kin}-g_\text{tangential}\)</span> 를 사용. 일정 bank 직진처럼
+  <span class="arithmatex">\(a_y^\text{kin}\to0\)</span> 이라도 타이어가 중력 횡성분을 받치는 <span class="arithmatex">\(a_y^\text{felt}=-g_{y,b}\)</span>
+  가 남아 <strong>bank 에 의한 좌우 하중이동과 quasi-static roll 추정</strong>이 생긴다 (예: 8°
+  bank → downhill 측 +660 N, roll≈0.76°). 단 이는 정상상태 대수해이며 <strong>차체 자세를
+  state 로 적분하지 않는다</strong> — transient·실제 attitude state 는 L3 의 몫. 뷰어가 차를
+  노면에 기울여 그리는 것은 시각 표현이다.</li>
+<li>자유 coasting incline 은 종방향 하중이동 0 (중력·관성이 CG 에서 상쇄, <span class="arithmatex">\(\cos\)</span>
+    재분배만), 제동/등판 유지 시 종방향 이동 발생 — specific-force 정식화에서 자동.</li>
+<li><strong>CG-migration (jacking)</strong>: roll <span class="arithmatex">\(\phi\)</span> 가 sprung CG 를 횡으로
+    <span class="arithmatex">\((h_{cg}-h_{ra})\sin\phi\)</span> 이동시켜 추가 중력 roll moment 를 만든다 →
+    유효 roll stiffness 가 <span class="arithmatex">\(m_s g_\perp (h_{cg}-h_{ra})\)</span> 만큼 감소
+    (<span class="arithmatex">\(M_\text{roll}\)</span>·종방향 transfer 를 <span class="arithmatex">\(1/(1-\varepsilon)\)</span> 로 증폭,
+    <span class="arithmatex">\(\varepsilon=m_s g_\perp\,\text{arm}/K\)</span>). pitch 도 동일. sedan flat 코너링
+    ~6-10%, 8° bank 에서 roll 0.76→0.81°, 횡 transfer 660→696 N. flat 직진은 불변.</li>
+<li><strong>L3 (14DOF)</strong>: 바퀴별 <code>road_dz</code> 가 unsprung↔노면 tire spring 에 들어가 sprung
+  body 의 roll/pitch 가 노면 평면을 <strong>자세로</strong> 따라간다 (chapter 06 §6.4). 단
+  grip <span class="arithmatex">\(F_z\)</span> 는 아직 quasi-static (같은 chapter 한계 box).</li>
+</ul>
 <hr />
 <h2 id="53-per-tire-fz-lateral-longitudinal-transfer">5.3 Per-tire Fz — lateral + longitudinal transfer<a class="headerlink" href="#53-per-tire-fz-lateral-longitudinal-transfer" title="Permanent link">&para;</a></h2>
 <p>Static per-tire:</p>
