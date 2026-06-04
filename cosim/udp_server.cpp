@@ -146,8 +146,15 @@ int main(int argc, char** argv) {
         s.pitch_rate = o.state.angular_velocity.y();
         s.yaw_rate = o.state.angular_velocity.z();
         s.ax = o.ax; s.ay = o.ay;
-        for (int i = 0; i < 4; ++i) { s.wheel_spin[i] = o.state.wheel_spin[i]; s.Fz[i] = o.Fz[i]; }
+        for (int i = 0; i < 4; ++i) {
+            s.wheel_spin[i] = o.state.wheel_spin[i]; s.Fz[i] = o.Fz[i];
+            s.slip_ratio[i] = o.slip_ratio[i]; s.slip_angle[i] = o.slip_angle[i];
+            s.susp[i] = o.state.susp_compression[i];
+        }
         s.steer_applied = o.steer_applied; s.wheel_radius = vp.wheel_radius_nominal;
+        s.rack_torque = o.rack_torque;
+        s.m_ax = o.sensors.ax; s.m_ay = o.sensors.ay; s.m_wz = o.sensors.wz;
+        s.m_steer = o.sensors.steer; s.m_gnss_x = o.sensors.gnss_x; s.m_gnss_y = o.sensors.gnss_y;
         const int len = vdsim::cosim::encode_state(out, s);
         ::sendto(sock, out, (size_t)len, 0, (sockaddr*)&dst, sizeof(dst));
         next += period;

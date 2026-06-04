@@ -12,12 +12,12 @@
 namespace vdsim::cosim {
 
 constexpr uint32_t kMagic       = 0x56445331u;  // "VDS1"
-constexpr uint16_t kVersion     = 1;
+constexpr uint16_t kVersion     = 2;  // v2: STATE adds rack_torque/slip/susp/measured
 constexpr uint16_t kMsgCmd      = 1;
 constexpr uint16_t kMsgState    = 2;
 constexpr int      kHeaderBytes = 24;
 constexpr int      kCmdBytes    = 76;
-constexpr int      kStateBytes  = 220;
+constexpr int      kStateBytes  = 372;
 
 // ---- CRC32 (IEEE 802.3, matches Python zlib.crc32) ----
 inline uint32_t crc32(const uint8_t* d, size_t n) {
@@ -65,6 +65,12 @@ struct StateFields {
     double steer_applied {0};
     double wheel_radius  {0};
     double Fz[4] {0,0,0,0};
+    // v2 additions (viewer parity: rendering / FFB / slip / recording)
+    double rack_torque {0};
+    double slip_ratio[4] {0,0,0,0};
+    double slip_angle[4] {0,0,0,0};
+    double susp[4] {0,0,0,0};
+    double m_ax{0}, m_ay{0}, m_wz{0}, m_steer{0}, m_gnss_x{0}, m_gnss_y{0};
     uint32_t seq {0};
     double timestamp {0};
 };
@@ -87,6 +93,12 @@ inline int encode_state(uint8_t* buf, const StateFields& s) {
     for (double v : s.wheel_spin) w.put(v);
     w.put(s.steer_applied); w.put(s.wheel_radius);
     for (double v : s.Fz) w.put(v);
+    w.put(s.rack_torque);
+    for (double v : s.slip_ratio) w.put(v);
+    for (double v : s.slip_angle) w.put(v);
+    for (double v : s.susp) w.put(v);
+    w.put(s.m_ax); w.put(s.m_ay); w.put(s.m_wz);
+    w.put(s.m_steer); w.put(s.m_gnss_x); w.put(s.m_gnss_y);
     const uint32_t c = crc32(buf, w.off);   // crc over header+payload
     w.put(c);
     return static_cast<int>(w.off);

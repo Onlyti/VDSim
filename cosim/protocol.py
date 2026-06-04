@@ -10,18 +10,21 @@ Layout (little-endian, tightly packed), see cosim_protocol.hpp:
   header (24): magic(I) version(H) msg_type(H) seq(I) _pad(I) timestamp(d)
   CMD payload (48): steer(d) throttle(d) brake(d) gear(i) handbrake(B) _pad(3x)
                     aux_accel(d) aux_speed(d)            -> 76 total incl. crc
-  STATE payload (192): x y z roll pitch yaw vx vy vz roll_rate pitch_rate
+  STATE payload (344): x y z roll pitch yaw vx vy vz roll_rate pitch_rate
                     yaw_rate ax ay (14d) wheel_spin[4] steer_applied
-                    wheel_radius Fz[4]                   -> 220 total incl. crc
+                    wheel_radius Fz[4]  (192, v1)
+                    rack_torque slip_ratio[4] slip_angle[4] susp[4]
+                    m_ax m_ay m_wz m_steer m_gnss_x m_gnss_y  (152, v2)
+                                                         -> 372 total incl. crc
   trailing crc (4): crc32 over all preceding bytes
 """
 import struct
 import zlib
 
 MAGIC = 0x56445331  # "VDS1"
-VERSION = 1
+VERSION = 2  # v2: STATE adds rack_torque/slip/susp/measured
 MSG_CMD, MSG_STATE = 1, 2
-CMD_BYTES, STATE_BYTES = 76, 220
+CMD_BYTES, STATE_BYTES = 76, 372
 
 # default ports (server listens CMD, emits STATE)
 CMD_PORT, STATE_PORT = 7001, 7002
@@ -79,4 +82,10 @@ def decode_state(buf):
     out["wheel_spin"] = list(struct.unpack_from("<4d", buf, 136))
     out["steer_applied"], out["wheel_radius"] = struct.unpack_from("<dd", buf, 168)
     out["Fz"] = list(struct.unpack_from("<4d", buf, 184))
+    out["rack_torque"] = struct.unpack_from("<d", buf, 216)[0]
+    out["slip_ratio"] = list(struct.unpack_from("<4d", buf, 224))
+    out["slip_angle"] = list(struct.unpack_from("<4d", buf, 256))
+    out["susp"] = list(struct.unpack_from("<4d", buf, 288))
+    (out["m_ax"], out["m_ay"], out["m_wz"], out["m_steer"],
+     out["m_gnss_x"], out["m_gnss_y"]) = struct.unpack_from("<6d", buf, 320)
     return out

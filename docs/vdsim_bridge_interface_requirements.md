@@ -111,7 +111,7 @@ Every packet begins with the common 24-byte header:
 | off | type | field | meaning |
 |---|---|---|---|
 | 0  | uint32 | magic | 0x56445331 ("VDS1") |
-| 4  | uint16 | version | protocol version = 1 |
+| 4  | uint16 | version | protocol version = 2 |
 | 6  | uint16 | msg_type | 1 = CMD, 2 = STATE |
 | 8  | uint32 | seq | monotonically increasing per stream |
 | 12 | uint32 | _pad | 0 (align payload to 8) |
@@ -170,10 +170,23 @@ origin = the world origin VDSim was configured with (Section 6). Body frame = IS
 | 136 | double[4]| wheel_spin | [rad/s] FL,FR,RL,RR |
 | 168 | double   | steering_tire_angle_applied | [rad] steer actually applied this step |
 | 176 | double   | wheel_radius_nominal | [m] so bridge computes wheel speed [m/s] = spin*r |
-| 184 | double[4]| tire_Fz | [N] FL,FR,RL,RR (0 if not modeled) — reserved/L3 |
-| 216 | uint32   | crc32 | over bytes [0,216) |
+| 184 | double[4]| tire_Fz | [N] FL,FR,RL,RR (0 if not modeled) |
+| 216 | double   | rack_torque | [N·m] steering aligning torque (FFB) — v2 |
+| 224 | double[4]| slip_ratio | kappa FL,FR,RL,RR — v2 |
+| 256 | double[4]| slip_angle | alpha [rad] FL,FR,RL,RR — v2 |
+| 288 | double[4]| susp_compression | [m] +compressed FL,FR,RL,RR (L3) — v2 |
+| 320 | double   | m_ax | [m/s^2] measured (sensor model; == truth if disabled) — v2 |
+| 328 | double   | m_ay | [m/s^2] measured — v2 |
+| 336 | double   | m_yaw_rate | [rad/s] measured — v2 |
+| 344 | double   | m_steer | [rad] measured — v2 |
+| 352 | double   | m_gnss_x | [m] measured ENU — v2 |
+| 360 | double   | m_gnss_y | [m] measured ENU — v2 |
+| 368 | uint32   | crc32 | over bytes [0,368) |
 
-Total = 220 bytes. Wheel index order FL=0, FR=1, RL=2, RR=3 (repo convention).
+Total = 372 bytes (v2). Wheel index order FL=0, FR=1, RL=2, RR=3 (repo
+convention). v1 (220 B) was the first 192 payload bytes (through tire_Fz); v2
+appends the FFB / slip / suspension / measured block. Receivers parse by version
++ length per Section 10.
 
 Bridge -> `autohyu_msgs/VehicleState`: x,y,z <- x/y/z_world; vx,vy,vz; roll,pitch,yaw;
 yaw_vel <- yaw_rate; ax,ay <- ax_body, ay_body; `vehicle_can.lateral_accel=ay`,
