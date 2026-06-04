@@ -27,6 +27,11 @@ if(MSVC)
     add_compile_options(/utf-8)
 endif()
 
+# M_PI et al. are POSIX/GNU extensions: glibc/libc++ expose them by default but
+# MSVC only with _USE_MATH_DEFINES before <cmath>. Define it everywhere (no-op
+# on GCC/Clang) so the core's trig constants compile on Windows.
+add_compile_definitions(_USE_MATH_DEFINES)
+
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
