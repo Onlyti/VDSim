@@ -1,0 +1,17 @@
+# Example communication routing (real-time-comms mode). Realized by
+# python/vdsim_comms.py Router; referenced from a scenario via `run: {mode:
+# rt_comms, comms: example}`. See builder/README.md + docs/design/SIM_CONFIG_ARCH.md.
+name: example
+channels:
+  # vehicle dynamics state -> two consumers (fan-out): a controller + a logger
+  - source: ego.state
+    template: json
+    to: [ {ip: 127.0.0.1, port: 7100}, {ip: 127.0.0.1, port: 7101} ]
+  # one sensor -> a perception node, as an NMEA-framed sentence
+  - source: ego.sensor.gnss
+    template: nmea_gga
+    to: [ {ip: 127.0.0.1, port: 9001} ]
+  # control INTO the sim (fan-in): any controller may send a VDS1 cmd here
+  - direction: in
+    template: vds1_cmd
+    listen: { port: 7001 }
