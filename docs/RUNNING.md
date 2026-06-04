@@ -44,12 +44,12 @@ res.to_csv("run.csv"); print(res.summary())
 ```
 
 ### B. Real-time comms (UDP; SIL/HIL nodes in the loop)
-The C++ `vdsim_udp_server` is the single comms layer: it runs a real-time
+The C++ `vdsim_realtime` is the single comms layer: it runs a real-time
 `SimSession`, receives CMD packets on one port, and emits STATE on another. The
 wire format is the canonical VDS1 binary protocol (`cosim/cosim_protocol.hpp`,
 CRC32, 76B CMD / 220B STATE).
 ```sh
-build/bin/vdsim_udp_server configs/vehicles/sedan.yaml \
+build/bin/vdsim_realtime configs/vehicles/sedan.yaml \
     configs/tires/default_pacejka.yaml --level=L3 \
     --cmd-port=7001 --state-ip=127.0.0.1 --state-port=7002 --rate=200
 ```

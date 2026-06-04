@@ -51,7 +51,7 @@ Confirmed decisions:
  +-------------------------------------------------------------------+
                                 |  UDP (binary)  |
  +-------------------------- VDSim host (no ROS) --------------------+
- |   vdsim_udp_server (VDSim-side, NEW deliverable)                  |
+ |   vdsim_realtime (VDSim-side, NEW deliverable)                  |
  |    - recv CMD packet -> CmdL4 -> IVehicleDynamics::step(dt)        |
  |    - read State -> pack STATE packet -> send @ >=100 Hz            |
  |   create_seven_dof() + create_flat_ground() ; own real-time loop  |

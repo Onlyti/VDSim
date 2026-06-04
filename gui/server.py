@@ -275,7 +275,7 @@ class FigureEight(WaypointPath):
         super().__init__(fig8_pts(0.0, 0.0, R, n))
 
 
-COSIM_BIN = REPO / "build" / "bin" / "vdsim_udp_server"
+COSIM_BIN = REPO / "build" / "bin" / "vdsim_realtime"
 
 
 def _write_terrain(path, terrain):
@@ -293,7 +293,7 @@ def _write_terrain(path, terrain):
 
 
 class CosimBridge:
-    """Launches the binary vdsim_udp_server, consumes its STATE packets for the
+    """Launches the binary vdsim_realtime, consumes its STATE packets for the
     3D view, and relays control as CMD packets (per cosim_protocol.hpp).
 
     The GUI configures and runs the real co-sim server; the Python playground sim
@@ -322,7 +322,8 @@ class CosimBridge:
         with self.lock:
             return self.proc is not None and self.proc.poll() is None
 
-    def start(self, vp, tp, over, road=None, sensors=None, terrain=None, sensor_delay=0.0):
+    def start(self, vp, tp, over, road=None, sensors=None, terrain=None,
+              sensor_delay=0.0, pose=None):
         if self.running():
             self.stop()
         with self.lock:
@@ -358,6 +359,10 @@ class CosimBridge:
                 args.append(f"--sensors={sf}")
             if sensor_delay:
                 args.append(f"--sensor-delay={float(sensor_delay)}")
+            if pose:
+                for flag, key in (("--x0=", "x0"), ("--y0=", "y0"), ("--yaw0=", "yaw0")):
+                    if pose.get(key) is not None:
+                        args.append(f"{flag}{float(pose[key])}")
             self._rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self._rx.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self._rx.bind(("127.0.0.1", int(c["state_port"])))
@@ -489,25 +494,22 @@ class Runner:
         threading.Thread(target=self._loop, daemon=True).start()
 
     def _build(self):
-        if self.terrain is not None:             # drive on a baked terrain heightmap
-            t = self.terrain
-            self.sim = vdsim.make_sim_session_heightmap(
-                self.vp, self.tp, self.cfg["level"], t["H"],
-                x0=t["x0"], y0=t["y0"], dx=t["dx"], dy=t["dy"],
-                mu=self.cfg["road_mu"], nominal_dt=self.dt, solver=self.solver)
+        # No in-process sim: the real-time server (vdsim_realtime) is the single
+        # plant. (Re)start it with the current vehicle/tire/level/road/terrain/
+        # sensors + init pose; the GUI subscribes to its STATE and relays CMD.
+        over = {"level": self.cfg["level"], "vx0": max(0.0, self.cfg["init_v"]),
+                "rate": (1.0 / self.dt if self.dt > 1e-6 else 200.0)}
+        road = {"mu": self.cfg["road_mu"], "mu_right": self.cfg["road_mu_right"],
+                "mu_boundary": self.cfg["road_boundary"], "grade": self.cfg["road_grade"],
+                "bank": self.cfg["road_bank"], "rough_amp": self.cfg["road_rough_amp"],
+                "rough_wl": self.cfg["road_rough_wl"]}
+        pose = {"x0": self.cfg["init_x"], "y0": self.cfg["init_y"], "yaw0": self.cfg["init_yaw"]}
+        sensors = self.sensors if self.sensors.enabled else None
+        if self.cosim.available():
+            self.cosim.start(self.vp, self.tp, over, road=road, sensors=sensors,
+                             terrain=self.terrain, sensor_delay=self.sensor_delay, pose=pose)
         else:
-            self.sim = vdsim.make_sim_session(
-                self.vp, self.tp, self.cfg["level"], nominal_dt=self.dt,
-                sensor_delay_s=self.sensor_delay, actuator=self.act,
-                solver=self.solver, sensors=self.sensors,
-                mu=self.cfg["road_mu"], mu_right=self.cfg["road_mu_right"],
-                mu_boundary_y=self.cfg["road_boundary"],
-                grade=self.cfg["road_grade"], bank=self.cfg["road_bank"],
-                rough_amp=self.cfg["road_rough_amp"], rough_wavelength=self.cfg["road_rough_wl"])
-        s0 = vdsim.make_init_state(
-            x=self.cfg["init_x"], y=self.cfg["init_y"], yaw=self.cfg["init_yaw"],
-            v=max(0.0, self.cfg["init_v"]), wheel_radius=self.vp.wheel_radius_nominal)
-        self.sim.reset(s0)
+            print("[VDSim GUI] vdsim_realtime binary missing — build the C++ tree first")
         self.prev_idx = 0
 
     def load_vehicle(self, name):
@@ -756,47 +758,22 @@ class Runner:
                 wb = self.vp.wheelbase
             cosim_on = self.cosim.running()
             cs = self.cosim.last_state if cosim_on else None
-            if run and cosim_on:
-                # Co-sim mode: the binary server is the plant. Build the command
-                # (autopilot uses the server's state for feedback) and relay it as
-                # a binary CMD; the Python sim is bypassed.
-                t = b = st = 0.0
-                if cs:
-                    if driver:
-                        st, self.prev_idx = self.path.steer(
-                            cs["x"], cs["y"], cs["yaw"], cs["vx"], wb, self.prev_idx)
-                        ax = max(-3.0, min(3.0, 0.8 * (vt - cs["vx"])))
-                        t = min(1.0, ax / 3.0) if ax >= 0 else 0.0
-                        b = min(1.0, -ax / 3.0) if ax < 0 else 0.0
-                    else:
-                        t, b, st = man["throttle"], man["brake"], man["steer"]
+            if run and cosim_on and cs:
+                # The real-time server (vdsim_realtime) is the plant. Build the
+                # command (autopilot uses the server's state for feedback) and
+                # relay it as a binary CMD. The GUI owns no sim — it only drives
+                # and renders the one real-time runtime.
+                if driver:
+                    st, self.prev_idx = self.path.steer(
+                        cs["x"], cs["y"], cs["yaw"], cs["vx"], wb, self.prev_idx)
+                    ax = max(-3.0, min(3.0, 0.8 * (vt - cs["vx"])))
+                    t = min(1.0, ax / 3.0) if ax >= 0 else 0.0
+                    b = min(1.0, -ax / 3.0) if ax < 0 else 0.0
+                else:
+                    t, b, st = man["throttle"], man["brake"], man["steer"]
                 self.cosim.send_cmd(t, b, st)
                 self.ports[self.live_vid].applied = {"throttle": t, "brake": b, "steer": st}
-            elif run:
-                pending = min(pending + (1.0 / fps) * ts, 0.5)  # cap to avoid spiral
-                while pending >= dt:
-                    s = self.sim.state()
-                    cmd = vdsim.CmdL4()
-                    if driver:
-                        x, y = float(s.position[0]), float(s.position[1])
-                        steer, self.prev_idx = self.path.steer(
-                            x, y, s.yaw(), s.vx(), wb, self.prev_idx)
-                        ax = max(-3.0, min(3.0, 0.8 * (vt - s.vx())))
-                        if ax >= 0:
-                            cmd.throttle = min(1.0, ax / 3.0)
-                        else:
-                            cmd.brake = min(1.0, -ax / 3.0)
-                        cmd.steer_angle_wheel = steer
-                    else:
-                        cmd.throttle, cmd.brake = man["throttle"], man["brake"]
-                        cmd.steer_angle_wheel = man["steer"]
-                    self.sim.set_input(cmd)
-                    self.sim.tick(dt)
-                    pending -= dt
-                    self.ports[self.live_vid].applied = {
-                        "throttle": cmd.throttle, "brake": cmd.brake,
-                        "steer": cmd.steer_angle_wheel}
-            if cosim_on and cs:
+            if cs:
                 snap = {"t": cs["t"], "running": run, "driver": driver,
                         "x": cs["x"], "y": cs["y"], "z": cs["z"],
                         "yaw": cs["yaw"], "roll": cs["roll"], "pitch": cs["pitch"],
@@ -813,26 +790,17 @@ class Runner:
                         "v_target": vt, "dt": 1.0 / max(1.0, self.cosim.cfg["rate"]),
                         "time_scale": 1.0, "source": "cosim"}
             else:
-                o = self.sim.output()
-                s = o.state
-                snap = {"t": o.sim_time, "running": run, "driver": driver,
-                        "x": float(s.position[0]), "y": float(s.position[1]),
-                        "z": float(s.position[2]),
-                        "yaw": s.yaw(), "roll": o.roll, "pitch": o.pitch,
-                        "vx": s.vx(), "vy": s.vy(), "r": s.yaw_rate(),
-                        "wx": float(s.angular_velocity[0]), "wy": float(s.angular_velocity[1]),
-                        "ax": o.ax, "ay": o.ay, "steer": o.steer_applied,
-                        "rack_torque": o.rack_torque,   # aligning torque -> wheel FFB
-                        "Fz": [float(v) for v in o.Fz],
-                        "Ft": [[float(f[0]), float(f[1])] for f in o.tire_forces],
-                        "kappa": [float(v) for v in o.slip_ratio],
-                        "alpha": [float(v) for v in o.slip_angle],
-                        "susp": [float(v) for v in s.susp_compression],
+                # Real-time runtime not yet streaming (just (re)started). Hold the
+                # init pose so the viewer has something coherent to render.
+                snap = {"t": 0.0, "running": run, "driver": driver,
+                        "x": self.cfg["init_x"], "y": self.cfg["init_y"], "z": 0.0,
+                        "yaw": self.cfg["init_yaw"], "roll": 0.0, "pitch": 0.0,
+                        "vx": 0.0, "vy": 0.0, "r": 0.0, "wx": 0.0, "wy": 0.0,
+                        "ax": 0.0, "ay": 0.0, "steer": 0.0, "Fz": [0.0, 0.0, 0.0, 0.0],
+                        "Ft": [], "susp": [], "rack_torque": 0.0, "kappa": [], "alpha": [],
                         "level": self.cfg["level"], "vehicle": self.cfg["vehicle"],
-                        "v_target": vt, "dt": dt, "time_scale": ts, "source": "sim",
-                        "m_gx": o.sensors.gnss_x, "m_gy": o.sensors.gnss_y,
-                        "m_ax": o.sensors.ax, "m_ay": o.sensors.ay,
-                        "m_wz": o.sensors.wz, "m_steer": o.sensors.steer}
+                        "v_target": vt, "dt": dt, "time_scale": 1.0,
+                        "source": "waiting", "cosim_up": cosim_on}
             snap["grade"] = self.cfg["road_grade"]
             snap["bank"] = self.cfg["road_bank"]
             if self.terrain is not None:        # live slope the contact model sees
@@ -1115,19 +1083,13 @@ class Runner:
                     "last": dict(self.rec_last)}
 
     def start_cosim(self, over):
+        # Manual (re)start of the real-time runtime with the current config.
+        # B4 makes the GUI always run on it, so this just rebuilds.
         with self.lock:
-            vp, tp = self.vp, self.tp
-            over.setdefault("level", self.cfg["level"])
-            over.setdefault("vx0", self.cfg["init_v"])
-            road = {"mu": self.cfg["road_mu"], "mu_right": self.cfg["road_mu_right"],
-                    "mu_boundary": self.cfg["road_boundary"], "grade": self.cfg["road_grade"],
-                    "bank": self.cfg["road_bank"], "rough_amp": self.cfg["road_rough_amp"],
-                    "rough_wl": self.cfg["road_rough_wl"]}
-            sensors = self.sensors if self.sensors.enabled else None
-            terrain = self.terrain
-            sensor_delay = self.sensor_delay
-        return self.cosim.start(vp, tp, over, road=road, sensors=sensors,
-                                terrain=terrain, sensor_delay=sensor_delay)
+            if "level" in over:
+                self.cfg["level"] = str(over["level"])
+            self._build()
+        return self.cosim.status()
 
     def stop_cosim(self):
         return self.cosim.stop()

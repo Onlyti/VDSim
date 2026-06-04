@@ -1,4 +1,4 @@
-// vdsim_udp_server — real-time UDP co-simulation server.
+// vdsim_realtime — real-time UDP co-simulation server.
 //
 // Runs a SimSession in real time (RealTimeRunner), receiving CMD packets and
 // emitting STATE packets per docs/vdsim_bridge_interface_requirements.md. This
@@ -6,7 +6,7 @@
 // latched commands, ECU-style fail-safe on command timeout.
 //
 // Usage:
-//   vdsim_udp_server <vehicle.yaml> <tire.yaml> [--level=L1|L2|L3]
+//   vdsim_realtime <vehicle.yaml> <tire.yaml> [--level=L1|L2|L3]
 //       [--cmd-port=7001] [--state-ip=127.0.0.1] [--state-port=7002]
 //       [--rate=200] [--vx0=0] [--cmd-timeout=0.1]
 #include "cosim_protocol.hpp"
@@ -79,7 +79,7 @@ std::unique_ptr<vdsim::IContactProvider> make_ground(
                        static_cast<std::streamsize>(h.size()) * 8))
                 return vdsim::create_heightmap_ground(std::move(h), nx, ny, x0, y0, dx, dy, mu);
         }
-        std::fprintf(stderr, "[vdsim_udp_server] terrain load failed: %s (flat-ground)\n",
+        std::fprintf(stderr, "[vdsim_realtime] terrain load failed: %s (flat-ground)\n",
                      terrain.c_str());
     }
     if (iso_class >= 0) return vdsim::create_iso8608_ground(0.0, mu, iso_class, 1u);
@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
             "[--rate=200] [--vx0=0] [--cmd-timeout=0.1] "
             "[--mu=1.0] [--mu-right=-1] [--mu-boundary=0] [--grade=0] [--bank=0] "
             "[--rough-amp=0] [--rough-wl=4] [--iso-class=-1] [--terrain=<file>] "
-            "[--sensors=<yaml>] [--sensor-delay=0]\n",
+            "[--sensors=<yaml>] [--sensor-delay=0] [--x0=0] [--y0=0] [--yaw0=0]\n",
             argv[0]);
         return 2;
     }
@@ -127,6 +127,9 @@ int main(int argc, char** argv) {
     const std::string terrain = opts(argc, argv, "--terrain=", "");
     const std::string sensors_yaml = opts(argc, argv, "--sensors=", "");
     const double sensor_delay = optd(argc, argv, "--sensor-delay=", 0.0);
+    const double x0   = optd(argc, argv, "--x0=", 0.0);
+    const double y0   = optd(argc, argv, "--y0=", 0.0);
+    const double yaw0 = optd(argc, argv, "--yaw0=", 0.0);
 
     vdsim::SimConfig cfg; cfg.nominal_dt = dt;
     if (!sensors_yaml.empty()) cfg.sensors = vdsim::SensorParams::from_yaml(sensors_yaml);
@@ -134,7 +137,10 @@ int main(int argc, char** argv) {
     vdsim::SimSession sim(make_dyn(level),
         make_ground(terrain, mu, mu_right, mu_boundary, grade, bank, rough_amp, rough_wl, iso_class),
         vp, tp, sp, cfg);
-    vdsim::State s0; s0.velocity.x() = vx0;
+    vdsim::State s0;
+    s0.position = vdsim::Vec3(x0, y0, 0.0);
+    s0.orientation = vdsim::quat_from_euler(vdsim::Euler{0.0, 0.0, yaw0});
+    s0.velocity.x() = vx0;
     const double w0 = (vp.wheel_radius_nominal > 0.0) ? vx0 / vp.wheel_radius_nominal : 0.0;
     s0.wheel_spin = {{w0, w0, w0, w0}};
     sim.reset(s0);
@@ -183,7 +189,7 @@ int main(int argc, char** argv) {
 
     runner.start();
     std::fprintf(stderr,
-        "[vdsim_udp_server] %s @ %.0f Hz | cmd :%d  state -> %s:%d | Ctrl-C to stop\n",
+        "[vdsim_realtime] %s @ %.0f Hz | cmd :%d  state -> %s:%d | Ctrl-C to stop\n",
         level.c_str(), rate, cmd_port, st_ip.c_str(), st_port);
 
     // Main thread: emit STATE at the sim rate.
@@ -221,7 +227,7 @@ int main(int argc, char** argv) {
     runner.stop();
     recv_thread.join();
     ::close(sock);
-    std::fprintf(stderr, "[vdsim_udp_server] stopped. sim_time=%.2fs, cmds=%llu\n",
+    std::fprintf(stderr, "[vdsim_realtime] stopped. sim_time=%.2fs, cmds=%llu\n",
                  sim.sim_time(), (unsigned long long)cmd_count.load());
     return 0;
 }

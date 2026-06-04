@@ -95,7 +95,7 @@ struct Config { double dt{0.005}; double cmd_timeout_s{0.1};
   roll·pitch·yaw rate / ax,ay / wheel_spin[4] / steer_applied / wheel_radius /
   Fz[4] + CRC32.
 - **CRC32** = IEEE 802.3, Python `zlib.crc32` 호환 (헤더+payload 전체).
-- seq 로 out-of-order/stale 폐기. `vdsim_udp_server <veh.yaml> <tire.yaml>
+- seq 로 out-of-order/stale 폐기. `vdsim_realtime <veh.yaml> <tire.yaml>
   [--level --cmd-port --state-ip --state-port --rate --vx0 --cmd-timeout]` 가
   SimSession+RealTimeRunner 를 띄워 이 프로토콜을 말한다.
 
@@ -111,7 +111,7 @@ struct Config { double dt{0.005}; double cmd_timeout_s{0.1};
 - **outbound telemetry** `/api/io/targets` — 차량별로 설정한 ip:port 들에 state(+
   cmd 확인용)를 JSON UDP fan-out.
 - **co-sim 구동 front-end**: GUI 가 현재 vehicle/tire 설정을 temp yaml 로 써서
-  `vdsim_udp_server` 를 subprocess 로 띄우고, 그 바이너리 STATE 를 받아 3D 로
+  `vdsim_realtime` 를 subprocess 로 띄우고, 그 바이너리 STATE 를 받아 3D 로
   시각화하며 제어를 바이너리 CMD 로 relay (single source of truth).
 
 ### 언제 무엇을
@@ -126,7 +126,7 @@ struct Config { double dt{0.005}; double cmd_timeout_s{0.1};
 
 ## 18.7 한계 / 다음
 
-- 현재 `vdsim_udp_server` 는 vehicle/tire yaml 만 받아 **actuator/solver 설정은
+- 현재 `vdsim_realtime` 는 vehicle/tire yaml 만 받아 **actuator/solver 설정은
   미전달** (CLI 확장 여지).
 - STATE 목적지가 단일 → 외부 controller 와 GUI 동시 수신은 GUI relay 또는
   state-ip 노출 필요.

@@ -10,7 +10,7 @@ owners of a live simulation** and **multiple incompatible comm paths**:
 
 | owner | sim instance | transport | protocol |
 |---|---|---|---|
-| `cosim/udp_server.cpp` | own `SimSession` + `RealTimeRunner` | UDP | VDS1 binary, CRC32, versioned (`cosim_protocol.hpp`) — canonical |
+| `cosim/realtime_server.cpp` | own `SimSession` + `RealTimeRunner` | UDP | VDS1 binary, CRC32, versioned (`cosim_protocol.hpp`) — canonical |
 | `python/vdsim_comms.py` | own `Simulation` (via lab) | UDP | toy templates (`vds1_cmd = <Iddd`, json, nmea) — divergent, NOT wire-compatible with the above |
 | `gui/server.py` | own `RUNNER` | HTTP SSE + HTTP `/api/manual` + UDP 8101 (FFB) + HTTP `/api/io` fan-out | ad-hoc JSON |
 
@@ -44,7 +44,7 @@ Three rules:
    get_data` is the only stepping path. Batch and embedded callers use only
    this. (`python/vdsim_lab.py`, `tools/vdsim_batch.py`, the `vdsim` .so.)
 
-2. **[2] is the real-time runtime, not merely "comms."** `vdsim_udp_server` is
+2. **[2] is the real-time runtime, not merely "comms."** `vdsim_realtime` is
    VDSim's real-time application: it drives the *same* SimSession core as [3],
    but paced by `RealTimeRunner` against a wall clock, with UDP as its I/O. So
    [3] and [2] are the two ways to run one core — offline/deterministic vs
@@ -97,7 +97,7 @@ tools/wheel_ffb*.py    # control SOURCES (clients) for branch [2]
 cosim/                 # [2] the one comms layer
   cosim_protocol.hpp   # canonical VDS1 wire format (C++)
   protocol.py          # Python mirror of it (encode CMD / decode STATE)
-  udp_server.cpp       # the single comms server (CMD in / STATE out)
+  realtime_server.cpp       # the single comms server (CMD in / STATE out)
   test_udp_client.py   # smoke test, uses protocol.py
 configs/comms/*.yaml   # routing spec (fan-out not yet realized in the server)
 gui/                   # [1] the one web viewer: SSE + static, subscribes
@@ -108,16 +108,24 @@ builder/               # authoring tool (incl. suspension editor), separate conc
 
 - Single web viewer: `gui/` (kept), `viewer/` retired (suspension editor folded
   into `builder/`). DONE.
-- Single comms layer: C++ `vdsim_udp_server`. Python router (`vdsim_comms.py`)
+- Single comms layer: C++ `vdsim_realtime`. Python router (`vdsim_comms.py`)
   retired; its toy templates deleted. Python participants use `cosim/protocol.py`.
   DONE.
 
+## B-track progress (2026-06-04, post-v0.1.0)
+
+- B1 STATE v2 (rack_torque/slip/susp/measured); B2 server road/terrain config;
+  B3 server SensorParams yaml; B4 `gui/server.py` now owns no sim — it auto-
+  starts `vdsim_realtime`, relays CMD, and renders its STATE. DONE.
+- The real-time app is renamed `vdsim_realtime` (core pacing class stays
+  `RealTimeRunner`).
+
 ## Open items
 
-- Branch [2] fan-out: the C++ server currently has one CMD-in port + one
-  STATE-out destination (CLI). Config-driven multi-destination fan-out (so
-  viewer + logger + HIL can all subscribe) is the configs/comms intent, not yet
-  realized in the server.
-- Branch [1]: `gui/server.py` still owns its own sim + control + fan-out (task
-  #147). Convert it to subscribe to the udp_server STATE and drop its control
-  ownership; wheel clients send CMD to the udp_server directly.
+- Branch [2] fan-out: one CMD-in port + one STATE-out destination (CLI).
+  Config-driven multi-destination fan-out (viewer + logger + HIL at once) is the
+  configs/comms intent, not yet realized in the server.
+- Parity gaps deferred from B4: ActuatorParams and SolverParams
+  (integrator/substeps) are not yet passed to the server, so the GUI's
+  actuator/solver panels don't affect the plant. rack_torque is emitted at L2
+  but reads 0 at L3 (FFB on L3).

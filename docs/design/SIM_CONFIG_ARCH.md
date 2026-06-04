@@ -66,7 +66,7 @@ channels:
 - **fan-out**: one source → many `to` destinations (a sensor feeds perception +
   a logger).
 - **fan-in**: a `direction: in` channel listens on one port; multiple controllers
-  may send (last-writer / ZOH, as the current `vdsim_udp_server` already does).
+  may send (last-writer / ZOH, as the current `vdsim_realtime` already does).
 - **templates** keyed by source type: `vds1_state` / `vds1_cmd` (the existing
   `cosim/cosim_protocol.hpp` VDS1 binary), plus sensor templates (NMEA for GNSS,
   raw IMU struct, etc.). New source type → new template; the config never hand-
@@ -77,7 +77,7 @@ saved, multi-source routing file.
 
 ## 5. Execution modes (same scenario, two ways to drive it)
 
-- **A. Real-time comms** (real-vehicle-equivalent; current `vdsim_udp_server` /
+- **A. Real-time comms** (real-vehicle-equivalent; current `vdsim_realtime` /
   GUI data port): the sim free-runs; data flows per `comms.yaml`; control arrives
   over UDP (ZOH-latched, fail-safe on timeout). Batch can run this when the loop
   involves external SIL/HIL nodes.

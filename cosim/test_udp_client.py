@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Smoke test for vdsim_udp_server: send CMD packets, receive + decode STATE.
+"""Smoke test for vdsim_realtime: send CMD packets, receive + decode STATE.
 
 Verifies the wire protocol round-trips (CRC32 via zlib must match the C++ side)
 and that the vehicle responds to a throttle command (vx increases). Uses the
 shared protocol module so there is one definition of the wire format.
 
 Usage:
-  build/bin/vdsim_udp_server configs/vehicles/sedan.yaml \
+  build/bin/vdsim_realtime configs/vehicles/sedan.yaml \
       configs/tires/default_pacejka.yaml --rate=200 --vx0=0 &
   python3 cosim/test_udp_client.py
 """

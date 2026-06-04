@@ -27,7 +27,7 @@ yet cross-validated against a commercial reference on real-vehicle data.
 - Batch / campaign runner (sweep + Monte Carlo) → summary CSV.
 - Sensor models (GNSS/INS/IMU/wheel-speed/steer, noise+bias+delay, mount-pose).
 - Operating-point linearization (A,B export); in-loop observer slot.
-- Real-time UDP runtime (`vdsim_udp_server`, VDS1 binary protocol) for
+- Real-time UDP runtime (`vdsim_realtime`, VDS1 binary protocol) for
   SIL/HIL/co-sim; Python protocol mirror.
 - FMI 2.0 Co-Simulation export (L2/L3 FMUs) + import of any CS FMU.
 - Web viewer (Three.js PoC) + experiment authoring builder + suspension editor.
