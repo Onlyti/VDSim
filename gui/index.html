@@ -359,12 +359,14 @@ rebuildCar('L2');
 
 // Map streamed per-wheel forces (always 4) onto the rendered wheels (2 or 4).
 function renderForces(Ft, Fz, susp){
-  if(!renderLevel || !wheels.length || !Ft) return;
+  if(!renderLevel || !wheels.length) return;
+  Fz = Fz || [0,0,0,0];
+  const ft=i=> (Ft && Ft[i]) ? Ft[i] : [0,0];   // tire Fx/Fy may be absent (cosim STATE has Fz only)
   let WF;
   if(wheels.length===2){  // bicycle: front = FL+FR, rear = RL+RR
-    WF=[[Ft[0][0]+Ft[1][0], Ft[0][1]+Ft[1][1], (Fz[0]||0)+(Fz[1]||0)],
-        [Ft[2][0]+Ft[3][0], Ft[2][1]+Ft[3][1], (Fz[2]||0)+(Fz[3]||0)]];
-  } else WF=[0,1,2,3].map(i=>[Ft[i][0],Ft[i][1],Fz[i]||0]);
+    WF=[[ft(0)[0]+ft(1)[0], ft(0)[1]+ft(1)[1], (Fz[0]||0)+(Fz[1]||0)],
+        [ft(2)[0]+ft(3)[0], ft(2)[1]+ft(3)[1], (Fz[2]||0)+(Fz[3]||0)]];
+  } else WF=[0,1,2,3].map(i=>[ft(i)[0],ft(i)[1],Fz[i]||0]);
   const setArr=(ar,dir,mag,scale)=>{ if(mag>5){ ar.visible=true;
       ar.setDirection(dir.normalize()); ar.setLength(Math.max(0.12,mag*scale),0.35,0.25);
     } else ar.visible=false; };
