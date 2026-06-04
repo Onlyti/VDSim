@@ -117,6 +117,10 @@
   <div class="kv"><span>yaw rate</span><b id="h_r">—</b></div>
   <h2>Fz [N] FL FR RL RR</h2>
   <div class="sub" id="h_fz">—</div>
+  <h2>slip κ [-] FL FR RL RR</h2>
+  <div class="sub" id="h_kappa">—</div>
+  <h2>slip α [deg] FL FR RL RR</h2>
+  <div class="sub" id="h_alpha">—</div>
   <h2>Force arrows</h2>
   <div class="sub"><span style="color:#ff3b30">■</span> Fx&nbsp; <span style="color:#34c759">■</span> Fy&nbsp; <span style="color:#0a84ff">■</span> Fz</div>
 </div>
@@ -503,6 +507,8 @@ function applyState(s){
   $('h_roll').textContent=f(s.roll,3); $('h_pitch').textContent=f(s.pitch,3);
   $('h_steer').textContent=f(s.steer,3)+' rad';
   if(s.Fz) $('h_fz').textContent=s.Fz.map(v=>Math.round(v)).join('  ');
+  if(s.kappa&&s.kappa.length) $('h_kappa').textContent=s.kappa.map(v=>v.toFixed(3)).join('  ');
+  if(s.alpha&&s.alpha.length) $('h_alpha').textContent=s.alpha.map(v=>(v*57.2958).toFixed(2)).join('  ');
   window._lastState=s;
   if($('win_io')&&$('win_io').classList.contains('open')) updateIoMonitor(s);
 }
