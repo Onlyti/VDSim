@@ -340,8 +340,14 @@ async function rebuildCar(level){
   pos.forEach(([x,z])=>{
     const w=new THREE.Mesh(wg,wheelMat); w.rotation.x=Math.PI/2; w.position.set(x,R,z); car.add(w); wheels.push(w);
     // per-wheel force components as RGB arrows: R=Fx(long), G=Fy(lat), B=Fz(vert).
-    const mk=(col)=>{ const a=new THREE.ArrowHelper(new THREE.Vector3(0,1,0),new THREE.Vector3(x,0.06,z),0.01,col,0.4,0.28);
-      a.visible=false; car.add(a); return a; };
+    // Thick force vector: cylinder shaft + cone head (WebGL ignores line width,
+    // so ArrowHelper's 1px shaft can't be thickened — use real geometry).
+    const mk=(col)=>{ const m=new THREE.MeshBasicMaterial({color:col});
+      const g=new THREE.Group();
+      const shaft=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,1,12), m); shaft.position.y=0.5;
+      const head=new THREE.Mesh(new THREE.ConeGeometry(0.14,0.30,16), m); head.position.y=1.0;
+      g.add(shaft, head); g.position.set(x,0.06,z); g.visible=false;
+      g.userData={shaft, head}; car.add(g); return g; };
     axx.push(mk(0xff3b30)); axy.push(mk(0x34c759)); axz.push(mk(0x0a84ff));
     if(susp){   // L3: visible coil spring (animated) + unsprung block
       const sp=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,span,12),springMat);
@@ -367,9 +373,16 @@ function renderForces(Ft, Fz, susp){
     WF=[[ft(0)[0]+ft(1)[0], ft(0)[1]+ft(1)[1], (Fz[0]||0)+(Fz[1]||0)],
         [ft(2)[0]+ft(3)[0], ft(2)[1]+ft(3)[1], (Fz[2]||0)+(Fz[3]||0)]];
   } else WF=[0,1,2,3].map(i=>[ft(i)[0],ft(i)[1],Fz[i]||0]);
-  const setArr=(ar,dir,mag,scale)=>{ if(mag>5){ ar.visible=true;
-      ar.setDirection(dir.normalize()); ar.setLength(Math.max(0.12,mag*scale),0.35,0.25);
-    } else ar.visible=false; };
+  const Y=new THREE.Vector3(0,1,0), HEAD=0.30;
+  const setArr=(ar,dir,mag,scale)=>{
+    if(mag<=5){ ar.visible=false; return; }
+    ar.visible=true;
+    const L=Math.max(0.18, mag*scale);
+    ar.quaternion.setFromUnitVectors(Y, dir.clone().normalize());
+    const sLen=Math.max(0.02, L-HEAD);
+    ar.userData.shaft.scale.y=sLen; ar.userData.shaft.position.y=sLen/2;
+    ar.userData.head.position.y=sLen+HEAD/2;
+  };
   const kin=(renderLevel==='K'), bike=(wheels.length===2);  // K: no forces; bike: Fz only
   for(let i=0;i<wheels.length;i++){
     const [Fx,Fy,Fzz]=WF[i]; const w=wheels[i].position;
