@@ -1121,6 +1121,19 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(html)))
             self.end_headers()
             self.wfile.write(html)
+        elif self.path.startswith("/vendor/"):
+            # locally-vendored JS (Three.js etc.) so the client needs no CDN
+            rel = self.path.lstrip("/").split("?")[0]
+            fp = (HERE / rel).resolve()
+            if str(fp).startswith(str(HERE / "vendor")) and fp.is_file():
+                data = fp.read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/javascript")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+            else:
+                self.send_response(404); self.end_headers()
         elif self.path == "/api/config":
             self._json({"config": RUNNER.config(),
                         "vehicles": VEHICLES, "levels": LEVELS})
