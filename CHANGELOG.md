@@ -20,8 +20,8 @@ yet cross-validated against a commercial reference on real-vehicle data.
   heightmap terrain.
 - Drivetrain (FWD/RWD/AWD, open/locked/LSD diff, final drive), brake bias/EBD,
   aero, anti-roll bars, road slope/bank load transfer + jacking.
-- Standstill stick (brush/LuGre) friction: clean zero force at rest and static
-  hold on a slope (L2/L3), blending to Pacejka above low speed.
+- Low-speed lateral fade: ramps lateral grip in over 0..1.5 m/s so the tire-slip
+  singularity at standstill doesn't blow up the force or jitter Fz.
 
 ### Tooling & interfaces
 - Python API (`vdsim` pybind module) + fluent experiment layer (`vdsim_lab`):

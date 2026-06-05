@@ -314,7 +314,7 @@ const cabinMat = new THREE.MeshStandardMaterial({color:0x9fd8f5});
 const wheelMat = new THREE.MeshStandardMaterial({color:0x14181f});
 const springMat= new THREE.MeshStandardMaterial({color:0xb0b8c0, metalness:.6, roughness:.4});
 const unsprMat = new THREE.MeshStandardMaterial({color:0x444c57});
-let wheels=[], axx=[], axy=[], axz=[], springs=[], unspr=[], geom=null, renderLevel=null, rebuilding=false;
+let wheels=[], axx=[], axy=[], axz=[], springs=[], unspr=[], geom=null, renderLevel=null, rebuilding=false, steerIdx=[0,1];
 const FSCALE=0.0012, FZSCALE=0.0006;   // N -> metres for the arrows
 function clearGroup(g){ for(const c of [...g.children]){ g.remove(c); if(c.geometry) c.geometry.dispose(); } }
 async function rebuildCar(level){
@@ -340,7 +340,7 @@ async function rebuildCar(level){
                    : [[a,-tf/2],[a,tf/2],[-b,-tr/2],[-b,tr/2]];  // FL FR RL RR (+z=right)
   const wg=new THREE.CylinderGeometry(R,R,0.22,18);
   pos.forEach(([x,z])=>{
-    const w=new THREE.Mesh(wg,wheelMat); w.rotation.x=Math.PI/2; w.position.set(x,R,z); car.add(w); wheels.push(w);
+    const w=new THREE.Mesh(wg,wheelMat); w.rotation.order='YXZ'; w.rotation.x=Math.PI/2; w.position.set(x,R,z); car.add(w); wheels.push(w);
     // per-wheel force components as RGB arrows: R=Fx(long), G=Fy(lat), B=Fz(vert).
     // Thick force vector: cylinder shaft + cone head (WebGL ignores line width,
     // so ArrowHelper's 1px shaft can't be thickened — use real geometry).
@@ -361,6 +361,7 @@ async function rebuildCar(level){
       st.position.set(x,R+span/2,z); car.add(st); springs.push(st); unspr.push(null);
     }
   });
+  steerIdx = bike ? [0] : [0, 1];   // front wheels turn with steer
   renderLevel=level; rebuilding=false;
 }
 rebuildCar('L2');
@@ -526,6 +527,7 @@ function applyState(s){
   $('i_wx').textContent=f(s.wx,3); $('i_wy').textContent=f(s.wy,3);
   $('h_roll').textContent=f(s.roll,3); $('h_pitch').textContent=f(s.pitch,3);
   $('h_steer').textContent=f(s.steer,3)+' rad';
+  for(const i of steerIdx){ if(wheels[i]) wheels[i].rotation.y = s.steer||0; }   // turn front wheels
   if(s.Fz) $('h_fz').textContent=s.Fz.map(v=>Math.round(v)).join('  ');
   if(s.kappa&&s.kappa.length) $('h_kappa').textContent=s.kappa.map(v=>v.toFixed(3)).join('  ');
   if(s.alpha&&s.alpha.length) $('h_alpha').textContent=s.alpha.map(v=>(v*57.2958).toFixed(2)).join('  ');
