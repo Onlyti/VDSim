@@ -445,6 +445,7 @@ class CosimBridge:
                 "wx": s["roll_rate"], "wy": s["pitch_rate"],
                 "ax": s["ax"], "ay": s["ay"],
                 "steer": s["steer_applied"], "Fz": s["Fz"], "Ft": s.get("Ft", []),
+                "wheel_spin": s.get("wheel_spin", []),
                 "rack_torque": s["rack_torque"], "kappa": s["slip_ratio"],
                 "alpha": s["slip_angle"], "susp": s["susp"],
                 "m_gx": s["m_gnss_x"], "m_gy": s["m_gnss_y"], "m_ax": s["m_ax"],
@@ -788,6 +789,7 @@ class Runner:
                         "vx": cs["vx"], "vy": cs["vy"], "r": cs["r"],
                         "wx": cs["wx"], "wy": cs["wy"], "ax": cs["ax"], "ay": cs["ay"],
                         "steer": cs["steer"], "Fz": cs["Fz"], "Ft": cs.get("Ft", []),
+                        "wheel_spin": cs.get("wheel_spin", []),
                         "susp": cs.get("susp", []),
                         "rack_torque": cs.get("rack_torque", 0.0),
                         "kappa": cs.get("kappa", []), "alpha": cs.get("alpha", []),
@@ -805,7 +807,8 @@ class Runner:
                         "yaw": self.cfg["init_yaw"], "roll": 0.0, "pitch": 0.0,
                         "vx": 0.0, "vy": 0.0, "r": 0.0, "wx": 0.0, "wy": 0.0,
                         "ax": 0.0, "ay": 0.0, "steer": 0.0, "Fz": [0.0, 0.0, 0.0, 0.0],
-                        "Ft": [], "susp": [], "rack_torque": 0.0, "kappa": [], "alpha": [],
+                        "Ft": [], "wheel_spin": [], "susp": [], "rack_torque": 0.0,
+                        "kappa": [], "alpha": [],
                         "level": self.cfg["level"], "vehicle": self.cfg["vehicle"],
                         "v_target": vt, "dt": dt, "time_scale": 1.0,
                         "source": "waiting", "cosim_up": cosim_on}
@@ -1134,6 +1137,14 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path in ("/", "/index.html"):
             html = (HERE / "index.html").read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
+            self.send_header("Content-Length", str(len(html)))
+            self.end_headers()
+            self.wfile.write(html)
+        elif self.path in ("/app", "/app.html"):
+            html = (HERE / "app.html").read_bytes()
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
