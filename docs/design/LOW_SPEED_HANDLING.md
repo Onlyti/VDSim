@@ -100,6 +100,14 @@ and inherited by L3 (delegates the planar solve to L2):
 - `kSpeedEps` slip-denominator floor tightened 0.5 -> 0.15 (lateral noise is now
   handled by the blend, not the floor, so the floor can be smaller for a sharper
   low-speed longitudinal force).
+- Reported per-wheel tire force (rendered arrows / logs) fades the raw slip force
+  by `lambda` and lets the smooth brake-hold term carry low speed. The slip ratio
+  and slip angle are both ill-conditioned as `Vx->0`, so the *per-wheel* force
+  chatters even though the *net* motion is smooth; the raw value is not what
+  effectively acts on the car at parking speed. This is display/diagnostic only —
+  the equations of motion use the full force. The brake-hold damper also keys off
+  the body-longitudinal speed (not the steer-rotated wheel speed) so a steered
+  front wheel cannot flip the hold-force sign.
 
 Measured (sedan preset, mu=1.0): braked grade hold creep ~1-2 cm/s on 8%,
 ~2-3 cm/s on 12-20%; brake-to-stop settles with no left/right oscillation;

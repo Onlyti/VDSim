@@ -304,6 +304,7 @@ private:
 
         // ---- Per-tire velocity, slip, force ----
         std::array<Vec3,   NUM_WHEELS> F_body;
+        std::array<Vec3,   NUM_WHEELS> tire_F_disp;   // reported force (lateral faded by lambda)
         std::array<double, NUM_WHEELS> kappa, alpha;
         std::array<double, NUM_WHEELS> mz_wheel {{0.0, 0.0, 0.0, 0.0}};
 
@@ -376,7 +377,9 @@ private:
             // cannot ring; lateral motion is governed by the kinematic blend.
             const double hold_gate = (1.0 - lambda) *
                 std::clamp(cmd.brake - cmd.throttle, 0.0, 1.0);
-            double Fx_hold = -kStickC * v_x_wheel * hold_gate;
+            // Use the body-longitudinal speed (not the steer-rotated wheel speed)
+            // so a steered front wheel's lateral velocity can't flip the hold force.
+            double Fx_hold = -kStickC * v_x_body * hold_gate;
             if (std::abs(Fx_hold) > muFz) Fx_hold = std::copysign(muFz, Fx_hold);
             double Fx_w = out.Fx + Fx_hold;
             double Fy_w = out.Fy;
@@ -385,6 +388,17 @@ private:
             const double Fx_b = Fx_w * cd_i - Fy_w * sd_i;
             const double Fy_b = Fx_w * sd_i + Fy_w * cd_i;
             F_body[i] = Vec3(Fx_b, Fy_b, 0.0);
+            // Reported tire force: fade the raw slip-based force by lambda and let
+            // the smooth brake-hold term carry the low speed. Both slip ratio and
+            // slip angle are ill-conditioned as Vx->0 (the per-wheel force chatters
+            // even though the net motion is smooth), so the raw value is not what
+            // effectively acts on the car at parking speed. Display/diagnostic only
+            // — the dynamics above use the full F_body.
+            double Fxd = lambda * out.Fx + Fx_hold;
+            double Fyd = lambda * out.Fy;
+            const double Fdm = std::hypot(Fxd, Fyd);
+            if (Fdm > muFz && Fdm > 1e-9) { const double c = muFz / Fdm; Fxd *= c; Fyd *= c; }
+            tire_F_disp[i] = Vec3(Fxd * cd_i - Fyd * sd_i, Fxd * sd_i + Fyd * cd_i, 0.0);
             fx_kin[i] = out.Fx;            // wheel-spin reaction = kinetic only
             kappa[i]  = k_slip;
             alpha[i]  = a_slip;
@@ -500,7 +514,7 @@ private:
         }
 
         // ---- Diagnostics ----
-        tire_F_   = F_body;
+        tire_F_   = tire_F_disp;
         tire_Fz_  = Fz;
         slip_ratio_ = kappa;
         slip_angle_ = alpha;

@@ -283,8 +283,10 @@ private:
         const double muFz_f = std::min(mu_long_f, mu_lat_f) * std::max(0.0, Fz_f);
         const double muFz_r = std::min(mu_long_r, mu_lat_r) * std::max(0.0, Fz_r);
         const double c_hold = 2.0 * kStickC;     // two wheels per axle
-        double Fxh_f = -c_hold * v_fx_wheel * hold_gate;
-        double Fxh_r = -c_hold * v_rx_body  * hold_gate;
+        // Use the body-longitudinal speed (front v_fx_body = vx), not the steer-
+        // rotated wheel speed, so a steered front wheel can't flip the hold force.
+        double Fxh_f = -c_hold * v_fx_body * hold_gate;
+        double Fxh_r = -c_hold * v_rx_body * hold_gate;
         if (std::abs(Fxh_f) > muFz_f) Fxh_f = std::copysign(muFz_f, Fxh_f);
         if (std::abs(Fxh_r) > muFz_r) Fxh_r = std::copysign(muFz_r, Fxh_r);
         // Per-axle force = kinetic Pacejka + hold damper, kept inside the friction
@@ -363,9 +365,22 @@ private:
         d_out.domega_r = (Td_r + Tb_r - F_r.Fx * R) / I_wheel_r_;
 
         // ---- Diagnostics ----
+        // Reported force: fade the raw slip force by lambda and let the smooth
+        // brake-hold term carry the low speed (matches the 7-DOF), so the rendered
+        // arrows don't chatter from the slip singularity as Vx->0. Display only.
+        auto disp = [](double Fx_slip, double Fxh, double Fy_slip, double lam,
+                       double muFz, double cd_, double sd_, double& bx, double& by) {
+            double fx = lam * Fx_slip + Fxh, fy = lam * Fy_slip;
+            const double mg = std::hypot(fx, fy);
+            if (mg > muFz && mg > 1e-9) { const double c = muFz / mg; fx *= c; fy *= c; }
+            bx = fx * cd_ - fy * sd_; by = fx * sd_ + fy * cd_;
+        };
+        double dfxf, dfyf, dfxr, dfyr;
+        disp(F_f.Fx, Fxh_f, F_f.Fy, lambda, muFz_f, cd, sd, dfxf, dfyf);
+        disp(F_r.Fx, Fxh_r, F_r.Fy, lambda, muFz_r, 1.0, 0.0, dfxr, dfyr);
         // Split axle force evenly across the two co-axial tires.
-        tire_F_[WHEEL_FL] = tire_F_[WHEEL_FR] = Vec3(0.5 * Fx_body_f, 0.5 * Fy_body_f, 0.0);
-        tire_F_[WHEEL_RL] = tire_F_[WHEEL_RR] = Vec3(0.5 * Fx_body_r, 0.5 * Fy_body_r, 0.0);
+        tire_F_[WHEEL_FL] = tire_F_[WHEEL_FR] = Vec3(0.5 * dfxf, 0.5 * dfyf, 0.0);
+        tire_F_[WHEEL_RL] = tire_F_[WHEEL_RR] = Vec3(0.5 * dfxr, 0.5 * dfyr, 0.0);
         tire_Fz_[WHEEL_FL] = tire_Fz_[WHEEL_FR] = 0.5 * Fz_f;
         tire_Fz_[WHEEL_RL] = tire_Fz_[WHEEL_RR] = 0.5 * Fz_r;
         slip_ratio_[WHEEL_FL] = slip_ratio_[WHEEL_FR] = kappa_f;
