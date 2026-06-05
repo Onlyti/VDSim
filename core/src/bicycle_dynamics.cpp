@@ -66,8 +66,10 @@ inline CmdL4 lower_to_l4(const ControlInput& u) {
 
 constexpr double kAirDensity   = 1.225;   // [kg/m^3]
 constexpr double kGravity      = 9.80665; // [m/s^2]
-constexpr double kSpeedEps     = 0.5;     // [m/s] minimum denom for slip ratio / angle
-constexpr double kLatFadeSpeed = 1.5;     // [m/s] lateral grip ramps in over 0..this
+constexpr double kSpeedEps     = 0.15;    // [m/s] minimum denom for slip ratio / angle
+constexpr double kStickBlend   = 3.0;     // [m/s] dynamic <-> low-speed (kinematic) blend
+constexpr double kStickC       = 6.0e4;   // [N·s/m] brake-hold creep damping (per wheel)
+constexpr double kKinTau       = 0.05;    // [s] low-speed kinematic relaxation time
 constexpr double kBrakeWidth   = 1.0;     // [rad/s] tanh transition width
 
 inline double smooth_sign(double x, double width) {
@@ -264,18 +266,41 @@ private:
         v_fx_wheel_last_   = v_fx_wheel;
         v_rx_body_last_    = v_rx_body;
 
-        // Low-speed lateral fade: the slip angle atan2(vy,vx) is singular as
-        // vx->0, so Fy/Mz otherwise snap to the friction limit from velocity
-        // noise at standstill. Ramp lateral grip in over 0..kLatFadeSpeed;
-        // longitudinal Fx is kept so the vehicle can still launch.
-        double fade = std::clamp(std::hypot(vx, vy) / kLatFadeSpeed, 0.0, 1.0);
-        fade = fade * fade * (3.0 - 2.0 * fade);     // smoothstep (C1)
-        const double Fyf_s = F_f.Fy * fade, Fyr_s = F_r.Fy * fade;
-        // Rotate wheel-frame front forces back into body frame.
-        const double Fx_body_f = F_f.Fx * cd - Fyf_s * sd;
-        const double Fy_body_f = F_f.Fx * sd + Fyf_s * cd;
-        const double Fx_body_r = F_r.Fx;
-        const double Fy_body_r = Fyr_s;
+        // Low-speed handling (mirrors the 7-DOF model): below kStickBlend the
+        // lateral states (vy, r) are governed by the slip-free kinematic bicycle
+        // (blended in the derivatives below), so the slip-angle singularity at
+        // vx->0 cannot make the car oscillate or spin. lambda: 0 at rest -> 1
+        // above the blend speed, where the validated dynamics are unchanged.
+        const double speed = std::hypot(vx, vy);
+        double lambda = std::clamp(speed / kStickBlend, 0.0, 1.0);
+        lambda = lambda * lambda * (3.0 - 2.0 * lambda);     // smoothstep (C1)
+        // Brake-hold creep damping: when on the brake and off the throttle, a
+        // purely viscous damper opposes each axle's longitudinal ground speed so
+        // the car holds on a grade (steady creep = gravity/damping, mm/s). Gated
+        // by (1-lambda); dissipative, so it cannot ring or fight drive torque.
+        const double hold_gate = (1.0 - lambda) *
+            std::clamp(cmd.brake - cmd.throttle, 0.0, 1.0);
+        const double muFz_f = std::min(mu_long_f, mu_lat_f) * std::max(0.0, Fz_f);
+        const double muFz_r = std::min(mu_long_r, mu_lat_r) * std::max(0.0, Fz_r);
+        const double c_hold = 2.0 * kStickC;     // two wheels per axle
+        double Fxh_f = -c_hold * v_fx_wheel * hold_gate;
+        double Fxh_r = -c_hold * v_rx_body  * hold_gate;
+        if (std::abs(Fxh_f) > muFz_f) Fxh_f = std::copysign(muFz_f, Fxh_f);
+        if (std::abs(Fxh_r) > muFz_r) Fxh_r = std::copysign(muFz_r, Fxh_r);
+        // Per-axle force = kinetic Pacejka + hold damper, kept inside the friction
+        // circle. Full lateral force is used; its low-speed effect on motion is
+        // suppressed by the kinematic blend on dvy/dr, not by fading the force.
+        double Fx_f_wheel = F_f.Fx + Fxh_f, Fy_f_wheel = F_f.Fy;
+        double Fx_r_axle  = F_r.Fx + Fxh_r, Fy_r_axle  = F_r.Fy;
+        const double Fmag_f = std::hypot(Fx_f_wheel, Fy_f_wheel);
+        if (Fmag_f > muFz_f && Fmag_f > 1e-9) { const double c = muFz_f/Fmag_f; Fx_f_wheel*=c; Fy_f_wheel*=c; }
+        const double Fmag_r = std::hypot(Fx_r_axle, Fy_r_axle);
+        if (Fmag_r > muFz_r && Fmag_r > 1e-9) { const double c = muFz_r/Fmag_r; Fx_r_axle*=c; Fy_r_axle*=c; }
+        // Rotate wheel-frame front forces back into body frame; rear is body frame.
+        const double Fx_body_f = Fx_f_wheel * cd - Fy_f_wheel * sd;
+        const double Fy_body_f = Fx_f_wheel * sd + Fy_f_wheel * cd;
+        const double Fx_body_r = Fx_r_axle;
+        const double Fy_body_r = Fy_r_axle;
 
         // Aero drag (opposes body-X velocity).
         const double F_aero = 0.5 * kAirDensity * vp_.aero_drag_coeff *
@@ -318,16 +343,22 @@ private:
         const double Fx_total = Fx_body_f + Fx_body_r - F_aero - F_rr + m * gx_b;
         const double Fy_total = Fy_body_f + Fy_body_r + m * gy_b;
         // Wheel-z and body-z are parallel (camber=0 assumed); Mz adds directly.
-        const double Mz_total = a * Fy_body_f - b * Fy_body_r + (F_f.Mz + F_r.Mz) * fade;
+        const double Mz_total = a * Fy_body_f - b * Fy_body_r + (F_f.Mz + F_r.Mz);
 
         Deriv d_out;
         d_out.dx_world = vx * std::cos(yaw) - vy * std::sin(yaw);
         d_out.dy_world = vx * std::sin(yaw) + vy * std::cos(yaw);
         d_out.dyaw     = r;
         d_out.dvx      = Fx_total / m + vy * r;
-        d_out.dvy      = Fy_total / m - vx * r;
         d_out.ax_body  = Fx_total / m;   // longitudinal accel (no vy*r) for Fz lag
-        d_out.dr       = Mz_total / Izz;
+        // Kinematic-dynamic blend on the lateral states: pure dynamic at speed,
+        // pure slip-free kinematic (r = vx·tan(delta)/L, vy = r·b) at rest.
+        const double dvy_dyn = Fy_total / m - vx * r;
+        const double dr_dyn  = Mz_total / Izz;
+        const double r_kin   = (L > 1e-6) ? vx * std::tan(d) / L : 0.0;
+        const double vy_kin  = r_kin * b;
+        d_out.dvy      = lambda * dvy_dyn + (1.0 - lambda) * (vy_kin - vy) / kKinTau;
+        d_out.dr       = lambda * dr_dyn  + (1.0 - lambda) * (r_kin  - r ) / kKinTau;
         d_out.domega_f = (Td_f + Tb_f - F_f.Fx * R) / I_wheel_f_;
         d_out.domega_r = (Td_r + Tb_r - F_r.Fx * R) / I_wheel_r_;
 

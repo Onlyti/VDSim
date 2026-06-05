@@ -72,10 +72,12 @@ Full automated suite: `cd build && ctest` — 187 checks, 100% green (measured 2
   analytic/standard/self-consistency evidence only.
 - **Tire model** is fitted Pacejka MF (and a linear fallback); no thermal,
   transient-relaxation beyond the first-order lag, or combined wear effects.
-- **Standstill / low speed**: a low-speed lateral fade keeps the tire-slip
-  singularity from blowing up the force at rest (clean force, stable low-speed
-  handling). True static hold on a slope (brush/LuGre stiction) is not yet
-  modeled — a parked car needs the brake and will creep on a grade.
+- **Standstill / low speed**: a kinematic-dynamic blend below 3 m/s governs the
+  lateral states with the slip-free kinematic bicycle (no spin/oscillation at
+  parking speed), and a viscous brake-hold damper holds the car on a grade. The
+  hold is not a true static hold — it leaves a small creep proportional to grade
+  (~1-2 cm/s on 8%); a zero-creep handbrake/locked-wheel static model is a v0.2
+  item. See `docs/design/LOW_SPEED_HANDLING.md`.
 - **L1/L2 are planar** — no body-attitude state from road slope (only force +
   quasi-static estimate); see theory ch05.
 - **Dependent axles** (twist-beam, solid beam) are not yet modeled (configs are

@@ -20,8 +20,12 @@ yet cross-validated against a commercial reference on real-vehicle data.
   heightmap terrain.
 - Drivetrain (FWD/RWD/AWD, open/locked/LSD diff, final drive), brake bias/EBD,
   aero, anti-roll bars, road slope/bank load transfer + jacking.
-- Low-speed lateral fade: ramps lateral grip in over 0..1.5 m/s so the tire-slip
-  singularity at standstill doesn't blow up the force or jitter Fz.
+- Low-speed handling (L1/L2/L3): kinematic-dynamic blend below 3 m/s (lateral
+  states cross-fade to the slip-free kinematic bicycle, removing the tire-slip
+  singularity so the car no longer wobbles, drifts or oscillates when steering or
+  stopping at parking speed) plus a viscous brake-hold creep damper that holds the
+  car on a grade (cm/s creep) without ringing. Validated dynamics above 3 m/s are
+  unchanged. See `docs/design/LOW_SPEED_HANDLING.md`.
 
 ### Tooling & interfaces
 - Python API (`vdsim` pybind module) + fluent experiment layer (`vdsim_lab`):

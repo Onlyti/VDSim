@@ -65,9 +65,10 @@ inline CmdL4 lower_to_l4(const ControlInput& u) {
 
 constexpr double kAirDensity = 1.225;
 constexpr double kGravity    = 9.80665;
-constexpr double kSpeedEps    = 0.5;
-constexpr double kLatFadeSpeed = 1.5;   // [m/s] lateral grip ramps in over 0..this
-constexpr double kLatDamp     = 6.0e3;  // [N·s/m] low-speed lateral velocity damping
+constexpr double kSpeedEps    = 0.15;
+constexpr double kStickBlend  = 3.0;    // [m/s] dynamic <-> low-speed (kinematic) blend
+constexpr double kStickC      = 6.0e4;  // [N·s/m] brake-hold creep damping
+constexpr double kKinTau      = 0.05;   // [s]     low-speed kinematic relaxation time
 constexpr double kBrakeWidth  = 1.0;
 
 inline double smooth_sign(double x, double w) { return std::tanh(x / w); }
@@ -318,6 +319,13 @@ private:
             0.0  + toe_ext_[WHEEL_RR],
         }};
 
+        // Low-speed blend factor: 0 at rest (stick + kinematic govern) -> 1 above
+        // kStickBlend (validated dynamic model).
+        const double speed = std::hypot(vx, vy);
+        double lambda = std::clamp(speed / kStickBlend, 0.0, 1.0);
+        lambda = lambda * lambda * (3.0 - 2.0 * lambda);     // smoothstep (C1)
+        std::array<double, NUM_WHEELS> fx_kin {{0.0, 0.0, 0.0, 0.0}};
+
         for (int i = 0; i < NUM_WHEELS; ++i) {
             const double v_x_body = vx - r * r_y[i];
             const double v_y_body = vy + r * r_x[i];
@@ -355,28 +363,32 @@ private:
             alpha_geom_last_[i] = a_slip;
             v_x_wheel_last_[i]  = v_x_wheel;
 
-            // Low-speed fade: the slip angle atan2(vy,vx) is singular as vx->0,
-            // so lateral grip is ill-conditioned at standstill. Project the tire
-            // force into the body frame, then fade the whole *lateral* body
-            // component over 0..v_blend — this also removes the sideways push
-            // from a steered wheel's (large, low-speed) longitudinal force. The
-            // longitudinal body force is kept so the vehicle can still launch.
-            double fade = std::clamp(std::hypot(vx, vy) / kLatFadeSpeed, 0.0, 1.0);
-            fade = fade * fade * (3.0 - 2.0 * fade);     // smoothstep (C1)
-            const double Fx_b = out.Fx * cd_i - out.Fy * sd_i;          // longitudinal (kept)
-            // Lateral body force: faded kinetic (Pacejka + steered-Fx projection)
-            // plus a low-speed velocity damper. The damper opposes the body
-            // lateral velocity at the patch (v_y_body includes r·r_x, so it damps
-            // yaw too), stopping the standstill drift/wiggle without the spin a
-            // position spring (full stick model) would cause. Clamped to mu*Fz.
             const double muFz = std::min(mu_long_i, mu_lat_i) * std::max(0.0, Fz[i]);
-            double Fy_b = (out.Fx * sd_i + out.Fy * cd_i) * fade
-                        - kLatDamp * (1.0 - fade) * v_y_body;
-            Fy_b = std::clamp(Fy_b, -muFz, muFz);
+            // Brake-hold standstill damping. A braked wheel does not fully lock at
+            // low speed (its dynamic force fades as Vx->0), so on a grade it keeps
+            // creeping. When the driver is on the brake and off the throttle we add
+            // a purely viscous damper on the wheel's longitudinal ground speed,
+            // -kStickC*v_x_wheel, which directly opposes the residual creep; the
+            // steady creep settles at gravity/damping (mm/s on an 8% grade). It is
+            // gated to the hold condition (brake>throttle) so it never fights drive
+            // torque, and by (1-lambda) so it vanishes above the blend speed and
+            // leaves the validated dynamics untouched. Being purely dissipative it
+            // cannot ring; lateral motion is governed by the kinematic blend.
+            const double hold_gate = (1.0 - lambda) *
+                std::clamp(cmd.brake - cmd.throttle, 0.0, 1.0);
+            double Fx_hold = -kStickC * v_x_wheel * hold_gate;
+            if (std::abs(Fx_hold) > muFz) Fx_hold = std::copysign(muFz, Fx_hold);
+            double Fx_w = out.Fx + Fx_hold;
+            double Fy_w = out.Fy;
+            const double Fmag = std::hypot(Fx_w, Fy_w);   // keep inside the friction circle
+            if (Fmag > muFz && Fmag > 1e-9) { const double c = muFz / Fmag; Fx_w *= c; Fy_w *= c; }
+            const double Fx_b = Fx_w * cd_i - Fy_w * sd_i;
+            const double Fy_b = Fx_w * sd_i + Fy_w * cd_i;
             F_body[i] = Vec3(Fx_b, Fy_b, 0.0);
+            fx_kin[i] = out.Fx;            // wheel-spin reaction = kinetic only
             kappa[i]  = k_slip;
             alpha[i]  = a_slip;
-            mz_wheel[i] = out.Mz * fade;
+            mz_wheel[i] = out.Mz * lambda;
         }
 
         // ---- Drive / brake torques ----
@@ -464,18 +476,27 @@ private:
         d_out.dy_world = vx * std::sin(yaw) + vy * std::cos(yaw);
         d_out.dyaw     = r;
         d_out.dvx      = Fx_total / m + vy * r;
-        d_out.dvy      = Fy_total / m - vx * r;
-        d_out.dr       = Mz_total / Izz;
+        // Kinematic-dynamic blend (Kong 2015 / Polack 2017): the *lateral* states
+        // (vy, r) cross-fade from pure dynamic at speed to pure slip-free kinematic
+        // at rest. We blend the whole derivative, not add on top, so at low speed
+        // the force-induced yaw (incl. the standstill stick lateral reaction) is
+        // fully replaced by the geometric constraint r = vx·tan(delta)/L — that is
+        // what kills the low-speed spin / stop oscillation. Longitudinal (vx) stays
+        // fully dynamic so drive, brake and the stick hold are unchanged.
+        const double dvy_dyn = Fy_total / m - vx * r;
+        const double dr_dyn  = Mz_total / Izz;
+        const double delta_f = 0.5 * (d_wheel[WHEEL_FL] + d_wheel[WHEEL_FR]);
+        const double r_kin   = (L > 1e-6) ? vx * std::tan(delta_f) / L : 0.0;
+        const double vy_kin  = r_kin * b;
+        d_out.dvy = lambda * dvy_dyn + (1.0 - lambda) * (vy_kin - vy) / kKinTau;
+        d_out.dr  = lambda * dr_dyn  + (1.0 - lambda) * (r_kin  - r ) / kKinTau;
         d_out.ax_body  = Fx_total / m;
         d_out.ay_body  = Fy_total / m;
         for (int i = 0; i < NUM_WHEELS; ++i) {
-            // Body-frame Fx already applied to body translation. For wheel
-            // spin, use wheel-frame Fx — re-rotate body force back to wheel x.
-            // Rear wheels now also have potentially-nonzero d_wheel (toe input).
-            const double cd_i = std::cos(d_wheel[i]);
-            const double sd_i = std::sin(d_wheel[i]);
-            const double Fx_wheel = F_body[i].x() * cd_i + F_body[i].y() * sd_i;
-            d_out.domega[i] = (Td[i] + Tb[i] - Fx_wheel * R) / I_wheel_[i];
+            // Wheel spin reacts to the kinetic (sliding) tire force only; the
+            // standstill stick force is a static (held) reaction, not a spin-up
+            // torque — feeding it here would destabilise the locked wheel.
+            d_out.domega[i] = (Td[i] + Tb[i] - fx_kin[i] * R) / I_wheel_[i];
         }
 
         // ---- Diagnostics ----
