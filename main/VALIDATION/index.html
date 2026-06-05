@@ -2229,6 +2229,9 @@ vehicle/controller property, not a sim defect (see "Notes on specific results").
   analytic/standard/self-consistency evidence only.</li>
 <li><strong>Tire model</strong> is fitted Pacejka MF (and a linear fallback); no thermal,
   transient-relaxation beyond the first-order lag, or combined wear effects.</li>
+<li><strong>Standstill / low speed</strong>: L2/L3 use a brush/LuGre stick model (clean force
+  at rest, static hold on a slope, blending to Pacejka above ~1.5 m/s). L1
+  (bicycle) uses only a lighter low-speed lateral fade (no slope hold yet).</li>
 <li><strong>L1/L2 are planar</strong> — no body-attitude state from road slope (only force +
   quasi-static estimate); see theory ch05.</li>
 <li><strong>Dependent axles</strong> (twist-beam, solid beam) are not yet modeled (configs are
