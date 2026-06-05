@@ -41,7 +41,8 @@ v0.2 착수:
   vehicle_id 포워딩(현재 빠짐). 데이터층은 이미 vid 키잉(`live_vid`, `self.ports`).
 - 충돌(V2V): **future TODO** (이번 범위 아님). contact-coupling pass 훅 위치만 런타임에
   남겨둠. `V0.2_MULTIVEHICLE.md` "Collision" 참고.
-- **서브시스템 모듈 (설계 lock 완료, `V0.2_SUBSYSTEMS.md` 결정 1-7)** — 구현 대기:
+- **서브시스템 모듈 (설계 lock 완료, `V0.2_SUBSYSTEMS.md` 결정 1-7)** — #159/#160 완료,
+  #161(dynamics 연결) 대기:
   brake(pedal→4륜 토크) / steering(handwheel→roadwheel·rack, unity 변형 포함) /
   drivetrain(throttle→4륜 토크, skeleton=flat) / suspension(코너별) / anti-roll bar
   (축별 별도 모듈) / 각 모듈 deadtime. 모두 `SubsystemContext`(full state) 받음, C++,
@@ -56,21 +57,17 @@ v0.2 착수:
 
 - #159 **DONE** (커밋 f8305b9, Cursor 위임→Claude 검증): `core/include/vdsim/
   subsystems.hpp`(인터페이스+SubsystemContext+DriverCmd) + `delay_line.hpp`. 187 green.
-- #160 **다음** — default 모듈 (전부 현재거동 정확 재현, 아직 코어에 안 엮음). 추출 소스:
-  - brake/drivetrain/steering(Ackermann): `core/src/seven_dof_dynamics.cpp`
-    (Tmot=throttle*max_motor_torque*final_drive, split_axle open/locked/LSD,
-    Tbrk=bias*brake*max_brake_torque+EBD, Tb=-smooth_sign(wheel_spin,kBrakeWidth)*0.5*axle,
-    Ackermann d_FL/d_FR) + `core/src/bicycle_dynamics.cpp`(axle 버전).
-  - suspension(코너별 k*defl+c*rate) + anti-roll bar(`arb_stiffness_front/rear`):
-    `core/src/fourteen_dof_dynamics.cpp`.
-  - params: `core/include/vdsim/params.hpp` (max_motor_torque/final_drive_ratio/
-    max_brake_torque/brake_bias_front/brake_ebd_enabled/diff/lsd_*/arb_stiffness_*/
-    spring_stiffness). steering_ratio 파라미터는 없음 → 추가하거나 생성자 인자로(default
-    합리값). 각 모듈 deadtime_s 파라미터(default 0, DelayLine 사용).
-  - RatioSteering + UnitySteering(ratio=1) 둘 다.
+- #160 **DONE** — default 모듈 (`core/include/vdsim/default_subsystems.hpp` +
+  `core/src/default_subsystems.cpp`): ProportionalBrake, BasicDrivetrain,
+  RatioSteering, UnitySteering, LinearSuspension, LinearARB + factory helpers.
+  아직 dynamics 미연결(#161). 187 green.
 - #161 dynamics 코어를 default 모듈 경유로 리팩터 — **default==현재거동, 187 green
   유지**가 합격 기준(Claude 가 검증/판정). L0/L1=roadwheel, L2+=rack. suspension/ARB 는
-  step 내부 콜백.
+  step 내부 콜백. **#160 검증 시 짚은 gotcha 2건**:
+  (a) ProportionalBrake EBD 는 현재 static Fz(m·g·cg/L) 사용 — seven_dof EBD 는 step 내
+  동적 Fz 라, EBD-enabled config 에서 일치하려면 SubsystemContext 에 동적 Fz[4] 를 넘겨야 함.
+  (b) LinearARB 부호는 적분 시 roll 저항 방향이 맞는지 ctest 로 확인(부호 뒤집힘 주의).
+  L1 drivetrain 은 axle-lumped(open 0.5/0.5)라 split_axle 로 동일하게 처리 가능.
 - 그 다음: #157 멀티차량 런타임 → #158 GUI 레이싱.
 - v0.3 이관: 엔진 torque-RPM 곡선 + 관성(Issue 2), LuGre tire.
 설계 spec: `docs/design/V0.2_SUBSYSTEMS.md` (결정 1-7, 인터페이스, per-level 표).
