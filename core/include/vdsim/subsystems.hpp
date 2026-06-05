@@ -20,6 +20,7 @@ struct SubsystemContext {
     const State&     state;
     const DriverCmd& cmd;
     double           dt;
+    std::array<double, NUM_WHEELS> Fz {{0.0, 0.0, 0.0, 0.0}};
 };
 
 struct SteeringOutput {

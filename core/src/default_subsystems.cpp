@@ -36,16 +36,25 @@ void split_axle(const VehicleParams& vp, double T_axle,
     }
 }
 
-double ebd_front_bias(const VehicleParams& vp, const State& state) {
+double ebd_front_bias(const VehicleParams& vp,
+                      const std::array<double, NUM_WHEELS>& Fz) {
     double bias = std::clamp(vp.brake_bias_front, 0.0, 1.0);
     if (!vp.brake_ebd_enabled) return bias;
 
-    const double L = vp.wheelbase;
-    const double Fz_f = vp.mass * kGravity * vp.cg_to_rear / L;
-    const double Fz_r = vp.mass * kGravity * vp.cg_to_front / L;
-    (void)state;
+    const double Fz_f = Fz[WHEEL_FL] + Fz[WHEEL_FR];
+    const double Fz_r = Fz[WHEEL_RL] + Fz[WHEEL_RR];
     const double total = Fz_f + Fz_r;
-    if (total > 1.0) bias = std::clamp(Fz_f / total, 0.05, 0.95);
+    if (total > 1.0) {
+        bias = std::clamp(Fz_f / total, 0.05, 0.95);
+    } else {
+        const double L = vp.wheelbase;
+        const double Fz_f_static = vp.mass * kGravity * vp.cg_to_rear / L;
+        const double Fz_r_static = vp.mass * kGravity * vp.cg_to_front / L;
+        const double total_static = Fz_f_static + Fz_r_static;
+        if (total_static > 1.0) {
+            bias = std::clamp(Fz_f_static / total_static, 0.05, 0.95);
+        }
+    }
     return bias;
 }
 
@@ -56,7 +65,7 @@ ProportionalBrake::ProportionalBrake(const VehicleParams& vp, double deadtime_s)
 
 std::array<double, NUM_WHEELS> ProportionalBrake::wheel_torque(const SubsystemContext& ctx) {
     const double brake = brake_delay_.step(ctx.cmd.brake, ctx.dt);
-    const double bias = ebd_front_bias(vp_, ctx.state);
+    const double bias = ebd_front_bias(vp_, ctx.Fz);
     const double Tbrk_front_axle =       bias  * brake * vp_.max_brake_torque;
     const double Tbrk_rear_axle  = (1.0 - bias) * brake * vp_.max_brake_torque;
 

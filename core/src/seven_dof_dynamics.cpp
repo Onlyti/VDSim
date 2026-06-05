@@ -15,7 +15,9 @@
 //   - Static Fz_z balance only; no aerodynamic lift, no anti-dive geometry.
 
 #include "vdsim/coordinate.hpp"
+#include "vdsim/default_subsystems.hpp"
 #include "vdsim/interfaces.hpp"
+#include "vdsim/subsystems.hpp"
 
 #include <spdlog/spdlog.h>
 
@@ -69,9 +71,6 @@ constexpr double kSpeedEps    = 0.15;
 constexpr double kStickBlend  = 3.0;    // [m/s] dynamic <-> low-speed (kinematic) blend
 constexpr double kStickC      = 6.0e4;  // [N·s/m] brake-hold creep damping
 constexpr double kKinTau      = 0.05;   // [s]     low-speed kinematic relaxation time
-constexpr double kBrakeWidth  = 1.0;
-
-inline double smooth_sign(double x, double w) { return std::tanh(x / w); }
 
 class SevenDOFDynamics final : public IVehicleDynamics {
 public:
@@ -97,6 +96,9 @@ public:
                 I_wheel_[i] = std::max(0.01, 0.5 * m_w * R * R);
             }
         }
+        drivetrain_ = make_default_drivetrain(vp_);
+        brake_      = make_default_brake(vp_);
+        steering_   = make_default_steering(vp_);
         spdlog::debug("[L2 7-DOF] init: mass={:.0f} kg, L={:.2f} m, Tw_f={:.2f} m, "
                       "diff={}, ackerman={:.0f}%, EBD={}",
                       vp.mass, vp.wheelbase, vp.track_front,
@@ -110,6 +112,9 @@ public:
         ay_prev_ = 0.0;
         alpha_dyn_.fill(0.0);
         alpha_geom_last_.fill(0.0);
+        drivetrain_ = make_default_drivetrain(vp_);
+        brake_      = make_default_brake(vp_);
+        steering_   = make_default_steering(vp_);
         // Clear diagnostics so accessors don't return stale values before step().
         tire_F_.fill(Vec3::Zero());
         tire_Fz_.fill(0.0);
@@ -185,7 +190,6 @@ private:
     Deriv derivatives(const State& s,
                       const CmdL4& cmd,
                       const ContactArray& contacts) {
-        const double d   = cmd.steer_angle_wheel;
         const double vx  = s.velocity.x();
         const double vy  = s.velocity.y();
         const double r   = s.angular_velocity.z();
@@ -280,6 +284,17 @@ private:
         // L3 may supply a dynamic (ride/road-coupled) tire load for grip in place
         // of this quasi-static Fz. One-shot: consumed here, re-set each L3 step.
         if (use_ext_fz_) { Fz = ext_fz_; use_ext_fz_ = false; }
+
+        const DriverCmd driver_cmd{
+            cmd.steer_angle_wheel,
+            cmd.throttle,
+            cmd.brake,
+            cmd.gear,
+            cmd.handbrake,
+        };
+        SubsystemContext ctx{s, driver_cmd, 0.0};
+        ctx.Fz = Fz;
+        const double d = steering_->apply(ctx).roadwheel_angle;
 
         // ---- Per-wheel steer angle with Ackerman correction ----
         // Average steer d -> per-axle inner/outer split.  Ackerman 0% = parallel,
@@ -411,65 +426,9 @@ private:
             mz_wheel[i] = out.Mz * lambda;
         }
 
-        // ---- Drive / brake torques ----
-        std::array<double, NUM_WHEELS> Td {{0.0, 0.0, 0.0, 0.0}};
-        const double Tmot = cmd.throttle * vp_.max_motor_torque * vp_.final_drive_ratio;
-        // Distribute per-axle then split L/R via differential model.
-        double T_front_axle = 0.0, T_rear_axle = 0.0;
-        switch (vp_.drive_type) {
-            case VehicleParams::Drive::FWD: T_front_axle = Tmot; break;
-            case VehicleParams::Drive::RWD: T_rear_axle  = Tmot; break;
-            case VehicleParams::Drive::AWD:
-                T_front_axle = 0.5 * Tmot; T_rear_axle = 0.5 * Tmot; break;
-        }
-        auto split_axle = [&](double T_axle, double omega_L, double omega_R,
-                              double& T_L, double& T_R) {
-            switch (vp_.differential) {
-                case VehicleParams::Differential::Open:
-                    T_L = T_R = 0.5 * T_axle;
-                    break;
-                case VehicleParams::Differential::Locked: {
-                    const double dw = omega_L - omega_R;
-                    // Bias to slower wheel: dw>0 -> right slower -> bias R (positive bias)
-                    const double bias = 0.45 * std::tanh(2.0 * dw);
-                    T_L = (0.5 - bias) * T_axle;
-                    T_R = (0.5 + bias) * T_axle;
-                    break;
-                }
-                case VehicleParams::Differential::LSD: {
-                    const double dw = omega_L - omega_R;
-                    const double mag = std::clamp(
-                        vp_.lsd_preload + vp_.lsd_ramp * std::abs(dw),
-                        0.0, 0.45);
-                    const double bias = mag * std::tanh(2.0 * dw);
-                    T_L = (0.5 - bias) * T_axle;
-                    T_R = (0.5 + bias) * T_axle;
-                    break;
-                }
-            }
-        };
-        split_axle(T_front_axle,
-                   s.wheel_spin[WHEEL_FL], s.wheel_spin[WHEEL_FR],
-                   Td[WHEEL_FL], Td[WHEEL_FR]);
-        split_axle(T_rear_axle,
-                   s.wheel_spin[WHEEL_RL], s.wheel_spin[WHEEL_RR],
-                   Td[WHEEL_RL], Td[WHEEL_RR]);
-        if (cmd.gear < 0) for (auto& x : Td) x = -x;
-        double bias = std::clamp(vp_.brake_bias_front, 0.0, 1.0);
-        if (vp_.brake_ebd_enabled) {
-            const double Fz_f = Fz[WHEEL_FL] + Fz[WHEEL_FR];
-            const double Fz_r = Fz[WHEEL_RL] + Fz[WHEEL_RR];
-            const double total = Fz_f + Fz_r;
-            if (total > 1.0) bias = std::clamp(Fz_f / total, 0.05, 0.95);
-        }
-        const double Tbrk_front_axle =       bias  * cmd.brake * vp_.max_brake_torque;
-        const double Tbrk_rear_axle  = (1.0-bias) * cmd.brake * vp_.max_brake_torque;
-        std::array<double, NUM_WHEELS> Tb;
-        for (int i = 0; i < NUM_WHEELS; ++i) {
-            const double axle_T = (i == WHEEL_FL || i == WHEEL_FR)
-                                  ? Tbrk_front_axle : Tbrk_rear_axle;
-            Tb[i] = -smooth_sign(s.wheel_spin[i], kBrakeWidth) * (0.5 * axle_T);
-        }
+        const auto dt_out = drivetrain_->apply(ctx);
+        const std::array<double, NUM_WHEELS> Td = dt_out.wheel_torque;
+        const std::array<double, NUM_WHEELS> Tb = brake_->wheel_torque(ctx);
 
         // ---- Body equations ----
         double Fx_total = 0.0, Fy_total = 0.0, Mz_total = 0.0;
@@ -591,6 +550,9 @@ private:
     TireParams    tp_;
     SolverParams  sp_;
     std::unique_ptr<ITireModel> tire_;
+    std::unique_ptr<IDrivetrain>     drivetrain_;
+    std::unique_ptr<IBrakeSystem>    brake_;
+    std::unique_ptr<ISteeringSystem> steering_;
     std::array<double, NUM_WHEELS> I_wheel_ {{1.0, 1.0, 1.0, 1.0}};
 
     State state_;
