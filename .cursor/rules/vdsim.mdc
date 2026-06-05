@@ -1,0 +1,42 @@
+---
+description: VDSim project conventions and guardrails (mirror of CLAUDE.md). Always apply.
+alwaysApply: true
+---
+
+# VDSim — conventions & guardrails (any Cursor agent must follow)
+
+Before working, read `docs/HANDOFF.md` (current state / next task) and the relevant
+`docs/design/*.md` (the spec). Cursor-usage rules: `docs/design/CURSOR_USAGE.md`.
+
+## Conventions
+- Wheel index order: FL=0, FR=1, RL=2, RR=3 (all code/docs/plots).
+- ISO 8855 right-handed frame (+x fwd, +y left, +z up).
+- Estimation noise: Simon convention `Q = process noise`, `R = measurement noise`
+  (NOT Thrun's R=process; Thrun only in SLAM-lecture context).
+- Parameters are YAML-based (new configs follow the same pattern).
+- Comments: default to none; only a short line for a non-obvious WHY. No what-comments,
+  no multi-paragraph docstrings.
+
+## Build & test (pass criteria)
+- Build: `cmake --build build -j`
+- Test: `cd build && ctest --output-on-failure` — **all 187 must stay green.**
+- The default subsystem modules must reproduce current behaviour exactly (no
+  re-baselining of ISO/benchmark numbers). If a number moves, stop and flag it.
+
+## Git
+- Never `push`, force-push, or move/retag without an explicit request.
+- Small, focused commits; conventional messages; end with
+  `Co-Authored-By: ...` only if appropriate. Do not commit unless asked, or as the
+  documented end-of-task step.
+
+## Security
+- Hyundai (TUR) measured tire data is confidential. Never commit `.tir` values or
+  details; refer to them generically only.
+
+## Verification
+- Do not guess external facts/APIs/numbers — verify, or say "unknown".
+- Trust internal code/framework guarantees; validate only at real boundaries.
+
+## Handoff
+- When a task is done: build + ctest green, then update `docs/HANDOFF.md` so the next
+  tool/session can continue. Final review/verification is Claude's responsibility.
