@@ -2002,10 +2002,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_1" class="md-nav__link">
+  <a href="#3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        구현 순서 (다음)
+        구현 순서 (사용자 결정: 3 부터)
       
     </span>
   </a>
@@ -2055,8 +2055,9 @@
 
 
 <h1 id="vdsim-v010-v02">VDSim 핸드오프 — v0.1.0 공개 완료 + v0.2 멀티차량 착수<a class="headerlink" href="#vdsim-v010-v02" title="Permanent link">&para;</a></h1>
-<p>작성: 2026-06-05. v0.1.0 published. v0.2 multi-vehicle 런타임 증분 &#8531; 완료.
-다음 = 증분 2 (#157 멀티차량 world 런타임).</p>
+<p>작성: 2026-06-05. v0.1.0 published. v0.2 설계 lock 완료(멀티차량+서브시스템).
+다음 = <strong>서브시스템 모듈 골격 (step 3, 아래 구현순서)</strong>. 멀티차량 런타임(#157/#158)은
+설계만 끝났고 그 뒤로 미룸 (사용자 결정).</p>
 <h2 id="1">1. 목표<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
 <p>v0.2 "composable vehicle": 컴포넌트 모델 + 워크샵 + 씬 UI 로 차량 조립, 멀티차량
 시나리오 구동. 지금 단계는 그 토대인 <strong>멀티차량 shared-world 런타임</strong>.
@@ -2101,14 +2102,18 @@ v0.2 착수:
   default==현재거동(187 유지). 엔진 torque-RPM 곡선+관성(Issue2)은 <strong>v0.3 이관</strong>.</li>
 <li>v0.2 이후 모듈: LuGre tire(저속 blend 대체, <code>V0.2_TIRE_LUGRE.md</code>).</li>
 </ul>
-<h2 id="_1">구현 순서 (다음)<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
-<ol>
-<li>멀티차량 런타임 #157 (realtime_server world + subscriber, scenario YAML).</li>
-<li>GUI 멀티차량 #158 (demux + selected-vehicle 제어 + 멀티 GUI 레이싱).</li>
-<li>서브시스템 골격: 인터페이스 + default 모듈 + 코어를 default 경유로 리팩터(187 green
-   유지) → brake/steering/drivetrain/suspension/ARB + deadtime.
-(1-2 와 3 은 독립 — 병렬 가능.)</li>
-</ol>
+<h2 id="3">구현 순서 (사용자 결정: 3 부터)<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
+<p><strong>다음 = 서브시스템 골격</strong> (#159-161). 멀티차량(#157/#158)은 그 뒤로 미룸.
+- #159 인터페이스 + <code>SubsystemContext</code>(full state) + <code>DriverCmd</code>(handwheel/throttle/
+  brake/gear/handbrake) + <code>DelayLine</code>(deadtime 헬퍼). <code>core/include/vdsim/</code> 에.
+- #160 default 모듈 (전부 현재거동 재현): brake(비례+bias/EBD) / steering(ratio +
+  unity) / drivetrain(flat torque+diff) / suspension(선형, 코너별) / anti-roll bar
+  (선형, 축별). 각 모듈 deadtime 파라미터(default 0).
+- #161 dynamics 코어를 default 모듈 경유로 리팩터 — <strong>default==현재거동, 187 green
+  유지</strong>가 합격 기준. L0/L1=roadwheel, L2+=rack. suspension/ARB 는 step 내부 콜백.
+- 그 다음: #157 멀티차량 런타임 → #158 GUI 레이싱.
+- v0.3 이관: 엔진 torque-RPM 곡선 + 관성(Issue 2), LuGre tire.
+설계 spec: <code>docs/design/V0.2_SUBSYSTEMS.md</code> (결정 1-7, 인터페이스, per-level 표).</p>
 <h2 id="5">5. 주의 · 함정<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>VDS1 v4</strong>: plant·GUI 둘 다 v4 여야 통신됨(version gate). protocol.py 수정 후 GUI
