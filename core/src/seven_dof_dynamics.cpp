@@ -96,9 +96,9 @@ public:
                 I_wheel_[i] = std::max(0.01, 0.5 * m_w * R * R);
             }
         }
-        drivetrain_ = make_default_drivetrain(vp_);
-        brake_      = make_default_brake(vp_);
-        steering_   = make_default_steering(vp_);
+        drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
+        brake_      = make_default_brake(vp_, vp_.brake_deadtime_s);
+        steering_   = make_default_steering(vp_, vp_.steer_deadtime_s);
         spdlog::debug("[L2 7-DOF] init: mass={:.0f} kg, L={:.2f} m, Tw_f={:.2f} m, "
                       "diff={}, ackerman={:.0f}%, EBD={}",
                       vp.mass, vp.wheelbase, vp.track_front,
@@ -112,9 +112,9 @@ public:
         ay_prev_ = 0.0;
         alpha_dyn_.fill(0.0);
         alpha_geom_last_.fill(0.0);
-        drivetrain_ = make_default_drivetrain(vp_);
-        brake_      = make_default_brake(vp_);
-        steering_   = make_default_steering(vp_);
+        drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
+        brake_      = make_default_brake(vp_, vp_.brake_deadtime_s);
+        steering_   = make_default_steering(vp_, vp_.steer_deadtime_s);
         // Clear diagnostics so accessors don't return stale values before step().
         tire_F_.fill(Vec3::Zero());
         tire_Fz_.fill(0.0);

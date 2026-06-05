@@ -152,6 +152,9 @@ VehicleParams VehicleParams::from_yaml(const std::string& path) {
     pull(root, "max_brake_torque", p.max_brake_torque);
     pull(root, "brake_bias_front",  p.brake_bias_front);
     pull(root, "brake_ebd_enabled", p.brake_ebd_enabled);
+    pull(root, "brake_deadtime_s",  p.brake_deadtime_s);
+    pull(root, "drive_deadtime_s",  p.drive_deadtime_s);
+    pull(root, "steer_deadtime_s",  p.steer_deadtime_s);
 
     pull(root, "steering_ratio",        p.steering_ratio);
     pull(root, "max_steer_angle_wheel", p.max_steer_angle_wheel);
@@ -213,6 +216,9 @@ void VehicleParams::to_yaml(const std::string& path) const {
     out << YAML::Key << "max_brake_torque"  << YAML::Value << max_brake_torque;
     out << YAML::Key << "brake_bias_front"  << YAML::Value << brake_bias_front;
     out << YAML::Key << "brake_ebd_enabled" << YAML::Value << brake_ebd_enabled;
+    out << YAML::Key << "brake_deadtime_s"  << YAML::Value << brake_deadtime_s;
+    out << YAML::Key << "drive_deadtime_s"  << YAML::Value << drive_deadtime_s;
+    out << YAML::Key << "steer_deadtime_s"  << YAML::Value << steer_deadtime_s;
 
     out << YAML::Key << "steering_ratio"        << YAML::Value << steering_ratio;
     out << YAML::Key << "max_steer_angle_wheel" << YAML::Value << max_steer_angle_wheel;

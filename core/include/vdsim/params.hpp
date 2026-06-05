@@ -57,6 +57,11 @@ struct VehicleParams {
     double brake_bias_front      {0.5};                                // front share [0, 1]
     bool   brake_ebd_enabled     {false};                              // dynamic Fz-based bias
 
+    // ---- Actuator transport deadtime (subsystem modules) ----
+    double brake_deadtime_s      {0.0};                                // [s] pedal->brake lag
+    double drive_deadtime_s      {0.0};                                // [s] throttle->drive lag
+    double steer_deadtime_s      {0.0};                                // [s] handwheel->steer lag
+
     // ---- Steering ----
     double steering_ratio        {15.0};                               // wheel/driver
     double max_steer_angle_wheel {0.5};                                // [rad]
