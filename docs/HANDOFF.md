@@ -65,11 +65,16 @@ v0.2 착수:
   - **#161a DONE** (커밋 5a952f7): L2 seven_dof 의 drive/brake/steer 를 모듈 경유로.
     SubsystemContext 에 동적 Fz 추가, ProportionalBrake EBD 가 ctx.Fz 사용. 187 green +
     저속/grade/ISO spot-check 일치(byte-identical). 저속 핸들링 코드 불변.
-  - **#161b 남음**: L1 bicycle drive/brake/steer 모듈 경유 (axle-lumped — drivetrain
-    모듈 4륜 출력을 축별 합산, brake 동일). L1 state.wheel_spin[4] 활용.
-  - **#161c 남음**: L3 fourteen_dof drive/brake/steer + suspension/ARB 를 모듈 경유
-    (step 내부 콜백). **ARB 부호 ctest 로 확인**(가장 깨지기 쉬움). L3 는 planar 을
-    inner seven_dof 에 위임하므로 drive/brake 는 이미 #161a 수혜 가능성 — 확인 필요.
+  - **L3 drive/brake/steer = #161a 로 이미 완료**: fourteen_dof 는 planar 을
+    `inner_ = create_seven_dof()` 에 위임하므로 inner 가 모듈 경유 → 별도 작업 불필요.
+  - **#161b (L1) = 면제 결정**: bicycle 은 single-track(`of=wheel_spin[FL]`,
+    `or_=wheel_spin[RL]`, Td_f/Tb_f 가 축 전체). 4륜 모듈(0.5/0.5 split, FR/RR omega 0)
+    을 끼우면 factor-2·diff-bias 불일치 → reduced model 이라 per-wheel 모듈 라우팅 면제.
+    L1 은 인라인 축레벨 유지. (모듈은 L2+ 및 L3(via inner) 대상.)
+  - **#161c 남음 (유일한 잔여)**: L3 fourteen_dof 의 **suspension + ARB** 만 모듈 경유.
+    주의: fourteen_dof ARB 는 **roll moment**(K_arb·φ)를 roll DOF 에 적용하는데 LinearARB
+    모듈은 **per-wheel 力 pair** 반환 → 등가 매핑에 설계판단 필요(단순 drop-in 아님,
+    가장 민감). suspension(k·defl+c·rate)은 비교적 직접. 합격=187 green + L3 거동 spot-check.
   - 합격 기준 공통: 187 green + 저속 spot-check(8% grade −0.0125, 20m/s r0.191/ay3.69).
   - **참고 gotcha (원 #160 검증)**:
   (a) ProportionalBrake EBD 는 현재 static Fz(m·g·cg/L) 사용 — seven_dof EBD 는 step 내
