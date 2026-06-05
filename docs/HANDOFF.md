@@ -64,10 +64,10 @@ v0.2 착수:
 - #161 **DONE** — 코어가 default 모듈 경유, default==현재거동, 187 green:
   - L2 drive/brake/steer 모듈 경유 (5a952f7, +동적 Fz EBD). L3 는 inner L2 위임이라 자동 수혜.
   - L3 per-corner suspension 모듈 경유 (8c11354). L1 은 single-track 이라 면제(인라인 유지).
-  - **남은 정리/연기 항목**(비차단):
-    (a) **ARB 모듈 미연결** — L3 ARB 는 roll moment(−K_arb·φ)로 roll DOF 에 적용되는데
-    `IAntiRollBar` 는 per-wheel 力 pair 반환 → 형식 불일치라 inline 유지. force-based ARB 로
-    통일할지(또는 interface 에 roll-moment 변형 추가) 설계결정 필요.
+  - **ARB DONE (#162, b60e139)**: L3 ARB 를 per-wheel force(LinearARB)로 재설계 — F_susp 에
+    더해 heave/pitch/roll+unsprung 에 작용. pure-roll 은 −K_arb·φ 와 등가, 비대칭 입력도 반응.
+    기본 sedan arb=0 라 187 불변; nonzero 시 roll 단조 억제 확인(susp FL-FR: 0→−0.083, 100k→−0.022).
+  - **남은 연기 항목**(비차단):
     (b) **deadtime 미활성** — DelayLine 은 derivatives() 내 dt=0 passthrough 로 호출(RK4
     4회 호출 회피). deadtime>0 실작동하려면 모듈을 substep 에서 1회 호출(실 dt)하도록 이동 필요.
     (c) brake EBD 정적fallback(total<=1)만 잔존 — 정상 동작 시 동적 Fz 사용(일치).

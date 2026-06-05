@@ -50,7 +50,7 @@
 ## 5. 워크플로 체크리스트
 1. 세션 시작: `docs/HANDOFF.md` + 관련 `docs/design/*` 읽기.
 2. 작업 분류: 위 rubric 으로 Cursor vs Claude 결정.
-3. Cursor 위임: `cursor-agent -p --force --trust --model composer-2.5 "<지시 + 가드레일>" --output-format text` (비대화형, ailab-12 검증완료; 위임 기본 = Composer 2.5 고정) 또는 IDE Composer.
+3. Cursor 위임: `~/bin/cursor_delegate.sh "<지시 + 가드레일>" <작업유형> [<workspace절대경로>]` (내부 composer-2.5 고정 + usage 자동로깅 → `~/cursor_eval/deleg.log`; 작업유형 예 boilerplate/test/refactor) 또는 IDE Composer. 직접 `cursor-agent -p --force --trust --model composer-2.5 "..."` 도 가능하나 deleg.log 미기록.
 4. 빌드·검증: `cmake --build build -j && (cd build && ctest --output-on-failure)` → 187 green 확인.
 5. commit (규약 준수, push 안 함).
 6. `docs/HANDOFF.md` 갱신 → 다음 세션·툴이 이어받게.
