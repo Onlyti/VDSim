@@ -48,15 +48,29 @@ v0.2 착수:
   default==현재거동(187 유지). 엔진 torque-RPM 곡선+관성(Issue2)은 **v0.3 이관**.
 - v0.2 이후 모듈: LuGre tire(저속 blend 대체, `V0.2_TIRE_LUGRE.md`).
 
-## 구현 순서 (사용자 결정: 3 부터)
-**다음 = 서브시스템 골격** (#159-161). 멀티차량(#157/#158)은 그 뒤로 미룸.
-- #159 인터페이스 + `SubsystemContext`(full state) + `DriverCmd`(handwheel/throttle/
-  brake/gear/handbrake) + `DelayLine`(deadtime 헬퍼). `core/include/vdsim/` 에.
-- #160 default 모듈 (전부 현재거동 재현): brake(비례+bias/EBD) / steering(ratio +
-  unity) / drivetrain(flat torque+diff) / suspension(선형, 코너별) / anti-roll bar
-  (선형, 축별). 각 모듈 deadtime 파라미터(default 0).
+## 구현 순서 (사용자 결정: 3 부터) + Cursor 위임 워크플로
+서브시스템 골격 (#159-161). 멀티차량(#157/#158)은 그 뒤로 미룸.
+**Cursor 위임 동작 확인됨**: 기계적 작업은 `cursor-agent -p --force --trust --model auto
+--output-format text "<지시>"` 로 위임 → Claude 가 리뷰+빌드+ctest 검증 후 커밋(push 금지).
+`.cursor/rules/vdsim.mdc`(규약·가드레일 미러), `docs/design/CURSOR_USAGE.md`(라우팅) 적용됨.
+
+- #159 **DONE** (커밋 f8305b9, Cursor 위임→Claude 검증): `core/include/vdsim/
+  subsystems.hpp`(인터페이스+SubsystemContext+DriverCmd) + `delay_line.hpp`. 187 green.
+- #160 **다음** — default 모듈 (전부 현재거동 정확 재현, 아직 코어에 안 엮음). 추출 소스:
+  - brake/drivetrain/steering(Ackermann): `core/src/seven_dof_dynamics.cpp`
+    (Tmot=throttle*max_motor_torque*final_drive, split_axle open/locked/LSD,
+    Tbrk=bias*brake*max_brake_torque+EBD, Tb=-smooth_sign(wheel_spin,kBrakeWidth)*0.5*axle,
+    Ackermann d_FL/d_FR) + `core/src/bicycle_dynamics.cpp`(axle 버전).
+  - suspension(코너별 k*defl+c*rate) + anti-roll bar(`arb_stiffness_front/rear`):
+    `core/src/fourteen_dof_dynamics.cpp`.
+  - params: `core/include/vdsim/params.hpp` (max_motor_torque/final_drive_ratio/
+    max_brake_torque/brake_bias_front/brake_ebd_enabled/diff/lsd_*/arb_stiffness_*/
+    spring_stiffness). steering_ratio 파라미터는 없음 → 추가하거나 생성자 인자로(default
+    합리값). 각 모듈 deadtime_s 파라미터(default 0, DelayLine 사용).
+  - RatioSteering + UnitySteering(ratio=1) 둘 다.
 - #161 dynamics 코어를 default 모듈 경유로 리팩터 — **default==현재거동, 187 green
-  유지**가 합격 기준. L0/L1=roadwheel, L2+=rack. suspension/ARB 는 step 내부 콜백.
+  유지**가 합격 기준(Claude 가 검증/판정). L0/L1=roadwheel, L2+=rack. suspension/ARB 는
+  step 내부 콜백.
 - 그 다음: #157 멀티차량 런타임 → #158 GUI 레이싱.
 - v0.3 이관: 엔진 torque-RPM 곡선 + 관성(Issue 2), LuGre tire.
 설계 spec: `docs/design/V0.2_SUBSYSTEMS.md` (결정 1-7, 인터페이스, per-level 표).
