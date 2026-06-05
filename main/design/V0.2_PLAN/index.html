@@ -2057,6 +2057,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#decisions-log" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decisions log
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#open-questions-decisions-needed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2266,10 +2277,18 @@ WS1/WS2/WS3 together.</p>
 <p>Rationale: physics (WS1) is the product's differentiator and unblocks the
 workshops; the assembly model (WS4) must exist before the tree UI (WS3); the big UI
 rewrite (WS3) lands last so it builds on stable part/model abstractions.</p>
+<h2 id="decisions-log">Decisions log<a class="headerlink" href="#decisions-log" title="Permanent link">&para;</a></h2>
+<ul>
+<li>2026-06-05 — <strong>Multi-vehicle runtime = one process, N vehicles (shared world,
+  one clock).</strong> Rejected N independent plant processes: in-engine collision needs
+  all bodies in one frame at the same instant with contact forces fed back inside
+  the integration step, which async free-running UDP processes can't do. V2V
+  collision physics is deferred to a future TODO (see <code>V0.2_MULTIVEHICLE.md</code>); the
+  runtime is built collision-<em>ready</em> now. I/O moves to VDS1 v4 with a <code>vehicle_id</code>
+  field (one socket, demux by id).</li>
+</ul>
 <h2 id="open-questions-decisions-needed">Open questions / decisions needed<a class="headerlink" href="#open-questions-decisions-needed" title="Permanent link">&para;</a></h2>
 <ol>
-<li>Multi-vehicle runtime: N <code>vdsim_realtime</code> instances vs one process with N
-   vehicles? (affects VDS1 addressing, ports, the scene UI).</li>
 <li>Gearbox: model a multi-ratio transmission in v0.2, or just final drive + engine
    inertia + torque curve?</li>
 <li>.tir import: which MF version(s) to support first.</li>
