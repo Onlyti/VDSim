@@ -63,8 +63,12 @@ double ebd_front_bias(const VehicleParams& vp,
 ProportionalBrake::ProportionalBrake(const VehicleParams& vp, double deadtime_s)
     : vp_(vp), brake_delay_(deadtime_s) {}
 
+void ProportionalBrake::begin_step(const SubsystemContext& ctx, double dt) {
+    brake_eff_ = brake_delay_.step(ctx.cmd.brake, dt);
+}
+
 std::array<double, NUM_WHEELS> ProportionalBrake::wheel_torque(const SubsystemContext& ctx) {
-    const double brake = brake_delay_.step(ctx.cmd.brake, ctx.dt);
+    const double brake = brake_eff_;
     const double bias = ebd_front_bias(vp_, ctx.Fz);
     const double Tbrk_front_axle =       bias  * brake * vp_.max_brake_torque;
     const double Tbrk_rear_axle  = (1.0 - bias) * brake * vp_.max_brake_torque;
@@ -78,13 +82,20 @@ std::array<double, NUM_WHEELS> ProportionalBrake::wheel_torque(const SubsystemCo
     return Tb;
 }
 
-void ProportionalBrake::reset() { brake_delay_.reset(); }
+void ProportionalBrake::reset() {
+    brake_eff_ = 0.0;
+    brake_delay_.reset();
+}
 
 BasicDrivetrain::BasicDrivetrain(const VehicleParams& vp, double deadtime_s)
     : vp_(vp), throttle_delay_(deadtime_s) {}
 
+void BasicDrivetrain::begin_step(const SubsystemContext& ctx, double dt) {
+    throttle_eff_ = throttle_delay_.step(ctx.cmd.throttle, dt);
+}
+
 DrivetrainOutput BasicDrivetrain::apply(const SubsystemContext& ctx) {
-    const double throttle = throttle_delay_.step(ctx.cmd.throttle, ctx.dt);
+    const double throttle = throttle_eff_;
     const double Tmot = throttle * vp_.max_motor_torque * vp_.final_drive_ratio;
 
     double T_front_axle = 0.0, T_rear_axle = 0.0;
@@ -110,7 +121,10 @@ DrivetrainOutput BasicDrivetrain::apply(const SubsystemContext& ctx) {
     return out;
 }
 
-void BasicDrivetrain::reset() { throttle_delay_.reset(); }
+void BasicDrivetrain::reset() {
+    throttle_eff_ = 0.0;
+    throttle_delay_.reset();
+}
 
 RatioSteering::RatioSteering(const VehicleParams& vp, double deadtime_s)
     : steering_ratio_(std::max(1e-6, vp.steering_ratio)), handwheel_delay_(deadtime_s) {}
@@ -118,26 +132,40 @@ RatioSteering::RatioSteering(const VehicleParams& vp, double deadtime_s)
 RatioSteering::RatioSteering(double steering_ratio, double deadtime_s)
     : steering_ratio_(std::max(1e-6, steering_ratio)), handwheel_delay_(deadtime_s) {}
 
+void RatioSteering::begin_step(const SubsystemContext& ctx, double dt) {
+    handwheel_eff_ = handwheel_delay_.step(ctx.cmd.handwheel_angle, dt);
+}
+
 SteeringOutput RatioSteering::apply(const SubsystemContext& ctx) {
-    const double handwheel = handwheel_delay_.step(ctx.cmd.handwheel_angle, ctx.dt);
+    const double handwheel = handwheel_eff_;
     SteeringOutput out;
     out.roadwheel_angle = handwheel / steering_ratio_;
     out.rack_travel     = out.roadwheel_angle;
     return out;
 }
 
-void RatioSteering::reset() { handwheel_delay_.reset(); }
+void RatioSteering::reset() {
+    handwheel_eff_ = 0.0;
+    handwheel_delay_.reset();
+}
 
 UnitySteering::UnitySteering(double deadtime_s) : handwheel_delay_(deadtime_s) {}
 
+void UnitySteering::begin_step(const SubsystemContext& ctx, double dt) {
+    handwheel_eff_ = handwheel_delay_.step(ctx.cmd.handwheel_angle, dt);
+}
+
 SteeringOutput UnitySteering::apply(const SubsystemContext& ctx) {
     SteeringOutput out;
-    out.roadwheel_angle = handwheel_delay_.step(ctx.cmd.handwheel_angle, ctx.dt);
+    out.roadwheel_angle = handwheel_eff_;
     out.rack_travel     = out.roadwheel_angle;
     return out;
 }
 
-void UnitySteering::reset() { handwheel_delay_.reset(); }
+void UnitySteering::reset() {
+    handwheel_eff_ = 0.0;
+    handwheel_delay_.reset();
+}
 
 LinearSuspension::LinearSuspension(const VehicleParams& vp) : vp_(vp) {}
 

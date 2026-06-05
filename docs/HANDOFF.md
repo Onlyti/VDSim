@@ -68,8 +68,8 @@ v0.2 착수:
     더해 heave/pitch/roll+unsprung 에 작용. pure-roll 은 −K_arb·φ 와 등가, 비대칭 입력도 반응.
     기본 sedan arb=0 라 187 불변; nonzero 시 roll 단조 억제 확인(susp FL-FR: 0→−0.083, 100k→−0.022).
   - **남은 연기 항목**(비차단):
-    (b) **deadtime 미활성** — DelayLine 은 derivatives() 내 dt=0 passthrough 로 호출(RK4
-    4회 호출 회피). deadtime>0 실작동하려면 모듈을 substep 에서 1회 호출(실 dt)하도록 이동 필요.
+    (b) ~~deadtime 미활성~~ **DONE** — `begin_step(ctx,dt)` 가 제어스텝당 1회 delay advance,
+    `wheel_torque`/`apply` 는 캐시 `*_eff_` 사용(derivatives dt=0, RK4 4회 재진행 없음).
     (c) brake EBD 정적fallback(total<=1)만 잔존 — 정상 동작 시 동적 Fz 사용(일치).
 - 그 다음: #157 멀티차량 런타임 → #158 GUI 레이싱.
 - v0.3 이관: 엔진 torque-RPM 곡선 + 관성(Issue 2), LuGre tire.

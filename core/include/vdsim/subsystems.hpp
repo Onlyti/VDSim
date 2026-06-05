@@ -48,18 +48,21 @@ struct DrivetrainOutput {
 
 struct IBrakeSystem {
     virtual std::array<double, NUM_WHEELS> wheel_torque(const SubsystemContext&) = 0;
+    virtual void begin_step(const SubsystemContext&, double /*dt*/) {}
     virtual void reset() {}
     virtual ~IBrakeSystem() = default;
 };
 
 struct ISteeringSystem {
     virtual SteeringOutput apply(const SubsystemContext&) = 0;
+    virtual void begin_step(const SubsystemContext&, double /*dt*/) {}
     virtual void reset() {}
     virtual ~ISteeringSystem() = default;
 };
 
 struct IDrivetrain {
     virtual DrivetrainOutput apply(const SubsystemContext&) = 0;
+    virtual void begin_step(const SubsystemContext&, double /*dt*/) {}
     virtual void reset() {}
     virtual ~IDrivetrain() = default;
 };

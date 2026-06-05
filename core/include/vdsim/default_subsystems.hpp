@@ -13,11 +13,13 @@ public:
     explicit ProportionalBrake(const VehicleParams& vp, double deadtime_s = 0.0);
 
     std::array<double, NUM_WHEELS> wheel_torque(const SubsystemContext& ctx) override;
+    void begin_step(const SubsystemContext& ctx, double dt) override;
     void reset() override;
 
 private:
     VehicleParams vp_;
     DelayLine     brake_delay_;
+    double        brake_eff_ {0.0};
 };
 
 class BasicDrivetrain final : public IDrivetrain {
@@ -25,11 +27,13 @@ public:
     explicit BasicDrivetrain(const VehicleParams& vp, double deadtime_s = 0.0);
 
     DrivetrainOutput apply(const SubsystemContext& ctx) override;
+    void begin_step(const SubsystemContext& ctx, double dt) override;
     void reset() override;
 
 private:
     VehicleParams vp_;
     DelayLine     throttle_delay_;
+    double        throttle_eff_ {0.0};
 };
 
 class RatioSteering final : public ISteeringSystem {
@@ -38,11 +42,13 @@ public:
     RatioSteering(double steering_ratio, double deadtime_s = 0.0);
 
     SteeringOutput apply(const SubsystemContext& ctx) override;
+    void begin_step(const SubsystemContext& ctx, double dt) override;
     void reset() override;
 
 private:
     double    steering_ratio_;
     DelayLine handwheel_delay_;
+    double    handwheel_eff_ {0.0};
 };
 
 class UnitySteering final : public ISteeringSystem {
@@ -50,10 +56,12 @@ public:
     explicit UnitySteering(double deadtime_s = 0.0);
 
     SteeringOutput apply(const SubsystemContext& ctx) override;
+    void begin_step(const SubsystemContext& ctx, double dt) override;
     void reset() override;
 
 private:
     DelayLine handwheel_delay_;
+    double    handwheel_eff_ {0.0};
 };
 
 class LinearSuspension final : public ISuspension {

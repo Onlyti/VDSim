@@ -129,6 +129,18 @@ public:
         const CmdL4 cmd = lower_to_l4(u);
         if (!(dt > 0.0)) return;
 
+        const DriverCmd driver_cmd{
+            cmd.steer_angle_wheel,
+            cmd.throttle,
+            cmd.brake,
+            cmd.gear,
+            cmd.handbrake,
+        };
+        SubsystemContext ctx{state_, driver_cmd, dt};
+        brake_->begin_step(ctx, dt);
+        drivetrain_->begin_step(ctx, dt);
+        steering_->begin_step(ctx, dt);
+
         const int N = std::max(1,
                        std::min(sp_.max_substeps,
                                 static_cast<int>(std::ceil(dt / sp_.max_substep_dt))));
