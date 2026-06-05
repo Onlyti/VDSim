@@ -69,6 +69,8 @@ public:
         vp_ = vp; tp_ = tp; sp_ = sp;
         inner_->initialize(vp, tp, sp);
         suspension_ = make_default_suspension(vp);
+        arb_front_  = make_default_antirollbar(vp, 0);
+        arb_rear_   = make_default_antirollbar(vp, 1);
 
         const double a = vp.cg_to_front, b = vp.cg_to_rear;
         const double tw_f = vp.track_front * 0.5, tw_r = vp.track_rear * 0.5;
@@ -106,6 +108,8 @@ public:
         z_u_     = {{0.0, 0.0, 0.0, 0.0}};
         z_u_dot_ = {{0.0, 0.0, 0.0, 0.0}};
         if (!suspension_) suspension_ = make_default_suspension(vp_);
+        if (!arb_front_)  arb_front_  = make_default_antirollbar(vp_, 0);
+        if (!arb_rear_)   arb_rear_   = make_default_antirollbar(vp_, 1);
     }
 
     void step(const ControlInput& u,
@@ -230,31 +234,38 @@ private:
         // Corner deflection couples heave + pitch + roll (delta = z + ry*phi - rx*th),
         // so the per-corner springs/dampers produce roll stiffness and roll damping
         // naturally -- no separate lumped K_phi/C_phi. The ARB adds a roll-only term.
-        double Fz_sum = 0.0, M_pitch_spring = 0.0, M_roll_spring = 0.0;
         std::array<double, NUM_WHEELS> F_susp{};
-        // Per-corner suspension force comes from the pluggable ISuspension module
-        // (default LinearSuspension == -k*delta - c*vel, identical to the prior
-        // inline form). LinearSuspension ignores ctx; it is threaded so a custom
-        // module can read vehicle state. The anti-roll bar stays a roll-DOF moment
-        // below (its lumped roll-stiffness form does not map to the per-wheel-force
-        // IAntiRollBar; reconciling that is a separate design decision).
+        std::array<double, NUM_WHEELS> delta{}, vel{};
+        // Per-corner suspension force from the pluggable ISuspension module (default
+        // LinearSuspension == -k*delta - c*vel). ctx is threaded so a custom module
+        // can read vehicle state (default ignores it).
         const SubsystemContext susp_ctx{state_, susp_ctx_cmd_, 0.0};
         for (int i = 0; i < NUM_WHEELS; ++i) {
             const double z_corner = z + ry_[i] * phi - rx_[i] * th;
             const double v_corner = z_dot + ry_[i] * phi_dot - rx_[i] * th_dot;
-            const double delta    = z_corner - zu[i];        // relative compression deviation
-            const double vel      = v_corner - zu_dot[i];
-            const double F        = suspension_->force(
-                susp_ctx, CornerInput{i, delta, vel, 1.0});   // force on sprung (positive = up)
-            F_susp[i]      = F;
-            Fz_sum        += F;
-            M_pitch_spring -= rx_[i] * F;
-            M_roll_spring  += ry_[i] * F;
+            delta[i] = z_corner - zu[i];        // relative compression deviation
+            vel[i]   = v_corner - zu_dot[i];
+            F_susp[i] = suspension_->force(susp_ctx, CornerInput{i, delta[i], vel[i], 1.0});
         }
-        // Anti-roll bar: roll-only restoring moment (undamped), added on top of the
-        // spring-derived roll stiffness above.
-        const double K_arb = std::max(0.0, vp_.arb_stiffness_front)
-                           + std::max(0.0, vp_.arb_stiffness_rear);
+        // Anti-roll bar as a per-wheel force pair (per axle), added to the corner
+        // forces so it feeds heave/pitch/roll AND the unsprung dynamics — the
+        // physical ARB. For pure roll (delta_L-delta_R = track*phi) this reproduces
+        // the previous lumped -K_arb*phi roll moment; it additionally reacts to
+        // asymmetric (one-wheel) inputs, which the lumped form could not.
+        {
+            const auto Ff = arb_front_->force(susp_ctx,
+                AxleDefl{delta[WHEEL_FL], delta[WHEEL_FR], vel[WHEEL_FL], vel[WHEEL_FR]});
+            const auto Fr = arb_rear_->force(susp_ctx,
+                AxleDefl{delta[WHEEL_RL], delta[WHEEL_RR], vel[WHEEL_RL], vel[WHEEL_RR]});
+            F_susp[WHEEL_FL] += Ff.first;  F_susp[WHEEL_FR] += Ff.second;
+            F_susp[WHEEL_RL] += Fr.first;  F_susp[WHEEL_RR] += Fr.second;
+        }
+        double Fz_sum = 0.0, M_pitch_spring = 0.0, M_roll_spring = 0.0;
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            Fz_sum         += F_susp[i];
+            M_pitch_spring -= rx_[i] * F_susp[i];
+            M_roll_spring  += ry_[i] * F_susp[i];   // includes the ARB roll contribution
+        }
 
         // Anti-dive / anti-squat reduces the longitudinal inertia moment fed
         // into pitch.  For braking (ax<0) the front anti_dive_front fraction
@@ -271,7 +282,7 @@ private:
         d.dz       = z_dot;
         d.dz_dot   = Fz_sum / std::max(1.0, m_s);
         d.dphi     = phi_dot;
-        d.dphi_dot = (M_roll_spring - K_arb * phi + m_s * ay * h) / std::max(1e-3, Ixx);
+        d.dphi_dot = (M_roll_spring + m_s * ay * h) / std::max(1e-3, Ixx);
         d.dth      = th_dot;
         d.dth_dot  = (M_pitch_spring + M_inertia_pitch) / std::max(1e-3, Iyy);
 
@@ -372,7 +383,9 @@ private:
     SolverParams  sp_;
     std::unique_ptr<IVehicleDynamics> inner_;
     std::unique_ptr<ISuspension> suspension_;
-    DriverCmd susp_ctx_cmd_ {};   // threaded into the suspension ctx (default module ignores it)
+    std::unique_ptr<IAntiRollBar> arb_front_;
+    std::unique_ptr<IAntiRollBar> arb_rear_;
+    DriverCmd susp_ctx_cmd_ {};   // threaded into the suspension/ARB ctx (default modules ignore it)
     std::array<double, NUM_WHEELS> Fz_static_           {};
     std::array<double, NUM_WHEELS> static_compression_  {};
     std::array<double, NUM_WHEELS> rx_                  {};
