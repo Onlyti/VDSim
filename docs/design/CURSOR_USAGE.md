@@ -31,7 +31,7 @@
 | 모델 고민 회피 | Auto (Cursor 가 선택) | 0 (포함, 무제한) |
 | 진짜 어려운 아키텍처 | Opus — 단 이건 Claude Code 에서 하는 게 정석 | 크레딧 큼 |
 
-포함분 관리: 기본 Auto/Composer, frontier 모델(Sonnet/Opus)은 꼭 필요할 때만 수동선택. 크레딧 소진 대시보드 주시.
+**위임 기본 = `--model composer-2.5` 고정 (웬만하면 이걸로).** auto 는 Cursor 가 모델선택해 더 비싼 모델 고를 수 있어 회피. frontier(Sonnet/Opus)는 꼭 필요할 때만 수동선택. 크레딧 소진 대시보드 주시.
 (확인 필요) 모델명·버전·벤치는 시점 따라 변동 — cursor.com/docs/models-and-pricing.
 
 ## 3. 핸드오프 / 일관성
@@ -50,7 +50,7 @@
 ## 5. 워크플로 체크리스트
 1. 세션 시작: `docs/HANDOFF.md` + 관련 `docs/design/*` 읽기.
 2. 작업 분류: 위 rubric 으로 Cursor vs Claude 결정.
-3. Cursor 위임: `cursor-agent -p --force --trust "<지시 + 가드레일>" --output-format text` (비대화형, ailab-12 검증완료; 기본 Composer 2, `--model auto` 가능) 또는 IDE Composer.
+3. Cursor 위임: `cursor-agent -p --force --trust --model composer-2.5 "<지시 + 가드레일>" --output-format text` (비대화형, ailab-12 검증완료; 위임 기본 = Composer 2.5 고정) 또는 IDE Composer.
 4. 빌드·검증: `cmake --build build -j && (cd build && ctest --output-on-failure)` → 187 green 확인.
 5. commit (규약 준수, push 안 함).
 6. `docs/HANDOFF.md` 갱신 → 다음 세션·툴이 이어받게.
