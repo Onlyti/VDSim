@@ -37,7 +37,9 @@
 // matches the Task 22 quasi-static formulas.  Damper gives transient ringing.
 
 #include "vdsim/coordinate.hpp"
+#include "vdsim/default_subsystems.hpp"
 #include "vdsim/interfaces.hpp"
+#include "vdsim/subsystems.hpp"
 #include "vdsim/suspension.hpp"
 
 #include <spdlog/spdlog.h>
@@ -66,6 +68,7 @@ public:
                     const SolverParams& sp) override {
         vp_ = vp; tp_ = tp; sp_ = sp;
         inner_->initialize(vp, tp, sp);
+        suspension_ = make_default_suspension(vp);
 
         const double a = vp.cg_to_front, b = vp.cg_to_rear;
         const double tw_f = vp.track_front * 0.5, tw_r = vp.track_rear * 0.5;
@@ -102,6 +105,7 @@ public:
         th_  = 0.0; th_dot_  = 0.0;
         z_u_     = {{0.0, 0.0, 0.0, 0.0}};
         z_u_dot_ = {{0.0, 0.0, 0.0, 0.0}};
+        if (!suspension_) suspension_ = make_default_suspension(vp_);
     }
 
     void step(const ControlInput& u,
@@ -228,14 +232,20 @@ private:
         // naturally -- no separate lumped K_phi/C_phi. The ARB adds a roll-only term.
         double Fz_sum = 0.0, M_pitch_spring = 0.0, M_roll_spring = 0.0;
         std::array<double, NUM_WHEELS> F_susp{};
+        // Per-corner suspension force comes from the pluggable ISuspension module
+        // (default LinearSuspension == -k*delta - c*vel, identical to the prior
+        // inline form). LinearSuspension ignores ctx; it is threaded so a custom
+        // module can read vehicle state. The anti-roll bar stays a roll-DOF moment
+        // below (its lumped roll-stiffness form does not map to the per-wheel-force
+        // IAntiRollBar; reconciling that is a separate design decision).
+        const SubsystemContext susp_ctx{state_, susp_ctx_cmd_, 0.0};
         for (int i = 0; i < NUM_WHEELS; ++i) {
             const double z_corner = z + ry_[i] * phi - rx_[i] * th;
             const double v_corner = z_dot + ry_[i] * phi_dot - rx_[i] * th_dot;
             const double delta    = z_corner - zu[i];        // relative compression deviation
             const double vel      = v_corner - zu_dot[i];
-            const double k        = std::max(1.0, vp_.spring_stiffness[i]);
-            const double c        = std::max(0.0, vp_.damper_coefficient[i]);
-            const double F        = -k * delta - c * vel;     // force on sprung (positive = up)
+            const double F        = suspension_->force(
+                susp_ctx, CornerInput{i, delta, vel, 1.0});   // force on sprung (positive = up)
             F_susp[i]      = F;
             Fz_sum        += F;
             M_pitch_spring -= rx_[i] * F;
@@ -361,6 +371,8 @@ private:
     TireParams    tp_;
     SolverParams  sp_;
     std::unique_ptr<IVehicleDynamics> inner_;
+    std::unique_ptr<ISuspension> suspension_;
+    DriverCmd susp_ctx_cmd_ {};   // threaded into the suspension ctx (default module ignores it)
     std::array<double, NUM_WHEELS> Fz_static_           {};
     std::array<double, NUM_WHEELS> static_compression_  {};
     std::array<double, NUM_WHEELS> rx_                  {};
