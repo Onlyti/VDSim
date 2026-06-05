@@ -58,6 +58,14 @@
   details.sec[open] > summary::before { content:'▾ '; }
   details.sec .secb { padding:6px 10px 9px; }
   .subgrp { font:600 9px Tahoma; color:var(--dim); text-transform:uppercase; margin:7px 0 2px; }
+  #win_workshops { width:720px; left:290px; max-height:82vh; }
+  .ws-layout { display:flex; gap:10px; align-items:stretch; }
+  .ws-nav { display:flex; flex-direction:column; gap:4px; width:112px; flex-shrink:0; }
+  .ws-nav button { flex:none; text-align:left; padding:8px 10px; font-size:11px; }
+  .ws-pane { flex:1; min-width:0; overflow:auto; max-height:62vh; }
+  .ws-canvas { width:100%; height:130px; display:block; margin:6px 0 4px; background:#fff;
+               border:1px solid #e3e9ef; border-radius:5px; }
+  .ws-status { font-size:11px; color:var(--dim); margin-top:6px; }
   #manbar { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); display:none;
             align-items:center; gap:10px; z-index:25; padding:8px 10px; touch-action:none; }
   #manbar input[type=range] { width:38vw; max-width:280px; }
@@ -127,11 +135,13 @@
 
 <div class="toolbar panel">
   <button id="tb_plant">Plant</button>
+  <button id="tb_workshops">Workshops</button>
   <button id="tb_sim">Simulation</button>
   <button id="tb_io">Data port</button>
 </div>
 
 <div id="win_plant" class="win"><div class="win-h"><b>Plant (vehicle · tire · actuator)</b><span class="x">✕</span></div><div class="win-b" id="plant_body"></div></div>
+<div id="win_workshops" class="win"><div class="win-h"><b>Workshops</b><span class="x">✕</span></div><div class="win-b" id="workshops_body"></div></div>
 <div id="win_sim" class="win"><div class="win-h"><b>Simulation</b><span class="x">✕</span></div><div class="win-b" id="sim_body"></div></div>
 <div id="win_io" class="win"><div class="win-h"><b>Data port (external I/O)</b><span class="x">✕</span></div><div class="win-b" id="io_body"></div></div>
 
@@ -633,7 +643,7 @@ function makeDraggable(win){
   ['mouseup','touchend','touchcancel'].forEach(ev=>addEventListener(ev,()=>dragging=false));
   win.querySelector('.x').onclick=()=>win.classList.remove('open');
 }
-['win_plant','win_sim','win_io'].forEach(id=>makeDraggable($(id)));
+['win_plant','win_workshops','win_sim','win_io'].forEach(id=>makeDraggable($(id)));
 
 // ---- 2-level Vehicle window (category -> fields), tire folded in ----
 // ARB: two linked inputs — roll stiffness [N·m/rad] (canonical, sent to backend)
@@ -1097,8 +1107,113 @@ async function buildSim(){
   updRec(await (await fetch('/api/log/status')).json());
 }
 
+// ---- Workshops window (per-subsystem component editor) ----
+let wsTab='suspension', wsCorner=0, wsLvl='L2', wsVehFields=[];
+let wsPostTimer=null;
+const WS_TABS=[
+  {id:'suspension', label:'Suspension'},
+  {id:'brake', label:'Brake'},
+  {id:'steering', label:'Steering'},
+  {id:'drivetrain', label:'Drivetrain'},
+];
+const WS_FILTER={
+  suspension: f=>f.group==='Suspension',
+  steering: f=>f.group==='Steering',
+  brake: f=>['max_brake_torque','brake_bias_front','brake_ebd_enabled','brake_deadtime_s'].includes(f.name),
+  drivetrain: f=>['drive_type','differential','lsd_preload','lsd_ramp','max_motor_torque','final_drive_ratio','drive_deadtime_s'].includes(f.name),
+};
+const SUSP_PRESETS={
+  soft:{spring_stiffness:[22000,22000,24000,24000],damper_coefficient:[2200,2200,2400,2400]},
+  med: {spring_stiffness:[30000,30000,30000,30000],damper_coefficient:[3000,3000,3000,3000]},
+  stiff:{spring_stiffness:[48000,48000,52000,52000],damper_coefficient:[4800,4800,5200,5200]},
+};
+const WS_CORNERS=['FL','FR','RL','RR'];
+function debouncedVehiclePost(body){
+  clearTimeout(wsPostTimer);
+  wsPostTimer=setTimeout(async()=>{
+    await post('/api/vehicle', body);
+    const st=$('ws_status'); if(st) st.textContent='● applied to live plant';
+  }, 300);
+}
+function wsCollect(el){
+  const names=new Set([...el.querySelectorAll('[data-name]')].map(i=>i.dataset.name));
+  return collectFields(el, names);
+}
+function wireWorkshopsLive(el){
+  el.querySelectorAll('[data-name]').forEach(inp=>{
+    const ev=inp.type==='checkbox'||inp.tagName==='SELECT'?'change':'input';
+    inp.addEventListener(ev, ()=>{
+      debouncedVehiclePost(wsCollect(el));
+      if(wsTab==='suspension') redrawWsCurve();
+    });
+  });
+}
+function redrawWsCurve(){
+  const cv=$('ws_canvas'); if(!cv||wsTab!=='suspension') return;
+  const kinp=document.querySelector(`#ws_form [data-name="spring_stiffness"][data-idx="${wsCorner}"]`);
+  const k=kinp?+kinp.value:30000;
+  const n=60, xmin=-0.06, xmax=0.06, x=[], y=[];
+  for(let i=0;i<=n;i++){ const d=xmin+(xmax-xmin)*i/n; x.push(d); y.push(-k*d); }
+  plotChart(cv, {title:`Spring F–δ (${WS_CORNERS[wsCorner]}, k=${k.toFixed(0)} N/m)`,
+    series:[{x,y,label:'F [N]',color:'#01A0E9'}]});
+}
+function renderWsPane(){
+  const pane=$('ws_pane'); if(!pane) return;
+  pane.innerHTML='';
+  const tab=WS_TABS.find(t=>t.id===wsTab)||WS_TABS[0];
+  const fields=wsVehFields.filter(WS_FILTER[tab.id]);
+  const form=document.createElement('div'); form.id='ws_form';
+  if(tab.id==='suspension'){
+    const tools=document.createElement('div');
+    tools.appendChild(selectRow('Level preset', ['soft','med','stiff'], 'med', v=>{
+      const p=SUSP_PRESETS[v]; if(!p) return;
+      Object.entries(p).forEach(([nm,val])=>{
+        val.forEach((x,i)=>{ const inp=form.querySelector(`[data-name="${nm}"][data-idx="${i}"]`);
+          if(inp) inp.value=x; });
+      });
+      debouncedVehiclePost(p);
+      redrawWsCurve();
+    }, {soft:'Soft',med:'Medium',stiff:'Stiff'}));
+    tools.appendChild(selectRow('Corner (curve)', WS_CORNERS, WS_CORNERS[wsCorner], v=>{
+      wsCorner=WS_CORNERS.indexOf(v); if(wsCorner<0) wsCorner=0; redrawWsCurve();
+    }));
+    pane.appendChild(tools);
+  }
+  fields.forEach(f=>form.appendChild(fieldRow(f, wsLvl)));
+  pane.appendChild(form);
+  const cv=document.createElement('canvas'); cv.id='ws_canvas'; cv.className='ws-canvas';
+  pane.appendChild(cv);
+  const st=document.createElement('div'); st.id='ws_status'; st.className='ws-status';
+  st.textContent='edits POST to /api/vehicle (debounced)';
+  pane.appendChild(st);
+  wireWorkshopsLive(form);
+  if(tab.id==='brake'||tab.id==='drivetrain') plantEnhance(form);
+  requestAnimationFrame(()=>{ if(tab.id==='suspension') redrawWsCurve(); });
+}
+async function buildWorkshops(){
+  const cf=await(await fetch('/api/config')).json();
+  wsLvl=cf.config.level;
+  wsVehFields=(await(await fetch('/api/vehicle')).json()).fields;
+  const el=$('workshops_body');
+  el.innerHTML='';
+  const layout=document.createElement('div'); layout.className='ws-layout';
+  const nav=document.createElement('div'); nav.className='ws-nav';
+  WS_TABS.forEach(t=>{
+    const b=document.createElement('button');
+    b.textContent=t.label; b.classList.toggle('on', t.id===wsTab);
+    b.onclick=()=>{ wsTab=t.id; [...nav.children].forEach(x=>x.classList.remove('on')); b.classList.add('on'); renderWsPane(); };
+    nav.appendChild(b);
+  });
+  layout.appendChild(nav);
+  const pane=document.createElement('div'); pane.className='ws-pane'; pane.id='ws_pane';
+  layout.appendChild(pane);
+  el.appendChild(layout);
+  renderWsPane();
+}
+
 function openWin(id, build){ const w=$(id); w.classList.toggle('open'); if(w.classList.contains('open')) build(); }
 $('tb_plant').onclick=()=>openWin('win_plant', buildPlant);
+$('tb_workshops').onclick=()=>openWin('win_workshops', buildWorkshops);
 $('tb_sim').onclick  =()=>openWin('win_sim', buildSim);
 $('tb_io').onclick   =()=>openWin('win_io', buildDataPort);
 </script>
