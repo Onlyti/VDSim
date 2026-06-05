@@ -354,18 +354,16 @@ private:
             alpha_geom_last_[i] = a_slip;
             v_x_wheel_last_[i]  = v_x_wheel;
 
-            // Low-speed lateral fade: the slip angle atan2(vy,vx) is singular as
-            // vx->0, so Fy/Mz otherwise snap to the friction limit from velocity
-            // noise at standstill (and jitter Fz via the load-transfer a_y). Ramp
-            // lateral grip in over 0..v_blend. Longitudinal Fx is left intact so
-            // the vehicle can still launch from rest.
+            // Low-speed fade: the slip angle atan2(vy,vx) is singular as vx->0,
+            // so lateral grip is ill-conditioned at standstill. Project the tire
+            // force into the body frame, then fade the whole *lateral* body
+            // component over 0..v_blend — this also removes the sideways push
+            // from a steered wheel's (large, low-speed) longitudinal force. The
+            // longitudinal body force is kept so the vehicle can still launch.
             double fade = std::clamp(std::hypot(vx, vy) / kLatFadeSpeed, 0.0, 1.0);
             fade = fade * fade * (3.0 - 2.0 * fade);     // smoothstep (C1)
-            const double Fy_s = out.Fy * fade;
-            // Project wheel-frame force into body frame.  Rear di may be
-            // non-zero from kinematic toe (bump-steer) — always rotate.
-            const double Fx_b = out.Fx * cd_i - Fy_s * sd_i;
-            const double Fy_b = out.Fx * sd_i + Fy_s * cd_i;
+            const double Fx_b = out.Fx * cd_i - out.Fy * sd_i;          // longitudinal (kept)
+            const double Fy_b = (out.Fx * sd_i + out.Fy * cd_i) * fade; // lateral (faded)
             F_body[i] = Vec3(Fx_b, Fy_b, 0.0);
             kappa[i]  = k_slip;
             alpha[i]  = a_slip;
