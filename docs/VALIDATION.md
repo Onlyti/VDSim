@@ -82,6 +82,15 @@ Full automated suite: `cd build && ctest` — 187 checks, 100% green (measured 2
   quasi-static estimate); see theory ch05.
 - **Dependent axles** (twist-beam, solid beam) are not yet modeled (configs are
   stubs); only the four independent topologies are validated.
+- **Drivetrain rotational inertia is not modeled.** Driven-wheel spin-up is
+  resisted only by the wheel inertia (~1.3 kg·m²); the engine/transmission inertia
+  reflected through the final drive (final_drive²) is omitted, and the open
+  differential is an ideal equal-torque split with no carrier–engine coupling. As
+  a result a lightly loaded driven wheel (e.g. the inside rear in a hard power-on
+  turn) spins up several times faster than a real drivetrain would, so the
+  one-wheel-spin and the hook-up / yaw transient when the load returns are
+  exaggerated. A proper drivetrain module (engine inertia + coupled open/LSD diff)
+  is a v0.2 item — see `docs/design/V0.2_DRIVETRAIN.md`.
 - **L3 grip Fz** couples ride/road dynamically but omits the unsprung lateral-
   transfer term (small); see ch06 §6.4.
 
