@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/HANDOFF/">
+        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/design/V0.2_SUBSYSTEMS/">
       
       
       
@@ -18,19 +18,19 @@
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>VDSim 핸드오프 — v0.1.0 공개 완료 + v0.2 멀티차량 착수 - VDSim</title>
+        <title>v0.2 — pluggable vehicle subsystems (design, for review) - VDSim</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -49,7 +49,7 @@
       
     
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#vdsim-v010-v02" class="md-skip">
+        <a href="#v02-pluggable-vehicle-subsystems-design-for-review" class="md-skip">
           Skip to content
         </a>
       
@@ -92,7 +92,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="VDSim" class="md-header__button md-logo" aria-label="VDSim" data-md-component="logo">
+    <a href="../.." title="VDSim" class="md-header__button md-logo" aria-label="VDSim" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              VDSim 핸드오프 — v0.1.0 공개 완료 + v0.2 멀티차량 착수
+              v0.2 — pluggable vehicle subsystems (design, for review)
             
           </span>
         </div>
@@ -232,7 +232,7 @@
     
     
       <li class="md-tabs__item">
-        <a href=".." class="md-tabs__link">
+        <a href="../.." class="md-tabs__link">
           
   
   
@@ -254,7 +254,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../theory/" class="md-tabs__link">
+        <a href="../../theory/" class="md-tabs__link">
           
   
   
@@ -276,7 +276,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../references/actuator_nonlinearity/" class="md-tabs__link">
+        <a href="../../references/actuator_nonlinearity/" class="md-tabs__link">
           
   
   
@@ -298,7 +298,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../tasks/T22_carla_bridge/REPORT/" class="md-tabs__link">
+        <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-tabs__link">
           
   
   
@@ -320,7 +320,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../tasks/" class="md-tabs__link">
+        <a href="../../tasks/" class="md-tabs__link">
           
   
   
@@ -342,7 +342,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../examples/" class="md-tabs__link">
+        <a href="../../examples/" class="md-tabs__link">
           
   
   
@@ -378,7 +378,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="VDSim" class="md-nav__button md-logo" aria-label="VDSim" data-md-component="logo">
+    <a href="../.." title="VDSim" class="md-nav__button md-logo" aria-label="VDSim" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -433,7 +433,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href=".." class="md-nav__link ">
+            <a href="../.." class="md-nav__link ">
               
   
   
@@ -540,7 +540,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../theory/" class="md-nav__link ">
+            <a href="../../theory/" class="md-nav__link ">
               
   
   
@@ -584,7 +584,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/01_frames_and_conventions/" class="md-nav__link">
+      <a href="../../theory/01_frames_and_conventions/" class="md-nav__link">
         
   
   
@@ -612,7 +612,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/02_rigid_body_dynamics/" class="md-nav__link">
+      <a href="../../theory/02_rigid_body_dynamics/" class="md-nav__link">
         
   
   
@@ -640,7 +640,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/03_tire_pacejka_mf96/" class="md-nav__link">
+      <a href="../../theory/03_tire_pacejka_mf96/" class="md-nav__link">
         
   
   
@@ -668,7 +668,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/04_ld1_bicycle/" class="md-nav__link">
+      <a href="../../theory/04_ld1_bicycle/" class="md-nav__link">
         
   
   
@@ -696,7 +696,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/05_ld2_seven_dof/" class="md-nav__link">
+      <a href="../../theory/05_ld2_seven_dof/" class="md-nav__link">
         
   
   
@@ -724,7 +724,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/06_ld3_fourteen_dof/" class="md-nav__link">
+      <a href="../../theory/06_ld3_fourteen_dof/" class="md-nav__link">
         
   
   
@@ -752,7 +752,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/07_control_ladder/" class="md-nav__link">
+      <a href="../../theory/07_control_ladder/" class="md-nav__link">
         
   
   
@@ -780,7 +780,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/08_pid_controllers/" class="md-nav__link">
+      <a href="../../theory/08_pid_controllers/" class="md-nav__link">
         
   
   
@@ -808,7 +808,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/09_pure_pursuit_path/" class="md-nav__link">
+      <a href="../../theory/09_pure_pursuit_path/" class="md-nav__link">
         
   
   
@@ -836,7 +836,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/10_driver_model/" class="md-nav__link">
+      <a href="../../theory/10_driver_model/" class="md-nav__link">
         
   
   
@@ -864,7 +864,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/11_numerical_integration/" class="md-nav__link">
+      <a href="../../theory/11_numerical_integration/" class="md-nav__link">
         
   
   
@@ -892,7 +892,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/12_software_architecture/" class="md-nav__link">
+      <a href="../../theory/12_software_architecture/" class="md-nav__link">
         
   
   
@@ -920,7 +920,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/13_multibody_outlook/" class="md-nav__link">
+      <a href="../../theory/13_multibody_outlook/" class="md-nav__link">
         
   
   
@@ -948,7 +948,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/14_hardpoint_kinematics/" class="md-nav__link">
+      <a href="../../theory/14_hardpoint_kinematics/" class="md-nav__link">
         
   
   
@@ -976,7 +976,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/15_validation_and_doe/" class="md-nav__link">
+      <a href="../../theory/15_validation_and_doe/" class="md-nav__link">
         
   
   
@@ -1004,7 +1004,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/16_fmi_integration/" class="md-nav__link">
+      <a href="../../theory/16_fmi_integration/" class="md-nav__link">
         
   
   
@@ -1032,7 +1032,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/17_actuator_and_sensing/" class="md-nav__link">
+      <a href="../../theory/17_actuator_and_sensing/" class="md-nav__link">
         
   
   
@@ -1060,7 +1060,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/18_runtime_and_cosim/" class="md-nav__link">
+      <a href="../../theory/18_runtime_and_cosim/" class="md-nav__link">
         
   
   
@@ -1159,7 +1159,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../references/actuator_nonlinearity/" class="md-nav__link">
+      <a href="../../references/actuator_nonlinearity/" class="md-nav__link">
         
   
   
@@ -1187,7 +1187,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../gui_architecture/" class="md-nav__link">
+      <a href="../../gui_architecture/" class="md-nav__link">
         
   
   
@@ -1215,7 +1215,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../vdsim_bridge_interface_requirements/" class="md-nav__link">
+      <a href="../../vdsim_bridge_interface_requirements/" class="md-nav__link">
         
   
   
@@ -1243,7 +1243,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../map_import_strategy/" class="md-nav__link">
+      <a href="../../map_import_strategy/" class="md-nav__link">
         
   
   
@@ -1346,7 +1346,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T22_carla_bridge/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-nav__link">
         
   
   
@@ -1374,7 +1374,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T23_jump_14dof/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T23_jump_14dof/REPORT/" class="md-nav__link">
         
   
   
@@ -1402,7 +1402,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T27_ld4_dw/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T27_ld4_dw/REPORT/" class="md-nav__link">
         
   
   
@@ -1430,7 +1430,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T28_ld4_mp/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T28_ld4_mp/REPORT/" class="md-nav__link">
         
   
   
@@ -1458,7 +1458,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T29_ld4_ta/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T29_ld4_ta/REPORT/" class="md-nav__link">
         
   
   
@@ -1486,7 +1486,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T30_ld4_5link/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T30_ld4_5link/REPORT/" class="md-nav__link">
         
   
   
@@ -1564,7 +1564,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../tasks/" class="md-nav__link ">
+            <a href="../../tasks/" class="md-nav__link ">
               
   
   
@@ -1608,7 +1608,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/68_poc_summary_v3/" class="md-nav__link">
+      <a href="../../tasks/68_poc_summary_v3/" class="md-nav__link">
         
   
   
@@ -1636,7 +1636,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/69_competitive_matrix/" class="md-nav__link">
+      <a href="../../tasks/69_competitive_matrix/" class="md-nav__link">
         
   
   
@@ -1664,7 +1664,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/62_cycles_overview/" class="md-nav__link">
+      <a href="../../tasks/62_cycles_overview/" class="md-nav__link">
         
   
   
@@ -1692,7 +1692,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/50_benchmark_matrix/" class="md-nav__link">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
         
   
   
@@ -1720,7 +1720,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/20_l1_l2_grid_sweep/" class="md-nav__link">
+      <a href="../../tasks/20_l1_l2_grid_sweep/" class="md-nav__link">
         
   
   
@@ -1748,7 +1748,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/30_l3_dynamic_suspension/" class="md-nav__link">
+      <a href="../../tasks/30_l3_dynamic_suspension/" class="md-nav__link">
         
   
   
@@ -1776,7 +1776,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/31_l6_l7_l8_control/" class="md-nav__link">
+      <a href="../../tasks/31_l6_l7_l8_control/" class="md-nav__link">
         
   
   
@@ -1804,7 +1804,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/57_58_59_driver_skidpad/" class="md-nav__link">
+      <a href="../../tasks/57_58_59_driver_skidpad/" class="md-nav__link">
         
   
   
@@ -1832,7 +1832,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/50_benchmark_matrix/" class="md-nav__link">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
         
   
   
@@ -1892,7 +1892,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../examples/" class="md-nav__link ">
+            <a href="../../examples/" class="md-nav__link ">
               
   
   
@@ -1958,10 +1958,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1" class="md-nav__link">
+  <a href="#goal" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. 목표
+        Goal
       
     </span>
   </a>
@@ -1969,10 +1969,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2" class="md-nav__link">
+  <a href="#command-layering" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. 현재 상태
+        Command layering
       
     </span>
   </a>
@@ -1980,10 +1980,82 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-arc" class="md-nav__link">
+  <a href="#module-interfaces-c" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. 완료 (이번 arc)
+        Module interfaces (C++)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Module interfaces (C++)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#brake-pedal-per-wheel-brake-torque" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Brake — pedal -&gt; per-wheel brake torque
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#steering-handwheel-road-wheel-angle-rack-travel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Steering — handwheel -&gt; road-wheel angle / rack travel
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#drivetrain-throttle-per-wheel-drive-torque" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Drivetrain — throttle -&gt; per-wheel drive torque
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#suspension-deflection-rate-params-force" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Suspension — (deflection, rate, params) -&gt; force
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#anti-roll-bar-separate-module-decision-6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Anti-roll bar — separate module (decision 6)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deadtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deadtime
       
     </span>
   </a>
@@ -1991,10 +2063,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4" class="md-nav__link">
+  <a href="#integration-the-vehicle-assembly" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. 미완 (다음 할 일)
+        Integration — the Vehicle assembly
       
     </span>
   </a>
@@ -2002,10 +2074,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_1" class="md-nav__link">
+  <a href="#configuration-pluggability" class="md-nav__link">
     <span class="md-ellipsis">
       
-        구현 순서 (다음)
+        Configuration &amp; pluggability
       
     </span>
   </a>
@@ -2013,10 +2085,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#5" class="md-nav__link">
+  <a href="#per-level-applicability" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. 주의 · 함정
+        Per-level applicability
       
     </span>
   </a>
@@ -2024,10 +2096,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#6" class="md-nav__link">
+  <a href="#decisions-reviewed-2026-06-05" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6. 관련 경로
+        Decisions (reviewed 2026-06-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#relationship-to-other-v02-docs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Relationship to other v0.2 docs
       
     </span>
   </a>
@@ -2054,84 +2137,224 @@
   
 
 
-<h1 id="vdsim-v010-v02">VDSim 핸드오프 — v0.1.0 공개 완료 + v0.2 멀티차량 착수<a class="headerlink" href="#vdsim-v010-v02" title="Permanent link">&para;</a></h1>
-<p>작성: 2026-06-05. v0.1.0 published. v0.2 multi-vehicle 런타임 증분 &#8531; 완료.
-다음 = 증분 2 (#157 멀티차량 world 런타임).</p>
-<h2 id="1">1. 목표<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
-<p>v0.2 "composable vehicle": 컴포넌트 모델 + 워크샵 + 씬 UI 로 차량 조립, 멀티차량
-시나리오 구동. 지금 단계는 그 토대인 <strong>멀티차량 shared-world 런타임</strong>.
-전체 그림: <code>docs/design/V0.2_PLAN.md</code>.</p>
-<h2 id="2">2. 현재 상태<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
+<h1 id="v02-pluggable-vehicle-subsystems-design-for-review">v0.2 — pluggable vehicle subsystems (design, for review)<a class="headerlink" href="#v02-pluggable-vehicle-subsystems-design-for-review" title="Permanent link">&para;</a></h1>
+<p>Status: design draft (2026-06-05), pending review before implementation.</p>
+<h2 id="goal">Goal<a class="headerlink" href="#goal" title="Permanent link">&para;</a></h2>
+<p>Make each vehicle subsystem a <strong>pluggable module</strong> with a clear input -&gt; output
+contract, a simple default implementation, and a path for a future team (brake,
+steering, …) to drop in their own algorithm or physics without touching the
+dynamics core. "Pave the way" — the v0.1 core hard-codes these inside the dynamics;
+v0.2 extracts them behind interfaces.</p>
+<h2 id="command-layering">Command layering<a class="headerlink" href="#command-layering" title="Permanent link">&para;</a></h2>
+<p>Three layers, top to bottom:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Driver / algorithm command            (what a human or a controller sends)
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  handwheel_angle, throttle, brake_pedal, gear, handbrake
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>        |   steering / brake / drivetrain modules convert
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>        v
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>Actuator-level inputs to the dynamics core
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>  per-wheel steer (road-wheel angle or rack travel),
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>  per-wheel brake torque[4], per-wheel drive torque[4]
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>        |   dynamics core integrates; calls suspension inside the step
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>        v
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>State (pose, velocities, wheel spin, Fz, forces, …)
+</span></code></pre></div>
+<p>The wire/<code>DriverCmd</code> carries the <em>top</em> layer; the modules produce the <em>middle</em>
+layer the core consumes. Today the core computes the middle layer internally — the
+refactor moves that into the default modules (see Integration).</p>
+<h2 id="module-interfaces-c">Module interfaces (C++)<a class="headerlink" href="#module-interfaces-c" title="Permanent link">&para;</a></h2>
+<p>All modules are C++. Every call receives a shared context with the full vehicle
+state, so a module can reference (almost) any state it needs, not just its narrow
+inputs (decision 1):</p>
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">struct</span><span class="w"> </span><span class="nc">SubsystemContext</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">VehicleState</span><span class="o">&amp;</span><span class="w"> </span><span class="n">state</span><span class="p">;</span><span class="w">   </span><span class="c1">// full state: pose, vel, wheel_spin, Fz, slip, ...</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">DriverCmd</span><span class="o">&amp;</span><span class="w">    </span><span class="n">cmd</span><span class="p">;</span><span class="w">     </span><span class="c1">// handwheel_angle, throttle, brake, gear, handbrake</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">dt</span><span class="p">;</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="p">};</span>
+</span></code></pre></div>
+<p>Each module also owns its own config (params + <code>deadtime_s</code>) and any internal
+state. The per-module structs below name the <em>primary</em> signals; the full context is
+always available.</p>
+<h3 id="brake-pedal-per-wheel-brake-torque">Brake — pedal -&gt; per-wheel brake torque<a class="headerlink" href="#brake-pedal-per-wheel-brake-torque" title="Permanent link">&para;</a></h3>
+<p><div class="language-cpp highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">struct</span><span class="w"> </span><span class="nc">IBrakeSystem</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="c1">// returns per-wheel brake torque [N.m, magnitude]; reads cmd.brake + state.Fz etc.</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="k">virtual</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">double</span><span class="p">,</span><span class="mi">4</span><span class="o">&gt;</span><span class="w"> </span><span class="n">wheel_torque</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">SubsystemContext</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="k">virtual</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">reset</span><span class="p">()</span><span class="w"> </span><span class="p">{}</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="k">virtual</span><span class="w"> </span><span class="o">~</span><span class="n">IBrakeSystem</span><span class="p">()</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">default</span><span class="p">;</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="p">};</span>
+</span></code></pre></div>
+- Default <code>ProportionalBrake</code>: <code>T_i = pedal * max_brake_torque * split_i</code>
+  (front/rear bias, EBD by Fz) — reproduces today's behaviour exactly.
+- Deadtime: the module delays <code>pedal</code> by <code>deadtime_s</code> (transport lag) before the map.
+- Future (brake team): booster -&gt; line pressure -&gt; pad mu -&gt; caliper torque, thermal
+  fade, ABS — same interface, richer internals.</p>
+<h3 id="steering-handwheel-road-wheel-angle-rack-travel">Steering — handwheel -&gt; road-wheel angle / rack travel<a class="headerlink" href="#steering-handwheel-road-wheel-angle-rack-travel" title="Permanent link">&para;</a></h3>
+<p><div class="language-cpp highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">struct</span><span class="w"> </span><span class="nc">SteeringOutput</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">roadwheel_angle</span><span class="p">;</span><span class="w">   </span><span class="c1">// rad  -&gt; used by Lk / Ld1 (axle / bicycle)</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">rack_travel</span><span class="p">;</span><span class="w">       </span><span class="c1">// m    -&gt; used by Ld2/Ld3/Ld4 (-&gt; Ackermann/Ld4 -&gt; wheel)</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="p">};</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="k">struct</span><span class="w"> </span><span class="nc">ISteeringSystem</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">virtual</span><span class="w"> </span><span class="n">SteeringOutput</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">SubsystemContext</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="cm">/* reset/dtor */</span><span class="w"> </span><span class="p">};</span>
+</span></code></pre></div>
+- <code>cmd.steer</code> is the <strong>handwheel angle</strong> (decision 2).
+- Default <code>RatioSteering</code>: <code>roadwheel = handwheel / steering_ratio</code>,
+  <code>rack = handwheel * rack_gain</code> (both consistent; lower models read the angle,
+  higher models read the rack and run the existing Ackermann/Ld4 map).
+- Convenience <code>UnitySteering</code> (ratio = 1): handwheel == road-wheel angle, for
+  callers that want to command the road wheel directly.
+- Deadtime on the handwheel input (decision 5). Future: MDPS assist, speed-variable
+  ratio, column compliance.</p>
+<h3 id="drivetrain-throttle-per-wheel-drive-torque">Drivetrain — throttle -&gt; per-wheel drive torque<a class="headerlink" href="#drivetrain-throttle-per-wheel-drive-torque" title="Permanent link">&para;</a></h3>
+<p><div class="language-cpp highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">struct</span><span class="w"> </span><span class="nc">DrivetrainOutput</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">double</span><span class="p">,</span><span class="mi">4</span><span class="o">&gt;</span><span class="w"> </span><span class="n">wheel_torque</span><span class="p">;</span><span class="w"> </span><span class="cm">/* +engine_omega later */</span><span class="w"> </span><span class="p">};</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="k">struct</span><span class="w"> </span><span class="nc">IDrivetrain</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">virtual</span><span class="w"> </span><span class="n">DrivetrainOutput</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">SubsystemContext</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="cm">/* reset/dtor */</span><span class="w"> </span><span class="p">};</span>
+</span></code></pre></div>
+- Default <code>BasicDrivetrain</code> (skeleton, decision 7): engine torque =
+  <code>throttle * max_motor_torque * final_drive</code>, split by the diff (open/locked/LSD,
+  existing logic) to the driven axle — reproduces today's behaviour. Reads
+  <code>state.wheel_spin</code> for the diff split.
+- Deadtime on <code>throttle</code>.
+- <strong>v0.3:</strong> the engine torque-RPM curve, plus engine inertia + coupled diff from
+  <code>V0.2_DRIVETRAIN.md</code> (fixes the Issue-2 inner-wheel spin), fill this module then.</p>
+<h3 id="suspension-deflection-rate-params-force">Suspension — (deflection, rate, params) -&gt; force<a class="headerlink" href="#suspension-deflection-rate-params-force" title="Permanent link">&para;</a></h3>
+<p><div class="language-cpp highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">struct</span><span class="w"> </span><span class="nc">CornerInput</span><span class="w"> </span><span class="p">{</span><span class="w">                 </span><span class="c1">// per corner, supplied by the core each substep</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">corner</span><span class="p">;</span><span class="w">                      </span><span class="c1">// 0=FL 1=FR 2=RL 3=RR</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">defl</span><span class="p">;</span><span class="w">                     </span><span class="c1">// m, compression +</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">defl_rate</span><span class="p">;</span><span class="w">                </span><span class="c1">// m/s</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">damping_scale</span><span class="p">;</span><span class="w">            </span><span class="c1">// live-adjustable dial, default 1.0</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="p">};</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="k">struct</span><span class="w"> </span><span class="nc">ISuspension</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="k">virtual</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="nf">force</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">SubsystemContext</span><span class="o">&amp;</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">CornerInput</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w">  </span><span class="c1">// N, per corner</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span><span class="cm">/* reset/dtor */</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="p">};</span>
+</span></code></pre></div>
+- Default <code>LinearSuspension</code>: <code>F = k*defl + c*damping_scale*defl_rate</code> (+ bump stop
+  later) — matches today's L3 spring/damper. Per corner (decision 6).
+- Called <strong>inside</strong> the dynamics step, per corner, where the vertical/roll states
+  live (Ld3 uses it; Ld2 quasi-static; Ld1/Lk n/a).</p>
+<h3 id="anti-roll-bar-separate-module-decision-6">Anti-roll bar — separate module (decision 6)<a class="headerlink" href="#anti-roll-bar-separate-module-decision-6" title="Permanent link">&para;</a></h3>
+<p><div class="language-cpp highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">struct</span><span class="w"> </span><span class="nc">AxleDefl</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">defl_left</span><span class="p">,</span><span class="w"> </span><span class="n">defl_right</span><span class="p">,</span><span class="w"> </span><span class="n">rate_left</span><span class="p">,</span><span class="w"> </span><span class="n">rate_right</span><span class="p">;</span><span class="w"> </span><span class="p">};</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="k">struct</span><span class="w"> </span><span class="nc">IAntiRollBar</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="c1">// returns the per-wheel vertical force pair the bar adds on this axle (+/-),</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="c1">// from the L/R deflection difference. front and rear bars are separate instances.</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="k">virtual</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="kt">double</span><span class="p">,</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="n">force</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">SubsystemContext</span><span class="o">&amp;</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">AxleDefl</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="p">};</span>
+</span></code></pre></div>
+- Default <code>LinearARB</code>: <code>F = k_arb * (defl_left - defl_right)</code>, applied +on one side
+  / -on the other. One instance per axle. Decoupled from the per-corner suspension
+  so either can be swapped independently.</p>
+<h2 id="deadtime">Deadtime<a class="headerlink" href="#deadtime" title="Permanent link">&para;</a></h2>
+<p>A transport delay = ring buffer of past inputs, depth <code>round(deadtime_s / dt)</code>.
+Embedded in the <strong>drivetrain (throttle)</strong> and <strong>brake (pedal)</strong> modules per the
+request; a reusable <code>DelayLine</code> helper. Steering deadtime optional (open question 4).</p>
+<h2 id="integration-the-vehicle-assembly">Integration — the Vehicle assembly<a class="headerlink" href="#integration-the-vehicle-assembly" title="Permanent link">&para;</a></h2>
+<p>A <code>Vehicle</code> owns the dynamics core + the four modules:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>Vehicle::step(DriverCmd cmd, env, dt):
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>  ctx    = { state, cmd, dt }                  // full state visible to every module
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>  steer  = steering.apply(ctx)                 // -&gt; roadwheel angle or rack travel
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>  Tb[4]  = brake.wheel_torque(ctx)
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>  Td[4]  = drivetrain.apply(ctx)
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>  core.set_actuators(steer, Tb, Td)
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>  core.step(dt)   // inside the substep the core calls suspension.force(ctx, corner)
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>                  // per corner and the ARB module per axle for the vertical states
+</span></code></pre></div>
+<p>This needs the dynamics core to accept <strong>actuator-level inputs</strong> (per-wheel
+<code>Td</code>/<code>Tb</code>, steer/rack) instead of computing them from <code>CmdL4</code> internally.</p>
+<p>Migration that keeps the 187 ctest green: make the default modules numerically
+identical to the current internal computation, and route the core through them. A
+<code>CmdL4</code> call then == "core + default modules", so existing results don't move; the
+Vehicle assembly swaps in custom modules when configured.</p>
+<h2 id="configuration-pluggability">Configuration &amp; pluggability<a class="headerlink" href="#configuration-pluggability" title="Permanent link">&para;</a></h2>
 <ul>
-<li>main 최신 push: <code>5684c92</code>. 작업트리 clean.</li>
-<li>빌드: <code>cmake --build build -j</code>. <strong>187/187 ctest 통과</strong>.</li>
-<li>v0.1.0 공개됨: origin/main + 태그 <code>v0.1.0</code> → <code>4c77d7f</code> (force-move 완료). 단,
-  <strong>GitHub repo visibility=public 토글 + Topics 는 사용자가 UI 에서</strong> 해야 함(미완).</li>
-<li>라이브 GUI: <code>python3 gui/server.py --port 8095</code> (PYTHONPATH=build/python:cosim).
-  현재 8095 에 v4 로 떠 있을 수 있음(pid 4136549). 재기동 시 orphan plant 가 7401/7402
-  점유하면 그 특정 pid 만 kill 후 재기동 (아래 함정 참고).</li>
+<li>Each subsystem selected in the vehicle YAML, like the tire model today:
+  <code>brake: {type: proportional, max_torque: 2000, deadtime: 0.02, bias_front: 0.6}</code>.</li>
+<li>A type registry maps <code>type</code> -&gt; factory; a new team registers a new type
+  implementing the interface. (Open question 3: also allow Python-implemented
+  subsystems via a pybind trampoline, so algorithm teams stay in Python.)</li>
 </ul>
-<h2 id="3-arc">3. 완료 (이번 arc)<a class="headerlink" href="#3-arc" title="Permanent link">&para;</a></h2>
-<p>저속 동역학 (v0.1.0 블로커, L1/L2/L3 + 187/187):
-- kinematic-dynamic blend(&lt;3 m/s, lateral 을 derivative 에서 kinematic 으로 cross-fade)
-  → 스핀/휘청/드리프트/정지진동 제거. <code>e3e0009</code>.
-- viscous brake-hold 댐퍼(brake&gt;throttle, v_x_body 기준) → 경사 hold creep cm/s. ring 없음.
-- lateral force 를 dynamics 에서 λ-fade → ay→0, 정지 시 Fz 안정(떨림 해결). <code>6aec66c</code>.
-- 보고 force 도 저속 λ-fade(display) → 화살표 chatter 제거. <code>96321a3</code>.
-- 설계 근거: <code>docs/design/LOW_SPEED_HANDLING.md</code>.
-v0.2 착수:
-- 로드맵/설계 문서 4종: <code>V0.2_PLAN</code>, <code>V0.2_MULTIVEHICLE</code>, <code>V0.2_DRIVETRAIN</code>, <code>V0.2_TIRE_LUGRE</code>.
-- 증분 1 — <strong>VDS1 v4 <code>vehicle_id</code></strong> (<code>cosim_protocol.hpp</code> + <code>protocol.py</code>): 헤더 pad→
-  vehicle_id, 크기 불변(CMD76/STATE436), version 3→4. C++↔py 교차검증 완료. <code>5684c92</code>.</p>
-<h2 id="4">4. 미완 (다음 할 일)<a class="headerlink" href="#4" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>#157 멀티차량 world 런타임</strong> (<code>cosim/realtime_server.cpp</code>): N SimSession 을 공유환경
-  ·공유 clock 으로 step, scenario YAML 로 차량목록(vehicle/tire yaml·level·spawn·id),
-  CMD 를 vehicle_id 로 demux(per-vehicle ZOH), tick 당 N STATE 송신. flat CLI = N=1 단축.
-  설계 그대로: <code>docs/design/V0.2_MULTIVEHICLE.md</code> "Runtime"/"Implementation increments".</li>
-<li><strong>#158 GUI 멀티차량</strong>: CosimBridge 가 scenario 로 plant 1개 spawn, STATE 를 vehicle_id 로
-  demux→<code>self.ports[vid]</code>, 제어는 선택 vehicle_id 로 CMD, 렌더 N대. GUI snapshot 에
-  vehicle_id 포워딩(현재 빠짐). 데이터층은 이미 vid 키잉(<code>live_vid</code>, <code>self.ports</code>).</li>
-<li>충돌(V2V): <strong>future TODO</strong> (이번 범위 아님). contact-coupling pass 훅 위치만 런타임에
-  남겨둠. <code>V0.2_MULTIVEHICLE.md</code> "Collision" 참고.</li>
-<li><strong>서브시스템 모듈 (설계 lock 완료, <code>V0.2_SUBSYSTEMS.md</code> 결정 1-7)</strong> — 구현 대기:
-  brake(pedal→4륜 토크) / steering(handwheel→roadwheel·rack, unity 변형 포함) /
-  drivetrain(throttle→4륜 토크, skeleton=flat) / suspension(코너별) / anti-roll bar
-  (축별 별도 모듈) / 각 모듈 deadtime. 모두 <code>SubsystemContext</code>(full state) 받음, C++,
-  default==현재거동(187 유지). 엔진 torque-RPM 곡선+관성(Issue2)은 <strong>v0.3 이관</strong>.</li>
-<li>v0.2 이후 모듈: LuGre tire(저속 blend 대체, <code>V0.2_TIRE_LUGRE.md</code>).</li>
-</ul>
-<h2 id="_1">구현 순서 (다음)<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<h2 id="per-level-applicability">Per-level applicability<a class="headerlink" href="#per-level-applicability" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Lk</th>
+<th>Ld1</th>
+<th>Ld2</th>
+<th>Ld3</th>
+<th>Ld4</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Steering out</td>
+<td>road-wheel angle</td>
+<td>road-wheel angle</td>
+<td>rack</td>
+<td>rack</td>
+<td>rack</td>
+</tr>
+<tr>
+<td>Brake</td>
+<td>(kinematic)</td>
+<td>yes</td>
+<td>yes</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Drivetrain</td>
+<td>(kinematic)</td>
+<td>yes</td>
+<td>yes</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Suspension (per corner)</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>quasi-static</td>
+<td>yes (dynamic)</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Anti-roll bar</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>quasi-static</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+</tbody>
+</table>
+<h2 id="decisions-reviewed-2026-06-05">Decisions (reviewed 2026-06-05)<a class="headerlink" href="#decisions-reviewed-2026-06-05" title="Permanent link">&para;</a></h2>
 <ol>
-<li>멀티차량 런타임 #157 (realtime_server world + subscriber, scenario YAML).</li>
-<li>GUI 멀티차량 #158 (demux + selected-vehicle 제어 + 멀티 GUI 레이싱).</li>
-<li>서브시스템 골격: 인터페이스 + default 모듈 + 코어를 default 경유로 리팩터(187 green
-   유지) → brake/steering/drivetrain/suspension/ARB + deadtime.
-(1-2 와 3 은 독립 — 병렬 가능.)</li>
+<li><strong>Modules see the full vehicle state.</strong> Every module call receives a
+   <code>SubsystemContext</code> with a const reference to the whole <code>VehicleState</code> (pose,
+   velocities, wheel spin, Fz, slip, …) plus the <code>DriverCmd</code> and <code>dt</code> — not just the
+   narrow inputs. A module may use as much of the state as it needs.</li>
+<li><strong>CMD <code>steer</code> is the handwheel angle</strong> (steering module runs server-side). For
+   convenience also provide a <strong>unity steering module (ratio = 1)</strong> so handwheel ==
+   road-wheel angle for callers that want to command the road wheel directly.</li>
+<li><strong>Core routes through default modules</strong> (defaults == current behaviour, 187 stays
+   green). Confirmed.</li>
+<li><strong>All core + dynamics + subsystems are C++.</strong> No Python-implemented subsystems
+   (the pybind trampoline idea is dropped); Python stays a client/config layer.</li>
+<li><strong>Deadtime on steering too</strong>, in addition to drivetrain and brake (each module
+   owns a <code>deadtime_s</code>, default 0).</li>
+<li><strong>Anti-roll bar is its own module</strong>, separate from suspension; suspension is
+   per-corner (scalar force), the ARB module adds the cross-corner L/R coupling.</li>
+<li><strong>Module skeletons first</strong> (interfaces + default flat behaviour). The engine
+   torque-RPM curve moves to <strong>v0.3</strong>; engine inertia + coupled diff land with the
+   engine model then (Issue 2 stays documented until then).</li>
 </ol>
-<h2 id="5">5. 주의 · 함정<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
+<h2 id="relationship-to-other-v02-docs">Relationship to other v0.2 docs<a class="headerlink" href="#relationship-to-other-v02-docs" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>VDS1 v4</strong>: plant·GUI 둘 다 v4 여야 통신됨(version gate). protocol.py 수정 후 GUI
-  서버 <strong>재기동</strong>해야 새 버전 반영(import 시점 로드). plant 는 재빌드.</li>
-<li><strong>orphan plant</strong>: 죽은 GUI 서버가 vdsim_realtime 를 7401/7402 에 남기면 새 GUI 가 plant
-  를 못 띄움. 해결=그 <strong>특정 pid</strong> 만 <code>kill &lt;pid&gt;</code> (광범위 <code>pkill -f vdsim_realtime</code> 는
-  classifier 가 막음 — 타 사용자 프로세스 영향 우려). 무관 점유자: <code>mike serve</code>(8090,
-  mkdocs), <code>ailab_dashboard.py</code>(8091) — 건드리지 말 것.</li>
-<li>저속 수정은 <strong>λ=1(&gt;3 m/s)에서 완전 무영향</strong> 설계라 ISO/187 불변. 재튜닝 시 이 불변식 유지.</li>
-<li><strong>재baseline</strong>: drivetrain/tire 모듈은 throttle 응답·ISO 수치를 바꾸므로 마일스톤당 1회
-  검증 패스로 <code>docs/VALIDATION.md</code> 갱신.</li>
-<li>TUR 실측 tire 데이터 대외비 — generic 지칭만, .tir 값/세부 커밋 금지.</li>
-<li>kill/체인 명령에서 exit 144 떠도 특정 pid kill 은 실제 실행됨. <code>ps</code>로 확인.</li>
-</ul>
-<h2 id="6">6. 관련 경로<a class="headerlink" href="#6" title="Permanent link">&para;</a></h2>
-<ul>
-<li>프로토콜: <code>cosim/cosim_protocol.hpp</code> + <code>cosim/protocol.py</code> (v4, vehicle_id)</li>
-<li>런타임: <code>cosim/realtime_server.cpp</code> (단일차량 → #157 에서 N차량 world)</li>
-<li>GUI: <code>gui/server.py</code> (CosimBridge spawn/subscribe, Runner self.ports[vid]), <code>gui/index.html</code></li>
-<li>코어 동역학: <code>core/src/{bicycle,seven_dof,fourteen_dof}_dynamics.cpp</code> (저속 blend 적용됨)</li>
-<li>v0.2 설계: <code>docs/design/V0.2_{PLAN,MULTIVEHICLE,DRIVETRAIN,TIRE_LUGRE}.md</code>,
-  <code>docs/design/LOW_SPEED_HANDLING.md</code></li>
-<li>task 보드: #157(멀티차량 런타임), #158(GUI 멀티차량), #155(데모 GIF), #138/#140(B/CARLA 논의)</li>
+<li><code>V0.2_DRIVETRAIN.md</code> — the engine-inertia + coupled-diff physics that fills in the
+  default <code>IDrivetrain</code>.</li>
+<li><code>V0.2_TIRE_LUGRE.md</code> — the tire is already an interface (<code>ITireModel</code>); LuGre is a
+  new impl, same pattern as these modules.</li>
+<li><code>V0.2_MULTIVEHICLE.md</code> — orthogonal; each vehicle in the world owns its own module
+  set.</li>
+<li><code>V0.2_PLAN.md</code> — these are WS1 (subsystem models) + the pluggability for WS2
+  (workshops edit each module's params).</li>
 </ul>
 
 
@@ -2201,12 +2424,12 @@ v0.2 착수:
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.expand", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.expand", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
-        <script src="../javascripts/mathjax.js"></script>
+        <script src="../../javascripts/mathjax.js"></script>
       
         <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
       

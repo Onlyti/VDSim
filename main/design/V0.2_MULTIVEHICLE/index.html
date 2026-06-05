@@ -1969,6 +1969,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#scope-control-model-v02" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope &amp; control model (v0.2)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Scope &amp; control model (v0.2)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#subscribers-multi-client-state-delivery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Subscribers (multi-client STATE delivery)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#wire-protocol-vds1-v4" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2063,6 +2091,34 @@ independent plant processes because in-engine collision needs all bodies in one
 frame at the same instant with contact forces fed back inside the integration
 step — async free-running UDP processes cannot do that. Collision physics itself is
 a future TODO (below); the runtime is built collision-ready now.</p>
+<h2 id="scope-control-model-v02">Scope &amp; control model (v0.2)<a class="headerlink" href="#scope-control-model-v02" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>No runtime spawn/despawn.</strong> The vehicle set is fixed at simulator-setup time
+  (the scenario YAML, loaded before the run starts). The runtime never adds or
+  removes vehicles mid-run. (Dynamic spawning is a later concern.)</li>
+<li><strong>Manual drive targets the selected vehicle.</strong> A driver/algorithm CMD carries a
+  <code>vehicle_id</code>; the runtime applies it to exactly that vehicle. Each vehicle holds
+  its own latched command + ZOH timeout, independent of the others.</li>
+<li><strong>Multiple clients on one server.</strong> The CMD socket accepts datagrams from any
+  source, so two (or more) GUIs/clients can connect to one runtime and each drive a
+  different <code>vehicle_id</code>. STATE is delivered to every active client (see
+  subscribers below). This <em>is</em> the racing feature: GUI A drives vehicle 0, GUI B
+  drives vehicle 1, both see both cars, they race. No ownership lock in v0.2 (last
+  CMD per <code>vehicle_id</code> wins); soft ownership can be added later if needed.</li>
+</ul>
+<h3 id="subscribers-multi-client-state-delivery">Subscribers (multi-client STATE delivery)<a class="headerlink" href="#subscribers-multi-client-state-delivery" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The runtime keeps a set of subscriber endpoints and sends every vehicle's STATE
+  to all of them each tick.</li>
+<li><strong>Auto-subscribe from CMD source:</strong> when a CMD arrives from a new <code>(ip,port)</code>,
+  add it as a STATE destination and refresh its last-seen time; evict after a
+  timeout (e.g. 2 s silent). So any controlling client automatically receives
+  state — no explicit registration needed for drivers.</li>
+<li>A lightweight <code>subscribe</code>/heartbeat (a CMD with throttle/brake/steer = 0, or a
+  dedicated keepalive) lets pure spectators receive STATE without driving.</li>
+<li>Backward compat: the single fixed <code>--state-ip/--state-port</code> destination stays
+  supported as a pre-seeded subscriber (today's GUI keeps working unchanged).</li>
+</ul>
 <h2 id="wire-protocol-vds1-v4">Wire protocol — VDS1 v4<a class="headerlink" href="#wire-protocol-vds1-v4" title="Permanent link">&para;</a></h2>
 <p>Add a <code>vehicle_id</code> to address vehicles on a single socket. The 24-byte header
 already has a <code>_pad</code> uint32 right after <code>seq</code>; repurpose it as <code>vehicle_id</code>
@@ -2082,19 +2138,24 @@ carry <code>vehicle_id</code> for free; <code>kCmdBytes</code>/<code>kStateBytes
   cmd_recv_time, vehicle_id, spawn pose }</code>.</li>
 <li>One shared environment (<code>IContactProvider</code>) and one shared clock; step every
   vehicle each tick with the same <code>dt</code>.</li>
-<li>Per tick: demux any received CMDs by <code>vehicle_id</code> -&gt; per-vehicle ZOH; step each
-  vehicle; [future] run the contact-coupling pass; emit N STATE packets.</li>
-<li>Config: a scenario YAML listing vehicles — each with <code>vehicle.yaml</code>, <code>tire.yaml</code>,
-  <code>level</code>, spawn <code>{x0,y0,yaw0,vx0}</code>, and <code>vehicle_id</code>. Keep the current flat-flag
-  CLI as the N=1 shortcut.</li>
+<li>Per tick: drain the CMD socket, demux by <code>vehicle_id</code> -&gt; per-vehicle ZOH, and
+  add each CMD's source to the subscriber set; step each vehicle; [future] run the
+  contact-coupling pass; emit each vehicle's STATE to every subscriber.</li>
+<li>Config (fixed at setup, no runtime spawn): a scenario YAML listing vehicles —
+  each with <code>vehicle.yaml</code>, <code>tire.yaml</code>, <code>level</code>, spawn <code>{x0,y0,yaw0,vx0}</code>, and
+  <code>vehicle_id</code>. Keep the current flat-flag CLI as the N=1 shortcut.</li>
 </ul>
 <h2 id="gui-guiserverpy">GUI — <code>gui/server.py</code><a class="headerlink" href="#gui-guiserverpy" title="Permanent link">&para;</a></h2>
 <p>The data layer already keys by vehicle id (<code>self.ports[vid]</code>, <code>live_vid</code>,
 <code>/api/io</code> and telemetry take a <code>vehicle</code> field). Changes:
-- <code>CosimBridge</code> spawns ONE plant from the scenario; subscribes on one state port
-  and demuxes STATE by <code>vehicle_id</code> into per-vehicle buffers.
-- Control relays CMD tagged with the selected <code>vehicle_id</code>.
-- Renderer draws all vehicles; the scene UI (WS3) grows the vehicle tree / list.</p>
+- <code>CosimBridge</code> connects to ONE runtime, receives the multiplexed STATE and
+  demuxes by <code>vehicle_id</code> into per-vehicle buffers; renders all vehicles.
+- Control relays CMD tagged with the <strong>selected</strong> <code>vehicle_id</code> (the car this GUI
+  drives). Two GUIs pointed at the same runtime, each with a different selected
+  vehicle, race against each other.
+- The runtime can spawn locally (single-GUI default) or be an already-running
+  shared server that multiple GUIs attach to (racing) — the GUI just needs the
+  runtime's host/cmd-port. Scene UI (WS3) grows the vehicle tree / selector.</p>
 <h2 id="collision-future-todo-deferred">Collision — FUTURE TODO (deferred)<a class="headerlink" href="#collision-future-todo-deferred" title="Permanent link">&para;</a></h2>
 <p>Where it will go and what it needs, so the runtime is built to accept it:
 - A contact-coupling pass after per-vehicle force/derivative computation and before
@@ -2110,10 +2171,14 @@ carry <code>vehicle_id</code> for free; <code>kCmdBytes</code>/<code>kStateBytes
 <h2 id="implementation-increments">Implementation increments<a class="headerlink" href="#implementation-increments" title="Permanent link">&para;</a></h2>
 <ol>
 <li>VDS1 v4: <code>vehicle_id</code> in header (<code>cosim_protocol.hpp</code> + <code>cosim/protocol.py</code>),
-   version 3 -&gt; 4, round-trip test. (foundation)</li>
+   version 3 -&gt; 4, round-trip test. (foundation — DONE)</li>
 <li>Runtime world: N vehicles in <code>realtime_server.cpp</code>, shared env + clock, scenario
-   YAML config, N STATE out / CMD demux.</li>
-<li>GUI: spawn multi-vehicle, demux states, per-vehicle control, render N.</li>
+   YAML config, CMD demux by <code>vehicle_id</code>, subscriber set (auto-subscribe from CMD
+   source + timeout), STATE to all subscribers.</li>
+<li>GUI: connect to runtime, demux states, control the selected <code>vehicle_id</code>, render
+   N; support attaching to an already-running shared runtime (racing).</li>
+<li>(parallel) subsystem modules — see <code>V0.2_SUBSYSTEMS.md</code> (brake / steering /
+   drivetrain / suspension as pluggable interfaces). Independent of 2-3.</li>
 <li>(future) collision module per the section above.</li>
 </ol>
 <h2 id="backward-compatibility">Backward compatibility<a class="headerlink" href="#backward-compatibility" title="Permanent link">&para;</a></h2>
