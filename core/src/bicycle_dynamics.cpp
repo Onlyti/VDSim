@@ -290,10 +290,11 @@ private:
         if (std::abs(Fxh_f) > muFz_f) Fxh_f = std::copysign(muFz_f, Fxh_f);
         if (std::abs(Fxh_r) > muFz_r) Fxh_r = std::copysign(muFz_r, Fxh_r);
         // Per-axle force = kinetic Pacejka + hold damper, kept inside the friction
-        // circle. Full lateral force is used; its low-speed effect on motion is
-        // suppressed by the kinematic blend on dvy/dr, not by fading the force.
-        double Fx_f_wheel = F_f.Fx + Fxh_f, Fy_f_wheel = F_f.Fy;
-        double Fx_r_axle  = F_r.Fx + Fxh_r, Fy_r_axle  = F_r.Fy;
+        // circle. The lateral force is faded by lambda so as Vx->0 it dies (slip
+        // angle ill-conditioned); the low-speed lateral motion is carried by the
+        // kinematic relaxation on dvy/dr, and ay -> 0 keeps the load transfer clean.
+        double Fx_f_wheel = F_f.Fx + Fxh_f, Fy_f_wheel = lambda * F_f.Fy;
+        double Fx_r_axle  = F_r.Fx + Fxh_r, Fy_r_axle  = lambda * F_r.Fy;
         const double Fmag_f = std::hypot(Fx_f_wheel, Fy_f_wheel);
         if (Fmag_f > muFz_f && Fmag_f > 1e-9) { const double c = muFz_f/Fmag_f; Fx_f_wheel*=c; Fy_f_wheel*=c; }
         const double Fmag_r = std::hypot(Fx_r_axle, Fy_r_axle);
@@ -345,7 +346,7 @@ private:
         const double Fx_total = Fx_body_f + Fx_body_r - F_aero - F_rr + m * gx_b;
         const double Fy_total = Fy_body_f + Fy_body_r + m * gy_b;
         // Wheel-z and body-z are parallel (camber=0 assumed); Mz adds directly.
-        const double Mz_total = a * Fy_body_f - b * Fy_body_r + (F_f.Mz + F_r.Mz);
+        const double Mz_total = a * Fy_body_f - b * Fy_body_r + lambda * (F_f.Mz + F_r.Mz);
 
         Deriv d_out;
         d_out.dx_world = vx * std::cos(yaw) - vy * std::sin(yaw);
@@ -353,14 +354,17 @@ private:
         d_out.dyaw     = r;
         d_out.dvx      = Fx_total / m + vy * r;
         d_out.ax_body  = Fx_total / m;   // longitudinal accel (no vy*r) for Fz lag
-        // Kinematic-dynamic blend on the lateral states: pure dynamic at speed,
-        // pure slip-free kinematic (r = vx·tan(delta)/L, vy = r·b) at rest.
+        // Kinematic-dynamic blend on the lateral states: the lateral force is
+        // already faded by lambda (above), so the dynamic part dies on its own as
+        // Vx->0; add the (1-lambda) kinematic relaxation onto the slip-free
+        // bicycle (r = vx·tan(delta)/L, vy = r·b). Pure kinematic at rest, pure
+        // validated dynamics at lambda=1.
         const double dvy_dyn = Fy_total / m - vx * r;
         const double dr_dyn  = Mz_total / Izz;
         const double r_kin   = (L > 1e-6) ? vx * std::tan(d) / L : 0.0;
         const double vy_kin  = r_kin * b;
-        d_out.dvy      = lambda * dvy_dyn + (1.0 - lambda) * (vy_kin - vy) / kKinTau;
-        d_out.dr       = lambda * dr_dyn  + (1.0 - lambda) * (r_kin  - r ) / kKinTau;
+        d_out.dvy      = dvy_dyn + (1.0 - lambda) * (vy_kin - vy) / kKinTau;
+        d_out.dr       = dr_dyn  + (1.0 - lambda) * (r_kin  - r ) / kKinTau;
         d_out.domega_f = (Td_f + Tb_f - F_f.Fx * R) / I_wheel_f_;
         d_out.domega_r = (Td_r + Tb_r - F_r.Fx * R) / I_wheel_r_;
 

@@ -100,14 +100,19 @@ and inherited by L3 (delegates the planar solve to L2):
 - `kSpeedEps` slip-denominator floor tightened 0.5 -> 0.15 (lateral noise is now
   handled by the blend, not the floor, so the floor can be smaller for a sharper
   low-speed longitudinal force).
-- Reported per-wheel tire force (rendered arrows / logs) fades the raw slip force
-  by `lambda` and lets the smooth brake-hold term carry low speed. The slip ratio
-  and slip angle are both ill-conditioned as `Vx->0`, so the *per-wheel* force
-  chatters even though the *net* motion is smooth; the raw value is not what
-  effectively acts on the car at parking speed. This is display/diagnostic only —
-  the equations of motion use the full force. The brake-hold damper also keys off
-  the body-longitudinal speed (not the steer-rotated wheel speed) so a steered
-  front wheel cannot flip the hold-force sign.
+- The lateral tire force is faded by `lambda` in the *dynamics* (not just the
+  display): as `Vx->0` the slip angle is ill-conditioned, so the raw lateral force
+  chatters; left unfaded it leaks into `ay` and makes the left/right load transfer
+  (`Fz`) tremble even though the car is at rest. Fading it keeps `ay -> 0` at a
+  standstill, so `Fz` is clean. The low-speed lateral motion is carried by the
+  kinematic relaxation, which is the physically correct low-speed behaviour. At
+  `lambda=1` (above the blend speed) the validated force is unchanged.
+- The reported longitudinal force additionally fades the raw slip part for the
+  rendered arrows / logs (the slip ratio is ill-conditioned as `Vx->0`, so the
+  per-wheel `Fx` chatters even though the net `ax` is smooth). This is
+  display-only — the equations of motion use the full `Fx` so the car still
+  self-arrests. The brake-hold damper keys off the body-longitudinal speed (not
+  the steer-rotated wheel speed) so a steered front wheel cannot flip its sign.
 
 Measured (sedan preset, mu=1.0): braked grade hold creep ~1-2 cm/s on 8%,
 ~2-3 cm/s on 12-20%; brake-to-stop settles with no left/right oscillation;

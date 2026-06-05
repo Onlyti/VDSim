@@ -382,20 +382,26 @@ private:
             double Fx_hold = -kStickC * v_x_body * hold_gate;
             if (std::abs(Fx_hold) > muFz) Fx_hold = std::copysign(muFz, Fx_hold);
             double Fx_w = out.Fx + Fx_hold;
-            double Fy_w = out.Fy;
+            // Fade the lateral tire force by lambda: as Vx->0 the slip angle is
+            // ill-conditioned (the raw Fy chatters), and the low-speed lateral
+            // motion is governed by the kinematic relaxation below, not this force.
+            // Fading it in the *dynamics* (not just the display) keeps ay -> 0 at
+            // rest, so the lateral load transfer (Fz left/right) stays clean. At
+            // lambda=1 (above the blend speed) the validated force is unchanged.
+            double Fy_w = lambda * out.Fy;
             const double Fmag = std::hypot(Fx_w, Fy_w);   // keep inside the friction circle
             if (Fmag > muFz && Fmag > 1e-9) { const double c = muFz / Fmag; Fx_w *= c; Fy_w *= c; }
             const double Fx_b = Fx_w * cd_i - Fy_w * sd_i;
             const double Fy_b = Fx_w * sd_i + Fy_w * cd_i;
             F_body[i] = Vec3(Fx_b, Fy_b, 0.0);
-            // Reported tire force: fade the raw slip-based force by lambda and let
-            // the smooth brake-hold term carry the low speed. Both slip ratio and
-            // slip angle are ill-conditioned as Vx->0 (the per-wheel force chatters
-            // even though the net motion is smooth), so the raw value is not what
-            // effectively acts on the car at parking speed. Display/diagnostic only
-            // — the dynamics above use the full F_body.
+            // Reported tire force: the lateral already carries the lambda fade
+            // above; additionally fade the raw longitudinal slip force for display
+            // and let the smooth brake-hold term carry low speed (slip ratio is
+            // ill-conditioned as Vx->0, so the per-wheel Fx chatters even though
+            // the net motion is smooth). Longitudinal fade is display-only — the
+            // equations of motion use the full Fx so the car still self-arrests.
             double Fxd = lambda * out.Fx + Fx_hold;
-            double Fyd = lambda * out.Fy;
+            double Fyd = Fy_w;
             const double Fdm = std::hypot(Fxd, Fyd);
             if (Fdm > muFz && Fdm > 1e-9) { const double c = muFz / Fdm; Fxd *= c; Fyd *= c; }
             tire_F_disp[i] = Vec3(Fxd * cd_i - Fyd * sd_i, Fxd * sd_i + Fyd * cd_i, 0.0);
@@ -492,18 +498,19 @@ private:
         d_out.dvx      = Fx_total / m + vy * r;
         // Kinematic-dynamic blend (Kong 2015 / Polack 2017): the *lateral* states
         // (vy, r) cross-fade from pure dynamic at speed to pure slip-free kinematic
-        // at rest. We blend the whole derivative, not add on top, so at low speed
-        // the force-induced yaw (incl. the standstill stick lateral reaction) is
-        // fully replaced by the geometric constraint r = vx·tan(delta)/L — that is
-        // what kills the low-speed spin / stop oscillation. Longitudinal (vx) stays
-        // fully dynamic so drive, brake and the stick hold are unchanged.
+        // at rest. The lateral *force* is already faded by lambda (above), so the
+        // dynamic part dies on its own as Vx->0; we just add the (1-lambda)
+        // kinematic relaxation that pulls (vy, r) onto the geometric constraint
+        // r = vx·tan(delta)/L. At rest this is pure kinematic (no force-induced
+        // yaw -> no spin / stop oscillation); at lambda=1 it is the validated
+        // dynamic model. Longitudinal (vx) stays fully dynamic.
         const double dvy_dyn = Fy_total / m - vx * r;
         const double dr_dyn  = Mz_total / Izz;
         const double delta_f = 0.5 * (d_wheel[WHEEL_FL] + d_wheel[WHEEL_FR]);
         const double r_kin   = (L > 1e-6) ? vx * std::tan(delta_f) / L : 0.0;
         const double vy_kin  = r_kin * b;
-        d_out.dvy = lambda * dvy_dyn + (1.0 - lambda) * (vy_kin - vy) / kKinTau;
-        d_out.dr  = lambda * dr_dyn  + (1.0 - lambda) * (r_kin  - r ) / kKinTau;
+        d_out.dvy = dvy_dyn + (1.0 - lambda) * (vy_kin - vy) / kKinTau;
+        d_out.dr  = dr_dyn  + (1.0 - lambda) * (r_kin  - r ) / kKinTau;
         d_out.ax_body  = Fx_total / m;
         d_out.ay_body  = Fy_total / m;
         for (int i = 0; i < NUM_WHEELS; ++i) {
