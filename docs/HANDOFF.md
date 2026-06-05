@@ -1,8 +1,24 @@
 # VDSim 핸드오프 — v0.1.0 공개 완료 + v0.2 멀티차량 착수
 
-작성: 2026-06-05. v0.1.0 published. v0.2 설계 lock + **서브시스템 골격 arc(#159-161) 완료**
-(인터페이스+default 모듈+L2/L3 코어 배선, 187 green). 다음 = 멀티차량 런타임 #157
-(또는 ARB 모듈화/deadtime 활성화 등 #161 연기항목, WS2 워크샵). 멀티차량 설계는 lock 됨.
+작성: 2026-06-05. v0.1.0 published. v0.2: 서브시스템 골격(#159-162)+deadtime+ARB 재설계
+완료, **WS2 컴포넌트 워크샵 진행 중**. 멀티차량(#157/#158)은 v0.2.0 최후단(사용자 결정).
+
+## WS2 컴포넌트 워크샵 상태 (현재 작업)
+설계 spec: `docs/design/V0.2_WORKSHOPS.md`. 새 Workshops 창, UI 새로 설계(사용자 결정).
+- **DONE(검증)**: WS2-0 deadtime config bridge(`aa4fca7`, full-sim 검증) · 백엔드 필드 노출
+  (`f8e318a`, VEHICLE_FIELDS 에 deadtime/final_drive).
+- **DONE(시각검증 대기)**: 새 Workshops 창 UI(`e7d47d1`, gui/index.html) — toolbar 'Workshops'
+  → 드래그 창, 좌측 Suspension/Brake/Steering/Drivetrain 셀렉터, 우측 /api/vehicle 라이브 편집
+  +곡선. **serve/markup/필드/괄호balance 는 OK 확인, 브라우저 렌더링은 미확인** → 유저가
+  `python3 gui/server.py --port 8096`(PYTHONPATH=build/python:cosim) 열어 Workshops 창·기존
+  GUI(3D/Plant) 정상 확인 필요. 깨지면 e7d47d1 수정/revert.
+- **남음**: Tire 탭(.tir import 엔드포인트 + 곡선; `python/tir_to_yaml.py parse_tir`+FIELD_MAP →
+  set_params("tire") — 단 파싱키가 TIRE_FIELDS 화이트리스트에 있어야 함, 매핑 커버리지 확인 필요).
+  Engine 탭(stub, 모델 v0.3). 샘플 라이브러리는 **기존 `configs/{tires,suspensions}/`** 사용
+  (새 components/ 트리 불필요 — V0.2_WORKSHOPS 의 configs/components 결정은 이걸로 정정).
+  보안: tire 샘플은 generic 합성만, 실측 현대 .tir 값 커밋 금지.
+
+다음(WS2 후): WS4 parts → WS3 scene UI → 멀티차량 런타임 #157/#158(최후단).
 
 ## 1. 목표
 v0.2 "composable vehicle": 컴포넌트 모델 + 워크샵 + 씬 UI 로 차량 조립, 멀티차량
