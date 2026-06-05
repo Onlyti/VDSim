@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/HANDOFF/">
+        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/design/CURSOR_USAGE/">
       
       
       
@@ -18,19 +18,19 @@
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>VDSim 핸드오프 — v0.1.0 공개 완료 + v0.2 멀티차량 착수 - VDSim</title>
+        <title>Cursor 사용 지침 — Claude 토큰 절감 (VDSim) - VDSim</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -49,7 +49,7 @@
       
     
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#vdsim-v010-v02" class="md-skip">
+        <a href="#cursor-claude-vdsim" class="md-skip">
           Skip to content
         </a>
       
@@ -92,7 +92,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="VDSim" class="md-header__button md-logo" aria-label="VDSim" data-md-component="logo">
+    <a href="../.." title="VDSim" class="md-header__button md-logo" aria-label="VDSim" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              VDSim 핸드오프 — v0.1.0 공개 완료 + v0.2 멀티차량 착수
+              Cursor 사용 지침 — Claude 토큰 절감 (VDSim)
             
           </span>
         </div>
@@ -232,7 +232,7 @@
     
     
       <li class="md-tabs__item">
-        <a href=".." class="md-tabs__link">
+        <a href="../.." class="md-tabs__link">
           
   
   
@@ -254,7 +254,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../theory/" class="md-tabs__link">
+        <a href="../../theory/" class="md-tabs__link">
           
   
   
@@ -276,7 +276,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../references/actuator_nonlinearity/" class="md-tabs__link">
+        <a href="../../references/actuator_nonlinearity/" class="md-tabs__link">
           
   
   
@@ -298,7 +298,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../tasks/T22_carla_bridge/REPORT/" class="md-tabs__link">
+        <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-tabs__link">
           
   
   
@@ -320,7 +320,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../tasks/" class="md-tabs__link">
+        <a href="../../tasks/" class="md-tabs__link">
           
   
   
@@ -342,7 +342,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../examples/" class="md-tabs__link">
+        <a href="../../examples/" class="md-tabs__link">
           
   
   
@@ -378,7 +378,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="VDSim" class="md-nav__button md-logo" aria-label="VDSim" data-md-component="logo">
+    <a href="../.." title="VDSim" class="md-nav__button md-logo" aria-label="VDSim" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -433,7 +433,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href=".." class="md-nav__link ">
+            <a href="../.." class="md-nav__link ">
               
   
   
@@ -540,7 +540,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../theory/" class="md-nav__link ">
+            <a href="../../theory/" class="md-nav__link ">
               
   
   
@@ -584,7 +584,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/01_frames_and_conventions/" class="md-nav__link">
+      <a href="../../theory/01_frames_and_conventions/" class="md-nav__link">
         
   
   
@@ -612,7 +612,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/02_rigid_body_dynamics/" class="md-nav__link">
+      <a href="../../theory/02_rigid_body_dynamics/" class="md-nav__link">
         
   
   
@@ -640,7 +640,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/03_tire_pacejka_mf96/" class="md-nav__link">
+      <a href="../../theory/03_tire_pacejka_mf96/" class="md-nav__link">
         
   
   
@@ -668,7 +668,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/04_ld1_bicycle/" class="md-nav__link">
+      <a href="../../theory/04_ld1_bicycle/" class="md-nav__link">
         
   
   
@@ -696,7 +696,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/05_ld2_seven_dof/" class="md-nav__link">
+      <a href="../../theory/05_ld2_seven_dof/" class="md-nav__link">
         
   
   
@@ -724,7 +724,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/06_ld3_fourteen_dof/" class="md-nav__link">
+      <a href="../../theory/06_ld3_fourteen_dof/" class="md-nav__link">
         
   
   
@@ -752,7 +752,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/07_control_ladder/" class="md-nav__link">
+      <a href="../../theory/07_control_ladder/" class="md-nav__link">
         
   
   
@@ -780,7 +780,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/08_pid_controllers/" class="md-nav__link">
+      <a href="../../theory/08_pid_controllers/" class="md-nav__link">
         
   
   
@@ -808,7 +808,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/09_pure_pursuit_path/" class="md-nav__link">
+      <a href="../../theory/09_pure_pursuit_path/" class="md-nav__link">
         
   
   
@@ -836,7 +836,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/10_driver_model/" class="md-nav__link">
+      <a href="../../theory/10_driver_model/" class="md-nav__link">
         
   
   
@@ -864,7 +864,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/11_numerical_integration/" class="md-nav__link">
+      <a href="../../theory/11_numerical_integration/" class="md-nav__link">
         
   
   
@@ -892,7 +892,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/12_software_architecture/" class="md-nav__link">
+      <a href="../../theory/12_software_architecture/" class="md-nav__link">
         
   
   
@@ -920,7 +920,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/13_multibody_outlook/" class="md-nav__link">
+      <a href="../../theory/13_multibody_outlook/" class="md-nav__link">
         
   
   
@@ -948,7 +948,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/14_hardpoint_kinematics/" class="md-nav__link">
+      <a href="../../theory/14_hardpoint_kinematics/" class="md-nav__link">
         
   
   
@@ -976,7 +976,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/15_validation_and_doe/" class="md-nav__link">
+      <a href="../../theory/15_validation_and_doe/" class="md-nav__link">
         
   
   
@@ -1004,7 +1004,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/16_fmi_integration/" class="md-nav__link">
+      <a href="../../theory/16_fmi_integration/" class="md-nav__link">
         
   
   
@@ -1032,7 +1032,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/17_actuator_and_sensing/" class="md-nav__link">
+      <a href="../../theory/17_actuator_and_sensing/" class="md-nav__link">
         
   
   
@@ -1060,7 +1060,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/18_runtime_and_cosim/" class="md-nav__link">
+      <a href="../../theory/18_runtime_and_cosim/" class="md-nav__link">
         
   
   
@@ -1159,7 +1159,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../references/actuator_nonlinearity/" class="md-nav__link">
+      <a href="../../references/actuator_nonlinearity/" class="md-nav__link">
         
   
   
@@ -1187,7 +1187,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../gui_architecture/" class="md-nav__link">
+      <a href="../../gui_architecture/" class="md-nav__link">
         
   
   
@@ -1215,7 +1215,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../vdsim_bridge_interface_requirements/" class="md-nav__link">
+      <a href="../../vdsim_bridge_interface_requirements/" class="md-nav__link">
         
   
   
@@ -1243,7 +1243,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../map_import_strategy/" class="md-nav__link">
+      <a href="../../map_import_strategy/" class="md-nav__link">
         
   
   
@@ -1346,7 +1346,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T22_carla_bridge/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-nav__link">
         
   
   
@@ -1374,7 +1374,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T23_jump_14dof/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T23_jump_14dof/REPORT/" class="md-nav__link">
         
   
   
@@ -1402,7 +1402,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T27_ld4_dw/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T27_ld4_dw/REPORT/" class="md-nav__link">
         
   
   
@@ -1430,7 +1430,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T28_ld4_mp/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T28_ld4_mp/REPORT/" class="md-nav__link">
         
   
   
@@ -1458,7 +1458,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T29_ld4_ta/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T29_ld4_ta/REPORT/" class="md-nav__link">
         
   
   
@@ -1486,7 +1486,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T30_ld4_5link/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T30_ld4_5link/REPORT/" class="md-nav__link">
         
   
   
@@ -1564,7 +1564,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../tasks/" class="md-nav__link ">
+            <a href="../../tasks/" class="md-nav__link ">
               
   
   
@@ -1608,7 +1608,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/68_poc_summary_v3/" class="md-nav__link">
+      <a href="../../tasks/68_poc_summary_v3/" class="md-nav__link">
         
   
   
@@ -1636,7 +1636,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/69_competitive_matrix/" class="md-nav__link">
+      <a href="../../tasks/69_competitive_matrix/" class="md-nav__link">
         
   
   
@@ -1664,7 +1664,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/62_cycles_overview/" class="md-nav__link">
+      <a href="../../tasks/62_cycles_overview/" class="md-nav__link">
         
   
   
@@ -1692,7 +1692,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/50_benchmark_matrix/" class="md-nav__link">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
         
   
   
@@ -1720,7 +1720,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/20_l1_l2_grid_sweep/" class="md-nav__link">
+      <a href="../../tasks/20_l1_l2_grid_sweep/" class="md-nav__link">
         
   
   
@@ -1748,7 +1748,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/30_l3_dynamic_suspension/" class="md-nav__link">
+      <a href="../../tasks/30_l3_dynamic_suspension/" class="md-nav__link">
         
   
   
@@ -1776,7 +1776,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/31_l6_l7_l8_control/" class="md-nav__link">
+      <a href="../../tasks/31_l6_l7_l8_control/" class="md-nav__link">
         
   
   
@@ -1804,7 +1804,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/57_58_59_driver_skidpad/" class="md-nav__link">
+      <a href="../../tasks/57_58_59_driver_skidpad/" class="md-nav__link">
         
   
   
@@ -1832,7 +1832,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/50_benchmark_matrix/" class="md-nav__link">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
         
   
   
@@ -1892,7 +1892,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../examples/" class="md-nav__link ">
+            <a href="../../examples/" class="md-nav__link ">
               
   
   
@@ -1958,10 +1958,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1" class="md-nav__link">
+  <a href="#0-2026-06" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. 목표
+        0. 과금 현실 (2026-06 웹확인, 변동 가능 — 가입 시점 재확인)
       
     </span>
   </a>
@@ -1969,10 +1969,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2" class="md-nav__link">
+  <a href="#1-task-rubric-vdsim" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. 현재 상태
+        1. Task 라우팅 rubric (VDSim 구체)
       
     </span>
   </a>
@@ -1980,10 +1980,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-arc" class="md-nav__link">
+  <a href="#2-cursor" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. 완료 (이번 arc)
+        2. 모델 선택 (Cursor 내)
       
     </span>
   </a>
@@ -1991,10 +1991,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4" class="md-nav__link">
+  <a href="#3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. 미완 (다음 할 일)
+        3. 핸드오프 / 일관성
       
     </span>
   </a>
@@ -2002,10 +2002,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-cursor" class="md-nav__link">
+  <a href="#4-claudemd" class="md-nav__link">
     <span class="md-ellipsis">
       
-        구현 순서 (사용자 결정: 3 부터) + Cursor 위임 워크플로
+        4. 가드레일 (CLAUDE.md 와 동일 강제)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 워크플로 체크리스트
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-claude-cursor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Claude ↔ Cursor 충돌 방지
       
     </span>
   </a>
@@ -2032,114 +2054,132 @@
   
 
 
-<h1 id="vdsim-v010-v02">VDSim 핸드오프 — v0.1.0 공개 완료 + v0.2 멀티차량 착수<a class="headerlink" href="#vdsim-v010-v02" title="Permanent link">&para;</a></h1>
-<p>작성: 2026-06-05. v0.1.0 published. v0.2 설계 lock 완료(멀티차량+서브시스템).
-다음 = <strong>서브시스템 모듈 골격 (step 3, 아래 구현순서)</strong>. 멀티차량 런타임(#157/#158)은
-설계만 끝났고 그 뒤로 미룸 (사용자 결정).</p>
-<h2 id="1">1. 목표<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
-<p>v0.2 "composable vehicle": 컴포넌트 모델 + 워크샵 + 씬 UI 로 차량 조립, 멀티차량
-시나리오 구동. 지금 단계는 그 토대인 <strong>멀티차량 shared-world 런타임</strong>.
-전체 그림: <code>docs/design/V0.2_PLAN.md</code>.</p>
-<h2 id="2">2. 현재 상태<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
+<h1 id="cursor-claude-vdsim">Cursor 사용 지침 — Claude 토큰 절감 (VDSim)<a class="headerlink" href="#cursor-claude-vdsim" title="Permanent link">&para;</a></h1>
+<p>작성 2026-06-05. 목적: VDSim 개발에서 Claude(Anthropic) 한도를 아끼기 위해 Cursor 병행.
+전 에이전트 공통 원칙은 글로벌 <code>~/.claude/CLAUDE.md</code> "Cursor 위임" 섹션. 이 문서는 VDSim 프로젝트별 상세.
+저장 위치(권장): <code>docs/design/CURSOR_USAGE.md</code>.</p>
+<h2 id="0-2026-06">0. 과금 현실 (2026-06 웹확인, 변동 가능 — 가입 시점 재확인)<a class="headerlink" href="#0-2026-06" title="Permanent link">&para;</a></h2>
 <ul>
-<li>main 최신 push: <code>5684c92</code>. 작업트리 clean.</li>
-<li>빌드: <code>cmake --build build -j</code>. <strong>187/187 ctest 통과</strong>.</li>
-<li>v0.1.0 공개됨: origin/main + 태그 <code>v0.1.0</code> → <code>4c77d7f</code> (force-move 완료). 단,
-  <strong>GitHub repo visibility=public 토글 + Topics 는 사용자가 UI 에서</strong> 해야 함(미완).</li>
-<li>라이브 GUI: <code>python3 gui/server.py --port 8095</code> (PYTHONPATH=build/python:cosim).
-  현재 8095 에 v4 로 떠 있을 수 있음(pid 4136549). 재기동 시 orphan plant 가 7401/7402
-  점유하면 그 특정 pid 만 kill 후 재기동 (아래 함정 참고).</li>
+<li>Cursor 플랜: Hobby(Free) / Pro $20 / Pro+ $60 / Ultra <span class="arithmatex">\(200. 유료플랜은 가격만큼 크레딧 풀 포함(\)</span>20/<span class="arithmatex">\(60/\)</span>200).</li>
+<li><strong>Auto mode = 유료플랜 쿼터 내 무제한</strong> (Cursor 가 모델 선택). frontier 모델(Sonnet/Opus) 수동선택 시 크레딧 소모, 초과분 API 종량제.</li>
+<li>버킷 분리: Cursor 작업은 Anthropic 한도가 아니라 Cursor 쿼터로 빠짐.</li>
+<li>절감 핵심: 단순작업을 Cursor Auto/Composer 로 빼면 Anthropic 한도 절감 + Cursor 추가비용 0. Opus 를 Cursor 에서 쓰면 버킷만 다르고 비용은 비슷 → 의미 적음.</li>
+<li>(확인 필요) 정확한 플랜·단가·크레딧 정책: cursor.com/docs/models-and-pricing.</li>
 </ul>
-<h2 id="3-arc">3. 완료 (이번 arc)<a class="headerlink" href="#3-arc" title="Permanent link">&para;</a></h2>
-<p>저속 동역학 (v0.1.0 블로커, L1/L2/L3 + 187/187):
-- kinematic-dynamic blend(&lt;3 m/s, lateral 을 derivative 에서 kinematic 으로 cross-fade)
-  → 스핀/휘청/드리프트/정지진동 제거. <code>e3e0009</code>.
-- viscous brake-hold 댐퍼(brake&gt;throttle, v_x_body 기준) → 경사 hold creep cm/s. ring 없음.
-- lateral force 를 dynamics 에서 λ-fade → ay→0, 정지 시 Fz 안정(떨림 해결). <code>6aec66c</code>.
-- 보고 force 도 저속 λ-fade(display) → 화살표 chatter 제거. <code>96321a3</code>.
-- 설계 근거: <code>docs/design/LOW_SPEED_HANDLING.md</code>.
-v0.2 착수:
-- 로드맵/설계 문서 4종: <code>V0.2_PLAN</code>, <code>V0.2_MULTIVEHICLE</code>, <code>V0.2_DRIVETRAIN</code>, <code>V0.2_TIRE_LUGRE</code>.
-- 증분 1 — <strong>VDS1 v4 <code>vehicle_id</code></strong> (<code>cosim_protocol.hpp</code> + <code>protocol.py</code>): 헤더 pad→
-  vehicle_id, 크기 불변(CMD76/STATE436), version 3→4. C++↔py 교차검증 완료. <code>5684c92</code>.</p>
-<h2 id="4">4. 미완 (다음 할 일)<a class="headerlink" href="#4" title="Permanent link">&para;</a></h2>
+<h2 id="1-task-rubric-vdsim">1. Task 라우팅 rubric (VDSim 구체)<a class="headerlink" href="#1-task-rubric-vdsim" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>작업 유형</th>
+<th>도구·모델</th>
+<th>근거</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>인터페이스/추상클래스 stub, SubsystemContext·DelayLine 보일러플레이트 (#159)</td>
+<td>Cursor Composer/Auto</td>
+<td>패턴 정해짐, ctest 검증</td>
+</tr>
+<tr>
+<td>default 모듈 구현 (#160)</td>
+<td>Cursor Composer/Auto</td>
+<td>기존 거동 복제, 정답 명확</td>
+</tr>
+<tr>
+<td>테스트 케이스 작성, 포맷팅, 이름변경, mechanical 일괄수정</td>
+<td>Cursor Composer/Auto</td>
+<td>반복·기계적</td>
+</tr>
+<tr>
+<td>코어→모듈 경유 리팩터 (#161) 의 기계적 적용 부분</td>
+<td>Cursor (단 default==현재거동 판정은 Claude)</td>
+<td>패턴 적용</td>
+</tr>
+<tr>
+<td>물리 디버깅(타이어/적분기 발산), 수치 정합, 아키텍처 결정, FMI/cosim(VDS1) 프로토콜 설계</td>
+<td><strong>Claude Opus</strong></td>
+<td>불확실·추론 핵심</td>
+</tr>
+<tr>
+<td>모호한 spec 해석, <code>V0.2_SUBSYSTEMS.md</code> 설계 변경, novelty 판단</td>
+<td><strong>Claude Opus</strong></td>
+<td>판단</td>
+</tr>
+</tbody>
+</table>
+<p>판단 한 줄: 정답이 거의 정해졌고 <code>ctest</code> 로 검증되면 Cursor, 아니면 Claude.</p>
+<h2 id="2-cursor">2. 모델 선택 (Cursor 내)<a class="headerlink" href="#2-cursor" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>작업</th>
+<th>권장 모델</th>
+<th>비용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>인라인 편집, 빠른 리팩터, 보일러플레이트</td>
+<td>Composer (Cursor 자체, 약 4x 빠름)</td>
+<td>Auto 무제한/저렴</td>
+</tr>
+<tr>
+<td>긴 agent 런 + 중간 판단</td>
+<td>Sonnet (Opus 대비 저비용, 품질 근접)</td>
+<td>크레딧 소모</td>
+</tr>
+<tr>
+<td>모델 고민 회피</td>
+<td>Auto (Cursor 가 선택)</td>
+<td>0 (포함, 무제한)</td>
+</tr>
+<tr>
+<td>진짜 어려운 아키텍처</td>
+<td>Opus — 단 이건 Claude Code 에서 하는 게 정석</td>
+<td>크레딧 큼</td>
+</tr>
+</tbody>
+</table>
+<p><strong>위임 기본 = <code>--model composer-2.5</code> 고정 (웬만하면 이걸로).</strong> auto 는 Cursor 가 모델선택해 더 비싼 모델 고를 수 있어 회피. frontier(Sonnet/Opus)는 꼭 필요할 때만 수동선택. 크레딧 소진 대시보드 주시.
+(확인 필요) 모델명·버전·벤치는 시점 따라 변동 — cursor.com/docs/models-and-pricing.</p>
+<h2 id="3">3. 핸드오프 / 일관성<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>#157 멀티차량 world 런타임</strong> (<code>cosim/realtime_server.cpp</code>): N SimSession 을 공유환경
-  ·공유 clock 으로 step, scenario YAML 로 차량목록(vehicle/tire yaml·level·spawn·id),
-  CMD 를 vehicle_id 로 demux(per-vehicle ZOH), tick 당 N STATE 송신. flat CLI = N=1 단축.
-  설계 그대로: <code>docs/design/V0.2_MULTIVEHICLE.md</code> "Runtime"/"Implementation increments".</li>
-<li><strong>#158 GUI 멀티차량</strong>: CosimBridge 가 scenario 로 plant 1개 spawn, STATE 를 vehicle_id 로
-  demux→<code>self.ports[vid]</code>, 제어는 선택 vehicle_id 로 CMD, 렌더 N대. GUI snapshot 에
-  vehicle_id 포워딩(현재 빠짐). 데이터층은 이미 vid 키잉(<code>live_vid</code>, <code>self.ports</code>).</li>
-<li>충돌(V2V): <strong>future TODO</strong> (이번 범위 아님). contact-coupling pass 훅 위치만 런타임에
-  남겨둠. <code>V0.2_MULTIVEHICLE.md</code> "Collision" 참고.</li>
-<li><strong>서브시스템 모듈 (설계 lock 완료, <code>V0.2_SUBSYSTEMS.md</code> 결정 1-7)</strong> — #159/#160 완료,
-  #161(dynamics 연결) 대기:
-  brake(pedal→4륜 토크) / steering(handwheel→roadwheel·rack, unity 변형 포함) /
-  drivetrain(throttle→4륜 토크, skeleton=flat) / suspension(코너별) / anti-roll bar
-  (축별 별도 모듈) / 각 모듈 deadtime. 모두 <code>SubsystemContext</code>(full state) 받음, C++,
-  default==현재거동(187 유지). 엔진 torque-RPM 곡선+관성(Issue2)은 <strong>v0.3 이관</strong>.</li>
-<li>v0.2 이후 모듈: LuGre tire(저속 blend 대체, <code>V0.2_TIRE_LUGRE.md</code>).</li>
+<li>진실원천: <code>docs/HANDOFF.md</code>(툴 독립적 진행상황) + <code>docs/design/V0.2_SUBSYSTEMS.md</code>(설계 spec). Cursor·Claude 둘 다 세션 시작 시 필독.</li>
+<li>규약 미러링: <code>CLAUDE.md</code> 핵심 규약을 <code>.cursor/rules/</code>(project rules)로 미러 → Cursor 자동 적용. (확인 필요: .cursor/rules 포맷 — cursor.com/docs)</li>
+<li>MCP: Cursor CLI 가 desktop 과 <code>mcp.json</code>·rules·auth 공유. 기존 MCP 재사용 가능.</li>
 </ul>
-<h2 id="3-cursor">구현 순서 (사용자 결정: 3 부터) + Cursor 위임 워크플로<a class="headerlink" href="#3-cursor" title="Permanent link">&para;</a></h2>
-<p>서브시스템 골격 (#159-161). 멀티차량(#157/#158)은 그 뒤로 미룸.
-<strong>Cursor 위임 동작 확인됨</strong>: 기계적 작업은 <code>cursor-agent -p --force --trust --model auto
---output-format text "&lt;지시&gt;"</code> 로 위임 → Claude 가 리뷰+빌드+ctest 검증 후 커밋(push 금지).
-<code>.cursor/rules/vdsim.mdc</code>(규약·가드레일 미러), <code>docs/design/CURSOR_USAGE.md</code>(라우팅) 적용됨.</p>
+<h2 id="4-claudemd">4. 가드레일 (CLAUDE.md 와 동일 강제)<a class="headerlink" href="#4-claudemd" title="Permanent link">&para;</a></h2>
 <ul>
-<li>
-<h1 id="159-done-f8305b9-cursor-claude-coreincludevdsim">159 <strong>DONE</strong> (커밋 f8305b9, Cursor 위임→Claude 검증): `core/include/vdsim/<a class="headerlink" href="#159-done-f8305b9-cursor-claude-coreincludevdsim" title="Permanent link">&para;</a></h1>
-  subsystems.hpp<code>(인터페이스+SubsystemContext+DriverCmd) +</code>delay_line.hpp`. 187 green.</li>
-<li>
-<h1 id="160-done-default-coreincludevdsimdefault_subsystemshpp">160 <strong>DONE</strong> — default 모듈 (<code>core/include/vdsim/default_subsystems.hpp</code> +<a class="headerlink" href="#160-done-default-coreincludevdsimdefault_subsystemshpp" title="Permanent link">&para;</a></h1>
-<code>core/src/default_subsystems.cpp</code>): ProportionalBrake, BasicDrivetrain,
-  RatioSteering, UnitySteering, LinearSuspension, LinearARB + factory helpers.
-  아직 dynamics 미연결(#161). 187 green.</li>
-<li>
-<h1 id="161-dynamics-default-default-187-green">161 dynamics 코어를 default 모듈 경유로 리팩터 — <strong>default==현재거동, 187 green</strong>.<a class="headerlink" href="#161-dynamics-default-default-187-green" title="Permanent link">&para;</a></h1>
-</li>
-<li><strong>#161a DONE</strong> (커밋 5a952f7): L2 seven_dof 의 drive/brake/steer 를 모듈 경유로.
-    SubsystemContext 에 동적 Fz 추가, ProportionalBrake EBD 가 ctx.Fz 사용. 187 green +
-    저속/grade/ISO spot-check 일치(byte-identical). 저속 핸들링 코드 불변.</li>
-<li><strong>#161b 남음</strong>: L1 bicycle drive/brake/steer 모듈 경유 (axle-lumped — drivetrain
-    모듈 4륜 출력을 축별 합산, brake 동일). L1 state.wheel_spin[4] 활용.</li>
-<li><strong>#161c 남음</strong>: L3 fourteen_dof drive/brake/steer + suspension/ARB 를 모듈 경유
-    (step 내부 콜백). <strong>ARB 부호 ctest 로 확인</strong>(가장 깨지기 쉬움). L3 는 planar 을
-    inner seven_dof 에 위임하므로 drive/brake 는 이미 #161a 수혜 가능성 — 확인 필요.</li>
-<li>합격 기준 공통: 187 green + 저속 spot-check(8% grade −0.0125, 20m/s r0.191/ay3.69).</li>
-<li><strong>참고 gotcha (원 #160 검증)</strong>:
-  (a) ProportionalBrake EBD 는 현재 static Fz(m·g·cg/L) 사용 — seven_dof EBD 는 step 내
-  동적 Fz 라, EBD-enabled config 에서 일치하려면 SubsystemContext 에 동적 Fz[4] 를 넘겨야 함.
-  (b) LinearARB 부호는 적분 시 roll 저항 방향이 맞는지 ctest 로 확인(부호 뒤집힘 주의).
-  L1 drivetrain 은 axle-lumped(open 0.5/0.5)라 split_axle 로 동일하게 처리 가능.</li>
-<li>그 다음: #157 멀티차량 런타임 → #158 GUI 레이싱.</li>
-<li>v0.3 이관: 엔진 torque-RPM 곡선 + 관성(Issue 2), LuGre tire.
-설계 spec: <code>docs/design/V0.2_SUBSYSTEMS.md</code> (결정 1-7, 인터페이스, per-level 표).</li>
+<li>검증 우선: 외부 사실/API/수치 추측 금지, 확인 후 기술.</li>
+<li>규약: wheel FL=0/FR=1/RL=2/RR=3, ISO 8855 RH, YAML 파라미터.</li>
+<li><strong>estimation noise = Simon <code>Q=process/R=measurement</code>.</strong> (※ 원 지시의 "Thrun R=process" 는 글로벌 정정으로 폐기 — VDSim estimator(<code>estimator_in_loop</code> 등)는 Simon. SLAM 교재 맥락에 한해 Thrun.)</li>
+<li>보안: 현대 산학 실측 tire 데이터 대외비 — 값/세부 커밋 금지, generic 지칭만.</li>
+<li>git: 명시 요청 없이 push/force/tag 이동 금지. commit 메시지 규약 준수.</li>
+<li>합격기준: 변경 후 <strong>ctest 187 green 유지.</strong> 특히 #161 코어 리팩터는 default == 현재거동(재baseline 금지).</li>
 </ul>
-<h2 id="5">5. 주의 · 함정<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
+<h2 id="5">5. 워크플로 체크리스트<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
+<ol>
+<li>세션 시작: <code>docs/HANDOFF.md</code> + 관련 <code>docs/design/*</code> 읽기.</li>
+<li>작업 분류: 위 rubric 으로 Cursor vs Claude 결정.</li>
+<li>Cursor 위임: <code>cursor-agent -p --force --trust --model composer-2.5 "&lt;지시 + 가드레일&gt;" --output-format text</code> (비대화형, ailab-12 검증완료; 위임 기본 = Composer 2.5 고정) 또는 IDE Composer.</li>
+<li>빌드·검증: <code>cmake --build build -j &amp;&amp; (cd build &amp;&amp; ctest --output-on-failure)</code> → 187 green 확인.</li>
+<li>commit (규약 준수, push 안 함).</li>
+<li><code>docs/HANDOFF.md</code> 갱신 → 다음 세션·툴이 이어받게.</li>
+</ol>
+<h2 id="6-claude-cursor">6. Claude ↔ Cursor 충돌 방지<a class="headerlink" href="#6-claude-cursor" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>VDS1 v4</strong>: plant·GUI 둘 다 v4 여야 통신됨(version gate). protocol.py 수정 후 GUI
-  서버 <strong>재기동</strong>해야 새 버전 반영(import 시점 로드). plant 는 재빌드.</li>
-<li><strong>orphan plant</strong>: 죽은 GUI 서버가 vdsim_realtime 를 7401/7402 에 남기면 새 GUI 가 plant
-  를 못 띄움. 해결=그 <strong>특정 pid</strong> 만 <code>kill &lt;pid&gt;</code> (광범위 <code>pkill -f vdsim_realtime</code> 는
-  classifier 가 막음 — 타 사용자 프로세스 영향 우려). 무관 점유자: <code>mike serve</code>(8090,
-  mkdocs), <code>ailab_dashboard.py</code>(8091) — 건드리지 말 것.</li>
-<li>저속 수정은 <strong>λ=1(&gt;3 m/s)에서 완전 무영향</strong> 설계라 ISO/187 불변. 재튜닝 시 이 불변식 유지.</li>
-<li><strong>재baseline</strong>: drivetrain/tire 모듈은 throttle 응답·ISO 수치를 바꾸므로 마일스톤당 1회
-  검증 패스로 <code>docs/VALIDATION.md</code> 갱신.</li>
-<li>TUR 실측 tire 데이터 대외비 — generic 지칭만, .tir 값/세부 커밋 금지.</li>
-<li>kill/체인 명령에서 exit 144 떠도 특정 pid kill 은 실제 실행됨. <code>ps</code>로 확인.</li>
+<li>동시 편집 금지: 같은 파일·이슈를 두 툴이 동시에 만지지 말 것. 이슈/파일 단위로 분리.</li>
+<li>브랜치: 위험·대형 작업은 브랜치 분리. 기계적 위임은 작은 단위 commit.</li>
+<li>재빌드 경쟁: 한 툴이 빌드 중이면 다른 툴 빌드 회피(<code>build/</code> 충돌).</li>
+<li>동기화: 작업 끝나면 HANDOFF.md 갱신 → 다음 툴이 최신 상태 인지.</li>
+<li>책임: Cursor 산출물도 최종 검증(ctest/리뷰)은 Claude. 위임 ≠ 방치.</li>
 </ul>
-<h2 id="6">6. 관련 경로<a class="headerlink" href="#6" title="Permanent link">&para;</a></h2>
-<ul>
-<li>프로토콜: <code>cosim/cosim_protocol.hpp</code> + <code>cosim/protocol.py</code> (v4, vehicle_id)</li>
-<li>런타임: <code>cosim/realtime_server.cpp</code> (단일차량 → #157 에서 N차량 world)</li>
-<li>GUI: <code>gui/server.py</code> (CosimBridge spawn/subscribe, Runner self.ports[vid]), <code>gui/index.html</code></li>
-<li>코어 동역학: <code>core/src/{bicycle,seven_dof,fourteen_dof}_dynamics.cpp</code> (저속 blend 적용됨)</li>
-<li>v0.2 설계: <code>docs/design/V0.2_{PLAN,MULTIVEHICLE,DRIVETRAIN,TIRE_LUGRE}.md</code>,
-  <code>docs/design/LOW_SPEED_HANDLING.md</code></li>
-<li>task 보드: #157(멀티차량 런타임), #158(GUI 멀티차량), #155(데모 GIF), #138/#140(B/CARLA 논의)</li>
-</ul>
+<hr />
+<p>CLI vs SDK (둘 다 실재 — 2026-06 확인):
+- <strong>Cursor CLI (<code>cursor-agent</code>)</strong>: 셸 헤드리스(<code>-p</code>), 구독쿼터 내 <strong>Auto mode 무제한</strong>, 언어 무관. → <strong>토큰 절감 위임은 이걸로.</strong>
+- <strong>Cursor SDK (<code>@cursor/sdk</code>)</strong>: TypeScript, 2026-04 public beta, <strong>토큰 종량제</strong>, Python 공식 미지원(커뮤니티/REST). subagents·hooks·cloud VM 등 프로그래밍적 에이전트 인프라용. → 종량제라 절감 목적엔 부적합, 정교한 자동화 필요할 때만.
+주의(확인 필요): 제품명/플래그/과금은 실행 시점 <code>cursor.com/docs/cli</code>·<code>models-and-pricing</code>·<code>changelog/sdk-release</code> 재확인.</p>
 
 
 
@@ -2208,12 +2248,12 @@ v0.2 착수:
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.expand", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.expand", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
-        <script src="../javascripts/mathjax.js"></script>
+        <script src="../../javascripts/mathjax.js"></script>
       
         <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
       
