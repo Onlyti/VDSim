@@ -65,8 +65,9 @@ inline CmdL4 lower_to_l4(const ControlInput& u) {
 
 constexpr double kAirDensity = 1.225;
 constexpr double kGravity    = 9.80665;
-constexpr double kSpeedEps   = 0.5;
-constexpr double kBrakeWidth = 1.0;
+constexpr double kSpeedEps    = 0.5;
+constexpr double kLatFadeSpeed = 1.5;   // [m/s] lateral grip ramps in over 0..this
+constexpr double kBrakeWidth  = 1.0;
 
 inline double smooth_sign(double x, double w) { return std::tanh(x / w); }
 
@@ -353,14 +354,22 @@ private:
             alpha_geom_last_[i] = a_slip;
             v_x_wheel_last_[i]  = v_x_wheel;
 
+            // Low-speed lateral fade: the slip angle atan2(vy,vx) is singular as
+            // vx->0, so Fy/Mz otherwise snap to the friction limit from velocity
+            // noise at standstill (and jitter Fz via the load-transfer a_y). Ramp
+            // lateral grip in over 0..v_blend. Longitudinal Fx is left intact so
+            // the vehicle can still launch from rest.
+            double fade = std::clamp(std::hypot(vx, vy) / kLatFadeSpeed, 0.0, 1.0);
+            fade = fade * fade * (3.0 - 2.0 * fade);     // smoothstep (C1)
+            const double Fy_s = out.Fy * fade;
             // Project wheel-frame force into body frame.  Rear di may be
             // non-zero from kinematic toe (bump-steer) — always rotate.
-            const double Fx_b = out.Fx * cd_i - out.Fy * sd_i;
-            const double Fy_b = out.Fx * sd_i + out.Fy * cd_i;
+            const double Fx_b = out.Fx * cd_i - Fy_s * sd_i;
+            const double Fy_b = out.Fx * sd_i + Fy_s * cd_i;
             F_body[i] = Vec3(Fx_b, Fy_b, 0.0);
             kappa[i]  = k_slip;
             alpha[i]  = a_slip;
-            mz_wheel[i] = out.Mz;
+            mz_wheel[i] = out.Mz * fade;
         }
 
         // ---- Drive / brake torques ----

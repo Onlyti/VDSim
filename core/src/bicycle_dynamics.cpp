@@ -67,6 +67,7 @@ inline CmdL4 lower_to_l4(const ControlInput& u) {
 constexpr double kAirDensity   = 1.225;   // [kg/m^3]
 constexpr double kGravity      = 9.80665; // [m/s^2]
 constexpr double kSpeedEps     = 0.5;     // [m/s] minimum denom for slip ratio / angle
+constexpr double kLatFadeSpeed = 1.5;     // [m/s] lateral grip ramps in over 0..this
 constexpr double kBrakeWidth   = 1.0;     // [rad/s] tanh transition width
 
 inline double smooth_sign(double x, double width) {
@@ -263,11 +264,18 @@ private:
         v_fx_wheel_last_   = v_fx_wheel;
         v_rx_body_last_    = v_rx_body;
 
+        // Low-speed lateral fade: the slip angle atan2(vy,vx) is singular as
+        // vx->0, so Fy/Mz otherwise snap to the friction limit from velocity
+        // noise at standstill. Ramp lateral grip in over 0..kLatFadeSpeed;
+        // longitudinal Fx is kept so the vehicle can still launch.
+        double fade = std::clamp(std::hypot(vx, vy) / kLatFadeSpeed, 0.0, 1.0);
+        fade = fade * fade * (3.0 - 2.0 * fade);     // smoothstep (C1)
+        const double Fyf_s = F_f.Fy * fade, Fyr_s = F_r.Fy * fade;
         // Rotate wheel-frame front forces back into body frame.
-        const double Fx_body_f = F_f.Fx * cd - F_f.Fy * sd;
-        const double Fy_body_f = F_f.Fx * sd + F_f.Fy * cd;
+        const double Fx_body_f = F_f.Fx * cd - Fyf_s * sd;
+        const double Fy_body_f = F_f.Fx * sd + Fyf_s * cd;
         const double Fx_body_r = F_r.Fx;
-        const double Fy_body_r = F_r.Fy;
+        const double Fy_body_r = Fyr_s;
 
         // Aero drag (opposes body-X velocity).
         const double F_aero = 0.5 * kAirDensity * vp_.aero_drag_coeff *
@@ -310,7 +318,7 @@ private:
         const double Fx_total = Fx_body_f + Fx_body_r - F_aero - F_rr + m * gx_b;
         const double Fy_total = Fy_body_f + Fy_body_r + m * gy_b;
         // Wheel-z and body-z are parallel (camber=0 assumed); Mz adds directly.
-        const double Mz_total = a * Fy_body_f - b * Fy_body_r + F_f.Mz + F_r.Mz;
+        const double Mz_total = a * Fy_body_f - b * Fy_body_r + (F_f.Mz + F_r.Mz) * fade;
 
         Deriv d_out;
         d_out.dx_world = vx * std::cos(yaw) - vy * std::sin(yaw);
