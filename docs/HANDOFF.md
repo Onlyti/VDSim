@@ -1,7 +1,8 @@
 # VDSim 핸드오프 — v0.1.0 공개 완료 + v0.2 멀티차량 착수
 
-작성: 2026-06-05. v0.1.0 published. v0.2 multi-vehicle 런타임 증분 1/3 완료.
-다음 = 증분 2 (#157 멀티차량 world 런타임).
+작성: 2026-06-05. v0.1.0 published. v0.2 설계 lock 완료(멀티차량+서브시스템).
+다음 = **서브시스템 모듈 골격 (step 3, 아래 구현순서)**. 멀티차량 런타임(#157/#158)은
+설계만 끝났고 그 뒤로 미룸 (사용자 결정).
 
 ## 1. 목표
 v0.2 "composable vehicle": 컴포넌트 모델 + 워크샵 + 씬 UI 로 차량 조립, 멀티차량
@@ -47,12 +48,18 @@ v0.2 착수:
   default==현재거동(187 유지). 엔진 torque-RPM 곡선+관성(Issue2)은 **v0.3 이관**.
 - v0.2 이후 모듈: LuGre tire(저속 blend 대체, `V0.2_TIRE_LUGRE.md`).
 
-## 구현 순서 (다음)
-1. 멀티차량 런타임 #157 (realtime_server world + subscriber, scenario YAML).
-2. GUI 멀티차량 #158 (demux + selected-vehicle 제어 + 멀티 GUI 레이싱).
-3. 서브시스템 골격: 인터페이스 + default 모듈 + 코어를 default 경유로 리팩터(187 green
-   유지) → brake/steering/drivetrain/suspension/ARB + deadtime.
-(1-2 와 3 은 독립 — 병렬 가능.)
+## 구현 순서 (사용자 결정: 3 부터)
+**다음 = 서브시스템 골격** (#159-161). 멀티차량(#157/#158)은 그 뒤로 미룸.
+- #159 인터페이스 + `SubsystemContext`(full state) + `DriverCmd`(handwheel/throttle/
+  brake/gear/handbrake) + `DelayLine`(deadtime 헬퍼). `core/include/vdsim/` 에.
+- #160 default 모듈 (전부 현재거동 재현): brake(비례+bias/EBD) / steering(ratio +
+  unity) / drivetrain(flat torque+diff) / suspension(선형, 코너별) / anti-roll bar
+  (선형, 축별). 각 모듈 deadtime 파라미터(default 0).
+- #161 dynamics 코어를 default 모듈 경유로 리팩터 — **default==현재거동, 187 green
+  유지**가 합격 기준. L0/L1=roadwheel, L2+=rack. suspension/ARB 는 step 내부 콜백.
+- 그 다음: #157 멀티차량 런타임 → #158 GUI 레이싱.
+- v0.3 이관: 엔진 torque-RPM 곡선 + 관성(Issue 2), LuGre tire.
+설계 spec: `docs/design/V0.2_SUBSYSTEMS.md` (결정 1-7, 인터페이스, per-level 표).
 
 ## 5. 주의 · 함정
 - **VDS1 v4**: plant·GUI 둘 다 v4 여야 통신됨(version gate). protocol.py 수정 후 GUI
