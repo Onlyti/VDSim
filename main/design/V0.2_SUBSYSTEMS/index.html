@@ -2324,6 +2324,13 @@ Vehicle assembly swaps in custom modules when configured.</p>
 </tr>
 </tbody>
 </table>
+<p>Note (decided 2026-06-05): <strong>Ld1 (bicycle) is exempt from per-wheel module routing.</strong>
+It is a single-track model (one omega per axle, axle-level drive/brake), so the
+4-wheel modules do not map cleanly (0.5/0.5 split + zero FR/RR omega → factor-2 /
+diff-bias mismatch). Ld1 keeps its inline axle-level computation; the modules target
+Ld2+ (Ld3 gets drive/brake/steer for free since it delegates the planar solve to an
+inner Ld2). Ld3-only suspension/ARB are wired separately (the ARB enters as a roll
+moment in Ld3, so the per-wheel-force module needs an equivalent mapping).</p>
 <h2 id="decisions-reviewed-2026-06-05">Decisions (reviewed 2026-06-05)<a class="headerlink" href="#decisions-reviewed-2026-06-05" title="Permanent link">&para;</a></h2>
 <ol>
 <li><strong>Modules see the full vehicle state.</strong> Every module call receives a

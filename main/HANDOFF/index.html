@@ -2033,9 +2033,9 @@
 
 
 <h1 id="vdsim-v010-v02">VDSim 핸드오프 — v0.1.0 공개 완료 + v0.2 멀티차량 착수<a class="headerlink" href="#vdsim-v010-v02" title="Permanent link">&para;</a></h1>
-<p>작성: 2026-06-05. v0.1.0 published. v0.2 설계 lock 완료(멀티차량+서브시스템).
-다음 = <strong>서브시스템 모듈 골격 (step 3, 아래 구현순서)</strong>. 멀티차량 런타임(#157/#158)은
-설계만 끝났고 그 뒤로 미룸 (사용자 결정).</p>
+<p>작성: 2026-06-05. v0.1.0 published. v0.2 설계 lock + <strong>서브시스템 골격 arc(#159-161) 완료</strong>
+(인터페이스+default 모듈+L2/L3 코어 배선, 187 green). 다음 = 멀티차량 런타임 #157
+(또는 ARB 모듈화/deadtime 활성화 등 #161 연기항목, WS2 워크샵). 멀티차량 설계는 lock 됨.</p>
 <h2 id="1">1. 목표<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
 <p>v0.2 "composable vehicle": 컴포넌트 모델 + 워크샵 + 씬 UI 로 차량 조립, 멀티차량
 시나리오 구동. 지금 단계는 그 토대인 <strong>멀티차량 shared-world 런타임</strong>.
@@ -2096,22 +2096,17 @@ v0.2 착수:
   RatioSteering, UnitySteering, LinearSuspension, LinearARB + factory helpers.
   아직 dynamics 미연결(#161). 187 green.</li>
 <li>
-<h1 id="161-dynamics-default-default-187-green">161 dynamics 코어를 default 모듈 경유로 리팩터 — <strong>default==현재거동, 187 green</strong>.<a class="headerlink" href="#161-dynamics-default-default-187-green" title="Permanent link">&para;</a></h1>
+<h1 id="161-done-default-default-187-green">161 <strong>DONE</strong> — 코어가 default 모듈 경유, default==현재거동, 187 green:<a class="headerlink" href="#161-done-default-default-187-green" title="Permanent link">&para;</a></h1>
 </li>
-<li><strong>#161a DONE</strong> (커밋 5a952f7): L2 seven_dof 의 drive/brake/steer 를 모듈 경유로.
-    SubsystemContext 에 동적 Fz 추가, ProportionalBrake EBD 가 ctx.Fz 사용. 187 green +
-    저속/grade/ISO spot-check 일치(byte-identical). 저속 핸들링 코드 불변.</li>
-<li><strong>#161b 남음</strong>: L1 bicycle drive/brake/steer 모듈 경유 (axle-lumped — drivetrain
-    모듈 4륜 출력을 축별 합산, brake 동일). L1 state.wheel_spin[4] 활용.</li>
-<li><strong>#161c 남음</strong>: L3 fourteen_dof drive/brake/steer + suspension/ARB 를 모듈 경유
-    (step 내부 콜백). <strong>ARB 부호 ctest 로 확인</strong>(가장 깨지기 쉬움). L3 는 planar 을
-    inner seven_dof 에 위임하므로 drive/brake 는 이미 #161a 수혜 가능성 — 확인 필요.</li>
-<li>합격 기준 공통: 187 green + 저속 spot-check(8% grade −0.0125, 20m/s r0.191/ay3.69).</li>
-<li><strong>참고 gotcha (원 #160 검증)</strong>:
-  (a) ProportionalBrake EBD 는 현재 static Fz(m·g·cg/L) 사용 — seven_dof EBD 는 step 내
-  동적 Fz 라, EBD-enabled config 에서 일치하려면 SubsystemContext 에 동적 Fz[4] 를 넘겨야 함.
-  (b) LinearARB 부호는 적분 시 roll 저항 방향이 맞는지 ctest 로 확인(부호 뒤집힘 주의).
-  L1 drivetrain 은 axle-lumped(open 0.5/0.5)라 split_axle 로 동일하게 처리 가능.</li>
+<li>L2 drive/brake/steer 모듈 경유 (5a952f7, +동적 Fz EBD). L3 는 inner L2 위임이라 자동 수혜.</li>
+<li>L3 per-corner suspension 모듈 경유 (8c11354). L1 은 single-track 이라 면제(인라인 유지).</li>
+<li><strong>ARB DONE (#162, b60e139)</strong>: L3 ARB 를 per-wheel force(LinearARB)로 재설계 — F_susp 에
+    더해 heave/pitch/roll+unsprung 에 작용. pure-roll 은 −K_arb·φ 와 등가, 비대칭 입력도 반응.
+    기본 sedan arb=0 라 187 불변; nonzero 시 roll 단조 억제 확인(susp FL-FR: 0→−0.083, 100k→−0.022).</li>
+<li><strong>남은 연기 항목</strong>(비차단):
+    (b) <strong>deadtime 미활성</strong> — DelayLine 은 derivatives() 내 dt=0 passthrough 로 호출(RK4
+    4회 호출 회피). deadtime&gt;0 실작동하려면 모듈을 substep 에서 1회 호출(실 dt)하도록 이동 필요.
+    &copy; brake EBD 정적fallback(total&lt;=1)만 잔존 — 정상 동작 시 동적 Fz 사용(일치).</li>
 <li>그 다음: #157 멀티차량 런타임 → #158 GUI 레이싱.</li>
 <li>v0.3 이관: 엔진 torque-RPM 곡선 + 관성(Issue 2), LuGre tire.
 설계 spec: <code>docs/design/V0.2_SUBSYSTEMS.md</code> (결정 1-7, 인터페이스, per-level 표).</li>
