@@ -66,7 +66,9 @@ inline CmdL4 lower_to_l4(const ControlInput& u) {
 constexpr double kAirDensity = 1.225;
 constexpr double kGravity    = 9.80665;
 constexpr double kSpeedEps    = 0.5;
-constexpr double kLatFadeSpeed = 1.5;   // [m/s] lateral grip ramps in over 0..this
+constexpr double kLatFadeSpeed = 1.5;   // [m/s] kinetic<->stick blend speed
+constexpr double kBristleK    = 3.0e5;  // [N/m]   standstill bristle (tread) stiffness
+constexpr double kBristleC    = 4.0e3;  // [N·s/m] bristle damping
 constexpr double kBrakeWidth  = 1.0;
 
 inline double smooth_sign(double x, double w) { return std::tanh(x / w); }
@@ -108,6 +110,8 @@ public:
         ay_prev_ = 0.0;
         alpha_dyn_.fill(0.0);
         alpha_geom_last_.fill(0.0);
+        z_stick_x_.fill(0.0); z_stick_y_.fill(0.0);
+        v_sx_last_.fill(0.0); v_sy_last_.fill(0.0); muFz_last_.fill(0.0);
         // Clear diagnostics so accessors don't return stale values before step().
         tire_F_.fill(Vec3::Zero());
         tire_Fz_.fill(0.0);
@@ -304,6 +308,10 @@ private:
         std::array<Vec3,   NUM_WHEELS> F_body;
         std::array<double, NUM_WHEELS> kappa, alpha;
         std::array<double, NUM_WHEELS> mz_wheel {{0.0, 0.0, 0.0, 0.0}};
+        // Kinetic (Pacejka) wheel-frame Fx, used for the wheel-spin dynamics. The
+        // standstill stick force goes to the body only (it is reacted by the
+        // brake / chassis, not by spinning the held wheel up).
+        std::array<double, NUM_WHEELS> fx_kin {{0.0, 0.0, 0.0, 0.0}};
 
         // Wheel position offsets in body frame (ax, ay relative to CG):
         const std::array<double, NUM_WHEELS> r_x = {{ +a,      +a,      -b,      -b      }};
@@ -354,19 +362,29 @@ private:
             alpha_geom_last_[i] = a_slip;
             v_x_wheel_last_[i]  = v_x_wheel;
 
-            // Low-speed lateral fade: the slip angle atan2(vy,vx) is singular as
-            // vx->0, so Fy/Mz otherwise snap to the friction limit from velocity
-            // noise at standstill (and jitter Fz via the load-transfer a_y). Ramp
-            // lateral grip in over 0..v_blend. Longitudinal Fx is left intact so
-            // the vehicle can still launch from rest.
+            // Standstill stick + kinetic blend. The slip-based (Pacejka) force is
+            // singular as vx->0; blend it to a brush/LuGre bristle force that
+            // holds the contact patch — true static friction up to mu*Fz (so the
+            // car parks on a slope) and breaks away into sliding above the limit.
+            // The bristle deflection z_stick is advanced in substep().
+            const double v_sx = R * s.wheel_spin[i] - v_x_wheel;   // long slide speed
+            const double v_sy = v_y_wheel;                          // lat slide speed
+            const double muFz = std::min(mu_long_i, mu_lat_i) * std::max(0.0, Fz[i]);
+            double Fx_st = kBristleK * z_stick_x_[i] + kBristleC * v_sx;
+            double Fy_st = kBristleK * z_stick_y_[i] + kBristleC * v_sy;
+            const double Fst = std::hypot(Fx_st, Fy_st);
+            if (Fst > muFz && Fst > 1e-9) { const double c = muFz / Fst; Fx_st *= c; Fy_st *= c; }
             double fade = std::clamp(std::hypot(vx, vy) / kLatFadeSpeed, 0.0, 1.0);
-            fade = fade * fade * (3.0 - 2.0 * fade);     // smoothstep (C1)
-            const double Fy_s = out.Fy * fade;
+            fade = fade * fade * (3.0 - 2.0 * fade);                // smoothstep (C1)
+            const double Fx_w = fade * out.Fx + (1.0 - fade) * Fx_st;
+            const double Fy_w = fade * out.Fy + (1.0 - fade) * Fy_st;
+            v_sx_last_[i] = v_sx; v_sy_last_[i] = v_sy; muFz_last_[i] = muFz;
             // Project wheel-frame force into body frame.  Rear di may be
             // non-zero from kinematic toe (bump-steer) — always rotate.
-            const double Fx_b = out.Fx * cd_i - Fy_s * sd_i;
-            const double Fy_b = out.Fx * sd_i + Fy_s * cd_i;
+            const double Fx_b = Fx_w * cd_i - Fy_w * sd_i;
+            const double Fy_b = Fx_w * sd_i + Fy_w * cd_i;
             F_body[i] = Vec3(Fx_b, Fy_b, 0.0);
+            fx_kin[i] = out.Fx;            // wheel-spin reaction = kinetic only
             kappa[i]  = k_slip;
             alpha[i]  = a_slip;
             mz_wheel[i] = out.Mz * fade;
@@ -462,13 +480,10 @@ private:
         d_out.ax_body  = Fx_total / m;
         d_out.ay_body  = Fy_total / m;
         for (int i = 0; i < NUM_WHEELS; ++i) {
-            // Body-frame Fx already applied to body translation. For wheel
-            // spin, use wheel-frame Fx — re-rotate body force back to wheel x.
-            // Rear wheels now also have potentially-nonzero d_wheel (toe input).
-            const double cd_i = std::cos(d_wheel[i]);
-            const double sd_i = std::sin(d_wheel[i]);
-            const double Fx_wheel = F_body[i].x() * cd_i + F_body[i].y() * sd_i;
-            d_out.domega[i] = (Td[i] + Tb[i] - Fx_wheel * R) / I_wheel_[i];
+            // Wheel spin reacts to the kinetic (sliding) tire force only; the
+            // standstill stick force is a static (held) reaction, not a spin-up
+            // torque — feeding it here would destabilise the locked wheel.
+            d_out.domega[i] = (Td[i] + Tb[i] - fx_kin[i] * R) / I_wheel_[i];
         }
 
         // ---- Diagnostics ----
@@ -536,6 +551,15 @@ private:
                               + (alpha_dyn_[i] - alpha_geom_last_[i]) * decay;
             }
         }
+        // Advance the standstill bristle deflection: integrate the slide velocity,
+        // clamped to the breakaway deflection mu*Fz/k so the held force never
+        // exceeds friction. Holds at rest (v_s~0 -> z frozen), saturates and
+        // releases into sliding when the patch slides.
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            const double zmax = (muFz_last_[i] > 1e-9) ? muFz_last_[i] / kBristleK : 0.0;
+            z_stick_x_[i] = std::clamp(z_stick_x_[i] + v_sx_last_[i] * h, -zmax, zmax);
+            z_stick_y_[i] = std::clamp(z_stick_y_[i] + v_sy_last_[i] * h, -zmax, zmax);
+        }
     }
 
     VehicleParams vp_;
@@ -560,6 +584,13 @@ private:
     std::array<double, NUM_WHEELS> alpha_dyn_       {{0.0, 0.0, 0.0, 0.0}};
     std::array<double, NUM_WHEELS> alpha_geom_last_ {{0.0, 0.0, 0.0, 0.0}};
     std::array<double, NUM_WHEELS> v_x_wheel_last_  {{0.0, 0.0, 0.0, 0.0}};
+    // Standstill stick (brush/LuGre) state: bristle deflection per wheel [m] and
+    // the last contact-patch slide velocity / friction limit (advanced in substep).
+    std::array<double, NUM_WHEELS> z_stick_x_ {{0.0, 0.0, 0.0, 0.0}};
+    std::array<double, NUM_WHEELS> z_stick_y_ {{0.0, 0.0, 0.0, 0.0}};
+    std::array<double, NUM_WHEELS> v_sx_last_ {{0.0, 0.0, 0.0, 0.0}};
+    std::array<double, NUM_WHEELS> v_sy_last_ {{0.0, 0.0, 0.0, 0.0}};
+    std::array<double, NUM_WHEELS> muFz_last_ {{0.0, 0.0, 0.0, 0.0}};
     // External per-wheel camber input (set by Ld3 or caller before step).
     std::array<double, NUM_WHEELS> camber_ext_      {{0.0, 0.0, 0.0, 0.0}};
     // External per-wheel toe input (additive to Ackerman steer angle).
