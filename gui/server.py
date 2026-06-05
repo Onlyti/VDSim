@@ -1293,7 +1293,14 @@ def _udp_control(host, port):
     # datagram {steer,throttle,brake} in -> drive the live sim; reply with
     # {rack_torque,vx,steer,susp} for force feedback. Same sim the browser views.
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.bind((host, port))
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        s.bind((host, port))
+    except OSError as e:
+        # Non-fatal: the FFB port is optional (only a physical wheel uses it).
+        # Don't take down the GUI if it's busy (e.g. another instance).
+        print(f"[VDSim GUI] FFB UDP port {port} unavailable ({e}); FFB disabled")
+        return
     print(f"[VDSim GUI] udp control/ffb on {host}:{port}")
     while True:
         try:
