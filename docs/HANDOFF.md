@@ -61,9 +61,17 @@ v0.2 착수:
   `core/src/default_subsystems.cpp`): ProportionalBrake, BasicDrivetrain,
   RatioSteering, UnitySteering, LinearSuspension, LinearARB + factory helpers.
   아직 dynamics 미연결(#161). 187 green.
-- #161 dynamics 코어를 default 모듈 경유로 리팩터 — **default==현재거동, 187 green
-  유지**가 합격 기준(Claude 가 검증/판정). L0/L1=roadwheel, L2+=rack. suspension/ARB 는
-  step 내부 콜백. **#160 검증 시 짚은 gotcha 2건**:
+- #161 dynamics 코어를 default 모듈 경유로 리팩터 — **default==현재거동, 187 green**.
+  - **#161a DONE** (커밋 5a952f7): L2 seven_dof 의 drive/brake/steer 를 모듈 경유로.
+    SubsystemContext 에 동적 Fz 추가, ProportionalBrake EBD 가 ctx.Fz 사용. 187 green +
+    저속/grade/ISO spot-check 일치(byte-identical). 저속 핸들링 코드 불변.
+  - **#161b 남음**: L1 bicycle drive/brake/steer 모듈 경유 (axle-lumped — drivetrain
+    모듈 4륜 출력을 축별 합산, brake 동일). L1 state.wheel_spin[4] 활용.
+  - **#161c 남음**: L3 fourteen_dof drive/brake/steer + suspension/ARB 를 모듈 경유
+    (step 내부 콜백). **ARB 부호 ctest 로 확인**(가장 깨지기 쉬움). L3 는 planar 을
+    inner seven_dof 에 위임하므로 drive/brake 는 이미 #161a 수혜 가능성 — 확인 필요.
+  - 합격 기준 공통: 187 green + 저속 spot-check(8% grade −0.0125, 20m/s r0.191/ay3.69).
+  - **참고 gotcha (원 #160 검증)**:
   (a) ProportionalBrake EBD 는 현재 static Fz(m·g·cg/L) 사용 — seven_dof EBD 는 step 내
   동적 Fz 라, EBD-enabled config 에서 일치하려면 SubsystemContext 에 동적 Fz[4] 를 넘겨야 함.
   (b) LinearARB 부호는 적분 시 roll 저항 방향이 맞는지 ctest 로 확인(부호 뒤집힘 주의).
