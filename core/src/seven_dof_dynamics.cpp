@@ -67,6 +67,7 @@ constexpr double kAirDensity = 1.225;
 constexpr double kGravity    = 9.80665;
 constexpr double kSpeedEps    = 0.5;
 constexpr double kLatFadeSpeed = 1.5;   // [m/s] lateral grip ramps in over 0..this
+constexpr double kLatDamp     = 6.0e3;  // [N·s/m] low-speed lateral velocity damping
 constexpr double kBrakeWidth  = 1.0;
 
 inline double smooth_sign(double x, double w) { return std::tanh(x / w); }
@@ -363,7 +364,15 @@ private:
             double fade = std::clamp(std::hypot(vx, vy) / kLatFadeSpeed, 0.0, 1.0);
             fade = fade * fade * (3.0 - 2.0 * fade);     // smoothstep (C1)
             const double Fx_b = out.Fx * cd_i - out.Fy * sd_i;          // longitudinal (kept)
-            const double Fy_b = (out.Fx * sd_i + out.Fy * cd_i) * fade; // lateral (faded)
+            // Lateral body force: faded kinetic (Pacejka + steered-Fx projection)
+            // plus a low-speed velocity damper. The damper opposes the body
+            // lateral velocity at the patch (v_y_body includes r·r_x, so it damps
+            // yaw too), stopping the standstill drift/wiggle without the spin a
+            // position spring (full stick model) would cause. Clamped to mu*Fz.
+            const double muFz = std::min(mu_long_i, mu_lat_i) * std::max(0.0, Fz[i]);
+            double Fy_b = (out.Fx * sd_i + out.Fy * cd_i) * fade
+                        - kLatDamp * (1.0 - fade) * v_y_body;
+            Fy_b = std::clamp(Fy_b, -muFz, muFz);
             F_body[i] = Vec3(Fx_b, Fy_b, 0.0);
             kappa[i]  = k_slip;
             alpha[i]  = a_slip;
