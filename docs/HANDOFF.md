@@ -1,8 +1,8 @@
 # VDSim 핸드오프 — v0.1.0 공개 완료 + v0.2 멀티차량 착수
 
-작성: 2026-06-05. v0.1.0 published. v0.2 설계 lock 완료(멀티차량+서브시스템).
-다음 = **서브시스템 모듈 골격 (step 3, 아래 구현순서)**. 멀티차량 런타임(#157/#158)은
-설계만 끝났고 그 뒤로 미룸 (사용자 결정).
+작성: 2026-06-05. v0.1.0 published. v0.2 설계 lock + **서브시스템 골격 arc(#159-161) 완료**
+(인터페이스+default 모듈+L2/L3 코어 배선, 187 green). 다음 = 멀티차량 런타임 #157
+(또는 ARB 모듈화/deadtime 활성화 등 #161 연기항목, WS2 워크샵). 멀티차량 설계는 lock 됨.
 
 ## 1. 목표
 v0.2 "composable vehicle": 컴포넌트 모델 + 워크샵 + 씬 UI 로 차량 조립, 멀티차량
@@ -61,26 +61,16 @@ v0.2 착수:
   `core/src/default_subsystems.cpp`): ProportionalBrake, BasicDrivetrain,
   RatioSteering, UnitySteering, LinearSuspension, LinearARB + factory helpers.
   아직 dynamics 미연결(#161). 187 green.
-- #161 dynamics 코어를 default 모듈 경유로 리팩터 — **default==현재거동, 187 green**.
-  - **#161a DONE** (커밋 5a952f7): L2 seven_dof 의 drive/brake/steer 를 모듈 경유로.
-    SubsystemContext 에 동적 Fz 추가, ProportionalBrake EBD 가 ctx.Fz 사용. 187 green +
-    저속/grade/ISO spot-check 일치(byte-identical). 저속 핸들링 코드 불변.
-  - **L3 drive/brake/steer = #161a 로 이미 완료**: fourteen_dof 는 planar 을
-    `inner_ = create_seven_dof()` 에 위임하므로 inner 가 모듈 경유 → 별도 작업 불필요.
-  - **#161b (L1) = 면제 결정**: bicycle 은 single-track(`of=wheel_spin[FL]`,
-    `or_=wheel_spin[RL]`, Td_f/Tb_f 가 축 전체). 4륜 모듈(0.5/0.5 split, FR/RR omega 0)
-    을 끼우면 factor-2·diff-bias 불일치 → reduced model 이라 per-wheel 모듈 라우팅 면제.
-    L1 은 인라인 축레벨 유지. (모듈은 L2+ 및 L3(via inner) 대상.)
-  - **#161c 남음 (유일한 잔여)**: L3 fourteen_dof 의 **suspension + ARB** 만 모듈 경유.
-    주의: fourteen_dof ARB 는 **roll moment**(K_arb·φ)를 roll DOF 에 적용하는데 LinearARB
-    모듈은 **per-wheel 力 pair** 반환 → 등가 매핑에 설계판단 필요(단순 drop-in 아님,
-    가장 민감). suspension(k·defl+c·rate)은 비교적 직접. 합격=187 green + L3 거동 spot-check.
-  - 합격 기준 공통: 187 green + 저속 spot-check(8% grade −0.0125, 20m/s r0.191/ay3.69).
-  - **참고 gotcha (원 #160 검증)**:
-  (a) ProportionalBrake EBD 는 현재 static Fz(m·g·cg/L) 사용 — seven_dof EBD 는 step 내
-  동적 Fz 라, EBD-enabled config 에서 일치하려면 SubsystemContext 에 동적 Fz[4] 를 넘겨야 함.
-  (b) LinearARB 부호는 적분 시 roll 저항 방향이 맞는지 ctest 로 확인(부호 뒤집힘 주의).
-  L1 drivetrain 은 axle-lumped(open 0.5/0.5)라 split_axle 로 동일하게 처리 가능.
+- #161 **DONE** — 코어가 default 모듈 경유, default==현재거동, 187 green:
+  - L2 drive/brake/steer 모듈 경유 (5a952f7, +동적 Fz EBD). L3 는 inner L2 위임이라 자동 수혜.
+  - L3 per-corner suspension 모듈 경유 (8c11354). L1 은 single-track 이라 면제(인라인 유지).
+  - **남은 정리/연기 항목**(비차단):
+    (a) **ARB 모듈 미연결** — L3 ARB 는 roll moment(−K_arb·φ)로 roll DOF 에 적용되는데
+    `IAntiRollBar` 는 per-wheel 力 pair 반환 → 형식 불일치라 inline 유지. force-based ARB 로
+    통일할지(또는 interface 에 roll-moment 변형 추가) 설계결정 필요.
+    (b) **deadtime 미활성** — DelayLine 은 derivatives() 내 dt=0 passthrough 로 호출(RK4
+    4회 호출 회피). deadtime>0 실작동하려면 모듈을 substep 에서 1회 호출(실 dt)하도록 이동 필요.
+    (c) brake EBD 정적fallback(total<=1)만 잔존 — 정상 동작 시 동적 Fz 사용(일치).
 - 그 다음: #157 멀티차량 런타임 → #158 GUI 레이싱.
 - v0.3 이관: 엔진 torque-RPM 곡선 + 관성(Issue 2), LuGre tire.
 설계 spec: `docs/design/V0.2_SUBSYSTEMS.md` (결정 1-7, 인터페이스, per-level 표).
