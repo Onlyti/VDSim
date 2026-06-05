@@ -40,8 +40,19 @@ v0.2 착수:
   vehicle_id 포워딩(현재 빠짐). 데이터층은 이미 vid 키잉(`live_vid`, `self.ports`).
 - 충돌(V2V): **future TODO** (이번 범위 아님). contact-coupling pass 훅 위치만 런타임에
   남겨둠. `V0.2_MULTIVEHICLE.md` "Collision" 참고.
-- v0.2 이후 모듈: drivetrain(엔진관성+coupled diff, Issue 2 해결), LuGre tire(저속 blend
-  대체). 각 설계doc 있음.
+- **서브시스템 모듈 (설계 lock 완료, `V0.2_SUBSYSTEMS.md` 결정 1-7)** — 구현 대기:
+  brake(pedal→4륜 토크) / steering(handwheel→roadwheel·rack, unity 변형 포함) /
+  drivetrain(throttle→4륜 토크, skeleton=flat) / suspension(코너별) / anti-roll bar
+  (축별 별도 모듈) / 각 모듈 deadtime. 모두 `SubsystemContext`(full state) 받음, C++,
+  default==현재거동(187 유지). 엔진 torque-RPM 곡선+관성(Issue2)은 **v0.3 이관**.
+- v0.2 이후 모듈: LuGre tire(저속 blend 대체, `V0.2_TIRE_LUGRE.md`).
+
+## 구현 순서 (다음)
+1. 멀티차량 런타임 #157 (realtime_server world + subscriber, scenario YAML).
+2. GUI 멀티차량 #158 (demux + selected-vehicle 제어 + 멀티 GUI 레이싱).
+3. 서브시스템 골격: 인터페이스 + default 모듈 + 코어를 default 경유로 리팩터(187 green
+   유지) → brake/steering/drivetrain/suspension/ARB + deadtime.
+(1-2 와 3 은 독립 — 병렬 가능.)
 
 ## 5. 주의 · 함정
 - **VDS1 v4**: plant·GUI 둘 다 v4 여야 통신됨(version gate). protocol.py 수정 후 GUI
