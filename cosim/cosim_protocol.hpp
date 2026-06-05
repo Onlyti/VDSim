@@ -12,7 +12,7 @@
 namespace vdsim::cosim {
 
 constexpr uint32_t kMagic       = 0x56445331u;  // "VDS1"
-constexpr uint16_t kVersion     = 3;  // v2: rack_torque/slip/susp/measured; v3: + tire Fx/Fy
+constexpr uint16_t kVersion     = 4;  // v2: rack_torque/slip/susp/measured; v3: + tire Fx/Fy; v4: header pad -> vehicle_id
 constexpr uint16_t kMsgCmd      = 1;
 constexpr uint16_t kMsgState    = 2;
 constexpr int      kHeaderBytes = 24;
@@ -53,6 +53,7 @@ struct CmdFields {
     double aux_speed  {0.0};
     uint32_t seq      {0};
     double timestamp  {0.0};
+    uint32_t vehicle_id {0};   // v4: header field (was _pad)
 };
 
 struct StateFields {
@@ -75,18 +76,20 @@ struct StateFields {
     double fy[4] {0,0,0,0};   // v3: per-wheel tire force (body) Fy
     uint32_t seq {0};
     double timestamp {0};
+    uint32_t vehicle_id {0};   // v4: header field (was _pad)
 };
 
-inline void write_header(Writer& w, uint16_t msg_type, uint32_t seq, double ts) {
+inline void write_header(Writer& w, uint16_t msg_type, uint32_t seq, double ts,
+                         uint32_t vehicle_id) {
     w.put(kMagic); w.put(kVersion); w.put(msg_type); w.put(seq);
-    w.put<uint32_t>(0);            // _pad
+    w.put(vehicle_id);            // v4: was _pad
     w.put(ts);
 }
 
 // Encode a STATE packet into buf (must be >= kStateBytes). Returns byte count.
 inline int encode_state(uint8_t* buf, const StateFields& s) {
     Writer w{buf};
-    write_header(w, kMsgState, s.seq, s.timestamp);
+    write_header(w, kMsgState, s.seq, s.timestamp, s.vehicle_id);
     w.put(s.x); w.put(s.y); w.put(s.z);
     w.put(s.roll); w.put(s.pitch); w.put(s.yaw);
     w.put(s.vx); w.put(s.vy); w.put(s.vz);
@@ -116,7 +119,7 @@ inline bool decode_cmd(const uint8_t* buf, size_t n, CmdFields& out) {
     if (r.get<uint16_t>() != kVersion) return false;
     if (r.get<uint16_t>() != kMsgCmd) return false;
     out.seq = r.get<uint32_t>();
-    r.skip(4);                       // _pad
+    out.vehicle_id = r.get<uint32_t>();   // v4: was _pad
     out.timestamp = r.get<double>();
     out.steer_tire = r.get<double>();
     out.throttle   = r.get<double>();
