@@ -2257,7 +2257,7 @@ request; a reusable <code>DelayLine</code> helper. Steering deadtime optional (o
 </span></code></pre></div>
 <p>This needs the dynamics core to accept <strong>actuator-level inputs</strong> (per-wheel
 <code>Td</code>/<code>Tb</code>, steer/rack) instead of computing them from <code>CmdL4</code> internally.</p>
-<p>Migration that keeps the 187 ctest green: make the default modules numerically
+<p>Migration that keeps the 190 ctest green: make the default modules numerically
 identical to the current internal computation, and route the core through them. A
 <code>CmdL4</code> call then == "core + default modules", so existing results don't move; the
 Vehicle assembly swaps in custom modules when configured.</p>
@@ -2340,7 +2340,7 @@ moment in Ld3, so the per-wheel-force module needs an equivalent mapping).</p>
 <li><strong>CMD <code>steer</code> is the handwheel angle</strong> (steering module runs server-side). For
    convenience also provide a <strong>unity steering module (ratio = 1)</strong> so handwheel ==
    road-wheel angle for callers that want to command the road wheel directly.</li>
-<li><strong>Core routes through default modules</strong> (defaults == current behaviour, 187 stays
+<li><strong>Core routes through default modules</strong> (defaults == current behaviour, 190 stays
    green). Confirmed.</li>
 <li><strong>All core + dynamics + subsystems are C++.</strong> No Python-implemented subsystems
    (the pybind trampoline idea is dropped); Python stays a client/config layer.</li>

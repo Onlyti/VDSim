@@ -23,7 +23,7 @@
     
     
       
-        <title>VDSim 핸드오프 — v0.1.0 공개 완료 + v0.2 멀티차량 착수 - VDSim</title>
+        <title>VDSim 핸드오프 - VDSim</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#vdsim-v010-v02" class="md-skip">
+        <a href="#vdsim" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              VDSim 핸드오프 — v0.1.0 공개 완료 + v0.2 멀티차량 착수
+              VDSim 핸드오프
             
           </span>
         </div>
@@ -1980,10 +1980,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-arc" class="md-nav__link">
+  <a href="#3-v020" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. 완료 (이번 arc)
+        3. v0.2.0 완료
       
     </span>
   </a>
@@ -1991,10 +1991,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4" class="md-nav__link">
+  <a href="#4-v021-hotfix" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. 미완 (다음 할 일)
+        4. v0.2.1 hotfix (진행)
       
     </span>
   </a>
@@ -2002,10 +2002,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-cursor" class="md-nav__link">
+  <a href="#5-v03" class="md-nav__link">
     <span class="md-ellipsis">
       
-        구현 순서 (사용자 결정: 3 부터) + Cursor 위임 워크플로
+        5. 다음 (v0.3+)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. 주의
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. 경로
       
     </span>
   </a>
@@ -2032,108 +2054,50 @@
   
 
 
-<h1 id="vdsim-v010-v02">VDSim 핸드오프 — v0.1.0 공개 완료 + v0.2 멀티차량 착수<a class="headerlink" href="#vdsim-v010-v02" title="Permanent link">&para;</a></h1>
-<p>작성: 2026-06-05. v0.1.0 published. v0.2 설계 lock + <strong>서브시스템 골격 arc(#159-161) 완료</strong>
-(인터페이스+default 모듈+L2/L3 코어 배선, 187 green). 다음 = 멀티차량 런타임 #157
-(또는 ARB 모듈화/deadtime 활성화 등 #161 연기항목, WS2 워크샵). 멀티차량 설계는 lock 됨.</p>
+<h1 id="vdsim">VDSim 핸드오프<a class="headerlink" href="#vdsim" title="Permanent link">&para;</a></h1>
+<p>작성: 2026-06-06. <strong>v0.2.0</strong> 태그 완료. <strong>v0.2.1 hotfix</strong> (parts 계약) 진행 중. v0.3 = drivetrain + LuGre.</p>
 <h2 id="1">1. 목표<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
-<p>v0.2 "composable vehicle": 컴포넌트 모델 + 워크샵 + 씬 UI 로 차량 조립, 멀티차량
-시나리오 구동. 지금 단계는 그 토대인 <strong>멀티차량 shared-world 런타임</strong>.
-전체 그림: <code>docs/design/V0.2_PLAN.md</code>.</p>
+<p>v0.2 "composable vehicle": 차량 = chassis + parts, 워크샵 + 씬 UI. <strong><code>gui/app.html</code></strong>
+단일 GUI. <code>docs/design/V0.2_PLAN.md</code>.</p>
 <h2 id="2">2. 현재 상태<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
 <ul>
-<li>main 최신 push: <code>5684c92</code>. 작업트리 clean.</li>
-<li>빌드: <code>cmake --build build -j</code>. <strong>187/187 ctest 통과</strong>.</li>
-<li>v0.1.0 공개됨: origin/main + 태그 <code>v0.1.0</code> → <code>4c77d7f</code> (force-move 완료). 단,
-  <strong>GitHub repo visibility=public 토글 + Topics 는 사용자가 UI 에서</strong> 해야 함(미완).</li>
-<li>라이브 GUI: <code>python3 gui/server.py --port 8095</code> (PYTHONPATH=build/python:cosim).
-  현재 8095 에 v4 로 떠 있을 수 있음(pid 4136549). 재기동 시 orphan plant 가 7401/7402
-  점유하면 그 특정 pid 만 kill 후 재기동 (아래 함정 참고).</li>
+<li><strong>v0.2.0</strong> 태그 = 로컬 HEAD (push 후 origin 갱신).</li>
+<li>빌드 <code>cmake --build build -j</code>; <strong>ctest 190/190</strong> (v0.2.1 hotfix 후).</li>
+<li>v0.1.0 태그 <code>4c77d7f</code>. GitHub Topics / 데모 GIF (#155) = 사용자 UI.</li>
 </ul>
-<h2 id="3-arc">3. 완료 (이번 arc)<a class="headerlink" href="#3-arc" title="Permanent link">&para;</a></h2>
-<p>저속 동역학 (v0.1.0 블로커, L1/L2/L3 + 187/187):
-- kinematic-dynamic blend(&lt;3 m/s, lateral 을 derivative 에서 kinematic 으로 cross-fade)
-  → 스핀/휘청/드리프트/정지진동 제거. <code>e3e0009</code>.
-- viscous brake-hold 댐퍼(brake&gt;throttle, v_x_body 기준) → 경사 hold creep cm/s. ring 없음.
-- lateral force 를 dynamics 에서 λ-fade → ay→0, 정지 시 Fz 안정(떨림 해결). <code>6aec66c</code>.
-- 보고 force 도 저속 λ-fade(display) → 화살표 chatter 제거. <code>96321a3</code>.
-- 설계 근거: <code>docs/design/LOW_SPEED_HANDLING.md</code>.
-v0.2 착수:
-- 로드맵/설계 문서 4종: <code>V0.2_PLAN</code>, <code>V0.2_MULTIVEHICLE</code>, <code>V0.2_DRIVETRAIN</code>, <code>V0.2_TIRE_LUGRE</code>.
-- 증분 1 — <strong>VDS1 v4 <code>vehicle_id</code></strong> (<code>cosim_protocol.hpp</code> + <code>protocol.py</code>): 헤더 pad→
-  vehicle_id, 크기 불변(CMD76/STATE436), version 3→4. C++↔py 교차검증 완료. <code>5684c92</code>.</p>
-<h2 id="4">4. 미완 (다음 할 일)<a class="headerlink" href="#4" title="Permanent link">&para;</a></h2>
+<h2 id="3-v020">3. v0.2.0 완료<a class="headerlink" href="#3-v020" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>#157 멀티차량 world 런타임</strong> (<code>cosim/realtime_server.cpp</code>): N SimSession 을 공유환경
-  ·공유 clock 으로 step, scenario YAML 로 차량목록(vehicle/tire yaml·level·spawn·id),
-  CMD 를 vehicle_id 로 demux(per-vehicle ZOH), tick 당 N STATE 송신. flat CLI = N=1 단축.
-  설계 그대로: <code>docs/design/V0.2_MULTIVEHICLE.md</code> "Runtime"/"Implementation increments".</li>
-<li><strong>#158 GUI 멀티차량</strong>: CosimBridge 가 scenario 로 plant 1개 spawn, STATE 를 vehicle_id 로
-  demux→<code>self.ports[vid]</code>, 제어는 선택 vehicle_id 로 CMD, 렌더 N대. GUI snapshot 에
-  vehicle_id 포워딩(현재 빠짐). 데이터층은 이미 vid 키잉(<code>live_vid</code>, <code>self.ports</code>).</li>
-<li>충돌(V2V): <strong>future TODO</strong> (이번 범위 아님). contact-coupling pass 훅 위치만 런타임에
-  남겨둠. <code>V0.2_MULTIVEHICLE.md</code> "Collision" 참고.</li>
-<li><strong>서브시스템 모듈 (설계 lock 완료, <code>V0.2_SUBSYSTEMS.md</code> 결정 1-7)</strong> — #159/#160 완료,
-  #161(dynamics 연결) 대기:
-  brake(pedal→4륜 토크) / steering(handwheel→roadwheel·rack, unity 변형 포함) /
-  drivetrain(throttle→4륜 토크, skeleton=flat) / suspension(코너별) / anti-roll bar
-  (축별 별도 모듈) / 각 모듈 deadtime. 모두 <code>SubsystemContext</code>(full state) 받음, C++,
-  default==현재거동(187 유지). 엔진 torque-RPM 곡선+관성(Issue2)은 <strong>v0.3 이관</strong>.</li>
-<li>v0.2 이후 모듈: LuGre tire(저속 blend 대체, <code>V0.2_TIRE_LUGRE.md</code>).</li>
+<li><strong>WS1</strong> 서브시스템 골격 + deadtime (#159-162).</li>
+<li><strong>WS2</strong> edit 모달 workshops (tire .tir, susp presets, actuator curves); Engine stub → v0.3.</li>
+<li><strong>WS3</strong> 3-tab setup, data-comms, minimap, simconfig v2, fleet tree, legacy GUI 제거.</li>
+<li><strong>WS4</strong> fleet parts (<code>vehicle</code>/<code>tire</code>/<code>front_susp</code>/<code>rear_susp</code>), <code>/api/parts/registry</code>,
+  L3 <code>attach_*_kinematics</code> in <code>vdsim_realtime</code>, infra sensor list (authoring).</li>
+<li><strong>멀티차량</strong> #157/#158, VDS1 vehicle_id, shared-world scenarios.</li>
 </ul>
-<h2 id="3-cursor">구현 순서 (사용자 결정: 3 부터) + Cursor 위임 워크플로<a class="headerlink" href="#3-cursor" title="Permanent link">&para;</a></h2>
-<p>서브시스템 골격 (#159-161). 멀티차량(#157/#158)은 그 뒤로 미룸.
-<strong>Cursor 위임 동작 확인됨</strong>: 기계적 작업은 <code>cursor-agent -p --force --trust --model auto
---output-format text "&lt;지시&gt;"</code> 로 위임 → Claude 가 리뷰+빌드+ctest 검증 후 커밋(push 금지).
-<code>.cursor/rules/vdsim.mdc</code>(규약·가드레일 미러), <code>docs/design/CURSOR_USAGE.md</code>(라우팅) 적용됨.</p>
+<h2 id="4-v021-hotfix">4. v0.2.1 hotfix (진행)<a class="headerlink" href="#4-v021-hotfix" title="Permanent link">&para;</a></h2>
 <ul>
-<li>
-<h1 id="159-done-f8305b9-cursor-claude-coreincludevdsim">159 <strong>DONE</strong> (커밋 f8305b9, Cursor 위임→Claude 검증): `core/include/vdsim/<a class="headerlink" href="#159-done-f8305b9-cursor-claude-coreincludevdsim" title="Permanent link">&para;</a></h1>
-  subsystems.hpp<code>(인터페이스+SubsystemContext+DriverCmd) +</code>delay_line.hpp`. 187 green.</li>
-<li>
-<h1 id="160-done-default-coreincludevdsimdefault_subsystemshpp">160 <strong>DONE</strong> — default 모듈 (<code>core/include/vdsim/default_subsystems.hpp</code> +<a class="headerlink" href="#160-done-default-coreincludevdsimdefault_subsystemshpp" title="Permanent link">&para;</a></h1>
-<code>core/src/default_subsystems.cpp</code>): ProportionalBrake, BasicDrivetrain,
-  RatioSteering, UnitySteering, LinearSuspension, LinearARB + factory helpers.
-  아직 dynamics 미연결(#161). 187 green.</li>
-<li>
-<h1 id="161-done-default-default-187-green">161 <strong>DONE</strong> — 코어가 default 모듈 경유, default==현재거동, 187 green:<a class="headerlink" href="#161-done-default-default-187-green" title="Permanent link">&para;</a></h1>
-</li>
-<li>L2 drive/brake/steer 모듈 경유 (5a952f7, +동적 Fz EBD). L3 는 inner L2 위임이라 자동 수혜.</li>
-<li>L3 per-corner suspension 모듈 경유 (8c11354). L1 은 single-track 이라 면제(인라인 유지).</li>
-<li><strong>ARB DONE (#162, b60e139)</strong>: L3 ARB 를 per-wheel force(LinearARB)로 재설계 — F_susp 에
-    더해 heave/pitch/roll+unsprung 에 작용. pure-roll 은 −K_arb·φ 와 등가, 비대칭 입력도 반응.
-    기본 sedan arb=0 라 187 불변; nonzero 시 roll 단조 억제 확인(susp FL-FR: 0→−0.083, 100k→−0.022).</li>
-<li><strong>남은 연기 항목</strong>(비차단):
-    (b) <strong>deadtime 미활성</strong> — DelayLine 은 derivatives() 내 dt=0 passthrough 로 호출(RK4
-    4회 호출 회피). deadtime&gt;0 실작동하려면 모듈을 substep 에서 1회 호출(실 dt)하도록 이동 필요.
-    &copy; brake EBD 정적fallback(total&lt;=1)만 잔존 — 정상 동작 시 동적 Fz 사용(일치).</li>
-<li>그 다음: #157 멀티차량 런타임 → #158 GUI 레이싱.</li>
-<li>v0.3 이관: 엔진 torque-RPM 곡선 + 관성(Issue 2), LuGre tire.
-설계 spec: <code>docs/design/V0.2_SUBSYSTEMS.md</code> (결정 1-7, 인터페이스, per-level 표).</li>
+<li>fsk_formula L3 susp default, scenario susp 경로, L3-only fleet UI, attach warnings.</li>
+<li><code>cosim_multi_vehicle</code> ctest; topology-only YAML attach 거부 테스트.</li>
 </ul>
-<h2 id="5">5. 주의 · 함정<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
+<h2 id="5-v03">5. 다음 (v0.3+)<a class="headerlink" href="#5-v03" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>VDS1 v4</strong>: plant·GUI 둘 다 v4 여야 통신됨(version gate). protocol.py 수정 후 GUI
-  서버 <strong>재기동</strong>해야 새 버전 반영(import 시점 로드). plant 는 재빌드.</li>
-<li><strong>orphan plant</strong>: 죽은 GUI 서버가 vdsim_realtime 를 7401/7402 에 남기면 새 GUI 가 plant
-  를 못 띄움. 해결=그 <strong>특정 pid</strong> 만 <code>kill &lt;pid&gt;</code> (광범위 <code>pkill -f vdsim_realtime</code> 는
-  classifier 가 막음 — 타 사용자 프로세스 영향 우려). 무관 점유자: <code>mike serve</code>(8090,
-  mkdocs), <code>ailab_dashboard.py</code>(8091) — 건드리지 말 것.</li>
-<li>저속 수정은 <strong>λ=1(&gt;3 m/s)에서 완전 무영향</strong> 설계라 ISO/187 불변. 재튜닝 시 이 불변식 유지.</li>
-<li><strong>재baseline</strong>: drivetrain/tire 모듈은 throttle 응답·ISO 수치를 바꾸므로 마일스톤당 1회
-  검증 패스로 <code>docs/VALIDATION.md</code> 갱신.</li>
-<li>TUR 실측 tire 데이터 대외비 — generic 지칭만, .tir 값/세부 커밋 금지.</li>
-<li>kill/체인 명령에서 exit 144 떠도 특정 pid kill 은 실제 실행됨. <code>ps</code>로 확인.</li>
+<li>Drivetrain inertia + torque–RPM (<code>V0.2_DRIVETRAIN.md</code>).</li>
+<li>LuGre tire (<code>V0.2_TIRE_LUGRE.md</code>).</li>
+<li>Engine workshop (실구현).</li>
+<li>Infra sensor runtime mount (<code>SIM_CONFIG_ARCH.md</code> host field).</li>
+<li>v0.4 스턴트 (<code>V0.4_PLAN.md</code> M1–M6).</li>
 </ul>
-<h2 id="6">6. 관련 경로<a class="headerlink" href="#6" title="Permanent link">&para;</a></h2>
+<h2 id="6">6. 주의<a class="headerlink" href="#6" title="Permanent link">&para;</a></h2>
 <ul>
-<li>프로토콜: <code>cosim/cosim_protocol.hpp</code> + <code>cosim/protocol.py</code> (v4, vehicle_id)</li>
-<li>런타임: <code>cosim/realtime_server.cpp</code> (단일차량 → #157 에서 N차량 world)</li>
-<li>GUI: <code>gui/server.py</code> (CosimBridge spawn/subscribe, Runner self.ports[vid]), <code>gui/index.html</code></li>
-<li>코어 동역학: <code>core/src/{bicycle,seven_dof,fourteen_dof}_dynamics.cpp</code> (저속 blend 적용됨)</li>
-<li>v0.2 설계: <code>docs/design/V0.2_{PLAN,MULTIVEHICLE,DRIVETRAIN,TIRE_LUGRE}.md</code>,
-  <code>docs/design/LOW_SPEED_HANDLING.md</code></li>
-<li>task 보드: #157(멀티차량 런타임), #158(GUI 멀티차량), #155(데모 GIF), #138/#140(B/CARLA 논의)</li>
+<li>GUI 시각검증 = 유저. 에이전트 = markup/API/ctest.</li>
+<li><strong>190 green</strong> on default modules.</li>
+<li>TUR tire confidential. Simon Q/R. VDS1 v4.</li>
+</ul>
+<h2 id="7">7. 경로<a class="headerlink" href="#7" title="Permanent link">&para;</a></h2>
+<ul>
+<li>GUI: <code>gui/app.html</code>, <code>gui/server.py</code></li>
+<li>Parts: <code>configs/components/</code>, <code>configs/suspensions/</code></li>
+<li>설계: <code>docs/design/V0.2_*.md</code>, <code>V0.4_PLAN.md</code></li>
 </ul>
 
 

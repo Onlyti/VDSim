@@ -2156,14 +2156,14 @@
 <li><strong>estimation noise = Simon <code>Q=process/R=measurement</code>.</strong> (※ 원 지시의 "Thrun R=process" 는 글로벌 정정으로 폐기 — VDSim estimator(<code>estimator_in_loop</code> 등)는 Simon. SLAM 교재 맥락에 한해 Thrun.)</li>
 <li>보안: 현대 산학 실측 tire 데이터 대외비 — 값/세부 커밋 금지, generic 지칭만.</li>
 <li>git: 명시 요청 없이 push/force/tag 이동 금지. commit 메시지 규약 준수.</li>
-<li>합격기준: 변경 후 <strong>ctest 187 green 유지.</strong> 특히 #161 코어 리팩터는 default == 현재거동(재baseline 금지).</li>
+<li>합격기준: 변경 후 <strong>ctest 190 green 유지.</strong> 특히 #161 코어 리팩터는 default == 현재거동(재baseline 금지).</li>
 </ul>
 <h2 id="5">5. 워크플로 체크리스트<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
 <ol>
 <li>세션 시작: <code>docs/HANDOFF.md</code> + 관련 <code>docs/design/*</code> 읽기.</li>
 <li>작업 분류: 위 rubric 으로 Cursor vs Claude 결정.</li>
 <li>Cursor 위임: <code>~/bin/cursor_delegate.sh "&lt;지시 + 가드레일&gt;" &lt;작업유형&gt; [&lt;workspace절대경로&gt;]</code> (내부 composer-2.5 고정 + usage 자동로깅 → <code>~/cursor_eval/deleg.log</code>; 작업유형 예 boilerplate/test/refactor) 또는 IDE Composer. 직접 <code>cursor-agent -p --force --trust --model composer-2.5 "..."</code> 도 가능하나 deleg.log 미기록.</li>
-<li>빌드·검증: <code>cmake --build build -j &amp;&amp; (cd build &amp;&amp; ctest --output-on-failure)</code> → 187 green 확인.</li>
+<li>빌드·검증: <code>cmake --build build -j &amp;&amp; (cd build &amp;&amp; ctest --output-on-failure)</code> → 190 green 확인.</li>
 <li>commit (규약 준수, push 안 함).</li>
 <li><code>docs/HANDOFF.md</code> 갱신 → 다음 세션·툴이 이어받게.</li>
 </ol>
