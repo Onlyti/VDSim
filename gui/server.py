@@ -84,6 +84,28 @@ def _strip_fleet_susp_if_not_l3(spec):
         spec.pop("rear_susp", None)
 
 
+def _l3_susp_path_warnings(fleet_spec):
+    warnings = []
+    for spec in fleet_spec:
+        if str(spec.get("level", "L2")) != "L3":
+            continue
+        vid = int(spec.get("id", 0))
+        for side, key in (("front", "front_susp"), ("rear", "rear_susp")):
+            stem = spec.get(key)
+            if not stem:
+                continue
+            ref = susp_stem_from_ref(stem)
+            path = SUSP_DIR / f"{ref}.yaml"
+            if not path.is_file():
+                warnings.append(
+                    f"[vdsim] vehicle {vid}: {side} susp '{stem}' not found")
+            elif not is_l3_kinematics_yaml(ref):
+                warnings.append(
+                    f"[vdsim] vehicle {vid}: {side} susp '{stem}' "
+                    "is not L3-native (topology-only YAML)")
+    return warnings
+
+
 _KIN_WARN_MARKERS = ("kinematics attach failed", "front susp", "rear susp")
 
 
@@ -561,6 +583,10 @@ class CosimBridge:
         self._plant_log = None
         self._run_since = None
         self.kinematics_warnings = []
+        self._kin_warn_pre = []
+
+    def set_kinematics_pre_warnings(self, warnings):
+        self._kin_warn_pre = list(warnings or [])
 
     def available(self):
         return COSIM_BIN.exists()
@@ -586,17 +612,19 @@ class CosimBridge:
                 pass
         log_path = os.path.join(self._tmp, "plant.log")
         self._plant_log = open(log_path, "w")
-        self.kinematics_warnings = []
+        self.kinematics_warnings = list(self._kin_warn_pre)
         self.proc = subprocess.Popen(args, stdout=self._plant_log,
-                                     stderr=subprocess.STDOUT)
+                                     stderr=subprocess.STDOUT, cwd=str(REPO))
         self.started_t = time.monotonic()
         threading.Thread(target=self._rx_loop, args=(self._rx,), daemon=True).start()
 
     def refresh_kinematics_warnings(self):
-        if self._plant_log is None:
-            self.kinematics_warnings = []
-            return self.kinematics_warnings
-        self.kinematics_warnings = _scan_kinematics_warnings(self._plant_log.name)
+        merged = list(self._kin_warn_pre)
+        if self._plant_log is not None:
+            for w in _scan_kinematics_warnings(self._plant_log.name):
+                if w not in merged:
+                    merged.append(w)
+        self.kinematics_warnings = merged
         return self.kinematics_warnings
 
     def _road_cli(self, args, road, terrain, sensors, sensor_delay):
@@ -1075,6 +1103,7 @@ class Runner:
             return
         _cleanup_stale_plant(int(self.cosim.cfg.get("cmd_port", COSIM_CMD_PORT)))
         fleet = self._fleet_launch()
+        self.cosim.set_kinematics_pre_warnings(_l3_susp_path_warnings(self.fleet_spec))
         if self.cosim.available():
             self.cosim.start(self.vp, self.tp, over, road=road, sensors=sensors,
                              terrain=self.terrain, sensor_delay=self.sensor_delay,

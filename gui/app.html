@@ -2434,8 +2434,7 @@ async function openModal(vid) {
   actFields = (await (await fetch('/api/actuator')).json()).fields;
   sensFields = (await (await fetch('/api/sensors')).json()).fields;
   tireSamples = (await (await fetch('/api/tire/samples')).json()).samples;
-  const sj = await (await fetch('/api/suspension/list?preview=1')).json();
-  suspList = sj.preview || sj.samples || [];
+  suspList = (await (await fetch('/api/suspension/list')).json()).samples || [];
   suspDefaults = await (await fetch(`/api/suspension/default?vehicle=${encodeURIComponent(vehKey)}`)).json();
   const fspec = fspec0;
   if (fspec?.front_susp) modalSuspFront = fspec.front_susp;

@@ -4,7 +4,14 @@ All notable changes to VDSim are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow
 [SemVer](https://semver.org/).
 
-## [Unreleased] — v0.2.1 hotfix (parts contract)
+## [Unreleased] — v0.2.2 hotfix
+
+### Fixed
+- Edit modal kinematics dropdown uses L3-native list only (preview API unchanged for schematic).
+- `vdsim_realtime` launched with `cwd=REPO` for relative suspension paths.
+- L3 fleet with missing or topology-only suspension stems surfaces pre-launch warnings.
+
+## [0.2.1] — parts contract hotfix
 
 ### Fixed
 - `fsk_formula` fleet defaults use L3-native kinematics YAML (`dw_front_sports` / `5link_rear_sports`).
