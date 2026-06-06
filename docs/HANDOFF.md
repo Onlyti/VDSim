@@ -25,7 +25,8 @@ plant: orphan cleanup, STATE subscriber fix (`touch_sub(seed)`), fleet ghost pru
 ## 4. 미완 (다음 할 일)
 - **WS4** vehicle assembly (chassis + parts YAML).
 - **WS3** 잔여 — data-comms 패널, 3-tab 설계 대비 갭 (app에 setup/sim 일부 있음).
-- **WS2** — app 모달 vs index Workshops parity (Tire import·곡선 등 index에만 있던 것 이전).
+- ~~**WS2** app 모달 parity~~ **DONE**: Chassis preset·linkPlantFields·Actuator step curves·
+  Tire import/samples/curves·Susp presets (`app.html` edit modal).
 - v0.3.0: drivetrain 관성+torque-RPM, LuGre tire (`V0.2_DRIVETRAIN.md`, `V0.2_TIRE_LUGRE.md`).
 - v0.4.0: 점프~루프 (`V0.4_PLAN.md` M1–M6).
 - 멀티차량 future: V2V, dynamic spawn, mesh LOD.
