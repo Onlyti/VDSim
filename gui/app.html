@@ -13,10 +13,25 @@
   .sidebar { width:320px; flex-shrink:0; display:flex; flex-direction:column;
              background:var(--panel); border-right:1px solid var(--border); overflow:hidden; }
   .sidebar-scroll { flex:1; overflow-y:auto; padding:10px 12px; display:flex; flex-direction:column; gap:10px; }
-  .center { flex:1; min-width:0; position:relative; background:#e9eef3; }
+  .work { flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden; }
+  .center { flex:1; min-width:0; min-height:0; position:relative; background:#e9eef3; }
   #view { position:absolute; inset:0; }
   .telemetry { width:300px; flex-shrink:0; background:var(--panel); border-left:1px solid var(--border);
                overflow-y:auto; padding:12px 14px; font-variant-numeric:tabular-nums; }
+  .setup-bar { flex-shrink:0; border-top:1px solid var(--border); background:var(--panel);
+               padding:8px 12px 10px; max-height:min(36vh, 300px); overflow:auto; }
+  .setup-bar-h { display:flex; align-items:baseline; gap:10px; margin-bottom:8px; }
+  .setup-bar-h .card-h { margin:0; }
+  .setup-bar-inner { display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap; }
+  .setup-section { flex:0 1 auto; min-width:150px; max-width:220px; padding:8px 10px;
+                   background:#f8fafc; border:1px solid var(--border); border-radius:8px; }
+  .setup-section.path { min-width:170px; max-width:200px; }
+  .setup-section.map { min-width:200px; max-width:260px; }
+  .setup-section .grp { margin:0 0 4px; }
+  .setup-section label { margin:2px 0 1px; font-size:11px; }
+  .setup-section .setup-table { max-height:88px; display:block; overflow:auto; }
+  .setup-bar-actions { display:flex; flex-direction:column; justify-content:flex-end; gap:6px; min-width:96px; }
+  #setup_apply { margin:0; width:100%; }
   .card { background:#f8fafc; border:1px solid var(--border); border-radius:8px; padding:10px 12px; }
   .card-h { font:600 11px Tahoma; margin:0 0 8px; color:#16202b; letter-spacing:.4px;
             text-transform:uppercase; display:flex; align-items:center; justify-content:space-between; }
@@ -34,7 +49,9 @@
   .kv { display:flex; justify-content:space-between; font-size:12px; padding:2px 0; gap:8px; }
   .kv span { color:var(--dim); flex-shrink:0; }
   .kv b { color:#16202b; font-weight:600; text-align:right; word-break:break-all; }
-  .grp { font:600 10px Tahoma; color:var(--acc); text-transform:uppercase; letter-spacing:.5px; margin:10px 0 4px; }
+  .grp { font:600 10px Tahoma; color:var(--acc); text-transform:uppercase; letter-spacing:.5px; margin:10px 0 4px;
+         display:flex; align-items:center; gap:0; }
+  label[data-help] { display:flex; align-items:center; }
   .tree { font-size:12px; }
   .tree-row { display:flex; align-items:center; gap:4px; padding:3px 0; }
   .tree-row.veh { font-weight:600; color:#16202b; }
@@ -45,8 +62,12 @@
               font-size:11px; color:var(--dim); }
   #minimap { width:100%; height:120px; display:block; background:#fff; border:1px solid var(--border);
              border-radius:6px; }
-  .cam-bar { position:absolute; top:10px; left:10px; display:flex; gap:4px; z-index:5; }
+  .cam-bar { position:absolute; top:10px; left:10px; display:flex; gap:4px; z-index:5; flex-wrap:wrap; max-width:70%; }
   .cam-bar button { width:auto; padding:6px 10px; background:rgba(255,255,255,.9); }
+  #edit_hint { position:absolute; top:48px; left:10px; z-index:5; font-size:11px; color:#16202b;
+               background:rgba(255,252,245,.92); border:1px solid var(--border); border-radius:6px;
+               padding:5px 9px; display:none; pointer-events:none; }
+  .center.illustr #view { filter:saturate(1.08) contrast(1.02); }
   #conn { font-size:11px; margin-top:4px; }
   #manbar { position:absolute; bottom:14px; left:50%; transform:translateX(-50%); display:none;
             align-items:center; gap:10px; z-index:5; padding:8px 10px; background:rgba(255,255,255,.92);
@@ -63,7 +84,7 @@
              border-bottom:1px solid var(--border); background:#eef2f6; border-radius:12px 12px 0 0; }
   .modal-h b { font:600 14px Tahoma; color:#16202b; }
   .modal-tabs { display:flex; flex-wrap:wrap; gap:4px; padding:8px 12px; border-bottom:1px solid var(--border); }
-  .modal-tabs button { flex:none; padding:6px 10px; font-size:11px; }
+  .modal-tabs button { flex:none; padding:6px 10px; font-size:11px; display:inline-flex; align-items:center; }
   .modal-body { flex:1; overflow:auto; padding:12px 16px; max-height:58vh; }
   .modal-foot { padding:8px 16px; border-top:1px solid var(--border); font-size:11px; color:var(--dim); }
   .fld { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:3px 0; }
@@ -74,8 +95,30 @@
   .fld.na { opacity:.35; }
   .badge { font-size:9px; color:var(--dim); border:1px solid var(--border); border-radius:3px;
            padding:0 3px; margin-left:5px; }
-  .subgrp { font:600 9px Tahoma; color:var(--dim); text-transform:uppercase; margin:7px 0 2px; }
+  .subgrp { font:600 9px Tahoma; color:var(--dim); text-transform:uppercase; margin:7px 0 2px;
+            display:flex; align-items:center; }
   .later { opacity:.45; font-style:italic; }
+  .modal-tools { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; align-items:center; }
+  .modal-tools button { flex:none; width:auto; padding:5px 10px; font-size:11px; }
+  .modal-tools select { font-size:11px; padding:4px; border:1px solid var(--border); border-radius:4px; }
+  .modal-curves canvas { width:100%; height:132px; display:block; margin:6px 0;
+    background:#fff; border:1px solid var(--border); border-radius:5px; }
+  #sim_load_input { display:none; }
+  .hidden { display:none !important; }
+  .setup-inp { width:58px; background:#f4f7fa; color:var(--ink); border:1px solid var(--border);
+               border-radius:4px; padding:3px 4px; font-size:11px; font-variant-numeric:tabular-nums; }
+  .setup-inp.wide { width:100%; }
+  .setup-table { width:100%; border-collapse:collapse; font-size:11px; margin:4px 0; }
+  .setup-table th { text-align:left; color:var(--dim); font-weight:600; padding:2px 3px; }
+  .setup-table td { padding:2px 1px; }
+  .setup-table button { flex:none; width:22px; padding:2px; font-size:10px; }
+  .setup-fleet { border:1px solid var(--border); border-radius:6px; padding:5px 7px; margin:3px 0 4px;
+                 background:#fff; }
+  .setup-fleet.sel { border-color:var(--acc); box-shadow:0 0 0 1px var(--acc); }
+  .setup-fleet b { font-size:11px; }
+  .setup-row { display:flex; gap:4px; align-items:center; margin:2px 0; flex-wrap:wrap; }
+  .setup-row label { margin:0; font-size:10px; min-width:14px; }
+  #setup_apply { background:var(--acc); color:#001018; border-color:var(--acc); font-weight:600; }
 </style>
 <script type="importmap">
 { "imports": {
@@ -92,83 +135,153 @@
     </div>
     <div class="sidebar-scroll">
       <section class="card">
-        <div class="card-h">SIM</div>
+        <div class="card-h" data-help="model">SIM</div>
         <div class="row">
-          <button id="sim_play" title="Start">▶</button>
-          <button id="sim_stop" title="Stop">⏸</button>
+          <button id="sim_play" title="Start simulation">▶</button>
+          <button id="sim_stop" title="Stop (setup mode)">⏹</button>
           <button id="sim_reset" title="Reset">⟲</button>
         </div>
-        <label>realtime <span id="ts_val" class="sub">1.0×</span></label>
+        <label data-help="numerics">realtime <span id="ts_val" class="sub">1.0×</span></label>
         <input id="ts_slider" type="range" min="0.1" max="3" step="0.1" value="1">
         <div class="row" style="margin-top:8px">
-          <button id="sim_save" class="stub" title="Save config (coming soon)">save cfg</button>
-          <button id="sim_load" class="stub" title="Load config (coming soon)">load</button>
+          <button id="sim_save" title="Download vehicle+tire+sim JSON">save cfg</button>
+          <button id="sim_load" title="Load JSON config">load</button>
+          <input id="sim_load_input" type="file" accept=".json,application/json">
         </div>
-        <label style="margin-top:8px">Drive mode</label>
+        <div class="row">
+          <button id="fleet_demo" title="Load 2-car shared-world scenario">2-car demo</button>
+        </div>
+        <label style="margin-top:8px" data-help="run">Drive mode</label>
         <div class="row">
           <button id="mode_drv">Autopilot</button>
           <button id="mode_man">Manual</button>
         </div>
       </section>
       <section class="card">
-        <div class="card-h">
+        <div class="card-h" data-help="Geometry">
           <span>Vehicles</span>
           <span>
-            <button id="add_veh" class="icon stub" title="멀티차량: #157 예정">+</button>
+            <button id="add_veh" class="icon" title="Add vehicle to fleet">+</button>
           </span>
         </div>
         <div id="veh_tree" class="tree"></div>
         <div class="tree-sep">
           Infra sensors
-          <button id="add_infra" class="icon stub" title="멀티차량: #157 예정" style="float:right">+</button>
+          <button id="add_infra" class="icon stub" title="Infra sensors (stub)" style="float:right">+</button>
         </div>
+        <div id="infra_tree" class="tree"></div>
       </section>
       <section class="card" style="flex-shrink:0">
-        <div class="card-h">Mini-map</div>
+        <div class="card-h" data-help="run">Mini-map</div>
         <canvas id="minimap"></canvas>
       </section>
     </div>
   </aside>
-  <main class="center">
-    <div id="view"></div>
-    <div class="cam-bar">
-      <button id="cam_orbit" class="on">Orbit</button>
-      <button id="cam_chase">Chase</button>
-      <button id="cam_top">Top</button>
+  <div class="work">
+    <main class="center">
+      <div id="view"></div>
+      <div class="cam-bar">
+        <button id="cam_orbit">Orbit</button>
+        <button id="cam_chase">Chase</button>
+        <button id="cam_top" class="on">Top</button>
+        <button id="cam_path_edit" title="Drag waypoints on the map">Edit track</button>
+      </div>
+      <div id="edit_hint">Drag ● waypoints · click ground to add · Del remove · Esc done</div>
+      <div id="manbar">
+        <button id="m_brk" class="mbtn">◀ BRAKE</button>
+        <input id="m_steer" type="range" min="-0.4" max="0.4" step="0.01" value="0">
+        <button id="m_thr" class="mbtn">THROTTLE ▶</button>
+      </div>
+    </main>
+    <div id="setup_panel" class="setup-bar">
+      <div class="setup-bar-h">
+        <div class="card-h" data-help="run">Scenario setup</div>
+        <span class="sub">Stopped — edit then ▶ Play</span>
+      </div>
+      <div class="setup-bar-inner">
+        <section class="setup-section path">
+          <div class="grp" data-help="run">Path</div>
+          <select id="setup_path_preset" class="setup-inp wide">
+            <option value="figure8">Figure-8</option>
+            <option value="straight">Straight</option>
+            <option value="custom">Custom waypoints</option>
+          </select>
+          <div id="setup_wp_box" style="margin-top:4px">
+            <table class="setup-table">
+              <thead><tr><th>x</th><th>y</th><th></th></tr></thead>
+              <tbody id="setup_wp_rows"></tbody>
+            </table>
+            <button id="setup_wp_add" style="width:auto;flex:none;padding:3px 7px;font-size:10px;margin-top:2px">+ wp</button>
+          </div>
+        </section>
+        <section class="setup-section">
+          <div class="grp" data-help="frames">Vehicle spawn</div>
+          <div id="setup_fleet"></div>
+          <button id="setup_fleet_add" style="width:100%;padding:4px;font-size:10px;margin-top:2px">+ vehicle</button>
+        </section>
+        <section class="setup-section">
+          <div class="grp" data-help="road">Road</div>
+          <div class="setup-row"><label>μ</label><input id="setup_mu" class="setup-inp" type="number" step="0.05" value="1">
+            <label>g°</label><input id="setup_grade" class="setup-inp" type="number" step="0.5" value="0"></div>
+          <div class="setup-row"><label>b°</label><input id="setup_bank" class="setup-inp" type="number" step="0.5" value="0">
+            <label>v</label><input id="setup_v_target" class="setup-inp" type="number" step="0.5" value="10"></div>
+        </section>
+        <section class="setup-section map">
+          <div class="grp" data-help="road">Map / terrain</div>
+          <input id="setup_xodr" class="setup-inp wide" type="text" placeholder="OpenDRIVE .xodr">
+          <div class="row" style="margin-top:3px">
+            <button id="setup_map_load" style="flex:1;padding:5px;font-size:11px">Map</button>
+            <button id="setup_terrain_clr" style="flex:1;padding:5px;font-size:11px">Clear</button>
+          </div>
+          <input id="setup_obj" class="setup-inp wide" type="text" placeholder="terrain .obj" style="margin-top:4px">
+          <button id="setup_terrain_load" style="width:100%;margin-top:3px;padding:5px;font-size:11px">Load terrain</button>
+        </section>
+        <section class="setup-section">
+          <div class="grp" data-help="cosim">Runtime / scenario</div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink)">
+            <input type="checkbox" id="setup_attach"> Attach external
+          </label>
+          <input id="setup_cosim_host" class="setup-inp wide" type="text" value="127.0.0.1" placeholder="runtime host">
+          <div class="setup-row"><label>cmd</label><input id="setup_cosim_port" class="setup-inp" type="number" value="7401"></div>
+          <select id="setup_scenario" class="setup-inp wide" style="margin-top:4px"></select>
+          <div class="row" style="margin-top:3px">
+            <button id="setup_scenario_load" style="flex:1;padding:4px;font-size:10px">Load</button>
+            <button id="setup_scenario_save" style="flex:1;padding:4px;font-size:10px">Save</button>
+          </div>
+        </section>
+        <div class="setup-bar-actions">
+          <button id="setup_apply">Apply</button>
+        </div>
+      </div>
     </div>
-    <div id="manbar">
-      <button id="m_brk" class="mbtn">◀ BRAKE</button>
-      <input id="m_steer" type="range" min="-0.4" max="0.4" step="0.01" value="0">
-      <button id="m_thr" class="mbtn">THROTTLE ▶</button>
-    </div>
-  </main>
-  <aside class="telemetry">
+  </div>
+  <aside class="telemetry hidden" id="telemetry_aside">
     <div class="card-h" style="margin-bottom:10px">Selected: <span id="tel_veh">Vehicle 0</span></div>
-    <div class="grp">Pose</div>
+    <div class="grp" data-help="frames">Pose</div>
     <div class="kv"><span>x</span><b id="tel_x">—</b></div>
     <div class="kv"><span>y</span><b id="tel_y">—</b></div>
     <div class="kv"><span>z</span><b id="tel_z">—</b></div>
     <div class="kv"><span>roll</span><b id="tel_roll">—</b></div>
     <div class="kv"><span>pitch</span><b id="tel_pitch">—</b></div>
     <div class="kv"><span>yaw</span><b id="tel_yaw">—</b></div>
-    <div class="grp">Velocity</div>
+    <div class="grp" data-help="frames">Velocity</div>
     <div class="kv"><span>vx</span><b id="tel_vx">—</b></div>
     <div class="kv"><span>vy</span><b id="tel_vy">—</b></div>
     <div class="kv"><span>yaw rate</span><b id="tel_r">—</b></div>
-    <div class="grp">Accel</div>
+    <div class="grp" data-help="frames">Accel</div>
     <div class="kv"><span>ax</span><b id="tel_ax">—</b></div>
     <div class="kv"><span>ay</span><b id="tel_ay">—</b></div>
-    <div class="grp">wheel spin [rad/s] FL FR RL RR</div>
+    <div class="grp" data-help="Tire">wheel spin [rad/s] FL FR RL RR</div>
     <div class="sub" id="tel_spin">—</div>
-    <div class="grp">slip ratio κ FL FR RL RR</div>
+    <div class="grp" data-help="Tire">slip ratio κ FL FR RL RR</div>
     <div class="sub" id="tel_kappa">—</div>
-    <div class="grp">slip angle α [deg] FL FR RL RR</div>
+    <div class="grp" data-help="Tire">slip angle α [deg] FL FR RL RR</div>
     <div class="sub" id="tel_alpha">—</div>
-    <div class="grp">Fz [N] FL FR RL RR</div>
+    <div class="grp" data-help="Tire">Fz [N] FL FR RL RR</div>
     <div class="sub" id="tel_fz">—</div>
-    <div class="grp">tire force Ft [N] FL FR RL RR</div>
+    <div class="grp" data-help="Tire">tire force Ft [N] FL FR RL RR</div>
     <div class="sub" id="tel_ft">—</div>
-    <div class="grp">rack torque</div>
+    <div class="grp" data-help="Steering">rack torque</div>
     <div class="kv"><span>[N·m]</span><b id="tel_rack">—</b></div>
     <div class="grp later">battery / SOC</div>
     <div class="kv later"><span>SOC</span><b>later</b></div>
@@ -193,10 +306,36 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const $ = id => document.getElementById(id);
+const DOCS = 'https://onlyti.github.io/VDSim/main/theory/';
+const DOC_MAP = {
+  'Preset': '', 'Mass & inertia': '02_rigid_body_dynamics', 'Geometry': '04_ld1_bicycle',
+  'Suspension': '05_ld2_seven_dof', 'Drivetrain': '05_ld2_seven_dof', 'Steering': '05_ld2_seven_dof',
+  'Aero': '04_ld1_bicycle', 'Tire': '03_tire_pacejka_mf96', 'Actuator & feedback': '17_actuator_and_sensing',
+  'model': '', 'numerics': '11_numerical_integration', 'run': '09_pure_pursuit_path', 'cosim': '18_runtime_and_cosim',
+  'frames': '01_frames_and_conventions', 'road': '03_tire_pacejka_mf96',
+};
+function docHref(key) { const f = DOC_MAP[key]; return f === undefined ? null : DOCS + (f ? f + '/' : ''); }
+function helpIcon(href) {
+  if (!href) return null;
+  const a = document.createElement('a'); a.href = href; a.target = '_blank'; a.rel = 'noopener';
+  a.textContent = '?'; a.title = '관련 문서 열기';
+  a.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;margin-left:6px;' +
+    'border:1px solid var(--dim);border-radius:50%;font:bold 10px Tahoma;color:var(--dim);text-decoration:none;cursor:help;vertical-align:middle';
+  a.onclick = e => e.stopPropagation();
+  return a;
+}
+function addHelp(node, key) { const a = helpIcon(docHref(key)); if (a && node) node.appendChild(a); }
+function initStaticHelp() {
+  document.querySelectorAll('[data-help]').forEach(el => addHelp(el, el.dataset.help));
+}
 const f = (v, p = 2) => (v == null ? '—' : (+v).toFixed(p));
 const fmtArr = (a, p = 2) => (!a || !a.length ? '—' : a.map(v => (+v).toFixed(p)).join('  '));
 async function post(url, obj) {
   await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) });
+}
+async function postJson(url, obj) {
+  const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) });
+  return r.json();
 }
 
 // ---- three.js scene (ported from index.html) ----
@@ -349,9 +488,13 @@ function sampleTerrain(wx, wy) {
 }
 drawTerrain(); drawScenery(); drawRoad();
 
+const FLEET_COLORS = [0x01A0E9, 0xDC291E, 0x34c759, 0xf5a623];
 const car = new THREE.Group();
 car.rotation.order = 'YXZ';
-const sprung = new THREE.Group(); car.add(sprung); scene.add(car);
+const ground = new THREE.Group(); ground.rotation.order = 'YXZ';
+const sprung = new THREE.Group();
+car.add(ground); car.add(sprung); scene.add(car);
+const fleetCars = {};
 const bodyMat = new THREE.MeshStandardMaterial({ color: 0x01A0E9, metalness: .3, roughness: .5 });
 const cabinMat = new THREE.MeshStandardMaterial({ color: 0x9fd8f5 });
 const wheelMat = new THREE.MeshStandardMaterial({ color: 0x14181f });
@@ -360,14 +503,133 @@ const unsprMat = new THREE.MeshStandardMaterial({ color: 0x444c57 });
 let wheels = [], axx = [], axy = [], axz = [], springs = [], unspr = [], renderLevel = null, rebuilding = false, steerIdx = [0, 1];
 const FSCALE = 0.0012, FZSCALE = 0.0006;
 function clearGroup(g) { for (const c of [...g.children]) { g.remove(c); if (c.geometry) c.geometry.dispose(); } }
-async function rebuildCar(level) {
+function disposeCarGroup(grp) {
+  if (!grp) return;
+  grp.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+  scene.remove(grp);
+}
+
+function buildStaticCar(geom, level, bodyColor) {
+  const grp = new THREE.Group();
+  grp.rotation.order = 'YXZ';
+  const gnd = new THREE.Group(); gnd.rotation.order = 'YXZ';
+  const spr = new THREE.Group();
+  grp.add(gnd); grp.add(spr);
+  const a = geom.cg_to_front, b = geom.cg_to_rear, tf = geom.track_front, tr = geom.track_rear, R = geom.wheel_radius_nominal;
+  const bike = (level === 'K' || level === 'L1'), susp = (level === 'L3');
+  const wp = susp ? gnd : grp;
+  const L = a + b, W = Math.max(tf, tr, 0.6);
+  const bodyH = 0.5, bodyY = R + 0.45, bodyW = bike ? 0.45 : Math.max(0.4, W - 0.5);
+  const bm = new THREE.MeshStandardMaterial({ color: bodyColor, metalness: .3, roughness: .5 });
+  const cm = new THREE.MeshStandardMaterial({ color: 0x9fd8f5 });
+  const wm = new THREE.MeshStandardMaterial({ color: 0x14181f });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(L * 0.78, bodyH, bodyW), bm);
+  body.position.set((a - b) / 2, bodyY, 0); spr.add(body);
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(L * 0.34, 0.38, bike ? 0.34 : Math.max(0.3, W * 0.55)), cm);
+  cabin.position.set((a - b) / 2 - 0.15, bodyY + bodyH / 2 + 0.19, 0); spr.add(cabin);
+  const pos = bike ? [[a, 0], [-b, 0]] : [[a, -tf / 2], [a, tf / 2], [-b, -tr / 2], [-b, tr / 2]];
+  const wg = new THREE.CylinderGeometry(R, R, 0.22, 14);
+  pos.forEach(([x, z]) => {
+    const w = new THREE.Mesh(wg, wm); w.rotation.order = 'YXZ'; w.rotation.x = Math.PI / 2;
+    w.position.set(x, R, z); wp.add(w);
+  });
+  return { group: grp, ground: gnd, sprung: spr, level };
+}
+
+function placeFleetCar(vid, st) {
+  const fc = fleetCars[vid]; if (!fc || st.x == null) return;
+  fc.group.position.copy(toThree(st.x, st.y, 0));
+  fc.group.position.y = terrainGrid ? sampleTerrain(fc.group.position.x, -fc.group.position.z) : 0;
+  fc.group.rotation.set(0, st.yaw || 0, 0);
+}
+
+async function ensureFleetCar(vid, spec) {
+  if (vid === selectedVid) return;
+  const level = spec.level || 'L2';
+  const col = FLEET_COLORS[vid % FLEET_COLORS.length];
+  const geom = spec.geom || {};
+  const fc = fleetCars[vid];
+  if (fc && fc.level === level && fc.color === col) return;
+  if (fc) { disposeCarGroup(fc.group); delete fleetCars[vid]; }
+  if (!geom.cg_to_front) {
+    const r = await (await fetch(`/api/vehicle?vehicle_id=${vid}`)).json();
+    const g = {}; r.fields.forEach(f => { g[f.name] = f.value; });
+    Object.assign(geom, { cg_to_front: g.cg_to_front, cg_to_rear: g.cg_to_rear,
+      track_front: g.track_front, track_rear: g.track_rear, wheel_radius_nominal: g.wheel_radius_nominal });
+  }
+  const built = buildStaticCar(geom, level, col);
+  scene.add(built.group);
+  fleetCars[vid] = { ...built, color: col };
+}
+
+function fleetFromSpec(specs) {
+  const f = {};
+  for (const s of specs || []) {
+    f[String(+s.id)] = {
+      x: s.x0, y: s.y0, yaw: s.yaw0, vx: s.vx0 || 0,
+      level: s.level || 'L2', vehicle: s.vehicle || '',
+    };
+  }
+  return f;
+}
+
+function filterFleet(fleet) {
+  const allowed = new Set((window._fleetSpec || []).map(f => String(+f.id)));
+  const out = {};
+  for (const [k, v] of Object.entries(fleet || {})) {
+    if (allowed.has(k)) out[k] = v;
+  }
+  return out;
+}
+
+function purgeOrphanFleetMeshes() {
+  const allowed = new Set((window._fleetSpec || []).map(f => String(+f.id)));
+  for (const vid of Object.keys(fleetCars)) {
+    if (!allowed.has(vid)) {
+      disposeCarGroup(fleetCars[vid].group);
+      delete fleetCars[vid];
+    }
+  }
+}
+
+async function refreshFleetView(specs, vid = selectedVid) {
+  window._fleetSpec = specs || [];
+  purgeOrphanFleetMeshes();
+  const fleet = fleetFromSpec(window._fleetSpec);
+  await syncFleetMeshes(fleet, vid);
+  const st = fleet[String(vid)] || fleet[String(window._fleetSpec[0]?.id)];
+  if (st) previewSpawn(st);
+}
+
+async function syncFleetMeshes(fleet, sel) {
+  const allowed = new Set((window._fleetSpec || []).map(f => String(+f.id)));
+  const ids = new Set(Object.keys(fleet || {}).filter(k => allowed.has(k)));
+  purgeOrphanFleetMeshes();
+  for (const vid of Object.keys(fleetCars)) {
+    if (!ids.has(vid) || +vid === sel) {
+      disposeCarGroup(fleetCars[vid].group);
+      delete fleetCars[vid];
+    }
+  }
+  for (const [vid, st] of Object.entries(fleet || {})) {
+    const id = +vid;
+    if (id === sel || st.x == null) continue;
+    const spec = (window._fleetSpec || []).find(f => +f.id === id) || { id, level: st.level || 'L2', geom: {} };
+    await ensureFleetCar(id, spec);
+    placeFleetCar(vid, st);
+  }
+}
+
+async function rebuildCar(level, vid = selectedVid) {
   rebuilding = true;
-  const r = await (await fetch('/api/vehicle')).json(); const g = {}; r.fields.forEach(f => g[f.name] = f.value);
+  const r = await (await fetch(`/api/vehicle?vehicle_id=${vid}`)).json();
+  const g = {}; r.fields.forEach(f => g[f.name] = f.value);
   const a = g.cg_to_front, b = g.cg_to_rear, tf = g.track_front, tr = g.track_rear, R = g.wheel_radius_nominal;
   clearGroup(sprung);
-  [...wheels, ...springs, ...unspr, ...axx, ...axy, ...axz].forEach(m => car.remove(m));
+  [...wheels, ...springs, ...unspr, ...axx, ...axy, ...axz].forEach(m => { car.remove(m); ground.remove(m); });
   wheels = []; axx = []; axy = []; axz = []; springs = []; unspr = [];
   const bike = (level === 'K' || level === 'L1'), susp = (level === 'L3');
+  const wp = susp ? ground : car;
   const L = a + b, W = Math.max(tf, tr, 0.6);
   const bodyH = 0.5, bodyY = R + 0.45, bodyBottom = bodyY - bodyH / 2;
   const bodyW = bike ? 0.45 : Math.max(0.4, W - 0.5);
@@ -379,27 +641,28 @@ async function rebuildCar(level) {
   const pos = bike ? [[a, 0], [-b, 0]] : [[a, -tf / 2], [a, tf / 2], [-b, -tr / 2], [-b, tr / 2]];
   const wg = new THREE.CylinderGeometry(R, R, 0.22, 18);
   pos.forEach(([x, z]) => {
-    const w = new THREE.Mesh(wg, wheelMat); w.rotation.order = 'YXZ'; w.rotation.x = Math.PI / 2; w.position.set(x, R, z); car.add(w); wheels.push(w);
+    const w = new THREE.Mesh(wg, wheelMat); w.rotation.order = 'YXZ'; w.rotation.x = Math.PI / 2; w.position.set(x, R, z); wp.add(w); wheels.push(w);
     const mk = col => {
       const m = new THREE.MeshBasicMaterial({ color: col });
       const g = new THREE.Group();
       const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1, 12), m); shaft.position.y = 0.5;
       const head = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.30, 16), m); head.position.y = 1.0;
-      g.add(shaft, head); g.position.set(x, 0.02, z); g.visible = false; g.userData = { shaft, head }; car.add(g); return g;
+      g.add(shaft, head); g.position.set(x, 0.02, z); g.visible = false; g.userData = { shaft, head }; wp.add(g); return g;
     };
     axx.push(mk(0xff3b30)); axy.push(mk(0x34c759)); axz.push(mk(0x0a84ff));
     if (susp) {
       const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, span, 12), springMat);
-      sp.position.set(x, R + span / 2, z); car.add(sp); springs.push(sp);
+      sp.position.set(x, R + span / 2, z); wp.add(sp); springs.push(sp);
       const us = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.22), unsprMat);
-      us.position.set(x, R, z); car.add(us); unspr.push(us);
+      us.position.set(x, R, z); wp.add(us); unspr.push(us);
     } else {
       const st = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, span, 8), unsprMat);
-      st.position.set(x, R + span / 2, z); car.add(st); springs.push(st); unspr.push(null);
+      st.position.set(x, R + span / 2, z); wp.add(st); springs.push(st); unspr.push(null);
     }
   });
   steerIdx = bike ? [0] : [0, 1];
   renderLevel = level; rebuilding = false;
+  if (illustrOn) { illustrOn = false; setIllustrationMode(true); }
 }
 rebuildCar('L2');
 
@@ -452,7 +715,9 @@ function pushTrail(x, z) {
 
 function toThree(x, y, z) { return new THREE.Vector3(x, z, -y); }
 
-let camMode = 'orbit';
+let camMode = 'top';
+let playCamMode = 'orbit';
+let simRunning = false;
 const tgt = { pos: new THREE.Vector3(), yaw: 0, roll: 0, pitch: 0, vx: 0, vy: 0, r: 0, has: false };
 const lerpAngle = (a, b, t) => { let d = ((b - a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; return a + d * t; };
 const clock = new THREE.Clock();
@@ -470,31 +735,46 @@ function resizeView() {
 new ResizeObserver(resizeView).observe(view);
 resizeView();
 
+function carGroundPose(nyaw) {
+  let grade = roadGrade, bank = roadBank;
+  if (terrainGrid) {
+    const wx = car.position.x, wy = -car.position.z, e = 2.0;
+    car.position.y = sampleTerrain(wx, wy);
+    grade = (sampleTerrain(wx + e, wy) - sampleTerrain(wx - e, wy)) / (2 * e);
+    bank = (sampleTerrain(wx, wy + e) - sampleTerrain(wx, wy - e)) / (2 * e);
+  } else {
+    car.position.y = roadGrade * car.position.x + roadBank * (-car.position.z);
+  }
+  const rPitch = grade * Math.cos(nyaw) + bank * Math.sin(nyaw);
+  const rRoll = -grade * Math.sin(nyaw) + bank * Math.cos(nyaw);
+  const l3 = (renderLevel === 'L3');
+  if (l3) {
+    car.rotation.set(0, nyaw, 0);
+    ground.rotation.set(rRoll, 0, -rPitch);
+  } else {
+    car.rotation.set(rRoll, nyaw, -rPitch);
+    ground.rotation.set(0, 0, 0);
+  }
+  sprung.rotation.x += (tgt.roll - sprung.rotation.x) * 0.3;
+  sprung.rotation.z += ((-tgt.pitch) - sprung.rotation.z) * 0.3;
+}
 function frame() {
   requestAnimationFrame(frame);
   const dt = Math.min(clock.getDelta(), 0.1);
   if (tgt.has) {
-    const yaw = car.rotation.y;
-    const vE = tgt.vx * Math.cos(yaw) - tgt.vy * Math.sin(yaw);
-    const vN = tgt.vx * Math.sin(yaw) + tgt.vy * Math.cos(yaw);
-    car.position.x += vE * dt;
-    car.position.z += -vN * dt;
-    car.position.lerp(tgt.pos, 0.10);
-    const nyaw = lerpAngle(yaw + tgt.r * dt, tgt.yaw, 0.15);
-    let grade = roadGrade, bank = roadBank;
-    if (terrainGrid) {
-      const wx = car.position.x, wy = -car.position.z, e = 2.0;
-      car.position.y = sampleTerrain(wx, wy);
-      grade = (sampleTerrain(wx + e, wy) - sampleTerrain(wx - e, wy)) / (2 * e);
-      bank = (sampleTerrain(wx, wy + e) - sampleTerrain(wx, wy - e)) / (2 * e);
+    if (simRunning) {
+      const yaw = car.rotation.y;
+      const vE = tgt.vx * Math.cos(yaw) - tgt.vy * Math.sin(yaw);
+      const vN = tgt.vx * Math.sin(yaw) + tgt.vy * Math.cos(yaw);
+      car.position.x += vE * dt;
+      car.position.z += -vN * dt;
+      car.position.lerp(tgt.pos, 0.10);
+      carGroundPose(lerpAngle(yaw + tgt.r * dt, tgt.yaw, 0.15));
     } else {
-      car.position.y = roadGrade * car.position.x + roadBank * (-car.position.z);
+      tgt.vx = 0; tgt.vy = 0; tgt.r = 0;
+      car.position.copy(tgt.pos);
+      carGroundPose(tgt.yaw || 0);
     }
-    const rPitch = grade * Math.cos(nyaw) + bank * Math.sin(nyaw);
-    const rRoll = -grade * Math.sin(nyaw) + bank * Math.cos(nyaw);
-    car.rotation.set(rRoll, nyaw, -rPitch);
-    sprung.rotation.x += (tgt.roll - sprung.rotation.x) * 0.3;
-    sprung.rotation.z += ((-tgt.pitch) - sprung.rotation.z) * 0.3;
   }
   const cp = car.position;
   if (!prevInit) { prevCarPos.copy(cp); prevInit = true; }
@@ -519,15 +799,181 @@ function frame() {
 }
 frame();
 
+const savedMats = new WeakMap();
+let illustrOn = false;
+function setIllustrationMode(on) {
+  if (illustrOn === on) return;
+  illustrOn = on;
+  document.querySelector('.center').classList.toggle('illustr', on);
+  scene.background.setHex(on ? 0xf4efe4 : 0xe9eef3);
+  const gridMats = Array.isArray(grid.material) ? grid.material : [grid.material];
+  gridMats.forEach(m => { m.color.setHex(on ? 0xe0d6c8 : 0xd2dae3); m.opacity = on ? 0.55 : 1; m.transparent = on; });
+  if (pathLine) pathLine.material.color.setHex(on ? 0x01A0E9 : 0x2f6d8f);
+  const stylize = grp => {
+    if (!grp) return;
+    grp.traverse(o => {
+      if (!o.isMesh || !o.material) return;
+      if (on) {
+        if (!savedMats.has(o)) savedMats.set(o, o.material);
+        const c = o.material.color ? o.material.color.getHex() : 0x01A0E9;
+        o.material = new THREE.MeshToonMaterial({ color: c });
+      } else if (savedMats.has(o)) {
+        o.material = savedMats.get(o);
+        savedMats.delete(o);
+      }
+    });
+  };
+  stylize(car);
+  for (const fc of Object.values(fleetCars)) stylize(fc?.group);
+  if (roadGroup) roadGroup.traverse(o => {
+    if (!o.isMesh || !o.material || o.material.vertexColors) return;
+    if (on) o.material.color.setHex(0x5a5a62);
+    else o.material.color.setHex(0x37373b);
+  });
+}
+function refreshIllustration() { setIllustrationMode(!simRunning && camMode === 'top'); }
+
 function setCam(m) {
   camMode = m;
   ['orbit', 'chase', 'top'].forEach(id => $(`cam_${id}`).classList.toggle('on', id === m));
   if (m === 'orbit') controls.target.copy(car.position);
   if (m !== 'cockpit') camera.up.set(0, 1, 0);
+  refreshIllustration();
 }
-$('cam_orbit').onclick = () => setCam('orbit');
-$('cam_chase').onclick = () => setCam('chase');
-$('cam_top').onclick = () => setCam('top');
+$('cam_orbit').onclick = () => { setCam('orbit'); if (simRunning) playCamMode = 'orbit'; };
+$('cam_chase').onclick = () => { setCam('chase'); if (simRunning) playCamMode = 'chase'; };
+$('cam_top').onclick = () => { setCam('top'); if (simRunning) playCamMode = 'top'; };
+setCam('top');
+
+// ---- on-screen track edit (setup / top view) ----
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+let pathEditGroup = null, editPts = [], pathEditActive = false, dragIdx = -1, pathEditTimer = null;
+function simFromThree(v) { return [v.x, -v.z]; }
+function pickGround(clientX, clientY) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+  const cam = camMode === 'top' ? orthoCam : camera;
+  raycaster.setFromCamera(mouse, cam);
+  const hit = new THREE.Vector3();
+  if (!raycaster.ray.intersectPlane(groundPlane, hit)) return null;
+  if (terrainGrid) hit.y = sampleTerrain(hit.x, -hit.z);
+  return hit;
+}
+function disposePathEditGroup() {
+  if (!pathEditGroup) return;
+  pathEditGroup.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+  scene.remove(pathEditGroup);
+  pathEditGroup = null;
+}
+function rebuildPathMarkers() {
+  disposePathEditGroup();
+  if (!pathEditActive || !editPts.length) return;
+  pathEditGroup = new THREE.Group();
+  const geo = new THREE.SphereGeometry(1.1, 14, 14);
+  editPts.forEach((p, i) => {
+    const m = new THREE.Mesh(geo, new THREE.MeshToonMaterial({ color: i === 0 ? 0x34c759 : 0xff7a18 }));
+    const t = toThree(p[0], p[1], (terrainGrid ? sampleTerrain(p[0], p[1]) : 0) + 0.35);
+    m.position.copy(t); m.userData.idx = i;
+    pathEditGroup.add(m);
+  });
+  scene.add(pathEditGroup);
+}
+function downsamplePts(pts, maxN = 14) {
+  if (pts.length <= maxN) return pts.map(p => [p[0], p[1]]);
+  const out = [];
+  const step = (pts.length - 1) / (maxN - 1);
+  for (let i = 0; i < maxN; i++) {
+    const p = pts[Math.round(i * step)];
+    out.push([p[0], p[1]]);
+  }
+  return out;
+}
+async function commitPathEdit() {
+  clearTimeout(pathEditTimer);
+  pathEditTimer = setTimeout(async () => {
+    if (!editPts.length) return;
+    $('setup_path_preset').value = 'custom';
+    $('setup_wp_box').style.display = '';
+    renderWaypointRows(editPts);
+    const r = await (await fetch('/api/setup', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path_preset: 'custom', path_pts: editPts }),
+    })).json();
+    if (!r.ok) return;
+    lastNpath = -1;
+    await drawPath(); await drawRoad();
+    rebuildPathMarkers();
+  }, 180);
+}
+async function startPathEdit() {
+  const j = await (await fetch('/api/path')).json();
+  editPts = downsamplePts(j.pts || [[0, 0], [30, 0]]);
+  pathEditActive = true;
+  $('cam_path_edit').classList.add('on');
+  $('edit_hint').style.display = 'block';
+  controls.enabled = false;
+  rebuildPathMarkers();
+}
+function stopPathEdit() {
+  pathEditActive = false;
+  dragIdx = -1;
+  $('cam_path_edit').classList.remove('on');
+  $('edit_hint').style.display = 'none';
+  disposePathEditGroup();
+  if (!simRunning && camMode === 'orbit') controls.enabled = true;
+}
+$('cam_path_edit').onclick = async () => {
+  if (simRunning) return;
+  if (pathEditActive) { stopPathEdit(); return; }
+  if (camMode !== 'top') setCam('top');
+  await startPathEdit();
+};
+const viewEl = renderer.domElement;
+viewEl.addEventListener('pointerdown', e => {
+  if (!pathEditActive || simRunning) return;
+  const hit = pickGround(e.clientX, e.clientY);
+  if (!hit) return;
+  const cam = camMode === 'top' ? orthoCam : camera;
+  mouse.x = ((e.clientX - viewEl.getBoundingClientRect().left) / viewEl.clientWidth) * 2 - 1;
+  mouse.y = -((e.clientY - viewEl.getBoundingClientRect().top) / viewEl.clientHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, cam);
+  const hits = pathEditGroup ? raycaster.intersectObjects(pathEditGroup.children) : [];
+  if (hits.length) {
+    dragIdx = hits[0].object.userData.idx;
+    controls.enabled = false;
+    e.preventDefault();
+    return;
+  }
+  editPts.push(simFromThree(hit));
+  rebuildPathMarkers();
+  commitPathEdit();
+  e.preventDefault();
+});
+viewEl.addEventListener('pointermove', e => {
+  if (!pathEditActive || dragIdx < 0) return;
+  const hit = pickGround(e.clientX, e.clientY);
+  if (!hit) return;
+  editPts[dragIdx] = simFromThree(hit);
+  rebuildPathMarkers();
+  commitPathEdit();
+  e.preventDefault();
+});
+const endDrag = () => { dragIdx = -1; };
+viewEl.addEventListener('pointerup', endDrag);
+viewEl.addEventListener('pointerleave', endDrag);
+addEventListener('keydown', e => {
+  if (!pathEditActive) return;
+  if (e.key === 'Escape') { stopPathEdit(); e.preventDefault(); }
+  if (e.key === 'Delete' && editPts.length > 2) {
+    editPts.pop();
+    rebuildPathMarkers();
+    commitPathEdit();
+    e.preventDefault();
+  }
+});
 
 // ---- mini-map ----
 const mm = $('minimap');
@@ -596,15 +1042,68 @@ function updateTelemetry(s) {
   $('tel_rack').textContent = f(s.rack_torque, 1);
 }
 
+
+function updateSimModeUI(running) {
+  if (running && !simRunning && camMode !== 'top') playCamMode = camMode;
+  simRunning = running;
+  $('setup_panel').classList.toggle('hidden', running);
+  $('telemetry_aside').classList.toggle('hidden', !running);
+  $('sim_play').classList.toggle('on', !running);
+  $('sim_stop').classList.toggle('on', running);
+  $('cam_path_edit').style.display = running ? 'none' : '';
+  if (running) {
+    stopPathEdit();
+    setCam(playCamMode);
+    if (manualMode) toggleManualBar(true);
+  } else {
+    tgt.vx = 0; tgt.vy = 0; tgt.r = 0;
+    setCam('top');
+    loadSetupForm();
+    toggleManualBar(manualMode);
+  }
+  refreshIllustration();
+  resizeView();
+}
+
+function previewSpawn(st) {
+  if (!st || st.x == null) return;
+  tgt.pos.copy(toThree(st.x, st.y, 0)); tgt.yaw = st.yaw || 0;
+  tgt.roll = 0; tgt.pitch = 0; tgt.vx = 0; tgt.vy = 0; tgt.r = 0;
+  car.position.copy(tgt.pos); car.rotation.set(0, tgt.yaw, 0); tgt.has = true;
+  renderForces([], [], []);
+  for (const i of steerIdx) { if (wheels[i]) wheels[i].rotation.y = 0; }
+  drawMinimap(st.x, st.y);
+}
+
 function applyState(s) {
-  if (s.x == null) return;
-  tgt.pos.copy(toThree(s.x, s.y, 0)); tgt.yaw = s.yaw;
-  if (s.grade != null && (s.grade !== roadGrade || s.bank !== roadBank)) { roadGrade = s.grade; roadBank = s.bank || 0; updateRoadTilt(); }
+  if (s.live_vid != null) selectedVid = s.live_vid;
+  if (s.fleet_spec?.length) window._fleetSpec = s.fleet_spec;
+  if (!$('veh_tree').children.length && (s.fleet_spec?.length || window._fleetSpec?.length)) {
+    void buildVehicleTree(s.fleet_spec || window._fleetSpec, s.live_vid ?? selectedVid);
+  }
+  const stopped = !!s.setup_mode || !s.running;
+  if (stopped !== !simRunning) updateSimModeUI(!stopped);
+  if (stopped && s.plant_error) updateConn(s);
+  if (s.grade != null && (s.grade !== roadGrade || s.bank !== roadBank)) {
+    roadGrade = s.grade; roadBank = s.bank || 0; updateRoadTilt();
+  }
   if (s.npath != null && s.npath !== lastNpath) { lastNpath = s.npath; drawPath(); drawRoad(); }
   if (s.terrain != null && s.terrain !== lastTerrain) {
     lastTerrain = s.terrain; drawScenery();
     drawTerrain().then(() => { drawRoad(); drawPath(); });
   }
+  if (stopped) {
+    purgeOrphanFleetMeshes();
+    if (s.fleet) void syncFleetMeshes(filterFleet(s.fleet), selectedVid);
+    const st = (s.fleet && s.fleet[String(selectedVid)]) ? s.fleet[String(selectedVid)] : s;
+    previewSpawn(st);
+    window._lastState = s;
+    updateConn(s);
+    return;
+  }
+  if (s.fleet) void syncFleetMeshes(filterFleet(s.fleet), selectedVid);
+  if (s.x == null) return;
+  tgt.pos.copy(toThree(s.x, s.y, 0)); tgt.yaw = s.yaw;
   const dyn3 = (s.level === 'L3');
   tgt.roll = dyn3 ? (s.roll || 0) : 0; tgt.pitch = dyn3 ? (s.pitch || 0) : 0;
   tgt.vx = s.vx || 0; tgt.vy = s.vy || 0; tgt.r = s.r || 0;
@@ -616,19 +1115,284 @@ function applyState(s) {
   updateTelemetry(s);
   drawMinimap(s.x, s.y);
   window._lastState = s;
+  updateConn(s);
 }
 
-const es = new EventSource('/api/stream');
-es.onopen = () => { $('conn').textContent = '● live'; $('conn').style.color = '#34c759'; };
-es.onerror = () => { $('conn').textContent = '● disconnected'; $('conn').style.color = 'var(--dim)'; };
-es.onmessage = e => { try { applyState(JSON.parse(e.data)); } catch (_) {} };
-
+function updateConn(s) {
+  if (s?.plant_error) {
+    $('conn').textContent = '● ' + s.plant_error;
+    $('conn').style.color = '#ff9500';
+  } else if (s?.running && s?.source === 'waiting') {
+    const attach = $('setup_attach')?.checked;
+    $('conn').textContent = attach
+      ? '● waiting for external plant (Attach)…'
+      : '● waiting for plant… (retry ▶ Play)';
+    $('conn').style.color = '#ff9500';
+  } else if (s?.running && s?.source === 'cosim') {
+    $('conn').textContent = '● running';
+    $('conn').style.color = '#34c759';
+  } else if (!simRunning) {
+    $('conn').textContent = manualMode ? '● setup — manual needs ▶ Play' : '● setup';
+    $('conn').style.color = 'var(--dim)';
+  }
+}
+// ---- scenario setup panel ----
+function renderWaypointRows(pts) {
+  const tb = $('setup_wp_rows');
+  tb.innerHTML = '';
+  (pts || []).forEach((p, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><input class="setup-inp wp-x" type="number" step="1" value="${(+p[0]).toFixed(1)}"></td>
+      <td><input class="setup-inp wp-y" type="number" step="1" value="${(+p[1]).toFixed(1)}"></td>
+      <td><button type="button" class="wp-del" title="Remove">×</button></td>`;
+    tr.querySelector('.wp-del').onclick = () => { tr.remove(); };
+    tb.appendChild(tr);
+  });
+}
+function collectWaypointPts() {
+  return [...$('setup_wp_rows').querySelectorAll('tr')].map(tr => {
+    const x = +tr.querySelector('.wp-x').value, y = +tr.querySelector('.wp-y').value;
+    return [x, y];
+  }).filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]));
+}
+let setupVehicleList = [], setupTireSamples = [];
+async function ensureSetupLists() {
+  if (!setupVehicleList.length) {
+    const cf = await (await fetch('/api/config')).json();
+    setupVehicleList = cf.vehicles || ['sedan'];
+  }
+  if (!setupTireSamples.length) {
+    setupTireSamples = (await (await fetch('/api/tire/samples')).json()).samples || [];
+  }
+}
+async function renderFleetSpawn(fleet) {
+  await ensureSetupLists();
+  const el = $('setup_fleet');
+  el.innerHTML = '';
+  const n = (fleet || []).length;
+  (fleet || []).forEach(spec => {
+    const vid = +spec.id;
+    const box = document.createElement('div');
+    box.className = 'setup-fleet' + (vid === selectedVid ? ' sel' : '');
+    box.dataset.vid = vid;
+    const head = document.createElement('div');
+    head.style.display = 'flex'; head.style.alignItems = 'center'; head.style.gap = '4px';
+    head.innerHTML = `<b>Vehicle ${vid}</b>`;
+    if (n > 1) {
+      const rm = document.createElement('button');
+      rm.textContent = '×'; rm.className = 'icon'; rm.title = 'Remove vehicle';
+      rm.onclick = async e => {
+        e.stopPropagation();
+        const r = await (await fetch('/api/setup', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fleet_remove: vid }),
+        })).json();
+        if (r.setup) {
+          if (+vid === selectedVid && r.setup.fleet.length)
+            selectedVid = +r.setup.fleet[0].id;
+          await renderFleetSpawn(r.setup.fleet);
+          await buildVehicleTree(r.setup.fleet, selectedVid);
+          await refreshFleetView(r.setup.fleet, selectedVid);
+          lastNpath = -1; await drawPath(); await drawRoad();
+        }
+      };
+      head.appendChild(rm);
+    }
+    box.appendChild(head);
+    const mkSel = (k, opts, val) => {
+      const s = document.createElement('select');
+      s.className = 'setup-inp wide'; s.dataset.k = k; s.style.fontSize = '10px'; s.style.marginTop = '2px';
+      opts.forEach(o => { const op = document.createElement('option'); op.value = o; op.textContent = o;
+        if (o === val) op.selected = true; s.appendChild(op); });
+      return s;
+    };
+    box.appendChild(mkSel('vehicle', setupVehicleList, spec.vehicle || 'sedan'));
+    box.appendChild(mkSel('tire', setupTireSamples.length ? setupTireSamples : ['default_pacejka'], spec.tire || 'default_pacejka'));
+    box.appendChild(mkSel('level', ['L1', 'L2', 'L3'], spec.level || 'L2'));
+    const row = document.createElement('div'); row.className = 'setup-row';
+    for (const [k, lab] of [['x0', 'x'], ['y0', 'y'], ['yaw0', 'ψ'], ['vx0', 'vx']]) {
+      const lb = document.createElement('label'); lb.textContent = lab;
+      const inp = document.createElement('input');
+      inp.className = 'setup-inp'; inp.type = 'number'; inp.step = k === 'yaw0' ? '0.05' : '0.5';
+      inp.dataset.k = k; inp.value = spec[k] ?? 0;
+      row.appendChild(lb); row.appendChild(inp);
+    }
+    box.appendChild(row);
+    box.onclick = e => { if (!/INPUT|SELECT|BUTTON/.test(e.target.tagName)) selectVehicle(vid); };
+    el.appendChild(box);
+  });
+}
+function collectSetupPayload() {
+  const preset = $('setup_path_preset').value;
+  const fleet = [...$('setup_fleet').querySelectorAll('.setup-fleet')].map(box => {
+    const id = +box.dataset.vid;
+    const upd = { id };
+    box.querySelectorAll('input[data-k], select[data-k]').forEach(inp => {
+      upd[inp.dataset.k] = inp.tagName === 'SELECT' ? inp.value : +inp.value;
+    });
+    return upd;
+  });
+  const road = {
+    mu: +$('setup_mu').value, grade: +$('setup_grade').value, bank: +$('setup_bank').value,
+    mu_right: -1, mu_boundary: 0, rough_amp: 0, rough_wl: 4,
+  };
+  const payload = {
+    path_preset: preset, fleet, road, v_target: +$('setup_v_target').value,
+    cosim_attach: $('setup_attach').checked,
+    cosim_host: $('setup_cosim_host').value.trim() || '127.0.0.1',
+    cosim_cmd_port: +$('setup_cosim_port').value || 7401,
+  };
+  if (preset === 'custom') payload.path_pts = collectWaypointPts();
+  return payload;
+}
+async function loadSetupForm() {
+  try {
+    const s = await (await fetch('/api/setup')).json();
+    $('setup_path_preset').value = s.path_preset || 'figure8';
+    $('setup_wp_box').style.display = s.path_preset === 'custom' ? '' : 'none';
+    renderWaypointRows(s.path_pts || []);
+    await renderFleetSpawn(s.fleet || []);
+    window._fleetSpec = s.fleet || [];
+    await refreshFleetView(s.fleet || [], selectedVid);
+    const r = s.road || {};
+    $('setup_mu').value = r.mu ?? 1;
+    $('setup_grade').value = ((r.grade ?? 0) * 57.2958).toFixed(2);
+    $('setup_bank').value = ((r.bank ?? 0) * 57.2958).toFixed(2);
+    $('setup_v_target').value = s.v_target ?? 10;
+    $('setup_attach').checked = !!s.cosim_attach;
+    $('setup_cosim_host').value = s.cosim_host || '127.0.0.1';
+    $('setup_cosim_port').value = s.cosim_cmd_port ?? 7401;
+    const sel = $('setup_scenario');
+    sel.innerHTML = '<option value="">— scenario —</option>' +
+      (s.scenarios || []).map(n => `<option value="${n}">${n}</option>`).join('');
+  } catch (_) {}
+}
+async function fleetAddVehicle() {
+  const r = await (await fetch('/api/setup', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fleet_add: true }),
+  })).json();
+  if (r.setup) {
+    await renderFleetSpawn(r.setup.fleet);
+    await buildVehicleTree(r.setup.fleet, selectedVid);
+    await refreshFleetView(r.setup.fleet, selectedVid);
+  }
+}
+async function applySetupFromForm() {
+  const payload = collectSetupPayload();
+  payload.road.grade = (+$('setup_grade').value) * Math.PI / 180;
+  payload.road.bank = (+$('setup_bank').value) * Math.PI / 180;
+  const r = await (await fetch('/api/setup', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+  })).json();
+  if (!r.ok) { alert('Setup apply failed'); return; }
+  lastNpath = -1;
+  trailPts = []; trail.visible = false; mmTrail.length = 0;
+  await drawPath(); await drawRoad();
+  if (r.setup) {
+    await renderFleetSpawn(r.setup.fleet);
+    await buildVehicleTree(r.setup.fleet, selectedVid);
+    await refreshFleetView(r.setup.fleet, selectedVid);
+  }
+}
+$('setup_fleet_add').onclick = () => fleetAddVehicle();
+$('setup_scenario_load').onclick = async () => {
+  const name = $('setup_scenario').value;
+  if (!name) return;
+  const r = await (await fetch('/api/fleet', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scenario: name }),
+  })).json();
+  if (!r.ok) { alert(r.error || 'load failed'); return; }
+  selectedVid = r.live_vid;
+  window._fleetSpec = r.fleet;
+  lastNpath = -1;
+  await loadSetupForm();
+  await buildVehicleTree(r.fleet, selectedVid);
+  await drawPath(); await drawRoad();
+};
+$('setup_scenario_save').onclick = async () => {
+  await applySetupFromForm();
+  const name = prompt('Scenario name (configs/scenarios/)');
+  if (!name) return;
+  const r = await (await fetch('/api/scenario/save', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  })).json();
+  if (!r.ok) alert(r.error || 'save failed');
+  else await loadSetupForm();
+};
+$('setup_path_preset').onchange = () => {
+  $('setup_wp_box').style.display = $('setup_path_preset').value === 'custom' ? '' : 'none';
+};
+$('setup_wp_add').onclick = () => {
+  const pts = collectWaypointPts();
+  pts.push([0, 0]);
+  $('setup_path_preset').value = 'custom';
+  $('setup_wp_box').style.display = '';
+  renderWaypointRows(pts);
+};
+$('setup_apply').onclick = () => applySetupFromForm();
+$('setup_map_load').onclick = async () => {
+  const xodr = $('setup_xodr').value.trim();
+  if (!xodr) return;
+  const r = await (await fetch('/api/map/load', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ xodr }),
+  })).json();
+  if (!r.ok) { alert(r.msg || 'map load failed'); return; }
+  lastNpath = -1; lastTerrain = -1;
+  await loadSetupForm(); await drawPath(); await drawRoad(); await drawScenery();
+  await drawTerrain().then(() => { drawRoad(); drawPath(); });
+};
+$('setup_terrain_load').onclick = async () => {
+  const obj = $('setup_obj').value.trim();
+  if (!obj) return;
+  const r = await (await fetch('/api/terrain/load', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ obj, cell: 5 }),
+  })).json();
+  if (!r.ok) { alert(r.msg || 'terrain load failed'); return; }
+  lastNpath = -1; lastTerrain = -1;
+  await loadSetupForm(); await drawScenery();
+  await drawTerrain().then(() => { drawRoad(); drawPath(); });
+};
+$('setup_terrain_clr').onclick = async () => {
+  await fetch('/api/terrain/clear', { method: 'POST' });
+  lastTerrain = -1; await loadSetupForm();
+  await drawScenery(); await drawTerrain().then(() => { drawRoad(); drawPath(); });
+};
 // ---- SIM controls ----
-$('sim_play').onclick = () => post('/api/control', { action: 'start' });
-$('sim_stop').onclick = () => post('/api/control', { action: 'stop' });
-$('sim_reset').onclick = () => {
+$('sim_play').onclick = async () => {
+  trailPts = []; trail.visible = false; mmTrail.length = 0; tgt.has = false;
+  stopPathEdit();
+  await applySetupFromForm();
+  if (manualMode) await post('/api/config', { driver: false });
+  const r = await postJson('/api/control', { action: 'start' });
+  if (!r.running) {
+    alert(r.error || 'Simulation failed to start');
+    purgeOrphanFleetMeshes();
+    updateSimModeUI(false);
+    updateConn({ plant_error: r.error });
+    return;
+  }
+  purgeOrphanFleetMeshes();
+  updateSimModeUI(true);
+};
+$('sim_stop').onclick = async () => {
+  trailPts = []; trail.visible = false; mmTrail.length = 0; tgt.has = false;
+  try {
+    await postJson('/api/control', { action: 'stop' });
+    purgeOrphanFleetMeshes();
+    updateSimModeUI(false);
+    await loadSetupForm();
+    await buildVehicleTree();
+  } catch (e) {
+    alert('Stop failed: ' + e.message);
+  }
+};
+$('sim_reset').onclick = async () => {
   trailPts = []; trail.visible = false; tgt.has = false; mmTrail.length = 0;
-  post('/api/control', { action: 'reset' });
+  await post('/api/control', { action: 'reset' });
+  updateSimModeUI(false);
 };
 let tsTimer = null;
 $('ts_slider').oninput = e => {
@@ -637,51 +1401,160 @@ $('ts_slider').oninput = e => {
   clearTimeout(tsTimer);
   tsTimer = setTimeout(() => post('/api/sim', { time_scale: v }), 150);
 };
+$('sim_save').onclick = async () => {
+  const cfg = await (await fetch('/api/simconfig')).json();
+  const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `vdsim_config_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+$('sim_load').onclick = () => $('sim_load_input').click();
+$('fleet_demo').onclick = async () => {
+  const r = await (await fetch('/api/fleet', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scenario: 'two_vehicle_race' }),
+  })).json();
+  if (!r.ok) { alert(r.error || 'fleet load failed'); return; }
+  selectedVid = r.live_vid;
+  await buildVehicleTree(r.fleet, selectedVid);
+  lastNpath = -1;
+  await loadSetupForm();
+  await drawPath(); await drawRoad();
+};
+$('sim_load_input').onchange = async e => {
+  const f = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    const r = await (await fetch('/api/simconfig', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
+    })).json();
+    if (!r.ok) throw new Error(r.error || 'load failed');
+    const ts = r.config.time_scale ?? 1;
+    $('ts_slider').value = ts; $('ts_val').textContent = (+ts).toFixed(1) + '×';
+    await buildVehicleTree();
+  } catch (err) {
+    alert('Config load failed: ' + err.message);
+  }
+};
 
 // ---- vehicle tree ----
 const SENSOR_TREE = { IMU: 'IMU', GNSS: 'GNSS', Wheel: 'Wheel speed', Steer: 'Steer', General: 'Sensors' };
-async function buildVehicleTree() {
+async function selectVehicle(vid) {
+  const old = selectedVid;
+  selectedVid = vid;
+  $('tel_veh').textContent = `Vehicle ${vid}`;
+  await post('/api/fleet', { live_vid: vid });
+  const spec = (window._fleetSpec || []).find(f => +f.id === vid);
+  if (old !== vid && window._fleetSpec) {
+    const oldSpec = window._fleetSpec.find(f => +f.id === old);
+    if (oldSpec) await ensureFleetCar(old, oldSpec);
+    if (fleetCars[old] && window._lastState?.fleet?.[String(old)])
+      placeFleetCar(old, window._lastState.fleet[String(old)]);
+    if (fleetCars[vid]) { disposeCarGroup(fleetCars[vid].group); delete fleetCars[vid]; }
+  }
+  if (spec?.level && spec.level !== renderLevel) await rebuildCar(spec.level, vid);
+  buildVehicleTree(window._fleetSpec, selectedVid);
+  if (!simRunning && spec) {
+    previewSpawn({ x: spec.x0, y: spec.y0, yaw: spec.yaw0 });
+    await renderFleetSpawn(window._fleetSpec);
+    if (window._lastState?.fleet) void syncFleetMeshes(filterFleet(window._lastState.fleet), selectedVid);
+  }
+}
+async function buildVehicleTree(fleetSpec, liveVid) {
+  if (!fleetSpec) {
+    const fr = await (await fetch('/api/fleet')).json();
+    fleetSpec = fr.fleet; liveVid = fr.live_vid;
+  }
+  window._fleetSpec = fleetSpec;
+  selectedVid = liveVid;
+  $('tel_veh').textContent = `Vehicle ${liveVid}`;
   const sens = (await (await fetch('/api/sensors')).json()).fields;
   const groups = {};
   sens.forEach(f => { if (f.group !== 'General') (groups[f.group] = groups[f.group] || []).push(f); });
   const enabled = sens.find(f => f.name === 'enabled');
   const el = $('veh_tree');
   el.innerHTML = '';
-  const row = document.createElement('div'); row.className = 'tree-row veh';
-  row.innerHTML = `<span>▾ Vehicle 0</span>`;
-  const acts = document.createElement('span'); acts.className = 'tree-actions';
-  const edit = document.createElement('button'); edit.className = 'icon'; edit.textContent = 'edit';
-  edit.title = 'Edit vehicle modules'; edit.onclick = () => openModal(0);
-  const del = document.createElement('button'); del.className = 'icon stub'; del.textContent = '×';
-  del.title = '멀티차량: #157 예정';
-  acts.appendChild(edit); acts.appendChild(del);
-  row.appendChild(acts);
-  el.appendChild(row);
-  const names = new Set();
-  for (const g of ['IMU', 'GNSS', 'Wheel', 'Steer']) {
-    if (!groups[g]) continue;
-    const sr = document.createElement('div'); sr.className = 'tree-row sens';
-    sr.textContent = SENSOR_TREE[g] || g;
-    el.appendChild(sr);
-    names.add(g);
+  for (const spec of fleetSpec) {
+    const vid = +spec.id;
+    const row = document.createElement('div'); row.className = 'tree-row veh';
+    if (vid === liveVid) row.style.outline = '1px solid var(--acc)';
+    const label = document.createElement('span');
+    label.textContent = `▾ Vehicle ${vid}` + (spec.vehicle ? ` (${spec.vehicle})` : '');
+    label.style.cursor = 'pointer';
+    label.onclick = () => selectVehicle(vid);
+    row.appendChild(label);
+    const acts = document.createElement('span'); acts.className = 'tree-actions';
+    const edit = document.createElement('button'); edit.className = 'icon'; edit.textContent = 'edit';
+    edit.title = 'Edit vehicle modules'; edit.onclick = e => { e.stopPropagation(); openModal(vid); };
+    acts.appendChild(edit);
+    row.appendChild(acts);
+    el.appendChild(row);
+    if (vid === liveVid) {
+      for (const g of ['IMU', 'GNSS', 'Wheel', 'Steer']) {
+        if (!groups[g]) continue;
+        const sr = document.createElement('div'); sr.className = 'tree-row sens';
+        sr.textContent = SENSOR_TREE[g] || g;
+        el.appendChild(sr);
+      }
+      if (enabled && !enabled.value) {
+        const sr = document.createElement('div'); sr.className = 'tree-row sens sub';
+        sr.textContent = '(sensors off — truth)';
+        el.appendChild(sr);
+      }
+    }
   }
-  if (enabled && !enabled.value) {
-    const sr = document.createElement('div'); sr.className = 'tree-row sens sub';
-    sr.textContent = '(sensors off — truth)';
+}
+$('add_veh').onclick = () => fleetAddVehicle();
+function buildInfraTree() {
+  const el = $('infra_tree');
+  el.innerHTML = '';
+  for (const name of ['Roadside radar', 'Loop detector', 'GNSS base']) {
+    const sr = document.createElement('div');
+    sr.className = 'tree-row sens sub';
+    sr.textContent = name + ' (stub)';
     el.appendChild(sr);
   }
 }
-buildVehicleTree();
+buildInfraTree();
+
+async function boot() {
+  initStaticHelp();
+  try {
+    const s = await (await fetch('/api/state')).json();
+    if (s.fleet_spec?.length) await buildVehicleTree(s.fleet_spec, s.live_vid ?? 0);
+    else await buildVehicleTree();
+    applyState(s);
+    if (!simRunning) await loadSetupForm();
+  } catch (_) {
+    updateSimModeUI(false);
+    try { await buildVehicleTree(); } catch (_e) {}
+    try { await loadSetupForm(); } catch (_e) {}
+  }
+  refreshIllustration();
+  const es = new EventSource('/api/stream');
+  es.onopen = () => updateConn(window._lastState);
+  es.onerror = () => { $('conn').textContent = '● disconnected'; $('conn').style.color = 'var(--dim)'; };
+  es.onmessage = e => { try { applyState(JSON.parse(e.data)); } catch (_) {} };
+}
+void boot();
 
 // ---- manual control ----
 let manualMode = false;
 const man = { throttle: 0, brake: 0, steer: 0 };
 const keys = {}; let touchThr = 0, touchBrk = 0, touchSteer = 0;
-addEventListener('keydown', e => keys[e.key] = true);
-addEventListener('keyup', e => keys[e.key] = false);
+const ARROW_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
+addEventListener('keydown', e => {
+  if (manualMode && simRunning && ARROW_KEYS.has(e.key)) e.preventDefault();
+  keys[e.key] = true;
+});
+addEventListener('keyup', e => { keys[e.key] = false; });
 function toggleManualBar(show) { $('manbar').style.display = show ? 'flex' : 'none'; }
 setInterval(() => {
-  if (!manualMode) return;
+  if (!manualMode || !simRunning) return;
   man.throttle = Math.max(keys['ArrowUp'] ? 0.7 : 0, touchThr);
   man.brake = Math.max(keys['ArrowDown'] ? 0.6 : 0, touchBrk);
   man.steer = Math.max(-0.4, Math.min(0.4, (keys['ArrowLeft'] ? 0.25 : 0) - (keys['ArrowRight'] ? 0.25 : 0) + touchSteer));
@@ -705,6 +1578,7 @@ const recenterSteer = () => { $('m_steer').value = 0; touchSteer = 0; };
     $('mode_drv').classList.toggle('on', drv);
     $('mode_man').classList.toggle('on', !drv);
     toggleManualBar(!drv);
+    updateConn(window._lastState);
   };
   $('mode_drv').onclick = () => setMode(true);
   $('mode_man').onclick = () => setMode(false);
@@ -783,24 +1657,73 @@ function plantEnhance(el) {
     ebd.addEventListener('change', upd); upd();
   }
 }
+function selectRow(label, opts, cur, onChange, labelMap) {
+  const row = document.createElement('div'); row.className = 'fld';
+  const lab = document.createElement('label'); lab.textContent = label; row.appendChild(lab);
+  const sel = document.createElement('select');
+  sel.innerHTML = opts.map(v => `<option value="${v}" ${v === cur ? 'selected' : ''}>${labelMap ? (labelMap[v] || v) : v}</option>`).join('');
+  sel.onchange = e => onChange(e.target.value); row.appendChild(sel); return row;
+}
+function plotChart(cv, p) {
+  const dpr = devicePixelRatio || 1, W = cv.clientWidth || 300, H = cv.clientHeight || 132;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, W, H);
+  const ml = 44, mr = 8, mt = 18, mb = 22, pw = W - ml - mr, ph = H - mt - mb;
+  let xmin = 1 / 0, xmax = -1 / 0, ymin = 1 / 0, ymax = -1 / 0;
+  p.series.forEach(s => s.x.forEach((x, i) => {
+    const y = s.y[i]; if (x < xmin) xmin = x; if (x > xmax) xmax = x; if (y < ymin) ymin = y; if (y > ymax) ymax = y;
+  }));
+  if (!isFinite(xmin)) return;
+  if (ymin === ymax) { ymin -= 1; ymax += 1; } if (xmin === xmax) { xmax = xmin + 1; }
+  const padY = (ymax - ymin) * 0.08; ymin -= padY; ymax += padY;
+  const X = x => ml + (x - xmin) / (xmax - xmin) * pw, Y = y => mt + (1 - (y - ymin) / (ymax - ymin)) * ph;
+  g.strokeStyle = '#d2dae3'; g.lineWidth = 1; g.strokeRect(ml, mt, pw, ph);
+  g.fillStyle = '#6b7480'; g.font = '9px Tahoma';
+  g.fillStyle = '#2a2f37'; g.font = '600 10px Tahoma'; g.textAlign = 'left';
+  g.fillText(p.title, ml, 12);
+  p.series.forEach(s => {
+    g.strokeStyle = s.color; g.lineWidth = 1.6; g.setLineDash(s.dash ? [4, 3] : []);
+    g.beginPath(); s.x.forEach((x, i) => { const px = X(x), py = Y(s.y[i]); i ? g.lineTo(px, py) : g.moveTo(px, py); });
+    g.stroke();
+  });
+  g.setLineDash([]);
+}
+function renderPlots(box, plots) {
+  box.innerHTML = '';
+  plots.forEach(p => {
+    const cv = document.createElement('canvas');
+    box.appendChild(cv);
+    requestAnimationFrame(() => plotChart(cv, p));
+  });
+}
 
 // ---- modal (vehicle modules) ----
 const MODAL_TABS = [
-  { id: 'suspension', label: 'Suspension', type: 'vehicle', filter: f => f.group === 'Suspension' },
-  { id: 'brake', label: 'Brake', type: 'vehicle', filter: f => ['max_brake_torque', 'brake_bias_front', 'brake_ebd_enabled', 'brake_deadtime_s'].includes(f.name) },
-  { id: 'steering', label: 'Steering', type: 'vehicle', filter: f => f.group === 'Steering' },
-  { id: 'drivetrain', label: 'Drivetrain', type: 'vehicle', filter: f => ['drive_type', 'differential', 'lsd_preload', 'lsd_ramp', 'max_motor_torque', 'final_drive_ratio', 'drive_deadtime_s'].includes(f.name) },
-  { id: 'tire', label: 'Tire', type: 'tire' },
-  { id: 'sensors', label: 'Sensors', type: 'sensors' },
+  { id: 'suspension', label: 'Suspension', help: 'Suspension', type: 'vehicle', filter: f => f.group === 'Suspension' },
+  { id: 'brake', label: 'Brake', help: 'Drivetrain', type: 'vehicle', filter: f => ['max_brake_torque', 'brake_bias_front', 'brake_ebd_enabled', 'brake_deadtime_s'].includes(f.name) },
+  { id: 'steering', label: 'Steering', help: 'Steering', type: 'vehicle', filter: f => f.group === 'Steering' },
+  { id: 'drivetrain', label: 'Drivetrain', help: 'Drivetrain', type: 'vehicle', filter: f => ['drive_type', 'differential', 'lsd_preload', 'lsd_ramp', 'max_motor_torque', 'final_drive_ratio', 'drive_deadtime_s'].includes(f.name) },
+  { id: 'tire', label: 'Tire', help: 'Tire', type: 'tire' },
+  { id: 'engine', label: 'Engine', help: 'Drivetrain', type: 'stub' },
+  { id: 'sensors', label: 'Sensors', help: 'Actuator & feedback', type: 'sensors' },
 ];
-let modalTab = 'suspension', modalLvl = 'L2', vehFields = [], tireFields = [], sensFields = [];
+const SUBGRP_HELP = { IMU: 'Actuator & feedback', GNSS: 'Actuator & feedback', Wheel: 'Actuator & feedback', Steer: 'Actuator & feedback', General: 'Actuator & feedback' };
+const SUSP_PRESETS = {
+  soft: { spring_stiffness: [22000, 22000, 24000, 24000], damper_coefficient: [2200, 2200, 2400, 2400] },
+  med: { spring_stiffness: [30000, 30000, 30000, 30000], damper_coefficient: [3000, 3000, 3000, 3000] },
+  stiff: { spring_stiffness: [48000, 48000, 52000, 52000], damper_coefficient: [4800, 4800, 5200, 5200] },
+};
+const WS_CORNERS = ['FL', 'FR', 'RL', 'RR'];
+let modalTab = 'suspension', modalLvl = 'L2', modalCorner = 0, modalVid = 0;
+let vehFields = [], tireFields = [], sensFields = [], tireSamples = [];
 let postTimer = null;
 
 function debouncedPost(url, body) {
   clearTimeout(postTimer);
   postTimer = setTimeout(async () => {
-    await post(url, body);
-    $('modal_status').textContent = '● applied to live plant';
+    await post(url, { ...body, vehicle_id: modalVid });
+    $('modal_status').textContent = `● applied (vehicle ${modalVid})`;
   }, 300);
 }
 function wireLive(el, url) {
@@ -812,30 +1735,118 @@ function wireLive(el, url) {
     });
   });
 }
+function redrawSuspCurve() {
+  const cv = $('modal_susp_cv'); if (!cv) return;
+  const kinp = document.querySelector('#modal_form [data-name="spring_stiffness"][data-idx="' + modalCorner + '"]');
+  const k = kinp ? +kinp.value : 30000;
+  const n = 60, xmin = -0.06, xmax = 0.06, x = [], y = [];
+  for (let i = 0; i <= n; i++) { const d = xmin + (xmax - xmin) * i / n; x.push(d); y.push(-k * d); }
+  plotChart(cv, { title: `Spring F–δ (${WS_CORNERS[modalCorner]}, k=${k.toFixed(0)} N/m)`,
+    series: [{ x, y, label: 'F [N]', color: '#01A0E9' }] });
+}
+async function refreshTireCurves() {
+  const box = $('modal_tire_curves'); if (!box) return;
+  renderPlots(box, (await (await fetch(`/api/tire/curves?vehicle_id=${modalVid}`)).json()).plots);
+}
 function renderModalPane() {
   const body = $('modal_body');
   body.innerHTML = '';
   const tab = MODAL_TABS.find(t => t.id === modalTab) || MODAL_TABS[0];
   const form = document.createElement('div'); form.id = 'modal_form';
   if (tab.type === 'vehicle') {
+    if (tab.id === 'suspension') {
+      const tools = document.createElement('div'); tools.className = 'modal-tools';
+      tools.appendChild(selectRow('Level preset', ['soft', 'med', 'stiff'], 'med', v => {
+        const p = SUSP_PRESETS[v]; if (!p) return;
+        Object.entries(p).forEach(([nm, val]) => {
+          val.forEach((x, i) => {
+            const inp = form.querySelector(`[data-name="${nm}"][data-idx="${i}"]`);
+            if (inp) inp.value = x;
+          });
+        });
+        debouncedPost('/api/vehicle', p);
+        redrawSuspCurve();
+      }, { soft: 'Soft', med: 'Medium', stiff: 'Stiff' }));
+      tools.appendChild(selectRow('Corner (curve)', WS_CORNERS, WS_CORNERS[modalCorner], v => {
+        modalCorner = WS_CORNERS.indexOf(v); if (modalCorner < 0) modalCorner = 0; redrawSuspCurve();
+      }));
+      body.appendChild(tools);
+    }
     vehFields.filter(tab.filter).forEach(f => form.appendChild(fieldRow(f, modalLvl)));
     body.appendChild(form);
     wireLive(form, '/api/vehicle');
     if (tab.id === 'brake' || tab.id === 'drivetrain') plantEnhance(form);
+    if (tab.id === 'suspension') {
+      const curves = document.createElement('div'); curves.className = 'modal-curves';
+      const cv = document.createElement('canvas'); cv.id = 'modal_susp_cv'; curves.appendChild(cv);
+      body.appendChild(curves);
+      form.querySelectorAll('[data-name]').forEach(inp => {
+        inp.addEventListener(inp.type === 'checkbox' ? 'change' : 'input', () => redrawSuspCurve());
+      });
+      requestAnimationFrame(() => redrawSuspCurve());
+    }
   } else if (tab.type === 'tire') {
+    const tools = document.createElement('div'); tools.className = 'modal-tools';
+    const sel = document.createElement('select');
+    sel.innerHTML = tireSamples.map(s => `<option value="${s}">${s}</option>`).join('');
+    const loadBtn = document.createElement('button'); loadBtn.textContent = 'Load sample';
+    loadBtn.onclick = async () => {
+      const r = await (await fetch('/api/tire/load', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: sel.value, vehicle_id: modalVid }),
+      })).json();
+      if (!r.ok) { $('modal_status').textContent = '● ' + (r.error || 'load failed'); return; }
+      tireFields = (await (await fetch(`/api/tire?vehicle_id=${modalVid}`)).json()).fields;
+      renderModalPane();
+    };
+    const imp = document.createElement('button'); imp.textContent = 'Import .tir';
+    const tirIn = document.createElement('input'); tirIn.type = 'file'; tirIn.accept = '.tir,text/plain'; tirIn.style.display = 'none';
+    imp.onclick = () => tirIn.click();
+    tirIn.onchange = async e => {
+      const f = e.target.files && e.target.files[0]; e.target.value = '';
+      if (!f) return;
+      const r = await (await fetch('/api/tire/import', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: await f.text(), vehicle_id: modalVid }),
+      })).json();
+      $('modal_status').textContent = r.ok
+        ? `● imported ${r.mapped.length} coeffs (parsed ${r.parsed})`
+        : '● ' + (r.error || 'import failed');
+      if (r.ok) { tireFields = (await (await fetch(`/api/tire?vehicle_id=${modalVid}`)).json()).fields; renderModalPane(); }
+    };
+    tools.appendChild(sel); tools.appendChild(loadBtn); tools.appendChild(imp); tools.appendChild(tirIn);
+    body.appendChild(tools);
     const tg = {};
     tireFields.forEach(f => { (tg[f.group] = tg[f.group] || []).push(f); });
     for (const g in tg) {
-      const l = document.createElement('div'); l.className = 'subgrp'; l.textContent = g; form.appendChild(l);
+      const l = document.createElement('div'); l.className = 'subgrp'; l.textContent = g;
+      addHelp(l, DOC_MAP[g] !== undefined ? g : 'Tire');
+      form.appendChild(l);
       tg[g].forEach(f => form.appendChild(fieldRow(f, modalLvl)));
     }
     body.appendChild(form);
     wireLive(form, '/api/tire');
+    const curves = document.createElement('div'); curves.className = 'modal-curves'; curves.id = 'modal_tire_curves';
+    body.appendChild(curves);
+    form.querySelectorAll('[data-name]').forEach(inp => {
+      inp.addEventListener(inp.type === 'checkbox' ? 'change' : 'input', () => {
+        clearTimeout(postTimer);
+        postTimer = setTimeout(refreshTireCurves, 400);
+      });
+    });
+    refreshTireCurves();
+  } else if (tab.type === 'stub') {
+    const note = document.createElement('div');
+    note.className = 'sub';
+    note.textContent = 'Engine torque–RPM map and inertia model — planned for v0.3 (V0.2_DRIVETRAIN.md).';
+    body.appendChild(note);
   } else if (tab.type === 'sensors') {
     const sg = {};
     sensFields.forEach(f => { (sg[f.group] = sg[f.group] || []).push(f); });
     for (const g in sg) {
-      const l = document.createElement('div'); l.className = 'subgrp'; l.textContent = g; form.appendChild(l);
+      const l = document.createElement('div'); l.className = 'subgrp'; l.textContent = g;
+      addHelp(l, SUBGRP_HELP[g] || 'Actuator & feedback');
+      form.appendChild(l);
       sg[g].forEach(f => form.appendChild(fieldRow(f, 'L2')));
     }
     body.appendChild(form);
@@ -844,17 +1855,21 @@ function renderModalPane() {
   $('modal_status').textContent = 'edits POST live (debounced 300 ms)';
 }
 async function openModal(vid) {
-  selectedVid = vid;
+  modalVid = vid;
+  if (vid !== selectedVid) await selectVehicle(vid);
   $('modal_title').textContent = `Vehicle ${vid} — modules`;
-  const cf = await (await fetch('/api/config')).json();
-  modalLvl = cf.config.level;
-  vehFields = (await (await fetch('/api/vehicle')).json()).fields;
-  tireFields = (await (await fetch('/api/tire')).json()).fields;
+  const spec = (window._fleetSpec || []).find(f => +f.id === vid);
+  modalLvl = spec?.level || (await (await fetch('/api/config')).json()).config.level;
+  vehFields = (await (await fetch(`/api/vehicle?vehicle_id=${vid}`)).json()).fields;
+  tireFields = (await (await fetch(`/api/tire?vehicle_id=${vid}`)).json()).fields;
   sensFields = (await (await fetch('/api/sensors')).json()).fields;
+  tireSamples = (await (await fetch('/api/tire/samples')).json()).samples;
   const tabs = $('modal_tabs'); tabs.innerHTML = '';
   MODAL_TABS.forEach(t => {
     const b = document.createElement('button');
-    b.textContent = t.label; b.classList.toggle('on', t.id === modalTab);
+    b.textContent = t.label;
+    if (t.help) addHelp(b, t.help);
+    b.classList.toggle('on', t.id === modalTab);
     b.onclick = () => {
       modalTab = t.id;
       [...tabs.children].forEach(x => x.classList.remove('on'));

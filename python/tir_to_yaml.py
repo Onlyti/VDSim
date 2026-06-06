@@ -36,14 +36,26 @@ FIELD_MAP = {
 
 
 def parse_tir(path: str) -> dict:
+    return parse_tir_text(Path(path).read_text(errors="ignore"))
+
+
+def parse_tir_text(text: str) -> dict:
     fields = {}
     pat = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)")
-    for line in Path(path).read_text(errors="ignore").splitlines():
-        line = line.split("$", 1)[0]    # strip comments
+    for line in text.splitlines():
+        line = line.split("$", 1)[0]
         m = pat.match(line)
         if m:
             fields[m.group(1).upper()] = float(m.group(2))
     return fields
+
+
+def tir_to_params(tir_fields: dict) -> dict:
+    out = {}
+    for src, dst in FIELD_MAP.items():
+        if src in tir_fields:
+            out[dst] = tir_fields[src]
+    return out
 
 
 def main():

@@ -1,4 +1,4 @@
-add_executable(vdsim_realtime realtime_server.cpp)
+add_executable(vdsim_realtime realtime_server.cpp world_scenario.cpp)
 target_include_directories(vdsim_realtime PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(vdsim_realtime PRIVATE vdsim::core)
 if(WIN32)

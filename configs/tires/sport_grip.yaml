@@ -1,0 +1,16 @@
+# Synthetic high-grip passenger tire (generic, not measured data).
+B_long: 11.0
+C_long: 1.65
+D_long: 1.05
+E_long: 0.97
+B_lat:  9.0
+C_lat:  1.30
+D_lat:  1.05
+E_lat: -1.0
+mu_nominal: 1.05
+Fz_nominal: 4000.0
+load_sensitivity: 0.12
+relaxation_length_lat:  0.5
+relaxation_length_long: 0.12
+cornering_stiffness: 92000.0
+rolling_resistance:  0.012

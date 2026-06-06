@@ -14,6 +14,8 @@ import argparse
 import json
 import math
 import os
+import re
+import signal
 import socket
 import subprocess
 import sys
@@ -22,11 +24,14 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "build" / "python"))
 sys.path.insert(0, str(REPO / "cosim"))
+sys.path.insert(0, str(REPO / "python"))
 HERE = Path(__file__).resolve().parent
+TIRE_DIR = REPO / "configs" / "tires"
 
 try:
     import vdsim
@@ -209,6 +214,32 @@ def _serialize(obj, fields):
     return out
 
 
+def _params_dict(obj, fields):
+    return {f[0]: _field_value(obj, f[0], f[3]) for f in fields}
+
+
+def _flat_sensors(sensors):
+    out = {}
+    for attr, _, _, kind in SENSOR_FIELDS:
+        if kind == "bool":
+            out[attr] = bool(getattr(sensors, attr))
+        else:
+            out[attr] = float(_get_dotted(sensors, attr))
+    return out
+
+
+def _flat_actuator(act, sensor_delay):
+    out = {}
+    for attr, _, _, kind in ACTUATOR_FIELDS:
+        if attr == "@sensor_delay_s":
+            out[attr] = float(sensor_delay)
+        elif kind == "bool":
+            out[attr] = bool(_get_dotted(act, attr))
+        else:
+            out[attr] = float(_get_dotted(act, attr))
+    return out
+
+
 def _apply(obj, fields, data):
     kinds = {f[0]: f[3] for f in fields}
     for k, v in data.items():
@@ -281,6 +312,50 @@ class FigureEight(WaypointPath):
 
 COSIM_BIN = REPO / "build" / "bin" / ("vdsim_realtime.exe" if os.name == "nt"
                                       else "vdsim_realtime")
+COSIM_CMD_PORT = 7401
+COSIM_STATE_PORT = 7402
+
+
+def _pids_on_udp_port(port):
+    out = []
+    try:
+        r = subprocess.run(["ss", "-H", "-ulnp"],
+                           capture_output=True, text=True, timeout=2)
+    except (OSError, subprocess.TimeoutExpired):
+        return out
+    needle = f":{int(port)}"
+    for line in (r.stdout or "").splitlines():
+        if needle not in line:
+            continue
+        for tok in line.split():
+            if "pid=" in line:
+                for m in re.finditer(r'pid=(\d+)', line):
+                    out.append(int(m.group(1)))
+    return out
+
+
+def _is_vdsim_realtime_pid(pid):
+    try:
+        raw = Path(f"/proc/{int(pid)}/cmdline").read_bytes()
+    except OSError:
+        return False
+    cmd = raw.replace(b"\x00", b" ").decode(errors="ignore")
+    return "vdsim_realtime" in cmd
+
+
+def _cleanup_stale_plant(cmd_port=7401):
+    killed = []
+    for pid in _pids_on_udp_port(cmd_port):
+        if not _is_vdsim_realtime_pid(pid):
+            continue
+        try:
+            os.kill(pid, signal.SIGTERM)
+            killed.append(pid)
+        except OSError:
+            pass
+    if killed:
+        time.sleep(0.15)
+    return killed
 
 
 def _write_terrain(path, terrain):
@@ -307,7 +382,7 @@ class CosimBridge:
     # Private loopback ports for the GUI's own real-time runtime instance. NOT
     # the canonical 7001/7002 (those are the external AutoHYU contract and can
     # collide with other local services, e.g. NoMachine's nxnode).
-    DEFAULT = {"level": "L2", "cmd_port": 7401, "state_port": 7402,
+    DEFAULT = {"level": "L2", "cmd_port": COSIM_CMD_PORT, "state_port": COSIM_STATE_PORT,
                "rate": 200.0, "vx0": 0.0, "cmd_timeout": 0.1}
 
     def __init__(self):
@@ -317,21 +392,100 @@ class CosimBridge:
         self.started_t = None
         self.last_state = None
         self.last_state_t = None
+        self.states = {}
         self._seq = 0
         self._rx = None
         self._tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._tmp = tempfile.mkdtemp(prefix="vdsim_cosim_")
         self._stop = threading.Event()
+        self.attach_only = False
+        self.cmd_host = "127.0.0.1"
+        self._plant_log = None
+        self._run_since = None
 
     def available(self):
         return COSIM_BIN.exists()
 
     def running(self):
         with self.lock:
+            if self.attach_only:
+                return self._rx is not None and not self._stop.is_set()
             return self.proc is not None and self.proc.poll() is None
 
+    def _launch(self, args, state_port):
+        self._rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._rx.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._rx.bind(("127.0.0.1", int(state_port)))
+        self._rx.settimeout(0.2)
+        self._stop.clear()
+        self.states = {}
+        self.last_state = None
+        if self._plant_log:
+            try:
+                self._plant_log.close()
+            except OSError:
+                pass
+        log_path = os.path.join(self._tmp, "plant.log")
+        self._plant_log = open(log_path, "w")
+        self.proc = subprocess.Popen(args, stdout=self._plant_log,
+                                     stderr=subprocess.STDOUT)
+        self.started_t = time.monotonic()
+        threading.Thread(target=self._rx_loop, args=(self._rx,), daemon=True).start()
+
+    def _road_cli(self, args, road, terrain, sensors, sensor_delay):
+        if terrain is not None:
+            tf = os.path.join(self._tmp, "terrain.bin")
+            _write_terrain(tf, terrain)
+            args.append(f"--terrain={tf}")
+        elif road:
+            for flag, key in (("--mu=", "mu"), ("--mu-right=", "mu_right"),
+                              ("--mu-boundary=", "mu_boundary"), ("--grade=", "grade"),
+                              ("--bank=", "bank"), ("--rough-amp=", "rough_amp"),
+                              ("--rough-wl=", "rough_wl")):
+                if road.get(key) is not None:
+                    args.append(f"{flag}{float(road[key])}")
+        if sensors is not None:
+            sf = os.path.join(self._tmp, "sensors.yaml")
+            sensors.to_yaml(sf)
+            args.append(f"--sensors={sf}")
+        if sensor_delay:
+            args.append(f"--sensor-delay={float(sensor_delay)}")
+
+    def _write_world_yaml(self, fleet, road, terrain, sensors, sensor_delay, rate, cmd_timeout):
+        wy = os.path.join(self._tmp, "world.yaml")
+        lines = [f"rate: {float(rate)}", f"cmd_timeout: {float(cmd_timeout)}"]
+        if terrain is not None:
+            tf = os.path.join(self._tmp, "terrain.bin")
+            _write_terrain(tf, terrain)
+            lines.append(f"terrain: {tf}")
+        elif road:
+            for key in ("mu", "mu_right", "mu_boundary", "grade", "bank",
+                        "rough_amp", "rough_wl"):
+                if road.get(key) is not None:
+                    lines.append(f"{key}: {float(road[key])}")
+        if sensors is not None:
+            sf = os.path.join(self._tmp, "sensors.yaml")
+            sensors.to_yaml(sf)
+            lines.append(f"sensors: {sf}")
+        if sensor_delay:
+            lines.append(f"sensor_delay: {float(sensor_delay)}")
+        lines.append("vehicles:")
+        for e in fleet:
+            lines += [
+                f"  - id: {int(e['id'])}",
+                f"    vehicle: {e['vehicle_yaml']}",
+                f"    tire: {e['tire_yaml']}",
+                f"    level: {e.get('level', 'L2')}",
+                f"    x0: {float(e.get('x0', 0.0))}",
+                f"    y0: {float(e.get('y0', 0.0))}",
+                f"    yaw0: {float(e.get('yaw0', 0.0))}",
+                f"    vx0: {float(e.get('vx0', 0.0))}",
+            ]
+        Path(wy).write_text("\n".join(lines) + "\n")
+        return wy
+
     def start(self, vp, tp, over, road=None, sensors=None, terrain=None,
-              sensor_delay=0.0, pose=None):
+              sensor_delay=0.0, pose=None, fleet=None):
         if self.running():
             self.stop()
         with self.lock:
@@ -339,60 +493,45 @@ class CosimBridge:
                 if k in over:
                     self.cfg[k] = over[k]
             self.cfg["level"] = str(self.cfg["level"])
-            vy = os.path.join(self._tmp, "vehicle.yaml")
-            ty = os.path.join(self._tmp, "tire.yaml")
-            vp.to_yaml(vy)
-            tp.to_yaml(ty)
             c = self.cfg
-            args = [str(COSIM_BIN), vy, ty, f"--level={c['level']}",
-                    f"--cmd-port={int(c['cmd_port'])}", "--state-ip=127.0.0.1",
-                    f"--state-port={int(c['state_port'])}", f"--rate={float(c['rate'])}",
-                    f"--vx0={float(c['vx0'])}", f"--cmd-timeout={float(c['cmd_timeout'])}"]
-            # road / terrain / sensors -> full real-time runtime parity with the
-            # in-process sim (terrain wins over analytic surface, server-side).
-            if terrain is not None:
-                tf = os.path.join(self._tmp, "terrain.bin")
-                _write_terrain(tf, terrain)
-                args.append(f"--terrain={tf}")
-            elif road:
-                for flag, key in (("--mu=", "mu"), ("--mu-right=", "mu_right"),
-                                  ("--mu-boundary=", "mu_boundary"), ("--grade=", "grade"),
-                                  ("--bank=", "bank"), ("--rough-amp=", "rough_amp"),
-                                  ("--rough-wl=", "rough_wl")):
-                    if road.get(key) is not None:
-                        args.append(f"{flag}{float(road[key])}")
-            if sensors is not None:
-                sf = os.path.join(self._tmp, "sensors.yaml")
-                sensors.to_yaml(sf)
-                args.append(f"--sensors={sf}")
-            if sensor_delay:
-                args.append(f"--sensor-delay={float(sensor_delay)}")
-            if pose:
-                for flag, key in (("--x0=", "x0"), ("--y0=", "y0"), ("--yaw0=", "yaw0")):
-                    if pose.get(key) is not None:
-                        args.append(f"{flag}{float(pose[key])}")
-            self._rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self._rx.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self._rx.bind(("127.0.0.1", int(c["state_port"])))
-            self._rx.settimeout(0.2)
-            self._stop.clear()
-            self.proc = subprocess.Popen(args, stdout=subprocess.DEVNULL,
-                                         stderr=subprocess.DEVNULL)
-            self.started_t = time.monotonic()
-            self.last_state = None
-            threading.Thread(target=self._rx_loop, args=(self._rx,), daemon=True).start()
+            if fleet and len(fleet) > 1:
+                wy = self._write_world_yaml(
+                    fleet, road, terrain, sensors, sensor_delay,
+                    c["rate"], c["cmd_timeout"])
+                args = [str(COSIM_BIN), f"--scenario={wy}",
+                        f"--cmd-port={int(c['cmd_port'])}", "--state-ip=127.0.0.1",
+                        f"--state-port={int(c['state_port'])}",
+                        f"--rate={float(c['rate'])}",
+                        f"--cmd-timeout={float(c['cmd_timeout'])}"]
+                self._launch(args, c["state_port"])
+            else:
+                vy = os.path.join(self._tmp, "vehicle.yaml")
+                ty = os.path.join(self._tmp, "tire.yaml")
+                vp.to_yaml(vy)
+                tp.to_yaml(ty)
+                args = [str(COSIM_BIN), vy, ty, f"--level={c['level']}",
+                        f"--cmd-port={int(c['cmd_port'])}", "--state-ip=127.0.0.1",
+                        f"--state-port={int(c['state_port'])}", f"--rate={float(c['rate'])}",
+                        f"--vx0={float(c['vx0'])}", f"--cmd-timeout={float(c['cmd_timeout'])}"]
+                self._road_cli(args, road, terrain, sensors, sensor_delay)
+                if pose:
+                    for flag, key in (("--x0=", "x0"), ("--y0=", "y0"), ("--yaw0=", "yaw0")):
+                        if pose.get(key) is not None:
+                            args.append(f"{flag}{float(pose[key])}")
+                self._launch(args, c["state_port"])
         return self.status()
 
     def stop(self):
         with self.lock:
             self._stop.set()
-            if self.proc and self.proc.poll() is None:
+            if not self.attach_only and self.proc and self.proc.poll() is None:
                 self.proc.terminate()
                 try:
                     self.proc.wait(timeout=2)
                 except subprocess.TimeoutExpired:
                     self.proc.kill()
             self.proc = None
+            self.attach_only = False
             self.started_t = None
             if self._rx is not None:
                 try:
@@ -401,25 +540,59 @@ class CosimBridge:
                     pass
                 self._rx = None
             self.last_state = None
+            self.states = {}
+        return self.status()
+
+    def attach(self, host="127.0.0.1", cmd_port=COSIM_CMD_PORT,
+               state_port=COSIM_STATE_PORT):
+        if self.running():
+            self.stop()
+        local = str(host).lower() in ("127.0.0.1", "localhost", "::1")
+        if local:
+            _cleanup_stale_plant(int(cmd_port))
+        with self.lock:
+            self.attach_only = True
+            self.cmd_host = str(host)
+            self.cfg["cmd_port"] = int(cmd_port)
+            self._rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self._rx.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            state_port = int(state_port)
+            self.cfg["state_port"] = state_port
+            if local:
+                self._rx.bind(("127.0.0.1", state_port))
+            else:
+                self._rx.bind(("0.0.0.0", 0))
+            self._rx.settimeout(0.2)
+            self._stop.clear()
+            self.states = {}
+            self.last_state = None
+            self.last_state_t = None
+            self.started_t = time.monotonic()
+            threading.Thread(target=self._rx_loop, args=(self._rx,), daemon=True).start()
+        self.send_cmd(0.0, 0.0, 0.0, vehicle_id=0)
         return self.status()
 
     def status(self):
-        run = self.proc is not None and self.proc.poll() is None
-        return {"available": self.available(), "running": run, "cfg": dict(self.cfg),
-                "pid": (self.proc.pid if run else None),
+        run = self.running()
+        return {"available": self.available(), "running": run, "attach": self.attach_only,
+                "cfg": dict(self.cfg), "cmd_host": self.cmd_host,
+                "pid": (self.proc.pid if run and self.proc else None),
                 "uptime": (time.monotonic() - self.started_t if run and self.started_t else None),
                 "state_age": (time.monotonic() - self.last_state_t if self.last_state_t else None),
+                "vehicles": sorted(self.states),
                 "binary": str(COSIM_BIN)}
 
-    def send_cmd(self, throttle, brake, steer, gear=1):
+    def send_cmd(self, throttle, brake, steer, gear=1, vehicle_id=0):
         if not self.running():
             return
         self._seq += 1
         body = vds1.pack_cmd(self._seq, steer=steer, throttle=throttle, brake=brake,
                              gear=gear, aux_accel=0.0, aux_speed=0.0,
-                             timestamp=time.time())
+                             timestamp=time.time(), vehicle_id=int(vehicle_id))
+        host = self.cmd_host if self.attach_only else "127.0.0.1"
+        sock = self._rx if self.attach_only and self._rx else self._tx
         try:
-            self._tx.sendto(body, ("127.0.0.1", int(self.cfg["cmd_port"])))
+            sock.sendto(body, (host, int(self.cfg["cmd_port"])))
         except OSError:
             pass
 
@@ -431,6 +604,8 @@ class CosimBridge:
                 continue
             st = self._decode_state(data)
             if st:
+                vid = int(st.get("vehicle_id", 0))
+                self.states[vid] = st
                 self.last_state = st
                 self.last_state_t = time.monotonic()
 
@@ -439,7 +614,8 @@ class CosimBridge:
         s = vds1.decode_state(buf)
         if s is None:
             return None
-        return {"t": s["timestamp"], "x": s["x"], "y": s["y"], "z": s["z"],
+        return {"vehicle_id": s.get("vehicle_id", 0),
+                "t": s["timestamp"], "x": s["x"], "y": s["y"], "z": s["z"],
                 "roll": s["roll"], "pitch": s["pitch"], "yaw": s["yaw"],
                 "vx": s["vx"], "vy": s["vy"], "r": s["yaw_rate"],
                 "wx": s["roll_rate"], "wy": s["pitch_rate"],
@@ -472,15 +648,24 @@ class Runner:
     def __init__(self):
         self.lock = threading.Lock()
         self.cfg = {"level": "L2", "vehicle": "sedan", "v_target": 10.0,
-                    "driver": True, "running": True,
-                    "init_x": 0.0, "init_y": 0.0, "init_yaw": 0.0, "init_v": 10.0,
+                    "driver": True, "running": False,
+                    "init_x": 0.0, "init_y": 0.0, "init_yaw": 0.0, "init_v": 0.0,
                     "road_mu": 1.0, "road_mu_right": -1.0, "road_boundary": 0.0,
                     "road_grade": 0.0, "road_bank": 0.0,
-                    "road_rough_amp": 0.0, "road_rough_wl": 4.0}
+                    "road_rough_amp": 0.0, "road_rough_wl": 4.0,
+                    "cosim_attach": False, "cosim_host": "127.0.0.1",
+                    "cosim_cmd_port": 7401}
         self.dt = 0.005
         self.time_scale = 1.0
-        self.live_vid = 0                  # vehicle id backed by the (single) sim
-        self.ports = {0: VehiclePort()}    # data-port config keyed by vehicle id
+        self.live_vid = 0
+        self.ports = {0: VehiclePort()}
+        self.fleet_spec = [
+            {"id": 0, "vehicle": "sedan", "tire": "default_pacejka", "level": "L2",
+             "x0": 0.0, "y0": 0.0, "yaw0": 0.0, "vx0": 0.0},
+        ]
+        self.fleet_overrides = {}
+        self.plant_error = None
+        self._wait_since = None
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.cosim = CosimBridge()         # binary co-sim server (configured + launched here)
         self.rec_on = False                # logging recorder
@@ -499,13 +684,169 @@ class Runner:
         self.terrain = None                      # baked heightmap terrain (or None)
         self.scenery = None                      # parsed building meshes (or None)
         self.tex_dir = None                      # dir holding building textures
-        self._build()
+        self.path_preset = "figure8"
+        self.prev_idx = 0
         threading.Thread(target=self._loop, daemon=True).start()
 
+    def _ensure_ports(self):
+        for spec in self.fleet_spec:
+            vid = int(spec["id"])
+            if vid not in self.ports:
+                self.ports[vid] = VehiclePort()
+
+    def _renumber_fleet(self):
+        want = list(range(len(self.fleet_spec)))
+        have = [int(s["id"]) for s in self.fleet_spec]
+        if have == want:
+            return
+        mapping = {old: i for i, old in enumerate(have)}
+        new_spec = []
+        for i, s in enumerate(self.fleet_spec):
+            ns = dict(s)
+            ns["id"] = i
+            new_spec.append(ns)
+        new_overrides = {mapping[k]: v for k, v in self.fleet_overrides.items()
+                         if k in mapping}
+        new_ports = {mapping[k]: v for k, v in self.ports.items() if k in mapping}
+        self.fleet_spec = new_spec
+        self.fleet_overrides = new_overrides
+        self.ports = new_ports
+        self.live_vid = mapping.get(self.live_vid, 0)
+        self._ensure_ports()
+        self._sync_live_from_fleet()
+
+    def _spec_for_vid(self, vid):
+        vid = int(vid)
+        spec = next((f for f in self.fleet_spec if int(f["id"]) == vid), None)
+        if spec is None:
+            raise ValueError(f"unknown vehicle id {vid}")
+        return spec
+
+    def _vp_for_vid(self, vid):
+        vid = int(vid)
+        if vid == self.live_vid:
+            return self.vp
+        spec = self._spec_for_vid(vid)
+        vp = vdsim.VehicleParams.from_yaml(
+            str(REPO / f"configs/vehicles/{spec['vehicle']}.yaml"))
+        ov = self.fleet_overrides.get(vid, {}).get("vehicle")
+        if ov:
+            _apply(vp, VEHICLE_FIELDS, ov)
+        return vp
+
+    def _tp_for_vid(self, vid):
+        vid = int(vid)
+        if vid == self.live_vid:
+            return self.tp
+        spec = self._spec_for_vid(vid)
+        tp = vdsim.TireParams.from_yaml(
+            str(REPO / f"configs/tires/{spec['tire']}.yaml"))
+        ov = self.fleet_overrides.get(vid, {}).get("tire")
+        if ov:
+            _apply(tp, TIRE_FIELDS, ov)
+        return tp
+
+    def vehicle_geom(self, vid):
+        vp = self._vp_for_vid(vid)
+        return {"cg_to_front": float(vp.cg_to_front), "cg_to_rear": float(vp.cg_to_rear),
+                "track_front": float(vp.track_front), "track_rear": float(vp.track_rear),
+                "wheel_radius_nominal": float(vp.wheel_radius_nominal)}
+
+    def _fleet_launch(self):
+        fleet = []
+        for spec in self.fleet_spec:
+            vid = int(spec["id"])
+            vy = os.path.join(self.cosim._tmp, f"vehicle_{vid}.yaml")
+            ty = os.path.join(self.cosim._tmp, f"tire_{vid}.yaml")
+            self._vp_for_vid(vid).to_yaml(vy)
+            self._tp_for_vid(vid).to_yaml(ty)
+            fleet.append({
+                "id": vid,
+                "vehicle_yaml": vy,
+                "tire_yaml": ty,
+                "level": spec.get("level", self.cfg["level"]),
+                "x0": float(spec.get("x0", self.cfg["init_x"])),
+                "y0": float(spec.get("y0", self.cfg["init_y"])),
+                "yaw0": float(spec.get("yaw0", self.cfg["init_yaw"])),
+                "vx0": float(spec.get("vx0", self.cfg["init_v"])),
+            })
+        return fleet
+
+    def _sync_live_from_fleet(self):
+        spec = self._spec_for_vid(self.live_vid)
+        self.cfg["init_x"] = float(spec.get("x0", 0.0))
+        self.cfg["init_y"] = float(spec.get("y0", 0.0))
+        self.cfg["init_yaw"] = float(spec.get("yaw0", 0.0))
+        self.cfg["init_v"] = float(spec.get("vx0", 0.0))
+        if spec.get("level"):
+            self.cfg["level"] = str(spec["level"])
+        if spec.get("vehicle"):
+            self.cfg["vehicle"] = str(spec["vehicle"])
+            self.load_vehicle(self.cfg["vehicle"])
+        tire_stem = str(spec.get("tire", ""))
+        if tire_stem:
+            tp = vdsim.TireParams.from_yaml(
+                str(REPO / f"configs/tires/{tire_stem}.yaml"))
+            ov = self.fleet_overrides.get(self.live_vid, {}).get("tire")
+            if ov:
+                _apply(tp, TIRE_FIELDS, ov)
+            self.tp = tp
+
+    def load_fleet_scenario(self, name):
+        path = REPO / "configs" / "scenarios" / f"{name}.yaml"
+        if not path.is_file():
+            raise ValueError(f"unknown scenario: {name}")
+        import yaml
+        doc = yaml.safe_load(path.read_text())
+        self.fleet_overrides = {}
+        self.fleet_spec = []
+        for v in doc.get("vehicles", []):
+            veh = Path(str(v["vehicle"]))
+            tire = Path(str(v["tire"]))
+            if not veh.is_absolute():
+                veh = REPO / veh
+            if not tire.is_absolute():
+                tire = REPO / tire
+            self.fleet_spec.append({
+                "id": int(v["id"]),
+                "vehicle": veh.stem,
+                "tire": tire.stem,
+                "level": str(v.get("level", "L2")),
+                "x0": float(v.get("x0", 0.0)),
+                "y0": float(v.get("y0", 0.0)),
+                "yaw0": float(v.get("yaw0", 0.0)),
+                "vx0": float(v.get("vx0", 0.0)),
+            })
+        self._ensure_ports()
+        if self.fleet_spec:
+            s0 = self.fleet_spec[0]
+            self.live_vid = int(s0["id"])
+            self.cfg["init_x"] = float(s0.get("x0", 0.0))
+            self.cfg["init_y"] = float(s0.get("y0", 0.0))
+            self.cfg["init_yaw"] = float(s0.get("yaw0", 0.0))
+            self.cfg["init_v"] = float(s0.get("vx0", 0.0))
+            if s0.get("level"):
+                self.cfg["level"] = str(s0["level"])
+            self._sync_live_from_fleet()
+        if doc.get("path_preset"):
+            self.set_path_preset(str(doc["path_preset"]))
+        elif doc.get("path_pts"):
+            pts = [(float(p[0]), float(p[1])) for p in doc["path_pts"]]
+            if len(pts) >= 2:
+                self.path = WaypointPath(pts)
+                self.path_preset = "custom"
+        for key, ck in (("mu", "road_mu"), ("grade", "road_grade"), ("bank", "road_bank"),
+                        ("v_target", "v_target")):
+            if doc.get(key) is not None:
+                self.cfg[ck] = float(doc[key])
+        if doc.get("road"):
+            r = doc["road"]
+            for k, ck in (("mu", "road_mu"), ("grade", "road_grade"), ("bank", "road_bank")):
+                if k in r:
+                    self.cfg[ck] = float(r[k])
+
     def _build(self):
-        # No in-process sim: the real-time server (vdsim_realtime) is the single
-        # plant. (Re)start it with the current vehicle/tire/level/road/terrain/
-        # sensors + init pose; the GUI subscribes to its STATE and relays CMD.
+        self._ensure_ports()
         over = {"level": self.cfg["level"], "vx0": max(0.0, self.cfg["init_v"]),
                 "rate": (1.0 / self.dt if self.dt > 1e-6 else 200.0)}
         road = {"mu": self.cfg["road_mu"], "mu_right": self.cfg["road_mu_right"],
@@ -514,12 +855,25 @@ class Runner:
                 "rough_wl": self.cfg["road_rough_wl"]}
         pose = {"x0": self.cfg["init_x"], "y0": self.cfg["init_y"], "yaw0": self.cfg["init_yaw"]}
         sensors = self.sensors if self.sensors.enabled else None
+        if self.cfg.get("cosim_attach"):
+            self.cosim.attach(self.cfg.get("cosim_host", "127.0.0.1"),
+                              int(self.cfg.get("cosim_cmd_port", COSIM_CMD_PORT)),
+                              int(self.cfg.get("cosim_state_port", COSIM_STATE_PORT)))
+            self.prev_idx = 0
+            return
+        _cleanup_stale_plant(int(self.cosim.cfg.get("cmd_port", COSIM_CMD_PORT)))
+        fleet = self._fleet_launch()
         if self.cosim.available():
             self.cosim.start(self.vp, self.tp, over, road=road, sensors=sensors,
-                             terrain=self.terrain, sensor_delay=self.sensor_delay, pose=pose)
+                             terrain=self.terrain, sensor_delay=self.sensor_delay,
+                             pose=pose, fleet=fleet)
         else:
             print("[VDSim GUI] vdsim_realtime binary missing — build the C++ tree first")
         self.prev_idx = 0
+
+    def _rebuild_if_running(self):
+        if self.cfg["running"]:
+            self._build()
 
     def load_vehicle(self, name):
         self.vp = vdsim.VehicleParams.from_yaml(
@@ -532,7 +886,7 @@ class Runner:
             for k in ("level", "vehicle", "v_target", "driver"):
                 if k in kw:
                     self.cfg[k] = kw[k]
-            self._build()
+            self._rebuild_if_running()
 
     def set_sim(self, dt=None, time_scale=None, integrator=None, max_substeps=None,
                 **init):
@@ -555,19 +909,44 @@ class Runner:
                     self.cfg[k] = float(init[k])
                     rebuild = True
             if rebuild:
-                self._build()
+                self._rebuild_if_running()
 
-    def set_params(self, which, data):
+    def set_params(self, which, data, vehicle_id=None):
+        vid = int(vehicle_id) if vehicle_id is not None else self.live_vid
         with self.lock:
-            if which == "vehicle":
-                _apply(self.vp, VEHICLE_FIELDS, data)
-            elif which == "tire":
-                _apply(self.tp, TIRE_FIELDS, data)
-            elif which == "sensors":
-                self._apply_sensors(data)
-            else:
-                self._apply_actuator(data)
-            self._build()
+            if vid == self.live_vid:
+                if which == "vehicle":
+                    _apply(self.vp, VEHICLE_FIELDS, data)
+                elif which == "tire":
+                    _apply(self.tp, TIRE_FIELDS, data)
+                elif which == "sensors":
+                    self._apply_sensors(data)
+                else:
+                    self._apply_actuator(data)
+            elif which in ("vehicle", "tire"):
+                bucket = self.fleet_overrides.setdefault(vid, {}).setdefault(which, {})
+                bucket.update(data)
+            self._rebuild_if_running()
+
+    def serialize_vehicle(self, vehicle_id=None):
+        vid = int(vehicle_id) if vehicle_id is not None else self.live_vid
+        with self.lock:
+            return _serialize(self._vp_for_vid(vid), VEHICLE_FIELDS)
+
+    def serialize_tire(self, vehicle_id=None):
+        vid = int(vehicle_id) if vehicle_id is not None else self.live_vid
+        with self.lock:
+            return _serialize(self._tp_for_vid(vid), TIRE_FIELDS)
+
+    def fleet_enriched(self):
+        with self.lock:
+            out = []
+            for spec in self.fleet_spec:
+                vid = int(spec["id"])
+                row = dict(spec)
+                row["geom"] = self.vehicle_geom(vid)
+                out.append(row)
+            return out
 
     def serialize_sensors(self):
         out = []
@@ -605,37 +984,40 @@ class Runner:
                         "value": val})
         return out
 
-    def tire_curves(self):
+    def tire_curves(self, vehicle_id=None):
         with self.lock:
-            tp = self.tp
-            t = vdsim.create_pacejka_mf96()
-            t.initialize(tp)
-            Fz0, mu = tp.Fz_nominal, tp.mu_nominal
+            vid = int(vehicle_id) if vehicle_id is not None else self.live_vid
+            tp = self._tp_for_vid(vid)
+        return self._tire_plots(tp)
 
-            def F(kappa, alpha, Fz):
-                inp = vdsim.TireInput()
-                inp.Fz, inp.kappa, inp.alpha = Fz, kappa, alpha
-                inp.mu_long = inp.mu_lat = mu
-                inp.Vx_wheel, inp.gamma = 15.0, 0.0
-                o = t.compute(inp)
-                return o.Fx, o.Fy
+    def _tire_plots(self, tp):
+        t = vdsim.create_pacejka_mf96()
+        t.initialize(tp)
+        Fz0, mu = tp.Fz_nominal, tp.mu_nominal
 
-            ks = [i / 100.0 for i in range(-25, 26)]
-            deg = 57.29578
-            loads = [(0.5, "#9bbcff"), (1.0, "#01A0E9"), (1.5, "#002060")]
-            sx = [{"label": f"{int(L*100)}% Fz", "color": c, "x": ks,
-                   "y": [F(k, 0.0, Fz0 * L)[0] for k in ks]} for L, c in loads]
-            # Negate Fy so +alpha -> +cornering force (intuitive reading).
-            sy = [{"label": f"{int(L*100)}% Fz", "color": c, "x": [a * deg for a in ks],
-                   "y": [-F(0.0, a, Fz0 * L)[1] for a in ks]} for L, c in loads]
-            kappas = [(0.0, "#002060"), (0.05, "#01A0E9"), (0.10, "#f5a623"), (0.20, "#DC291E")]
-            sc = [{"label": f"κ={k:g}", "color": c, "x": [a * deg for a in ks],
-                   "y": [-F(k, a, Fz0)[1] for a in ks]} for k, c in kappas]
-            return [
-                {"title": "Longitudinal Fx(κ)", "xlabel": "slip ratio κ", "ylabel": "Fx [N]", "series": sx},
-                {"title": "Lateral Fy(α)", "xlabel": "slip angle α [deg]", "ylabel": "Fy [N]", "series": sy},
-                {"title": "Combined slip — Fy(α) at fixed κ", "xlabel": "slip angle α [deg]", "ylabel": "Fy [N]", "series": sc},
-            ]
+        def F(kappa, alpha, Fz):
+            inp = vdsim.TireInput()
+            inp.Fz, inp.kappa, inp.alpha = Fz, kappa, alpha
+            inp.mu_long = inp.mu_lat = mu
+            inp.Vx_wheel, inp.gamma = 15.0, 0.0
+            o = t.compute(inp)
+            return o.Fx, o.Fy
+
+        ks = [i / 100.0 for i in range(-25, 26)]
+        deg = 57.29578
+        loads = [(0.5, "#9bbcff"), (1.0, "#01A0E9"), (1.5, "#002060")]
+        sx = [{"label": f"{int(L*100)}% Fz", "color": c, "x": ks,
+               "y": [F(k, 0.0, Fz0 * L)[0] for k in ks]} for L, c in loads]
+        sy = [{"label": f"{int(L*100)}% Fz", "color": c, "x": [a * deg for a in ks],
+               "y": [-F(0.0, a, Fz0 * L)[1] for a in ks]} for L, c in loads]
+        kappas = [(0.0, "#002060"), (0.05, "#01A0E9"), (0.10, "#f5a623"), (0.20, "#DC291E")]
+        sc = [{"label": f"κ={k:g}", "color": c, "x": [a * deg for a in ks],
+               "y": [-F(k, a, Fz0)[1] for a in ks]} for k, c in kappas]
+        return [
+            {"title": "Longitudinal Fx(κ)", "xlabel": "slip ratio κ", "ylabel": "Fx [N]", "series": sx},
+            {"title": "Lateral Fy(α)", "xlabel": "slip angle α [deg]", "ylabel": "Fy [N]", "series": sy},
+            {"title": "Combined slip — Fy(α) at fixed κ", "xlabel": "slip angle α [deg]", "ylabel": "Fy [N]", "series": sc},
+        ]
 
     def actuator_step(self):
         with self.lock:
@@ -667,14 +1049,261 @@ class Runner:
             else:
                 _set_dotted(self.act, k, float(v))
 
+    def set_path_preset(self, name):
+        self.path_preset = name
+        if name == "figure8":
+            self.path = FigureEight()
+        elif name == "straight":
+            self.path = WaypointPath([(-40.0, 0.0), (40.0, 0.0)])
+
+    def get_setup(self):
+        with self.lock:
+            road = {"mu": self.cfg["road_mu"], "mu_right": self.cfg["road_mu_right"],
+                    "mu_boundary": self.cfg["road_boundary"], "grade": self.cfg["road_grade"],
+                    "bank": self.cfg["road_bank"], "rough_amp": self.cfg["road_rough_amp"],
+                    "rough_wl": self.cfg["road_rough_wl"]}
+            fleet = []
+            for spec in self.fleet_spec:
+                vid = int(spec["id"])
+                row = dict(spec)
+                row["geom"] = self.vehicle_geom(vid)
+                fleet.append(row)
+            return {
+                "running": self.cfg["running"],
+                "path_preset": self.path_preset,
+                "path_pts": [[float(p[0]), float(p[1])] for p in self.path.pts],
+                "fleet": fleet,
+                "road": road,
+                "v_target": self.cfg["v_target"],
+                "level": self.cfg["level"],
+                "vehicle": self.cfg["vehicle"],
+                "driver": self.cfg["driver"],
+                "cosim_attach": self.cfg.get("cosim_attach", False),
+                "cosim_host": self.cfg.get("cosim_host", "127.0.0.1"),
+                "cosim_cmd_port": int(self.cfg.get("cosim_cmd_port", 7401)),
+                "scenarios": self.list_scenarios(),
+            }
+
+    def _fleet_add(self):
+        ids = [int(s["id"]) for s in self.fleet_spec]
+        nid = (max(ids) + 1) if ids else 0
+        ref = self.fleet_spec[-1]
+        self.fleet_spec.append({
+            "id": nid,
+            "vehicle": str(ref.get("vehicle", "sedan")),
+            "tire": str(ref.get("tire", "default_pacejka")),
+            "level": str(ref.get("level", self.cfg["level"])),
+            "x0": float(ref.get("x0", 0.0)) + 3.0,
+            "y0": float(ref.get("y0", 0.0)),
+            "yaw0": float(ref.get("yaw0", 0.0)),
+            "vx0": float(ref.get("vx0", 0.0)),
+        })
+        self._ensure_ports()
+
+    def _fleet_ids(self):
+        return {int(s["id"]) for s in self.fleet_spec}
+
+    def _prune_cosim_states(self):
+        allowed = self._fleet_ids()
+        for k in list(self.cosim.states.keys()):
+            if int(k) not in allowed:
+                self.cosim.states.pop(k, None)
+        if (self.cosim.last_state is not None
+                and int(self.cosim.last_state.get("vehicle_id", 0)) not in allowed):
+            self.cosim.last_state = None
+            self.cosim.last_state_t = None
+
+    def _fleet_remove(self, vid):
+        if len(self.fleet_spec) <= 1:
+            return
+        vid = int(vid)
+        self.fleet_spec = [s for s in self.fleet_spec if int(s["id"]) != vid]
+        self.fleet_overrides.pop(vid, None)
+        self.ports.pop(vid, None)
+        if self.live_vid == vid:
+            s0 = self.fleet_spec[0]
+            self.live_vid = int(s0["id"])
+        self._renumber_fleet()
+        self._prune_cosim_states()
+
+    def list_scenarios(self):
+        d = REPO / "configs" / "scenarios"
+        if not d.is_dir():
+            return []
+        return sorted(p.stem for p in d.glob("*.yaml"))
+
+    def save_scenario(self, name):
+        import yaml
+        stem = Path(str(name)).stem
+        if not stem:
+            raise ValueError("scenario name required")
+        path = REPO / "configs" / "scenarios" / f"{stem}.yaml"
+        vehs = []
+        for s in self.fleet_spec:
+            vehs.append({
+                "id": int(s["id"]),
+                "vehicle": f"configs/vehicles/{s['vehicle']}.yaml",
+                "tire": f"configs/tires/{s['tire']}.yaml",
+                "level": str(s.get("level", "L2")),
+                "x0": float(s.get("x0", 0.0)),
+                "y0": float(s.get("y0", 0.0)),
+                "yaw0": float(s.get("yaw0", 0.0)),
+                "vx0": float(s.get("vx0", 0.0)),
+            })
+        doc = {
+            "name": stem,
+            "rate": 200,
+            "cmd_timeout": 0.1,
+            "mu": float(self.cfg["road_mu"]),
+            "grade": float(self.cfg["road_grade"]),
+            "bank": float(self.cfg["road_bank"]),
+            "v_target": float(self.cfg["v_target"]),
+            "path_preset": self.path_preset,
+            "vehicles": vehs,
+        }
+        if self.path_preset == "custom":
+            doc["path_pts"] = [[float(p[0]), float(p[1])] for p in self.path.pts]
+        path.write_text(yaml.safe_dump(doc, sort_keys=False))
+        return {"ok": True, "name": stem}
+
+    def apply_setup(self, data):
+        refresh_snap = False
+        with self.lock:
+            if data.get("fleet_add"):
+                self._fleet_add()
+                refresh_snap = True
+            if data.get("fleet_remove") is not None:
+                self._fleet_remove(int(data["fleet_remove"]))
+                refresh_snap = True
+            if "cosim_attach" in data:
+                self.cfg["cosim_attach"] = bool(data["cosim_attach"])
+            if "cosim_host" in data:
+                self.cfg["cosim_host"] = str(data["cosim_host"])
+            if "cosim_cmd_port" in data:
+                self.cfg["cosim_cmd_port"] = int(data["cosim_cmd_port"])
+            preset = str(data.get("path_preset") or "")
+            if preset and preset != "custom":
+                self.set_path_preset(preset)
+            elif "path_pts" in data and data["path_pts"]:
+                pts = [(float(p[0]), float(p[1])) for p in data["path_pts"]]
+                if len(pts) >= 2:
+                    self.path = WaypointPath(pts)
+                    self.path_preset = "custom"
+            if "fleet" in data:
+                for upd in data["fleet"]:
+                    vid = int(upd["id"])
+                    spec = next((f for f in self.fleet_spec if int(f["id"]) == vid), None)
+                    if spec is None:
+                        continue
+                    for k in ("x0", "y0", "yaw0", "vx0", "level", "vehicle", "tire"):
+                        if k in upd:
+                            spec[k] = upd[k]
+                    if vid == self.live_vid:
+                        self._sync_live_from_fleet()
+                refresh_snap = True
+            if "road" in data:
+                r = data["road"]
+                for k, ck in (("mu", "road_mu"), ("mu_right", "road_mu_right"),
+                              ("mu_boundary", "road_boundary"), ("grade", "road_grade"),
+                              ("bank", "road_bank"), ("rough_amp", "road_rough_amp"),
+                              ("rough_wl", "road_rough_wl")):
+                    if k in r:
+                        self.cfg[ck] = float(r[k])
+            if "v_target" in data:
+                self.cfg["v_target"] = float(data["v_target"])
+            if "level" in data:
+                self.cfg["level"] = str(data["level"])
+            if "vehicle" in data:
+                self.cfg["vehicle"] = str(data["vehicle"])
+                self.load_vehicle(self.cfg["vehicle"])
+            if refresh_snap and not self.cfg["running"]:
+                self.latest = self._setup_snapshot()
+
+    def _setup_snapshot(self):
+        fleet = {}
+        for spec in self.fleet_spec:
+            vid = str(int(spec["id"]))
+            fleet[vid] = {
+                "x": float(spec.get("x0", 0.0)),
+                "y": float(spec.get("y0", 0.0)),
+                "z": 0.0,
+                "yaw": float(spec.get("yaw0", 0.0)),
+                "roll": 0.0, "pitch": 0.0,
+                "vx": float(spec.get("vx0", 0.0)),
+                "vy": 0.0,
+                "level": spec.get("level", self.cfg["level"]),
+                "vehicle": spec.get("vehicle", ""),
+            }
+        live = fleet.get(str(self.live_vid), {})
+        return {
+            "t": 0.0, "running": False, "setup_mode": True,
+            "driver": self.cfg["driver"],
+            "x": live.get("x", 0.0), "y": live.get("y", 0.0), "z": 0.0,
+            "yaw": live.get("yaw", 0.0), "roll": 0.0, "pitch": 0.0,
+            "vx": 0.0, "vy": 0.0, "r": 0.0,
+            "wx": 0.0, "wy": 0.0, "ax": 0.0, "ay": 0.0,
+            "steer": 0.0, "Fz": [0.0, 0.0, 0.0, 0.0],
+            "Ft": [], "wheel_spin": [], "susp": [], "rack_torque": 0.0,
+            "kappa": [], "alpha": [],
+            "level": self.cfg["level"], "vehicle": self.cfg["vehicle"],
+            "v_target": self.cfg["v_target"], "dt": self.dt,
+            "time_scale": self.time_scale, "source": "setup",
+            "fleet": fleet, "live_vid": self.live_vid,
+            "npath": len(self.path.pts), "terrain": 1 if self.terrain else 0,
+            "grade": self.cfg["road_grade"], "bank": self.cfg["road_bank"],
+        }
+
     def control(self, action):
+        start_req = False
         with self.lock:
             if action == "reset":
-                self._build()
+                self.cfg["running"] = False
+                self.plant_error = None
+                self.cosim.stop()
+                self.prev_idx = 0
             elif action == "stop":
                 self.cfg["running"] = False
+                self.plant_error = None
+                self.cosim.stop()
             elif action == "start":
-                self.cfg["running"] = True
+                self.cosim.stop()
+                self._renumber_fleet()
+                self._sync_live_from_fleet()
+                self._prune_cosim_states()
+                self.prev_idx = 0
+                self.plant_error = None
+                if not self.cfg.get("cosim_attach") and not self.cosim.available():
+                    self.cfg["running"] = False
+                    self.plant_error = "vdsim_realtime not built (cmake -DVDSIM_BUILD_COSIM=ON)"
+                else:
+                    start_req = True
+        if start_req:
+            t0 = time.monotonic()
+            self._build()
+            deadline = t0 + 2.5
+            while time.monotonic() < deadline:
+                if (self.cosim.last_state is not None and self.cosim.last_state_t
+                        and self.cosim.last_state_t >= t0 - 0.05):
+                    break
+                if not self.cfg.get("cosim_attach") and not self.cosim.running():
+                    break
+                time.sleep(0.05)
+            with self.lock:
+                ok = self.cosim.last_state is not None
+                self.cfg["running"] = ok
+                if ok:
+                    self._run_since = time.monotonic()
+                    self._wait_since = None
+                else:
+                    hint = "runtime did not respond"
+                    if self.cfg.get("cosim_attach"):
+                        hint += " — uncheck Attach external or start vdsim_realtime on that host"
+                    else:
+                        hint += " — orphan vdsim_realtime on 7401? (server now auto-cleans on Play)"
+                    self.plant_error = hint
+                    self.cosim.stop()
+        with self.lock:
+            return {"running": self.cfg["running"], "error": self.plant_error}
 
     def set_manual(self, **kw):
         with self.lock:
@@ -765,9 +1394,42 @@ class Runner:
                 vt, dt, ts = self.cfg["v_target"], self.dt, self.time_scale
                 man = dict(self.ports[self.live_vid].in_cmd)
                 wb = self.vp.wheelbase
+            if not run:
+                with self.lock:
+                    self._wait_since = None
+                    self._run_since = None
+                snap = self._setup_snapshot()
+                with self.lock:
+                    self.latest = snap
+                nxt += 1.0 / fps
+                time.sleep(max(0.0, nxt - time.monotonic()))
+                continue
             cosim_on = self.cosim.running()
-            cs = self.cosim.last_state if cosim_on else None
-            if run and cosim_on and cs:
+            if not cosim_on:
+                with self.lock:
+                    self.cfg["running"] = False
+                    if not self.plant_error:
+                        self.plant_error = "plant exited — press ▶ Play again"
+                    self._wait_since = None
+                self.cosim.stop()
+                snap = self._setup_snapshot()
+                snap["setup_mode"] = True
+                snap["plant_error"] = self.plant_error
+                with self.lock:
+                    self.latest = snap
+                nxt += 1.0 / fps
+                time.sleep(max(0.0, nxt - time.monotonic()))
+                continue
+            self._prune_cosim_states()
+            allowed = self._fleet_ids()
+            all_cs = ({k: v for k, v in self.cosim.states.items() if int(k) in allowed}
+                      if cosim_on else {})
+            cs = all_cs.get(self.live_vid) if cosim_on else None
+            if cs is None and cosim_on and self.cosim.last_state is not None:
+                lv = int(self.cosim.last_state.get("vehicle_id", self.live_vid))
+                if lv == self.live_vid and lv in allowed:
+                    cs = self.cosim.last_state
+            if cosim_on and cs:
                 # The real-time server (vdsim_realtime) is the plant. Build the
                 # command (autopilot uses the server's state for feedback) and
                 # relay it as a binary CMD. The GUI owns no sim — it only drives
@@ -780,10 +1442,23 @@ class Runner:
                     b = min(1.0, -ax / 3.0) if ax < 0 else 0.0
                 else:
                     t, b, st = man["throttle"], man["brake"], man["steer"]
-                self.cosim.send_cmd(t, b, st)
+                self.cosim.send_cmd(t, b, st, vehicle_id=self.live_vid)
                 self.ports[self.live_vid].applied = {"throttle": t, "brake": b, "steer": st}
+            fleet = {}
+            if all_cs:
+                for vid, st in all_cs.items():
+                    spec = next((f for f in self.fleet_spec if int(f["id"]) == int(vid)), {})
+                    fleet[str(vid)] = {
+                        "x": st["x"], "y": st["y"], "z": st["z"],
+                        "yaw": st["yaw"], "roll": st["roll"], "pitch": st["pitch"],
+                        "vx": st["vx"], "vy": st["vy"],
+                        "level": spec.get("level", self.cfg["level"]),
+                        "vehicle": spec.get("vehicle", ""),
+                    }
             if cs:
-                snap = {"t": cs["t"], "running": run, "driver": driver,
+                with self.lock:
+                    self._wait_since = None
+                snap = {"t": cs["t"], "running": run, "setup_mode": False, "driver": driver,
                         "x": cs["x"], "y": cs["y"], "z": cs["z"],
                         "yaw": cs["yaw"], "roll": cs["roll"], "pitch": cs["pitch"],
                         "vx": cs["vx"], "vy": cs["vy"], "r": cs["r"],
@@ -798,20 +1473,51 @@ class Runner:
                         "m_wz": cs.get("m_wz", 0.0), "m_steer": cs.get("m_steer", 0.0),
                         "level": self.cosim.cfg["level"], "vehicle": self.cfg["vehicle"],
                         "v_target": vt, "dt": 1.0 / max(1.0, self.cosim.cfg["rate"]),
-                        "time_scale": 1.0, "source": "cosim"}
+                        "time_scale": 1.0, "source": "cosim",
+                        "fleet": fleet if all_cs else {}}
             else:
-                # Real-time runtime not yet streaming (just (re)started). Hold the
-                # init pose so the viewer has something coherent to render.
-                snap = {"t": 0.0, "running": run, "driver": driver,
-                        "x": self.cfg["init_x"], "y": self.cfg["init_y"], "z": 0.0,
-                        "yaw": self.cfg["init_yaw"], "roll": 0.0, "pitch": 0.0,
-                        "vx": 0.0, "vy": 0.0, "r": 0.0, "wx": 0.0, "wy": 0.0,
+                now = time.monotonic()
+                err = None
+                with self.lock:
+                    if self._wait_since is None:
+                        self._wait_since = now
+                    waited = now - (self._wait_since or now)
+                    if waited > 4.0:
+                        if not self.plant_error:
+                            self.plant_error = (
+                                "no STATE from plant — uncheck Attach external, "
+                                "then ▶ Play again")
+                        self.cfg["running"] = False
+                        self._wait_since = None
+                        err = self.plant_error
+                if err is not None:
+                    self.cosim.stop()
+                    snap = self._setup_snapshot()
+                    snap["plant_error"] = err
+                    with self.lock:
+                        self.latest = snap
+                    nxt += 1.0 / fps
+                    time.sleep(max(0.0, nxt - time.monotonic()))
+                    continue
+                hold = self.cosim.last_state
+                if hold is not None and int(hold.get("vehicle_id", self.live_vid)) in allowed:
+                    hx, hy = hold["x"], hold["y"]
+                    hyaw, hvx = hold["yaw"], hold.get("vx", 0.0)
+                    ht = hold.get("t", 0.0)
+                else:
+                    hx, hy = self.cfg["init_x"], self.cfg["init_y"]
+                    hyaw, hvx, ht = self.cfg["init_yaw"], 0.0, 0.0
+                snap = {"t": ht, "running": run, "setup_mode": False, "driver": driver,
+                        "x": hx, "y": hy, "z": 0.0,
+                        "yaw": hyaw, "roll": 0.0, "pitch": 0.0,
+                        "vx": hvx, "vy": 0.0, "r": 0.0, "wx": 0.0, "wy": 0.0,
                         "ax": 0.0, "ay": 0.0, "steer": 0.0, "Fz": [0.0, 0.0, 0.0, 0.0],
                         "Ft": [], "wheel_spin": [], "susp": [], "rack_torque": 0.0,
                         "kappa": [], "alpha": [],
                         "level": self.cfg["level"], "vehicle": self.cfg["vehicle"],
                         "v_target": vt, "dt": dt, "time_scale": 1.0,
-                        "source": "waiting", "cosim_up": cosim_on}
+                        "source": "waiting", "cosim_up": cosim_on, "fleet": {}}
+                snap["plant_error"] = self.plant_error
             snap["grade"] = self.cfg["road_grade"]
             snap["bank"] = self.cfg["road_bank"]
             if self.terrain is not None:        # live slope the contact model sees
@@ -855,11 +1561,16 @@ class Runner:
             snap = dict(self.latest)
             p = self.ports[self.live_vid]
             snap["veh"] = self.live_vid
+            snap["live_vid"] = self.live_vid
             snap["vehicles"] = sorted(self.ports)
+            snap["fleet_spec"] = list(self.fleet_spec)
             snap["cmd_in"] = dict(p.applied)
             snap["io_age"] = (time.monotonic() - p.io_last_t
                               if p.io_last_t is not None else None)
             snap["cosim"] = self.cosim.running()
+            snap["plant_error"] = self.plant_error
+            if snap.get("source") == "waiting" and self.plant_error:
+                snap["plant_error"] = self.plant_error
             return snap
 
     def load_map(self, xodr):
@@ -883,7 +1594,8 @@ class Runner:
             self.cfg["init_x"], self.cfg["init_y"] = x0, y0
             self.cfg["init_yaw"] = math.atan2(y1 - y0, x1 - x0)
             self.cfg["driver"] = True
-            self._build()
+            self.path_preset = "custom"
+            self._rebuild_if_running()
         L = sum(math.hypot(route[i + 1][0] - route[i][0], route[i + 1][1] - route[i][1])
                 for i in range(len(route) - 1))
         return {"ok": True, "pts": len(route), "length": round(L, 1)}
@@ -914,7 +1626,8 @@ class Runner:
             self.cfg["init_x"], self.cfg["init_y"] = x0, y0
             self.cfg["init_yaw"] = math.atan2(y1 - y0, x1 - x0)
             self.cfg["driver"] = True
-            self._build()
+            self.path_preset = "custom"
+            self._rebuild_if_running()
         L = sum(math.hypot(route[i + 1][0] - route[i][0], route[i + 1][1] - route[i][1])
                 for i in range(len(route) - 1))
         out = {"ok": True, "pts": len(route), "length": round(L, 1)}
@@ -942,7 +1655,8 @@ class Runner:
             self.cfg["init_yaw"], self.cfg["init_v"] = yaw0, 5.0   # roll onto the path
             self.cfg["v_target"], self.cfg["driver"] = 10.0, True
             self.path = WaypointPath(pts)
-            self._build()
+            self.path_preset = "custom"
+            self._rebuild_if_running()
         return {"ok": True, "nx": int(H.shape[1]), "ny": int(H.shape[0]),
                 "z": [round(float(bb[4]), 1), round(float(bb[5]), 1)],
                 "center": [round(cx, 1), round(cy, 1)]}
@@ -952,8 +1666,9 @@ class Runner:
             self.terrain = None
             self.scenery = None
             self.path = FigureEight()
+            self.path_preset = "figure8"
             self.cfg["init_x"] = self.cfg["init_y"] = self.cfg["init_yaw"] = 0.0
-            self._build()
+            self._rebuild_if_running()
         return {"ok": True}
 
     # approximate flat colors for the speedway building materials
@@ -1112,10 +1827,93 @@ class Runner:
             c["time_scale"] = self.time_scale
             c["integrator"] = self.solver.integrator.name
             c["max_substeps"] = self.solver.max_substeps
+            c["live_vid"] = self.live_vid
             return c
+
+    def tire_samples(self):
+        return sorted(p.stem for p in TIRE_DIR.glob("*.yaml"))
+
+    def load_tire(self, name, vehicle_id=None):
+        stem = Path(str(name)).stem
+        path = (TIRE_DIR / f"{stem}.yaml").resolve()
+        if not str(path).startswith(str(TIRE_DIR.resolve())) or not path.is_file():
+            raise ValueError(f"unknown tire preset: {name}")
+        vid = int(vehicle_id) if vehicle_id is not None else self.live_vid
+        with self.lock:
+            if vid == self.live_vid:
+                self.tp = vdsim.TireParams.from_yaml(str(path))
+            else:
+                spec = self._spec_for_vid(vid)
+                spec["tire"] = stem
+                self.fleet_overrides.get(vid, {}).pop("tire", None)
+            self._rebuild_if_running()
+
+    def import_tir(self, text, vehicle_id=None):
+        from tir_to_yaml import parse_tir_text, tir_to_params
+        raw = parse_tir_text(text)
+        mapped = tir_to_params(raw)
+        if not mapped:
+            raise ValueError("no recognized .tir coefficients")
+        vid = int(vehicle_id) if vehicle_id is not None else self.live_vid
+        with self.lock:
+            if vid == self.live_vid:
+                _apply(self.tp, TIRE_FIELDS, mapped)
+            else:
+                bucket = self.fleet_overrides.setdefault(vid, {}).setdefault("tire", {})
+                bucket.update(mapped)
+            self._rebuild_if_running()
+        return {"parsed": len(raw), "mapped": sorted(mapped.keys())}
+
+    def export_simconfig(self):
+        with self.lock:
+            return {
+                "version": 1,
+                "config": self.config(),
+                "vehicle": _params_dict(self.vp, VEHICLE_FIELDS),
+                "tire": _params_dict(self.tp, TIRE_FIELDS),
+                "sensors": _flat_sensors(self.sensors),
+                "actuator": _flat_actuator(self.act, self.sensor_delay),
+            }
+
+    def import_simconfig(self, data):
+        with self.lock:
+            c = data.get("config") or {}
+            if c.get("vehicle"):
+                self.load_vehicle(c["vehicle"])
+            for k in ("level", "vehicle", "v_target", "driver", "running",
+                      "init_x", "init_y", "init_yaw", "init_v",
+                      "road_mu", "road_mu_right", "road_boundary",
+                      "road_grade", "road_bank", "road_rough_amp", "road_rough_wl"):
+                if k in c:
+                    self.cfg[k] = c[k]
+            if "dt" in c and c["dt"] > 1e-5:
+                self.dt = float(c["dt"])
+            if "time_scale" in c and c["time_scale"] > 0:
+                self.time_scale = float(c["time_scale"])
+            if c.get("integrator") in ENUM_MAPS["integrator"]:
+                self.solver.integrator = ENUM_MAPS["integrator"][c["integrator"]]
+            if "max_substeps" in c:
+                self.solver.max_substeps = max(1, int(c["max_substeps"]))
+            if "vehicle" in data:
+                _apply(self.vp, VEHICLE_FIELDS, data["vehicle"])
+            if "tire" in data:
+                _apply(self.tp, TIRE_FIELDS, data["tire"])
+            if "sensors" in data:
+                self._apply_sensors(data["sensors"])
+            if "actuator" in data:
+                self._apply_actuator(data["actuator"])
+            self._rebuild_if_running()
+        return self.config()
 
 
 RUNNER = Runner()
+
+
+def _qvid(qs, default=None):
+    v = qs.get("vehicle_id", [None])[0]
+    if v is None or v == "":
+        return default
+    return int(v)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -1135,15 +1933,8 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
-        if self.path in ("/", "/index.html"):
-            html = (HERE / "index.html").read_bytes()
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
-            self.send_header("Content-Length", str(len(html)))
-            self.end_headers()
-            self.wfile.write(html)
-        elif self.path in ("/app", "/app.html"):
+        route, qs = urlparse(self.path).path, parse_qs(urlparse(self.path).query)
+        if route in ("/", "/index.html", "/app", "/app.html"):
             html = (HERE / "app.html").read_bytes()
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -1151,9 +1942,17 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(html)))
             self.end_headers()
             self.wfile.write(html)
-        elif self.path.startswith("/vendor/"):
+        elif route in ("/legacy", "/classic", "/classic.html"):
+            html = (HERE / "index.html").read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
+            self.send_header("Content-Length", str(len(html)))
+            self.end_headers()
+            self.wfile.write(html)
+        elif route.startswith("/vendor/"):
             # locally-vendored JS (Three.js etc.) so the client needs no CDN
-            rel = self.path.lstrip("/").split("?")[0]
+            rel = route.lstrip("/").split("?")[0]
             fp = (HERE / rel).resolve()
             if str(fp).startswith(str(HERE / "vendor")) and fp.is_file():
                 data = fp.read_bytes()
@@ -1164,37 +1963,48 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(data)
             else:
                 self.send_response(404); self.end_headers()
-        elif self.path == "/api/config":
+        elif route == "/api/config":
             self._json({"config": RUNNER.config(),
                         "vehicles": VEHICLES, "levels": LEVELS})
-        elif self.path == "/api/vehicle":
-            self._json({"fields": _serialize(RUNNER.vp, VEHICLE_FIELDS)})
-        elif self.path == "/api/tire":
-            self._json({"fields": _serialize(RUNNER.tp, TIRE_FIELDS)})
-        elif self.path == "/api/actuator":
+        elif route == "/api/vehicle":
+            self._json({"fields": RUNNER.serialize_vehicle(_qvid(qs))})
+        elif route == "/api/tire":
+            self._json({"fields": RUNNER.serialize_tire(_qvid(qs))})
+        elif route == "/api/actuator":
             self._json({"fields": RUNNER.serialize_actuator()})
-        elif self.path == "/api/sensors":
+        elif route == "/api/sensors":
             self._json({"fields": RUNNER.serialize_sensors()})
-        elif self.path == "/api/tire/curves":
-            self._json({"plots": RUNNER.tire_curves()})
-        elif self.path == "/api/actuator/step":
+        elif route == "/api/tire/curves":
+            self._json({"plots": RUNNER.tire_curves(_qvid(qs))})
+        elif route == "/api/tire/samples":
+            self._json({"samples": RUNNER.tire_samples()})
+        elif route == "/api/simconfig":
+            self._json(RUNNER.export_simconfig())
+        elif route == "/api/fleet":
+            self._json({"fleet": RUNNER.fleet_enriched(), "live_vid": RUNNER.live_vid,
+                        "vehicles": sorted(RUNNER.ports)})
+        elif route == "/api/setup":
+            self._json(RUNNER.get_setup())
+        elif route == "/api/scenario/list":
+            self._json({"scenarios": RUNNER.list_scenarios()})
+        elif route == "/api/actuator/step":
             self._json({"plots": RUNNER.actuator_step()})
-        elif self.path in ("/api/state", "/api/io"):
+        elif route in ("/api/state", "/api/io"):
             self._json(RUNNER.snapshot())
-        elif self.path == "/api/io/targets":
+        elif route == "/api/io/targets":
             self._json(RUNNER.telemetry_config())
-        elif self.path == "/api/cosim":
+        elif route == "/api/cosim":
             self._json(RUNNER.cosim.status())
-        elif self.path == "/api/log/status":
+        elif route == "/api/log/status":
             self._json(RUNNER.log_status())
-        elif self.path == "/api/path":
+        elif route == "/api/path":
             self._json({"pts": RUNNER.path_points()})
-        elif self.path == "/api/terrain":
+        elif route == "/api/terrain":
             self._json(RUNNER.terrain_grid())
-        elif self.path == "/api/scenery":
+        elif route == "/api/scenery":
             self._json(RUNNER.scenery_meshes())
-        elif self.path.startswith("/tex/"):
-            name = os.path.basename(self.path[len("/tex/"):].split("?")[0])
+        elif route.startswith("/tex/"):
+            name = os.path.basename(route[len("/tex/"):].split("?")[0])
             tdir = RUNNER.tex_dir
             fp = os.path.join(tdir, name) if tdir else ""
             if fp and os.path.isfile(fp):
@@ -1206,8 +2016,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(data)
             else:
                 self.send_response(404); self.end_headers()
-        elif self.path.startswith("/api/log/download"):
-            which = "tum" if self.path.endswith("tum") else "csv"
+        elif route.startswith("/api/log/download"):
+            which = "tum" if route.endswith("tum") else "csv"
             path = RUNNER.rec_last.get(which)
             if not path or not Path(path).is_file():
                 self.send_error(404)
@@ -1220,7 +2030,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
             self.wfile.write(data)
-        elif self.path == "/api/stream":
+        elif route == "/api/stream":
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
             self.send_header("Cache-Control", "no-cache")
@@ -1240,8 +2050,29 @@ class Handler(BaseHTTPRequestHandler):
         n = int(self.headers.get("Content-Length", 0))
         body = json.loads(self.rfile.read(n) or b"{}")
         if self.path == "/api/config":
-            RUNNER.reconfigure(**body)
+            if "live_vid" in body:
+                with RUNNER.lock:
+                    vid = int(body["live_vid"])
+                    if vid in RUNNER.ports:
+                        RUNNER.live_vid = vid
+            RUNNER.reconfigure(**{k: v for k, v in body.items()
+                                  if k not in ("live_vid", "scenario")})
             self._json({"ok": True, "config": RUNNER.config()})
+        elif self.path == "/api/fleet":
+            try:
+                if body.get("scenario"):
+                    RUNNER.load_fleet_scenario(str(body["scenario"]))
+                    RUNNER._rebuild_if_running()
+                elif "live_vid" in body:
+                    with RUNNER.lock:
+                        vid = int(body["live_vid"])
+                        if vid in RUNNER.ports:
+                            RUNNER.live_vid = vid
+                            RUNNER._sync_live_from_fleet()
+                self._json({"ok": True, "fleet": RUNNER.fleet_enriched(),
+                            "live_vid": RUNNER.live_vid})
+            except ValueError as e:
+                self._json({"ok": False, "error": str(e)}, 400)
         elif self.path == "/api/sim":
             RUNNER.set_sim(dt=body.get("dt"), time_scale=body.get("time_scale"),
                            integrator=body.get("integrator"),
@@ -1257,20 +2088,73 @@ class Handler(BaseHTTPRequestHandler):
                            road_rough_wl=body.get("road_rough_wl"))
             self._json({"ok": True, "config": RUNNER.config()})
         elif self.path == "/api/vehicle":
-            RUNNER.set_params("vehicle", body)
+            vid = body.get("vehicle_id")
+            payload = {k: v for k, v in body.items() if k != "vehicle_id"}
+            RUNNER.set_params("vehicle", payload, vehicle_id=vid)
             self._json({"ok": True})
         elif self.path == "/api/tire":
-            RUNNER.set_params("tire", body)
+            vid = body.get("vehicle_id")
+            payload = {k: v for k, v in body.items() if k != "vehicle_id"}
+            RUNNER.set_params("tire", payload, vehicle_id=vid)
             self._json({"ok": True})
+        elif self.path == "/api/tire/load":
+            try:
+                RUNNER.load_tire(body.get("name", ""), vehicle_id=body.get("vehicle_id"))
+                self._json({"ok": True, "name": body.get("name")})
+            except ValueError as e:
+                self._json({"ok": False, "error": str(e)}, 400)
+        elif self.path == "/api/tire/import":
+            try:
+                info = RUNNER.import_tir(body.get("text", ""),
+                                        vehicle_id=body.get("vehicle_id"))
+                self._json({"ok": True, **info})
+            except ValueError as e:
+                self._json({"ok": False, "error": str(e)}, 400)
+        elif self.path == "/api/scenario/save":
+            try:
+                self._json(RUNNER.save_scenario(body.get("name", "")))
+            except ValueError as e:
+                self._json({"ok": False, "error": str(e)}, 400)
+        elif self.path == "/api/cosim/attach":
+            host = str(body.get("host", "127.0.0.1"))
+            port = int(body.get("cmd_port", COSIM_CMD_PORT))
+            st_port = int(body.get("state_port", COSIM_STATE_PORT))
+            with RUNNER.lock:
+                RUNNER.cfg["cosim_attach"] = True
+                RUNNER.cfg["cosim_host"] = host
+                RUNNER.cfg["cosim_cmd_port"] = port
+                RUNNER.cfg["cosim_state_port"] = st_port
+                RUNNER.plant_error = None
+            RUNNER.cosim.attach(host, port, st_port)
+            t0 = time.monotonic()
+            while time.monotonic() < t0 + 2.5:
+                if RUNNER.cosim.last_state is not None:
+                    break
+                time.sleep(0.05)
+            with RUNNER.lock:
+                ok = RUNNER.cosim.last_state is not None
+                RUNNER.cfg["running"] = ok
+                if not ok:
+                    RUNNER.plant_error = (
+                        "attach failed — no STATE on :%d (uncheck Attach external?)"
+                        % st_port)
+                    RUNNER.cosim.stop()
+            self._json({"ok": ok, "cosim": RUNNER.cosim.status(),
+                        "error": RUNNER.plant_error})
+        elif self.path == "/api/simconfig":
+            self._json({"ok": True, "config": RUNNER.import_simconfig(body)})
         elif self.path == "/api/actuator":
             RUNNER.set_params("actuator", body)
             self._json({"ok": True})
         elif self.path == "/api/sensors":
             RUNNER.set_params("sensors", body)
             self._json({"ok": True})
+        elif self.path == "/api/setup":
+            RUNNER.apply_setup(body)
+            self._json({"ok": True, "setup": RUNNER.get_setup()})
         elif self.path == "/api/control":
-            RUNNER.control(body.get("action", ""))
-            self._json({"ok": True})
+            out = RUNNER.control(body.get("action", ""))
+            self._json({"ok": True, **out})
         elif self.path == "/api/manual":
             RUNNER.set_manual(**body)
             self._json({"ok": True})
