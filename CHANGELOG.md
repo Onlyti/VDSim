@@ -4,6 +4,27 @@ All notable changes to VDSim are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow
 [SemVer](https://semver.org/).
 
+## [0.2.0] — composable vehicle + scene GUI
+
+### GUI & authoring
+- Full-screen `app.html`: fleet tree, 3-tab scenario setup, telemetry, edit modal
+  (chassis/suspension/brake/steer/drivetrain/tire/actuator/sensors).
+- Suspension 3D preview + hardpoint links; wheel roll animation.
+- Data-comms panel (HTTP I/O, UDP telemetry, co-sim controls).
+- simconfig v2 (fleet, path, cosim, infra sensors); scenario YAML save/load.
+- Part registry API (`GET /api/parts/registry`); fleet `front_susp` / `rear_susp`.
+
+### Runtime
+- Multi-vehicle shared world in `vdsim_realtime` (VDS1 vehicle_id).
+- L3 native kinematics attach from suspension YAML (`--front-susp` / `--rear-susp`).
+- Subsystem deadtime on brake/steer/drive channels.
+
+### Removed
+- Legacy `gui/index.html` viewer (all routes serve `app.html`).
+
+### Tests
+- 188/188 ctest green (adds `SuspensionFactory.DispatchesByYamlType`).
+
 ## [0.1.0] — first public release
 
 Experimental / pre-release. Validated on analytic + ISO standard +
@@ -50,4 +71,5 @@ yet cross-validated against a commercial reference on real-vehicle data.
   road class. See `docs/VALIDATION.md` for the benchmark matrix and honest
   limitations.
 
+[0.2.0]: https://github.com/Onlyti/VDSim/releases/tag/v0.2.0
 [0.1.0]: https://github.com/Onlyti/VDSim/releases/tag/v0.1.0

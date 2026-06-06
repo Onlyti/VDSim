@@ -19,7 +19,7 @@ Before working, read `docs/HANDOFF.md` (current state / next task) and the relev
 
 ## Build & test (pass criteria)
 - Build: `cmake --build build -j`
-- Test: `cd build && ctest --output-on-failure` — **all 187 must stay green.**
+- Test: `cd build && ctest --output-on-failure` — **all 188 must stay green.**
 - The default subsystem modules must reproduce current behaviour exactly (no
   re-baselining of ISO/benchmark numbers). If a number moves, stop and flag it.
 

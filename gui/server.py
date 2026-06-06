@@ -102,6 +102,22 @@ def suspension_default_for_vehicle(vehicle):
     }))
 
 
+def parts_registry():
+    comp = REPO / "configs" / "components" / "suspension"
+    presets = sorted(p.stem for p in comp.glob("*.yaml")) if comp.is_dir() else []
+    veh = REPO / "configs" / "vehicles"
+    tires = REPO / "configs" / "tires"
+    return {
+        "vehicles": sorted(p.stem for p in veh.glob("*.yaml")),
+        "tires": sorted(p.stem for p in tires.glob("*.yaml")),
+        "suspensions": list_suspension_configs(),
+        "suspension_presets": presets,
+        "vehicle_suspension_defaults": {
+            v: suspension_default_for_vehicle(v) for v in VEHICLES
+        },
+    }
+
+
 def suspension_schematic(name):
     import yaml
     stem = Path(str(name)).stem
@@ -779,6 +795,7 @@ class Runner:
         self.tex_dir = None                      # dir holding building textures
         self.path_preset = "figure8"
         self.prev_idx = 0
+        self.infra_sensors = []
         threading.Thread(target=self._loop, daemon=True).start()
 
     def _ensure_ports(self):
@@ -962,6 +979,8 @@ class Runner:
             for k, ck in (("mu", "road_mu"), ("grade", "road_grade"), ("bank", "road_bank")):
                 if k in r:
                     self.cfg[ck] = float(r[k])
+        if doc.get("infra_sensors") is not None:
+            self.infra_sensors = list(doc["infra_sensors"])
 
     def _build(self):
         self._ensure_ports()
@@ -1202,6 +1221,7 @@ class Runner:
                 "cosim_host": self.cfg.get("cosim_host", "127.0.0.1"),
                 "cosim_cmd_port": int(self.cfg.get("cosim_cmd_port", 7401)),
                 "scenarios": self.list_scenarios(),
+                "infra_sensors": list(self.infra_sensors),
             }
 
     def _fleet_add(self):
@@ -1292,6 +1312,8 @@ class Runner:
         }
         if self.path_preset == "custom":
             doc["path_pts"] = [[float(p[0]), float(p[1])] for p in self.path.pts]
+        if self.infra_sensors:
+            doc["infra_sensors"] = list(self.infra_sensors)
         path.write_text(yaml.safe_dump(doc, sort_keys=False))
         return {"ok": True, "name": stem}
 
@@ -1343,6 +1365,9 @@ class Runner:
                               ("rough_wl", "road_rough_wl")):
                     if k in r:
                         self.cfg[ck] = float(r[k])
+            if "infra_sensors" in data:
+                self.infra_sensors = list(data["infra_sensors"] or [])
+                refresh_snap = True
             if "v_target" in data:
                 self.cfg["v_target"] = float(data["v_target"])
             if "level" in data:
@@ -2020,6 +2045,7 @@ class Runner:
                 "cosim_attach": bool(self.cfg.get("cosim_attach", False)),
                 "cosim_host": str(self.cfg.get("cosim_host", "127.0.0.1")),
                 "cosim_cmd_port": int(self.cfg.get("cosim_cmd_port", 7401)),
+                "infra_sensors": list(self.infra_sensors),
             }
 
     def import_simconfig(self, data):
@@ -2075,6 +2101,8 @@ class Runner:
                 self._apply_sensors(data["sensors"])
             if "actuator" in data:
                 self._apply_actuator(data["actuator"])
+            if "infra_sensors" in data:
+                self.infra_sensors = list(data["infra_sensors"] or [])
             self._rebuild_if_running()
         return self.config()
 
@@ -2143,6 +2171,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"plots": RUNNER.tire_curves(_qvid(qs))})
         elif route == "/api/tire/samples":
             self._json({"samples": RUNNER.tire_samples()})
+        elif route == "/api/parts/registry":
+            self._json(parts_registry())
         elif route == "/api/suspension/list":
             self._json({"samples": list_suspension_configs()})
         elif route == "/api/suspension/default":

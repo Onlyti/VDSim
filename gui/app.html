@@ -184,7 +184,7 @@
         <div id="veh_tree" class="tree"></div>
         <div class="tree-sep">
           Infra sensors
-          <button id="add_infra" class="icon stub" title="Infra sensors (stub)" style="float:right">+</button>
+          <button id="add_infra" class="icon" title="Add infra sensor" style="float:right">+</button>
         </div>
         <div id="infra_tree" class="tree"></div>
       </section>
@@ -1481,6 +1481,7 @@ async function loadSetupForm() {
     const sel = $('setup_scenario');
     sel.innerHTML = '<option value="">— scenario —</option>' +
       (s.scenarios || []).map(n => `<option value="${n}">${n}</option>`).join('');
+    buildInfraTree(s.infra_sensors || []);
   } catch (_) {}
 }
 async function fleetAddVehicle() {
@@ -1734,17 +1735,46 @@ async function buildVehicleTree(fleetSpec, liveVid) {
   }
 }
 $('add_veh').onclick = () => fleetAddVehicle();
-function buildInfraTree() {
+let infraSensors = [];
+function buildInfraTree(list) {
+  infraSensors = list || [];
   const el = $('infra_tree');
   el.innerHTML = '';
-  for (const name of ['Roadside radar', 'Loop detector', 'GNSS base']) {
+  if (!infraSensors.length) {
     const sr = document.createElement('div');
     sr.className = 'tree-row sens sub';
-    sr.textContent = name + ' (stub)';
+    sr.textContent = '(none — roadside / fixed sensors)';
     el.appendChild(sr);
+    return;
   }
+  infraSensors.forEach((s, i) => {
+    const sr = document.createElement('div');
+    sr.className = 'tree-row sens sub';
+    sr.style.display = 'flex';
+    sr.style.justifyContent = 'space-between';
+    const lab = document.createElement('span');
+    lab.textContent = (s.label || s.id) + (s.type ? ` · ${s.type}` : '');
+    sr.appendChild(lab);
+    const rm = document.createElement('button');
+    rm.className = 'icon'; rm.textContent = '×'; rm.title = 'Remove';
+    rm.onclick = async e => {
+      e.stopPropagation();
+      infraSensors.splice(i, 1);
+      await post('/api/setup', { infra_sensors: infraSensors });
+      buildInfraTree(infraSensors);
+    };
+    sr.appendChild(rm);
+    el.appendChild(sr);
+  });
 }
-buildInfraTree();
+$('add_infra').onclick = async () => {
+  const id = prompt('Sensor id (e.g. cam_tower_1)');
+  if (!id) return;
+  const type = prompt('Type (radar / loop / gnss)', 'radar') || 'radar';
+  infraSensors.push({ id: id.trim(), type: type.trim(), label: id.trim() });
+  await post('/api/setup', { infra_sensors: infraSensors });
+  buildInfraTree(infraSensors);
+};
 
 async function boot() {
   initStaticHelp();
