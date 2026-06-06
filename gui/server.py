@@ -33,12 +33,72 @@ sys.path.insert(0, str(REPO / "python"))
 HERE = Path(__file__).resolve().parent
 TIRE_DIR = REPO / "configs" / "tires"
 SUSP_DIR = REPO / "configs" / "suspensions"
+SUSP_REL_PREFIX = "configs/suspensions"
 VEHICLE_SUSP_DEFAULT = {
     "sedan": {"front": "mp_front_sedan", "rear": "ta_rear_sedan"},
     "sports": {"front": "dw_front_sports", "rear": "5link_rear_sports"},
-    "fsk_formula": {"front": "double_wishbone", "rear": "double_wishbone"},
+    "fsk_formula": {"front": "dw_front_sports", "rear": "5link_rear_sports"},
     "race_car": {"front": "dw_front_sports", "rear": "5link_rear_sports"},
 }
+
+
+def susp_stem_from_ref(ref):
+    if not ref:
+        return ""
+    return Path(str(ref)).stem
+
+
+def susp_rel_path(stem_or_ref):
+    stem = susp_stem_from_ref(stem_or_ref)
+    if not stem:
+        return None
+    if not (SUSP_DIR / f"{stem}.yaml").is_file():
+        return None
+    return f"{SUSP_REL_PREFIX}/{stem}.yaml"
+
+
+def is_l3_kinematics_yaml(path_or_stem):
+    stem = susp_stem_from_ref(path_or_stem)
+    path = SUSP_DIR / f"{stem}.yaml"
+    if not path.is_file():
+        return False
+    import yaml
+    doc = yaml.safe_load(path.read_text()) or {}
+    return bool(doc.get("type"))
+
+
+def list_l3_kinematics_configs():
+    return sorted(s for s in list_suspension_configs() if is_l3_kinematics_yaml(s))
+
+
+def list_suspension_api(preview_all=False):
+    l3 = list_l3_kinematics_configs()
+    if preview_all:
+        return {"samples": l3, "preview": list_suspension_configs()}
+    return {"samples": l3}
+
+
+def _strip_fleet_susp_if_not_l3(spec):
+    if str(spec.get("level", "L2")) != "L3":
+        spec.pop("front_susp", None)
+        spec.pop("rear_susp", None)
+
+
+_KIN_WARN_MARKERS = ("kinematics attach failed", "front susp", "rear susp")
+
+
+def _scan_kinematics_warnings(log_path):
+    warnings = []
+    try:
+        text = Path(log_path).read_text(errors="replace")
+    except OSError:
+        return warnings
+    for line in text.splitlines():
+        if "[vdsim_realtime]" not in line:
+            continue
+        if any(m in line for m in _KIN_WARN_MARKERS):
+            warnings.append(line.strip())
+    return warnings
 
 
 def _corner_kinematic_links(doc):
@@ -98,7 +158,7 @@ def list_suspension_configs():
 def suspension_default_for_vehicle(vehicle):
     stem = Path(str(vehicle)).stem
     return dict(VEHICLE_SUSP_DEFAULT.get(stem, {
-        "front": "double_wishbone", "rear": "trailing_arm",
+        "front": "mp_front_sedan", "rear": "ta_rear_sedan",
     }))
 
 
@@ -111,6 +171,7 @@ def parts_registry():
         "vehicles": sorted(p.stem for p in veh.glob("*.yaml")),
         "tires": sorted(p.stem for p in tires.glob("*.yaml")),
         "suspensions": list_suspension_configs(),
+        "l3_kinematics": list_l3_kinematics_configs(),
         "suspension_presets": presets,
         "vehicle_suspension_defaults": {
             v: suspension_default_for_vehicle(v) for v in VEHICLES
@@ -499,6 +560,7 @@ class CosimBridge:
         self.cmd_host = "127.0.0.1"
         self._plant_log = None
         self._run_since = None
+        self.kinematics_warnings = []
 
     def available(self):
         return COSIM_BIN.exists()
@@ -524,10 +586,18 @@ class CosimBridge:
                 pass
         log_path = os.path.join(self._tmp, "plant.log")
         self._plant_log = open(log_path, "w")
+        self.kinematics_warnings = []
         self.proc = subprocess.Popen(args, stdout=self._plant_log,
                                      stderr=subprocess.STDOUT)
         self.started_t = time.monotonic()
         threading.Thread(target=self._rx_loop, args=(self._rx,), daemon=True).start()
+
+    def refresh_kinematics_warnings(self):
+        if self._plant_log is None:
+            self.kinematics_warnings = []
+            return self.kinematics_warnings
+        self.kinematics_warnings = _scan_kinematics_warnings(self._plant_log.name)
+        return self.kinematics_warnings
 
     def _road_cli(self, args, road, terrain, sensors, sensor_delay):
         if terrain is not None:
@@ -681,12 +751,15 @@ class CosimBridge:
 
     def status(self):
         run = self.running()
+        if run and self._plant_log is not None:
+            self.refresh_kinematics_warnings()
         return {"available": self.available(), "running": run, "attach": self.attach_only,
                 "cfg": dict(self.cfg), "cmd_host": self.cmd_host,
                 "pid": (self.proc.pid if run and self.proc else None),
                 "uptime": (time.monotonic() - self.started_t if run and self.started_t else None),
                 "state_age": (time.monotonic() - self.last_state_t if self.last_state_t else None),
                 "vehicles": sorted(self.states),
+                "kinematics_warnings": list(self.kinematics_warnings),
                 "binary": str(COSIM_BIN)}
 
     def send_cmd(self, throttle, brake, steer, gear=1, vehicle_id=0):
@@ -895,12 +968,13 @@ class Runner:
                 "yaw0": float(spec.get("yaw0", self.cfg["init_yaw"])),
                 "vx0": float(spec.get("vx0", self.cfg["init_v"])),
             }
-            fs = self._susp_yaml_path(spec.get("front_susp"))
-            rs = self._susp_yaml_path(spec.get("rear_susp"))
-            if fs:
-                row["front_susp_yaml"] = fs
-            if rs:
-                row["rear_susp_yaml"] = rs
+            if str(spec.get("level", self.cfg["level"])) == "L3":
+                fs = self._susp_yaml_path(spec.get("front_susp"))
+                rs = self._susp_yaml_path(spec.get("rear_susp"))
+                if fs:
+                    row["front_susp_yaml"] = fs
+                if rs:
+                    row["rear_susp_yaml"] = rs
             fleet.append(row)
         return fleet
 
@@ -949,9 +1023,10 @@ class Runner:
                 "y0": float(v.get("y0", 0.0)),
                 "yaw0": float(v.get("yaw0", 0.0)),
                 "vx0": float(v.get("vx0", 0.0)),
-                "front_susp": str(v.get("front_susp", parts["front"])),
-                "rear_susp": str(v.get("rear_susp", parts["rear"])),
+                "front_susp": susp_stem_from_ref(v.get("front_susp", parts["front"])),
+                "rear_susp": susp_stem_from_ref(v.get("rear_susp", parts["rear"])),
             })
+            _strip_fleet_susp_if_not_l3(self.fleet_spec[-1])
         self._ensure_ports()
         if self.fleet_spec:
             s0 = self.fleet_spec[0]
@@ -1242,6 +1317,7 @@ class Runner:
             "front_susp": str(ref.get("front_susp", parts["front"])),
             "rear_susp": str(ref.get("rear_susp", parts["rear"])),
         })
+        _strip_fleet_susp_if_not_l3(self.fleet_spec[-1])
         self._ensure_ports()
 
     def _fleet_ids(self):
@@ -1294,10 +1370,13 @@ class Runner:
                 "yaw0": float(s.get("yaw0", 0.0)),
                 "vx0": float(s.get("vx0", 0.0)),
             }
-            if s.get("front_susp"):
-                row["front_susp"] = str(s["front_susp"])
-            if s.get("rear_susp"):
-                row["rear_susp"] = str(s["rear_susp"])
+            if str(s.get("level", "L2")) == "L3":
+                fp = susp_rel_path(s.get("front_susp"))
+                rp = susp_rel_path(s.get("rear_susp"))
+                if fp:
+                    row["front_susp"] = fp
+                if rp:
+                    row["rear_susp"] = rp
             vehs.append(row)
         doc = {
             "name": stem,
@@ -1354,6 +1433,9 @@ class Runner:
                         d = suspension_default_for_vehicle(str(upd["vehicle"]))
                         spec["front_susp"] = d["front"]
                         spec["rear_susp"] = d["rear"]
+                    if "level" in upd and str(upd["level"]) == "L3":
+                        self._ensure_fleet_parts(spec)
+                    _strip_fleet_susp_if_not_l3(spec)
                     if vid == self.live_vid:
                         self._sync_live_from_fleet()
                 refresh_snap = True
@@ -1453,6 +1535,7 @@ class Runner:
                 if ok:
                     self._run_since = time.monotonic()
                     self._wait_since = None
+                    self.cosim.refresh_kinematics_warnings()
                 else:
                     hint = "runtime did not respond"
                     if self.cfg.get("cosim_attach"):
@@ -1730,6 +1813,7 @@ class Runner:
             snap["plant_error"] = self.plant_error
             if snap.get("source") == "waiting" and self.plant_error:
                 snap["plant_error"] = self.plant_error
+            snap["kinematics_warnings"] = list(self.cosim.kinematics_warnings)
             return snap
 
     def load_map(self, xodr):
@@ -2029,6 +2113,7 @@ class Runner:
             for spec in self.fleet_spec:
                 row = dict(spec)
                 self._ensure_fleet_parts(row)
+                _strip_fleet_susp_if_not_l3(row)
                 fleet.append(row)
             return {
                 "version": 2,
@@ -2075,6 +2160,7 @@ class Runner:
                 for spec in data["fleet_spec"]:
                     row = dict(spec)
                     self._ensure_fleet_parts(row)
+                    _strip_fleet_susp_if_not_l3(row)
                     self.fleet_spec.append(row)
                 self._ensure_ports()
                 if "live_vid" in data:
@@ -2174,7 +2260,8 @@ class Handler(BaseHTTPRequestHandler):
         elif route == "/api/parts/registry":
             self._json(parts_registry())
         elif route == "/api/suspension/list":
-            self._json({"samples": list_suspension_configs()})
+            preview = (qs.get("preview") or ["0"])[0] in ("1", "true", "yes")
+            self._json(list_suspension_api(preview_all=preview))
         elif route == "/api/suspension/default":
             veh = (qs.get("vehicle") or ["sedan"])[0]
             self._json(suspension_default_for_vehicle(veh))

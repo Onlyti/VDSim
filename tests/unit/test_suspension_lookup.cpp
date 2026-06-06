@@ -113,6 +113,12 @@ TEST(SuspensionFactory, DispatchesByYamlType) {
     EXPECT_TRUE(std::isfinite(o.camber));
 }
 
+TEST(SuspensionFactory, RejectsTopologyOnlyYaml) {
+    const std::string path =
+        std::string(VDSIM_SOURCE_DIR) + "/configs/suspensions/double_wishbone.yaml";
+    EXPECT_THROW(vdsim::create_native_kinematics_from_yaml(path), std::exception);
+}
+
 TEST(DWNativeKinematics, StaticReturnsZero) {
     auto k = vdsim::create_dw_native_kinematics(
         std::string(VDSIM_SOURCE_DIR) + "/configs/suspensions/dw_front_sports.yaml");

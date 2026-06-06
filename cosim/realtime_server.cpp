@@ -58,27 +58,44 @@ std::unique_ptr<vdsim::IVehicleDynamics> make_dyn(const std::string& lvl) {
     if (lvl == "L3") return vdsim::create_fourteen_dof();
     return vdsim::create_seven_dof();
 }
+std::string resolve_susp_yaml(std::string ref) {
+    if (ref.empty()) return ref;
+    {
+        std::ifstream f(ref);
+        if (f.good()) return ref;
+    }
+    const auto slash = ref.find_last_of("/\\");
+    const std::string stem = (slash == std::string::npos) ? ref : ref.substr(slash + 1);
+    const auto dot = stem.find_last_of('.');
+    const std::string base = (dot == std::string::npos) ? stem : stem.substr(0, dot);
+    const std::string candidate = "configs/suspensions/" + base + ".yaml";
+    std::ifstream f2(candidate);
+    if (f2.good()) return candidate;
+    return ref;
+}
 void attach_susp_parts(vdsim::IVehicleDynamics& dyn, const std::string& lvl,
                        const std::string& front_yaml, const std::string& rear_yaml) {
     if (lvl != "L3") return;
-    if (!front_yaml.empty()) {
+    const std::string front = resolve_susp_yaml(front_yaml);
+    const std::string rear  = resolve_susp_yaml(rear_yaml);
+    if (!front.empty()) {
         try {
-            auto k = vdsim::create_native_kinematics_from_yaml(front_yaml);
+            auto k = vdsim::create_native_kinematics_from_yaml(front);
             if (!vdsim::attach_front_kinematics(dyn, std::move(k)))
                 std::fprintf(stderr, "[vdsim_realtime] front kinematics attach failed\n");
         } catch (const std::exception& e) {
             std::fprintf(stderr, "[vdsim_realtime] front susp %s: %s\n",
-                         front_yaml.c_str(), e.what());
+                         front.c_str(), e.what());
         }
     }
-    if (!rear_yaml.empty()) {
+    if (!rear.empty()) {
         try {
-            auto k = vdsim::create_native_kinematics_from_yaml(rear_yaml);
+            auto k = vdsim::create_native_kinematics_from_yaml(rear);
             if (!vdsim::attach_rear_kinematics(dyn, std::move(k)))
                 std::fprintf(stderr, "[vdsim_realtime] rear kinematics attach failed\n");
         } catch (const std::exception& e) {
             std::fprintf(stderr, "[vdsim_realtime] rear susp %s: %s\n",
-                         rear_yaml.c_str(), e.what());
+                         rear.c_str(), e.what());
         }
     }
 }

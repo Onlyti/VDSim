@@ -11,3 +11,12 @@ set_target_properties(vdsim_realtime PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY_DEBUG          ${CMAKE_BINARY_DIR}/bin
     RUNTIME_OUTPUT_DIRECTORY_RELEASE        ${CMAKE_BINARY_DIR}/bin
     RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_BINARY_DIR}/bin)
+
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_FOUND)
+    add_test(NAME cosim_multi_vehicle
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/cosim/test_multi_vehicle.py)
+    set_tests_properties(cosim_multi_vehicle PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 30)
+endif()

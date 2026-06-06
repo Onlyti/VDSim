@@ -184,6 +184,7 @@
         <div id="veh_tree" class="tree"></div>
         <div class="tree-sep">
           Infra sensors
+          <span style="font-size:9px;color:var(--dim);font-weight:normal"> (authoring only)</span>
           <button id="add_infra" class="icon" title="Add infra sensor" style="float:right">+</button>
         </div>
         <div id="infra_tree" class="tree"></div>
@@ -1204,7 +1205,10 @@ function applyState(s) {
 }
 
 function updateConn(s) {
-  if (s?.plant_error) {
+  if (s?.kinematics_warnings?.length) {
+    $('conn').textContent = '● ' + s.kinematics_warnings[0];
+    $('conn').style.color = '#ff9500';
+  } else if (s?.plant_error) {
     $('conn').textContent = '● ' + s.plant_error;
     $('conn').style.color = '#ff9500';
   } else if (s?.running && s?.source === 'waiting') {
@@ -1379,6 +1383,22 @@ function collectWaypointPts() {
   }).filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]));
 }
 let setupVehicleList = [], setupTireSamples = [], setupSuspList = [];
+function syncFleetSuspLevel(box, level) {
+  const l3 = level === 'L3';
+  for (const k of ['front_susp', 'rear_susp']) {
+    const s = box.querySelector(`select[data-k="${k}"]`);
+    if (s) { s.disabled = !l3; s.style.opacity = l3 ? '' : '0.45'; }
+  }
+  let hint = box.querySelector('.susp-hint');
+  if (!hint) {
+    hint = document.createElement('div');
+    hint.className = 'susp-hint';
+    hint.style.cssText = 'font-size:9px;color:var(--dim);margin-top:2px';
+    const row = box.querySelector('.setup-row');
+    box.insertBefore(hint, row);
+  }
+  hint.textContent = l3 ? 'L3 kinematics attach' : 'Suspension parts: L3 only';
+}
 async function ensureSetupLists() {
   if (!setupVehicleList.length) {
     const cf = await (await fetch('/api/config')).json();
@@ -1420,10 +1440,13 @@ async function renderFleetSpawn(fleet) {
     };
     box.appendChild(mkSel('vehicle', setupVehicleList, spec.vehicle || 'sedan'));
     box.appendChild(mkSel('tire', setupTireSamples.length ? setupTireSamples : ['default_pacejka'], spec.tire || 'default_pacejka'));
-    box.appendChild(mkSel('level', ['L1', 'L2', 'L3'], spec.level || 'L2'));
+    const levelSel = mkSel('level', ['L1', 'L2', 'L3'], spec.level || 'L2');
+    box.appendChild(levelSel);
     if (setupSuspList.length) {
       box.appendChild(mkSel('front_susp', setupSuspList, spec.front_susp || ''));
       box.appendChild(mkSel('rear_susp', setupSuspList, spec.rear_susp || ''));
+      syncFleetSuspLevel(box, spec.level || 'L2');
+      levelSel.addEventListener('change', () => syncFleetSuspLevel(box, levelSel.value));
     }
     const row = document.createElement('div'); row.className = 'setup-row';
     for (const [k, lab] of [['x0', 'x'], ['y0', 'y'], ['yaw0', 'ψ'], ['vx0', 'vx']]) {
@@ -1444,6 +1467,7 @@ function collectSetupPayload() {
     const id = +box.dataset.vid;
     const upd = { id };
     box.querySelectorAll('input[data-k], select[data-k]').forEach(inp => {
+      if (inp.disabled) return;
       upd[inp.dataset.k] = inp.tagName === 'SELECT' ? inp.value : +inp.value;
     });
     return upd;
@@ -2410,7 +2434,8 @@ async function openModal(vid) {
   actFields = (await (await fetch('/api/actuator')).json()).fields;
   sensFields = (await (await fetch('/api/sensors')).json()).fields;
   tireSamples = (await (await fetch('/api/tire/samples')).json()).samples;
-  suspList = (await (await fetch('/api/suspension/list')).json()).samples || [];
+  const sj = await (await fetch('/api/suspension/list?preview=1')).json();
+  suspList = sj.preview || sj.samples || [];
   suspDefaults = await (await fetch(`/api/suspension/default?vehicle=${encodeURIComponent(vehKey)}`)).json();
   const fspec = fspec0;
   if (fspec?.front_susp) modalSuspFront = fspec.front_susp;

@@ -45,13 +45,13 @@
   - **estimation noise = Simon `Q=process/R=measurement`.** (※ 원 지시의 "Thrun R=process" 는 글로벌 정정으로 폐기 — VDSim estimator(`estimator_in_loop` 등)는 Simon. SLAM 교재 맥락에 한해 Thrun.)
 - 보안: 현대 산학 실측 tire 데이터 대외비 — 값/세부 커밋 금지, generic 지칭만.
 - git: 명시 요청 없이 push/force/tag 이동 금지. commit 메시지 규약 준수.
-- 합격기준: 변경 후 **ctest 187 green 유지.** 특히 #161 코어 리팩터는 default == 현재거동(재baseline 금지).
+- 합격기준: 변경 후 **ctest 190 green 유지.** 특히 #161 코어 리팩터는 default == 현재거동(재baseline 금지).
 
 ## 5. 워크플로 체크리스트
 1. 세션 시작: `docs/HANDOFF.md` + 관련 `docs/design/*` 읽기.
 2. 작업 분류: 위 rubric 으로 Cursor vs Claude 결정.
 3. Cursor 위임: `~/bin/cursor_delegate.sh "<지시 + 가드레일>" <작업유형> [<workspace절대경로>]` (내부 composer-2.5 고정 + usage 자동로깅 → `~/cursor_eval/deleg.log`; 작업유형 예 boilerplate/test/refactor) 또는 IDE Composer. 직접 `cursor-agent -p --force --trust --model composer-2.5 "..."` 도 가능하나 deleg.log 미기록.
-4. 빌드·검증: `cmake --build build -j && (cd build && ctest --output-on-failure)` → 187 green 확인.
+4. 빌드·검증: `cmake --build build -j && (cd build && ctest --output-on-failure)` → 190 green 확인.
 5. commit (규약 준수, push 안 함).
 6. `docs/HANDOFF.md` 갱신 → 다음 세션·툴이 이어받게.
 

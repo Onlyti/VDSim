@@ -8,7 +8,7 @@ openly.
 
 ```bash
 cmake -DVDSIM_BUILD_PYTHON=ON -B build && cmake --build build -j
-cd build && ctest --output-on-failure        # 187 checks, must stay 100% green
+cd build && ctest --output-on-failure        # 190 checks, must stay 100% green
 ```
 Python package: `pip install ".[plot]"` (Python ≥ 3.10 with a modern `pip`).
 CI (GitHub Actions) builds gcc-9 + clang-10 and runs ctest on every push/PR.

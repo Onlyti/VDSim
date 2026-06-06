@@ -4,6 +4,20 @@ All notable changes to VDSim are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow
 [SemVer](https://semver.org/).
 
+## [Unreleased] — v0.2.1 hotfix (parts contract)
+
+### Fixed
+- `fsk_formula` fleet defaults use L3-native kinematics YAML (`dw_front_sports` / `5link_rear_sports`).
+- Saved scenarios persist `configs/suspensions/*.yaml` paths; cosim resolves stem-only refs.
+- Fleet suspension selectors gated to L3; infra sensors labelled authoring-only.
+
+### Added
+- L3 attachable suspension filter on `/api/suspension/list`; kinematics attach warnings in GUI status.
+- ctest `cosim_multi_vehicle` smoke; `SuspensionFactory.RejectsTopologyOnlyYaml`.
+
+### Tests
+- 190/190 ctest green.
+
 ## [0.2.0] — composable vehicle + scene GUI
 
 ### GUI & authoring
