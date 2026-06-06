@@ -19,4 +19,9 @@ if(Python3_FOUND)
     set_tests_properties(cosim_multi_vehicle PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 30)
+    add_test(NAME l3_scenario_susp_paths
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_l3_scenario_paths.py)
+    set_tests_properties(l3_scenario_susp_paths PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endif()

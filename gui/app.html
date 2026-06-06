@@ -79,6 +79,8 @@
                padding:5px 9px; display:none; pointer-events:none; }
   .center.illustr #view { filter:saturate(1.08) contrast(1.02); }
   #conn { font-size:11px; margin-top:4px; }
+  #kin_warnings { font-size:10px; color:#ff9500; margin-top:2px; max-height:4.5em; overflow-y:auto; display:none; }
+  #kin_warnings.on { display:block; }
   #manbar { position:absolute; bottom:14px; left:50%; transform:translateX(-50%); display:none;
             align-items:center; gap:10px; z-index:5; padding:8px 10px; background:rgba(255,255,255,.92);
             border:1px solid var(--border); border-radius:10px; touch-action:none; }
@@ -149,6 +151,7 @@
     <div style="padding:10px 12px 0;border-bottom:1px solid var(--border)">
       <h1>VDSim</h1>
       <div id="conn" class="sub">connecting…</div>
+      <div id="kin_warnings"></div>
     </div>
     <div class="sidebar-scroll">
       <section class="card">
@@ -369,6 +372,18 @@ async function post(url, obj) {
 async function postJson(url, obj) {
   const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) });
   return r.json();
+}
+async function postSetup(payload) {
+  const r = await fetch('/api/setup', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+  });
+  const j = await r.json();
+  if (!r.ok || j.ok === false) {
+    const msg = j.error || 'setup failed';
+    updateConn({ kinematics_warnings: [msg] });
+    throw new Error(msg);
+  }
+  return j;
 }
 
 // ---- three.js scene ----
@@ -1205,10 +1220,18 @@ function applyState(s) {
 }
 
 function updateConn(s) {
+  const kw = $('kin_warnings');
   if (s?.kinematics_warnings?.length) {
-    $('conn').textContent = '● ' + s.kinematics_warnings[0];
+    $('conn').textContent = '● kinematics warning';
     $('conn').style.color = '#ff9500';
-  } else if (s?.plant_error) {
+    kw.className = 'on';
+    kw.innerHTML = s.kinematics_warnings.map(w => `<div>● ${w}</div>`).join('');
+  } else {
+    kw.className = '';
+    kw.innerHTML = '';
+  }
+  if (s?.kinematics_warnings?.length) return;
+  if (s?.plant_error) {
     $('conn').textContent = '● ' + s.plant_error;
     $('conn').style.color = '#ff9500';
   } else if (s?.running && s?.source === 'waiting') {
@@ -1382,7 +1405,7 @@ function collectWaypointPts() {
     return [x, y];
   }).filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]));
 }
-let setupVehicleList = [], setupTireSamples = [], setupSuspList = [];
+let setupVehicleList = [], setupTireSamples = [], setupSuspList = [], setupSuspL3Count = 0;
 function syncFleetSuspLevel(box, level) {
   const l3 = level === 'L3';
   for (const k of ['front_susp', 'rear_susp']) {
@@ -1397,7 +1420,10 @@ function syncFleetSuspLevel(box, level) {
     const row = box.querySelector('.setup-row');
     box.insertBefore(hint, row);
   }
-  hint.textContent = l3 ? 'L3 kinematics attach' : 'Suspension parts: L3 only';
+  const n = setupSuspL3Count || setupSuspList.length;
+  hint.textContent = l3
+    ? `L3 kinematics attach (${n} configs)`
+    : 'Suspension parts: L3 only';
 }
 async function ensureSetupLists() {
   if (!setupVehicleList.length) {
@@ -1408,7 +1434,9 @@ async function ensureSetupLists() {
     setupTireSamples = (await (await fetch('/api/tire/samples')).json()).samples || [];
   }
   if (!setupSuspList.length) {
-    setupSuspList = (await (await fetch('/api/suspension/list')).json()).samples || [];
+    const sj = await (await fetch('/api/suspension/list')).json();
+    setupSuspList = sj.samples || [];
+    setupSuspL3Count = sj.l3_count ?? setupSuspList.length;
   }
 }
 async function renderFleetSpawn(fleet) {
@@ -1446,7 +1474,18 @@ async function renderFleetSpawn(fleet) {
       box.appendChild(mkSel('front_susp', setupSuspList, spec.front_susp || ''));
       box.appendChild(mkSel('rear_susp', setupSuspList, spec.rear_susp || ''));
       syncFleetSuspLevel(box, spec.level || 'L2');
-      levelSel.addEventListener('change', () => syncFleetSuspLevel(box, levelSel.value));
+      levelSel.addEventListener('change', async () => {
+        syncFleetSuspLevel(box, levelSel.value);
+        if (levelSel.value === 'L3') {
+          const veh = box.querySelector('select[data-k=vehicle]')?.value || 'sedan';
+          const defs = await (await fetch(
+            `/api/suspension/default?vehicle=${encodeURIComponent(veh)}`)).json();
+          for (const [k, v] of [['front_susp', defs.front], ['rear_susp', defs.rear]]) {
+            const sel = box.querySelector(`select[data-k="${k}"]`);
+            if (sel) sel.value = v;
+          }
+        }
+      });
     }
     const row = document.createElement('div'); row.className = 'setup-row';
     for (const [k, lab] of [['x0', 'x'], ['y0', 'y'], ['yaw0', 'ψ'], ['vx0', 'vx']]) {
@@ -1523,10 +1562,8 @@ async function applySetupFromForm() {
   const payload = collectSetupPayload();
   payload.road.grade = (+$('setup_grade').value) * Math.PI / 180;
   payload.road.bank = (+$('setup_bank').value) * Math.PI / 180;
-  const r = await (await fetch('/api/setup', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
-  })).json();
-  if (!r.ok) { alert('Setup apply failed'); return; }
+  let r;
+  try { r = await postSetup(payload); } catch (e) { alert(e.message); return; }
   lastNpath = -1;
   trailPts = []; trail.visible = false; mmTrail.length = 0;
   await drawPath(); await drawRoad();
@@ -2297,14 +2334,18 @@ function renderModalPane() {
       tools.appendChild(selectRow('Front kinematics', suspList,
         modalSuspFront || suspDefaults.front, async v => {
           modalSuspFront = v; refreshModalPreview();
-          await post('/api/setup', { fleet: [{ id: modalVid, front_susp: v }] });
+          try {
+            await postSetup({ fleet: [{ id: modalVid, front_susp: v }] });
+          } catch (e) { alert(e.message); return; }
           const sp = (window._fleetSpec || []).find(s => +s.id === modalVid);
           if (sp) sp.front_susp = v;
         }));
       tools.appendChild(selectRow('Rear kinematics', suspList,
         modalSuspRear || suspDefaults.rear, async v => {
           modalSuspRear = v; refreshModalPreview();
-          await post('/api/setup', { fleet: [{ id: modalVid, rear_susp: v }] });
+          try {
+            await postSetup({ fleet: [{ id: modalVid, rear_susp: v }] });
+          } catch (e) { alert(e.message); return; }
           const sp = (window._fleetSpec || []).find(s => +s.id === modalVid);
           if (sp) sp.rear_susp = v;
         }));

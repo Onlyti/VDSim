@@ -17,7 +17,7 @@ the last section.
 | ISO 7401 step-steer / 4138 understeer / 3888-2 DLC — run + measured | Tire thermal, wear, full transient beyond first-order relaxation |
 | L1↔L2↔L3 cross-model consistency where physics overlaps | Dependent axles (twist-beam / solid beam) — configs are stubs |
 | FMI round-trip Δ=0 (machine precision); ISO 8608 PSD RMS per class | L3 unsprung lateral-transfer term (small) |
-| Full suite: **190/190 ctest green** | — |
+| Full suite: **191/191 ctest green** | — |
 
 Note: ISO 3888-2 DLC@60 not meeting the 1.0 m gate is a default-preset
 vehicle/controller property, not a sim defect (see "Notes on specific results").
@@ -50,7 +50,7 @@ vehicle/controller property, not a sim defect (see "Notes on specific results").
 | 11 | FMI round-trip | native VDSim | max \|Δvx\| = 0 (machine precision) | 1e-9 | `python3 fmi_export/test_roundtrip.py` |
 | 12 | ISO 8608 roughness | PSD Gd(n)=Gd(n0)(n/n0)⁻² | RMS doubles/class: A 3.5, B 7.0, C 14.1, D 28 mm | 15% | `ctest -R Iso8608` |
 
-Full automated suite: `cd build && ctest` — 190 checks, 100% green (measured 2026-06-06).
+Full automated suite: `cd build && ctest` — 191 checks, 100% green (measured 2026-06-06).
 
 ## Notes on specific results
 

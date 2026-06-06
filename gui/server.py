@@ -73,9 +73,10 @@ def list_l3_kinematics_configs():
 
 def list_suspension_api(preview_all=False):
     l3 = list_l3_kinematics_configs()
+    out = {"samples": l3, "l3_count": len(l3)}
     if preview_all:
-        return {"samples": l3, "preview": list_suspension_configs()}
-    return {"samples": l3}
+        out["preview"] = list_suspension_configs()
+    return out
 
 
 def _strip_fleet_susp_if_not_l3(spec):
@@ -107,12 +108,43 @@ def _l3_susp_path_warnings(fleet_spec):
 
 
 _KIN_WARN_MARKERS = ("kinematics attach failed", "front susp", "rear susp")
+_KIN_LOG_TAIL = 16384
 
 
-def _scan_kinematics_warnings(log_path):
+def _validate_l3_susp_stem(stem, side, vid):
+    if not stem:
+        return
+    ref = susp_stem_from_ref(stem)
+    if not (SUSP_DIR / f"{ref}.yaml").is_file():
+        raise ValueError(f"vehicle {vid}: {side} suspension '{stem}' not found")
+    if not is_l3_kinematics_yaml(ref):
+        raise ValueError(
+            f"vehicle {vid}: {side} suspension '{stem}' is not L3-native")
+
+
+def _validate_fleet_updates(updates, fleet_spec):
+    for upd in updates:
+        vid = int(upd["id"])
+        spec = next((f for f in fleet_spec if int(f["id"]) == vid), None)
+        if spec is None:
+            continue
+        level = str(upd.get("level", spec.get("level", "L2")))
+        if level != "L3":
+            continue
+        for side, key in (("front", "front_susp"), ("rear", "rear_susp")):
+            if key in upd:
+                _validate_l3_susp_stem(upd[key], side, vid)
+
+
+def _scan_kinematics_warnings(log_path, tail_only=True):
     warnings = []
     try:
-        text = Path(log_path).read_text(errors="replace")
+        path = Path(log_path)
+        size = path.stat().st_size
+        with path.open("rb") as f:
+            if tail_only and size > _KIN_LOG_TAIL:
+                f.seek(-_KIN_LOG_TAIL, 2)
+            text = f.read().decode("utf-8", errors="replace")
     except OSError:
         return warnings
     for line in text.splitlines():
@@ -584,6 +616,7 @@ class CosimBridge:
         self._run_since = None
         self.kinematics_warnings = []
         self._kin_warn_pre = []
+        self._kin_full_scanned = False
 
     def set_kinematics_pre_warnings(self, warnings):
         self._kin_warn_pre = list(warnings or [])
@@ -613,6 +646,7 @@ class CosimBridge:
         log_path = os.path.join(self._tmp, "plant.log")
         self._plant_log = open(log_path, "w")
         self.kinematics_warnings = list(self._kin_warn_pre)
+        self._kin_full_scanned = False
         self.proc = subprocess.Popen(args, stdout=self._plant_log,
                                      stderr=subprocess.STDOUT, cwd=str(REPO))
         self.started_t = time.monotonic()
@@ -621,9 +655,11 @@ class CosimBridge:
     def refresh_kinematics_warnings(self):
         merged = list(self._kin_warn_pre)
         if self._plant_log is not None:
-            for w in _scan_kinematics_warnings(self._plant_log.name):
+            tail_only = self._kin_full_scanned
+            for w in _scan_kinematics_warnings(self._plant_log.name, tail_only=tail_only):
                 if w not in merged:
                     merged.append(w)
+            self._kin_full_scanned = True
         self.kinematics_warnings = merged
         return self.kinematics_warnings
 
@@ -746,6 +782,9 @@ class CosimBridge:
                 self._rx = None
             self.last_state = None
             self.states = {}
+            self._kin_warn_pre = []
+            self.kinematics_warnings = []
+            self._kin_full_scanned = False
         return self.status()
 
     def attach(self, host="127.0.0.1", cmd_port=COSIM_CMD_PORT,
@@ -997,8 +1036,8 @@ class Runner:
                 "vx0": float(spec.get("vx0", self.cfg["init_v"])),
             }
             if str(spec.get("level", self.cfg["level"])) == "L3":
-                fs = self._susp_yaml_path(spec.get("front_susp"))
-                rs = self._susp_yaml_path(spec.get("rear_susp"))
+                fs = susp_rel_path(spec.get("front_susp"))
+                rs = susp_rel_path(spec.get("rear_susp"))
                 if fs:
                     row["front_susp_yaml"] = fs
                 if rs:
@@ -1426,6 +1465,9 @@ class Runner:
         return {"ok": True, "name": stem}
 
     def apply_setup(self, data):
+        if "fleet" in data:
+            with self.lock:
+                _validate_fleet_updates(data["fleet"], self.fleet_spec)
         refresh_snap = False
         with self.lock:
             if data.get("fleet_add"):
@@ -1454,15 +1496,22 @@ class Runner:
                     spec = next((f for f in self.fleet_spec if int(f["id"]) == vid), None)
                     if spec is None:
                         continue
+                    old_level = str(spec.get("level", "L2"))
                     for k in ("x0", "y0", "yaw0", "vx0", "level", "vehicle", "tire",
                               "front_susp", "rear_susp"):
                         if k in upd:
                             spec[k] = upd[k]
+                    if "level" in upd:
+                        new_level = str(upd["level"])
+                        if new_level == "L3" and old_level != "L3":
+                            d = suspension_default_for_vehicle(str(spec.get("vehicle", "sedan")))
+                            spec["front_susp"] = d["front"]
+                            spec["rear_susp"] = d["rear"]
                     if "vehicle" in upd and "front_susp" not in upd and "rear_susp" not in upd:
                         d = suspension_default_for_vehicle(str(upd["vehicle"]))
                         spec["front_susp"] = d["front"]
                         spec["rear_susp"] = d["rear"]
-                    if "level" in upd and str(upd["level"]) == "L3":
+                    if str(spec.get("level", "L2")) == "L3":
                         self._ensure_fleet_parts(spec)
                     _strip_fleet_susp_if_not_l3(spec)
                     if vid == self.live_vid:
@@ -2472,7 +2521,11 @@ class Handler(BaseHTTPRequestHandler):
             RUNNER.set_params("sensors", body)
             self._json({"ok": True})
         elif self.path == "/api/setup":
-            RUNNER.apply_setup(body)
+            try:
+                RUNNER.apply_setup(body)
+            except ValueError as e:
+                self._json({"ok": False, "error": str(e)}, code=400)
+                return
             self._json({"ok": True, "setup": RUNNER.get_setup()})
         elif self.path == "/api/control":
             out = RUNNER.control(body.get("action", ""))

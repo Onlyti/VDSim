@@ -1,6 +1,6 @@
 # VDSim 핸드오프
 
-작성: 2026-06-06. **v0.2.2** `ee53f31` push 완료. v0.3 = drivetrain + LuGre.
+작성: 2026-06-06. **v0.2.3** polish 진행 중. v0.2.2 = `ee53f31`. v0.3 = drivetrain + LuGre.
 
 ## 1. 목표
 v0.2 "composable vehicle": 차량 = chassis + parts, 워크샵 + 씬 UI. **`gui/app.html`**
@@ -8,7 +8,7 @@ v0.2 "composable vehicle": 차량 = chassis + parts, 워크샵 + 씬 UI. **`gui/
 
 ## 2. 현재 상태
 - **v0.2.0** 태그 = 로컬 HEAD (push 후 origin 갱신).
-- 빌드 `cmake --build build -j`; **ctest 190/190** (v0.2.1 hotfix 후).
+- 빌드 `cmake --build build -j`; **ctest 191/191** (v0.2.3 후).
 - v0.1.0 태그 `4c77d7f`. GitHub Topics / 데모 GIF (#155) = 사용자 UI.
 
 ## 3. v0.2.0 완료
@@ -27,19 +27,23 @@ v0.2 "composable vehicle": 차량 = chassis + parts, 워크샵 + 씬 UI. **`gui/
 - 모달 kinematics 드롭다운 L3-native only; `Popen(cwd=REPO)`.
 - L3 missing/topology-only stem → pre-launch `kinematics_warnings`.
 
-## 6. 다음 (v0.3+)
+## 6. v0.2.3 (진행)
+- 경고 패널, setup API L3 검증, L3 전환 default, log tail, rel world susp paths.
+- `l3_sedan_kinematics.yaml` + `l3_scenario_susp_paths` ctest.
+
+## 7. 다음 (v0.3+)
 - Drivetrain inertia + torque–RPM (`V0.2_DRIVETRAIN.md`).
 - LuGre tire (`V0.2_TIRE_LUGRE.md`).
 - Engine workshop (실구현).
 - Infra sensor runtime mount (`SIM_CONFIG_ARCH.md` host field).
 - v0.4 스턴트 (`V0.4_PLAN.md` M1–M6).
 
-## 7. 주의
+## 8. 주의
 - GUI 시각검증 = 유저. 에이전트 = markup/API/ctest.
-- **190 green** on default modules.
+- **191 green** on default modules.
 - TUR tire confidential. Simon Q/R. VDS1 v4.
 
-## 8. 경로
+## 9. 경로
 - GUI: `gui/app.html`, `gui/server.py`
 - Parts: `configs/components/`, `configs/suspensions/`
 - 설계: `docs/design/V0.2_*.md`, `V0.4_PLAN.md`

@@ -4,7 +4,20 @@ All notable changes to VDSim are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow
 [SemVer](https://semver.org/).
 
-## [Unreleased] — v0.2.2 hotfix
+## [Unreleased] — v0.2.3 polish
+
+### Fixed
+- Full kinematics warning list in sidebar; setup API rejects invalid L3 suspension stems (400).
+- L3 level switch resets suspension defaults; fleet launch uses relative susp paths in world YAML.
+- `plant.log` tail scan after first full read; cosim stop clears stale warnings.
+
+### Added
+- Sample `configs/scenarios/l3_sedan_kinematics.yaml`; ctest `l3_scenario_susp_paths`.
+
+### Tests
+- 191/191 ctest green.
+
+## [0.2.2] — modal + cwd + pre-launch warnings
 
 ### Fixed
 - Edit modal kinematics dropdown uses L3-native list only (preview API unchanged for schematic).

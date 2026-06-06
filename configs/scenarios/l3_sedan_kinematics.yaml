@@ -1,0 +1,17 @@
+# L3 single-vehicle scenario with native kinematics paths (not measured data).
+name: l3_sedan_kinematics
+rate: 200
+cmd_timeout: 0.1
+mu: 1.0
+
+vehicles:
+  - id: 0
+    vehicle: configs/vehicles/sedan.yaml
+    tire: configs/tires/default_pacejka.yaml
+    level: L3
+    front_susp: configs/suspensions/mp_front_sedan.yaml
+    rear_susp: configs/suspensions/ta_rear_sedan.yaml
+    x0: 0
+    y0: 0
+    yaw0: 0
+    vx0: 0
