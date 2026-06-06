@@ -32,6 +32,87 @@ sys.path.insert(0, str(REPO / "cosim"))
 sys.path.insert(0, str(REPO / "python"))
 HERE = Path(__file__).resolve().parent
 TIRE_DIR = REPO / "configs" / "tires"
+SUSP_DIR = REPO / "configs" / "suspensions"
+VEHICLE_SUSP_DEFAULT = {
+    "sedan": {"front": "mp_front_sedan", "rear": "ta_rear_sedan"},
+    "sports": {"front": "dw_front_sports", "rear": "5link_rear_sports"},
+    "fsk_formula": {"front": "double_wishbone", "rear": "double_wishbone"},
+    "race_car": {"front": "dw_front_sports", "rear": "5link_rear_sports"},
+}
+
+
+def _corner_kinematic_links(doc):
+    links = []
+    for arm in ("lca", "uca"):
+        block = doc.get(arm)
+        if not isinstance(block, dict):
+            continue
+        cf, cr, kn = block["chassis_front"], block["chassis_rear"], block["knuckle"]
+        links.extend([[cf, cr], [cf, kn], [cr, kn]])
+    st = doc.get("strut")
+    if isinstance(st, dict) and "top" in st and "bottom" in st:
+        links.append([st["top"], st["bottom"]])
+    tr = doc.get("tie_rod")
+    if isinstance(tr, dict):
+        links.append([tr["rack"], tr["knuckle"]])
+    sd = doc.get("spring_damper")
+    if isinstance(sd, dict) and "chassis" in sd and "lca" in sd:
+        links.append([sd["chassis"], sd["lca"]])
+    ap = doc.get("arm_pivot")
+    if isinstance(ap, dict):
+        pi, po = ap["chassis_inboard"], ap["chassis_outboard"]
+        links.append([pi, po])
+        wh = (doc.get("wheel") or {}).get("center")
+        if wh:
+            mid = [(pi[i] + po[i]) / 2.0 for i in range(3)]
+            links.append([mid, wh])
+    lb = doc.get("links")
+    if isinstance(lb, dict):
+        for block in lb.values():
+            if isinstance(block, dict) and "chassis" in block and "knuckle" in block:
+                links.append([block["chassis"], block["knuckle"]])
+    hps = doc.get("hardpoints")
+    if isinstance(hps, list):
+        hp = {h["name"]: h["position"] for h in hps if isinstance(h, dict) and "name" in h}
+        for a, b in (
+            ("uca_inner_front", "uca_outer_ball"), ("uca_inner_rear", "uca_outer_ball"),
+            ("lca_inner_front", "lca_outer_ball"), ("lca_inner_rear", "lca_outer_ball"),
+            ("tie_rod_inner", "tie_rod_outer"), ("pushrod_lower", "pushrod_upper"),
+            ("damper_top", "damper_bottom"),
+        ):
+            if a in hp and b in hp:
+                links.append([hp[a], hp[b]])
+    pts = {}
+    wh = (doc.get("wheel") or {}).get("center")
+    if wh:
+        pts["wheel"] = wh
+    return links, pts
+
+
+def list_suspension_configs():
+    if not SUSP_DIR.is_dir():
+        return []
+    return sorted(p.stem for p in SUSP_DIR.glob("*.yaml"))
+
+
+def suspension_default_for_vehicle(vehicle):
+    stem = Path(str(vehicle)).stem
+    return dict(VEHICLE_SUSP_DEFAULT.get(stem, {
+        "front": "double_wishbone", "rear": "trailing_arm",
+    }))
+
+
+def suspension_schematic(name):
+    import yaml
+    stem = Path(str(name)).stem
+    path = SUSP_DIR / f"{stem}.yaml"
+    if not path.is_file():
+        raise ValueError(f"unknown suspension: {name}")
+    doc = yaml.safe_load(path.read_text()) or {}
+    typ = str(doc.get("type") or doc.get("topology") or "unknown")
+    links, pts = _corner_kinematic_links(doc)
+    return {"name": stem, "type": typ, "links": links, "points": pts}
+
 
 try:
     import vdsim
@@ -659,9 +740,11 @@ class Runner:
         self.time_scale = 1.0
         self.live_vid = 0
         self.ports = {0: VehiclePort()}
+        _p0 = suspension_default_for_vehicle("sedan")
         self.fleet_spec = [
             {"id": 0, "vehicle": "sedan", "tire": "default_pacejka", "level": "L2",
-             "x0": 0.0, "y0": 0.0, "yaw0": 0.0, "vx0": 0.0},
+             "x0": 0.0, "y0": 0.0, "yaw0": 0.0, "vx0": 0.0,
+             "front_susp": _p0["front"], "rear_susp": _p0["rear"]},
         ]
         self.fleet_overrides = {}
         self.plant_error = None
@@ -693,6 +776,13 @@ class Runner:
             vid = int(spec["id"])
             if vid not in self.ports:
                 self.ports[vid] = VehiclePort()
+
+    @staticmethod
+    def _ensure_fleet_parts(spec):
+        veh = str(spec.get("vehicle", "sedan"))
+        defaults = suspension_default_for_vehicle(veh)
+        spec.setdefault("front_susp", defaults["front"])
+        spec.setdefault("rear_susp", defaults["rear"])
 
     def _renumber_fleet(self):
         want = list(range(len(self.fleet_spec)))
@@ -807,6 +897,7 @@ class Runner:
                 veh = REPO / veh
             if not tire.is_absolute():
                 tire = REPO / tire
+            parts = suspension_default_for_vehicle(veh.stem)
             self.fleet_spec.append({
                 "id": int(v["id"]),
                 "vehicle": veh.stem,
@@ -816,6 +907,8 @@ class Runner:
                 "y0": float(v.get("y0", 0.0)),
                 "yaw0": float(v.get("yaw0", 0.0)),
                 "vx0": float(v.get("vx0", 0.0)),
+                "front_susp": str(v.get("front_susp", parts["front"])),
+                "rear_susp": str(v.get("rear_susp", parts["rear"])),
             })
         self._ensure_ports()
         if self.fleet_spec:
@@ -944,6 +1037,7 @@ class Runner:
             for spec in self.fleet_spec:
                 vid = int(spec["id"])
                 row = dict(spec)
+                self._ensure_fleet_parts(row)
                 row["geom"] = self.vehicle_geom(vid)
                 out.append(row)
             return out
@@ -1066,6 +1160,7 @@ class Runner:
             for spec in self.fleet_spec:
                 vid = int(spec["id"])
                 row = dict(spec)
+                self._ensure_fleet_parts(row)
                 row["geom"] = self.vehicle_geom(vid)
                 fleet.append(row)
             return {
@@ -1088,15 +1183,19 @@ class Runner:
         ids = [int(s["id"]) for s in self.fleet_spec]
         nid = (max(ids) + 1) if ids else 0
         ref = self.fleet_spec[-1]
+        veh = str(ref.get("vehicle", "sedan"))
+        parts = suspension_default_for_vehicle(veh)
         self.fleet_spec.append({
             "id": nid,
-            "vehicle": str(ref.get("vehicle", "sedan")),
+            "vehicle": veh,
             "tire": str(ref.get("tire", "default_pacejka")),
             "level": str(ref.get("level", self.cfg["level"])),
             "x0": float(ref.get("x0", 0.0)) + 3.0,
             "y0": float(ref.get("y0", 0.0)),
             "yaw0": float(ref.get("yaw0", 0.0)),
             "vx0": float(ref.get("vx0", 0.0)),
+            "front_susp": str(ref.get("front_susp", parts["front"])),
+            "rear_susp": str(ref.get("rear_susp", parts["rear"])),
         })
         self._ensure_ports()
 
@@ -1140,7 +1239,7 @@ class Runner:
         path = REPO / "configs" / "scenarios" / f"{stem}.yaml"
         vehs = []
         for s in self.fleet_spec:
-            vehs.append({
+            row = {
                 "id": int(s["id"]),
                 "vehicle": f"configs/vehicles/{s['vehicle']}.yaml",
                 "tire": f"configs/tires/{s['tire']}.yaml",
@@ -1149,7 +1248,12 @@ class Runner:
                 "y0": float(s.get("y0", 0.0)),
                 "yaw0": float(s.get("yaw0", 0.0)),
                 "vx0": float(s.get("vx0", 0.0)),
-            })
+            }
+            if s.get("front_susp"):
+                row["front_susp"] = str(s["front_susp"])
+            if s.get("rear_susp"):
+                row["rear_susp"] = str(s["rear_susp"])
+            vehs.append(row)
         doc = {
             "name": stem,
             "rate": 200,
@@ -1195,9 +1299,14 @@ class Runner:
                     spec = next((f for f in self.fleet_spec if int(f["id"]) == vid), None)
                     if spec is None:
                         continue
-                    for k in ("x0", "y0", "yaw0", "vx0", "level", "vehicle", "tire"):
+                    for k in ("x0", "y0", "yaw0", "vx0", "level", "vehicle", "tire",
+                              "front_susp", "rear_susp"):
                         if k in upd:
                             spec[k] = upd[k]
+                    if "vehicle" in upd and "front_susp" not in upd and "rear_susp" not in upd:
+                        d = suspension_default_for_vehicle(str(upd["vehicle"]))
+                        spec["front_susp"] = d["front"]
+                        spec["rear_susp"] = d["rear"]
                     if vid == self.live_vid:
                         self._sync_live_from_fleet()
                 refresh_snap = True
@@ -1866,13 +1975,26 @@ class Runner:
 
     def export_simconfig(self):
         with self.lock:
+            fleet = []
+            for spec in self.fleet_spec:
+                row = dict(spec)
+                self._ensure_fleet_parts(row)
+                fleet.append(row)
             return {
-                "version": 1,
+                "version": 2,
                 "config": self.config(),
                 "vehicle": _params_dict(self.vp, VEHICLE_FIELDS),
                 "tire": _params_dict(self.tp, TIRE_FIELDS),
                 "sensors": _flat_sensors(self.sensors),
                 "actuator": _flat_actuator(self.act, self.sensor_delay),
+                "fleet_spec": fleet,
+                "fleet_overrides": {str(k): v for k, v in self.fleet_overrides.items()},
+                "live_vid": self.live_vid,
+                "path_preset": self.path_preset,
+                "path_pts": [[float(p[0]), float(p[1])] for p in self.path.pts],
+                "cosim_attach": bool(self.cfg.get("cosim_attach", False)),
+                "cosim_host": str(self.cfg.get("cosim_host", "127.0.0.1")),
+                "cosim_cmd_port": int(self.cfg.get("cosim_cmd_port", 7401)),
             }
 
     def import_simconfig(self, data):
@@ -1894,6 +2016,32 @@ class Runner:
                 self.solver.integrator = ENUM_MAPS["integrator"][c["integrator"]]
             if "max_substeps" in c:
                 self.solver.max_substeps = max(1, int(c["max_substeps"]))
+            ver = int(data.get("version", 1))
+            if ver >= 2 and data.get("fleet_spec"):
+                self.fleet_overrides = {
+                    int(k): v for k, v in (data.get("fleet_overrides") or {}).items()}
+                self.fleet_spec = []
+                for spec in data["fleet_spec"]:
+                    row = dict(spec)
+                    self._ensure_fleet_parts(row)
+                    self.fleet_spec.append(row)
+                self._ensure_ports()
+                if "live_vid" in data:
+                    self.live_vid = int(data["live_vid"])
+                pp = data.get("path_preset")
+                if pp == "custom" and data.get("path_pts"):
+                    pts = [(float(p[0]), float(p[1])) for p in data["path_pts"]]
+                    if len(pts) >= 2:
+                        self.path = WaypointPath(pts)
+                        self.path_preset = "custom"
+                elif pp and pp != "custom":
+                    self.set_path_preset(str(pp))
+                for k, ck in (("cosim_attach", "cosim_attach"),
+                              ("cosim_host", "cosim_host"),
+                              ("cosim_cmd_port", "cosim_cmd_port")):
+                    if k in data:
+                        self.cfg[ck] = data[k]
+                self._sync_live_from_fleet()
             if "vehicle" in data:
                 _apply(self.vp, VEHICLE_FIELDS, data["vehicle"])
             if "tire" in data:
@@ -1934,16 +2082,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         route, qs = urlparse(self.path).path, parse_qs(urlparse(self.path).query)
-        if route in ("/", "/index.html", "/app", "/app.html"):
+        if route in ("/", "/index.html", "/app", "/app.html", "/legacy", "/classic", "/classic.html"):
             html = (HERE / "app.html").read_bytes()
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
-            self.send_header("Content-Length", str(len(html)))
-            self.end_headers()
-            self.wfile.write(html)
-        elif route in ("/legacy", "/classic", "/classic.html"):
-            html = (HERE / "index.html").read_bytes()
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
@@ -1978,6 +2118,17 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"plots": RUNNER.tire_curves(_qvid(qs))})
         elif route == "/api/tire/samples":
             self._json({"samples": RUNNER.tire_samples()})
+        elif route == "/api/suspension/list":
+            self._json({"samples": list_suspension_configs()})
+        elif route == "/api/suspension/default":
+            veh = (qs.get("vehicle") or ["sedan"])[0]
+            self._json(suspension_default_for_vehicle(veh))
+        elif route == "/api/suspension/schematic":
+            name = (qs.get("name") or [""])[0]
+            try:
+                self._json(suspension_schematic(name))
+            except ValueError as e:
+                self._json({"ok": False, "error": str(e)})
         elif route == "/api/simconfig":
             self._json(RUNNER.export_simconfig())
         elif route == "/api/fleet":

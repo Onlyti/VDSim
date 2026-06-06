@@ -39,4 +39,4 @@ frontend. WebGPU rendering is a later (quality) swap; the MVP uses WebGL2.
 | Path | Role |
 |---|---|
 | `gui/server.py`  | stdlib HTTP server: REST config/control + SSE state; runs SimSession |
-| `gui/index.html` | single-page Three.js (WebGL2) viewer + config panel |
+| `gui/app.html`   | full-screen Three.js viewer + fleet/setup/telemetry + edit modal |

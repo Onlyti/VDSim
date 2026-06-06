@@ -19,7 +19,17 @@
   .telemetry { width:300px; flex-shrink:0; background:var(--panel); border-left:1px solid var(--border);
                overflow-y:auto; padding:12px 14px; font-variant-numeric:tabular-nums; }
   .setup-bar { flex-shrink:0; border-top:1px solid var(--border); background:var(--panel);
-               padding:8px 12px 10px; max-height:min(36vh, 300px); overflow:auto; }
+               padding:8px 12px 10px; max-height:min(48vh, 400px); overflow:auto; }
+  .setup-tabs { display:flex; gap:4px; margin-bottom:8px; }
+  .setup-tab { flex:none; width:auto; padding:5px 12px; font-size:11px; }
+  .setup-tab.on { background:var(--acc); color:#001018; border-color:var(--acc); }
+  .setup-tab-pane { display:none; flex:1; flex-wrap:wrap; gap:12px; align-items:flex-start; min-width:0; }
+  .setup-tab-pane.on { display:flex; }
+  .setup-section.comms { min-width:260px; max-width:340px; max-height:280px; overflow:auto; flex:1; }
+  #io_body .fld input[type=range] { flex:1; width:auto; min-width:60px; }
+  #io_body button.apply { background:var(--acc); color:#001018; border-color:var(--acc); width:100%; margin-top:6px; }
+  #io_body pre { white-space:pre-wrap; font:10px Consolas,monospace; background:#f4f6f9;
+                 border:1px solid var(--border); border-radius:5px; padding:6px; color:var(--ink); }
   .setup-bar-h { display:flex; align-items:baseline; gap:10px; margin-bottom:8px; }
   .setup-bar-h .card-h { margin:0; }
   .setup-bar-inner { display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap; }
@@ -80,6 +90,13 @@
   .modal-bg.open { display:flex; }
   .modal { width:min(820px,94vw); max-height:88vh; background:var(--panel); border:1px solid var(--border);
            border-radius:12px; box-shadow:0 12px 40px rgba(20,40,70,.22); display:flex; flex-direction:column; }
+  .modal.wide { width:min(1020px,96vw); }
+  .modal-body-split { display:flex; gap:14px; align-items:flex-start; }
+  .modal-preview-wrap { width:300px; flex-shrink:0; position:sticky; top:0; }
+  .modal-preview-wrap .sub { margin-bottom:4px; font-size:10px; }
+  #modal_preview_cv { width:100%; height:240px; display:block; border:1px solid var(--border);
+                      border-radius:8px; background:#e9eef3; }
+  .modal-form-wrap { flex:1; min-width:0; }
   .modal-h { display:flex; align-items:center; justify-content:space-between; padding:12px 16px;
              border-bottom:1px solid var(--border); background:#eef2f6; border-radius:12px 12px 0 0; }
   .modal-h b { font:600 14px Tahoma; color:#16202b; }
@@ -198,57 +215,72 @@
         <div class="card-h" data-help="run">Scenario setup</div>
         <span class="sub">Stopped — edit then ▶ Play</span>
       </div>
+      <div class="setup-tabs">
+        <button type="button" class="setup-tab on" data-setup-tab="vehicle">Vehicle</button>
+        <button type="button" class="setup-tab" data-setup-tab="env">Environment</button>
+        <button type="button" class="setup-tab" data-setup-tab="sim">Simulator</button>
+      </div>
       <div class="setup-bar-inner">
-        <section class="setup-section path">
-          <div class="grp" data-help="run">Path</div>
-          <select id="setup_path_preset" class="setup-inp wide">
-            <option value="figure8">Figure-8</option>
-            <option value="straight">Straight</option>
-            <option value="custom">Custom waypoints</option>
-          </select>
-          <div id="setup_wp_box" style="margin-top:4px">
-            <table class="setup-table">
-              <thead><tr><th>x</th><th>y</th><th></th></tr></thead>
-              <tbody id="setup_wp_rows"></tbody>
-            </table>
-            <button id="setup_wp_add" style="width:auto;flex:none;padding:3px 7px;font-size:10px;margin-top:2px">+ wp</button>
-          </div>
-        </section>
-        <section class="setup-section">
-          <div class="grp" data-help="frames">Vehicle spawn</div>
-          <div id="setup_fleet"></div>
-          <button id="setup_fleet_add" style="width:100%;padding:4px;font-size:10px;margin-top:2px">+ vehicle</button>
-        </section>
-        <section class="setup-section">
-          <div class="grp" data-help="road">Road</div>
-          <div class="setup-row"><label>μ</label><input id="setup_mu" class="setup-inp" type="number" step="0.05" value="1">
-            <label>g°</label><input id="setup_grade" class="setup-inp" type="number" step="0.5" value="0"></div>
-          <div class="setup-row"><label>b°</label><input id="setup_bank" class="setup-inp" type="number" step="0.5" value="0">
-            <label>v</label><input id="setup_v_target" class="setup-inp" type="number" step="0.5" value="10"></div>
-        </section>
-        <section class="setup-section map">
-          <div class="grp" data-help="road">Map / terrain</div>
-          <input id="setup_xodr" class="setup-inp wide" type="text" placeholder="OpenDRIVE .xodr">
-          <div class="row" style="margin-top:3px">
-            <button id="setup_map_load" style="flex:1;padding:5px;font-size:11px">Map</button>
-            <button id="setup_terrain_clr" style="flex:1;padding:5px;font-size:11px">Clear</button>
-          </div>
-          <input id="setup_obj" class="setup-inp wide" type="text" placeholder="terrain .obj" style="margin-top:4px">
-          <button id="setup_terrain_load" style="width:100%;margin-top:3px;padding:5px;font-size:11px">Load terrain</button>
-        </section>
-        <section class="setup-section">
-          <div class="grp" data-help="cosim">Runtime / scenario</div>
-          <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink)">
-            <input type="checkbox" id="setup_attach"> Attach external
-          </label>
-          <input id="setup_cosim_host" class="setup-inp wide" type="text" value="127.0.0.1" placeholder="runtime host">
-          <div class="setup-row"><label>cmd</label><input id="setup_cosim_port" class="setup-inp" type="number" value="7401"></div>
-          <select id="setup_scenario" class="setup-inp wide" style="margin-top:4px"></select>
-          <div class="row" style="margin-top:3px">
-            <button id="setup_scenario_load" style="flex:1;padding:4px;font-size:10px">Load</button>
-            <button id="setup_scenario_save" style="flex:1;padding:4px;font-size:10px">Save</button>
-          </div>
-        </section>
+        <div class="setup-tab-pane on" id="setup_pane_vehicle">
+          <section class="setup-section path">
+            <div class="grp" data-help="run">Path</div>
+            <select id="setup_path_preset" class="setup-inp wide">
+              <option value="figure8">Figure-8</option>
+              <option value="straight">Straight</option>
+              <option value="custom">Custom waypoints</option>
+            </select>
+            <div id="setup_wp_box" style="margin-top:4px">
+              <table class="setup-table">
+                <thead><tr><th>x</th><th>y</th><th></th></tr></thead>
+                <tbody id="setup_wp_rows"></tbody>
+              </table>
+              <button id="setup_wp_add" style="width:auto;flex:none;padding:3px 7px;font-size:10px;margin-top:2px">+ wp</button>
+            </div>
+          </section>
+          <section class="setup-section">
+            <div class="grp" data-help="frames">Fleet spawn</div>
+            <div id="setup_fleet"></div>
+            <button id="setup_fleet_add" style="width:100%;padding:4px;font-size:10px;margin-top:2px">+ vehicle</button>
+          </section>
+        </div>
+        <div class="setup-tab-pane" id="setup_pane_env">
+          <section class="setup-section">
+            <div class="grp" data-help="road">Road</div>
+            <div class="setup-row"><label>μ</label><input id="setup_mu" class="setup-inp" type="number" step="0.05" value="1">
+              <label>g°</label><input id="setup_grade" class="setup-inp" type="number" step="0.5" value="0"></div>
+            <div class="setup-row"><label>b°</label><input id="setup_bank" class="setup-inp" type="number" step="0.5" value="0">
+              <label>v</label><input id="setup_v_target" class="setup-inp" type="number" step="0.5" value="10"></div>
+          </section>
+          <section class="setup-section map">
+            <div class="grp" data-help="road">Map / terrain</div>
+            <input id="setup_xodr" class="setup-inp wide" type="text" placeholder="OpenDRIVE .xodr">
+            <div class="row" style="margin-top:3px">
+              <button id="setup_map_load" style="flex:1;padding:5px;font-size:11px">Map</button>
+              <button id="setup_terrain_clr" style="flex:1;padding:5px;font-size:11px">Clear</button>
+            </div>
+            <input id="setup_obj" class="setup-inp wide" type="text" placeholder="terrain .obj" style="margin-top:4px">
+            <button id="setup_terrain_load" style="width:100%;margin-top:3px;padding:5px;font-size:11px">Load terrain</button>
+          </section>
+        </div>
+        <div class="setup-tab-pane" id="setup_pane_sim">
+          <section class="setup-section">
+            <div class="grp" data-help="cosim">Runtime / scenario</div>
+            <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink)">
+              <input type="checkbox" id="setup_attach"> Attach external
+            </label>
+            <input id="setup_cosim_host" class="setup-inp wide" type="text" value="127.0.0.1" placeholder="runtime host">
+            <div class="setup-row"><label>cmd</label><input id="setup_cosim_port" class="setup-inp" type="number" value="7401"></div>
+            <select id="setup_scenario" class="setup-inp wide" style="margin-top:4px"></select>
+            <div class="row" style="margin-top:3px">
+              <button id="setup_scenario_load" style="flex:1;padding:4px;font-size:10px">Load</button>
+              <button id="setup_scenario_save" style="flex:1;padding:4px;font-size:10px">Save</button>
+            </div>
+          </section>
+          <section class="setup-section comms">
+            <div class="grp" data-help="cosim">Data &amp; comms</div>
+            <div id="io_body"></div>
+          </section>
+        </div>
         <div class="setup-bar-actions">
           <button id="setup_apply">Apply</button>
         </div>
@@ -290,7 +322,7 @@
 </div>
 
 <div id="modal_bg" class="modal-bg">
-  <div class="modal">
+  <div class="modal" id="modal_panel">
     <div class="modal-h">
       <b id="modal_title">Vehicle 0 — modules</b>
       <span id="modal_x" style="cursor:pointer;color:var(--dim);padding:0 6px">✕</span>
@@ -338,7 +370,7 @@ async function postJson(url, obj) {
   return r.json();
 }
 
-// ---- three.js scene (ported from index.html) ----
+// ---- three.js scene ----
 const view = $('view');
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xe9eef3);
@@ -498,9 +530,53 @@ const fleetCars = {};
 const bodyMat = new THREE.MeshStandardMaterial({ color: 0x01A0E9, metalness: .3, roughness: .5 });
 const cabinMat = new THREE.MeshStandardMaterial({ color: 0x9fd8f5 });
 const wheelMat = new THREE.MeshStandardMaterial({ color: 0x14181f });
+const treadMat = new THREE.MeshStandardMaterial({ color: 0x8a929c, metalness: .15, roughness: .65 });
 const springMat = new THREE.MeshStandardMaterial({ color: 0xb0b8c0, metalness: .6, roughness: .4 });
 const unsprMat = new THREE.MeshStandardMaterial({ color: 0x444c57 });
-let wheels = [], axx = [], axy = [], axz = [], springs = [], unspr = [], renderLevel = null, rebuilding = false, steerIdx = [0, 1];
+let wheels = [], wheelRoll = [], axx = [], axy = [], axz = [], springs = [], unspr = [];
+let renderLevel = null, rebuilding = false, steerIdx = [0, 1];
+function addWheelTread(wheel, R) {
+  const mk = x => {
+    const s = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.22, 0.09), treadMat);
+    s.position.set(x, 0, 0); wheel.add(s);
+  };
+  mk(R * 0.96); mk(-R * 0.96);
+}
+function makeWheelMesh(wg, R) {
+  const w = new THREE.Mesh(wg, wheelMat);
+  w.rotation.order = 'YXZ'; w.rotation.x = Math.PI / 2;
+  addWheelTread(w, R); return w;
+}
+function wheelSpinRate(i) {
+  const sp = tgt.wheelSpin || [];
+  if (wheels.length === 2) {
+    return i === 0 ? ((sp[0] || 0) + (sp[1] || 0)) * 0.5 : ((sp[2] || 0) + (sp[3] || 0)) * 0.5;
+  }
+  return sp[i] || 0;
+}
+function updateWheelRoll(dt) {
+  if (!wheels.length) return;
+  while (wheelRoll.length < wheels.length) wheelRoll.push(0);
+  const roll = simRunning && tgt.has;
+  for (let i = 0; i < wheels.length; i++) {
+    if (roll) wheelRoll[i] += wheelSpinRate(i) * dt;
+    wheels[i].rotation.z = wheelRoll[i];
+  }
+}
+function updateFleetWheelRoll(dt) {
+  const fleet = window._lastState?.fleet;
+  if (!fleet || !simRunning) return;
+  for (const [vid, fc] of Object.entries(fleetCars)) {
+    const st = fleet[vid]; if (!st || !fc.wheels?.length) continue;
+    const R = fc.geom?.wheel_radius_nominal || 0.32;
+    const omega = (st.vx || 0) / Math.max(R, 0.05);
+    if (!fc.wheelRoll) fc.wheelRoll = fc.wheels.map(() => 0);
+    for (let i = 0; i < fc.wheels.length; i++) {
+      fc.wheelRoll[i] += omega * dt;
+      fc.wheels[i].rotation.z = fc.wheelRoll[i];
+    }
+  }
+}
 const FSCALE = 0.0012, FZSCALE = 0.0006;
 function clearGroup(g) { for (const c of [...g.children]) { g.remove(c); if (c.geometry) c.geometry.dispose(); } }
 function disposeCarGroup(grp) {
@@ -529,11 +605,12 @@ function buildStaticCar(geom, level, bodyColor) {
   cabin.position.set((a - b) / 2 - 0.15, bodyY + bodyH / 2 + 0.19, 0); spr.add(cabin);
   const pos = bike ? [[a, 0], [-b, 0]] : [[a, -tf / 2], [a, tf / 2], [-b, -tr / 2], [-b, tr / 2]];
   const wg = new THREE.CylinderGeometry(R, R, 0.22, 14);
+  const builtWheels = [];
   pos.forEach(([x, z]) => {
-    const w = new THREE.Mesh(wg, wm); w.rotation.order = 'YXZ'; w.rotation.x = Math.PI / 2;
-    w.position.set(x, R, z); wp.add(w);
+    const w = makeWheelMesh(wg, R);
+    w.position.set(x, R, z); wp.add(w); builtWheels.push(w);
   });
-  return { group: grp, ground: gnd, sprung: spr, level };
+  return { group: grp, ground: gnd, sprung: spr, level, wheels: builtWheels, wheelRoll: builtWheels.map(() => 0) };
 }
 
 function placeFleetCar(vid, st) {
@@ -559,7 +636,7 @@ async function ensureFleetCar(vid, spec) {
   }
   const built = buildStaticCar(geom, level, col);
   scene.add(built.group);
-  fleetCars[vid] = { ...built, color: col };
+  fleetCars[vid] = { ...built, color: col, geom };
 }
 
 function fleetFromSpec(specs) {
@@ -640,8 +717,9 @@ async function rebuildCar(level, vid = selectedVid) {
   cabin.position.set((a - b) / 2 - 0.15, bodyY + bodyH / 2 + 0.19, 0); sprung.add(cabin);
   const pos = bike ? [[a, 0], [-b, 0]] : [[a, -tf / 2], [a, tf / 2], [-b, -tr / 2], [-b, tr / 2]];
   const wg = new THREE.CylinderGeometry(R, R, 0.22, 18);
+  wheels = []; wheelRoll = [];
   pos.forEach(([x, z]) => {
-    const w = new THREE.Mesh(wg, wheelMat); w.rotation.order = 'YXZ'; w.rotation.x = Math.PI / 2; w.position.set(x, R, z); wp.add(w); wheels.push(w);
+    const w = makeWheelMesh(wg, R); w.position.set(x, R, z); wp.add(w); wheels.push(w); wheelRoll.push(0);
     const mk = col => {
       const m = new THREE.MeshBasicMaterial({ color: col });
       const g = new THREE.Group();
@@ -718,7 +796,8 @@ function toThree(x, y, z) { return new THREE.Vector3(x, z, -y); }
 let camMode = 'top';
 let playCamMode = 'orbit';
 let simRunning = false;
-const tgt = { pos: new THREE.Vector3(), yaw: 0, roll: 0, pitch: 0, vx: 0, vy: 0, r: 0, has: false };
+const tgt = { pos: new THREE.Vector3(), yaw: 0, roll: 0, pitch: 0, vx: 0, vy: 0, r: 0,
+  wheelSpin: [0, 0, 0, 0], has: false };
 const lerpAngle = (a, b, t) => { let d = ((b - a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; return a + d * t; };
 const clock = new THREE.Clock();
 const prevCarPos = new THREE.Vector3(); let prevInit = false;
@@ -795,6 +874,8 @@ function frame() {
     activeCam = orthoCam;
   }
   prevCarPos.copy(cp);
+  updateWheelRoll(dt);
+  updateFleetWheelRoll(dt);
   renderer.render(scene, activeCam);
 }
 frame();
@@ -1069,9 +1150,11 @@ function previewSpawn(st) {
   if (!st || st.x == null) return;
   tgt.pos.copy(toThree(st.x, st.y, 0)); tgt.yaw = st.yaw || 0;
   tgt.roll = 0; tgt.pitch = 0; tgt.vx = 0; tgt.vy = 0; tgt.r = 0;
+  tgt.wheelSpin = st.wheel_spin || [0, 0, 0, 0];
   car.position.copy(tgt.pos); car.rotation.set(0, tgt.yaw, 0); tgt.has = true;
   renderForces([], [], []);
   for (const i of steerIdx) { if (wheels[i]) wheels[i].rotation.y = 0; }
+  wheelRoll = wheels.map(() => 0);
   drawMinimap(st.x, st.y);
 }
 
@@ -1107,6 +1190,7 @@ function applyState(s) {
   const dyn3 = (s.level === 'L3');
   tgt.roll = dyn3 ? (s.roll || 0) : 0; tgt.pitch = dyn3 ? (s.pitch || 0) : 0;
   tgt.vx = s.vx || 0; tgt.vy = s.vy || 0; tgt.r = s.r || 0;
+  tgt.wheelSpin = s.wheel_spin || [0, 0, 0, 0];
   if (!tgt.has) { car.position.copy(tgt.pos); car.rotation.set(0, tgt.yaw, 0); tgt.has = true; }
   if (s.level && s.level !== renderLevel && !rebuilding) rebuildCar(s.level);
   renderForces(s.Ft, s.Fz, s.susp);
@@ -1116,6 +1200,7 @@ function applyState(s) {
   drawMinimap(s.x, s.y);
   window._lastState = s;
   updateConn(s);
+  updateIoMonitor(s);
 }
 
 function updateConn(s) {
@@ -1137,6 +1222,144 @@ function updateConn(s) {
   }
 }
 // ---- scenario setup panel ----
+let ioPanelBuilt = false;
+document.querySelectorAll('.setup-tab').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.setup-tab').forEach(b => b.classList.toggle('on', b === btn));
+    document.querySelectorAll('.setup-tab-pane').forEach(p => p.classList.remove('on'));
+    const pane = $('setup_pane_' + btn.dataset.setupTab);
+    if (pane) pane.classList.add('on');
+    if (btn.dataset.setupTab === 'sim' && !ioPanelBuilt) void buildDataPort();
+  };
+});
+async function buildDataPort() {
+  const el = $('io_body');
+  if (!el) return;
+  ioPanelBuilt = true;
+  const base = location.origin;
+  el.innerHTML = `
+   <div class="grp" id="g_cosim">Co-sim server</div>
+   <div id="cosim_ctl"></div>
+   <div class="grp">HTTP I/O</div>
+   <div class="sub" style="line-height:1.5;margin-bottom:4px">
+     <b>POST</b> /api/io · <b>GET</b> /api/stream (SSE)
+   </div>
+   <pre>curl -X POST ${base}/api/io \\
+  -H 'Content-Type: application/json' \\
+  -d '{"vehicle":0,"throttle":0.5,"steer":0.05}'</pre>
+   <div class="grp">Control in</div>
+   <div class="fld"><label>throttle</label><input id="ci_th" type="range" min="0" max="1" step="0.01" value="0"><b id="ci_thv" style="width:36px;text-align:right">0.00</b></div>
+   <div class="fld"><label>brake</label><input id="ci_br" type="range" min="0" max="1" step="0.01" value="0"><b id="ci_brv" style="width:36px;text-align:right">0.00</b></div>
+   <div class="fld"><label>steer</label><input id="ci_st" type="range" min="-0.5" max="0.5" step="0.01" value="0"><b id="ci_stv" style="width:36px;text-align:right">0.00</b></div>
+   <div class="row"><button id="ci_zero" style="width:auto">neutral</button></div>
+   <div class="grp">State out <span id="io_conn" class="sub">—</span></div>
+   <div class="kv"><span>vx</span><b id="io_vx">—</b></div>
+   <div class="kv"><span>vy</span><b id="io_vy">—</b></div>
+   <div class="kv"><span>yaw rate</span><b id="io_r">—</b></div>
+   <div class="grp">UDP telemetry</div>
+   <div id="tx_ctl"></div>`;
+  const ciSend = () => {
+    const th = +$('ci_th').value, br = +$('ci_br').value, st = +$('ci_st').value;
+    $('ci_thv').textContent = th.toFixed(2);
+    $('ci_brv').textContent = br.toFixed(2);
+    $('ci_stv').textContent = st.toFixed(2);
+    const vid = window._lastState?.live_vid ?? selectedVid ?? 0;
+    post('/api/io', { vehicle: vid, throttle: th, brake: br, steer: st });
+  };
+  ['ci_th', 'ci_br', 'ci_st'].forEach(id => $(id).oninput = ciSend);
+  $('ci_zero').onclick = () => { $('ci_th').value = 0; $('ci_br').value = 0; $('ci_st').value = 0; ciSend(); };
+  addHelp($('g_cosim'), 'cosim');
+  await renderCosim($('cosim_ctl'));
+  if (window._lastState) updateIoMonitor(window._lastState);
+  renderTx($('tx_ctl'), await (await fetch('/api/io/targets')).json());
+}
+async function renderCosim(box) {
+  const st = await (await fetch('/api/cosim')).json();
+  box.innerHTML = '';
+  if (!st.available) {
+    box.innerHTML = '<div class="sub">vdsim_realtime not built.</div>';
+    return;
+  }
+  const c = st.cfg || {};
+  const num = (v, w) => { const i = document.createElement('input'); i.type = 'number'; i.step = 'any'; i.value = v; i.style.width = (w || 70) + 'px'; return i; };
+  const fld = (label, node) => { const d = document.createElement('div'); d.className = 'fld'; const l = document.createElement('label'); l.textContent = label; d.appendChild(l); d.appendChild(node); box.appendChild(d); };
+  const lvl = document.createElement('select'); lvl.style.width = '90px';
+  lvl.innerHTML = ['L1', 'L2', 'L3'].map(v => `<option ${v === c.level ? 'selected' : ''}>${v}</option>`).join('');
+  const cp = num(c.cmd_port, 80), spp = num(c.state_port, 80), rate = num(c.rate, 70);
+  fld('Level', lvl); fld('cmd', cp); fld('state', spp); fld('Hz', rate);
+  const status = document.createElement('div'); status.className = 'sub'; status.style.margin = '4px 0';
+  status.textContent = st.running ? `● pid ${st.pid}` : 'stopped';
+  status.style.color = st.running ? '#34c759' : 'var(--dim)';
+  box.appendChild(status);
+  const row = document.createElement('div'); row.className = 'row';
+  const start = document.createElement('button'); start.textContent = 'Start';
+  const stop = document.createElement('button'); stop.textContent = 'Stop';
+  start.onclick = async () => { await post('/api/cosim/start', { level: lvl.value, cmd_port: +cp.value, state_port: +spp.value, rate: +rate.value }); renderCosim(box); };
+  stop.onclick = async () => { await post('/api/cosim/stop'); renderCosim(box); };
+  row.appendChild(start); row.appendChild(stop); box.appendChild(row);
+}
+function renderTx(box, cfg, vid) {
+  const vehicles = cfg.vehicles || [0];
+  if (vid == null || !vehicles.includes(vid)) vid = cfg.live ?? vehicles[0];
+  const c = (cfg.configs && cfg.configs[vid]) || { tx: {}, targets: [] };
+  const tx = c.tx || {}, targets = c.targets || [];
+  box.innerHTML = '';
+  const chk = v => { const i = document.createElement('input'); i.type = 'checkbox'; i.checked = !!v; return i; };
+  const num = (v, w) => { const i = document.createElement('input'); i.type = 'number'; i.step = 'any'; i.value = v; i.style.width = w + 'px'; return i; };
+  const fld = (label, node) => { const d = document.createElement('div'); d.className = 'fld'; const l = document.createElement('label'); l.textContent = label; d.appendChild(l); d.appendChild(node); box.appendChild(d); };
+  const sel = document.createElement('select'); sel.style.width = '110px';
+  sel.innerHTML = vehicles.map(v => `<option value="${v}" ${v === vid ? 'selected' : ''}>veh ${v}</option>`).join('');
+  sel.onchange = e => renderTx(box, cfg, +e.target.value);
+  fld('Vehicle', sel);
+  const en = chk(tx.enabled), rate = num(tx.rate ?? 50, 70);
+  const sst = chk(tx.send_state !== false), scm = chk(tx.send_cmd !== false);
+  fld('On', en); fld('Hz', rate); fld('State', sst); fld('Cmd', scm);
+  const list = document.createElement('div'); box.appendChild(list);
+  const addRow = (ip = '127.0.0.1', port = 9100) => {
+    const r = document.createElement('div'); r.style.cssText = 'display:flex;gap:4px;margin:3px 0';
+    const ipi = document.createElement('input'); ipi.type = 'text'; ipi.value = ip; ipi.style.flex = '1'; ipi.dataset.k = 'ip';
+    const pi = num(port, 64); pi.dataset.k = 'port';
+    const rm = document.createElement('button'); rm.textContent = '✕'; rm.style.width = '28px'; rm.onclick = () => r.remove();
+    r.appendChild(ipi); r.appendChild(pi); r.appendChild(rm); list.appendChild(r);
+  };
+  targets.forEach(t => addRow(t.ip, t.port));
+  const add = document.createElement('button'); add.textContent = '+ dest'; add.style.width = 'auto'; add.onclick = () => addRow(); box.appendChild(add);
+  const apply = document.createElement('button'); apply.className = 'apply'; apply.textContent = 'Apply telemetry';
+  apply.onclick = async () => {
+    const tgts = [...list.children].map(r => ({
+      ip: r.querySelector('[data-k=ip]').value.trim(),
+      port: +r.querySelector('[data-k=port]').value,
+    })).filter(t => t.ip && t.port > 0);
+    await post('/api/io/targets', { vehicle: vid, enabled: en.checked, rate: +rate.value,
+      send_state: sst.checked, send_cmd: scm.checked, targets: tgts });
+    renderTx(box, await (await fetch('/api/io/targets')).json(), vid);
+  };
+  box.appendChild(apply);
+}
+function updateIoMonitor(s) {
+  if (!$('io_vx')) return;
+  const c = s.cmd_in || {};
+  $('io_vx').textContent = f(s.vx);
+  $('io_vy').textContent = f(s.vy);
+  $('io_r').textContent = f(s.r, 3);
+  const conn = $('io_conn');
+  if (!conn) return;
+  const a = s.io_age;
+  conn.textContent = (a == null) ? 'no client' : (a < 1 ? `● live (${a.toFixed(1)}s)` : `idle ${a.toFixed(0)}s`);
+  conn.style.color = (a != null && a < 1) ? '#34c759' : 'var(--dim)';
+}
+async function fleetRemoveVehicle(vid) {
+  const r = await (await fetch('/api/setup', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fleet_remove: vid }),
+  })).json();
+  if (!r.setup) return;
+  if (+vid === selectedVid && r.setup.fleet.length) selectedVid = +r.setup.fleet[0].id;
+  await renderFleetSpawn(r.setup.fleet);
+  await buildVehicleTree(r.setup.fleet, selectedVid);
+  await refreshFleetView(r.setup.fleet, selectedVid);
+  lastNpath = -1; await drawPath(); await drawRoad();
+}
 function renderWaypointRows(pts) {
   const tb = $('setup_wp_rows');
   tb.innerHTML = '';
@@ -1155,7 +1378,7 @@ function collectWaypointPts() {
     return [x, y];
   }).filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]));
 }
-let setupVehicleList = [], setupTireSamples = [];
+let setupVehicleList = [], setupTireSamples = [], setupSuspList = [];
 async function ensureSetupLists() {
   if (!setupVehicleList.length) {
     const cf = await (await fetch('/api/config')).json();
@@ -1163,6 +1386,9 @@ async function ensureSetupLists() {
   }
   if (!setupTireSamples.length) {
     setupTireSamples = (await (await fetch('/api/tire/samples')).json()).samples || [];
+  }
+  if (!setupSuspList.length) {
+    setupSuspList = (await (await fetch('/api/suspension/list')).json()).samples || [];
   }
 }
 async function renderFleetSpawn(fleet) {
@@ -1181,21 +1407,7 @@ async function renderFleetSpawn(fleet) {
     if (n > 1) {
       const rm = document.createElement('button');
       rm.textContent = '×'; rm.className = 'icon'; rm.title = 'Remove vehicle';
-      rm.onclick = async e => {
-        e.stopPropagation();
-        const r = await (await fetch('/api/setup', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fleet_remove: vid }),
-        })).json();
-        if (r.setup) {
-          if (+vid === selectedVid && r.setup.fleet.length)
-            selectedVid = +r.setup.fleet[0].id;
-          await renderFleetSpawn(r.setup.fleet);
-          await buildVehicleTree(r.setup.fleet, selectedVid);
-          await refreshFleetView(r.setup.fleet, selectedVid);
-          lastNpath = -1; await drawPath(); await drawRoad();
-        }
-      };
+      rm.onclick = async e => { e.stopPropagation(); await fleetRemoveVehicle(vid); };
       head.appendChild(rm);
     }
     box.appendChild(head);
@@ -1209,6 +1421,10 @@ async function renderFleetSpawn(fleet) {
     box.appendChild(mkSel('vehicle', setupVehicleList, spec.vehicle || 'sedan'));
     box.appendChild(mkSel('tire', setupTireSamples.length ? setupTireSamples : ['default_pacejka'], spec.tire || 'default_pacejka'));
     box.appendChild(mkSel('level', ['L1', 'L2', 'L3'], spec.level || 'L2'));
+    if (setupSuspList.length) {
+      box.appendChild(mkSel('front_susp', setupSuspList, spec.front_susp || ''));
+      box.appendChild(mkSel('rear_susp', setupSuspList, spec.rear_susp || ''));
+    }
     const row = document.createElement('div'); row.className = 'setup-row';
     for (const [k, lab] of [['x0', 'x'], ['y0', 'y'], ['yaw0', 'ψ'], ['vx0', 'vx']]) {
       const lb = document.createElement('label'); lb.textContent = lab;
@@ -1435,7 +1651,11 @@ $('sim_load_input').onchange = async e => {
     if (!r.ok) throw new Error(r.error || 'load failed');
     const ts = r.config.time_scale ?? 1;
     $('ts_slider').value = ts; $('ts_val').textContent = (+ts).toFixed(1) + '×';
-    await buildVehicleTree();
+    selectedVid = r.config.live_vid ?? selectedVid;
+    lastNpath = -1;
+    await loadSetupForm();
+    await buildVehicleTree(window._fleetSpec, selectedVid);
+    await drawPath(); await drawRoad();
   } catch (err) {
     alert('Config load failed: ' + err.message);
   }
@@ -1491,6 +1711,11 @@ async function buildVehicleTree(fleetSpec, liveVid) {
     const edit = document.createElement('button'); edit.className = 'icon'; edit.textContent = 'edit';
     edit.title = 'Edit vehicle modules'; edit.onclick = e => { e.stopPropagation(); openModal(vid); };
     acts.appendChild(edit);
+    if (fleetSpec.length > 1) {
+      const del = document.createElement('button'); del.className = 'icon'; del.textContent = '×';
+      del.title = 'Remove vehicle'; del.onclick = e => { e.stopPropagation(); fleetRemoveVehicle(vid); };
+      acts.appendChild(del);
+    }
     row.appendChild(acts);
     el.appendChild(row);
     if (vid === liveVid) {
@@ -1587,7 +1812,7 @@ const recenterSteer = () => { $('m_steer').value = 0; touchSteer = 0; };
   $('ts_slider').value = ts; $('ts_val').textContent = (+ts).toFixed(1) + '×';
 })();
 
-// ---- field rows (from index.html) ----
+// ---- field rows ----
 function arbRow(f, lvl) {
   const applies = f.levels.includes(lvl);
   const axle = f.name.endsWith('front') ? 'front' : 'rear', trackName = 'track_' + axle;
@@ -1797,7 +2022,146 @@ const WS_CORNERS = ['FL', 'FR', 'RL', 'RR'];
 let modalTab = 'chassis', modalLvl = 'L2', modalCorner = 0, modalVid = 0;
 let vehFields = [], tireFields = [], sensFields = [], actFields = [], tireSamples = [];
 let vehicleList = [], cfgVehicle = 'sedan';
+let suspList = [], suspDefaults = { front: '', rear: '' };
+let modalSuspFront = '', modalSuspRear = '';
+let modalPreview = null;
+const schematicCache = {};
 let postTimer = null;
+
+function geomFromModalForm() {
+  const el = $('modal_form');
+  const q = n => el?.querySelector(`[data-name="${n}"]`);
+  return {
+    cg_to_front: +(q('cg_to_front')?.value || 1.2),
+    cg_to_rear: +(q('cg_to_rear')?.value || 1.5),
+    track_front: +(q('track_front')?.value || 1.55),
+    track_rear: +(q('track_rear')?.value || 1.55),
+    wheel_radius_nominal: +(q('wheel_radius_nominal')?.value || 0.32),
+  };
+}
+function disposeModalPreview() {
+  if (!modalPreview) return;
+  cancelAnimationFrame(modalPreview.raf);
+  modalPreview.controls?.dispose();
+  modalPreview.renderer?.dispose();
+  if (modalPreview.resizeObs) modalPreview.resizeObs.disconnect();
+  modalPreview = null;
+}
+function initModalPreview(cv) {
+  disposeModalPreview();
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xe9eef3);
+  const camera = new THREE.PerspectiveCamera(42, 1, 0.02, 80);
+  camera.position.set(4, 2.2, 4);
+  const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.62));
+  const dir = new THREE.DirectionalLight(0xffffff, 0.88);
+  dir.position.set(4, 7, 3); scene.add(dir);
+  const grid = new THREE.GridHelper(7, 14, 0xb8c0c8, 0xd5dbe2);
+  scene.add(grid);
+  const carRoot = new THREE.Group();
+  scene.add(carRoot);
+  const controls = new OrbitControls(camera, cv);
+  controls.enableDamping = true;
+  controls.target.set(0, 0.45, 0);
+  const resize = () => {
+    const w = cv.clientWidth || 300, h = cv.clientHeight || 240;
+    camera.aspect = w / h; camera.updateProjectionMatrix();
+    renderer.setSize(w, h, false);
+  };
+  resize();
+  const resizeObs = new ResizeObserver(resize);
+  resizeObs.observe(cv);
+  modalPreview = { renderer, scene, camera, controls, carRoot, cv, resizeObs, raf: 0 };
+  const tick = () => {
+    if (!modalPreview) return;
+    modalPreview.raf = requestAnimationFrame(tick);
+    controls.update();
+    renderer.render(scene, camera);
+  };
+  tick();
+}
+async function fetchSchematic(name) {
+  if (!name) return null;
+  if (!schematicCache[name]) {
+    schematicCache[name] = fetch(`/api/suspension/schematic?name=${encodeURIComponent(name)}`)
+      .then(r => r.json()).then(d => (d.ok === false ? null : d));
+  }
+  return schematicCache[name];
+}
+function addSuspLinks(parent, sch, geom, axle) {
+  if (!sch?.links?.length) return;
+  const a = geom.cg_to_front, b = geom.cg_to_rear;
+  const tf = geom.track_front, tr = geom.track_rear, R = geom.wheel_radius_nominal;
+  const tgtX = axle === 'front' ? a : -b;
+  const tgtY = axle === 'front' ? tf / 2 : tr / 2;
+  const wh = sch.points?.wheel;
+  const wx = wh ? wh[0] : (axle === 'front' ? 0 : -1.35);
+  const wy = wh ? wh[1] : tgtY;
+  const wz = wh ? wh[2] : R;
+  const dx = tgtX - wx, dy = tgtY - wy, dz = R - wz;
+  const verts = [];
+  for (const [p1, p2] of sch.links) {
+    const t1 = toThree(p1[0] + dx, p1[1] + dy, p1[2] + dz);
+    const t2 = toThree(p2[0] + dx, p2[1] + dy, p2[2] + dz);
+    verts.push(t1.x, t1.y, t1.z, t2.x, t2.y, t2.z);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  const col = axle === 'front' ? 0xe85d04 : 0x1d8a6e;
+  parent.add(new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: col })));
+}
+async function refreshModalPreview() {
+  const cv = $('modal_preview_cv');
+  if (!cv || !modalPreview) return;
+  const geom = geomFromModalForm();
+  const lvl = modalLvl;
+  clearGroup(modalPreview.carRoot);
+  const built = buildStaticCar(geom, lvl, 0x01A0E9);
+  modalPreview.carRoot.add(built.group);
+  const links = new THREE.Group();
+  modalPreview.carRoot.add(links);
+  const front = modalSuspFront || suspDefaults.front;
+  const rear = modalSuspRear || suspDefaults.rear;
+  const [sf, sr] = await Promise.all([fetchSchematic(front), fetchSchematic(rear)]);
+  addSuspLinks(links, sf, geom, 'front');
+  addSuspLinks(links, sr, geom, 'rear');
+  const L = geom.cg_to_front + geom.cg_to_rear;
+  modalPreview.controls.target.set(0, geom.wheel_radius_nominal + 0.38, 0);
+  modalPreview.camera.position.set(L * 0.85, L * 0.38, L * 0.9);
+  const hint = $('modal_preview_hint');
+  if (hint) {
+    const bike = (lvl === 'K' || lvl === 'L1');
+    hint.textContent = `Level ${lvl}${bike ? ' (bicycle)' : ''} · front ${front || '—'} · rear ${rear || '—'}`;
+  }
+}
+function wireModalPreview(el) {
+  el.querySelectorAll('[data-name]').forEach(inp => {
+    const ev = inp.type === 'checkbox' || inp.tagName === 'SELECT' ? 'change' : 'input';
+    inp.addEventListener(ev, () => refreshModalPreview());
+  });
+}
+function wrapModalPreview(inner) {
+  $('modal_panel').classList.add('wide');
+  const split = document.createElement('div');
+  split.className = 'modal-body-split';
+  const preview = document.createElement('div');
+  preview.className = 'modal-preview-wrap';
+  const plab = document.createElement('div'); plab.className = 'sub';
+  plab.textContent = '차량·하드포인트 미리보기';
+  const cv = document.createElement('canvas'); cv.id = 'modal_preview_cv';
+  const tools = document.createElement('div'); tools.style.marginBottom = '6px';
+  tools.appendChild(selectRow('Preview level', ['K', 'L1', 'L2', 'L3'], modalLvl, v => {
+    modalLvl = v; refreshModalPreview();
+  }));
+  const hint = document.createElement('div'); hint.className = 'sub'; hint.id = 'modal_preview_hint';
+  preview.appendChild(plab); preview.appendChild(cv); preview.appendChild(tools); preview.appendChild(hint);
+  split.appendChild(preview);
+  split.appendChild(inner);
+  requestAnimationFrame(() => { initModalPreview(cv); refreshModalPreview(); });
+  return split;
+}
 
 function debouncedPost(url, body, after) {
   clearTimeout(postTimer);
@@ -1836,22 +2200,29 @@ async function refreshActuatorStep() {
   renderPlots(box, (await (await fetch('/api/actuator/step')).json()).plots);
 }
 function renderModalPane() {
+  disposeModalPreview();
+  $('modal_panel').classList.remove('wide');
   const body = $('modal_body');
   body.innerHTML = '';
   const tab = MODAL_TABS.find(t => t.id === modalTab) || MODAL_TABS[0];
   const form = document.createElement('div'); form.id = 'modal_form';
+  const withPreview = tab.id === 'chassis' || tab.id === 'suspension';
+  const shell = document.createElement('div'); shell.className = 'modal-form-wrap';
   if (tab.type === 'chassis') {
     const tools = document.createElement('div'); tools.className = 'modal-tools';
     tools.appendChild(selectRow('Vehicle preset', vehicleList, cfgVehicle, async v => {
       await post('/api/config', { vehicle: v });
       cfgVehicle = v;
+      suspDefaults = await (await fetch(`/api/suspension/default?vehicle=${encodeURIComponent(v)}`)).json();
+      modalSuspFront = suspDefaults.front;
+      modalSuspRear = suspDefaults.rear;
       vehFields = (await (await fetch(`/api/vehicle?vehicle_id=${modalVid}`)).json()).fields;
       renderModalPane();
     }));
     const note = document.createElement('div'); note.className = 'sub';
-    note.textContent = 'Dynamics level is set in Scenario setup or fleet row.';
+    note.textContent = 'Fleet dynamics level: Scenario setup. Preview level (left) is visual only.';
     tools.appendChild(note);
-    body.appendChild(tools);
+    shell.appendChild(tools);
     const vg = {};
     vehFields.filter(chassisFilter).forEach(f => { (vg[f.group] = vg[f.group] || []).push(f); });
     for (const g in vg) {
@@ -1860,13 +2231,29 @@ function renderModalPane() {
       form.appendChild(l);
       vg[g].forEach(f => form.appendChild(fieldRow(f, modalLvl)));
     }
-    body.appendChild(form);
-    wireLive(form, '/api/vehicle');
+    shell.appendChild(form);
+    wireLive(form, '/api/vehicle', refreshModalPreview);
     plantEnhance(form);
     linkPlantFields(form);
+    wireModalPreview(form);
+    body.appendChild(withPreview ? wrapModalPreview(shell) : shell);
   } else if (tab.type === 'vehicle') {
     if (tab.id === 'suspension') {
       const tools = document.createElement('div'); tools.className = 'modal-tools';
+      tools.appendChild(selectRow('Front kinematics', suspList,
+        modalSuspFront || suspDefaults.front, async v => {
+          modalSuspFront = v; refreshModalPreview();
+          await post('/api/setup', { fleet: [{ id: modalVid, front_susp: v }] });
+          const sp = (window._fleetSpec || []).find(s => +s.id === modalVid);
+          if (sp) sp.front_susp = v;
+        }));
+      tools.appendChild(selectRow('Rear kinematics', suspList,
+        modalSuspRear || suspDefaults.rear, async v => {
+          modalSuspRear = v; refreshModalPreview();
+          await post('/api/setup', { fleet: [{ id: modalVid, rear_susp: v }] });
+          const sp = (window._fleetSpec || []).find(s => +s.id === modalVid);
+          if (sp) sp.rear_susp = v;
+        }));
       tools.appendChild(selectRow('Level preset', ['soft', 'med', 'stiff'], 'med', v => {
         const p = SUSP_PRESETS[v]; if (!p) return;
         Object.entries(p).forEach(([nm, val]) => {
@@ -1875,25 +2262,30 @@ function renderModalPane() {
             if (inp) inp.value = x;
           });
         });
-        debouncedPost('/api/vehicle', p, redrawSuspCurve);
+        debouncedPost('/api/vehicle', p, () => { redrawSuspCurve(); refreshModalPreview(); });
       }, { soft: 'Soft', med: 'Medium', stiff: 'Stiff' }));
       tools.appendChild(selectRow('Corner (curve)', WS_CORNERS, WS_CORNERS[modalCorner], v => {
         modalCorner = WS_CORNERS.indexOf(v); if (modalCorner < 0) modalCorner = 0; redrawSuspCurve();
       }));
-      body.appendChild(tools);
+      shell.appendChild(tools);
     }
     vehFields.filter(tab.filter).forEach(f => form.appendChild(fieldRow(f, modalLvl)));
-    body.appendChild(form);
-    wireLive(form, '/api/vehicle', tab.id === 'suspension' ? redrawSuspCurve : null);
+    shell.appendChild(form);
+    wireLive(form, '/api/vehicle', tab.id === 'suspension'
+      ? () => { redrawSuspCurve(); refreshModalPreview(); } : null);
     if (tab.id === 'brake' || tab.id === 'drivetrain' || tab.id === 'steering') plantEnhance(form);
     if (tab.id === 'suspension') {
+      wireModalPreview(form);
       const curves = document.createElement('div'); curves.className = 'modal-curves';
       const cv = document.createElement('canvas'); cv.id = 'modal_susp_cv'; curves.appendChild(cv);
-      body.appendChild(curves);
+      shell.appendChild(curves);
       form.querySelectorAll('[data-name]').forEach(inp => {
         inp.addEventListener(inp.type === 'checkbox' ? 'change' : 'input', () => redrawSuspCurve());
       });
       requestAnimationFrame(() => redrawSuspCurve());
+      body.appendChild(wrapModalPreview(shell));
+    } else {
+      body.appendChild(shell);
     }
   } else if (tab.type === 'tire') {
     const tools = document.createElement('div'); tools.className = 'modal-tools';
@@ -1981,11 +2373,20 @@ async function openModal(vid) {
   const cf = await (await fetch('/api/config')).json();
   vehicleList = cf.vehicles || ['sedan'];
   cfgVehicle = cf.config?.vehicle || 'sedan';
+  const fspec0 = (window._fleetSpec || []).find(s => +s.id === vid);
+  const vehKey = fspec0?.vehicle || cfgVehicle;
   vehFields = (await (await fetch(`/api/vehicle?vehicle_id=${vid}`)).json()).fields;
   tireFields = (await (await fetch(`/api/tire?vehicle_id=${vid}`)).json()).fields;
   actFields = (await (await fetch('/api/actuator')).json()).fields;
   sensFields = (await (await fetch('/api/sensors')).json()).fields;
   tireSamples = (await (await fetch('/api/tire/samples')).json()).samples;
+  suspList = (await (await fetch('/api/suspension/list')).json()).samples || [];
+  suspDefaults = await (await fetch(`/api/suspension/default?vehicle=${encodeURIComponent(vehKey)}`)).json();
+  const fspec = fspec0;
+  if (fspec?.front_susp) modalSuspFront = fspec.front_susp;
+  if (fspec?.rear_susp) modalSuspRear = fspec.rear_susp;
+  if (!modalSuspFront || !suspList.includes(modalSuspFront)) modalSuspFront = suspDefaults.front;
+  if (!modalSuspRear || !suspList.includes(modalSuspRear)) modalSuspRear = suspDefaults.rear;
   const tabs = $('modal_tabs'); tabs.innerHTML = '';
   MODAL_TABS.forEach(t => {
     const b = document.createElement('button');
@@ -2003,8 +2404,12 @@ async function openModal(vid) {
   renderModalPane();
   $('modal_bg').classList.add('open');
 }
-$('modal_x').onclick = () => $('modal_bg').classList.remove('open');
-$('modal_bg').addEventListener('click', e => { if (e.target === $('modal_bg')) $('modal_bg').classList.remove('open'); });
+function closeModal() {
+  disposeModalPreview();
+  $('modal_bg').classList.remove('open');
+}
+$('modal_x').onclick = closeModal;
+$('modal_bg').addEventListener('click', e => { if (e.target === $('modal_bg')) closeModal(); });
 </script>
 </body>
 </html>

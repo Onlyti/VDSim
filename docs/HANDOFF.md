@@ -5,7 +5,7 @@ app.html 승인·`/` 기본 라우트 완료(2026-06-06)**. 멀티차량 런타�
 
 ## 1. 목표
 v0.2 "composable vehicle": 차량 = chassis + parts(모듈), 컴포넌트 워크샵 + 씬 UI 로
-조립·구동. **`gui/app.html` = 기본 GUI (`/`)**. 레거시 뷰어는 `/legacy`.
+조립·구동. **`gui/app.html` = 유일한 GUI (`/`, `/legacy` 등 모두 동일 페이지).
 전체 그림: `docs/design/V0.2_PLAN.md`.
 
 ## 2. 현재 상태
@@ -17,16 +17,19 @@ v0.2 "composable vehicle": 차량 = chassis + parts(모듈), 컴포넌트 워크
 ## 3. 완료
 저속 동역학, WS1 서브시스템 (#159-162 + deadtime), 멀티차량 #157/#158, GUI `app.html`
 (3-컬럼, setup, fleet, telemetry, edit 모달, help `?`, track edit, manual 키).
-**`/` → app.html**; `/legacy` → index.html (Workshops 제거, New GUI 링크).
+**`/` → app.html** only (`gui/index.html` 제거, 2026-06-06).
 plant: orphan cleanup, STATE subscriber fix (`touch_sub(seed)`), fleet ghost prune,
 `_renumber_fleet`, setup snapshot 즉시 갱신.
+WS3/WS4 (v0.2 GUI): 3-tab scenario setup, data-comms (I/O+UDP), fleet `front_susp`/`rear_susp`
+parts, simconfig v2, tree fleet remove.
 설계: `docs/design/V0.4_PLAN.md` (스턴트 v0.4.0 단일 릴리스).
 
 ## 4. 미완 (다음 할 일)
-- **WS4** vehicle assembly (chassis + parts YAML).
-- **WS3** 잔여 — data-comms 패널, 3-tab 설계 대비 갭 (app에 setup/sim 일부 있음).
-- ~~**WS2** app 모달 parity~~ **DONE**: Chassis preset·linkPlantFields·Actuator step curves·
-  Tire import/samples/curves·Susp presets (`app.html` edit modal).
+- **WS4** 잔여 — parts가 L3 native kinematics attach까지 연결되진 않음 (fleet YAML·UI만).
+- ~~**WS3** data-comms + 3-tab setup~~ **DONE** (Vehicle/Environment/Simulator, HTTP+UDP I/O).
+- ~~**WS2** app 모달 parity~~ **DONE**: workshops + 3D preview + wheel roll anim +
+  `configs/components/suspension/{soft,med,stiff}.yaml`.
+- **simconfig v2** — fleet/path/cosim round-trip (`export_simconfig` version 2).
 - v0.3.0: drivetrain 관성+torque-RPM, LuGre tire (`V0.2_DRIVETRAIN.md`, `V0.2_TIRE_LUGRE.md`).
 - v0.4.0: 점프~루프 (`V0.4_PLAN.md` M1–M6).
 - 멀티차량 future: V2V, dynamic spawn, mesh LOD.
@@ -41,6 +44,6 @@ plant: orphan cleanup, STATE subscriber fix (`touch_sub(seed)`), fleet ghost pru
 - git: push/force/tag — 명시 요청 시에만.
 
 ## 6. 관련 경로
-- GUI: `gui/app.html` (`/`), `gui/index.html` (`/legacy`), `gui/server.py`.
+- GUI: `gui/app.html`, `gui/server.py`.
 - 설계: `docs/design/V0.2_*.md`, `V0.4_PLAN.md`.
 - Cursor: `docs/design/CURSOR_USAGE.md`, `.cursor/rules/vdsim.mdc`.

@@ -1,0 +1,3 @@
+# WS2 suspension sample — medium (default sedan).
+spring_stiffness:   [30000, 30000, 30000, 30000]
+damper_coefficient: [3000,  3000,  3000,  3000]
