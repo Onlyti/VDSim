@@ -1991,10 +1991,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-v021-hotfix" class="md-nav__link">
+  <a href="#4-v021-1c979c6" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. v0.2.1 hotfix (진행)
+        4. v0.2.1 완료 (1c979c6)
       
     </span>
   </a>
@@ -2002,10 +2002,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#5-v03" class="md-nav__link">
+  <a href="#5-v022-ee53f31" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. 다음 (v0.3+)
+        5. v0.2.2 완료 (ee53f31)
       
     </span>
   </a>
@@ -2013,10 +2013,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#6" class="md-nav__link">
+  <a href="#6-v03" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6. 주의
+        6. 다음 (v0.3+)
       
     </span>
   </a>
@@ -2027,7 +2027,18 @@
   <a href="#7" class="md-nav__link">
     <span class="md-ellipsis">
       
-        7. 경로
+        7. 주의
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. 경로
       
     </span>
   </a>
@@ -2055,7 +2066,7 @@
 
 
 <h1 id="vdsim">VDSim 핸드오프<a class="headerlink" href="#vdsim" title="Permanent link">&para;</a></h1>
-<p>작성: 2026-06-06. <strong>v0.2.0</strong> 태그 완료. <strong>v0.2.1 hotfix</strong> (parts 계약) 진행 중. v0.3 = drivetrain + LuGre.</p>
+<p>작성: 2026-06-06. <strong>v0.2.2</strong> <code>ee53f31</code> push 완료. v0.3 = drivetrain + LuGre.</p>
 <h2 id="1">1. 목표<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
 <p>v0.2 "composable vehicle": 차량 = chassis + parts, 워크샵 + 씬 UI. <strong><code>gui/app.html</code></strong>
 단일 GUI. <code>docs/design/V0.2_PLAN.md</code>.</p>
@@ -2074,12 +2085,17 @@
   L3 <code>attach_*_kinematics</code> in <code>vdsim_realtime</code>, infra sensor list (authoring).</li>
 <li><strong>멀티차량</strong> #157/#158, VDS1 vehicle_id, shared-world scenarios.</li>
 </ul>
-<h2 id="4-v021-hotfix">4. v0.2.1 hotfix (진행)<a class="headerlink" href="#4-v021-hotfix" title="Permanent link">&para;</a></h2>
+<h2 id="4-v021-1c979c6">4. v0.2.1 완료 (<code>1c979c6</code>)<a class="headerlink" href="#4-v021-1c979c6" title="Permanent link">&para;</a></h2>
 <ul>
 <li>fsk_formula L3 susp default, scenario susp 경로, L3-only fleet UI, attach warnings.</li>
 <li><code>cosim_multi_vehicle</code> ctest; topology-only YAML attach 거부 테스트.</li>
 </ul>
-<h2 id="5-v03">5. 다음 (v0.3+)<a class="headerlink" href="#5-v03" title="Permanent link">&para;</a></h2>
+<h2 id="5-v022-ee53f31">5. v0.2.2 완료 (<code>ee53f31</code>)<a class="headerlink" href="#5-v022-ee53f31" title="Permanent link">&para;</a></h2>
+<ul>
+<li>모달 kinematics 드롭다운 L3-native only; <code>Popen(cwd=REPO)</code>.</li>
+<li>L3 missing/topology-only stem → pre-launch <code>kinematics_warnings</code>.</li>
+</ul>
+<h2 id="6-v03">6. 다음 (v0.3+)<a class="headerlink" href="#6-v03" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Drivetrain inertia + torque–RPM (<code>V0.2_DRIVETRAIN.md</code>).</li>
 <li>LuGre tire (<code>V0.2_TIRE_LUGRE.md</code>).</li>
@@ -2087,13 +2103,13 @@
 <li>Infra sensor runtime mount (<code>SIM_CONFIG_ARCH.md</code> host field).</li>
 <li>v0.4 스턴트 (<code>V0.4_PLAN.md</code> M1–M6).</li>
 </ul>
-<h2 id="6">6. 주의<a class="headerlink" href="#6" title="Permanent link">&para;</a></h2>
+<h2 id="7">7. 주의<a class="headerlink" href="#7" title="Permanent link">&para;</a></h2>
 <ul>
 <li>GUI 시각검증 = 유저. 에이전트 = markup/API/ctest.</li>
 <li><strong>190 green</strong> on default modules.</li>
 <li>TUR tire confidential. Simon Q/R. VDS1 v4.</li>
 </ul>
-<h2 id="7">7. 경로<a class="headerlink" href="#7" title="Permanent link">&para;</a></h2>
+<h2 id="8">8. 경로<a class="headerlink" href="#8" title="Permanent link">&para;</a></h2>
 <ul>
 <li>GUI: <code>gui/app.html</code>, <code>gui/server.py</code></li>
 <li>Parts: <code>configs/components/</code>, <code>configs/suspensions/</code></li>
