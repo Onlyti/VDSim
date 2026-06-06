@@ -8,8 +8,10 @@
 #include "vdsim/suspension.hpp"
 
 #include <spdlog/spdlog.h>
+#include <yaml-cpp/yaml.h>
 
 #include <algorithm>
+#include <stdexcept>
 #include <cmath>
 #include <fstream>
 #include <set>
@@ -158,6 +160,23 @@ create_lookup_kinematics(const std::string& csv_path) {
     if (rows.empty())
         throw std::runtime_error("CSV has no valid rows: " + csv_path);
     return std::make_unique<LookupKinematics>(std::move(rows));
+}
+
+std::unique_ptr<ISuspensionKinematics>
+create_native_kinematics_from_yaml(const std::string& yaml_path) {
+    const YAML::Node root = YAML::LoadFile(yaml_path);
+    std::string typ;
+    if (root["type"]) typ = root["type"].as<std::string>();
+    else if (root["topology"]) typ = root["topology"].as<std::string>();
+    if (typ == "double_wishbone")
+        return create_dw_native_kinematics(yaml_path);
+    if (typ == "macpherson")
+        return create_mp_native_kinematics(yaml_path);
+    if (typ == "trailing_arm")
+        return create_ta_native_kinematics(yaml_path);
+    if (typ == "five_link")
+        return create_5link_native_kinematics(yaml_path);
+    throw std::runtime_error("unsupported suspension YAML type: " + typ);
 }
 
 }  // namespace vdsim

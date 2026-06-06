@@ -67,6 +67,10 @@ create_mp_native_kinematics(const std::string& yaml_path);
 std::unique_ptr<ISuspensionKinematics>
 create_5link_native_kinematics(const std::string& yaml_path);
 
+// Dispatch on YAML `type` / `topology` (double_wishbone, macpherson, …).
+std::unique_ptr<ISuspensionKinematics>
+create_native_kinematics_from_yaml(const std::string& yaml_path);
+
 // Attach a kinematics model to a FourteenDOFDynamics instance.  Returns false
 // if `dyn` is not Ld3.  Ld1/Ld2 ignore this (no per-wheel suspension state).
 class IVehicleDynamics;

@@ -25,6 +25,8 @@ struct VehicleSpawn {
     std::string vehicle_yaml;
     std::string tire_yaml;
     std::string level {"L2"};
+    std::string front_susp;
+    std::string rear_susp;
     double x0 {0.0}, y0 {0.0}, yaw0 {0.0}, vx0 {0.0};
 };
 

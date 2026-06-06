@@ -562,6 +562,10 @@ class CosimBridge:
                 f"    yaw0: {float(e.get('yaw0', 0.0))}",
                 f"    vx0: {float(e.get('vx0', 0.0))}",
             ]
+            if e.get("front_susp_yaml"):
+                lines.append(f"    front_susp: {e['front_susp_yaml']}")
+            if e.get("rear_susp_yaml"):
+                lines.append(f"    rear_susp: {e['rear_susp_yaml']}")
         Path(wy).write_text("\n".join(lines) + "\n")
         return wy
 
@@ -594,6 +598,12 @@ class CosimBridge:
                         f"--cmd-port={int(c['cmd_port'])}", "--state-ip=127.0.0.1",
                         f"--state-port={int(c['state_port'])}", f"--rate={float(c['rate'])}",
                         f"--vx0={float(c['vx0'])}", f"--cmd-timeout={float(c['cmd_timeout'])}"]
+                if fleet:
+                    fe = fleet[0]
+                    if fe.get("front_susp_yaml"):
+                        args.append(f"--front-susp={fe['front_susp_yaml']}")
+                    if fe.get("rear_susp_yaml"):
+                        args.append(f"--rear-susp={fe['rear_susp_yaml']}")
                 self._road_cli(args, road, terrain, sensors, sensor_delay)
                 if pose:
                     for flag, key in (("--x0=", "x0"), ("--y0=", "y0"), ("--yaw0=", "yaw0")):
@@ -784,6 +794,13 @@ class Runner:
         spec.setdefault("front_susp", defaults["front"])
         spec.setdefault("rear_susp", defaults["rear"])
 
+    @staticmethod
+    def _susp_yaml_path(stem):
+        if not stem:
+            return None
+        p = SUSP_DIR / f"{Path(str(stem)).stem}.yaml"
+        return str(p) if p.is_file() else None
+
     def _renumber_fleet(self):
         want = list(range(len(self.fleet_spec)))
         have = [int(s["id"]) for s in self.fleet_spec]
@@ -845,12 +862,13 @@ class Runner:
     def _fleet_launch(self):
         fleet = []
         for spec in self.fleet_spec:
+            self._ensure_fleet_parts(spec)
             vid = int(spec["id"])
             vy = os.path.join(self.cosim._tmp, f"vehicle_{vid}.yaml")
             ty = os.path.join(self.cosim._tmp, f"tire_{vid}.yaml")
             self._vp_for_vid(vid).to_yaml(vy)
             self._tp_for_vid(vid).to_yaml(ty)
-            fleet.append({
+            row = {
                 "id": vid,
                 "vehicle_yaml": vy,
                 "tire_yaml": ty,
@@ -859,7 +877,14 @@ class Runner:
                 "y0": float(spec.get("y0", self.cfg["init_y"])),
                 "yaw0": float(spec.get("yaw0", self.cfg["init_yaw"])),
                 "vx0": float(spec.get("vx0", self.cfg["init_v"])),
-            })
+            }
+            fs = self._susp_yaml_path(spec.get("front_susp"))
+            rs = self._susp_yaml_path(spec.get("rear_susp"))
+            if fs:
+                row["front_susp_yaml"] = fs
+            if rs:
+                row["rear_susp_yaml"] = rs
+            fleet.append(row)
         return fleet
 
     def _sync_live_from_fleet(self):

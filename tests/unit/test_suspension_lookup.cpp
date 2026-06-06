@@ -105,6 +105,14 @@ TEST(DWNativeKinematics, MatchesLookupAtGridPoints) {
     }
 }
 
+TEST(SuspensionFactory, DispatchesByYamlType) {
+    const std::string base = std::string(VDSIM_SOURCE_DIR) + "/configs/suspensions/";
+    auto k = vdsim::create_native_kinematics_from_yaml(base + "mp_front_sedan.yaml");
+    ASSERT_NE(k, nullptr);
+    const auto o = k->compute(0.0, 0.0);
+    EXPECT_TRUE(std::isfinite(o.camber));
+}
+
 TEST(DWNativeKinematics, StaticReturnsZero) {
     auto k = vdsim::create_dw_native_kinematics(
         std::string(VDSIM_SOURCE_DIR) + "/configs/suspensions/dw_front_sports.yaml");

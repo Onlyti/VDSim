@@ -10,6 +10,7 @@
 #include "vdsim/realtime_runner.hpp"
 #include "vdsim/sensors.hpp"
 #include "vdsim/sim_session.hpp"
+#include "vdsim/suspension.hpp"
 
 #ifdef _WIN32
   #include <winsock2.h>
@@ -56,6 +57,30 @@ std::unique_ptr<vdsim::IVehicleDynamics> make_dyn(const std::string& lvl) {
     if (lvl == "L1") return vdsim::create_bicycle();
     if (lvl == "L3") return vdsim::create_fourteen_dof();
     return vdsim::create_seven_dof();
+}
+void attach_susp_parts(vdsim::IVehicleDynamics& dyn, const std::string& lvl,
+                       const std::string& front_yaml, const std::string& rear_yaml) {
+    if (lvl != "L3") return;
+    if (!front_yaml.empty()) {
+        try {
+            auto k = vdsim::create_native_kinematics_from_yaml(front_yaml);
+            if (!vdsim::attach_front_kinematics(dyn, std::move(k)))
+                std::fprintf(stderr, "[vdsim_realtime] front kinematics attach failed\n");
+        } catch (const std::exception& e) {
+            std::fprintf(stderr, "[vdsim_realtime] front susp %s: %s\n",
+                         front_yaml.c_str(), e.what());
+        }
+    }
+    if (!rear_yaml.empty()) {
+        try {
+            auto k = vdsim::create_native_kinematics_from_yaml(rear_yaml);
+            if (!vdsim::attach_rear_kinematics(dyn, std::move(k)))
+                std::fprintf(stderr, "[vdsim_realtime] rear kinematics attach failed\n");
+        } catch (const std::exception& e) {
+            std::fprintf(stderr, "[vdsim_realtime] rear susp %s: %s\n",
+                         rear_yaml.c_str(), e.what());
+        }
+    }
 }
 double now_s() {
     return std::chrono::duration<double>(
@@ -177,11 +202,15 @@ int run_flat(int argc, char** argv) {
     const double x0   = optd(argc, argv, "--x0=", 0.0);
     const double y0   = optd(argc, argv, "--y0=", 0.0);
     const double yaw0 = optd(argc, argv, "--yaw0=", 0.0);
+    const std::string front_susp = opts(argc, argv, "--front-susp=", "");
+    const std::string rear_susp  = opts(argc, argv, "--rear-susp=", "");
 
     vdsim::SimConfig cfg; cfg.nominal_dt = dt;
     if (!sensors_yaml.empty()) cfg.sensors = vdsim::SensorParams::from_yaml(sensors_yaml);
     cfg.sensor_delay_s = sensor_delay;
-    vdsim::SimSession sim(make_dyn(level),
+    auto dyn = make_dyn(level);
+    attach_susp_parts(*dyn, level, front_susp, rear_susp);
+    vdsim::SimSession sim(std::move(dyn),
         make_ground(terrain, mu, mu_right, mu_boundary, grade, bank, rough_amp, rough_wl, iso_class),
         vp, tp, sp, cfg);
     vdsim::State s0;
@@ -314,8 +343,10 @@ int run_world(const std::string& scenario_path, int argc, char** argv) {
         wv.id = spn.id;
         wv.vp = vdsim::VehicleParams::from_yaml(spn.vehicle_yaml);
         const auto tp = vdsim::TireParams::from_yaml(spn.tire_yaml);
+        auto dyn = make_dyn(spn.level);
+        attach_susp_parts(*dyn, spn.level, spn.front_susp, spn.rear_susp);
         wv.sim = std::make_unique<vdsim::SimSession>(
-            make_dyn(spn.level),
+            std::move(dyn),
             make_ground(rd.terrain, rd.mu, rd.mu_right, rd.mu_boundary,
                         rd.grade, rd.bank, rd.rough_amp, rd.rough_wl, rd.iso_class),
             wv.vp, tp, sp, cfg);

@@ -37,6 +37,8 @@ WorldScenario load_world_scenario(const std::string& path) {
         s.vehicle_yaml = v["vehicle"].as<std::string>();
         s.tire_yaml    = v["tire"].as<std::string>();
         if (v["level"]) s.level = v["level"].as<std::string>();
+        if (v["front_susp"]) s.front_susp = v["front_susp"].as<std::string>();
+        if (v["rear_susp"]) s.rear_susp = v["rear_susp"].as<std::string>();
         s.x0   = node_d(v, "x0", 0.0);
         s.y0   = node_d(v, "y0", 0.0);
         s.yaw0 = node_d(v, "yaw0", 0.0);

@@ -21,11 +21,12 @@ v0.2 "composable vehicle": 차량 = chassis + parts(모듈), 컴포넌트 워크
 plant: orphan cleanup, STATE subscriber fix (`touch_sub(seed)`), fleet ghost prune,
 `_renumber_fleet`, setup snapshot 즉시 갱신.
 WS3/WS4 (v0.2 GUI): 3-tab scenario setup, data-comms (I/O+UDP), fleet `front_susp`/`rear_susp`
-parts, simconfig v2, tree fleet remove.
+parts, simconfig v2, tree fleet remove; L3 `attach_*_kinematics` via `vdsim_realtime`
+(`--front-susp`/`--rear-susp`, world scenario YAML).
 설계: `docs/design/V0.4_PLAN.md` (스턴트 v0.4.0 단일 릴리스).
 
 ## 4. 미완 (다음 할 일)
-- **WS4** 잔여 — parts가 L3 native kinematics attach까지 연결되진 않음 (fleet YAML·UI만).
+- **WS4** 잔여 — 통합 part registry (engine/brake YAML 조립) 미완; L3 attach는 완료.
 - ~~**WS3** data-comms + 3-tab setup~~ **DONE** (Vehicle/Environment/Simulator, HTTP+UDP I/O).
 - ~~**WS2** app 모달 parity~~ **DONE**: workshops + 3D preview + wheel roll anim +
   `configs/components/suspension/{soft,med,stiff}.yaml`.
