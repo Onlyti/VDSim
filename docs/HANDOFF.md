@@ -1,6 +1,6 @@
 # VDSim 핸드오프
 
-작성: 2026-06-06. **v0.2.1** `1c979c6` push 완료. **v0.2.2** hotfix 진행. v0.3 = drivetrain + LuGre.
+작성: 2026-06-06. **v0.2.2** `ee53f31` push 완료. v0.3 = drivetrain + LuGre.
 
 ## 1. 목표
 v0.2 "composable vehicle": 차량 = chassis + parts, 워크샵 + 씬 UI. **`gui/app.html`**
@@ -23,7 +23,7 @@ v0.2 "composable vehicle": 차량 = chassis + parts, 워크샵 + 씬 UI. **`gui/
 - fsk_formula L3 susp default, scenario susp 경로, L3-only fleet UI, attach warnings.
 - `cosim_multi_vehicle` ctest; topology-only YAML attach 거부 테스트.
 
-## 5. v0.2.2 hotfix (진행)
+## 5. v0.2.2 완료 (`ee53f31`)
 - 모달 kinematics 드롭다운 L3-native only; `Popen(cwd=REPO)`.
 - L3 missing/topology-only stem → pre-launch `kinematics_warnings`.
 
