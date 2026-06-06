@@ -1,0 +1,3255 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Open-core vehicle dynamics simulator — theory + PoC reports">
+      
+      
+      
+        <link rel="canonical" href="https://onlyti.github.io/VDSim/v0.2.0/theory/01_frames_and_conventions/">
+      
+      
+        <link rel="prev" href="../">
+      
+      
+        <link rel="next" href="../02_rigid_body_dynamics/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>01 — Frames & conventions - VDSim</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#01-frames-and-sign-conventions" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="VDSim" class="md-header__button md-logo" aria-label="VDSim" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            VDSim
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              01 — Frames & conventions
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Onlyti/VDSim" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Onlyti/VDSim
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../.." class="md-tabs__link">
+          
+  
+  
+    
+  
+  Home
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Theory
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../references/actuator_nonlinearity/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  References
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Phase 2 — Multibody & Integration
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../tasks/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  PoC Reports
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../examples/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Examples
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="VDSim" class="md-nav__button md-logo" aria-label="VDSim" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    VDSim
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Onlyti/VDSim" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Onlyti/VDSim
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../.." class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Home
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Theory
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Theory
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    01 — Frames & conventions
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    01 — Frames & conventions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#learning-objectives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Learning objectives
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-chapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 동기 — 왜 좌표계가 별도 chapter 인가
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2 가정
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-frame" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.3 네 가지 frame
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1.3 네 가지 frame">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#inertial-world-frame-w" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inertial (world) frame W
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#body-frame-b" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Body frame B
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wheel-frame-w_i" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wheel frame W_i
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#contact-frame-c_i" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contact frame C_i
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-quaternion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.4 Quaternion 으로 본 회전
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1.4 Quaternion 으로 본 회전">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#zyx-tait-bryan-euler-quaternion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ZYX Tait-Bryan Euler ↔ quaternion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#yaw-atan2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Yaw 만 필요할 때 — atan2 추출
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#15-iso-8855-slip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.5 ISO 8855 의 slip 정의
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1.5 ISO 8855 의 slip 정의">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#slip-angle-alpha" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slip angle alpha
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#case" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        부호 직관 — 좌선회 case
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slip-ratio-kappa" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slip ratio kappa
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        부호 직관
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#16-world-yaw-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.6 World 변환 — yaw integration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1.6 World 변환 — yaw integration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#planar-simplification-roll-pitch-0" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Planar simplification (roll / pitch ≈ 0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#quaternion-ode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quaternion ODE (정확 형식)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#yaw" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Yaw 적분의 흔한 실수
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#17" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.7 검증 전략
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#18" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.8 한계
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#19-chapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.9 다음 chapter 와의 연결
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#110" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.10 참고문헌
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#111-self-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.11 Self-check
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#112-vdsim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.12 VDSim 구현 노트
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02_rigid_body_dynamics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    02 — Rigid-body dynamics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../03_tire_pacejka_mf96/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    03 — Tire (Pacejka MF96)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04_ld1_bicycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    04 — Ld1-Bicycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../05_ld2_seven_dof/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    05 — Ld2-SevenDOF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../06_ld3_fourteen_dof/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    06 — Ld3-FourteenDOF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../07_control_ladder/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    07 — Control ladder Lc1-Lc8
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../08_pid_controllers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    08 — PID controllers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../09_pure_pursuit_path/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    09 — Pure Pursuit / path
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../10_driver_model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10 — Driver model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../11_numerical_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11 — Numerical integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../12_software_architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12 — Software architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13_multibody_outlook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13 — Multibody (Ld4) overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../14_hardpoint_kinematics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    14 — Hardpoint kinematics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../15_validation_and_doe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    15 — Validation & DOE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../16_fmi_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16 — FMI 2.0 integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../17_actuator_and_sensing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    17 — Actuator dynamics & sensing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../18_runtime_and_cosim/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18 — Runtime kernel & co-simulation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    References
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    References
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../references/actuator_nonlinearity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Actuator/sensor nonlinearity & delay
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gui_architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GUI architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vdsim_bridge_interface_requirements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Co-sim bridge interface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../map_import_strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Map import strategy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase 2 — Multibody & Integration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Phase 2 — Multibody & Integration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T22 — CARLA Python bridge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/T23_jump_14dof/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T23 — Jump 14-DOF (world-z)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/T27_ld4_dw/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T27 — Ld4 double wishbone
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/T28_ld4_mp/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T28 — Ld4 MacPherson
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/T29_ld4_ta/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T29 — Ld4 trailing arm
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/T30_ld4_5link/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T30 — Ld4 5-link rear
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../tasks/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PoC Reports
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5" id="__nav_5_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    PoC Reports
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/68_poc_summary_v3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PoC Summary v3 (95%)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/69_competitive_matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Competitive matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/62_cycles_overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cycles overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmark matrix (4 vehicles)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/20_l1_l2_grid_sweep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    L1 vs L2 grid sweep
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/30_l3_dynamic_suspension/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    L3 dynamic suspension
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/31_l6_l7_l8_control/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    L5-L8 control cascade
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/57_58_59_driver_skidpad/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Driver / skidpad / brake-in-turn
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmark matrix (4 vehicles)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../examples/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#learning-objectives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Learning objectives
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-chapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 동기 — 왜 좌표계가 별도 chapter 인가
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2 가정
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-frame" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.3 네 가지 frame
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1.3 네 가지 frame">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#inertial-world-frame-w" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inertial (world) frame W
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#body-frame-b" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Body frame B
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wheel-frame-w_i" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wheel frame W_i
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#contact-frame-c_i" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contact frame C_i
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-quaternion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.4 Quaternion 으로 본 회전
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1.4 Quaternion 으로 본 회전">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#zyx-tait-bryan-euler-quaternion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ZYX Tait-Bryan Euler ↔ quaternion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#yaw-atan2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Yaw 만 필요할 때 — atan2 추출
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#15-iso-8855-slip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.5 ISO 8855 의 slip 정의
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1.5 ISO 8855 의 slip 정의">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#slip-angle-alpha" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slip angle alpha
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#case" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        부호 직관 — 좌선회 case
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slip-ratio-kappa" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slip ratio kappa
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        부호 직관
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#16-world-yaw-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.6 World 변환 — yaw integration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1.6 World 변환 — yaw integration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#planar-simplification-roll-pitch-0" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Planar simplification (roll / pitch ≈ 0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#quaternion-ode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quaternion ODE (정확 형식)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#yaw" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Yaw 적분의 흔한 실수
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#17" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.7 검증 전략
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#18" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.8 한계
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#19-chapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.9 다음 chapter 와의 연결
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#110" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.10 참고문헌
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#111-self-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.11 Self-check
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#112-vdsim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.12 VDSim 구현 노트
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="01-frames-and-sign-conventions">01. Frames and Sign Conventions<a class="headerlink" href="#01-frames-and-sign-conventions" title="Permanent link">&para;</a></h1>
+<h2 id="learning-objectives">Learning objectives<a class="headerlink" href="#learning-objectives" title="Permanent link">&para;</a></h2>
+<p>이 chapter 를 마치면 다음을 할 수 있다.</p>
+<ol>
+<li>ISO 8855 RH 와 SAE J670 의 좌표계 차이를 식의 부호 변화로 즉시 식별한다.</li>
+<li>4 가지 frame (world / body / wheel / contact) 사이의 변환을 quaternion 으로
+   정확히 정의한다.</li>
+<li>slip angle <code>alpha</code> 와 slip ratio <code>kappa</code> 의 부호 직관을 좌선회 / 가속 / 제동
+   각각의 case 로 설명한다.</li>
+<li>yaw integration 의 정확한 형식 (quaternion ODE) 과 simplification (planar yaw)
+   의 적용 범위를 판별한다.</li>
+</ol>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>선형대수</strong> — 회전 행렬, 정규 직교 기저.</li>
+<li><strong>Quaternion 기초</strong> — Hamilton product, conjugate.</li>
+<li><strong>외부 reference</strong> — Pacejka §1.3 (ISO vs SAE), Genta §2.2 (좌표계 정의).</li>
+</ul>
+<hr />
+<h2 id="11-chapter">1.1 동기 — 왜 좌표계가 별도 chapter 인가<a class="headerlink" href="#11-chapter" title="Permanent link">&para;</a></h2>
+<p>차량 동역학에서 가장 흔한 버그는 <strong>부호 실수</strong>다. 같은 단어가 책마다 다른 부호를
+의미한다.</p>
+<table>
+<thead>
+<tr>
+<th>책</th>
+<th>y 축</th>
+<th>α 부호 (좌선회)</th>
+<th>Fy 부호 (좌선회)</th>
+<th>yaw 양의 방향</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ISO 8855 RH (Genta, EU)</td>
+<td>leftward</td>
+<td>α &gt; 0</td>
+<td>Fy &lt; 0</td>
+<td>CCW (위에서 본)</td>
+</tr>
+<tr>
+<td>SAE J670 (Rajamani, US)</td>
+<td>rightward</td>
+<td>α &lt; 0</td>
+<td>Fy &lt; 0</td>
+<td>CW (위에서 본)</td>
+</tr>
+</tbody>
+</table>
+<p>본 시리즈는 <strong>ISO 8855 RH 단일 채택</strong>. 모든 식이 이 가정 위에서 유도된다. 다른
+책의 식을 옮길 때 — 예: Rajamani 의 <code>δ − atan(v_y / v_x)</code> — 의 부호 변환을
+명시적으로 추적해야 한다. 그대로 옮기면 yaw rate / lateral force 의 부호가 반대로
+나온다.</p>
+<hr />
+<h2 id="12">1.2 가정<a class="headerlink" href="#12" title="Permanent link">&para;</a></h2>
+<p>본 chapter 의 모든 식은 다음 가정 위에서 유도된다.</p>
+<table>
+<thead>
+<tr>
+<th>가정</th>
+<th>의미</th>
+<th>깨지는 case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Flat ground</td>
+<td>지구 곡률 무시</td>
+<td>장거리 GNSS / banked turn</td>
+</tr>
+<tr>
+<td>Contact normal = ground normal</td>
+<td>suspension travel 시에도 normal 불변</td>
+<td>rough terrain (chapter 14)</td>
+</tr>
+<tr>
+<td>Small roll / pitch</td>
+<td>yaw 적분에 planar simplification 적용 가능</td>
+<td>aggressive maneuver (chapter 06)</td>
+</tr>
+<tr>
+<td>차량은 rigid + sprung body 단일</td>
+<td>sprung body 의 yaw 가 vehicle yaw</td>
+<td>flexible chassis (out of scope)</td>
+</tr>
+</tbody>
+</table>
+<p>가정이 깨지는 chapter 별 연결은 §1.10 에서 정리한다.</p>
+<hr />
+<h2 id="13-frame">1.3 네 가지 frame<a class="headerlink" href="#13-frame" title="Permanent link">&para;</a></h2>
+<h3 id="inertial-world-frame-w">Inertial (world) frame <code>W</code><a class="headerlink" href="#inertial-world-frame-w" title="Permanent link">&para;</a></h3>
+<ul>
+<li>ENU (East-North-Up) right-handed.</li>
+<li>원점: 시뮬레이션 시작 시점의 차량 CG (또는 임의 fix).</li>
+<li>차량 trajectory <code>(x_w, y_w, z_w)</code> 가 여기서 측정된다.</li>
+</ul>
+<h3 id="body-frame-b">Body frame <code>B</code><a class="headerlink" href="#body-frame-b" title="Permanent link">&para;</a></h3>
+<ul>
+<li>원점: sprung body 의 CG.</li>
+<li>축: <code>x_B</code> forward, <code>y_B</code> leftward, <code>z_B</code> up (ISO 8855 RH).</li>
+<li>vehicle 의 모든 속도 / 가속도 / 힘은 별도 표기 없는 한 body frame.</li>
+</ul>
+<h3 id="wheel-frame-w_i">Wheel frame <code>W_i</code><a class="headerlink" href="#wheel-frame-w_i" title="Permanent link">&para;</a></h3>
+<ul>
+<li>원점: <code>i</code> 번째 wheel 의 contact point (또는 wheel center, 문맥에 따라).</li>
+<li>축: <code>x_W</code> 는 wheel 의 forward 방향 (steered wheel 의 경우 body x 에서 <code>δ</code> 만큼 회전), <code>y_W</code> 는 wheel 의 left, <code>z_W</code> 는 contact normal.</li>
+</ul>
+<h3 id="contact-frame-c_i">Contact frame <code>C_i</code><a class="headerlink" href="#contact-frame-c_i" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Wheel frame 과 동일하나 <code>z</code> 가 ground normal 과 align 됨.</li>
+<li>Flat ground 가정 하에서 contact frame = wheel frame.</li>
+<li>비평탄 지형에서는 두 frame 이 분리 (chapter 14).</li>
+</ul>
+<p><img alt="ISO 8855 frame, wheel index, slip angle" src="../figures/01_frames.png" /></p>
+<hr />
+<h2 id="14-quaternion">1.4 Quaternion 으로 본 회전<a class="headerlink" href="#14-quaternion" title="Permanent link">&para;</a></h2>
+<p>Body → world 변환은 unit quaternion 으로 표현한다.</p>
+<div class="arithmatex">\[
+v_{\text{world}} = q \otimes v_{\text{body}} \otimes q^{-1}
+\]</div>
+<p>여기서 <code>q</code> 는 body frame 의 orientation. <code>q = Identity</code> 일 때 body frame 이
+world frame 과 일치.</p>
+<h3 id="zyx-tait-bryan-euler-quaternion">ZYX Tait-Bryan Euler ↔ quaternion<a class="headerlink" href="#zyx-tait-bryan-euler-quaternion" title="Permanent link">&para;</a></h3>
+<p>본 시리즈는 ZYX intrinsic Tait-Bryan (no axis repetition) 을 채택한다.</p>
+<div class="arithmatex">\[
+R(\phi, \theta, \psi) = R_z(\psi) \cdot R_y(\theta) \cdot R_x(\phi)
+\]</div>
+<p>순서가 <code>roll → pitch → yaw</code> 의 적용 순서이며, 회전 행렬은 그 역순으로 쌓인다.
+다른 책의 ZYX extrinsic / XYZ intrinsic 등과 결과가 다르므로, 외부 식을 옮길
+때는 순서를 명시적으로 추적해야 한다.</p>
+<h3 id="yaw-atan2">Yaw 만 필요할 때 — <code>atan2</code> 추출<a class="headerlink" href="#yaw-atan2" title="Permanent link">&para;</a></h3>
+<p>roll / pitch 가 작은 영역에서는 yaw 만 필요한 경우가 흔하다. 일반 식:</p>
+<div class="arithmatex">\[
+\psi = \operatorname{atan2}\!\left(2(q_w q_z + q_x q_y),\; 1 - 2(q_y^2 + q_z^2)\right)
+\]</div>
+<p>roll / pitch = 0 의 special case 에서는 <code>psi = 2 · atan2(q_z, q_w)</code> 로 간략화
+가능.</p>
+<hr />
+<h2 id="15-iso-8855-slip">1.5 ISO 8855 의 slip 정의<a class="headerlink" href="#15-iso-8855-slip" title="Permanent link">&para;</a></h2>
+<h3 id="slip-angle-alpha">Slip angle <code>alpha</code><a class="headerlink" href="#slip-angle-alpha" title="Permanent link">&para;</a></h3>
+<p>Wheel center 의 velocity 를 wheel frame 으로 옮긴 후:</p>
+<div class="arithmatex">\[
+\alpha = \operatorname{atan2}(v_{y,\text{wheel}},\; v_{x,\text{wheel}})
+\]</div>
+<p><strong>Front wheel</strong> (steered angle <code>δ</code>):</p>
+<div class="arithmatex">\[
+v_{x,\text{wheel}} =  v_{x,\text{body}} \cos\delta + v_{y,\text{body}} \sin\delta
+\qquad
+v_{y,\text{wheel}} = -v_{x,\text{body}} \sin\delta + v_{y,\text{body}} \cos\delta
+\]</div>
+<p>여기서 wheel position 의 lever arm 적용: <code>v_{y,body} = v_{y,cg} + a · r</code>.</p>
+<p><strong>Rear wheel</strong> (un-steered, wheel frame = body frame):</p>
+<div class="arithmatex">\[
+v_{x,\text{wheel}} = v_{x,\text{body}}, \qquad
+v_{y,\text{wheel}} = v_{y,cg} - b r
+\]</div>
+<h3 id="case">부호 직관 — 좌선회 case<a class="headerlink" href="#case" title="Permanent link">&para;</a></h3>
+<p>좌선회 (r &gt; 0, δ &gt; 0). Rear axle 을 보면 <code>v_{y,wheel} = v_y − b·r</code>. Steady-state
+에서 <code>v_y</code> 가 약간 음수, <code>b · r</code> 가 양수 → 합쳐서 음수. <code>v_x</code> 양수 →
+<code>α_r = atan2(−, +) &lt; 0</code>.</p>
+<p>따라서 <strong>ISO 8855 RH 에서 좌선회 시 α &lt; 0</strong>.</p>
+<p>다음으로 Pacejka 의 <code>Fy = -D · sin(...)</code> 의 leading minus 부호를 보면:
+<code>α &lt; 0</code> → <code>sin(...) &lt; 0</code> → <code>Fy &gt; 0</code>. 즉 cornering force 가 차량을 안쪽으로
+(<code>+y</code> = leftward = inside of left turn) 잡아준다.</p>
+<p>SAE J670 의 책에서는 같은 좌선회의 α 부호가 반대로 나오므로 (y-axis 방향 차이),
+다른 reference 의 식을 옮길 때 이 부호 변환을 항상 추적한다.</p>
+<h3 id="slip-ratio-kappa">Slip ratio <code>kappa</code><a class="headerlink" href="#slip-ratio-kappa" title="Permanent link">&para;</a></h3>
+<div class="arithmatex">\[
+\kappa = \frac{R\, \omega - v_{x,\text{wheel}}}{\max(|v_{x,\text{wheel}}|,\; \varepsilon)}
+\]</div>
+<ul>
+<li><code>omega</code> — wheel angular velocity [rad/s], rolling forward 시 양.</li>
+<li><code>R</code> — kinematic (loaded) wheel radius.</li>
+<li><code>R · omega</code> — slip 없을 때의 진행 속도.</li>
+<li><code>ε</code> — 정지 근처에서 발산 방지하는 floor.</li>
+</ul>
+<h3 id="_1">부호 직관<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>case</th>
+<th>식 부호</th>
+<th>κ</th>
+<th>Fx</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>가속 (drive)</td>
+<td>R·ω &gt; v_x</td>
+<td>κ &gt; 0</td>
+<td>Fx &gt; 0</td>
+</tr>
+<tr>
+<td>제동 (brake)</td>
+<td>R·ω &lt; v_x</td>
+<td>κ &lt; 0</td>
+<td>Fx &lt; 0</td>
+</tr>
+<tr>
+<td>정지</td>
+<td>ω = v_x = 0</td>
+<td>κ = 0</td>
+<td>Fx = 0</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="16-world-yaw-integration">1.6 World 변환 — yaw integration<a class="headerlink" href="#16-world-yaw-integration" title="Permanent link">&para;</a></h2>
+<p>차량의 world position 적분은 body velocity 를 world frame 으로 회전시켜
+수행한다.</p>
+<h3 id="planar-simplification-roll-pitch-0">Planar simplification (roll / pitch ≈ 0)<a class="headerlink" href="#planar-simplification-roll-pitch-0" title="Permanent link">&para;</a></h3>
+<div class="arithmatex">\[
+\dot{x}_w = v_x \cos\psi - v_y \sin\psi
+\qquad
+\dot{y}_w = v_x \sin\psi + v_y \cos\psi
+\qquad
+\dot\psi = r
+\]</div>
+<p>이 형식은 Ld1 / Ld2 모델에서 충분하다. roll / pitch 가 작은 영역에서는 정확
+quaternion ODE 와 거의 일치한다.</p>
+<h3 id="quaternion-ode">Quaternion ODE (정확 형식)<a class="headerlink" href="#quaternion-ode" title="Permanent link">&para;</a></h3>
+<div class="arithmatex">\[
+\dot q = \tfrac{1}{2}\, q \otimes [0,\; \omega_{\text{body}}],
+\qquad
+\omega_{\text{body}} = (p, q, r)
+\]</div>
+<p><code>p, q, r</code> 는 body frame 의 angular velocity 성분. roll / pitch 가 활성화된
+Ld3 (chapter 06) 부터는 이 정확 형식이 필요하다.</p>
+<h3 id="yaw">Yaw 적분의 흔한 실수<a class="headerlink" href="#yaw" title="Permanent link">&para;</a></h3>
+<p>planar 형식에서 <code>dot ψ = r</code> 이 핵심이다. <code>vx</code> 를 yaw 적분에 사용하는 실수
+(예: <code>dot ψ = vx / R</code> 같은 잘못된 식) 가 자주 발생한다. 차량이 정지 (<code>vx = 0</code>)
+인데 외란으로 yaw 가 변하는 case 를 표현 못 한다.</p>
+<hr />
+<h2 id="17">1.7 검증 전략<a class="headerlink" href="#17" title="Permanent link">&para;</a></h2>
+<p>본 chapter 의 식과 부호 약속은 다음과 같이 자동 검증한다.</p>
+<table>
+<thead>
+<tr>
+<th>검증</th>
+<th>식 / 케이스</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Quaternion identity</td>
+<td><code>quat_from_euler({0,0,0}) ≈ Identity</code></td>
+</tr>
+<tr>
+<td>Yaw round-trip</td>
+<td><code>yaw_from_quat(quat_from_euler({0,0,π/2})) ≈ π/2</code></td>
+</tr>
+<tr>
+<td>ISO 8855 좌선회 부호</td>
+<td>해석적 steady-state 의 r, α_r, Fy 부호가 §1.5 의 표와 일치</td>
+</tr>
+<tr>
+<td>Wheel frame 변환</td>
+<td>동일한 wheel velocity 에 대해 body / wheel 두 frame 의 slip 식이 같은 α 반환</td>
+</tr>
+<tr>
+<td>기준 비교</td>
+<td>Genta §3.1 의 understeer gradient 식과 부호 일치</td>
+</tr>
+</tbody>
+</table>
+<p>세부 unit test 매핑은 §1.11 의 implementation note 참조.</p>
+<hr />
+<h2 id="18">1.8 한계<a class="headerlink" href="#18" title="Permanent link">&para;</a></h2>
+<p>본 chapter 의 약속과 식이 적용 안 되는 case.</p>
+<table>
+<thead>
+<tr>
+<th>한계</th>
+<th>영향</th>
+<th>다루는 chapter</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Banked road / 경사로</td>
+<td>flat ground 가정 위반</td>
+<td>chapter 14 (contact frame 분리)</td>
+</tr>
+<tr>
+<td>Roll / pitch 가 큰 maneuver</td>
+<td>planar yaw 적분의 오차 누적</td>
+<td>chapter 06 (quat ODE)</td>
+</tr>
+<tr>
+<td>지구 곡률</td>
+<td>world ENU 의 flat 가정 위반</td>
+<td>본 시리즈 out of scope</td>
+</tr>
+<tr>
+<td>Suspension travel 의 contact 변화</td>
+<td>wheel frame 의 z 가 변화</td>
+<td>chapter 14 (kinematic table)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="19-chapter">1.9 다음 chapter 와의 연결<a class="headerlink" href="#19-chapter" title="Permanent link">&para;</a></h2>
+<p>좌표계와 부호가 정해졌으므로, chapter 02 는 <strong>이 frame 위에서의 강체 운동방정식
+(Newton-Euler)</strong> 을 정리한다. body frame 에서 EoM 을 쓰면 관성 행렬이 시간 불변
+이라는 핵심 이점을 활용할 수 있다. 이 토대 위에서 Pacejka (chapter 03), Ld1
+(chapter 04), Ld2 (chapter 05), Ld3 (chapter 06) 가 같은 base 를 공유한다.</p>
+<hr />
+<h2 id="110">1.10 참고문헌<a class="headerlink" href="#110" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Genta, G.</strong> <em>Motor Vehicle Dynamics</em>, World Scientific, 2014. §2.2 좌표계 정의, §3.1 slip 정의.</li>
+<li><strong>Pacejka, H.B.</strong> <em>Tire and Vehicle Dynamics</em>, 3<sup>rd</sup> ed., 2012. §1.3 ISO 8855 vs SAE.</li>
+<li><strong>Rajamani, R.</strong> <em>Vehicle Dynamics and Control</em>, 2<sup>nd</sup> ed., Springer, 2012. SAE convention — 부호 변환 후 인용.</li>
+<li><strong>Sola, J.</strong> <em>Quaternion kinematics for the error-state Kalman filter</em>, arXiv:1711.02508, 2017. Tait-Bryan vs proper Euler 의 명확한 정리.</li>
+</ul>
+<hr />
+<h2 id="111-self-check">1.11 Self-check<a class="headerlink" href="#111-self-check" title="Permanent link">&para;</a></h2>
+<details>
+<summary>1. ISO 8855 RH 에서 좌선회 시 yaw rate <code>r</code> 의 부호는?</summary>
+
+`r > 0`. ENU 의 z 가 up 이고 ISO 의 z 도 up 이라, 위에서 본 CCW 가 양.
+</details>
+
+<details>
+<summary>2. 같은 좌선회에서 ISO 8855 RH 와 SAE J670 의 <code>alpha</code> 부호는 각각?</summary>
+
+ISO 8855 RH 에서 `α < 0`, SAE J670 (Rajamani) 에서 `α > 0`. y 축 방향이 반대라
+같은 물리 운동의 alpha 부호가 뒤집힌다. Fy 는 두 convention 에서 동일하게 음
+(restoring) — sign 두 번 뒤집혀 보존.
+</details>
+
+<details>
+<summary>3. <code>ε</code> floor 를 빠뜨리면 어떤 case 에서 <code>kappa</code> 가 발산하는가?</summary>
+
+차량 정지 직전 (`v_{x,wheel} → 0`) + wheel 이 약간이라도 회전 중 (`omega ≠ 0`)
+인 case. 분모가 0 으로 가서 `κ → ±∞`. ε ≈ 0.5 m/s 로 clamping.
+</details>
+
+<details>
+<summary>4. <code>quat_from_euler({roll, pitch, yaw})</code> 의 인자 순서가 (x, y, z) 회전 순서가 아니라 (φ, θ, ψ) 인 이유는?</summary>
+
+ZYX intrinsic Tait-Bryan 의 회전 행렬은 `R_z · R_y · R_x` 순으로 쌓이지만,
+*적용 순서* 는 `roll → pitch → yaw` (intrinsic rotation 의 정의에 따라). 함수의
+parameter 가 *적용 순서* 를 따르므로 `(roll, pitch, yaw) = (φ, θ, ψ)`. 외부
+reference 에서 *회전 행렬 곱 순서* 와 혼동하지 않도록 주의.
+</details>
+
+<details>
+<summary>5. yaw 적분에 <code>vx</code> 가 아니라 <code>r</code> 을 사용하는 이유는?</summary>
+
+`vx = 0` 인 정지 상태에서도 외란 (예: rear tire impulse) 으로 yaw 가 변할 수
+있다. yaw rate 는 body angular velocity 성분이고, 이는 forward speed 와 독립.
+`dot ψ = vx / R` 같은 잘못된 식은 정지 차량의 yaw 변화를 표현 못 한다.
+</details>
+
+<hr />
+<h2 id="112-vdsim">1.12 VDSim 구현 노트<a class="headerlink" href="#112-vdsim" title="Permanent link">&para;</a></h2>
+<p>본 chapter 의 약속을 VDSim 코드가 따르는 방식. 본문 의존 없이 skim 가능.</p>
+<blockquote>
+<p><strong>[VDSim impl] § 1.3 — Wheel index 상수</strong></p>
+<p><code>core/include/vdsim/types.hpp:15-19</code>:</p>
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">constexpr</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">WHEEL_FL</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w">  </span><span class="c1">// front left  (+x forward, +y leftward)</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">constexpr</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">WHEEL_FR</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">constexpr</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">WHEEL_RL</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">constexpr</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">WHEEL_RR</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="k">constexpr</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">NUM_WHEELS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
+</span></code></pre></div>
+<p><strong>[VDSim impl] § 1.4 — Quaternion 변환 코드</strong></p>
+<p>Eigen <code>Quaterniond</code> 사용. <code>core/src/coordinate.cpp</code> 의 <code>yaw_from_quat</code>,
+<code>quat_from_euler</code> 두 함수:</p>
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kr">inline</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="nf">yaw_from_quat</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">Quat</span><span class="o">&amp;</span><span class="w"> </span><span class="n">q</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">atan2</span><span class="p">(</span><span class="mf">2.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="n">q</span><span class="p">.</span><span class="n">w</span><span class="p">()</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">q</span><span class="p">.</span><span class="n">z</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">q</span><span class="p">.</span><span class="n">x</span><span class="p">()</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">q</span><span class="p">.</span><span class="n">y</span><span class="p">()),</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">                      </span><span class="mf">1.0</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mf">2.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="n">q</span><span class="p">.</span><span class="n">y</span><span class="p">()</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">q</span><span class="p">.</span><span class="n">y</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">q</span><span class="p">.</span><span class="n">z</span><span class="p">()</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">q</span><span class="p">.</span><span class="n">z</span><span class="p">()));</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>Quat 의 <code>(w, x, y, z)</code> 순서는 Eigen 의 <code>w(), x(), y(), z()</code> accessor 로
+접근. 다른 lib (예: ROS tf2) 의 <code>(x, y, z, w)</code> 와 순서 다른 점에 주의.</p>
+<p><strong>[VDSim impl] § 1.5 — Slip 계산 코드</strong></p>
+<p><code>core/src/bicycle_dynamics.cpp:146-152</code>:</p>
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">alpha_f</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">atan2</span><span class="p">(</span><span class="n">v_fy_wheel</span><span class="p">,</span><span class="w"> </span><span class="n">v_fx_wheel</span><span class="p">);</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">alpha_r</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">atan2</span><span class="p">(</span><span class="n">v_ry_body</span><span class="p">,</span><span class="w">  </span><span class="n">v_rx_body</span><span class="p">);</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">kappa_f</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">R</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">of</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">v_fx_wheel</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">denom_f</span><span class="p">;</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">kappa_r</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">R</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">or_</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">v_rx_body</span><span class="p">)</span><span class="w">  </span><span class="o">/</span><span class="w"> </span><span class="n">denom_r</span><span class="p">;</span>
+</span></code></pre></div>
+<p><code>denom_*</code> 는 <code>std::max(std::abs(v_*), 0.5)</code> 로 ε floor 강제.</p>
+<p><strong>[VDSim impl] § 1.6 — ABI 상의 State 약속</strong></p>
+<p><code>core/include/vdsim/state.hpp</code> 의 약속:</p>
+<table>
+<thead>
+<tr>
+<th>필드</th>
+<th>frame</th>
+<th>단위</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>State::position</code></td>
+<td>world ENU</td>
+<td>m</td>
+</tr>
+<tr>
+<td><code>State::orientation</code></td>
+<td>body → world</td>
+<td>unit Quat</td>
+</tr>
+<tr>
+<td><code>State::velocity</code></td>
+<td>body</td>
+<td>m/s (vx, vy, vz)</td>
+</tr>
+<tr>
+<td><code>State::angular_velocity</code></td>
+<td>body</td>
+<td>rad/s (p, q, r)</td>
+</tr>
+<tr>
+<td><code>tire_forces_body()</code></td>
+<td>body</td>
+<td>N</td>
+</tr>
+<tr>
+<td><code>wheel_slip_angle()</code></td>
+<td>wheel</td>
+<td>rad</td>
+</tr>
+</tbody>
+</table>
+<p>이 약속은 모든 모델 사다리 (Ld1-Ld3 + 계획 중인 Ld4-Ld5) 에서 동일. dynamics
+를 갈아끼워 다른 fidelity 로 가도 외부 코드 (controller, CARLA plugin) 가
+다시 짜지 않는다.</p>
+<p><strong>[VDSim impl] § 1.7 — 검증 unit test</strong></p>
+<table>
+<thead>
+<tr>
+<th>검증</th>
+<th>test 파일</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Quaternion identity 와 round-trip</td>
+<td><code>tests/unit/test_coordinate.cpp</code></td>
+</tr>
+<tr>
+<td>헤더 컴파일 / Vec3::UnitZ default</td>
+<td><code>tests/unit/test_headers_compile.cpp</code></td>
+</tr>
+<tr>
+<td>ISO 8855 좌선회 부호 통과</td>
+<td><code>tests/integration/test_bicycle_steady_state.cpp</code> 의 <code>LeftTurnYawRateMatchesAnalytical</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>[VDSim impl] § 1.x — 자주 실수하는 코드 패턴</strong></p>
+<table>
+<thead>
+<tr>
+<th>실수</th>
+<th>증상</th>
+<th>VDSim 의 대응</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rajamani 의 <code>δ − atan(...)</code> 사용</td>
+<td>yaw rate 부호 반대</td>
+<td><code>atan2(v_y_wheel, v_x_wheel)</code></td>
+</tr>
+<tr>
+<td>Wheel 위치 lever arm 누락</td>
+<td>rear axle alpha 부호 틀림</td>
+<td><code>vy − b·r</code> 명시</td>
+</tr>
+<tr>
+<td>Yaw 적분에 <code>vx</code> 사용</td>
+<td>정지 차량의 yaw 가 표류</td>
+<td><code>dot ψ = r</code></td>
+</tr>
+<tr>
+<td>Quat 의 <code>(w, x, y, z)</code> 순서 혼동</td>
+<td>rotation 결과 깨짐</td>
+<td>Eigen <code>w()/x()/y()/z()</code> accessor</td>
+</tr>
+<tr>
+<td>ε floor 누락</td>
+<td>저속에서 κ 발산</td>
+<td><code>std::max(|vx|, 0.5)</code></td>
+</tr>
+<tr>
+<td>Roll/pitch 가 quat 에 안 들어감</td>
+<td>Ld3 시각화에서 차체 안 기울어짐</td>
+<td><code>quat_from_euler({roll, pitch, yaw})</code></td>
+</tr>
+</tbody>
+</table>
+</blockquote>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/Onlyti/VDSim" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.expand", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
