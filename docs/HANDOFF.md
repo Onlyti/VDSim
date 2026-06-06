@@ -1,6 +1,6 @@
 # VDSim 핸드오프
 
-작성: 2026-06-06. **v0.2.3** polish 진행 중. v0.2.2 = `ee53f31`. v0.3 = drivetrain + LuGre.
+작성: 2026-06-06. **v0.2.3** `f3f9815` push 완료. v0.3 = drivetrain + LuGre.
 
 ## 1. 목표
 v0.2 "composable vehicle": 차량 = chassis + parts, 워크샵 + 씬 UI. **`gui/app.html`**
@@ -27,7 +27,7 @@ v0.2 "composable vehicle": 차량 = chassis + parts, 워크샵 + 씬 UI. **`gui/
 - 모달 kinematics 드롭다운 L3-native only; `Popen(cwd=REPO)`.
 - L3 missing/topology-only stem → pre-launch `kinematics_warnings`.
 
-## 6. v0.2.3 (진행)
+## 6. v0.2.3 완료 (`f3f9815`)
 - 경고 패널, setup API L3 검증, L3 전환 default, log tail, rel world susp paths.
 - `l3_sedan_kinematics.yaml` + `l3_scenario_susp_paths` ctest.
 
