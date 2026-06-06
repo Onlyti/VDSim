@@ -11,7 +11,7 @@ v0.2 "composable vehicle": 차량 = chassis + parts(모듈), 컴포넌트 워크
 ## 2. 현재 상태
 - origin/main = `1cbea58`. **로컬 미push 커밋 다수**(서브시스템 + GUI 재설계 + plant/fleet
   fixes). push 는 사용자 명시요청 시에만.
-- 빌드 `cmake --build build -j`; **ctest 187/187**.
+- 빌드 `cmake --build build -j`; **ctest 188/188**.
 - v0.1.0 공개됨(태그 → `4c77d7f`). GitHub public 토글+Topics 는 사용자 UI 작업(미완).
 
 ## 3. 완료
@@ -38,7 +38,7 @@ parts, simconfig v2, tree fleet remove; L3 `attach_*_kinematics` via `vdsim_real
 
 ## 5. 주의 · 함정
 - GUI 시각검증은 유저 담당; 에이전트는 markup/API/ctest 만.
-- **187 green 불변식** on default modules.
+- **188 green 불변식** on default modules.
 - orphan plant: `kill <pid>` for stale `vdsim_realtime` on 7401/7402 only.
 - estimation noise = Simon Q/R. TUR tire confidential.
 - VDS1 v4; GUI 재기동 after protocol change.
