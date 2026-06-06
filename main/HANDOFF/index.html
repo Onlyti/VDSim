@@ -2013,10 +2013,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#6-v03" class="md-nav__link">
+  <a href="#6-v023-f3f9815" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6. 다음 (v0.3+)
+        6. v0.2.3 완료 (f3f9815)
       
     </span>
   </a>
@@ -2024,10 +2024,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#7" class="md-nav__link">
+  <a href="#7-v03" class="md-nav__link">
     <span class="md-ellipsis">
       
-        7. 주의
+        7. 다음 (v0.3+)
       
     </span>
   </a>
@@ -2038,7 +2038,18 @@
   <a href="#8" class="md-nav__link">
     <span class="md-ellipsis">
       
-        8. 경로
+        8. 주의
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. 경로
       
     </span>
   </a>
@@ -2066,14 +2077,14 @@
 
 
 <h1 id="vdsim">VDSim 핸드오프<a class="headerlink" href="#vdsim" title="Permanent link">&para;</a></h1>
-<p>작성: 2026-06-06. <strong>v0.2.2</strong> <code>ee53f31</code> push 완료. v0.3 = drivetrain + LuGre.</p>
+<p>작성: 2026-06-06. <strong>v0.2.3</strong> <code>f3f9815</code> push 완료. v0.3 = drivetrain + LuGre.</p>
 <h2 id="1">1. 목표<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
 <p>v0.2 "composable vehicle": 차량 = chassis + parts, 워크샵 + 씬 UI. <strong><code>gui/app.html</code></strong>
 단일 GUI. <code>docs/design/V0.2_PLAN.md</code>.</p>
 <h2 id="2">2. 현재 상태<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>v0.2.0</strong> 태그 = 로컬 HEAD (push 후 origin 갱신).</li>
-<li>빌드 <code>cmake --build build -j</code>; <strong>ctest 190/190</strong> (v0.2.1 hotfix 후).</li>
+<li>빌드 <code>cmake --build build -j</code>; <strong>ctest 191/191</strong> (v0.2.3 후).</li>
 <li>v0.1.0 태그 <code>4c77d7f</code>. GitHub Topics / 데모 GIF (#155) = 사용자 UI.</li>
 </ul>
 <h2 id="3-v020">3. v0.2.0 완료<a class="headerlink" href="#3-v020" title="Permanent link">&para;</a></h2>
@@ -2095,7 +2106,12 @@
 <li>모달 kinematics 드롭다운 L3-native only; <code>Popen(cwd=REPO)</code>.</li>
 <li>L3 missing/topology-only stem → pre-launch <code>kinematics_warnings</code>.</li>
 </ul>
-<h2 id="6-v03">6. 다음 (v0.3+)<a class="headerlink" href="#6-v03" title="Permanent link">&para;</a></h2>
+<h2 id="6-v023-f3f9815">6. v0.2.3 완료 (<code>f3f9815</code>)<a class="headerlink" href="#6-v023-f3f9815" title="Permanent link">&para;</a></h2>
+<ul>
+<li>경고 패널, setup API L3 검증, L3 전환 default, log tail, rel world susp paths.</li>
+<li><code>l3_sedan_kinematics.yaml</code> + <code>l3_scenario_susp_paths</code> ctest.</li>
+</ul>
+<h2 id="7-v03">7. 다음 (v0.3+)<a class="headerlink" href="#7-v03" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Drivetrain inertia + torque–RPM (<code>V0.2_DRIVETRAIN.md</code>).</li>
 <li>LuGre tire (<code>V0.2_TIRE_LUGRE.md</code>).</li>
@@ -2103,13 +2119,13 @@
 <li>Infra sensor runtime mount (<code>SIM_CONFIG_ARCH.md</code> host field).</li>
 <li>v0.4 스턴트 (<code>V0.4_PLAN.md</code> M1–M6).</li>
 </ul>
-<h2 id="7">7. 주의<a class="headerlink" href="#7" title="Permanent link">&para;</a></h2>
+<h2 id="8">8. 주의<a class="headerlink" href="#8" title="Permanent link">&para;</a></h2>
 <ul>
 <li>GUI 시각검증 = 유저. 에이전트 = markup/API/ctest.</li>
-<li><strong>190 green</strong> on default modules.</li>
+<li><strong>191 green</strong> on default modules.</li>
 <li>TUR tire confidential. Simon Q/R. VDS1 v4.</li>
 </ul>
-<h2 id="8">8. 경로<a class="headerlink" href="#8" title="Permanent link">&para;</a></h2>
+<h2 id="9">9. 경로<a class="headerlink" href="#9" title="Permanent link">&para;</a></h2>
 <ul>
 <li>GUI: <code>gui/app.html</code>, <code>gui/server.py</code></li>
 <li>Parts: <code>configs/components/</code>, <code>configs/suspensions/</code></li>
