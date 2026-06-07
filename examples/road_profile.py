@@ -61,8 +61,8 @@ def main():
     paths = [Path(args[0])] if args else sorted((REPO / "configs/roads").glob("*.yaml"))
     print("=== ride response per road preset (L3 sedan @ 20 m/s straight, 6 s) ===")
     import statistics
-    vp = vdsim.VehicleParams.from_yaml(str(REPO / "configs/vehicles/sedan.yaml"))
-    tp = vdsim.TireParams.from_yaml(str(REPO / "configs/tires/default_pacejka.yaml"))
+    from _catalog_load import load_vehicle_tire
+    vp, tp = load_vehicle_tire()
     for path in paths:
         cfg = yaml.safe_load(open(path)); p = cfg["psd"]; mu = float(cfg.get("mu", 1.0))
         if p.get("type") == "table":

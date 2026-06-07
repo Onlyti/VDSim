@@ -18,10 +18,10 @@ VDSim 의 10 CLI binaries.  build/bin/ 에 위치.
 ## Quick example
 
 ```bash
-build/bin/vdsim_path_tracking \
-    configs/vehicles/sports.yaml \
-    configs/tires/default_pacejka.yaml \
-    /tmp/path.csv 8.0
+# Resolve presets via vdsim_lab (catalog-backed), then run a binary:
+python3 -c "import sys; sys.path.insert(0,'python'); from vdsim_lab import Vehicle,Tire; \
+v,t=Vehicle.preset('sports'),Tire.preset(); print(v.vp,t.tp)"
+build/bin/vdsim_path_tracking /tmp/vehicle.yaml /tmp/tire.yaml /tmp/path.csv 8.0
 ```
 
 Outputs `/tmp/path.csv` with `t, x, y, yaw, vx, ...` columns. Visualize with
@@ -36,8 +36,10 @@ either:
 import sys; sys.path.insert(0, "build/python")
 import vdsim
 
-vp = vdsim.VehicleParams.from_yaml("configs/vehicles/sedan.yaml")
-tp = vdsim.TireParams.from_yaml("configs/tires/default_pacejka.yaml")
+import sys; sys.path.insert(0, "python")
+from vdsim_lab import Vehicle, Tire
+vp = Vehicle.preset("sedan").vp
+tp = Tire.preset().tp
 sp = vdsim.SolverParams()
 
 dyn = vdsim.create_seven_dof()

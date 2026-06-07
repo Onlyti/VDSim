@@ -16,10 +16,11 @@ cmake -G Ninja -B build -DVDSIM_BUILD_PYTHON=ON && cmake --build build -j
 ```sh
 python3 builder/server.py --port 8200          # http://<host>:8200
 ```
-Tabs save validated YAML: **Vehicle** → `configs/vehicles/`, **Sensors** (suite) →
-`configs/sensors/`, **Map** (driving line + surface) → `configs/maps/`, **Comms**
-(data routing) → `configs/comms/`, **Scenario** (composes all + run mode) →
-`configs/experiments/`. (See [builder/README](../builder/README.md).)
+Tabs save validated YAML: **Vehicle** → catalog parts / blueprints (or legacy
+experiment vehicle YAML), **Sensors** (suite) → `configs/sensors/`, **Map**
+(driving line + surface) → `configs/maps/`, **Comms** (data routing) →
+`configs/comms/`, **Scenario** (composes all + run mode) → `configs/experiments/`.
+(See [builder/README](../builder/README.md).)
 
 ## 2. Run an experiment — four modes (same scenario)
 
@@ -49,8 +50,7 @@ The C++ `vdsim_realtime` is the single comms layer: it runs a real-time
 wire format is the canonical VDS1 binary protocol (`cosim/cosim_protocol.hpp`,
 CRC32, 76B CMD / 220B STATE).
 ```sh
-build/bin/vdsim_realtime configs/vehicles/sedan.yaml \
-    configs/tires/default_pacejka.yaml --level=L3 \
+build/bin/vdsim_realtime --scene=configs/scenes/two_vehicle_race.yaml \
     --cmd-port=7001 --state-ip=127.0.0.1 --state-port=7002 --rate=200
 ```
 Python participants (wheel/pedal clients, viewer bridge, HIL harnesses) encode

@@ -11,7 +11,7 @@ Four tabs, each saves a validated config:
 
 | tab | output | schema |
 |---|---|---|
-| **Vehicle** | `configs/vehicles/<n>.yaml` | VehicleParams (mass, geometry, powertrain, brakes, steering, aero). Preview runs a full-throttle launch and reports peak accel / 7 s speed. |
+| **Vehicle** | catalog blueprint / resolved YAML | VehicleParams (mass, geometry, powertrain, brakes, steering, aero). Preview runs a full-throttle launch and reports peak accel / 7 s speed. |
 | **Sensors** | `configs/sensors/<n>.yaml` | suite: `{sensors:[{id,type,mount[x,y,z],yaw,rate,noise_std}]}` (gnss/imu/wheel_speed/steer/camera/lidar) |
 | **Map** | `configs/maps/<n>.yaml` | `{driving_line:{source: shape\|waypoints\|xodr\|rd5, ...}, road:{width, surface:{ref}}}`; 2D canvas preview |
 | **Comms** | `configs/comms/<n>.yaml` | data routing: channels `{source, template, to:[ip:port]}` (fan-out) or `{direction:in, listen:{port}}` (fan-in). Templates: json/vds1_state/vds1_cmd/nmea_gga/imu_raw |

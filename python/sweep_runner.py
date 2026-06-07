@@ -5,9 +5,9 @@ Usage:
     python3 sweep_runner.py <sweep.yaml> <out_dir>
 
 Sweep YAML schema:
-    base_vehicle:  configs/vehicles/sedan.yaml
-    base_tire:     configs/tires/default_pacejka.yaml
-    base_scenario: configs/scenarios/step_steer.yaml
+    catalog_vehicle: sedan
+    catalog_tire:    default_pacejka
+    base_scenario: configs/maneuvers/step_steer.yaml
     binary:        vdsim_l1_vs_l2          # or vdsim_scenario_run
     sweep:
       - param: vehicle.aero_drag_coeff      # dotted path; "vehicle" / "tire" / "scenario"
@@ -40,6 +40,25 @@ def deep_merge(base: dict, override: dict) -> dict:
     return out
 
 
+def _resolve_catalog_base(repo: Path, sweep: dict):
+    if not sweep.get("catalog_vehicle"):
+        veh = yaml.safe_load((repo / sweep["base_vehicle"]).read_text())
+        tire_text = (repo / sweep["base_tire"]).read_text()
+        return veh, tire_text
+    sys.path.insert(0, str(repo / "python"))
+    from catalog import CatalogResolver
+    from catalog.ids import blueprint_for_vehicle, tire_id_from_stem
+    tire_stem = sweep.get("catalog_tire", "default_pacejka")
+    cache = repo / "configs" / ".resolve_cache" / f"sweep_{sweep['catalog_vehicle']}_{tire_stem}"
+    cache.mkdir(parents=True, exist_ok=True)
+    rv = CatalogResolver(repo).resolve_blueprint(
+        blueprint_for_vehicle(sweep["catalog_vehicle"]),
+        instance_parts={"tire": tire_id_from_stem(tire_stem)},
+        out_dir=cache,
+    )
+    return yaml.safe_load(rv.vehicle_yaml.read_text()), rv.tire_yaml.read_text()
+
+
 def set_path(d: dict, path: str, value):
     parts = path.split(".")
     cur = d
@@ -64,8 +83,7 @@ def main():
         print(f"binary not found: {bin_path}", file=sys.stderr)
         sys.exit(1)
 
-    base_vehicle  = yaml.safe_load((repo / sweep["base_vehicle"]).read_text())
-    base_tire     = (repo / sweep["base_tire"]).read_text()
+    base_vehicle, base_tire = _resolve_catalog_base(repo, sweep)
     base_scenario = yaml.safe_load((repo / sweep["base_scenario"]).read_text())
 
     sweep_params = sweep["sweep"]

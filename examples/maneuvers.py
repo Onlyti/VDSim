@@ -25,9 +25,8 @@ G = 9.81
 
 
 def _veh(level="L2"):
-    vp = vdsim.VehicleParams.from_yaml(str(REPO / "configs/vehicles/sedan.yaml"))
-    tp = vdsim.TireParams.from_yaml(str(REPO / "configs/tires/default_pacejka.yaml"))
-    return vp, tp
+    from _catalog_load import load_vehicle_tire
+    return load_vehicle_tire()
 
 
 def _throttle_to(vx, v_target):

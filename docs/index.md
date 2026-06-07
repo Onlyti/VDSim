@@ -56,11 +56,8 @@ cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Debug \
       -DVDSIM_BUILD_PYTHON=ON -DVDSIM_BUILD_CARLA_PLUGIN=ON
 cmake --build build -j
 
-# Run a scenario
-build/bin/vdsim_scenario_run \
-    configs/vehicles/sports.yaml \
-    configs/tires/default_pacejka.yaml \
-    configs/scenarios/skidpad.yaml /tmp/out.csv
+# Run a scene (catalog fleet + maneuvers materialized at launch)
+build/bin/vdsim_realtime --scene=configs/scenes/l3_sedan_kinematics.yaml
 
 # Launch the 3D viewer (real-time web viewer + live sim)
 python3 gui/server.py --port 8100 &

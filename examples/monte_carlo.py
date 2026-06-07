@@ -32,8 +32,8 @@ E_BOUND = 0.4       # cross-track corridor half-width [m] (the chance constraint
 
 def sample_params(rng):
     """Draw a vehicle/tire/road realization from its uncertainty."""
-    vp = vdsim.VehicleParams.from_yaml(str(REPO / "configs/vehicles/sedan.yaml"))
-    tp = vdsim.TireParams.from_yaml(str(REPO / "configs/tires/default_pacejka.yaml"))
+    from _catalog_load import load_vehicle_tire
+    vp, tp = load_vehicle_tire()
     vp.mass *= 1.0 + 0.05 * rng.standard_normal()                 # +-5% mass
     tp.cornering_stiffness *= 1.0 + 0.10 * rng.standard_normal()  # +-10% Calpha
     tp.D_lat *= max(0.6, 1.0 + 0.06 * rng.standard_normal())      # lateral grip

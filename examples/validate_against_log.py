@@ -102,8 +102,8 @@ def metrics(sim, meas):
 
 def _make_reference_csv(path, mass_scale=1.0):
     """Generate a synthetic 'measured' log from a VDSim run (sine steer)."""
-    vp = vdsim.VehicleParams.from_yaml(str(REPO / "configs/vehicles/sedan.yaml"))
-    tp = vdsim.TireParams.from_yaml(str(REPO / "configs/tires/default_pacejka.yaml"))
+    from _catalog_load import load_vehicle_tire
+    vp, tp = load_vehicle_tire()
     vp.mass *= mass_scale
     dt, n = 0.005, 2400
     sess = vdsim.make_sim_session(vp, tp, "L2", nominal_dt=dt)
@@ -124,8 +124,8 @@ def _make_reference_csv(path, mass_scale=1.0):
 def main():
     if len(sys.argv) > 1:                       # validate a real log
         log = load_log(sys.argv[1])
-        vp = vdsim.VehicleParams.from_yaml(str(REPO / "configs/vehicles/sedan.yaml"))
-        tp = vdsim.TireParams.from_yaml(str(REPO / "configs/tires/default_pacejka.yaml"))
+        from _catalog_load import load_vehicle_tire
+        vp, tp = load_vehicle_tire()
         sim = replay(log, vp, tp)
         print(f"=== validation: {sys.argv[1]} ===")
         for s, rmse, nrmse, mx in metrics(sim, log):
@@ -138,8 +138,8 @@ def main():
     ref = out / "synthetic_measured.csv"
     _make_reference_csv(ref, mass_scale=1.0)
     log = load_log(ref)
-    vp = vdsim.VehicleParams.from_yaml(str(REPO / "configs/vehicles/sedan.yaml"))
-    tp = vdsim.TireParams.from_yaml(str(REPO / "configs/tires/default_pacejka.yaml"))
+    from _catalog_load import load_vehicle_tire
+    vp, tp = load_vehicle_tire()
     print("=== self-test (1): exact params -> expect ~0 ===")
     for s, rmse, nrmse, mx in metrics(replay(log, vp, tp), log):
         print(f"  {s:9s} NRMSE {nrmse:7.3f}%   max|e| {mx:.5f}")

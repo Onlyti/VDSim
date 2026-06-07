@@ -23,8 +23,9 @@ def main():
         sys.exit(1)
 
     # ---- Path 1: VDSim native L2 ----
-    vp = vdsim.VehicleParams.from_yaml(str(REPO / "configs/vehicles/sports.yaml"))
-    tp = vdsim.TireParams.from_yaml(str(REPO / "configs/tires/default_pacejka.yaml"))
+    sys.path.insert(0, str(REPO / "examples"))
+    from _catalog_load import load_vehicle_tire
+    vp, tp = load_vehicle_tire("sports")
     sp = vdsim.SolverParams()
     dyn = vdsim.create_seven_dof()
     dyn.initialize(vp, tp, sp)

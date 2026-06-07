@@ -4,7 +4,7 @@
 A dedicated web tool (separate from the PoC sim GUI) to author the four experiment
 artifacts as validated YAML configs that vdsim_lab / make_sim_session consume:
 
-    Vehicle   -> configs/vehicles/<name>.yaml      (VehicleParams)
+    Vehicle   -> catalog blueprint / resolved VehicleParams YAML
     Sensors   -> configs/sensors/<name>.yaml       (sensor suite: pose+type+noise)
     Map       -> configs/maps/<name>.yaml          (driving line + width + surface)
     Scenario  -> configs/experiments/<name>.yaml   (vehicle+map+maneuver+sensors+run)

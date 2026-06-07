@@ -65,8 +65,8 @@ forces, measured sensors, …) out. This is the SIL / HIL / co-sim boundary; the
 GUI and any external controller are just clients of it.
 
 ```bash
-build/bin/vdsim_realtime configs/vehicles/sedan.yaml configs/tires/default_pacejka.yaml \
-    --level=L3 --cmd-port=7001 --state-port=7002 --rate=200
+build/bin/vdsim_realtime --scene=configs/scenes/two_vehicle_race.yaml \
+    --cmd-port=7001 --state-port=7002 --rate=200
 ```
 The wire format is the canonical VDS1 binary protocol (`cosim/cosim_protocol.hpp`;
 contract in [docs/vdsim_bridge_interface_requirements.md](docs/vdsim_bridge_interface_requirements.md)).

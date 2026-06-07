@@ -58,8 +58,8 @@ def main():
     print(f"  xy bbox [{bb[0]:.0f},{bb[2]:.0f}]x[{bb[1]:.0f},{bb[3]:.0f}] m, "
           f"elevation [{bb[4]:.1f},{bb[5]:.1f}] m")
 
-    vp = vdsim.VehicleParams.from_yaml(str(REPO / "configs/vehicles/sedan.yaml"))
-    tp = vdsim.TireParams.from_yaml(str(REPO / "configs/tires/default_pacejka.yaml"))
+    from _catalog_load import load_vehicle_tire
+    vp, tp = load_vehicle_tire()
     sess = vdsim.make_sim_session_heightmap(vp, tp, "L2", H,
                                             x0=x0, y0=y0, dx=dx, dy=dy, mu=1.0,
                                             nominal_dt=0.005)

@@ -72,8 +72,8 @@ class KinematicPoseEKF:
 
 def run_estimation(est, level="L2", duration=25.0, dt=0.01,
                    gnss_std=0.1, gyro_std=0.005, accel_std=0.05):
-    vp = vdsim.VehicleParams.from_yaml(str(REPO / "configs/vehicles/sedan.yaml"))
-    tp = vdsim.TireParams.from_yaml(str(REPO / "configs/tires/default_pacejka.yaml"))
+    from _catalog_load import load_vehicle_tire
+    vp, tp = load_vehicle_tire()
     sp = vdsim.SensorParams()
     sp.enabled = True
     sp.gnss_pos.noise_std = gnss_std

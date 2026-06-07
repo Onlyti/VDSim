@@ -4,7 +4,21 @@ All notable changes to VDSim are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow
 [SemVer](https://semver.org/).
 
-## [Unreleased] — v0.2.3 polish
+## [Unreleased] — v0.3 parts catalog
+
+### Added
+- Parts catalog (`configs/catalog/`, scenes, maneuvers); `vdsim_realtime --scene=` only.
+- GUI catalog API (`/api/catalog`, `/api/scene`, simconfig v3).
+- `tools/import_part_pack.py` stub + `python/catalog/pack_import.py` (collision check, optional install).
+- ctest: `catalog_resolver`, `scene_materialize`, `catalog_api`, `import_part_pack`.
+
+### Changed
+- Legacy `configs/vehicles|tires|scenarios/` removed; examples/docs use catalog presets via `vdsim_lab`.
+
+### Tests
+- 196/196 ctest green.
+
+## [0.2.3] — polish
 
 ### Fixed
 - Full kinematics warning list in sidebar; setup API rejects invalid L3 suspension stems (400).

@@ -63,8 +63,8 @@ force feedback 은 `python tools/wheel_ffb_sdl.py --server <host> --udp-port 810
 SIL / HIL / co-sim 경계이고, GUI·외부 제어기는 전부 이것의 클라이언트입니다.
 
 ```bash
-build/bin/vdsim_realtime configs/vehicles/sedan.yaml configs/tires/default_pacejka.yaml \
-    --level=L3 --cmd-port=7001 --state-port=7002 --rate=200
+build/bin/vdsim_realtime --scene=configs/scenes/two_vehicle_race.yaml \
+    --cmd-port=7001 --state-port=7002 --rate=200
 ```
 wire 포맷 = canonical VDS1 바이너리 프로토콜 (`cosim/cosim_protocol.hpp`; 계약서는
 [docs/vdsim_bridge_interface_requirements.md](docs/vdsim_bridge_interface_requirements.md)).
