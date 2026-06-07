@@ -12,3 +12,4 @@ body:
   final_drive_ratio: 4.0
   lsd_preload: 0.0
   max_motor_torque: 150.0
+  engine_rotational_inertia: 0.08

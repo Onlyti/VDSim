@@ -15,7 +15,8 @@ L1–L3 동역학 + 실제 Pacejka 타이어 + 설계검증 가능한 hardpoint 
 > self-consistency 로 검증 (자세히는 [VALIDATION](docs/VALIDATION.md)); 양산용 아님.
 
 문서(이론·리포트): **https://onlyti.github.io/VDSim/** · 모든 실행 모드
-(API / batch / FMI): [docs/RUNNING.md](docs/RUNNING.md)
+(API / batch / FMI): [docs/RUNNING.md](docs/RUNNING.md) · catalog·물리 옵션:
+[docs/CATALOG_AND_PHYSICS.md](docs/CATALOG_AND_PHYSICS.md)
 
 ## 설치
 
@@ -33,7 +34,7 @@ python -c "import vdsim; print('ok')"
 ```bash
 cmake -B build -DVDSIM_BUILD_PYTHON=ON          # Linux 는 -G Ninja 추가
 cmake --build build --config Release            # Linux 는 -j
-ctest --test-dir build -C Release               # 191/191 ; 바이너리는 build/bin/
+ctest --test-dir build -C Release               # 201/201 ; 바이너리는 build/bin/
 ```
 
 Python 간단 실험:
@@ -54,6 +55,12 @@ python3 gui/server.py --port 8100        # Windows: python gui\server.py --port 
 3D 뷰(orbit / chase / cockpit), 도로·지형, per-wheel Fz / slip(κ, α) / 타이어 힘
 벡터, telemetry HUD. 키보드(↑↓ 가감속, ←→ 조향) 또는 게임패드-휠로 운전 —
 force feedback 은 `python tools/wheel_ffb_sdl.py --server <host> --udp-port 8101`.
+
+## 설정 — parts catalog & scene (v0.3)
+
+차량 = `configs/parts/` 조합 **blueprint**, 실행 = `fleet[]`가 있는 **scene**
+(`configs/scenes/`). 레이아웃·GUI API·drivetrain 관성·LuGre 타이어(opt-in)는
+[CATALOG_AND_PHYSICS](docs/CATALOG_AND_PHYSICS.md) 참고.
 
 ## 제어 — real-time UDP runtime
 

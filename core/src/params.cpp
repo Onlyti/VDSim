@@ -149,6 +149,7 @@ VehicleParams VehicleParams::from_yaml(const std::string& path) {
     pull(root, "lsd_ramp",    p.lsd_ramp);
     pull(root, "max_motor_torque", p.max_motor_torque);
     pull(root, "final_drive_ratio", p.final_drive_ratio);
+    pull(root, "engine_rotational_inertia", p.engine_rotational_inertia);
     pull(root, "max_brake_torque", p.max_brake_torque);
     pull(root, "brake_bias_front",  p.brake_bias_front);
     pull(root, "brake_ebd_enabled", p.brake_ebd_enabled);
@@ -213,6 +214,7 @@ void VehicleParams::to_yaml(const std::string& path) const {
     out << YAML::Key << "lsd_ramp"          << YAML::Value << lsd_ramp;
     out << YAML::Key << "max_motor_torque"  << YAML::Value << max_motor_torque;
     out << YAML::Key << "final_drive_ratio" << YAML::Value << final_drive_ratio;
+    out << YAML::Key << "engine_rotational_inertia" << YAML::Value << engine_rotational_inertia;
     out << YAML::Key << "max_brake_torque"  << YAML::Value << max_brake_torque;
     out << YAML::Key << "brake_bias_front"  << YAML::Value << brake_bias_front;
     out << YAML::Key << "brake_ebd_enabled" << YAML::Value << brake_ebd_enabled;
@@ -263,6 +265,13 @@ TireParams TireParams::from_yaml(const std::string& path) {
     pull(root, "relaxation_length_lat", p.relaxation_length_lat);
     pull(root, "relaxation_length_long", p.relaxation_length_long);
     pull(root, "tire_vertical_stiffness", p.tire_vertical_stiffness);
+    if (const auto n = root["lugre"]; n && n.IsMap()) {
+        pull(n, "enabled", p.lugre.enabled);
+        pull(n, "sigma0",  p.lugre.sigma0);
+        pull(n, "sigma1",  p.lugre.sigma1);
+        pull(n, "sigma2",  p.lugre.sigma2);
+        pull(n, "m_eff",   p.lugre.m_eff);
+    }
     return p;
 }
 
@@ -290,6 +299,13 @@ void TireParams::to_yaml(const std::string& path) const {
     out << YAML::Key << "relaxation_length_lat" << YAML::Value << relaxation_length_lat;
     out << YAML::Key << "relaxation_length_long" << YAML::Value << relaxation_length_long;
     out << YAML::Key << "tire_vertical_stiffness" << YAML::Value << tire_vertical_stiffness;
+    out << YAML::Key << "lugre" << YAML::Value << YAML::BeginMap;
+    out << YAML::Key << "enabled" << YAML::Value << lugre.enabled;
+    out << YAML::Key << "sigma0"  << YAML::Value << lugre.sigma0;
+    out << YAML::Key << "sigma1"  << YAML::Value << lugre.sigma1;
+    out << YAML::Key << "sigma2"  << YAML::Value << lugre.sigma2;
+    out << YAML::Key << "m_eff"   << YAML::Value << lugre.m_eff;
+    out << YAML::EndMap;
     out << YAML::EndMap;
     std::ofstream ofs(path);
     if (!ofs) throw std::runtime_error("Cannot open YAML file for write: " + path);

@@ -80,6 +80,8 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("lsd_ramp",             &vdsim::VehicleParams::lsd_ramp)
         .def_readwrite("max_motor_torque",     &vdsim::VehicleParams::max_motor_torque)
         .def_readwrite("final_drive_ratio",    &vdsim::VehicleParams::final_drive_ratio)
+        .def_readwrite("engine_rotational_inertia",
+                       &vdsim::VehicleParams::engine_rotational_inertia)
         .def_readwrite("max_brake_torque",     &vdsim::VehicleParams::max_brake_torque)
         .def_readwrite("brake_bias_front",     &vdsim::VehicleParams::brake_bias_front)
         .def_readwrite("brake_ebd_enabled",    &vdsim::VehicleParams::brake_ebd_enabled)
@@ -97,6 +99,14 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("anti_squat_rear",      &vdsim::VehicleParams::anti_squat_rear)
         .def_static("from_yaml", &vdsim::VehicleParams::from_yaml)
         .def("to_yaml",          &vdsim::VehicleParams::to_yaml);
+
+    py::class_<vdsim::LuGreTireParams>(m, "LuGreTireParams")
+        .def(py::init<>())
+        .def_readwrite("enabled", &vdsim::LuGreTireParams::enabled)
+        .def_readwrite("sigma0",  &vdsim::LuGreTireParams::sigma0)
+        .def_readwrite("sigma1",  &vdsim::LuGreTireParams::sigma1)
+        .def_readwrite("sigma2",  &vdsim::LuGreTireParams::sigma2)
+        .def_readwrite("m_eff",   &vdsim::LuGreTireParams::m_eff);
 
     // -------- TireParams --------
     py::class_<vdsim::TireParams>(m, "TireParams")
@@ -121,6 +131,7 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("relaxation_length_lat",  &vdsim::TireParams::relaxation_length_lat)
         .def_readwrite("relaxation_length_long", &vdsim::TireParams::relaxation_length_long)
         .def_readwrite("tire_vertical_stiffness", &vdsim::TireParams::tire_vertical_stiffness)
+        .def_readwrite("lugre", &vdsim::TireParams::lugre)
         .def_static("from_yaml", &vdsim::TireParams::from_yaml)
         .def("to_yaml",          &vdsim::TireParams::to_yaml);
 

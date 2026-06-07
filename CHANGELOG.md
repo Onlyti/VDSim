@@ -4,9 +4,17 @@ All notable changes to VDSim are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow
 [SemVer](https://semver.org/).
 
-## [Unreleased] — v0.3 parts catalog
+## [Unreleased] — v0.3 parts catalog + drivetrain inertia
 
 ### Added
+- User guide `docs/CATALOG_AND_PHYSICS.md` (catalog, scenes, GUI API, drivetrain,
+  LuGre); mkdocs nav + README links.
+- Drivetrain engine rotational inertia (`engine_rotational_inertia`) reflected to
+  wheels; open-diff carrier coupling (`drivetrain_inertia.hpp`).
+- LuGre dynamic tire (`TireParams.lugre`, MF96 steady-state envelope); opt-in.
+- ctest `EngineInertiaSlowsLowMuWheelSpinup`, `LuGreTire/*`, `TireYaml.LuGreRoundtrip`.
+
+### Added (v0.3)
 - Parts catalog (`configs/catalog/`, scenes, maneuvers); `vdsim_realtime --scene=` only.
 - GUI catalog API (`/api/catalog`, `/api/scene`, simconfig v3).
 - `tools/import_part_pack.py` stub + `python/catalog/pack_import.py` (collision check, optional install).
@@ -16,7 +24,7 @@ All notable changes to VDSim are documented here. Format follows
 - Legacy `configs/vehicles|tires|scenarios/` removed; examples/docs use catalog presets via `vdsim_lab`.
 
 ### Tests
-- 196/196 ctest green.
+- 201/201 ctest green.
 
 ## [0.2.3] — polish
 

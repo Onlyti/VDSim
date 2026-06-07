@@ -15,7 +15,8 @@ tools like CARLA. It is the chassis-accurate half that perception stacks lack.
 > self-consistency (see [VALIDATION](docs/VALIDATION.md)); not for production use.
 
 Docs (theory + reports): **https://onlyti.github.io/VDSim/** · all run modes
-(API / batch / FMI): [docs/RUNNING.md](docs/RUNNING.md)
+(API / batch / FMI): [docs/RUNNING.md](docs/RUNNING.md) · catalog & physics options:
+[docs/CATALOG_AND_PHYSICS.md](docs/CATALOG_AND_PHYSICS.md)
 
 ## Install
 
@@ -33,7 +34,7 @@ Full C++ tree (tests, real-time runtime, FMI, CARLA bridge):
 ```bash
 cmake -B build -DVDSIM_BUILD_PYTHON=ON          # add -G Ninja on Linux
 cmake --build build --config Release            # -j on Linux
-ctest --test-dir build -C Release               # 191/191 ; binaries in build/bin/
+ctest --test-dir build -C Release               # 201/201 ; binaries in build/bin/
 ```
 
 A quick experiment in Python:
@@ -55,6 +56,13 @@ renders it: 3D view (orbit / chase / cockpit), road & terrain, per-wheel Fz /
 slip (κ, α) / tire-force vectors, and a telemetry HUD. Drive with the keyboard
 (↑↓ throttle/brake, ←→ steer) or a gamepad-wheel — force feedback via
 `python tools/wheel_ffb_sdl.py --server <host> --udp-port 8101`.
+
+## Config — parts catalog & scenes (v0.3)
+
+Vehicles are **blueprints** over `configs/parts/` (chassis, tire, drivetrain, …).
+Runs are **scenes** (`configs/scenes/*.yaml`) with a `fleet[]` of blueprint + part
+overrides. See [CATALOG_AND_PHYSICS](docs/CATALOG_AND_PHYSICS.md) for layout,
+GUI API, drivetrain inertia, and opt-in LuGre tire.
 
 ## Control — real-time UDP runtime
 

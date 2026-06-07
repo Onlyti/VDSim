@@ -100,6 +100,13 @@ and inherited by L3 (delegates the planar solve to L2):
 - `kSpeedEps` slip-denominator floor tightened 0.5 -> 0.15 (lateral noise is now
   handled by the blend, not the floor, so the floor can be smaller for a sharper
   low-speed longitudinal force).
+## LuGre opt-in (2026-06)
+
+`TireParams.lugre.enabled: true` replaces the blend + brake-hold + lambda fades
+with a bristle-state LuGre model (MF96 as steady-state `g()`). Default catalog
+tires keep `enabled: false` so validation baselines are unchanged. See
+`V0.2_TIRE_LUGRE.md` and `docs/CATALOG_AND_PHYSICS.md`.
+
 - The lateral tire force is faded by `lambda` in the *dynamics* (not just the
   display): as `Vx->0` the slip angle is ill-conditioned, so the raw lateral force
   chatters; left unfaded it leaks into `ay` and makes the left/right load transfer

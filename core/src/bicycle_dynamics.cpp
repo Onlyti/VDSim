@@ -15,7 +15,9 @@
 // SAE Y-right convention.
 
 #include "vdsim/coordinate.hpp"
+#include "vdsim/drivetrain_inertia.hpp"
 #include "vdsim/interfaces.hpp"
+#include "vdsim/lugre_tire.hpp"
 
 #include <spdlog/spdlog.h>
 
@@ -104,6 +106,10 @@ public:
         };
         I_wheel_f_ = I_axle(WHEEL_FL);
         I_wheel_r_ = I_axle(WHEEL_RL);
+        double I_axle_f = 0.0, I_axle_r = 0.0;
+        axle_reflected_shares(vp, I_axle_f, I_axle_r);
+        I_spin_f_ = I_wheel_f_ + I_axle_f;
+        I_spin_r_ = I_wheel_r_ + I_axle_r;
     }
 
     void reset(const State& s) noexcept override {
@@ -111,6 +117,7 @@ public:
         ax_prev_ = 0.0;
         alpha_dyn_f_ = alpha_dyn_r_ = 0.0;
         alpha_geom_f_last_ = alpha_geom_r_last_ = 0.0;
+        lugre_z_long_f_ = lugre_z_lat_f_ = lugre_z_long_r_ = lugre_z_lat_r_ = 0.0;
         v_fx_wheel_last_ = v_rx_body_last_ = 0.0;
         // Clear diagnostics so accessors don't return stale values before step().
         tire_F_.fill(Vec3::Zero());
@@ -243,58 +250,66 @@ private:
         const double kappa_f = (R * of  - v_fx_wheel) / denom_f;
         const double kappa_r = (R * or_ - v_rx_body)  / denom_r;
 
-        // ---- Tire forces (Pacejka in wheel frame) ----
-        // Use transient α_dyn when relaxation length is enabled.
-        const double alpha_in_f = (tp_.relaxation_length_lat > 1e-6)
-                                  ? alpha_dyn_f_ : alpha_f;
-        const double alpha_in_r = (tp_.relaxation_length_lat > 1e-6)
-                                  ? alpha_dyn_r_ : alpha_r;
+        const bool lugre_on = tp_.lugre.enabled;
+        const double alpha_in_f = (lugre_on || tp_.relaxation_length_lat <= 1e-6)
+                                  ? alpha_f : alpha_dyn_f_;
+        const double alpha_in_r = (lugre_on || tp_.relaxation_length_lat <= 1e-6)
+                                  ? alpha_r : alpha_dyn_r_;
         ITireModel::Input in_f;
         in_f.Fz = Fz_f; in_f.kappa = kappa_f; in_f.alpha = alpha_in_f;
         in_f.mu_long = mu_long_f; in_f.mu_lat = mu_lat_f; in_f.Vx_wheel = v_fx_wheel;
-        const auto F_f = tire_->compute(in_f);
-
         ITireModel::Input in_r;
         in_r.Fz = Fz_r; in_r.kappa = kappa_r; in_r.alpha = alpha_in_r;
         in_r.mu_long = mu_long_r; in_r.mu_lat = mu_lat_r; in_r.Vx_wheel = v_rx_body;
-        const auto F_r = tire_->compute(in_r);
 
-        // Cache geometric α and wheel-frame Vx for the substep-end relaxation
-        // update (done in substep(), not inside derivatives()).
         alpha_geom_f_last_ = alpha_f;
         alpha_geom_r_last_ = alpha_r;
         v_fx_wheel_last_   = v_fx_wheel;
         v_rx_body_last_    = v_rx_body;
+        v_fy_wheel_last_   = v_fy_wheel;
+        v_ry_body_last_    = v_ry_body;
+        wheel_spin_f_last_ = of;
+        wheel_spin_r_last_ = or_;
 
-        // Low-speed handling (mirrors the 7-DOF model): below kStickBlend the
-        // lateral states (vy, r) are governed by the slip-free kinematic bicycle
-        // (blended in the derivatives below), so the slip-angle singularity at
-        // vx->0 cannot make the car oscillate or spin. lambda: 0 at rest -> 1
-        // above the blend speed, where the validated dynamics are unchanged.
         const double speed = std::hypot(vx, vy);
-        double lambda = std::clamp(speed / kStickBlend, 0.0, 1.0);
-        lambda = lambda * lambda * (3.0 - 2.0 * lambda);     // smoothstep (C1)
-        // Brake-hold creep damping: when on the brake and off the throttle, a
-        // purely viscous damper opposes each axle's longitudinal ground speed so
-        // the car holds on a grade (steady creep = gravity/damping, mm/s). Gated
-        // by (1-lambda); dissipative, so it cannot ring or fight drive torque.
-        const double hold_gate = (1.0 - lambda) *
-            std::clamp(cmd.brake - cmd.throttle, 0.0, 1.0);
+        double lambda = lugre_on ? 1.0 : std::clamp(speed / kStickBlend, 0.0, 1.0);
+        if (!lugre_on) lambda = lambda * lambda * (3.0 - 2.0 * lambda);
+
         const double muFz_f = std::min(mu_long_f, mu_lat_f) * std::max(0.0, Fz_f);
         const double muFz_r = std::min(mu_long_r, mu_lat_r) * std::max(0.0, Fz_r);
-        const double c_hold = 2.0 * kStickC;     // two wheels per axle
-        // Use the body-longitudinal speed (front v_fx_body = vx), not the steer-
-        // rotated wheel speed, so a steered front wheel can't flip the hold force.
-        double Fxh_f = -c_hold * v_fx_body * hold_gate;
-        double Fxh_r = -c_hold * v_rx_body * hold_gate;
-        if (std::abs(Fxh_f) > muFz_f) Fxh_f = std::copysign(muFz_f, Fxh_f);
-        if (std::abs(Fxh_r) > muFz_r) Fxh_r = std::copysign(muFz_r, Fxh_r);
-        // Per-axle force = kinetic Pacejka + hold damper, kept inside the friction
-        // circle. The lateral force is faded by lambda so as Vx->0 it dies (slip
-        // angle ill-conditioned); the low-speed lateral motion is carried by the
-        // kinematic relaxation on dvy/dr, and ay -> 0 keeps the load transfer clean.
-        double Fx_f_wheel = F_f.Fx + Fxh_f, Fy_f_wheel = lambda * F_f.Fy;
-        double Fx_r_axle  = F_r.Fx + Fxh_r, Fy_r_axle  = lambda * F_r.Fy;
+        const double v_slip_long_f = R * of - v_fx_wheel;
+        const double v_slip_lat_f  = v_fy_wheel;
+        const double v_slip_long_r = R * or_ - v_rx_body;
+        const double v_slip_lat_r  = v_ry_body;
+
+        ITireModel::Output F_f{}, F_r{};
+        double Fxh_f = 0.0, Fxh_r = 0.0;
+        double Fx_f_wheel = 0.0, Fy_f_wheel = 0.0;
+        double Fx_r_axle = 0.0, Fy_r_axle = 0.0;
+        double fx_kin_f = 0.0, fx_kin_r = 0.0;
+        if (lugre_on) {
+            const auto lf = lugre_wheel_forces(
+                *tire_, tp_, lugre_z_long_f_, lugre_z_lat_f_,
+                v_slip_long_f, v_slip_lat_f, in_f);
+            const auto lr = lugre_wheel_forces(
+                *tire_, tp_, lugre_z_long_r_, lugre_z_lat_r_,
+                v_slip_long_r, v_slip_lat_r, in_r);
+            Fx_f_wheel = lf.Fx; Fy_f_wheel = lf.Fy; F_f.Mz = lf.Mz; fx_kin_f = lf.fx_kin;
+            Fx_r_axle  = lr.Fx; Fy_r_axle  = lr.Fy; F_r.Mz = lr.Mz; fx_kin_r = lr.fx_kin;
+        } else {
+            F_f = tire_->compute(in_f);
+            F_r = tire_->compute(in_r);
+            const double hold_gate = (1.0 - lambda) *
+                std::clamp(cmd.brake - cmd.throttle, 0.0, 1.0);
+            const double c_hold = 2.0 * kStickC;
+            Fxh_f = -c_hold * v_fx_body * hold_gate;
+            Fxh_r = -c_hold * v_rx_body * hold_gate;
+            if (std::abs(Fxh_f) > muFz_f) Fxh_f = std::copysign(muFz_f, Fxh_f);
+            if (std::abs(Fxh_r) > muFz_r) Fxh_r = std::copysign(muFz_r, Fxh_r);
+            Fx_f_wheel = F_f.Fx + Fxh_f; Fy_f_wheel = lambda * F_f.Fy;
+            Fx_r_axle  = F_r.Fx + Fxh_r; Fy_r_axle  = lambda * F_r.Fy;
+            fx_kin_f = F_f.Fx; fx_kin_r = F_r.Fx;
+        }
         const double Fmag_f = std::hypot(Fx_f_wheel, Fy_f_wheel);
         if (Fmag_f > muFz_f && Fmag_f > 1e-9) { const double c = muFz_f/Fmag_f; Fx_f_wheel*=c; Fy_f_wheel*=c; }
         const double Fmag_r = std::hypot(Fx_r_axle, Fy_r_axle);
@@ -346,7 +361,8 @@ private:
         const double Fx_total = Fx_body_f + Fx_body_r - F_aero - F_rr + m * gx_b;
         const double Fy_total = Fy_body_f + Fy_body_r + m * gy_b;
         // Wheel-z and body-z are parallel (camber=0 assumed); Mz adds directly.
-        const double Mz_total = a * Fy_body_f - b * Fy_body_r + lambda * (F_f.Mz + F_r.Mz);
+        const double mz_scale = lugre_on ? 1.0 : lambda;
+        const double Mz_total = a * Fy_body_f - b * Fy_body_r + mz_scale * (F_f.Mz + F_r.Mz);
 
         Deriv d_out;
         d_out.dx_world = vx * std::cos(yaw) - vy * std::sin(yaw);
@@ -363,10 +379,15 @@ private:
         const double dr_dyn  = Mz_total / Izz;
         const double r_kin   = (L > 1e-6) ? vx * std::tan(d) / L : 0.0;
         const double vy_kin  = r_kin * b;
-        d_out.dvy      = dvy_dyn + (1.0 - lambda) * (vy_kin - vy) / kKinTau;
-        d_out.dr       = dr_dyn  + (1.0 - lambda) * (r_kin  - r ) / kKinTau;
-        d_out.domega_f = (Td_f + Tb_f - F_f.Fx * R) / I_wheel_f_;
-        d_out.domega_r = (Td_r + Tb_r - F_r.Fx * R) / I_wheel_r_;
+        if (lugre_on) {
+            d_out.dvy = dvy_dyn;
+            d_out.dr  = dr_dyn;
+        } else {
+            d_out.dvy = dvy_dyn + (1.0 - lambda) * (vy_kin - vy) / kKinTau;
+            d_out.dr  = dr_dyn  + (1.0 - lambda) * (r_kin  - r ) / kKinTau;
+        }
+        d_out.domega_f = (Td_f + Tb_f - fx_kin_f * R) / I_spin_f_;
+        d_out.domega_r = (Td_r + Tb_r - fx_kin_r * R) / I_spin_r_;
 
         // ---- Diagnostics ----
         // Reported force: fade the raw slip force by lambda and let the smooth
@@ -380,8 +401,14 @@ private:
             bx = fx * cd_ - fy * sd_; by = fx * sd_ + fy * cd_;
         };
         double dfxf, dfyf, dfxr, dfyr;
-        disp(F_f.Fx, Fxh_f, F_f.Fy, lambda, muFz_f, cd, sd, dfxf, dfyf);
-        disp(F_r.Fx, Fxh_r, F_r.Fy, lambda, muFz_r, 1.0, 0.0, dfxr, dfyr);
+        if (lugre_on) {
+            dfxf = Fx_f_wheel * cd - Fy_f_wheel * sd;
+            dfyf = Fx_f_wheel * sd + Fy_f_wheel * cd;
+            dfxr = Fx_r_axle; dfyr = Fy_r_axle;
+        } else {
+            disp(F_f.Fx, Fxh_f, F_f.Fy, lambda, muFz_f, cd, sd, dfxf, dfyf);
+            disp(F_r.Fx, Fxh_r, F_r.Fy, lambda, muFz_r, 1.0, 0.0, dfxr, dfyr);
+        }
         // Split axle force evenly across the two co-axial tires.
         tire_F_[WHEEL_FL] = tire_F_[WHEEL_FR] = Vec3(0.5 * dfxf, 0.5 * dfyf, 0.0);
         tire_F_[WHEEL_RL] = tire_F_[WHEEL_RR] = Vec3(0.5 * dfxr, 0.5 * dfyr, 0.0);
@@ -410,12 +437,45 @@ private:
         return s;
     }
 
+    void advance_lugre_states_(double h) {
+        if (!tp_.lugre.enabled) return;
+        const double sigma0 = std::max(1.0, tp_.lugre.sigma0);
+        const double Rloc = vp_.wheel_radius_nominal;
+        auto advance = [&](double& z_long, double& z_lat,
+                           double w_spin, double vx_w, double vy_w,
+                           const ITireModel::Input& in) {
+            const double v_slip_long = Rloc * w_spin - vx_w;
+            const double v_slip_lat  = vy_w;
+            const auto mf = tire_->compute(in);
+            z_long = lugre_advance_z(z_long, v_slip_long,
+                lugre_breakaway(mf, true), sigma0, h);
+            z_lat  = lugre_advance_z(z_lat, v_slip_lat,
+                lugre_breakaway(mf, false), sigma0, h);
+        };
+        ITireModel::Input in_f;
+        in_f.Fz = 2.0 * tire_Fz_[WHEEL_FL];
+        in_f.kappa = slip_ratio_[WHEEL_FL];
+        in_f.alpha = slip_angle_[WHEEL_FL];
+        in_f.mu_long = 1.0; in_f.mu_lat = 1.0;
+        in_f.Vx_wheel = v_fx_wheel_last_;
+        ITireModel::Input in_r = in_f;
+        in_r.Fz = 2.0 * tire_Fz_[WHEEL_RL];
+        in_r.kappa = slip_ratio_[WHEEL_RL];
+        in_r.alpha = slip_angle_[WHEEL_RL];
+        in_r.Vx_wheel = v_rx_body_last_;
+        advance(lugre_z_long_f_, lugre_z_lat_f_, wheel_spin_f_last_,
+                v_fx_wheel_last_, v_fy_wheel_last_, in_f);
+        advance(lugre_z_long_r_, lugre_z_lat_r_, wheel_spin_r_last_,
+                v_rx_body_last_, v_ry_body_last_, in_r);
+    }
+
     void substep(const CmdL4& cmd, const ContactArray& contacts, double h) {
         const State s0 = state_;
         if (sp_.integrator == SolverParams::Integrator::Euler) {
             const Deriv k = derivatives(s0, cmd, contacts);
             state_   = apply(s0, k, h);
             ax_prev_ = k.ax_body;
+            advance_lugre_states_(h);
             return;
         }
         // RK4
@@ -438,7 +498,7 @@ private:
         state_   = apply(s0, k, h);
         ax_prev_ = k.ax_body;
         // Transient slip-angle relaxation (per axle, between substeps).
-        if (tp_.relaxation_length_lat > 1e-6) {
+        if (!tp_.lugre.enabled && tp_.relaxation_length_lat > 1e-6) {
             const double sigma = tp_.relaxation_length_lat;
             const double vf = std::max(std::abs(v_fx_wheel_last_), kSpeedEps);
             const double vr = std::max(std::abs(v_rx_body_last_),  kSpeedEps);
@@ -449,6 +509,7 @@ private:
             alpha_dyn_r_ = alpha_geom_r_last_
                          + (alpha_dyn_r_ - alpha_geom_r_last_) * dr;
         }
+        advance_lugre_states_(h);
     }
 
     VehicleParams vp_;
@@ -457,6 +518,8 @@ private:
     std::unique_ptr<ITireModel> tire_;
     double I_wheel_f_ {1.0};
     double I_wheel_r_ {1.0};
+    double I_spin_f_  {1.0};
+    double I_spin_r_  {1.0};
 
     State state_;
     double ax_prev_ {0.0};
@@ -471,6 +534,12 @@ private:
     double alpha_geom_r_last_ {0.0};
     double v_fx_wheel_last_   {0.0};
     double v_rx_body_last_    {0.0};
+    double v_fy_wheel_last_   {0.0};
+    double v_ry_body_last_    {0.0};
+    double wheel_spin_f_last_  {0.0};
+    double wheel_spin_r_last_  {0.0};
+    double lugre_z_long_f_ {0.0}, lugre_z_lat_f_ {0.0};
+    double lugre_z_long_r_ {0.0}, lugre_z_lat_r_ {0.0};
 };
 
 }  // namespace

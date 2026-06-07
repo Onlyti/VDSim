@@ -16,7 +16,9 @@
 
 #include "vdsim/coordinate.hpp"
 #include "vdsim/default_subsystems.hpp"
+#include "vdsim/drivetrain_inertia.hpp"
 #include "vdsim/interfaces.hpp"
+#include "vdsim/lugre_tire.hpp"
 #include "vdsim/subsystems.hpp"
 
 #include <spdlog/spdlog.h>
@@ -112,6 +114,8 @@ public:
         ay_prev_ = 0.0;
         alpha_dyn_.fill(0.0);
         alpha_geom_last_.fill(0.0);
+        lugre_z_long_.fill(0.0);
+        lugre_z_lat_.fill(0.0);
         drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
         brake_      = make_default_brake(vp_, vp_.brake_deadtime_s);
         steering_   = make_default_steering(vp_, vp_.steer_deadtime_s);
@@ -347,11 +351,13 @@ private:
             0.0  + toe_ext_[WHEEL_RR],
         }};
 
+        const bool lugre_on = tp_.lugre.enabled;
         // Low-speed blend factor: 0 at rest (stick + kinematic govern) -> 1 above
-        // kStickBlend (validated dynamic model).
+        // kStickBlend (validated dynamic model). Skipped when LuGre is active.
         const double speed = std::hypot(vx, vy);
-        double lambda = std::clamp(speed / kStickBlend, 0.0, 1.0);
-        lambda = lambda * lambda * (3.0 - 2.0 * lambda);     // smoothstep (C1)
+        double lambda = lugre_on ? 1.0
+            : std::clamp(speed / kStickBlend, 0.0, 1.0);
+        if (!lugre_on) lambda = lambda * lambda * (3.0 - 2.0 * lambda);
         std::array<double, NUM_WHEELS> fx_kin {{0.0, 0.0, 0.0, 0.0}};
 
         for (int i = 0; i < NUM_WHEELS; ++i) {
@@ -382,60 +388,56 @@ private:
             // Use the transient α_dyn_ if relaxation length is enabled; the
             // host substep() advances α_dyn_ between substeps.  Within RK4 we
             // hold it frozen so all 4 stages see the same Pacejka linearization.
-            in.alpha = (tp_.relaxation_length_lat > 1e-6) ? alpha_dyn_[i] : a_slip;
+            in.alpha = (lugre_on || tp_.relaxation_length_lat <= 1e-6)
+                ? a_slip : alpha_dyn_[i];
             in.mu_long = mu_long_i; in.mu_lat = mu_lat_i; in.Vx_wheel = v_x_wheel;
             // Camber input: set by Ld3 (roll-driven) or by external caller via
             // set_camber_per_wheel().  Stand-alone Ld2 leaves it at zero.
             in.gamma = camber_ext_[i];
-            const auto out = tire_->compute(in);
             alpha_geom_last_[i] = a_slip;
             v_x_wheel_last_[i]  = v_x_wheel;
+            v_y_wheel_last_[i]  = v_y_wheel;
+            wheel_spin_last_[i] = s.wheel_spin[i];
 
             const double muFz = std::min(mu_long_i, mu_lat_i) * std::max(0.0, Fz[i]);
-            // Brake-hold standstill damping. A braked wheel does not fully lock at
-            // low speed (its dynamic force fades as Vx->0), so on a grade it keeps
-            // creeping. When the driver is on the brake and off the throttle we add
-            // a purely viscous damper on the wheel's longitudinal ground speed,
-            // -kStickC*v_x_wheel, which directly opposes the residual creep; the
-            // steady creep settles at gravity/damping (mm/s on an 8% grade). It is
-            // gated to the hold condition (brake>throttle) so it never fights drive
-            // torque, and by (1-lambda) so it vanishes above the blend speed and
-            // leaves the validated dynamics untouched. Being purely dissipative it
-            // cannot ring; lateral motion is governed by the kinematic blend.
-            const double hold_gate = (1.0 - lambda) *
-                std::clamp(cmd.brake - cmd.throttle, 0.0, 1.0);
-            // Use the body-longitudinal speed (not the steer-rotated wheel speed)
-            // so a steered front wheel's lateral velocity can't flip the hold force.
-            double Fx_hold = -kStickC * v_x_body * hold_gate;
-            if (std::abs(Fx_hold) > muFz) Fx_hold = std::copysign(muFz, Fx_hold);
-            double Fx_w = out.Fx + Fx_hold;
-            // Fade the lateral tire force by lambda: as Vx->0 the slip angle is
-            // ill-conditioned (the raw Fy chatters), and the low-speed lateral
-            // motion is governed by the kinematic relaxation below, not this force.
-            // Fading it in the *dynamics* (not just the display) keeps ay -> 0 at
-            // rest, so the lateral load transfer (Fz left/right) stays clean. At
-            // lambda=1 (above the blend speed) the validated force is unchanged.
-            double Fy_w = lambda * out.Fy;
+            const double v_slip_long = R * s.wheel_spin[i] - v_x_wheel;
+            const double v_slip_lat  = v_y_wheel;
+
+            double Fx_w = 0.0, Fy_w = 0.0;
+            double Fxd = 0.0, Fyd = 0.0;
+            if (lugre_on) {
+                const auto lugre = lugre_wheel_forces(
+                    *tire_, tp_, lugre_z_long_[i], lugre_z_lat_[i],
+                    v_slip_long, v_slip_lat, in);
+                Fx_w = lugre.Fx;
+                Fy_w = lugre.Fy;
+                mz_wheel[i] = lugre.Mz;
+                fx_kin[i] = lugre.fx_kin;
+                Fxd = Fx_w;
+                Fyd = Fy_w;
+            } else {
+                const auto out = tire_->compute(in);
+                const double hold_gate = (1.0 - lambda) *
+                    std::clamp(cmd.brake - cmd.throttle, 0.0, 1.0);
+                double Fx_hold = -kStickC * v_x_body * hold_gate;
+                if (std::abs(Fx_hold) > muFz) Fx_hold = std::copysign(muFz, Fx_hold);
+                Fx_w = out.Fx + Fx_hold;
+                Fy_w = lambda * out.Fy;
+                fx_kin[i] = out.Fx;
+                mz_wheel[i] = out.Mz * lambda;
+                Fxd = lambda * out.Fx + Fx_hold;
+                Fyd = Fy_w;
+            }
             const double Fmag = std::hypot(Fx_w, Fy_w);   // keep inside the friction circle
             if (Fmag > muFz && Fmag > 1e-9) { const double c = muFz / Fmag; Fx_w *= c; Fy_w *= c; }
             const double Fx_b = Fx_w * cd_i - Fy_w * sd_i;
             const double Fy_b = Fx_w * sd_i + Fy_w * cd_i;
             F_body[i] = Vec3(Fx_b, Fy_b, 0.0);
-            // Reported tire force: the lateral already carries the lambda fade
-            // above; additionally fade the raw longitudinal slip force for display
-            // and let the smooth brake-hold term carry low speed (slip ratio is
-            // ill-conditioned as Vx->0, so the per-wheel Fx chatters even though
-            // the net motion is smooth). Longitudinal fade is display-only — the
-            // equations of motion use the full Fx so the car still self-arrests.
-            double Fxd = lambda * out.Fx + Fx_hold;
-            double Fyd = Fy_w;
             const double Fdm = std::hypot(Fxd, Fyd);
             if (Fdm > muFz && Fdm > 1e-9) { const double c = muFz / Fdm; Fxd *= c; Fyd *= c; }
             tire_F_disp[i] = Vec3(Fxd * cd_i - Fyd * sd_i, Fxd * sd_i + Fyd * cd_i, 0.0);
-            fx_kin[i] = out.Fx;            // wheel-spin reaction = kinetic only
             kappa[i]  = k_slip;
             alpha[i]  = a_slip;
-            mz_wheel[i] = out.Mz * lambda;
         }
 
         const auto dt_out = drivetrain_->apply(ctx);
@@ -480,15 +482,36 @@ private:
         const double delta_f = 0.5 * (d_wheel[WHEEL_FL] + d_wheel[WHEEL_FR]);
         const double r_kin   = (L > 1e-6) ? vx * std::tan(delta_f) / L : 0.0;
         const double vy_kin  = r_kin * b;
-        d_out.dvy = dvy_dyn + (1.0 - lambda) * (vy_kin - vy) / kKinTau;
-        d_out.dr  = dr_dyn  + (1.0 - lambda) * (r_kin  - r ) / kKinTau;
+        if (lugre_on) {
+            d_out.dvy = dvy_dyn;
+            d_out.dr  = dr_dyn;
+        } else {
+            d_out.dvy = dvy_dyn + (1.0 - lambda) * (vy_kin - vy) / kKinTau;
+            d_out.dr  = dr_dyn  + (1.0 - lambda) * (r_kin  - r ) / kKinTau;
+        }
         d_out.ax_body  = Fx_total / m;
         d_out.ay_body  = Fy_total / m;
+        const bool open_diff = vp_.differential == VehicleParams::Differential::Open;
+        double I_axle_f = 0.0, I_axle_r = 0.0;
+        axle_reflected_shares(vp_, I_axle_f, I_axle_r);
         for (int i = 0; i < NUM_WHEELS; ++i) {
-            // Wheel spin reacts to the kinetic (sliding) tire force only; the
-            // standstill stick force is a static (held) reaction, not a spin-up
-            // torque — feeding it here would destabilise the locked wheel.
-            d_out.domega[i] = (Td[i] + Tb[i] - fx_kin[i] * R) / I_wheel_[i];
+            const double T_net = Td[i] + Tb[i] - fx_kin[i] * R;
+            const double I_eng = wheel_engine_inertia_share(vp_, i);
+            if (open_diff && I_eng > 0.0) {
+                d_out.domega[i] = T_net / I_wheel_[i];
+            } else {
+                d_out.domega[i] = T_net / (I_wheel_[i] + I_eng);
+            }
+        }
+        if (open_diff) {
+            if (I_axle_f > 0.0) {
+                couple_open_axle_spin(d_out.domega[WHEEL_FL], d_out.domega[WHEEL_FR],
+                                      I_wheel_[WHEEL_FL], I_wheel_[WHEEL_FR], I_axle_f);
+            }
+            if (I_axle_r > 0.0) {
+                couple_open_axle_spin(d_out.domega[WHEEL_RL], d_out.domega[WHEEL_RR],
+                                      I_wheel_[WHEEL_RL], I_wheel_[WHEEL_RR], I_axle_r);
+            }
         }
 
         // ---- Diagnostics ----
@@ -515,6 +538,28 @@ private:
         return s;
     }
 
+    void advance_lugre_states_(const ContactArray& contacts, double h) {
+        if (!tp_.lugre.enabled) return;
+        const double sigma0 = std::max(1.0, tp_.lugre.sigma0);
+        const double Rloc = vp_.wheel_radius_nominal;
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            const double v_slip_long = Rloc * wheel_spin_last_[i] - v_x_wheel_last_[i];
+            const double v_slip_lat  = v_y_wheel_last_[i];
+            ITireModel::Input in;
+            in.Fz = tire_Fz_[i];
+            in.kappa = slip_ratio_[i];
+            in.alpha = slip_angle_[i];
+            in.mu_long = contacts[i].mu_long;
+            in.mu_lat  = contacts[i].mu_lat;
+            in.Vx_wheel = v_x_wheel_last_[i];
+            const auto mf = tire_->compute(in);
+            lugre_z_long_[i] = lugre_advance_z(
+                lugre_z_long_[i], v_slip_long, lugre_breakaway(mf, true), sigma0, h);
+            lugre_z_lat_[i] = lugre_advance_z(
+                lugre_z_lat_[i], v_slip_lat, lugre_breakaway(mf, false), sigma0, h);
+        }
+    }
+
     void substep(const CmdL4& cmd, const ContactArray& contacts, double h) {
         const State s0 = state_;
         if (sp_.integrator == SolverParams::Integrator::Euler) {
@@ -522,6 +567,7 @@ private:
             state_   = apply(s0, k, h);
             ax_prev_ = k.ax_body;
             ay_prev_ = k.ay_body;
+            advance_lugre_states_(contacts, h);
             return;
         }
         const Deriv k1 = derivatives(s0,                       cmd, contacts);
@@ -546,7 +592,7 @@ private:
         ay_prev_ = k.ay_body;
         // Advance the per-wheel transient slip angle exponentially:
         //   α_dyn(t+h) = α_geom + (α_dyn(t) − α_geom) · exp(−|v|·h/σ)
-        if (tp_.relaxation_length_lat > 1e-6) {
+        if (!tp_.lugre.enabled && tp_.relaxation_length_lat > 1e-6) {
             const double sigma = tp_.relaxation_length_lat;
             for (int i = 0; i < NUM_WHEELS; ++i) {
                 const double v_safe = std::max(std::abs(v_x_wheel_last_[i]),
@@ -556,6 +602,7 @@ private:
                               + (alpha_dyn_[i] - alpha_geom_last_[i]) * decay;
             }
         }
+        advance_lugre_states_(contacts, h);
     }
 
     VehicleParams vp_;
@@ -583,6 +630,10 @@ private:
     std::array<double, NUM_WHEELS> alpha_dyn_       {{0.0, 0.0, 0.0, 0.0}};
     std::array<double, NUM_WHEELS> alpha_geom_last_ {{0.0, 0.0, 0.0, 0.0}};
     std::array<double, NUM_WHEELS> v_x_wheel_last_  {{0.0, 0.0, 0.0, 0.0}};
+    std::array<double, NUM_WHEELS> v_y_wheel_last_  {{0.0, 0.0, 0.0, 0.0}};
+    std::array<double, NUM_WHEELS> wheel_spin_last_ {{0.0, 0.0, 0.0, 0.0}};
+    std::array<double, NUM_WHEELS> lugre_z_long_   {{0.0, 0.0, 0.0, 0.0}};
+    std::array<double, NUM_WHEELS> lugre_z_lat_    {{0.0, 0.0, 0.0, 0.0}};
     // External per-wheel camber input (set by Ld3 or caller before step).
     std::array<double, NUM_WHEELS> camber_ext_      {{0.0, 0.0, 0.0, 0.0}};
     // External per-wheel toe input (additive to Ackerman steer angle).

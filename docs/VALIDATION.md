@@ -17,7 +17,8 @@ the last section.
 | ISO 7401 step-steer / 4138 understeer / 3888-2 DLC — run + measured | Tire thermal, wear, full transient beyond first-order relaxation |
 | L1↔L2↔L3 cross-model consistency where physics overlaps | Dependent axles (twist-beam / solid beam) — configs are stubs |
 | FMI round-trip Δ=0 (machine precision); ISO 8608 PSD RMS per class | L3 unsprung lateral-transfer term (small) |
-| Full suite: **191/191 ctest green** | — |
+| Full suite: **201/201 ctest green** | — |
+| Drivetrain engine inertia (open-diff carrier coupling) | ISO throttle transients may shift — re-baseline after `run_validation.py` |
 
 Note: ISO 3888-2 DLC@60 not meeting the 1.0 m gate is a default-preset
 vehicle/controller property, not a sim defect (see "Notes on specific results").
@@ -50,7 +51,12 @@ vehicle/controller property, not a sim defect (see "Notes on specific results").
 | 11 | FMI round-trip | native VDSim | max \|Δvx\| = 0 (machine precision) | 1e-9 | `python3 fmi_export/test_roundtrip.py` |
 | 12 | ISO 8608 roughness | PSD Gd(n)=Gd(n0)(n/n0)⁻² | RMS doubles/class: A 3.5, B 7.0, C 14.1, D 28 mm | 15% | `ctest -R Iso8608` |
 
-Full automated suite: `cd build && ctest` — 191 checks, 100% green (measured 2026-06-06).
+Full automated suite: `cd build && ctest` — 201 checks, 100% green (measured 2026-06-06).
+
+**Drivetrain inertia (2026-06-06):** `engine_rotational_inertia` slows wheel
+spin-up on low-μ wheels (fixes power-on-turn overspeed). ISO 7401/4138 numbers
+in the matrix below were measured *before* this change — re-run
+`apps/validation/run_validation.py` and update the table when re-baselining.
 
 ## Notes on specific results
 
@@ -82,22 +88,21 @@ Full automated suite: `cd build && ctest` — 191 checks, 100% green (measured 2
   quasi-static estimate); see theory ch05.
 - **Dependent axles** (twist-beam, solid beam) are not yet modeled (configs are
   stubs); only the four independent topologies are validated.
-- **Drivetrain rotational inertia is not modeled.** Driven-wheel spin-up is
-  resisted only by the wheel inertia (~1.3 kg·m²); the engine/transmission inertia
-  reflected through the final drive (final_drive²) is omitted, and the open
-  differential is an ideal equal-torque split with no carrier–engine coupling. As
-  a result a lightly loaded driven wheel (e.g. the inside rear in a hard power-on
-  turn) spins up several times faster than a real drivetrain would, so the
-  one-wheel-spin and the hook-up / yaw transient when the load returns are
-  exaggerated. A proper drivetrain module (engine inertia + coupled open/LSD diff)
-  is a v0.2 item — see `docs/design/V0.2_DRIVETRAIN.md`.
+- **Drivetrain (default off for legacy):** `engine_rotational_inertia` (default
+  `0.25` kg·m² at crank) is reflected to the wheels and open diffs are
+  carrier-coupled. Set `0` to recover pre–v0.3 wheel-only spin-up. ISO/accel
+  numbers in the matrix below predate this change — re-baseline when updating.
+  See `docs/design/V0.2_DRIVETRAIN.md`.
+- **Tire low-speed (default):** kinematic blend + brake-hold (`LOW_SPEED_HANDLING.md`).
+  Opt-in LuGre (`TireParams.lugre.enabled`) replaces that path; not used in the
+  default catalog tire preset.
 - **L3 grip Fz** couples ride/road dynamically but omits the unsprung lateral-
   transfer term (small); see ch06 §6.4.
 
 ## Reproducing the whole report
 
 ```sh
-cmake --build build -j && (cd build && ctest --output-on-failure)   # 185 checks
+cmake --build build -j && (cd build && ctest --output-on-failure)   # 201 checks
 python3 apps/validation/run_validation.py    # ISO 7401/4138/3888 -> REPORT.md
 python3 fmi_export/test_roundtrip.py          # FMU vs native
 ```

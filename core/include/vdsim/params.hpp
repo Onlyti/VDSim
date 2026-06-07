@@ -53,6 +53,9 @@ struct VehicleParams {
     double lsd_ramp              {0.20};    // [-] per (rad/s) bias growth
     double max_motor_torque      {300.0};                              // [Nm] peak motor (pre-gear)
     double final_drive_ratio     {5.0};                                // [-] motor->wheel torque mult
+    // Crankshaft + flywheel inertia at engine [kg m^2], reflected to wheels via
+    // final_drive_ratio^2. 0 disables (legacy wheel-only spin-up).
+    double engine_rotational_inertia {0.25};
     double max_brake_torque      {2000.0};                             // [Nm]
     double brake_bias_front      {0.5};                                // front share [0, 1]
     bool   brake_ebd_enabled     {false};                              // dynamic Fz-based bias
@@ -89,6 +92,14 @@ inline double axle_roll_stiffness(const VehicleParams& vp, int axle) {
     const double arb = axle ? vp.arb_stiffness_rear : vp.arb_stiffness_front;
     return k_spring + (arb > 0.0 ? arb : 0.0);
 }
+
+struct LuGreTireParams {
+    bool   enabled {false};
+    double sigma0  {2.0e5};    // bristle stiffness [N/m]
+    double sigma1  {0.0};      // micro-damping [N·s/m]; 0 -> critical from m_eff
+    double sigma2  {50.0};     // viscous [N·s/m]
+    double m_eff   {40.0};     // contact mass for critical sigma1 [kg]
+};
 
 struct TireParams {
     // Pacejka MF96 simple form:
@@ -135,6 +146,8 @@ struct TireParams {
 
     // Vertical tire stiffness (for L3 ride dynamics). Typical 150-300 kN/m.
     double tire_vertical_stiffness {220000.0};  // [N/m]
+
+    LuGreTireParams lugre;
 
     static TireParams from_yaml(const std::string& path);
     static TireParams from_tir(const std::string& path);   // AVL .tir (Phase 2)

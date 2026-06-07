@@ -1,53 +1,40 @@
 # VDSim 핸드오프
 
-작성: 2026-06-06. **v0.3 M5** docs sweep + import_part_pack stub 완료.
+작성: 2026-06-06. v0.3 catalog + drivetrain inertia + LuGre tire 완료.
 
-## 1. 목표
-v0.3 parts catalog + scene-based runtime. `docs/design/PARTS_CATALOG.md`.
+## 1. 문서 인덱스
 
-## 2. 현재 상태
-- **M1–M5** 완료.
-- **ctest 196/196** (`import_part_pack` 추가).
-- CLI: `vdsim_realtime --scene=` only.
+| Topic | User guide | Design spec |
+|-------|------------|-------------|
+| Catalog + scenes + CLI | [`CATALOG_AND_PHYSICS.md`](CATALOG_AND_PHYSICS.md) | [`design/PARTS_CATALOG.md`](design/PARTS_CATALOG.md) |
+| GUI catalog API | § GUI in above | `PARTS_CATALOG.md` §8 |
+| External packs | § External packs | `PARTS_CATALOG.md` §7 |
+| Drivetrain inertia | § Drivetrain | [`design/V0.2_DRIVETRAIN.md`](design/V0.2_DRIVETRAIN.md) |
+| LuGre tire | § LuGre | [`design/V0.2_TIRE_LUGRE.md`](design/V0.2_TIRE_LUGRE.md) |
+| Low-speed (default tire) | — | [`design/LOW_SPEED_HANDLING.md`](design/LOW_SPEED_HANDLING.md) |
+| Run modes | [`RUNNING.md`](RUNNING.md) | [`design/RUNTIME_ARCH.md`](design/RUNTIME_ARCH.md) |
+| Validation | [`VALIDATION.md`](VALIDATION.md) | — |
 
-## 3. v0.3 진행
-| Phase | 상태 | 내용 |
-|-------|------|------|
-| M1–M4 | 완료 | catalog, migrate, `--scene=`, GUI API |
-| **M5** | **완료** | docs sweep, `tools/import_part_pack.py` stub |
+## 2. 구현 상태 (요약)
 
-## 4. HTTP API (M4)
-| Endpoint | Role |
-|----------|------|
-| `GET /api/catalog` | manifest index; `?type=` `?q=` |
-| `GET /api/catalog/parts` | list parts |
-| `GET /api/catalog/parts/:id` | part envelope + body |
-| `GET /api/catalog/blueprints/:id` | blueprint doc |
-| `GET /api/scene/list` | saved scenes (`configs/scenes/`) |
-| `GET /api/scene/:name` | scene YAML as JSON |
-| `POST /api/scene` | import scene v3 |
-| `POST /api/scene/save` | save scene (alias `/api/scenario/save`) |
-| `GET /api/simconfig` | export scene **version 3** |
-| `POST /api/simconfig` | import scene v3 (**v2 rejected**) |
-| `GET/POST /api/runconfig` | materialized world (vehicles[] + gui) |
+### v0.3 catalog (M1–M5)
+- `configs/catalog/`, `parts/`, `blueprints/`, `scenes/`, `maneuvers/`
+- CLI: `vdsim_realtime --scene=` only
+- GUI: `/api/catalog`, `/api/scene`, simconfig v3
+- `tools/import_part_pack.py` stub
+- Legacy `configs/vehicles|tires|scenarios/` removed
 
-Legacy shims: `/api/parts/registry`, `/api/suspension/list`, `/api/scenario/list`.
+### Physics (post–v0.3)
+- **Drivetrain:** `engine_rotational_inertia` + open-diff carrier coupling
+- **Tire:** `TireParams.lugre` opt-in (default off)
 
-## 5. External packs (M5 stub)
-```bash
-python3 tools/import_part_pack.py /path/to/pack          # dry-run + collision check
-python3 tools/import_part_pack.py /path/to/pack --install
-```
-Install target: `configs/catalog/packages/<package_id>/`. Id collision with builtin = error.
+### Tests
+- **201/201** ctest green (`cd build && ctest`)
 
-## 6. 다음 (v0.3 이후)
-- Drivetrain inertia (`V0.2_DRIVETRAIN.md`)
-- LuGre tire (`V0.2_TIRE_LUGRE.md`)
-- v0.4 스턴트 (`V0.4_PLAN.md`)
+## 3. 다음
+- v0.4 스턴트 (`design/V0.4_PLAN.md`)
+- ISO re-baseline after drivetrain (`apps/validation/run_validation.py`)
 
-## 7. 주의
-- GUI 시각검증 = 유저. TUR confidential. ISO 리베이스 금지 until drivetrain.
-
-## 8. 경로
-- `tools/import_part_pack.py`, `python/catalog/pack_import.py`
-- `examples/_catalog_load.py` — catalog preset helper for examples
+## 4. 주의
+- TUR confidential. GUI 시각검증 = 유저.
+- Default subsystem behaviour unchanged until catalog parts set non-default physics.

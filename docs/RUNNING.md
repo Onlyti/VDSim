@@ -1,7 +1,9 @@
 # Running VDSim
 
-A run book for every way to drive the simulator. Setup is configuration-only
-(see [SIM_CONFIG_ARCH](design/SIM_CONFIG_ARCH.md)); this page is *how to execute*.
+A run book for every way to drive the simulator. Configuration layout (catalog,
+scenes, blueprints): [CATALOG_AND_PHYSICS](CATALOG_AND_PHYSICS.md). Legacy
+simconfig notes: [SIM_CONFIG_ARCH](design/SIM_CONFIG_ARCH.md). This page is
+*how to execute*.
 
 ## 0. Install
 

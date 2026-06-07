@@ -53,6 +53,8 @@ void expect_vehicle_equal(const vdsim::VehicleParams& a, const vdsim::VehiclePar
 
     EXPECT_EQ(a.drive_type, b.drive_type);
     EXPECT_NEAR(a.max_motor_torque, b.max_motor_torque, kTol);
+    EXPECT_NEAR(a.final_drive_ratio, b.final_drive_ratio, kTol);
+    EXPECT_NEAR(a.engine_rotational_inertia, b.engine_rotational_inertia, kTol);
     EXPECT_NEAR(a.max_brake_torque, b.max_brake_torque, kTol);
 
     EXPECT_NEAR(a.steering_ratio,        b.steering_ratio,        kTol);

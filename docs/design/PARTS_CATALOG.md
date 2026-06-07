@@ -84,12 +84,12 @@ Rules:
 | `type` | `schema` (initial) | Resolves to (runtime) |
 |--------|-------------------|------------------------|
 | `chassis` | `vehicle_params_v1` | `VehicleParams` mass/geom/aero/drive meta |
-| `tire` | `pacejka_mf96_v1` | `TireParams` |
+| `tire` | `pacejka_mf96_v1` | `TireParams` (+ optional `lugre:` block, `V0.2_TIRE_LUGRE.md`) |
 | `susp_kinematics` | `kinematics_l3_native_v1` | L3 `attach_*_kinematics` YAML path |
 | `susp_ride` | `spring_damper_v1` | per-corner k/c on `VehicleParams` (L2/L3) |
 | `brake` | `brake_subsystem_v1` | WS1 brake module config (v0.3 wires L3) |
 | `steering` | `steering_subsystem_v1` | ratio, deadtime |
-| `drivetrain` | `drivetrain_v1` | map + inertia (v0.3 `V0.2_DRIVETRAIN.md`) |
+| `drivetrain` | `drivetrain_v1` | `engine_rotational_inertia`, diff, ratios (`V0.2_DRIVETRAIN.md`) |
 | `actuator` | `actuator_v1` | `ActuatorParams` |
 | `sensor_suite` | `sensor_suite_v1` | `SensorParams` + mount list |
 

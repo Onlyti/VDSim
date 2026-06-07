@@ -2943,6 +2943,7 @@ function renderPlots(box, plots) {
 const MODAL_SUBSYS_NAMES = new Set([
   'max_brake_torque', 'brake_bias_front', 'brake_ebd_enabled', 'brake_deadtime_s',
   'drive_type', 'differential', 'lsd_preload', 'lsd_ramp', 'max_motor_torque',
+  'engine_rotational_inertia',
   'final_drive_ratio', 'drive_deadtime_s',
 ]);
 function chassisFilter(f) {
@@ -2955,7 +2956,7 @@ const MODAL_TABS = [
   { id: 'suspension', label: 'Suspension', help: 'Suspension', type: 'vehicle', filter: f => f.group === 'Suspension' },
   { id: 'brake', label: 'Brake', help: 'Drivetrain', type: 'vehicle', filter: f => ['max_brake_torque', 'brake_bias_front', 'brake_ebd_enabled', 'brake_deadtime_s'].includes(f.name) },
   { id: 'steering', label: 'Steering', help: 'Steering', type: 'vehicle', filter: f => f.group === 'Steering' },
-  { id: 'drivetrain', label: 'Drivetrain', help: 'Drivetrain', type: 'vehicle', filter: f => ['drive_type', 'differential', 'lsd_preload', 'lsd_ramp', 'max_motor_torque', 'final_drive_ratio', 'drive_deadtime_s'].includes(f.name) },
+  { id: 'drivetrain', label: 'Drivetrain', help: 'Drivetrain', type: 'vehicle', filter: f => ['drive_type', 'differential', 'lsd_preload', 'lsd_ramp', 'max_motor_torque', 'final_drive_ratio', 'engine_rotational_inertia', 'drive_deadtime_s'].includes(f.name) },
   { id: 'tire', label: 'Tire', help: 'Tire', type: 'tire' },
   { id: 'engine', label: 'Engine', help: 'Drivetrain', type: 'stub' },
   { id: 'actuator', label: 'Actuator', help: 'Actuator & feedback', type: 'actuator' },

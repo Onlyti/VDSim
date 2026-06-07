@@ -20,7 +20,8 @@ CHASSIS_KEYS = {
 }
 DRIVETRAIN_KEYS = {
     "drive_type", "differential", "lsd_preload", "lsd_ramp",
-    "max_motor_torque", "final_drive_ratio", "drive_deadtime_s",
+    "max_motor_torque", "final_drive_ratio", "engine_rotational_inertia",
+    "drive_deadtime_s",
 }
 BRAKE_KEYS = {"max_brake_torque", "brake_bias_front", "brake_ebd_enabled", "brake_deadtime_s"}
 STEERING_KEYS = {

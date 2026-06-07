@@ -342,6 +342,32 @@ TEST(SevenDOF, SteeringRackTorqueSignOpposesSteer) {
     EXPECT_TRUE(std::isfinite(trq));
 }
 
+TEST(SevenDOF, EngineInertiaSlowsLowMuWheelSpinup) {
+    auto spread = [](double I_engine) {
+        vdsim::VehicleParams vp;
+        vp.aero_drag_coeff = 0.0;
+        vp.engine_rotational_inertia = I_engine;
+        vp.differential = vdsim::VehicleParams::Differential::Open;
+        vdsim::TireParams tp;
+        vdsim::SolverParams sp;
+        auto dyn = vdsim::create_seven_dof();
+        dyn->initialize(vp, tp, sp);
+        dyn->reset(init_state(2.0, vp.wheel_radius_nominal));
+        vdsim::ContactArray c = flat_contacts(1.0);
+        c[vdsim::WHEEL_RL].mu_long = 0.2;
+        vdsim::CmdL4 cmd;
+        cmd.throttle = 1.0;
+        const vdsim::ControlInput u = cmd;
+        for (int i = 0; i < 400; ++i) dyn->step(u, c, 0.005);
+        const auto& s = dyn->state();
+        return s.wheel_spin[vdsim::WHEEL_RL] - s.wheel_spin[vdsim::WHEEL_RR];
+    };
+    const double with_inertia    = spread(0.25);
+    const double without_inertia = spread(0.0);
+    EXPECT_GT(with_inertia, 0.1);
+    EXPECT_LT(with_inertia, without_inertia);
+}
+
 TEST(SevenDOF, IndependentWheelSpinUnderSplitMu) {
     // Different mu on left vs right wheels => left spin diverges from right
     // under throttle.  This is the L1-vs-L2 differentiator.

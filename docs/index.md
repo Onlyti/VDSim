@@ -12,13 +12,13 @@ single C++17 + Python ABI.
 
 ## Status
 
-- **PoC W1-W12 progress**: ~ 95 %
-- **Tests**: 144 / 144 passing
-- **4 vehicles** (sedan / sports / FSK formula / race) × **8 scenarios**
-  (step_steer / DLC / throttle_brake / ice_patch / j_turn / skidpad /
-   brake_in_turn / ice_corner).
+- **v0.3**: parts catalog + scene runtime (`--scene=`), GUI catalog API.
+- **Physics**: drivetrain `engine_rotational_inertia` (default on); LuGre tire
+  opt-in (`lugre.enabled`, default off).
+- **Tests**: [201 / 201 ctest](VALIDATION.md) (2026-06-06).
+- **User guide**: [Catalog & physics options](CATALOG_AND_PHYSICS.md).
 - **10 CLI demo binaries**, **Python bindings**, **CARLA-ready raycast ABI**,
-  **3D Three.js viewer** (CSV replay + WebSocket realtime).
+  **Web GUI** (3D viewer + catalog/scene authoring).
 
 ## Two ladders
 

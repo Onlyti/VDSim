@@ -21,3 +21,8 @@ body:
   relaxation_length_long: 0.15
   cornering_stiffness: 80000.0
   rolling_resistance: 0.015
+  lugre:
+    enabled: false
+    sigma0: 200000.0
+    sigma2: 50.0
+    m_eff: 40.0

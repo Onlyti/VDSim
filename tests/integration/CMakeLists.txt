@@ -6,6 +6,7 @@ add_executable(vdsim_integration_tests
     test_seven_dof.cpp
     test_fourteen_dof.cpp
     test_control_dispatch.cpp
+    test_lugre_tire.cpp
 )
 
 target_link_libraries(vdsim_integration_tests PRIVATE
