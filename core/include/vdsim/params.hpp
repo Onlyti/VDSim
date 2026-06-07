@@ -94,10 +94,10 @@ inline double axle_roll_stiffness(const VehicleParams& vp, int axle) {
 }
 
 struct LuGreTireParams {
-    bool   enabled {false};
-    double sigma0  {2.0e5};    // bristle stiffness [N/m]
+    bool   enabled {true};
+    double sigma0  {3.0e5};    // bristle stiffness [N/m]
     double sigma1  {0.0};      // micro-damping [N·s/m]; 0 -> critical from m_eff
-    double sigma2  {50.0};     // viscous [N·s/m]
+    double sigma2  {120.0};    // viscous [N·s/m]
     double m_eff   {40.0};     // contact mass for critical sigma1 [kg]
 };
 

@@ -1,0 +1,16 @@
+id: scene.lugre_grade_demo
+version: 1
+label: LuGre grade-hold demo (8% grade, vx0=0)
+grade: 0.08
+rate: 200
+cmd_timeout: 0.1
+fleet:
+- id: 0
+  blueprint: vehicle.sedan_comfort
+  level: L2
+  parts:
+    tire: tire.lugre_on
+  x0: 0.0
+  y0: 0.0
+  yaw0: 0.0
+  vx0: 0.0

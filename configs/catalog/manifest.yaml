@@ -65,6 +65,10 @@ parts:
   path: parts/tire/low_mu.yaml
 - id: tire.sport_grip
   path: parts/tire/sport_grip.yaml
+- id: tire.lugre_on
+  path: parts/tire/lugre_on.yaml
+- id: tire.kinematic_fallback
+  path: parts/tire/kinematic_fallback.yaml
 blueprints:
 - id: vehicle.fsk_formula
   path: blueprints/fsk_formula.yaml

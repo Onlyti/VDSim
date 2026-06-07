@@ -294,8 +294,8 @@ private:
             const auto lr = lugre_wheel_forces(
                 *tire_, tp_, lugre_z_long_r_, lugre_z_lat_r_,
                 v_slip_long_r, v_slip_lat_r, in_r);
-            Fx_f_wheel = lf.Fx; Fy_f_wheel = lf.Fy; F_f.Mz = lf.Mz; fx_kin_f = lf.fx_kin;
-            Fx_r_axle  = lr.Fx; Fy_r_axle  = lr.Fy; F_r.Mz = lr.Mz; fx_kin_r = lr.fx_kin;
+            Fx_f_wheel = lf.Fx; Fy_f_wheel = lf.Fy; F_f.Mz = lf.Mz;
+            Fx_r_axle  = lr.Fx; Fy_r_axle  = lr.Fy; F_r.Mz = lr.Mz;
         } else {
             F_f = tire_->compute(in_f);
             F_r = tire_->compute(in_r);
@@ -311,9 +311,14 @@ private:
             fx_kin_f = F_f.Fx; fx_kin_r = F_r.Fx;
         }
         const double Fmag_f = std::hypot(Fx_f_wheel, Fy_f_wheel);
-        if (Fmag_f > muFz_f && Fmag_f > 1e-9) { const double c = muFz_f/Fmag_f; Fx_f_wheel*=c; Fy_f_wheel*=c; }
+        if (!(lugre_on && tp_.combined_slip_enabled) && Fmag_f > muFz_f && Fmag_f > 1e-9) {
+            const double c = muFz_f / Fmag_f; Fx_f_wheel *= c; Fy_f_wheel *= c;
+        }
         const double Fmag_r = std::hypot(Fx_r_axle, Fy_r_axle);
-        if (Fmag_r > muFz_r && Fmag_r > 1e-9) { const double c = muFz_r/Fmag_r; Fx_r_axle*=c; Fy_r_axle*=c; }
+        if (!(lugre_on && tp_.combined_slip_enabled) && Fmag_r > muFz_r && Fmag_r > 1e-9) {
+            const double c = muFz_r / Fmag_r; Fx_r_axle *= c; Fy_r_axle *= c;
+        }
+        if (lugre_on) { fx_kin_f = Fx_f_wheel; fx_kin_r = Fx_r_axle; }
         // Rotate wheel-frame front forces back into body frame; rear is body frame.
         const double Fx_body_f = Fx_f_wheel * cd - Fy_f_wheel * sd;
         const double Fy_body_f = Fx_f_wheel * sd + Fy_f_wheel * cd;
@@ -448,9 +453,9 @@ private:
             const double v_slip_lat  = vy_w;
             const auto mf = tire_->compute(in);
             z_long = lugre_advance_z(z_long, v_slip_long,
-                lugre_breakaway(mf, true), sigma0, h);
+                lugre_breakaway(mf, true, in.Fz, in.mu_long, in.mu_lat), sigma0, h);
             z_lat  = lugre_advance_z(z_lat, v_slip_lat,
-                lugre_breakaway(mf, false), sigma0, h);
+                lugre_breakaway(mf, false, in.Fz, in.mu_long, in.mu_lat, in.alpha), sigma0, h);
         };
         ITireModel::Input in_f;
         in_f.Fz = 2.0 * tire_Fz_[WHEEL_FL];
@@ -471,18 +476,23 @@ private:
 
     void substep(const CmdL4& cmd, const ContactArray& contacts, double h) {
         const State s0 = state_;
+        const bool lugre_on = tp_.lugre.enabled;
+        const double hz = 0.25 * h;
         if (sp_.integrator == SolverParams::Integrator::Euler) {
             const Deriv k = derivatives(s0, cmd, contacts);
             state_   = apply(s0, k, h);
             ax_prev_ = k.ax_body;
-            advance_lugre_states_(h);
+            if (lugre_on) advance_lugre_states_(h);
             return;
         }
-        // RK4
         const Deriv k1 = derivatives(s0,                       cmd, contacts);
+        if (lugre_on) advance_lugre_states_(hz);
         const Deriv k2 = derivatives(apply(s0, k1, 0.5 * h),  cmd, contacts);
+        if (lugre_on) advance_lugre_states_(hz);
         const Deriv k3 = derivatives(apply(s0, k2, 0.5 * h),  cmd, contacts);
+        if (lugre_on) advance_lugre_states_(hz);
         const Deriv k4 = derivatives(apply(s0, k3, h),        cmd, contacts);
+        if (lugre_on) advance_lugre_states_(hz);
 
         Deriv k;
         k.dx_world = (k1.dx_world + 2.0 * k2.dx_world + 2.0 * k3.dx_world + k4.dx_world) / 6.0;
@@ -509,7 +519,6 @@ private:
             alpha_dyn_r_ = alpha_geom_r_last_
                          + (alpha_dyn_r_ - alpha_geom_r_last_) * dr;
         }
-        advance_lugre_states_(h);
     }
 
     VehicleParams vp_;

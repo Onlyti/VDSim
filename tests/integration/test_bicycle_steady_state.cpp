@@ -77,6 +77,7 @@ protected:
         vp_ = vdsim::VehicleParams{};
         vp_.aero_drag_coeff = 0.0;     // remove drag so vx ~= constant
         tp_ = vdsim::TireParams{};
+        tp_.lugre.enabled = false;  // kinematic-fallback path for analytic steady-state
         sp_ = vdsim::SolverParams{};
 
         dyn_ = vdsim::create_bicycle();
@@ -191,6 +192,8 @@ TEST(Bicycle, RelaxationLengthDelaysLateralForce) {
 
     vdsim::TireParams tp_instant;  tp_instant.relaxation_length_lat = 0.0;
     vdsim::TireParams tp_lagged;   tp_lagged.relaxation_length_lat  = 0.6;
+    tp_instant.lugre.enabled = false;
+    tp_lagged.lugre.enabled  = false;
 
     const double vx_init = 15.0;
     const double dt      = 0.001;

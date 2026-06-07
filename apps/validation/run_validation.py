@@ -4,10 +4,14 @@ config and writes a markdown + figures report.
 
 Usage:
     python3 apps/validation/run_validation.py \\
-        --vehicle configs/vehicles/sports.yaml \\
-        --tire    configs/tires/default_pacejka.yaml \\
+        --vehicle configs/parts/chassis/sedan.yaml \\
+        --tire    configs/parts/tire/kinematic_fallback.yaml \\
         --level   L3 \\
-        --out     apps/validation/results/sports
+        --out     apps/validation/results/sedan
+
+Default tire is kinematic_fallback (legacy ISO baseline). Catalog default
+tire.default_pacejka uses LuGre; pass --tire configs/parts/tire/default_pacejka.yaml
+to re-baseline ISO under LuGre.
 """
 import argparse
 import sys
@@ -114,8 +118,8 @@ def plot_4138(r, out_png, vehicle_params):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--vehicle", default="configs/vehicles/sports.yaml")
-    ap.add_argument("--tire",    default="configs/tires/default_pacejka.yaml")
+    ap.add_argument("--vehicle", default="configs/parts/chassis/sedan.yaml")
+    ap.add_argument("--tire",    default="configs/parts/tire/kinematic_fallback.yaml")
     ap.add_argument("--level",   default="L2")
     ap.add_argument("--out",     default="apps/validation/results/run01")
     args = ap.parse_args()

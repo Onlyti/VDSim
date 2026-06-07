@@ -1,0 +1,341 @@
+# VDSim product roadmap
+
+**Last updated:** 2026-06-06 · **Tests:** 209/209 ctest green
+
+Living roadmap from early PoC through v0.3. Tracks what shipped in mainline vs what
+is planned. Detail specs link to `docs/design/*`; tire phases in
+[`design/TIRE_ROADMAP.md`](design/TIRE_ROADMAP.md).
+
+!!! note "How to read"
+    - [x] **Shipped** — in repo, default or opt-in, covered by ctest where applicable  
+    - [ ] **Planned** — scoped in design docs; not yet implemented  
+    - **Opt-in** — implemented but not default catalog (baseline frozen)
+
+**Velocity (recent):** v0.2 composable subsystems + GUI redesign → v0.3 parts
+catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week).
+
+---
+
+## At a glance
+
+| Area | Shipped (high level) | Next |
+|------|----------------------|------|
+| Dynamics L1–L3 | Full planar + 14-DOF ride | Ld4 kinematics, Ld5 stunt (v0.4) |
+| Tire | MF96 + LuGre **default**; kinematic fallback part | MF2002 catalog, belt transient |
+| Drivetrain | Engine inertia + open-diff coupling | Torque–RPM map, gearbox |
+| Brake / steer | Pluggable modules + deadtime | Booster/MDPS physics |
+| Catalog / runtime | `--scene=`, fleet, FMI | External part packs, VDS1 v4 |
+| GUI | 3-tab scene UI, catalog API, workshops | Tire `.tir` import UI |
+| Validation | ISO 7401/4138/3888, 209 ctest | Re-baseline post-drivetrain; stunt suite |
+
+```mermaid
+timeline
+    title Shipped milestones
+    section PoC
+        L1-L3 + MF96 + FMI : 2025
+        ISO maneuvers + driver L5-L8 : 2025
+    section v0.2
+        Subsystem modules + deadtime : 2026-06
+        GUI redesign + multi-vehicle : 2026-06
+        Workshops shell : 2026-06
+    section v0.3
+        Parts catalog M1-M5 : 2026-06
+        Drivetrain inertia : 2026-06
+        LuGre tire tuned : 2026-06
+    section Next
+        v0.4 stunt Ld5 : planned
+        Tire belt transient : planned
+```
+
+---
+
+## 1. Dynamics ladder
+
+| Item | Status | Notes |
+|------|--------|-------|
+| [x] Ld1 bicycle (5 state) | Shipped | `bicycle_dynamics.cpp` |
+| [x] Ld2 seven-DOF planar | Shipped | Per-wheel Pacejka, Ackermann |
+| [x] Ld3 fourteen-DOF (sprung + unsprung) | Shipped | Ride/heave/roll; L2 planar inner |
+| [x] L1↔L2↔L3 cross-model consistency | Shipped | `PlanarMotionMatchesL2`, grid sweeps |
+| [x] Low-speed kinematic blend (default tire) | Shipped | [`LOW_SPEED_HANDLING.md`](design/LOW_SPEED_HANDLING.md) |
+| [x] LuGre path skips blend | Shipped opt-in | Full dynamic EOM at all speeds |
+| [x] Ld4 hardpoint kinematics (attach) | Shipped | Native kin YAML; fleet parts wiring |
+| [ ] Ld4 full multibody (M1–M7) | Planned | Theory ch.13–14; dependent axle stubs |
+| [ ] Ld5 6-DOF 3D body + quaternion | Planned v0.4 | [`V0.4_PLAN.md`](design/V0.4_PLAN.md) WS-C |
+| [ ] 3D contact / airborne / ramp jump | Planned v0.4 | T23 port; `is_valid` wired |
+| [ ] V2V collision | Planned | [`V0.2_MULTIVEHICLE.md`](design/V0.2_MULTIVEHICLE.md) |
+
+---
+
+## 2. Tire
+
+**Today:** empirical Pacejka MF96 (default) + library MF2002 evaluator + opt-in LuGre brush.
+
+**Future layers:** [`design/TIRE_ROADMAP.md`](design/TIRE_ROADMAP.md) (belt transient, catalog MF, …).
+
+### 2.1 Shipped
+
+| Item | Status | Reference |
+|------|--------|-----------|
+| [x] Pacejka MF96 BCDE long/lat | Shipped | `pacejka_mf96.cpp` |
+| [x] Combined slip (friction ellipse) | Shipped | Ch.03 §3.5 |
+| [x] Aligning moment $M_z$ + trail falloff | Shipped | |
+| [x] Load sensitivity $\mu_{\mathrm{eff}}(F_z)$ | Shipped | |
+| [x] Lateral relaxation length → `alpha_dyn_` | Shipped | Off when LuGre on |
+| [x] Camber thrust (linear API) | Shipped | Ld4 forward |
+| [x] Full Magic Formula `.tir` evaluator | Shipped lib | `magic_formula_tire.cpp`; not default catalog |
+| [x] `python/tir_to_yaml.py` | Shipped | Workshop wire-up open |
+| [x] LuGre decoupled $z_{\mathrm{long}}, z_{\mathrm{lat}}$ | Shipped **default** | [`V0.2_TIRE_LUGRE.md`](design/V0.2_TIRE_LUGRE.md) |
+| [x] `tire.kinematic_fallback` (LuGre off) | Shipped | ISO / legacy baseline |
+| [x] MF96 as breakaway $g(\cdot)$ | Shipped | |
+| [x] Asymmetric $g$ floors (no long $\mu F_z$; α-gated lat) | Shipped | 2026-06 tuning |
+| [x] ISO $F_y$ sign ($F_y = -F_{\mathrm{raw}}$) | Shipped | |
+| [x] Peak-axis combined ellipse (LuGre path) | Shipped | Skip triple circular clip |
+| [x] RK4: $z$ advanced 4× per substep ($h/4$) | Shipped | |
+| [x] `fx_kin` = clipped LuGre $F_x$ for wheel spin | Shipped | |
+| [x] Catalog preset `tire.lugre_on` | Shipped | |
+| [x] CLI `--lugre` / `--no-lugre` | Shipped | |
+| [x] GUI LuGre toggle + `fleet_overrides` persist | Shipped | |
+| [x] Scene `lugre_grade_demo.yaml` | Shipped | |
+| [x] `LuGreTire/*` integration tests | Shipped | 209 ctest suite |
+| [x] Theory ch.19 + user docs synced | Shipped | |
+
+### 2.2 Planned (tire)
+
+| Phase | Item | Status |
+|-------|------|--------|
+| T1 | `.tir` / MF2002 as **catalog** tire backend | [ ] |
+| T1 | GUI tire import + public sample `.tir` | [ ] |
+| T1 | LuGre $g()$ from MF2002 $F_{x0},F_{y0}$ (optional) | [ ] |
+| T2 | **Belt transient** (carcass states per wheel) | [ ] |
+| T2 | Filtered slip → `ITireModel` / LuGre | [ ] |
+| T3 | VLOW-class unified low speed (reduce blend reliance) | [ ] |
+| T4 | MF2002 $G_{x\alpha}, G_{y\kappa}$ on dynamic path | [ ] |
+| T5 | Turn-slip, inflation, temperature | [ ] |
+| T6 | External tire FMU co-sim; public benchmark report | [ ] |
+
+### 2.3 Belt transient (planned — summary)
+
+Steady MF maps slip → force **instantly**. Real tires lag because the **carcass/belt**
+deflects first. Belt transient adds states (e.g. $q_y$ or $\alpha_{\mathrm{eff}}$)
+with $\tau \approx \sigma_y / |V_x|$ before the constitutive law — complementary to
+LuGre (contact bristle, presliding). See [`TIRE_ROADMAP.md`](design/TIRE_ROADMAP.md) §3.
+
+---
+
+## 3. Drivetrain
+
+| Item | Status | Reference |
+|------|--------|-----------|
+| [x] Pluggable `IDrivetrain` module | Shipped | WS1 #159–162 |
+| [x] Open / locked / LSD split | Shipped | |
+| [x] `engine_rotational_inertia` reflected ($I \cdot N_f^2$) | Shipped | [`V0.2_DRIVETRAIN.md`](design/V0.2_DRIVETRAIN.md) |
+| [x] Open-diff carrier coupling (`drivetrain_inertia.hpp`) | Shipped | Fixes inner-wheel spin-up |
+| [x] Legacy mode (`I_engine = 0`) | Shipped | |
+| [x] Catalog `drivetrain_v1` part type | Shipped | |
+| [ ] Engine **torque–RPM** map (non-flat $T(\omega)$) | Planned | Open in `V0.2_PLAN.md` |
+| [ ] Multi-ratio gearbox | Planned | Decision pending |
+| [ ] Engine speed state $\omega_{\mathrm{eng}}$ in output | Planned | |
+| [ ] Workshop engine map editor (WS2-6) | Planned | Stub in GUI |
+| [ ] ISO re-baseline after drivetrain | Planned | `run_validation.py` |
+
+---
+
+## 4. Brake & steering
+
+| Item | Status | Reference |
+|------|--------|-----------|
+| [x] `IBrakeSystem` / `ISteeringSystem` interfaces | Shipped | [`V0.2_SUBSYSTEMS.md`](design/V0.2_SUBSYSTEMS.md) |
+| [x] Proportional brake + front/rear bias | Shipped | |
+| [x] EBD by $F_z$ | Shipped | |
+| [x] Ratio steering + rack travel | Shipped | |
+| [x] Actuator deadtime (throttle/brake/steer) | Shipped | WS2-0 |
+| [x] Steering rack torque in STATE | Shipped | |
+| [x] LuGre column friction (separate module) | Shipped | Theory ch.17 |
+| [ ] Booster → line pressure → pad $\mu$ | Planned | |
+| [ ] Brake thermal fade | Planned | |
+| [ ] ABS / ESC interface | Planned | |
+| [ ] MDPS assist, variable ratio | Planned | |
+| [ ] Column compliance model | Planned | |
+
+---
+
+## 5. Suspension & anti-roll
+
+| Item | Status | Reference |
+|------|--------|-----------|
+| [x] Linear spring/damper per corner (L3) | Shipped | |
+| [x] `IAntiRollBar` per-wheel force (#162) | Shipped | |
+| [x] Ld4 hardpoint toe/camber into dynamics | Shipped | Fleet `susp_kinematics` |
+| [x] Catalog `susp_ride`, `susp_kinematics` parts | Shipped | |
+| [x] Workshops: suspension tab | Shipped | WS2-1 |
+| [ ] Progressive / bump-stop spring curves | Planned | v0.4 droop/bump |
+| [ ] Unsprung vs sprung damper split (L3) | Planned | PoC backlog |
+| [ ] Dependent axle (twist-beam, solid beam) | Planned | Config stubs only |
+| [ ] Full Ld4 compliant multibody | Planned | M1–M7 |
+
+---
+
+## 6. Actuator, driver & control ladder
+
+| Item | Status | Reference |
+|------|--------|-----------|
+| [x] Lc4 pedal (throttle/brake/steer) primary | Shipped | CARLA-compatible |
+| [x] Lc5–Lc8 cascade (PI, PP, waypoint) | Shipped | Demos + theory ch.07–10 |
+| [x] Driver latency + noise | Shipped | |
+| [x] First-order actuator lag | Shipped | |
+| [ ] LQR / MPC (HPIPM) | Planned | PoC Phase 2 |
+| [ ] Per-channel actuator nonlinearities (beyond deadtime) | Planned | `references/actuator_nonlinearity.md` |
+
+---
+
+## 7. Catalog, scenes & runtime
+
+| Item | Status | Reference |
+|------|--------|-----------|
+| [x] `configs/catalog/` manifest + parts + blueprints | Shipped | v0.3 M1 |
+| [x] Legacy flat `vehicles/` / `tires/` removed | Shipped | M2 |
+| [x] `vdsim_realtime --scene=` only | Shipped | M3 |
+| [x] GUI `/api/catalog`, `/api/scene`, simconfig v3 | Shipped | M4 |
+| [x] `fleet[]` + part overrides materialization | Shipped | |
+| [x] Maneuvers `configs/maneuvers/` | Shipped | |
+| [x] Python `Vehicle.preset()` / `Tire.preset()` | Shipped | |
+| [x] `tools/import_part_pack.py` stub | Shipped | M5 |
+| [ ] C++ in-process catalog resolver | Planned | PARTS_CATALOG §12 |
+| [ ] External catalog zip import (full) | Planned | |
+| [ ] VDS1 protocol v4 (`vehicle_id` field) | Planned | Multi-vehicle I/O |
+| [ ] In-engine V2V collision | Planned | |
+
+---
+
+## 8. GUI & workshops
+
+| Item | Status | Reference |
+|------|--------|-----------|
+| [x] Full-screen `app.html` (3D + telemetry) | Shipped | v0.2 redesign |
+| [x] 3-tab setup (vehicle / env / simulator) | Shipped | |
+| [x] Multi-vehicle fleet tree + viz | Shipped | |
+| [x] Data-comms panel (UDP targets) | Shipped | 2026-06 week |
+| [x] Scene save/load (simconfig v3) | Shipped | |
+| [x] Workshops window (susp/brake/steer/drivetrain) | Shipped | WS2 |
+| [x] Live tire/vehicle edit → plant | Shipped | |
+| [x] Catalog part picker in GUI | Shipped | v0.3 M4 |
+| [ ] Tire workshop: `.tir` import button | Planned | WS2-5 |
+| [ ] Engine map workshop (curves) | Planned | WS2-6 |
+| [ ] Stunt preset panel (ramp / loop) | Planned v0.4 | `V0.4_PLAN.md` |
+
+---
+
+## 9. Co-simulation, FMI & integrations
+
+| Item | Status | Reference |
+|------|--------|-----------|
+| [x] VDS1 UDP CMD/STATE (`vdsim_realtime`) | Shipped | 200 Hz class |
+| [x] FMI 2.0 export + round-trip Δ=0 | Shipped | |
+| [x] Multi-vehicle single process | Shipped | |
+| [x] CARLA raycast ABI skeleton | Shipped | PoC ~45% |
+| [ ] CARLA UE5 full sensor bridge | Planned | PoC backlog |
+| [ ] External MF-Tyre / tire FMU co-sim | Planned | Tire T6 |
+| [ ] CarMaker ERG cross-validation | Planned | License + confidential data |
+
+---
+
+## 10. Validation & credibility
+
+| Item | Status | Reference |
+|------|--------|-----------|
+| [x] Analytic benchmarks (bicycle, coast, weight transfer) | Shipped | [`VALIDATION.md`](VALIDATION.md) |
+| [x] ISO 7401 step-steer runner | Shipped | |
+| [x] ISO 4138 understeer gradient | Shipped | |
+| [x] ISO 3888-2 DLC metric | Shipped | |
+| [x] ISO 8608 road PSD classes | Shipped | |
+| [x] **209** automated ctests | Shipped | 2026-06-06 |
+| [ ] ISO matrix re-baseline (post engine inertia) | Planned | |
+| [ ] Stunt validation suite (`tests/stunt/*`) | Planned v0.4 | |
+| [ ] Published commercial cross-val (open data) | Planned | Honest gap today |
+
+---
+
+## 11. v0.4 — stunt physics (planned release)
+
+Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block tire T1/T2.
+
+| Milestone | Item | Status |
+|-----------|------|--------|
+| M1 | T23 jump C++ + contact `is_valid` | [ ] |
+| M2 | RampGround + `jump_ramp.yaml` + GUI | [ ] |
+| M3 | CurvedGround + banked scenario | [ ] |
+| M4 | Ld5 core + jump on Ld5 | [ ] |
+| M5 | MeshGround loop + `vertical_loop.yaml` | [ ] |
+| M6 | Loop validation + theory `07_ld5_stunt` | [ ] |
+
+---
+
+## 12. Version history (checklist)
+
+### PoC → v0.1 (2025)
+
+- [x] L1–L3 dynamics + MF96 tire  
+- [x] Combined slip, $M_z$, diff, EBD, aero  
+- [x] FMI 2.0, Python bindings, ISO runners  
+- [x] Driver L5–L8, scenarios (step, DLC, skidpad, …)
+
+### v0.2 — composable vehicle (2026-06)
+
+- [x] WS1 subsystem modules (brake, steer, drivetrain, susp, ARB)  
+- [x] WS2 workshops shell + deadtime bridge  
+- [x] WS3 scene UI redesign + data-comms  
+- [x] WS4 part registry + fleet assembly  
+- [x] Multi-vehicle runtime (single process)
+
+### v0.3 — parts catalog (2026-06)
+
+- [x] M1 catalog resolver + manifest  
+- [x] M2 migrate configs, delete legacy trees  
+- [x] M3 `--scene=` CLI  
+- [x] M4 GUI catalog API + simconfig v3  
+- [x] M5 docs sweep + import stub  
+- [x] Drivetrain `engine_rotational_inertia`  
+- [x] LuGre tire default on + `kinematic_fallback` part + tests + docs  
+
+### v0.4+ (planned)
+
+- [ ] Stunt / Ld5 / 3D contact (this doc §11)  
+- [ ] Tire T1–T2 belt + MF2002 catalog (this doc §2.2)  
+- [ ] Drivetrain torque–RPM + gearbox  
+- [ ] Brake/steer physics upgrade  
+- [ ] CARLA full bridge · open benchmark  
+
+---
+
+## 13. External messaging (approved)
+
+**Shipped today**
+
+> Open-core L1–L3 vehicle dynamics with Pacejka MF tire, optional LuGre brush layer,
+> parts catalog, real-time UDP/FMI, and ISO-standard validation (209 ctests).
+
+**In active development**
+
+> Layered tire roadmap (MF2002 catalog, belt transient), v0.4 3D stunt dynamics,
+> drivetrain torque maps, and workshop importers — default baselines frozen per phase.
+
+**Do not claim (yet)**
+
+> MF-Tyre product parity, published real-vehicle cross-validation, or production
+> sign-off.
+
+---
+
+## 14. Related documents
+
+| Doc | Role |
+|-----|------|
+| [`design/V0.2_PLAN.md`](design/V0.2_PLAN.md) | v0.2 workstreams (historical + status) |
+| [`design/V0.4_PLAN.md`](design/V0.4_PLAN.md) | Stunt / Ld5 |
+| [`design/TIRE_ROADMAP.md`](design/TIRE_ROADMAP.md) | Tire phases T1–T6 detail |
+| [`design/V0.2_DRIVETRAIN.md`](design/V0.2_DRIVETRAIN.md) | Engine inertia |
+| [`design/V0.2_TIRE_LUGRE.md`](design/V0.2_TIRE_LUGRE.md) | LuGre shipped spec |
+| [`design/PARTS_CATALOG.md`](design/PARTS_CATALOG.md) | Catalog M1–M5 |
+| [`VALIDATION.md`](VALIDATION.md) | Evidence matrix |
+| [`HANDOFF.md`](HANDOFF.md) | Agent handoff / current sprint |

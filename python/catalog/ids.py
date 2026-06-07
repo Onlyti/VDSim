@@ -15,6 +15,8 @@ TIRE_STEM_TO_ID = {
     "default_pacejka": "tire.default_pacejka",
     "sport_grip": "tire.sport_grip",
     "low_mu": "tire.low_mu",
+    "lugre_on": "tire.lugre_on",
+    "kinematic_fallback": "tire.kinematic_fallback",
 }
 
 TIRE_ID_TO_STEM = {v: k for k, v in TIRE_STEM_TO_ID.items()}

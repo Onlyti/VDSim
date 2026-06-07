@@ -14,8 +14,9 @@ single C++17 + Python ABI.
 
 - **v0.3**: parts catalog + scene runtime (`--scene=`), GUI catalog API.
 - **Physics**: drivetrain `engine_rotational_inertia` (default on); LuGre tire
-  opt-in (`lugre.enabled`, default off).
-- **Tests**: [201 / 201 ctest](VALIDATION.md) (2026-06-06).
+  default on (`lugre.enabled`); kinematic fallback via `tire.kinematic_fallback` or `--no-lugre`.
+- **Tests**: [209 / 209 ctest](VALIDATION.md) (2026-06-06).
+- **Roadmap**: [Product roadmap](ROADMAP.md) — shipped vs planned by subsystem.
 - **User guide**: [Catalog & physics options](CATALOG_AND_PHYSICS.md).
 - **10 CLI demo binaries**, **Python bindings**, **CARLA-ready raycast ABI**,
   **Web GUI** (3D viewer + catalog/scene authoring).

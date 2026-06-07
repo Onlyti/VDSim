@@ -1,10 +1,11 @@
-id: tire.default_pacejka
+id: tire.kinematic_fallback
 type: tire
 version: 1
 schema: pacejka_mf96_v1
-label: default pacejka + LuGre
+label: pacejka + kinematic low-speed fallback
 tags:
 - tire
+- legacy
 body:
   B_long: 10.0
   C_long: 1.65
@@ -22,7 +23,7 @@ body:
   cornering_stiffness: 80000.0
   rolling_resistance: 0.015
   lugre:
-    enabled: true
+    enabled: false
     sigma0: 300000.0
     sigma2: 120.0
     m_eff: 40.0

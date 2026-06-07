@@ -54,6 +54,9 @@ CRC32, 76B CMD / 220B STATE).
 ```sh
 build/bin/vdsim_realtime --scene=configs/scenes/two_vehicle_race.yaml \
     --cmd-port=7001 --state-ip=127.0.0.1 --state-port=7002 --rate=200
+# LuGre tire (override YAML default): add --lugre or use scene lugre_grade_demo.yaml
+build/bin/vdsim_realtime --scene=configs/scenes/lugre_grade_demo.yaml
+python3 examples/lugre_demo.py
 ```
 Python participants (wheel/pedal clients, viewer bridge, HIL harnesses) encode
 CMD / decode STATE through `cosim/protocol.py` — one definition of the wire

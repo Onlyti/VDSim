@@ -1,10 +1,11 @@
-id: tire.default_pacejka
+id: tire.lugre_on
 type: tire
 version: 1
 schema: pacejka_mf96_v1
-label: default pacejka + LuGre
+label: pacejka + LuGre (alias of default)
 tags:
 - tire
+- lugre
 body:
   B_long: 10.0
   C_long: 1.65
@@ -20,7 +21,7 @@ body:
   relaxation_length_lat: 0.6
   relaxation_length_long: 0.15
   cornering_stiffness: 80000.0
-  rolling_resistance: 0.015
+  rolling_resistance: 0.0
   lugre:
     enabled: true
     sigma0: 300000.0

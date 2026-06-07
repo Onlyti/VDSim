@@ -64,8 +64,9 @@ YAML). 본문 의존 없이 skim 가능하도록 단독 박스로 분리한다. 
 
 `01 → 02 → 03 → 04 → 05 → 06`
 
-좌표계 / 부호 → 강체 Newton-Euler → 타이어 Pacejka → 모델 사다리 (Ld1
-bicycle → Ld2 7-DOF → Ld3 14-DOF). 차량 동역학 수업의 표준 chapter 순.
+좌표계 / 부호 → 강체 Newton-Euler → 타이어 Pacejka → (선택) **19 LuGre** →
+모델 사다리 (Ld1 bicycle → Ld2 7-DOF → Ld3 14-DOF). 차량 동역학 수업의 표준
+chapter 순.
 
 ### Path B — 자율주행 제어 (control sequence)
 
@@ -98,6 +99,7 @@ lumped 14-DOF 의 한계 → hardpoint kinematics → ISO 표준 maneuver / DOE
 | 01 | [Frames & Conventions](01_frames_and_conventions.md) | 짧음 | 선형대수 | ISO 8855 RH 좌표계와 alpha/kappa 부호 약속을 정확히 정의 |
 | 02 | [Rigid-Body Dynamics](02_rigid_body_dynamics.md) | 중 | 01 | Body-frame Newton-Euler EoM 을 inertial / body 의 차이와 함께 유도 |
 | 03 | [Tire — Pacejka MF96](03_tire_pacejka_mf96.md) | 길음 | 01, 02 | Magic Formula 의 의미와 friction-ellipse rescale 의 가정 |
+| 19 | [Tire — LuGre / brush-dynamic](19_lugre_dynamic_tire.md) | 중 | 01, 03, 11 | Bristle state $z$, MF96 as $g()$, presliding vs sliding; VDSim opt-in |
 | 04 | [Ld1 — Bicycle (5 DOF)](04_ld1_bicycle.md) | 중 | 02, 03 | Single-track 가정 하의 5 DOF EoM 과 understeer gradient 의 해석해 |
 | 05 | [Ld2 — Seven-DOF](05_ld2_seven_dof.md) | 중 | 04 | Per-tire + lateral weight transfer + Ackerman + differential 분기 |
 | 06 | [Ld3 — Fourteen-DOF](06_ld3_fourteen_dof.md) | 길음 | 02, 04 | Sprung 3 + unsprung 4 의 lumped vertical 동역학 |

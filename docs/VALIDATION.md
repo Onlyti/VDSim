@@ -17,7 +17,7 @@ the last section.
 | ISO 7401 step-steer / 4138 understeer / 3888-2 DLC — run + measured | Tire thermal, wear, full transient beyond first-order relaxation |
 | L1↔L2↔L3 cross-model consistency where physics overlaps | Dependent axles (twist-beam / solid beam) — configs are stubs |
 | FMI round-trip Δ=0 (machine precision); ISO 8608 PSD RMS per class | L3 unsprung lateral-transfer term (small) |
-| Full suite: **201/201 ctest green** | — |
+| Full suite: **210/210 ctest green** | — |
 | Drivetrain engine inertia (open-diff carrier coupling) | ISO throttle transients may shift — re-baseline after `run_validation.py` |
 
 Note: ISO 3888-2 DLC@60 not meeting the 1.0 m gate is a default-preset
@@ -45,13 +45,31 @@ vehicle/controller property, not a sim defect (see "Notes on specific results").
 | 5 | Lateral weight transfer | m·a_y·h/T direction+sign | outer wheels gain | — | `ctest -R WeightTransfer` |
 | 6 | L3 ↔ L2 planar | identical grip at steady state | divergence ~3e-6 | 1e-3 | `ctest -R PlanarMotionMatchesL2` |
 | 7 | L3 attitude on slope | follows surface plane | 6° bank→5.98° roll | — | see ch06 §6.4 |
-| 8 | ISO 7401 step-steer | transient shape | yaw SS 30.1°/s, peak 36.4 (20.8% OS), t_settle 2.4 s, a_y 0.81 g | — | `python3 apps/validation/run_validation.py` |
+| 8 | ISO 7401 step-steer | transient shape | see **LuGre baseline** below (sedan L2, 6°) | — | `python3 apps/validation/run_validation.py` |
 | 9 | ISO 4138 understeer | sign of K | K = +9.44 mrad/g (understeer), linear ≤5.66 m/s² | — | same runner |
 | 10 | ISO 3888-2 DLC | excursion/speed-loss metric | 1.69 m / 1.34 km/h (sedan: does not meet 1.0 m) | — | same runner |
 | 11 | FMI round-trip | native VDSim | max \|Δvx\| = 0 (machine precision) | 1e-9 | `python3 fmi_export/test_roundtrip.py` |
 | 12 | ISO 8608 roughness | PSD Gd(n)=Gd(n0)(n/n0)⁻² | RMS doubles/class: A 3.5, B 7.0, C 14.1, D 28 mm | 15% | `ctest -R Iso8608` |
 
-Full automated suite: `cd build && ctest` — 201 checks, 100% green (measured 2026-06-06).
+Full automated suite: `cd build && ctest` — 210 checks, 100% green (measured 2026-06-05).
+
+**LuGre baseline (2026-06, sedan L2, `default_pacejka` tire):**
+
+```bash
+python3 apps/validation/run_validation.py \
+  --vehicle configs/parts/chassis/sedan.yaml \
+  --tire configs/parts/tire/default_pacejka.yaml \
+  --level L2 --out apps/validation/results/lugre_sedan_l2
+```
+
+| Maneuver | Key metrics |
+|----------|-------------|
+| ISO 7401 (6°, 80 km/h) | ψ̇_ss 17.5°/s, U 1.003 (+0.3% OS), a_y_ss 6.15 m/s² (0.63 g) |
+| ISO 4138 | K +0.071 mrad/g (neutral), linear a_y to 4 m/s² |
+| ISO 3888-2 DLC@60 | excursion 1.11 m (fail 1.0 m gate), speed loss −1.0 km/h |
+
+Legacy kinematic tire numbers (sports, pre-catalog): yaw SS 30.1°/s in matrix row #8
+above — use `tire.kinematic_fallback` to reproduce.
 
 **Drivetrain inertia (2026-06-06):** `engine_rotational_inertia` slows wheel
 spin-up on low-μ wheels (fixes power-on-turn overspeed). ISO 7401/4138 numbers
@@ -93,9 +111,10 @@ in the matrix below were measured *before* this change — re-run
   carrier-coupled. Set `0` to recover pre–v0.3 wheel-only spin-up. ISO/accel
   numbers in the matrix below predate this change — re-baseline when updating.
   See `docs/design/V0.2_DRIVETRAIN.md`.
-- **Tire low-speed (default):** kinematic blend + brake-hold (`LOW_SPEED_HANDLING.md`).
-  Opt-in LuGre (`TireParams.lugre.enabled`) replaces that path; not used in the
-  default catalog tire preset.
+- **Tire default:** LuGre brush (`lugre.enabled: true` on `tire.default_pacejka`).
+  **ISO runner default** uses `tire.kinematic_fallback` to preserve the published
+  matrix; pass `--tire configs/parts/tire/default_pacejka.yaml` to validate under LuGre.
+  Kinematic blend path: `LOW_SPEED_HANDLING.md`.
 - **L3 grip Fz** couples ride/road dynamically but omits the unsprung lateral-
   transfer term (small); see ch06 §6.4.
 

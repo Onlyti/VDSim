@@ -190,6 +190,11 @@ z_{k+1} = (z + h*w) / (1 + h*sigma0*|w|/g(w))
 - $\dot z = (z_{k+1}-z)/h$ 로 $T_f$ 계산. (참고: ch15 ref #2 Canudas-de-Wit LuGre,
   #1 Beal&Brennan 의 실차 steering friction ID.)
 
+**Tire LuGre (different module):** Chapter **19** ([brush-dynamic tire](19_lugre_dynamic_tire.md))
+uses the same semi-implicit $z$ update but slip velocity $v_r$ [m/s], stiffness
+$\sigma_0$ [N/m], and MF96 as $g(\cdot)$ [N]. Do not reuse steering `lugre` YAML
+fields for tire `lugre`.
+
 ---
 
 ## 17.7 Brake thermal fade — mu(T)

@@ -135,6 +135,12 @@ class Tire:
     def from_yaml(cls, path):
         return cls(vdsim.TireParams.from_yaml(str(path)))
 
+    def lugre(self, enabled=True, **kw):
+        self.tp.lugre.enabled = bool(enabled)
+        for k, v in kw.items():
+            setattr(self.tp.lugre, k, v)
+        return self
+
 
 # --------------------------------------------------------------------------- #
 # Sensors

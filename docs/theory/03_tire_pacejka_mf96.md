@@ -333,6 +333,11 @@ Relaxation 의 state (`α_dyn`) 는 tire model 이 아니라 host dynamics 에 �
 `α_dyn` 을 업데이트 한 후 tire model 에 넘긴다. 이렇게 하면 tire model 의 thread
 safety 와 reentrancy 가 유지된다.
 
+**Alternative (VDSim opt-in):** Chapter **19** ([LuGre / brush-dynamic tire](19_lugre_dynamic_tire.md))
+replaces the algebraic slip map with bristle states $z$ and uses MF96 as the
+steady envelope $g(\cdot)$. It can subsume both quasi-static slip and low-speed
+stick without a kinematic blend when `lugre.enabled: true`.
+
 ---
 
 ## 3.10 검증 전략
@@ -368,7 +373,7 @@ safety 와 reentrancy 가 유지된다.
 | Aligning moment | `−t_p · Fy + Mz_camber` | MF2002 의 residual Mzr 누락 |
 | Camber | linear `Fy_camber`, linear `Mz_camber` | non-linear (peak μ 의 camber 의존) |
 | Load sensitivity | linear `μ_eff(Fz)` | non-linear load curve |
-| Transient | lateral 만 1차 relaxation | longitudinal relaxation 누락, carcass 동역학 |
+| Transient | lateral 만 1차 relaxation | longitudinal relaxation 누락; see **Ch.19** LuGre brush |
 | `γ` source | Ld4 hardpoint kinematics 가 forward 계산 | force → camber 의 compliance feedback 없음 |
 | Temperature | constant μ | tire warming, thermal evolution |
 | Fz peak shift | constant B/C/E, μ_eff 만 Fz 의존 | Fz-dependent B/C/E |

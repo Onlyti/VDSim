@@ -159,6 +159,34 @@ TEST(SevenDOF, AckermanInfluencesTurningRadiusLowSpeed) {
     EXPECT_GE(r_ack, r_par * 0.97);   // at least within 3 % of parallel
 }
 
+TEST(SevenDOF, AckermanInnerWheelLargerSlipBothTurnDirections) {
+    vdsim::VehicleParams vp;
+    vp.ackerman_percent = 100.0;
+    vp.aero_drag_coeff  = 0.0;
+    vdsim::TireParams tp;
+    tp.lugre.enabled = false;
+    vdsim::SolverParams sp;
+    const auto contacts = flat_contacts();
+
+    auto front_slip = [&](double steer) {
+        auto dyn = vdsim::create_seven_dof();
+        dyn->initialize(vp, tp, sp);
+        dyn->reset(init_state(12.0, vp.wheel_radius_nominal));
+        vdsim::CmdL4 cmd;
+        cmd.steer_angle_wheel = steer;
+        for (int i = 0; i < 1200; ++i) dyn->step(cmd, contacts, 0.005);
+        const auto a = dyn->wheel_slip_angle();
+        return std::pair{a[vdsim::WHEEL_FL], a[vdsim::WHEEL_FR]};
+    };
+
+    const auto [aFL_l, aFR_l] = front_slip(+0.06);
+    const auto [aFL_r, aFR_r] = front_slip(-0.06);
+    EXPECT_GT(std::abs(aFL_l), std::abs(aFR_l) + 1e-5);
+    EXPECT_GT(std::abs(aFR_r), std::abs(aFL_r) + 1e-5);
+    EXPECT_NEAR(aFL_l, -aFL_r, 2e-3);
+    EXPECT_NEAR(aFR_l, -aFR_r, 2e-3);
+}
+
 TEST(SevenDOF, AckermanZeroReproducesBaseline) {
     // Setting ackerman_percent = 0 must yield bit-equal results vs the
     // default VehicleParams (which also has ackerman_percent = 0).
@@ -403,6 +431,8 @@ TEST(SevenDOF, RelaxationLengthDelaysLateralForce) {
     // Two tire configs: identical except for relaxation length
     vdsim::TireParams tp_instant;  tp_instant.relaxation_length_lat = 0.0;
     vdsim::TireParams tp_lagged;   tp_lagged.relaxation_length_lat  = 0.6;
+    tp_instant.lugre.enabled = false;
+    tp_lagged.lugre.enabled  = false;
 
     const double vx_init = 15.0;
     const double dt      = 0.001;

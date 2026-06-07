@@ -100,12 +100,16 @@ and inherited by L3 (delegates the planar solve to L2):
 - `kSpeedEps` slip-denominator floor tightened 0.5 -> 0.15 (lateral noise is now
   handled by the blend, not the floor, so the floor can be smaller for a sharper
   low-speed longitudinal force).
-## LuGre opt-in (2026-06)
+## LuGre opt-in (shipped 2026-06)
 
-`TireParams.lugre.enabled: true` replaces the blend + brake-hold + lambda fades
-with a bristle-state LuGre model (MF96 as steady-state `g()`). Default catalog
-tires keep `enabled: false` so validation baselines are unchanged. See
-`V0.2_TIRE_LUGRE.md` and `docs/CATALOG_AND_PHYSICS.md`.
+**Default (2026-06):** catalog `tire.default_pacejka` has `lugre.enabled: true` — LuGre
+at all speeds; MF96 shapes `g()` (asymmetric floors). **Fallback:** set
+`lugre.enabled: false` (`tire.kinematic_fallback`, `--no-lugre`) to use the blend +
+brake-hold path below.
+
+Theory: [`docs/theory/19_lugre_dynamic_tire.md`](../theory/19_lugre_dynamic_tire.md).
+Design: [`V0.2_TIRE_LUGRE.md`](V0.2_TIRE_LUGRE.md), user guide
+[`docs/CATALOG_AND_PHYSICS.md`](../CATALOG_AND_PHYSICS.md).
 
 - The lateral tire force is faded by `lambda` in the *dynamics* (not just the
   display): as `Vx->0` the slip angle is ill-conditioned, so the raw lateral force
@@ -126,9 +130,10 @@ Measured (sedan preset, mu=1.0): braked grade hold creep ~1-2 cm/s on 8%,
 no-brake car still rolls down a grade (no phantom hold); ISO 7401/4138/3888-2 and
 all 190 ctest checks unchanged (the blend is inactive above 3 m/s).
 
-Open (v0.2): a true zero-creep static hold (handbrake / locked-wheel static
-friction) would need the brush/LuGre stick or a brake static-friction model; the
-current damper leaves a small intentional creep proportional to grade.
+With **LuGre off** (default): a true zero-creep static hold still needs brush
+stick or brake static friction; the viscous damper leaves small grade-proportional
+creep. With **LuGre on**: presliding `z` + gated `g_y` give slope hold without
+the blend path — enable via `tire.lugre_on` or GUI toggle (see Ch. 19).
 
 ## Sources
 - Kong, Pfeiffer, Schildbach, Borrelli, "Kinematic and dynamic vehicle models for

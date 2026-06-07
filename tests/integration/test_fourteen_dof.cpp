@@ -280,6 +280,7 @@ TEST(FourteenDOF, AttachedKinematicsOverridesCamberPerRoll) {
         vdsim::VehicleParams vp; vp.aero_drag_coeff = 0.0;
         vp.camber_per_roll = 0.0;     // disable legacy fallback
         vdsim::TireParams    tp; tp.camber_stiffness = 2.0;
+        tp.lugre.enabled = false;
         vdsim::SolverParams  sp;
 
         auto dyn = vdsim::create_fourteen_dof();

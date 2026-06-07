@@ -14,9 +14,42 @@ inline double lugre_sigma1(const LuGreTireParams& p) {
     return 2.0 * std::sqrt(std::max(1.0, p.sigma0) * m);
 }
 
-inline double lugre_breakaway(const ITireModel::Output& mf, bool longitudinal) {
-    const double g = longitudinal ? std::abs(mf.Fx) : std::abs(mf.Fy);
-    return std::max(g, 1.0);
+inline double lugre_mu_eff(const TireParams& tp, double Fz) {
+    const double Fz_n = std::max(1.0, tp.Fz_nominal);
+    const double dfz  = std::max(0.0, Fz) / Fz_n - 1.0;
+    return std::max(0.3 * tp.mu_nominal,
+                    tp.mu_nominal * (1.0 - tp.load_sensitivity * dfz));
+}
+
+inline double lugre_breakaway(const ITireModel::Output& mf, bool longitudinal,
+                              double Fz, double mu_long, double mu_lat,
+                              double alpha = 0.0) {
+    const double g_mf = longitudinal ? std::abs(mf.Fx) : std::abs(mf.Fy);
+    if (longitudinal)
+        return std::max(g_mf, 1.0);
+    // Presliding mu*Fz floor only near alpha->0; at cornering MF |Fy| governs g.
+    constexpr double kPreslideAlpha = 0.03;
+    const double w = std::exp(-(alpha / kPreslideAlpha) * (alpha / kPreslideAlpha));
+    const double g_mu = w * std::max(0.0, mu_lat) * std::max(0.0, Fz);
+    return std::max({g_mf, g_mu, 1.0});
+}
+
+inline void lugre_friction_ellipse(double& fx, double& fy,
+                                   const TireParams& tp,
+                                   const ITireModel::Input& in) {
+    const double Fz = std::max(0.0, in.Fz);
+    if (Fz < 1.0) return;
+    const double mu_e  = lugre_mu_eff(tp, Fz);
+    const double Fx_max = std::max(tp.D_long * Fz * in.mu_long * mu_e, 1.0);
+    const double Fy_max = std::max(tp.D_lat  * Fz * in.mu_lat  * mu_e, 1.0);
+    const double rx = fx / Fx_max;
+    const double ry = fy / Fy_max;
+    const double r2 = rx * rx + ry * ry;
+    if (r2 > 1.0) {
+        const double s = 1.0 / std::sqrt(r2);
+        fx *= s;
+        fy *= s;
+    }
 }
 
 inline double lugre_z_dot(double z, double v_r, double g, double sigma0) {
@@ -58,27 +91,18 @@ inline LuGreWheelOutput lugre_wheel_forces(const ITireModel& tire,
                                            const ITireModel::Input& in) {
     LuGreWheelOutput out{};
     const auto& p = tp.lugre;
-    const double sigma0 = std::max(1.0, p.sigma0);
 
     const auto mf = tire.compute(in);
-    const double g_long = lugre_breakaway(mf, true);
-    const double g_lat  = lugre_breakaway(mf, false);
+    const double g_long = lugre_breakaway(mf, true, in.Fz, in.mu_long, in.mu_lat, in.alpha);
+    const double g_lat  = lugre_breakaway(mf, false, in.Fz, in.mu_long, in.mu_lat, in.alpha);
 
     out.Fx = lugre_force(z_long, v_slip_long, g_long, p);
-    out.Fy = lugre_force(z_lat,  v_slip_lat,  g_lat,  p);
+    // ISO 8855 / Pacejka: Fy opposes alpha (Fy = -D*sin(...)); bristle v_r uses
+    // v_y_wheel so the restoring force needs a sign flip vs the raw LuGre output.
+    out.Fy = -lugre_force(z_lat, v_slip_lat, g_lat, p);
 
-    if (tp.combined_slip_enabled) {
-        const double Fx_max = std::max(std::abs(mf.Fx), 1.0);
-        const double Fy_max = std::max(std::abs(mf.Fy), 1.0);
-        const double rx = out.Fx / Fx_max;
-        const double ry = out.Fy / Fy_max;
-        const double ratio_sq = rx * rx + ry * ry;
-        if (ratio_sq > 1.0) {
-            const double scale = 1.0 / std::sqrt(ratio_sq);
-            out.Fx *= scale;
-            out.Fy *= scale;
-        }
-    }
+    if (tp.combined_slip_enabled)
+        lugre_friction_ellipse(out.Fx, out.Fy, tp, in);
 
     const double tp0  = tp.pneumatic_trail;
     const double a_fo = (tp.trail_falloff_alpha > 1e-6) ? tp.trail_falloff_alpha : 1e-6;

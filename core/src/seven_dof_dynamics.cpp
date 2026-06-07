@@ -318,17 +318,14 @@ private:
         double d_FL = d, d_FR = d;
         if (std::abs(d) > 1e-6 && vp_.ackerman_percent > 1e-9) {
             const double frac = std::clamp(vp_.ackerman_percent / 100.0, 0.0, 1.0);
-            const double td   = std::tan(d);
             const double half = Tw_f * 0.5;
-            // R = L / tan(d), Ackerman: delta_in = atan(L / (R - half)),
-            //                          delta_out = atan(L / (R + half))
-            const double denom_in  = 1.0 - td * half / L;
-            const double denom_out = 1.0 + td * half / L;
-            const double d_in  = std::atan(td / denom_in);
-            const double d_out = std::atan(td / denom_out);
-            // d > 0 = left turn => inside = left = FL
-            const double d_FL_ack = (d > 0.0) ? d_in  : d_out;
-            const double d_FR_ack = (d > 0.0) ? d_out : d_in;
+            const double sgn  = (d >= 0.0) ? 1.0 : -1.0;
+            const double td_a = std::tan(std::abs(d));
+            // R = L/tan(d): inner = atan(|tan d|/(1-|tan d|·half/L)), outer = +half term.
+            const double d_inner = sgn * std::atan(td_a / (1.0 - td_a * half / L));
+            const double d_outer = sgn * std::atan(td_a / (1.0 + td_a * half / L));
+            const double d_FL_ack = (d > 0.0) ? d_inner : d_outer;
+            const double d_FR_ack = (d > 0.0) ? d_outer : d_inner;
             d_FL = d + frac * (d_FL_ack - d);
             d_FR = d + frac * (d_FR_ack - d);
         }
@@ -412,7 +409,6 @@ private:
                 Fx_w = lugre.Fx;
                 Fy_w = lugre.Fy;
                 mz_wheel[i] = lugre.Mz;
-                fx_kin[i] = lugre.fx_kin;
                 Fxd = Fx_w;
                 Fyd = Fy_w;
             } else {
@@ -428,13 +424,22 @@ private:
                 Fxd = lambda * out.Fx + Fx_hold;
                 Fyd = Fy_w;
             }
-            const double Fmag = std::hypot(Fx_w, Fy_w);   // keep inside the friction circle
-            if (Fmag > muFz && Fmag > 1e-9) { const double c = muFz / Fmag; Fx_w *= c; Fy_w *= c; }
+            const double Fmag = std::hypot(Fx_w, Fy_w);
+            if (!(lugre_on && tp_.combined_slip_enabled) && Fmag > muFz && Fmag > 1e-9) {
+                const double c = muFz / Fmag;
+                Fx_w *= c;
+                Fy_w *= c;
+            }
+            if (lugre_on) fx_kin[i] = Fx_w;
             const double Fx_b = Fx_w * cd_i - Fy_w * sd_i;
             const double Fy_b = Fx_w * sd_i + Fy_w * cd_i;
             F_body[i] = Vec3(Fx_b, Fy_b, 0.0);
             const double Fdm = std::hypot(Fxd, Fyd);
-            if (Fdm > muFz && Fdm > 1e-9) { const double c = muFz / Fdm; Fxd *= c; Fyd *= c; }
+            if (!(lugre_on && tp_.combined_slip_enabled) && Fdm > muFz && Fdm > 1e-9) {
+                const double c = muFz / Fdm;
+                Fxd *= c;
+                Fyd *= c;
+            }
             tire_F_disp[i] = Vec3(Fxd * cd_i - Fyd * sd_i, Fxd * sd_i + Fyd * cd_i, 0.0);
             kappa[i]  = k_slip;
             alpha[i]  = a_slip;
@@ -554,26 +559,34 @@ private:
             in.Vx_wheel = v_x_wheel_last_[i];
             const auto mf = tire_->compute(in);
             lugre_z_long_[i] = lugre_advance_z(
-                lugre_z_long_[i], v_slip_long, lugre_breakaway(mf, true), sigma0, h);
+                lugre_z_long_[i], v_slip_long,
+                lugre_breakaway(mf, true, in.Fz, in.mu_long, in.mu_lat), sigma0, h);
             lugre_z_lat_[i] = lugre_advance_z(
-                lugre_z_lat_[i], v_slip_lat, lugre_breakaway(mf, false), sigma0, h);
+                lugre_z_lat_[i], v_slip_lat,
+                lugre_breakaway(mf, false, in.Fz, in.mu_long, in.mu_lat, in.alpha), sigma0, h);
         }
     }
 
     void substep(const CmdL4& cmd, const ContactArray& contacts, double h) {
         const State s0 = state_;
+        const bool lugre_on = tp_.lugre.enabled;
+        const double hz = 0.25 * h;
         if (sp_.integrator == SolverParams::Integrator::Euler) {
             const Deriv k = derivatives(s0, cmd, contacts);
             state_   = apply(s0, k, h);
             ax_prev_ = k.ax_body;
             ay_prev_ = k.ay_body;
-            advance_lugre_states_(contacts, h);
+            if (lugre_on) advance_lugre_states_(contacts, h);
             return;
         }
         const Deriv k1 = derivatives(s0,                       cmd, contacts);
+        if (lugre_on) advance_lugre_states_(contacts, hz);
         const Deriv k2 = derivatives(apply(s0, k1, 0.5 * h),  cmd, contacts);
+        if (lugre_on) advance_lugre_states_(contacts, hz);
         const Deriv k3 = derivatives(apply(s0, k2, 0.5 * h),  cmd, contacts);
+        if (lugre_on) advance_lugre_states_(contacts, hz);
         const Deriv k4 = derivatives(apply(s0, k3, h),        cmd, contacts);
+        if (lugre_on) advance_lugre_states_(contacts, hz);
 
         Deriv k;
         k.dx_world = (k1.dx_world + 2*k2.dx_world + 2*k3.dx_world + k4.dx_world) / 6.0;
@@ -602,7 +615,6 @@ private:
                               + (alpha_dyn_[i] - alpha_geom_last_[i]) * decay;
             }
         }
-        advance_lugre_states_(contacts, h);
     }
 
     VehicleParams vp_;
