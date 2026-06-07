@@ -15,6 +15,7 @@ WorldScenario load_world_scenario(const std::string& path) {
     WorldScenario w;
     w.rate        = node_d(root, "rate", 200.0);
     w.cmd_timeout = node_d(root, "cmd_timeout", 0.1);
+    w.time_scale  = node_d(root, "time_scale", 1.0);
     if (root["mu"]) w.road.mu = root["mu"].as<double>();
     if (root["mu_right"]) w.road.mu_right = root["mu_right"].as<double>();
     if (root["mu_boundary"]) w.road.mu_boundary = root["mu_boundary"].as<double>();

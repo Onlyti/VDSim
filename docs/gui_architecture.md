@@ -1,8 +1,9 @@
 # VDSim GUI / Web Architecture
 
-Status: DESIGN (decided). Concept: VDSim computes only; all visualization and
-configuration happen in a web browser on the receiving device. The simulator
-sends/receives physics + config over the network and renders nothing itself.
+Status: **aligned with v0.2** (2026-06-06). See `docs/design/RUNTIME_ARCH.md` for
+branch [1] vs [2] split. Concept: the **plant** (C++ `vdsim_realtime`) computes
+only; the browser edits scenarios, controls run lifecycle, and reconstructs viz
+from compact state — not pixel streaming.
 
 This is an accessibility / deployment differentiator vs license-locked desktop
 VD tools (CarMaker / CarSim / Adams), not a research novelty. The technical fit
@@ -30,25 +31,29 @@ UDP co-sim protocol. Define the API spec first, implement it in Python, and a
 future C++ server implements the identical contract -> frontend unchanged.
 Migration = backend swap, no frontend change.
 
-## 3. Architecture
+## 3. Architecture (realized: v0.2)
 
 ```
-[VDSim compute server]                         [any device: browser]
-  C++ core: SimSession (set_input / tick / output)   <- hard real-time loop
-        |
-  Web/API server (Python: FastAPI + websockets, pybind vdsim)
-        |  REST  : config CRUD, scenario, start/stop/reset  <--- config UI (forms)
-        |  WS    : state stream (binary/JSON) @ sim rate     ---> 3D viz (Three.js)
-        |  WS    : time-series                               ---> plots
+[gui/server.py Runner]                         [browser: gui/app.html]
+  in-memory run-config draft (Setup)
+  on Play: runs/live/run_config.yaml → vdsim_realtime
+  CosimBridge: UDP STATE in, CMD out
+        |  REST  : /api/setup, /api/runconfig, /api/control, /api/vehicle, …
+        |  SSE   : /api/stream @ ~60 Hz  ---> applyState → Three.js + telemetry
 ```
 
-Three concerns, same split as the udp_server:
+| Concern | Transport | Direction | Notes |
+|---|---|---|---|
+| Scenario / draft (fleet, path, road, parts) | REST | browser → server | `POST /api/setup`; YAML via `/api/runconfig` |
+| Run lifecycle (start/stop/pause/reset) | REST | browser → server | `POST /api/control`; server spawns plant |
+| Manual / io control while running | REST | browser → server → UDP CMD | relayed to [2] |
+| State stream (viz, telemetry, minimap) | **SSE** | server → browser | Setup: draft snapshot; Running: relayed STATE |
 
-| Concern | Transport | Direction |
-|---|---|---|
-| Configuration (vehicle/tire/solver/scenario/actuator) | REST (HTTP) | browser -> server; validate -> YAML |
-| Control (start/stop/reset/manual input) | REST or WS | browser -> server -> set_input |
-| State stream (viz/plots) | WebSocket (high-rate) | server -> browser, from output() |
+**GUI does not step SimSession.** Python `vdsim` on the server loads YAML for
+forms, geometry, and draft validation only.
+
+Original sketch used FastAPI + WebSocket; realized stack is stdlib `http.server` +
+SSE — same logical split, different transport.
 
 ## 4. Wire contract (to be frozen as the migration boundary)
 
@@ -59,9 +64,11 @@ REST (draft):
 - `POST /api/sim/input` — manual CmdL4 (throttle/brake/steer/gear)
 - `GET  /api/schema/vehicle` ... — JSON schema driving the config forms
 
-WS:
-- `/ws/state` — server pushes SimOutput frames (state + ax/ay/roll/pitch/Fz/
-  steer_applied) at the sim rate. Binary preferred for high rate.
+WS / SSE (migration boundary — **schema** matters more than transport):
+- `/api/stream` (SSE, realized) — server pushes JSON snapshots @ ~60 Hz.
+  Fields mirror cosim STATE + `setup_mode`, `fleet_spec`, `live_vid`, errors.
+  Setup: synthetic pose from spawn; Running: relayed plant output.
+- (Future) `/ws/state` — optional binary WebSocket at sim rate; same field set.
 
 Frozen field names/units mirror the existing CSV/STATE-packet conventions
 (ENU world [m], ISO 8855 body, wheel FL=0..RR=3).
@@ -83,8 +90,7 @@ SPA realized in `gui/index.html` (Three.js). Add:
 |---|---|
 | `core` SimSession (set_input/tick/output) | compute kernel the server drives |
 | `python` pybind `vdsim` module | Python access to SimSession (Phase 1) |
-| `gui/index.html` (Three.js) | realized frontend |
-| `gui/server.py` (HTTP/SSE + pybind) | realized backend (stdlib http.server) |
+| `gui/app.html` + `gui/server.py` | scenario editor, run control, SSE relay |
 | `cosim` STATE/CMD field set | the wire-contract field conventions |
 
 ## 7. Phased plan

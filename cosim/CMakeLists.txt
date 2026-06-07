@@ -24,4 +24,10 @@ if(Python3_FOUND)
             ${CMAKE_SOURCE_DIR}/tests/scripts/test_l3_scenario_paths.py)
     set_tests_properties(l3_scenario_susp_paths PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+    add_test(NAME runconfig_roundtrip
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_runconfig_roundtrip.py)
+    set_tests_properties(runconfig_roundtrip PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/build/python:${CMAKE_SOURCE_DIR}/cosim:${CMAKE_SOURCE_DIR}/gui")
 endif()

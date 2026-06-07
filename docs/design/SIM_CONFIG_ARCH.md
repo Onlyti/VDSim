@@ -5,6 +5,11 @@ Status: DRAFT for alignment. How a VDSim run is *set up by configuration only*
 that composes them, a communication config for data routing, and two execution
 modes (real-time comms, or embedded API).
 
+> **v0.3 data layout:** part files, vehicle blueprints, and scene composition are
+> specified in **`PARTS_CATALOG.md`** (big-bang cutover; no v0.2 stem paths). This
+> doc remains authoritative for **comms routing**, **sensor host**, **run modes**,
+> and the **`vdsim.Simulation` API** facade.
+
 ## 1. Principle
 
 Setup = configuration, no code. Concerns are separate files, the scenario

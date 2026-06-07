@@ -33,6 +33,7 @@ struct VehicleSpawn {
 struct WorldScenario {
     double rate        {200.0};
     double cmd_timeout {0.1};
+    double time_scale  {1.0};
     RoadConfig road;
     std::vector<VehicleSpawn> vehicles;
 };

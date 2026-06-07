@@ -18,21 +18,43 @@
   #view { position:absolute; inset:0; }
   .telemetry { width:300px; flex-shrink:0; background:var(--panel); border-left:1px solid var(--border);
                overflow-y:auto; padding:12px 14px; font-variant-numeric:tabular-nums; }
-  .setup-bar { flex-shrink:0; border-top:1px solid var(--border); background:var(--panel);
-               padding:8px 12px 10px; max-height:min(48vh, 400px); overflow:auto; }
-  .setup-tabs { display:flex; gap:4px; margin-bottom:8px; }
+  .setup-bar { flex-shrink:0; height:var(--setup-bar-h, 252px); border-top:1px solid var(--border);
+               background:var(--panel); padding:11px 12px 10px; display:flex; flex-direction:column;
+               overflow:hidden; position:relative; }
+  .setup-resize { position:absolute; top:0; left:0; right:0; height:7px; cursor:ns-resize; z-index:3;
+                  touch-action:none; }
+  .setup-resize::after { content:''; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+                         width:36px; height:3px; border-radius:2px; background:var(--border);
+                         transition:background .15s; }
+  .setup-resize:hover::after, .setup-resize.dragging::after { background:var(--acc); }
+  .setup-tabs { display:flex; gap:4px; margin-bottom:6px; flex-shrink:0; }
   .setup-tab { flex:none; width:auto; padding:5px 12px; font-size:11px; }
   .setup-tab.on { background:var(--acc); color:#001018; border-color:var(--acc); }
-  .setup-tab-pane { display:none; flex:1; flex-wrap:wrap; gap:12px; align-items:flex-start; min-width:0; }
+  .setup-bar-body { flex:1; min-height:0; display:flex; gap:12px; align-items:stretch; }
+  .setup-tab-panes { flex:1; min-width:0; min-height:0; position:relative; }
+  .setup-tab-pane { display:none; position:absolute; inset:0; overflow-y:auto; overflow-x:hidden;
+                    flex-wrap:wrap; gap:12px; align-content:flex-start; align-items:flex-start; }
   .setup-tab-pane.on { display:flex; }
-  .setup-section.comms { min-width:260px; max-width:340px; max-height:280px; overflow:auto; flex:1; }
+  .setup-section.comms { min-width:260px; max-width:360px; flex:1; }
   #io_body .fld input[type=range] { flex:1; width:auto; min-width:60px; }
   #io_body button.apply { background:var(--acc); color:#001018; border-color:var(--acc); width:100%; margin-top:6px; }
   #io_body pre { white-space:pre-wrap; font:10px Consolas,monospace; background:#f4f6f9;
                  border:1px solid var(--border); border-radius:5px; padding:6px; color:var(--ink); }
-  .setup-bar-h { display:flex; align-items:baseline; gap:10px; margin-bottom:8px; }
+  .setup-bar-h { display:flex; align-items:center; gap:10px; margin-bottom:6px; flex-shrink:0; flex-wrap:wrap; }
   .setup-bar-h .card-h { margin:0; }
-  .setup-bar-inner { display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap; }
+  .setup-scenario-row { display:flex; gap:6px; align-items:center; margin-left:auto; flex-wrap:wrap; }
+  .setup-scenario-row select { min-width:132px; }
+  .setup-scenario-row button { flex:none; width:auto; padding:5px 10px; font-size:11px; }
+  .setup-status { display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; font-size:11px;
+                  margin-bottom:4px; flex-shrink:0; line-height:1.4; }
+  .setup-draft-badge { font-weight:600; }
+  .setup-draft-badge.dirty { color:#ff9500; }
+  .setup-draft-badge.synced { color:#34c759; }
+  .setup-grp-h { font:600 10px Tahoma; color:var(--acc); text-transform:uppercase; margin:8px 0 4px; }
+  .setup-field { display:flex; align-items:center; gap:6px; margin:3px 0; }
+  .setup-field > label { width:48px; margin:0; font-size:10px; color:var(--dim); flex-shrink:0; }
+  .setup-field select, .setup-field .setup-inp { flex:1; }
+  .setup-hint-line { font-size:10px; color:var(--dim); line-height:1.45; margin:4px 0 6px; }
   .setup-section { flex:0 1 auto; min-width:150px; max-width:220px; padding:8px 10px;
                    background:#f8fafc; border:1px solid var(--border); border-radius:8px; }
   .setup-section.path { min-width:170px; max-width:200px; }
@@ -77,6 +99,9 @@
   #edit_hint { position:absolute; top:48px; left:10px; z-index:5; font-size:11px; color:#16202b;
                background:rgba(255,252,245,.92); border:1px solid var(--border); border-radius:6px;
                padding:5px 9px; display:none; pointer-events:none; }
+  #spawn_hint { position:absolute; top:48px; left:10px; z-index:5; font-size:11px; color:#16202b;
+                background:rgba(255,252,245,.92); border:1px solid var(--border); border-radius:6px;
+                padding:5px 9px; display:none; pointer-events:none; }
   .center.illustr #view { filter:saturate(1.08) contrast(1.02); }
   #conn { font-size:11px; margin-top:4px; }
   #kin_warnings { font-size:10px; color:#ff9500; margin-top:2px; max-height:4.5em; overflow-y:auto; display:none; }
@@ -135,6 +160,10 @@
                  background:#fff; }
   .setup-fleet.sel { border-color:var(--acc); box-shadow:0 0 0 1px var(--acc); }
   .setup-fleet b { font-size:11px; }
+  .setup-fleet-h { display:flex; align-items:center; gap:6px; margin-bottom:2px; }
+  .setup-fleet-edit { width:auto; padding:1px 7px; font-size:9px; margin:0; flex:none; line-height:1.3; }
+  .setup-fleet-h .icon { margin-left:auto; }
+  button.icon:disabled { opacity:0.35; cursor:not-allowed; }
   .setup-row { display:flex; gap:4px; align-items:center; margin:2px 0; flex-wrap:wrap; }
   .setup-row label { margin:0; font-size:10px; min-width:14px; }
   #setup_apply { background:var(--acc); color:#001018; border-color:var(--acc); font-weight:600; }
@@ -144,38 +173,35 @@
     "three": "/vendor/three/three.module.js",
     "three/addons/": "/vendor/three/addons/" } }
 </script>
+<script src="/core.js"></script>
 </head>
 <body>
 <div class="app">
   <aside class="sidebar">
     <div style="padding:10px 12px 0;border-bottom:1px solid var(--border)">
       <h1>VDSim</h1>
-      <div id="conn" class="sub">connecting…</div>
+      <div id="conn" class="sub">● loading…</div>
       <div id="kin_warnings"></div>
     </div>
     <div class="sidebar-scroll">
       <section class="card">
         <div class="card-h" data-help="model">SIM</div>
         <div class="row">
-          <button id="sim_play" title="Start simulation">▶</button>
-          <button id="sim_stop" title="Stop (setup mode)">⏹</button>
-          <button id="sim_reset" title="Reset">⟲</button>
+          <button type="button" id="sim_play" title="Start simulation">▶</button>
+          <button type="button" id="sim_stop" title="Stop (setup mode)">⏹</button>
+          <button type="button" id="sim_reset" title="Reset">⟲</button>
+        </div>
+        <div class="row" id="drv_row" style="margin-top:4px">
+          <button type="button" id="drv_auto" style="flex:1;padding:4px;font-size:10px">Autopilot</button>
+          <button type="button" id="drv_manual" style="flex:1;padding:4px;font-size:10px">Manual</button>
         </div>
         <label data-help="numerics">realtime <span id="ts_val" class="sub">1.0×</span></label>
         <input id="ts_slider" type="range" min="0.1" max="3" step="0.1" value="1">
-        <div class="row" style="margin-top:8px">
-          <button id="sim_save" title="Download vehicle+tire+sim JSON">save cfg</button>
-          <button id="sim_load" title="Load JSON config">load</button>
-          <input id="sim_load_input" type="file" accept=".json,application/json">
+        <div class="row" style="margin-top:6px">
+          <button type="button" id="sim_load_cfg" style="flex:1;padding:4px;font-size:10px" title="Import run config YAML">Load cfg</button>
+          <button type="button" id="sim_save_cfg" style="flex:1;padding:4px;font-size:10px" title="Export draft run config">Save cfg</button>
         </div>
-        <div class="row">
-          <button id="fleet_demo" title="Load 2-car shared-world scenario">2-car demo</button>
-        </div>
-        <label style="margin-top:8px" data-help="run">Drive mode</label>
-        <div class="row">
-          <button id="mode_drv">Autopilot</button>
-          <button id="mode_man">Manual</button>
-        </div>
+        <input id="sim_load_input" type="file" accept=".yaml,.yml,.json,application/json,text/yaml" class="hidden">
       </section>
       <section class="card">
         <div class="card-h" data-help="Geometry">
@@ -208,6 +234,7 @@
         <button id="cam_path_edit" title="Drag waypoints on the map">Edit track</button>
       </div>
       <div id="edit_hint">Drag ● waypoints · click ground to add · Del remove · Esc done</div>
+      <div id="spawn_hint">Drag vehicles to set spawn · top view recommended</div>
       <div id="manbar">
         <button id="m_brk" class="mbtn">◀ BRAKE</button>
         <input id="m_steer" type="range" min="-0.4" max="0.4" step="0.01" value="0">
@@ -215,78 +242,93 @@
       </div>
     </main>
     <div id="setup_panel" class="setup-bar">
+      <div id="setup_resize" class="setup-resize" title="Drag to resize panel"></div>
       <div class="setup-bar-h">
-        <div class="card-h" data-help="run">Scenario setup</div>
-        <span class="sub">Stopped — edit then ▶ Play</span>
+        <div class="card-h" data-help="run">Run composition</div>
+        <div class="setup-scenario-row">
+          <select id="setup_scenario" class="setup-inp wide"></select>
+          <button type="button" id="setup_scenario_load" title="Load scenario from configs/scenarios/">Load</button>
+          <button type="button" id="setup_scenario_save" title="Save to configs/scenarios/">Save</button>
+          <button type="button" id="setup_export_yaml" title="Download draft YAML">Export</button>
+          <button type="button" id="setup_import_yaml" title="Import YAML run config">Import</button>
+        </div>
+      </div>
+      <div class="setup-status" id="setup_status">
+        <span id="setup_draft_badge" class="setup-draft-badge synced">● draft synced</span>
+        <span id="setup_loaded_scenario" class="sub"></span>
+        <span id="setup_last_run" class="sub">Last run: —</span>
+        <span class="sub">▶ Play = sync draft → <code>runs/live/</code> → start</span>
       </div>
       <div class="setup-tabs">
-        <button type="button" class="setup-tab on" data-setup-tab="vehicle">Vehicle</button>
-        <button type="button" class="setup-tab" data-setup-tab="env">Environment</button>
-        <button type="button" class="setup-tab" data-setup-tab="sim">Simulator</button>
+        <button type="button" class="setup-tab on" data-setup-tab="map">Map</button>
+        <button type="button" class="setup-tab" data-setup-tab="vehicle">Vehicle</button>
+        <button type="button" class="setup-tab" data-setup-tab="options">Options</button>
       </div>
-      <div class="setup-bar-inner">
-        <div class="setup-tab-pane on" id="setup_pane_vehicle">
-          <section class="setup-section path">
-            <div class="grp" data-help="run">Path</div>
-            <select id="setup_path_preset" class="setup-inp wide">
-              <option value="figure8">Figure-8</option>
-              <option value="straight">Straight</option>
-              <option value="custom">Custom waypoints</option>
-            </select>
-            <div id="setup_wp_box" style="margin-top:4px">
-              <table class="setup-table">
-                <thead><tr><th>x</th><th>y</th><th></th></tr></thead>
-                <tbody id="setup_wp_rows"></tbody>
-              </table>
-              <button id="setup_wp_add" style="width:auto;flex:none;padding:3px 7px;font-size:10px;margin-top:2px">+ wp</button>
-            </div>
-          </section>
-          <section class="setup-section">
-            <div class="grp" data-help="frames">Fleet spawn</div>
-            <div id="setup_fleet"></div>
-            <button id="setup_fleet_add" style="width:100%;padding:4px;font-size:10px;margin-top:2px">+ vehicle</button>
-          </section>
-        </div>
-        <div class="setup-tab-pane" id="setup_pane_env">
-          <section class="setup-section">
-            <div class="grp" data-help="road">Road</div>
-            <div class="setup-row"><label>μ</label><input id="setup_mu" class="setup-inp" type="number" step="0.05" value="1">
-              <label>g°</label><input id="setup_grade" class="setup-inp" type="number" step="0.5" value="0"></div>
-            <div class="setup-row"><label>b°</label><input id="setup_bank" class="setup-inp" type="number" step="0.5" value="0">
-              <label>v</label><input id="setup_v_target" class="setup-inp" type="number" step="0.5" value="10"></div>
-          </section>
-          <section class="setup-section map">
-            <div class="grp" data-help="road">Map / terrain</div>
-            <input id="setup_xodr" class="setup-inp wide" type="text" placeholder="OpenDRIVE .xodr">
-            <div class="row" style="margin-top:3px">
-              <button id="setup_map_load" style="flex:1;padding:5px;font-size:11px">Map</button>
-              <button id="setup_terrain_clr" style="flex:1;padding:5px;font-size:11px">Clear</button>
-            </div>
-            <input id="setup_obj" class="setup-inp wide" type="text" placeholder="terrain .obj" style="margin-top:4px">
-            <button id="setup_terrain_load" style="width:100%;margin-top:3px;padding:5px;font-size:11px">Load terrain</button>
-          </section>
-        </div>
-        <div class="setup-tab-pane" id="setup_pane_sim">
-          <section class="setup-section">
-            <div class="grp" data-help="cosim">Runtime / scenario</div>
-            <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink)">
-              <input type="checkbox" id="setup_attach"> Attach external
-            </label>
-            <input id="setup_cosim_host" class="setup-inp wide" type="text" value="127.0.0.1" placeholder="runtime host">
-            <div class="setup-row"><label>cmd</label><input id="setup_cosim_port" class="setup-inp" type="number" value="7401"></div>
-            <select id="setup_scenario" class="setup-inp wide" style="margin-top:4px"></select>
-            <div class="row" style="margin-top:3px">
-              <button id="setup_scenario_load" style="flex:1;padding:4px;font-size:10px">Load</button>
-              <button id="setup_scenario_save" style="flex:1;padding:4px;font-size:10px">Save</button>
-            </div>
-          </section>
-          <section class="setup-section comms">
-            <div class="grp" data-help="cosim">Data &amp; comms</div>
-            <div id="io_body"></div>
-          </section>
+      <div class="setup-bar-body">
+        <div class="setup-tab-panes">
+          <div class="setup-tab-pane on" id="setup_pane_map">
+            <section class="setup-section">
+              <div class="grp" data-help="road">Road</div>
+              <div class="setup-row"><label>μ</label><input id="setup_mu" class="setup-inp" type="number" step="0.05" value="1">
+                <label>g°</label><input id="setup_grade" class="setup-inp" type="number" step="0.5" value="0"></div>
+              <div class="setup-row"><label>b°</label><input id="setup_bank" class="setup-inp" type="number" step="0.5" value="0">
+                <label>v</label><input id="setup_v_target" class="setup-inp" type="number" step="0.5" value="10"></div>
+            </section>
+            <section class="setup-section map">
+              <div class="grp" data-help="road">Map / terrain</div>
+              <input id="setup_xodr" class="setup-inp wide" type="text" placeholder="OpenDRIVE .xodr">
+              <div class="row" style="margin-top:3px">
+                <button id="setup_map_load" style="flex:1;padding:5px;font-size:11px">Map</button>
+                <button id="setup_terrain_clr" style="flex:1;padding:5px;font-size:11px">Clear</button>
+              </div>
+              <input id="setup_obj" class="setup-inp wide" type="text" placeholder="terrain .obj" style="margin-top:4px">
+              <button id="setup_terrain_load" style="width:100%;margin-top:3px;padding:5px;font-size:11px">Load terrain</button>
+            </section>
+          </div>
+          <div class="setup-tab-pane" id="setup_pane_vehicle">
+            <section class="setup-section" style="min-width:300px;max-width:440px">
+              <div class="grp" data-help="frames">Vehicles</div>
+              <div class="setup-hint-line">Drag in view to set spawn · <b>Edit</b> or left-tree for vehicle modules.</div>
+              <div id="setup_fleet"></div>
+              <button id="setup_fleet_add" style="width:100%;padding:4px;font-size:10px;margin-top:4px">+ add 2nd vehicle</button>
+            </section>
+          </div>
+          <div class="setup-tab-pane" id="setup_pane_options">
+            <section class="setup-section path">
+              <div class="grp" data-help="run">Path / waypoints</div>
+              <select id="setup_path_preset" class="setup-inp wide">
+                <option value="figure8">Figure-8</option>
+                <option value="straight">Straight</option>
+                <option value="custom">Custom waypoints</option>
+              </select>
+              <div id="setup_wp_box" style="margin-top:4px">
+                <table class="setup-table">
+                  <thead><tr><th>x</th><th>y</th><th></th></tr></thead>
+                  <tbody id="setup_wp_rows"></tbody>
+                </table>
+                <button id="setup_wp_add" style="width:auto;flex:none;padding:3px 7px;font-size:10px;margin-top:2px">+ wp</button>
+              </div>
+            </section>
+            <section class="setup-section">
+              <div class="grp" data-help="cosim">External runtime</div>
+              <div class="sub" style="line-height:1.45;margin-bottom:4px">▶ Play starts the plant here. Enable only if you already run vdsim_realtime elsewhere.</div>
+              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink)">
+                <input type="checkbox" id="setup_attach"> Attach external plant
+              </label>
+              <input id="setup_cosim_host" class="setup-inp wide" type="text" value="127.0.0.1" placeholder="host">
+              <div class="setup-row">
+                <label>cmd</label><input id="setup_cosim_port" class="setup-inp" type="number" value="7401">
+                <label>state</label><input id="setup_cosim_state_port" class="setup-inp" type="number" value="7402">
+              </div>
+            </section>
+            <section class="setup-section comms">
+              <div class="grp" data-help="cosim">Data &amp; comms</div>
+              <div id="io_body"></div>
+            </section>
+          </div>
         </div>
         <div class="setup-bar-actions">
-          <button id="setup_apply">Apply</button>
+          <button id="setup_apply" title="Push form → server draft (preview). ▶ Play does this automatically.">Sync draft</button>
         </div>
       </div>
     </div>
@@ -325,6 +367,28 @@
   </aside>
 </div>
 
+<div id="scenario_save_bg" class="modal-bg">
+  <div class="modal" style="width:min(420px,92vw);max-height:none">
+    <div class="modal-h">
+      <b>Save scenario</b>
+      <span id="scenario_save_x" style="cursor:pointer;color:var(--dim);padding:0 6px">✕</span>
+    </div>
+    <div class="modal-body" style="max-height:none;padding:12px 16px">
+      <label style="font-size:11px;color:var(--dim)">File: <code>configs/scenarios/&lt;name&gt;.yaml</code></label>
+      <input id="scenario_save_name" class="setup-inp wide" type="text" style="width:100%;margin-top:6px"
+             placeholder="e.g. skidpad_sedan" autocomplete="off">
+      <div id="scenario_save_warn" class="sub" style="color:#ff9500;margin-top:6px;display:none"></div>
+      <label style="margin-top:10px;display:flex;gap:6px;align-items:center;font-size:11px;color:var(--ink)">
+        <input type="checkbox" id="scenario_save_overwrite"> Overwrite existing
+      </label>
+    </div>
+    <div class="row" style="padding:0 16px 14px">
+      <button type="button" id="scenario_save_cancel">Cancel</button>
+      <button type="button" id="scenario_save_ok" style="background:var(--acc);color:#001018;font-weight:600">Save</button>
+    </div>
+  </div>
+</div>
+
 <div id="modal_bg" class="modal-bg">
   <div class="modal" id="modal_panel">
     <div class="modal-h">
@@ -342,6 +406,51 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const $ = id => document.getElementById(id);
+function paintConnState(s) {
+  const conn = $('conn');
+  if (!conn || !s) return;
+  if (s.kinematics_warnings?.length) {
+    conn.textContent = '● kinematics warning';
+    conn.style.color = '#ff9500';
+    return;
+  }
+  if (s.plant_error) {
+    conn.textContent = '● ' + s.plant_error;
+    conn.style.color = '#ff9500';
+  } else if (s.setup_mode || (!s.running && !s.plant_error)) {
+    conn.textContent = '● setup — press ▶ Play';
+    conn.style.color = 'var(--dim)';
+  } else if (s.running && s.source === 'waiting') {
+    conn.textContent = '● waiting for plant… (retry ▶ Play)';
+    conn.style.color = '#ff9500';
+  } else if (s.running) {
+    conn.textContent = '● running';
+    conn.style.color = '#34c759';
+  }
+}
+const stateBoot = (async () => {
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), 12000);
+  try {
+    const r = await fetch('/api/state', { signal: ac.signal });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const s = await r.json();
+    window.__bootState = s;
+    paintConnState(s);
+    return s;
+  } catch (e) {
+    const conn = $('conn');
+    if (conn && /loading|connecting/i.test(conn.textContent)) {
+      conn.textContent = e.name === 'AbortError'
+        ? '● server timeout — restart gui/server.py'
+        : '● server unreachable — start gui/server.py';
+      conn.style.color = '#ff9500';
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+})();
 const DOCS = 'https://onlyti.github.io/VDSim/main/theory/';
 const DOC_MAP = {
   'Preset': '', 'Mass & inertia': '02_rigid_body_dynamics', 'Geometry': '04_ld1_bicycle',
@@ -370,8 +479,34 @@ async function post(url, obj) {
   await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) });
 }
 async function postJson(url, obj) {
-  const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) });
-  return r.json();
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(obj ?? {}),
+  });
+  const ct = r.headers.get('Content-Type') || '';
+  let j = {};
+  if (ct.includes('json')) {
+    j = await r.json();
+  } else {
+    const text = await r.text();
+    throw new Error(r.ok ? text.slice(0, 120) : (`HTTP ${r.status}: ${text.slice(0, 120)}`));
+  }
+  if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+  return j;
+}
+async function startSimulation() {
+  try {
+    if (typeof syncTimeScaleFromSlider === 'function') {
+      await syncTimeScaleFromSlider();
+    }
+    return await postJson('/api/run/start', {});
+  } catch (e) {
+    if (String(e.message).includes('404') || String(e.message).includes('Not Found')) {
+      return postJson('/api/control', { action: 'start' });
+    }
+    throw e;
+  }
 }
 async function postSetup(payload) {
   const r = await fetch('/api/setup', {
@@ -383,10 +518,19 @@ async function postSetup(payload) {
     updateConn({ kinematics_warnings: [msg] });
     throw new Error(msg);
   }
+  if (j.setup?.fleet) j.setup.fleet = mergeSetupFleet(j.setup.fleet);
   return j;
+}
+function mergeSetupFleet(incoming) {
+  const prev = Object.fromEntries((window._fleetSpec || []).map(s => [+s.id, s]));
+  return (incoming || []).map(s => {
+    const p = prev[+s.id];
+    return p?.geom ? { ...s, geom: p.geom } : s;
+  });
 }
 
 // ---- three.js scene ----
+const sceneReady = true;
 const view = $('view');
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xe9eef3);
@@ -396,10 +540,22 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(devicePixelRatio);
 view.appendChild(renderer.domElement);
 const controls = new OrbitControls(camera, renderer.domElement);
-const orthoSize = 70;
+let orthoSize = 70;
 let _a0 = 1;
 const orthoCam = new THREE.OrthographicCamera(-orthoSize / 2, orthoSize / 2, orthoSize / 2, -orthoSize / 2, 0.1, 2000);
 orthoCam.position.set(0, 120, 0); orthoCam.up.set(0, 0, -1); orthoCam.lookAt(0, 0, 0);
+const setupControls = new OrbitControls(orthoCam, renderer.domElement);
+setupControls.enableRotate = false;
+setupControls.enablePan = true;
+setupControls.enableZoom = true;
+setupControls.screenSpacePanning = true;
+setupControls.mouseButtons = {
+  LEFT: THREE.MOUSE.PAN,
+  MIDDLE: THREE.MOUSE.DOLLY,
+  RIGHT: THREE.MOUSE.PAN,
+};
+setupControls.target.set(0, 0, 0);
+setupControls.enabled = false;
 
 scene.add(new THREE.HemisphereLight(0xffffff, 0x9aa6b2, 1.15));
 const dir = new THREE.DirectionalLight(0xffffff, 0.8); dir.position.set(20, 40, 15); scene.add(dir);
@@ -410,6 +566,8 @@ function updateRoadTilt() {
   grid.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), n);
 }
 
+function toThree(x, y, z) { return new THREE.Vector3(x, z, -y); }
+
 let pathLine = null, lastNpath = -1;
 async function drawPath() {
   const r = await (await fetch('/api/path')).json();
@@ -419,7 +577,35 @@ async function drawPath() {
   pathLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(v), new THREE.LineBasicMaterial({ color: 0x2f6d8f }));
   scene.add(pathLine);
 }
-drawPath();
+async function fitSetupCamera() {
+  const r = await (await fetch('/api/path')).json();
+  const pts = r.pts || [];
+  if (pts.length < 2) return;
+  let xmin = pts[0][0], xmax = pts[0][0], ymin = pts[0][1], ymax = pts[0][1];
+  for (const [x, y] of pts) {
+    if (x < xmin) xmin = x; if (x > xmax) xmax = x;
+    if (y < ymin) ymin = y; if (y > ymax) ymax = y;
+  }
+  const cx = 0.5 * (xmin + xmax), cy = 0.5 * (ymin + ymax);
+  const span = Math.max(xmax - xmin, ymax - ymin, 24);
+  orthoSize = span * 0.65 + 18;
+  const c = toThree(cx, cy, 0);
+  setupControls.target.copy(c);
+  orthoCam.position.set(c.x, 120, c.z);
+  orthoCam.lookAt(c.x, 0, c.z);
+  resizeView();
+}
+async function refreshWorldGraphics() {
+  try {
+    await drawTerrain();
+    await drawScenery();
+    await drawPath();
+    await drawRoad();
+    if (!simRunning && camMode === 'top') await fitSetupCamera();
+  } catch (e) {
+    console.error('refreshWorldGraphics failed:', e);
+  }
+}
 
 let terrainGrid = null, terrainMesh = null, lastTerrain = -1;
 async function drawTerrain() {
@@ -534,17 +720,31 @@ function sampleTerrain(wx, wy) {
   const z = t.z;
   return (z[iy][ix] * (1 - ax) + z[iy][ix + 1] * ax) * (1 - ay) + (z[iy + 1][ix] * (1 - ax) + z[iy + 1][ix + 1] * ax) * ay;
 }
-drawTerrain(); drawScenery(); drawRoad();
 
 const FLEET_COLORS = [0x01A0E9, 0xDC291E, 0x34c759, 0xf5a623];
+const FLEET_CABIN = [0x9fd8f5, 0xf5a8a4, 0xb8f0c8, 0xffe0b0];
+function fleetColor(vid) { return FLEET_COLORS[(+vid || 0) % FLEET_COLORS.length]; }
+function fleetCabinColor(vid) { return FLEET_CABIN[(+vid || 0) % FLEET_CABIN.length]; }
+function applyCarColors(vid) {
+  bodyMat.color.setHex(fleetColor(vid));
+  cabinMat.color.setHex(fleetCabinColor(vid));
+}
+function multiFleetActive() {
+  return simRunning && (window._fleetSpec?.length || 0) > 1;
+}
+function viewTargetPos(out = new THREE.Vector3()) {
+  if (multiFleetActive() && fleetCars[selectedVid]) return out.copy(fleetCars[selectedVid].group.position);
+  return out.copy(car.position);
+}
 const car = new THREE.Group();
 car.rotation.order = 'YXZ';
+car.userData.vid = 0;
 const ground = new THREE.Group(); ground.rotation.order = 'YXZ';
 const sprung = new THREE.Group();
 car.add(ground); car.add(sprung); scene.add(car);
 const fleetCars = {};
-const bodyMat = new THREE.MeshStandardMaterial({ color: 0x01A0E9, metalness: .3, roughness: .5 });
-const cabinMat = new THREE.MeshStandardMaterial({ color: 0x9fd8f5 });
+const bodyMat = new THREE.MeshStandardMaterial({ color: fleetColor(0), metalness: .3, roughness: .5 });
+const cabinMat = new THREE.MeshStandardMaterial({ color: fleetCabinColor(0) });
 const wheelMat = new THREE.MeshStandardMaterial({ color: 0x14181f });
 const treadMat = new THREE.MeshStandardMaterial({ color: 0x8a929c, metalness: .15, roughness: .65 });
 const springMat = new THREE.MeshStandardMaterial({ color: 0xb0b8c0, metalness: .6, roughness: .4 });
@@ -552,46 +752,76 @@ const unsprMat = new THREE.MeshStandardMaterial({ color: 0x444c57 });
 let wheels = [], wheelRoll = [], axx = [], axy = [], axz = [], springs = [], unspr = [];
 let renderLevel = null, rebuilding = false, steerIdx = [0, 1];
 function addWheelTread(wheel, R) {
-  const mk = x => {
-    const s = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.22, 0.09), treadMat);
-    s.position.set(x, 0, 0); wheel.add(s);
+  const mk = z => {
+    const s = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.22, 0.05), treadMat);
+    s.position.set(0, 0, z); wheel.add(s);
   };
   mk(R * 0.96); mk(-R * 0.96);
 }
 function makeWheelMesh(wg, R) {
+  const spin = new THREE.Group();
+  spin.rotation.order = 'YXZ';
   const w = new THREE.Mesh(wg, wheelMat);
-  w.rotation.order = 'YXZ'; w.rotation.x = Math.PI / 2;
-  addWheelTread(w, R); return w;
+  w.rotation.x = Math.PI / 2;
+  addWheelTread(w, R);
+  spin.add(w);
+  return spin;
 }
-function wheelSpinRate(i) {
-  const sp = tgt.wheelSpin || [];
-  if (wheels.length === 2) {
+function wheelSpinRate(i, spinArr, nWheels) {
+  const sp = spinArr || tgt.wheelSpin || [];
+  const n = nWheels ?? wheels.length;
+  if (n === 2) {
     return i === 0 ? ((sp[0] || 0) + (sp[1] || 0)) * 0.5 : ((sp[2] || 0) + (sp[3] || 0)) * 0.5;
   }
   return sp[i] || 0;
 }
+function simWheelDt(dt) {
+  if (!simRunning || simPaused) return 0;
+  const ts = +(window._lastState?.time_scale ?? 1);
+  return dt * (ts > 0 && Number.isFinite(ts) ? ts : 1);
+}
 function updateWheelRoll(dt) {
   if (!wheels.length) return;
+  const ds = simWheelDt(dt);
   while (wheelRoll.length < wheels.length) wheelRoll.push(0);
-  const roll = simRunning && tgt.has;
   for (let i = 0; i < wheels.length; i++) {
-    if (roll) wheelRoll[i] += wheelSpinRate(i) * dt;
+    if (ds && tgt.has) wheelRoll[i] -= wheelSpinRate(i) * ds;
     wheels[i].rotation.z = wheelRoll[i];
   }
 }
+function fleetWheelSpin(st) {
+  const spin = st?.wheel_spin;
+  return (Array.isArray(spin) && spin.length >= 4) ? spin : null;
+}
 function updateFleetWheelRoll(dt) {
-  const fleet = window._lastState?.fleet;
-  if (!fleet || !simRunning) return;
+  const s = window._lastState;
+  const ds = simWheelDt(dt);
+  if (!ds || !s?.fleet) return;
   for (const [vid, fc] of Object.entries(fleetCars)) {
-    const st = fleet[vid]; if (!st || !fc.wheels?.length) continue;
-    const R = fc.geom?.wheel_radius_nominal || 0.32;
-    const omega = (st.vx || 0) / Math.max(R, 0.05);
+    if (!fc.wheels?.length) continue;
+    const st = fleetVehicleState(s, vid);
+    const spin = fleetWheelSpin(st);
+    if (!spin) continue;
     if (!fc.wheelRoll) fc.wheelRoll = fc.wheels.map(() => 0);
     for (let i = 0; i < fc.wheels.length; i++) {
-      fc.wheelRoll[i] += omega * dt;
+      fc.wheelRoll[i] -= wheelSpinRate(i, spin, fc.wheels.length) * ds;
       fc.wheels[i].rotation.z = fc.wheelRoll[i];
     }
   }
+}
+function makeForceArrow(wp, x, z, color) {
+  const m = new THREE.MeshBasicMaterial({ color });
+  const g = new THREE.Group();
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1, 12), m);
+  shaft.position.y = 0.5;
+  const head = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.30, 16), m);
+  head.position.y = 1.0;
+  g.add(shaft, head);
+  g.position.set(x, 0.02, z);
+  g.visible = false;
+  g.userData = { shaft, head };
+  wp.add(g);
+  return g;
 }
 const FSCALE = 0.0012, FZSCALE = 0.0006;
 function clearGroup(g) { for (const c of [...g.children]) { g.remove(c); if (c.geometry) c.geometry.dispose(); } }
@@ -601,9 +831,10 @@ function disposeCarGroup(grp) {
   scene.remove(grp);
 }
 
-function buildStaticCar(geom, level, bodyColor) {
+function buildStaticCar(geom, level, bodyColor, vid, cabinColor = fleetCabinColor(vid)) {
   const grp = new THREE.Group();
   grp.rotation.order = 'YXZ';
+  grp.userData.vid = vid;
   const gnd = new THREE.Group(); gnd.rotation.order = 'YXZ';
   const spr = new THREE.Group();
   grp.add(gnd); grp.add(spr);
@@ -612,8 +843,10 @@ function buildStaticCar(geom, level, bodyColor) {
   const wp = susp ? gnd : grp;
   const L = a + b, W = Math.max(tf, tr, 0.6);
   const bodyH = 0.5, bodyY = R + 0.45, bodyW = bike ? 0.45 : Math.max(0.4, W - 0.5);
+  const bodyBottom = bodyY - bodyH / 2;
+  const span = Math.max(0.06, bodyBottom - R);
   const bm = new THREE.MeshStandardMaterial({ color: bodyColor, metalness: .3, roughness: .5 });
-  const cm = new THREE.MeshStandardMaterial({ color: 0x9fd8f5 });
+  const cm = new THREE.MeshStandardMaterial({ color: cabinColor, metalness: .25, roughness: .55 });
   const wm = new THREE.MeshStandardMaterial({ color: 0x14181f });
   const body = new THREE.Mesh(new THREE.BoxGeometry(L * 0.78, bodyH, bodyW), bm);
   body.position.set((a - b) / 2, bodyY, 0); spr.add(body);
@@ -621,12 +854,31 @@ function buildStaticCar(geom, level, bodyColor) {
   cabin.position.set((a - b) / 2 - 0.15, bodyY + bodyH / 2 + 0.19, 0); spr.add(cabin);
   const pos = bike ? [[a, 0], [-b, 0]] : [[a, -tf / 2], [a, tf / 2], [-b, -tr / 2], [-b, tr / 2]];
   const wg = new THREE.CylinderGeometry(R, R, 0.22, 14);
-  const builtWheels = [];
+  const builtWheels = [], axx = [], axy = [], axz = [], springs = [], unspr = [];
   pos.forEach(([x, z]) => {
     const w = makeWheelMesh(wg, R);
     w.position.set(x, R, z); wp.add(w); builtWheels.push(w);
+    axx.push(makeForceArrow(wp, x, z, 0xff3b30));
+    axy.push(makeForceArrow(wp, x, z, 0x34c759));
+    axz.push(makeForceArrow(wp, x, z, 0x0a84ff));
+    if (susp) {
+      const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, span, 12),
+        new THREE.MeshStandardMaterial({ color: 0xb0b8c0, metalness: .6, roughness: .4 }));
+      sp.position.set(x, R + span / 2, z); wp.add(sp); springs.push(sp);
+      const us = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.22),
+        new THREE.MeshStandardMaterial({ color: 0x444c57 }));
+      us.position.set(x, R, z); wp.add(us); unspr.push(us);
+    } else {
+      const st = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, span, 8),
+        new THREE.MeshStandardMaterial({ color: 0x444c57 }));
+      st.position.set(x, R + span / 2, z); wp.add(st); springs.push(st); unspr.push(null);
+    }
   });
-  return { group: grp, ground: gnd, sprung: spr, level, wheels: builtWheels, wheelRoll: builtWheels.map(() => 0) };
+  return {
+    group: grp, ground: gnd, sprung: spr, level, wheels: builtWheels,
+    wheelRoll: builtWheels.map(() => 0), axx, axy, axz, springs, unspr,
+    steerIdx: bike ? [0] : [0, 1],
+  };
 }
 
 function placeFleetCar(vid, st) {
@@ -634,25 +886,111 @@ function placeFleetCar(vid, st) {
   fc.group.position.copy(toThree(st.x, st.y, 0));
   fc.group.position.y = terrainGrid ? sampleTerrain(fc.group.position.x, -fc.group.position.z) : 0;
   fc.group.rotation.set(0, st.yaw || 0, 0);
+  const spin = fleetWheelSpin(st);
+  if (spin) fc.wheelSpin = spin;
 }
 
 async function ensureFleetCar(vid, spec) {
-  if (vid === selectedVid) return;
+  if (+vid === +selectedVid && !multiFleetActive()) return;
   const level = spec.level || 'L2';
-  const col = FLEET_COLORS[vid % FLEET_COLORS.length];
+  const col = fleetColor(vid);
   const geom = spec.geom || {};
   const fc = fleetCars[vid];
-  if (fc && fc.level === level && fc.color === col) return;
+  if (fc && fc.level === level && fc.color === col && fc.axx?.length) return;
   if (fc) { disposeCarGroup(fc.group); delete fleetCars[vid]; }
   if (!geom.cg_to_front) {
-    const r = await (await fetch(`/api/vehicle?vehicle_id=${vid}`)).json();
-    const g = {}; r.fields.forEach(f => { g[f.name] = f.value; });
+    const g = await fetchVehicleGeom(vid);
     Object.assign(geom, { cg_to_front: g.cg_to_front, cg_to_rear: g.cg_to_rear,
       track_front: g.track_front, track_rear: g.track_rear, wheel_radius_nominal: g.wheel_radius_nominal });
   }
-  const built = buildStaticCar(geom, level, col);
+  const built = buildStaticCar(geom, level, col, vid, fleetCabinColor(vid));
   scene.add(built.group);
   fleetCars[vid] = { ...built, color: col, geom };
+}
+async function syncRunningFleetMeshes(fleet) {
+  const allowed = new Set((window._fleetSpec || []).map(f => String(+f.id)));
+  for (const vid of Object.keys(fleetCars)) {
+    if (!allowed.has(vid) || !fleet?.[vid]) {
+      disposeCarGroup(fleetCars[vid].group);
+      delete fleetCars[vid];
+    }
+  }
+  for (const [vid, st] of Object.entries(fleet || {})) {
+    if (!allowed.has(vid) || st.x == null) continue;
+    const id = +vid;
+    const spec = (window._fleetSpec || []).find(f => +f.id === id) || { id, level: st.level || 'L2', geom: {} };
+    await ensureFleetCar(id, spec);
+    placeFleetCar(id, st);
+  }
+  if (illustrOn) { illustrOn = false; setIllustrationMode(true); }
+}
+
+const _vehicleGeomCache = {};
+async function fetchVehicleGeom(vid) {
+  const k = String(vid);
+  if (_vehicleGeomCache[k]) return _vehicleGeomCache[k];
+  const r = await (await fetch(`/api/vehicle?vehicle_id=${vid}`)).json();
+  const g = {}; r.fields.forEach(f => { g[f.name] = f.value; });
+  _vehicleGeomCache[k] = g;
+  return g;
+}
+
+function fleetPoseSig(fleet) {
+  return Object.entries(fleet || {}).map(([k, v]) =>
+    `${k}:${(+v.x || 0).toFixed(1)},${(+v.y || 0).toFixed(1)},${(+v.yaw || 0).toFixed(2)}`).join('|');
+}
+
+let _fleetCarIdsSig = '';
+let _fleetMeshBusy = false;
+let _fleetMeshQueued = null;
+
+function updateFleetPoses(fleet, sel) {
+  for (const [vid, st] of Object.entries(fleet || {})) {
+    if (+vid === sel || +vid === dragSpawnVid || st.x == null) continue;
+    if (fleetCars[vid]) placeFleetCar(vid, st);
+  }
+}
+
+async function syncFleetMeshes(fleet, sel) {
+  _fleetMeshQueued = { fleet, sel };
+  if (_fleetMeshBusy) return;
+  _fleetMeshBusy = true;
+  try {
+    while (_fleetMeshQueued) {
+      const job = _fleetMeshQueued;
+      _fleetMeshQueued = null;
+      await syncFleetMeshesInner(job.fleet, job.sel);
+    }
+  } finally {
+    _fleetMeshBusy = false;
+  }
+}
+
+async function syncFleetMeshesInner(fleet, sel) {
+  const allowed = new Set((window._fleetSpec || []).map(f => String(+f.id)));
+  const ids = new Set(Object.keys(fleet || {}).filter(k => allowed.has(k)));
+  const idSig = [...ids].sort().join(',');
+  if (idSig !== _fleetCarIdsSig) {
+    _fleetCarIdsSig = idSig;
+    purgeOrphanFleetMeshes();
+    for (const vid of Object.keys(fleetCars)) {
+      if (!ids.has(vid)) {
+        disposeCarGroup(fleetCars[vid].group);
+        delete fleetCars[vid];
+      }
+    }
+  }
+  if (fleetCars[sel]) {
+    disposeCarGroup(fleetCars[sel].group);
+    delete fleetCars[sel];
+  }
+  for (const [vid, st] of Object.entries(fleet || {})) {
+    const id = +vid;
+    if (id === sel || st.x == null) continue;
+    const spec = (window._fleetSpec || []).find(f => +f.id === id) || { id, level: st.level || 'L2', geom: {} };
+    await ensureFleetCar(id, spec);
+  }
+  updateFleetPoses(fleet, sel);
 }
 
 function fleetFromSpec(specs) {
@@ -685,38 +1023,28 @@ function purgeOrphanFleetMeshes() {
   }
 }
 
-async function refreshFleetView(specs, vid = selectedVid) {
+async function refreshFleetView(specs, vid = selectedVid, forceRemesh = false) {
   window._fleetSpec = specs || [];
   purgeOrphanFleetMeshes();
   const fleet = fleetFromSpec(window._fleetSpec);
+  if (forceRemesh) _fleetCarIdsSig = '';
   await syncFleetMeshes(fleet, vid);
+  _lastFleetViewSel = vid;
+  _lastStoppedPoseSig = fleetPoseSig(localFleetPreview());
   const st = fleet[String(vid)] || fleet[String(window._fleetSpec[0]?.id)];
-  if (st) previewSpawn(st);
+  if (st && dragSpawnVid < 0) {
+    const preview = !simRunning ? (localFleetPreview()[String(vid)] || st) : st;
+    previewSpawn(preview);
+  }
+  if (illustrOn) { illustrOn = false; setIllustrationMode(true); }
 }
 
-async function syncFleetMeshes(fleet, sel) {
-  const allowed = new Set((window._fleetSpec || []).map(f => String(+f.id)));
-  const ids = new Set(Object.keys(fleet || {}).filter(k => allowed.has(k)));
-  purgeOrphanFleetMeshes();
-  for (const vid of Object.keys(fleetCars)) {
-    if (!ids.has(vid) || +vid === sel) {
-      disposeCarGroup(fleetCars[vid].group);
-      delete fleetCars[vid];
-    }
-  }
-  for (const [vid, st] of Object.entries(fleet || {})) {
-    const id = +vid;
-    if (id === sel || st.x == null) continue;
-    const spec = (window._fleetSpec || []).find(f => +f.id === id) || { id, level: st.level || 'L2', geom: {} };
-    await ensureFleetCar(id, spec);
-    placeFleetCar(vid, st);
-  }
-}
+let selectedVid = 0;
+let pathEditActive = false, dragIdx = -1, dragSpawnVid = -1, spawnDragMoved = false, dragSpawnXY = [0, 0];
 
 async function rebuildCar(level, vid = selectedVid) {
   rebuilding = true;
-  const r = await (await fetch(`/api/vehicle?vehicle_id=${vid}`)).json();
-  const g = {}; r.fields.forEach(f => g[f.name] = f.value);
+  const g = await fetchVehicleGeom(vid);
   const a = g.cg_to_front, b = g.cg_to_rear, tf = g.track_front, tr = g.track_rear, R = g.wheel_radius_nominal;
   clearGroup(sprung);
   [...wheels, ...springs, ...unspr, ...axx, ...axy, ...axz].forEach(m => { car.remove(m); ground.remove(m); });
@@ -736,14 +1064,9 @@ async function rebuildCar(level, vid = selectedVid) {
   wheels = []; wheelRoll = [];
   pos.forEach(([x, z]) => {
     const w = makeWheelMesh(wg, R); w.position.set(x, R, z); wp.add(w); wheels.push(w); wheelRoll.push(0);
-    const mk = col => {
-      const m = new THREE.MeshBasicMaterial({ color: col });
-      const g = new THREE.Group();
-      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1, 12), m); shaft.position.y = 0.5;
-      const head = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.30, 16), m); head.position.y = 1.0;
-      g.add(shaft, head); g.position.set(x, 0.02, z); g.visible = false; g.userData = { shaft, head }; wp.add(g); return g;
-    };
-    axx.push(mk(0xff3b30)); axy.push(mk(0x34c759)); axz.push(mk(0x0a84ff));
+    axx.push(makeForceArrow(wp, x, z, 0xff3b30));
+    axy.push(makeForceArrow(wp, x, z, 0x34c759));
+    axz.push(makeForceArrow(wp, x, z, 0x0a84ff));
     if (susp) {
       const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, span, 12), springMat);
       sp.position.set(x, R + span / 2, z); wp.add(sp); springs.push(sp);
@@ -756,16 +1079,18 @@ async function rebuildCar(level, vid = selectedVid) {
   });
   steerIdx = bike ? [0] : [0, 1];
   renderLevel = level; rebuilding = false;
+  applyCarColors(vid);
   if (illustrOn) { illustrOn = false; setIllustrationMode(true); }
 }
 rebuildCar('L2');
 
-function renderForces(Ft, Fz, susp) {
-  if (!renderLevel || !wheels.length) return;
+function renderForcesOnWheels(ctx, Ft, Fz, susp) {
+  const { wheels: ws, axx: axX, axy: axY, axz: axZ, springs: sp, level } = ctx;
+  if (!level || !ws?.length || !axX?.length) return;
   Fz = Fz || [0, 0, 0, 0];
   const ft = i => (Ft && Ft[i]) ? Ft[i] : [0, 0];
   let WF;
-  if (wheels.length === 2) {
+  if (ws.length === 2) {
     WF = [[ft(0)[0] + ft(1)[0], ft(0)[1] + ft(1)[1], (Fz[0] || 0) + (Fz[1] || 0)],
     [ft(2)[0] + ft(3)[0], ft(2)[1] + ft(3)[1], (Fz[2] || 0) + (Fz[3] || 0)]];
   } else WF = [0, 1, 2, 3].map(i => [ft(i)[0], ft(i)[1], Fz[i] || 0]);
@@ -779,18 +1104,64 @@ function renderForces(Ft, Fz, susp) {
     ar.userData.shaft.scale.y = sLen; ar.userData.shaft.position.y = sLen / 2;
     ar.userData.head.position.y = sLen + HEAD / 2;
   };
-  const kin = (renderLevel === 'K'), bike = (wheels.length === 2);
-  for (let i = 0; i < wheels.length; i++) {
-    const [Fx, Fy, Fzz] = WF[i]; const w = wheels[i].position;
-    [axx[i], axy[i], axz[i]].forEach(a => a.position.set(w.x, 0.02, w.z));
-    if (kin) { axx[i].visible = axy[i].visible = axz[i].visible = false; continue; }
-    setArr(axz[i], new THREE.Vector3(0, 1, 0), Fzz, FZSCALE);
-    if (bike) { axx[i].visible = false; axy[i].visible = false; }
+  const kin = (level === 'K'), bike = (ws.length === 2);
+  for (let i = 0; i < ws.length; i++) {
+    const [Fx, Fy, Fzz] = WF[i]; const w = ws[i].position;
+    [axX[i], axY[i], axZ[i]].forEach(a => a.position.set(w.x, 0.02, w.z));
+    if (kin) { axX[i].visible = axY[i].visible = axZ[i].visible = false; continue; }
+    setArr(axZ[i], new THREE.Vector3(0, 1, 0), Fzz, FZSCALE);
+    if (bike) { axX[i].visible = false; axY[i].visible = false; }
     else {
-      setArr(axx[i], new THREE.Vector3(Math.sign(Fx) || 1, 0, 0), Math.abs(Fx), FSCALE);
-      setArr(axy[i], new THREE.Vector3(0, 0, -(Math.sign(Fy) || 1)), Math.abs(Fy), FSCALE);
+      setArr(axX[i], new THREE.Vector3(Math.sign(Fx) || 1, 0, 0), Math.abs(Fx), FSCALE);
+      setArr(axY[i], new THREE.Vector3(0, 0, -(Math.sign(Fy) || 1)), Math.abs(Fy), FSCALE);
     }
-    if (springs[i] && susp) springs[i].scale.y = Math.max(0.3, Math.min(1.9, susp[i] / 0.12));
+    if (sp[i] && susp) sp[i].scale.y = Math.max(0.3, Math.min(1.9, susp[i] / 0.12));
+  }
+}
+function mainCarVizCtx() {
+  return { wheels, axx, axy, axz, springs, level: renderLevel };
+}
+function renderForces(Ft, Fz, susp) {
+  renderForcesOnWheels(mainCarVizCtx(), Ft, Fz, susp);
+}
+function applySteerToWheels(ws, steerIdx, steer) {
+  for (const i of steerIdx) {
+    if (ws[i]) ws[i].rotation.y = steer || 0;
+  }
+}
+function fleetVehicleState(s, vid) {
+  const row = s.fleet?.[String(vid)];
+  if (!row) return null;
+  const isLive = s.live_vid != null && +vid === +s.live_vid;
+  if (isLive && s.x != null) {
+    const spin = fleetWheelSpin(s) || fleetWheelSpin(row);
+    return { ...row, Ft: s.Ft, Fz: s.Fz, susp: s.susp, steer: s.steer,
+      wheel_spin: spin || row.wheel_spin, level: s.level || row.level,
+      kappa: s.kappa, alpha: s.alpha, rack_torque: s.rack_torque,
+      r: s.r, ax: s.ax, ay: s.ay };
+  }
+  return row;
+}
+function syncFleetWheelTelemetry(s) {
+  if (!s?.fleet) return;
+  for (const [vid, fc] of Object.entries(fleetCars)) {
+    const st = fleetVehicleState(s, vid);
+    if (!st || !fc?.wheels?.length) continue;
+    const spin = fleetWheelSpin(st);
+    if (spin) fc.wheelSpin = spin;
+    applySteerToWheels(fc.wheels, fc.steerIdx || [0, 1], st.steer);
+  }
+}
+function applyFleetDetailViz(s) {
+  if (!multiFleetActive() || !s?.fleet) return;
+  syncFleetWheelTelemetry(s);
+  for (const [vid, fc] of Object.entries(fleetCars)) {
+    const st = fleetVehicleState(s, vid);
+    if (!st || !fc?.wheels?.length || !fc.axx?.length) continue;
+    const lvl = st.level || fc.level || 'L2';
+    renderForcesOnWheels(
+      { wheels: fc.wheels, axx: fc.axx, axy: fc.axy, axz: fc.axz, springs: fc.springs, level: lvl },
+      st.Ft, st.Fz, st.susp);
   }
 }
 
@@ -807,11 +1178,10 @@ function pushTrail(x, z) {
   if (trailPts.length >= 2) { trailGeo.setFromPoints(trailPts); trail.visible = true; }
 }
 
-function toThree(x, y, z) { return new THREE.Vector3(x, z, -y); }
-
 let camMode = 'top';
 let playCamMode = 'orbit';
 let simRunning = false;
+let simPaused = false;
 const tgt = { pos: new THREE.Vector3(), yaw: 0, roll: 0, pitch: 0, vx: 0, vy: 0, r: 0,
   wheelSpin: [0, 0, 0, 0], has: false };
 const lerpAngle = (a, b, t) => { let d = ((b - a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; return a + d * t; };
@@ -853,6 +1223,23 @@ function carGroundPose(nyaw) {
   sprung.rotation.x += (tgt.roll - sprung.rotation.x) * 0.3;
   sprung.rotation.z += ((-tgt.pitch) - sprung.rotation.z) * 0.3;
 }
+function refreshViewControls() {
+  const canInteract = !simRunning && dragSpawnVid < 0 && !pathEditActive && dragIdx < 0;
+  if (simRunning) {
+    setupControls.enabled = false;
+    return;
+  }
+  if (camMode === 'top') {
+    setupControls.enabled = canInteract;
+    controls.enabled = false;
+  } else if (camMode === 'orbit') {
+    setupControls.enabled = false;
+    controls.enabled = canInteract;
+  } else {
+    setupControls.enabled = false;
+    controls.enabled = false;
+  }
+}
 function frame() {
   requestAnimationFrame(frame);
   const dt = Math.min(clock.getDelta(), 0.1);
@@ -867,29 +1254,43 @@ function frame() {
       carGroundPose(lerpAngle(yaw + tgt.r * dt, tgt.yaw, 0.15));
     } else {
       tgt.vx = 0; tgt.vy = 0; tgt.r = 0;
-      car.position.copy(tgt.pos);
-      carGroundPose(tgt.yaw || 0);
+      if (dragSpawnVid < 0) car.position.copy(tgt.pos);
+      carGroundPose(dragSpawnVid >= 0 ? car.rotation.y : (tgt.yaw || 0));
     }
   }
-  const cp = car.position;
+  const cp = viewTargetPos();
   if (!prevInit) { prevCarPos.copy(cp); prevInit = true; }
   let activeCam = camera;
-  if (camMode === 'orbit') {
-    const d = cp.clone().sub(prevCarPos);
-    camera.position.add(d); controls.target.add(d);
-    controls.enabled = true; controls.update();
-  } else if (camMode === 'chase') {
-    controls.enabled = false;
-    const yaw = car.rotation.y, fx = Math.cos(yaw), fz = -Math.sin(yaw);
-    camera.position.lerp(new THREE.Vector3(cp.x - fx * 11, cp.y + 5, cp.z - fz * 11), 0.12);
-    camera.lookAt(cp.x, cp.y + 1.2, cp.z);
-  } else {
-    controls.enabled = false;
-    orthoCam.position.set(cp.x, 120, cp.z);
-    orthoCam.lookAt(cp.x, 0, cp.z);
+  if (simRunning) {
+    const yaw = multiFleetActive() && fleetCars[selectedVid]
+      ? fleetCars[selectedVid].group.rotation.y : car.rotation.y;
+    if (camMode === 'orbit') {
+      const d = cp.clone().sub(prevCarPos);
+      camera.position.add(d); controls.target.add(d);
+      controls.enabled = true; controls.update();
+    } else if (camMode === 'chase') {
+      controls.enabled = false;
+      const fx = Math.cos(yaw), fz = -Math.sin(yaw);
+      camera.position.lerp(new THREE.Vector3(cp.x - fx * 11, cp.y + 5, cp.z - fz * 11), 0.12);
+      camera.lookAt(cp.x, cp.y + 1.2, cp.z);
+    } else {
+      controls.enabled = false;
+      orthoCam.position.set(cp.x, 120, cp.z);
+      orthoCam.lookAt(cp.x, 0, cp.z);
+      activeCam = orthoCam;
+    }
+  } else if (camMode === 'top') {
+    setupControls.update();
     activeCam = orthoCam;
+  } else if (camMode === 'orbit') {
+    controls.update();
+  } else {
+    const t = setupControls.target;
+    camera.position.lerp(new THREE.Vector3(t.x - 11, 5, t.z), 0.08);
+    camera.lookAt(t.x, 1.2, t.z);
   }
   prevCarPos.copy(cp);
+  refreshViewControls();
   updateWheelRoll(dt);
   updateFleetWheelRoll(dt);
   renderer.render(scene, activeCam);
@@ -933,9 +1334,10 @@ function refreshIllustration() { setIllustrationMode(!simRunning && camMode === 
 function setCam(m) {
   camMode = m;
   ['orbit', 'chase', 'top'].forEach(id => $(`cam_${id}`).classList.toggle('on', id === m));
-  if (m === 'orbit') controls.target.copy(car.position);
+  if (simRunning && m === 'orbit') controls.target.copy(car.position);
   if (m !== 'cockpit') camera.up.set(0, 1, 0);
   refreshIllustration();
+  refreshViewControls();
 }
 $('cam_orbit').onclick = () => { setCam('orbit'); if (simRunning) playCamMode = 'orbit'; };
 $('cam_chase').onclick = () => { setCam('chase'); if (simRunning) playCamMode = 'chase'; };
@@ -946,7 +1348,7 @@ setCam('top');
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-let pathEditGroup = null, editPts = [], pathEditActive = false, dragIdx = -1, pathEditTimer = null;
+let pathEditGroup = null, editPts = [], pathEditTimer = null;
 function simFromThree(v) { return [v.x, -v.z]; }
 function pickGround(clientX, clientY) {
   const rect = renderer.domElement.getBoundingClientRect();
@@ -958,6 +1360,83 @@ function pickGround(clientX, clientY) {
   if (!raycaster.ray.intersectPlane(groundPlane, hit)) return null;
   if (terrainGrid) hit.y = sampleTerrain(hit.x, -hit.z);
   return hit;
+}
+function pickFleetVehicle(clientX, clientY) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+  const cam = camMode === 'top' ? orthoCam : camera;
+  raycaster.setFromCamera(mouse, cam);
+  const objs = [];
+  car.traverse(o => { if (o.isMesh) objs.push(o); });
+  for (const fc of Object.values(fleetCars)) fc.group.traverse(o => { if (o.isMesh) objs.push(o); });
+  const hits = raycaster.intersectObjects(objs, false);
+  if (!hits.length) return null;
+  let node = hits[0].object;
+  while (node && node.userData.vid == null && node.parent) node = node.parent;
+  const vid = node?.userData?.vid;
+  return vid != null ? +vid : null;
+}
+function updateSpawnInputs(vid, x, y) {
+  const box = $('setup_fleet')?.querySelector(`.setup-fleet[data-vid="${vid}"]`);
+  if (!box) return;
+  const xi = box.querySelector('input[data-k=x0]'), yi = box.querySelector('input[data-k=y0]');
+  if (xi) xi.value = (+x).toFixed(1);
+  if (yi) yi.value = (+y).toFixed(1);
+}
+function setSpawnPose(vid, x, y) {
+  dragSpawnXY = [x, y];
+  const spec = window._fleetSpec?.find(f => +f.id === vid);
+  const yaw = spec?.yaw0 ?? tgt.yaw ?? 0;
+  if (spec) { spec.x0 = x; spec.y0 = y; }
+  if (vid === selectedVid) previewSpawn({ x, y, yaw }, true);
+  else if (fleetCars[vid]) {
+    const fc = fleetCars[vid];
+    fc.group.position.copy(toThree(x, y, 0));
+    fc.group.position.y = terrainGrid ? sampleTerrain(fc.group.position.x, -fc.group.position.z) : 0;
+  }
+  updateSpawnInputs(vid, x, y);
+}
+async function commitSpawnDrag(vid, x, y) {
+  const spec = window._fleetSpec?.find(f => +f.id === vid);
+  if (spec) { spec.x0 = x; spec.y0 = y; }
+  updateSpawnInputs(vid, x, y);
+  try {
+    const r = await postSetup({ fleet: [{ id: vid, x0: x, y0: y }] });
+    if (r.setup?.fleet) {
+      window._fleetSpec = mergeSetupFleet(r.setup.fleet);
+      _lastStoppedPoseSig = fleetPoseSig(localFleetPreview());
+    }
+  } catch (e) {
+    alert('Spawn save failed: ' + (e.message || e));
+  }
+}
+function mergeFleetSpecFromServer(incoming) {
+  const dom = (!simRunning && $('setup_fleet')?.children.length)
+    ? Object.fromEntries(collectFleetFromDom().map(d => [d.id, d])) : null;
+  return (incoming || []).map(s => {
+    const id = +s.id;
+    const d = dom?.[id];
+    if (d != null && (d.x0 !== s.x0 || d.y0 !== s.y0 || d.yaw0 !== s.yaw0)) {
+      return { ...s, x0: d.x0, y0: d.y0, yaw0: d.yaw0 ?? s.yaw0, vx0: d.vx0 ?? s.vx0 };
+    }
+    const local = (window._fleetSpec || []).find(f => +f.id === id);
+    if (local && (local.x0 !== s.x0 || local.y0 !== s.y0)) {
+      return { ...s, x0: local.x0, y0: local.y0, yaw0: local.yaw0 ?? s.yaw0, vx0: local.vx0 ?? s.vx0 };
+    }
+    return s;
+  });
+}
+function localFleetPreview() {
+  if (!simRunning && $('setup_fleet')?.children.length)
+    return fleetFromSpec(collectFleetFromDom());
+  return fleetFromSpec(window._fleetSpec || []);
+}
+function refreshSpawnHint() {
+  $('spawn_hint').style.display = (!simRunning && !pathEditActive) ? 'block' : 'none';
+  if (!simRunning && !pathEditActive) {
+    $('spawn_hint').textContent = 'Drag empty ground: pan · drag vehicle: move spawn';
+  }
 }
 function disposePathEditGroup() {
   if (!pathEditGroup) return;
@@ -1011,6 +1490,7 @@ async function startPathEdit() {
   pathEditActive = true;
   $('cam_path_edit').classList.add('on');
   $('edit_hint').style.display = 'block';
+  setupControls.enabled = false;
   controls.enabled = false;
   rebuildPathMarkers();
 }
@@ -1020,7 +1500,8 @@ function stopPathEdit() {
   $('cam_path_edit').classList.remove('on');
   $('edit_hint').style.display = 'none';
   disposePathEditGroup();
-  if (!simRunning && camMode === 'orbit') controls.enabled = true;
+  refreshSpawnHint();
+  refreshViewControls();
 }
 $('cam_path_edit').onclick = async () => {
   if (simRunning) return;
@@ -1030,37 +1511,74 @@ $('cam_path_edit').onclick = async () => {
 };
 const viewEl = renderer.domElement;
 viewEl.addEventListener('pointerdown', e => {
-  if (!pathEditActive || simRunning) return;
-  const hit = pickGround(e.clientX, e.clientY);
-  if (!hit) return;
-  const cam = camMode === 'top' ? orthoCam : camera;
-  mouse.x = ((e.clientX - viewEl.getBoundingClientRect().left) / viewEl.clientWidth) * 2 - 1;
-  mouse.y = -((e.clientY - viewEl.getBoundingClientRect().top) / viewEl.clientHeight) * 2 + 1;
-  raycaster.setFromCamera(mouse, cam);
-  const hits = pathEditGroup ? raycaster.intersectObjects(pathEditGroup.children) : [];
-  if (hits.length) {
-    dragIdx = hits[0].object.userData.idx;
-    controls.enabled = false;
+  if (pathEditActive && !simRunning) {
+    const hit = pickGround(e.clientX, e.clientY);
+    if (!hit) return;
+    const cam = camMode === 'top' ? orthoCam : camera;
+    mouse.x = ((e.clientX - viewEl.getBoundingClientRect().left) / viewEl.clientWidth) * 2 - 1;
+    mouse.y = -((e.clientY - viewEl.getBoundingClientRect().top) / viewEl.clientHeight) * 2 + 1;
+    raycaster.setFromCamera(mouse, cam);
+    const hits = pathEditGroup ? raycaster.intersectObjects(pathEditGroup.children) : [];
+    if (hits.length) {
+      dragIdx = hits[0].object.userData.idx;
+      setupControls.enabled = false;
+      controls.enabled = false;
+      e.preventDefault();
+      return;
+    }
+    editPts.push(simFromThree(hit));
+    rebuildPathMarkers();
+    commitPathEdit();
     e.preventDefault();
     return;
   }
-  editPts.push(simFromThree(hit));
-  rebuildPathMarkers();
-  commitPathEdit();
-  e.preventDefault();
+  if (!simRunning && !pathEditActive) {
+    const vid = pickFleetVehicle(e.clientX, e.clientY);
+    if (vid != null) {
+      dragSpawnVid = vid;
+      spawnDragMoved = false;
+      setupControls.enabled = false;
+      controls.enabled = false;
+      try { viewEl.setPointerCapture(e.pointerId); } catch (_) {}
+      e.preventDefault();
+    }
+  }
 });
 viewEl.addEventListener('pointermove', e => {
-  if (!pathEditActive || dragIdx < 0) return;
-  const hit = pickGround(e.clientX, e.clientY);
-  if (!hit) return;
-  editPts[dragIdx] = simFromThree(hit);
-  rebuildPathMarkers();
-  commitPathEdit();
-  e.preventDefault();
+  if (pathEditActive && dragIdx >= 0) {
+    const hit = pickGround(e.clientX, e.clientY);
+    if (!hit) return;
+    editPts[dragIdx] = simFromThree(hit);
+    rebuildPathMarkers();
+    commitPathEdit();
+    e.preventDefault();
+    return;
+  }
+  if (dragSpawnVid >= 0 && !simRunning) {
+    const hit = pickGround(e.clientX, e.clientY);
+    if (!hit) return;
+    spawnDragMoved = true;
+    const [x, y] = simFromThree(hit);
+    setSpawnPose(dragSpawnVid, x, y);
+    e.preventDefault();
+  }
 });
-const endDrag = () => { dragIdx = -1; };
-viewEl.addEventListener('pointerup', endDrag);
-viewEl.addEventListener('pointerleave', endDrag);
+const endDrag = async () => {
+  const was = dragSpawnVid;
+  const moved = spawnDragMoved;
+  const xy = dragSpawnXY.slice();
+  if (was >= 0 && moved) await commitSpawnDrag(was, xy[0], xy[1]);
+  dragSpawnVid = -1;
+  spawnDragMoved = false;
+  dragIdx = -1;
+  refreshViewControls();
+  if (was >= 0) {
+    const st = localFleetPreview()[String(was)];
+    if (st) previewSpawn(st);
+  }
+};
+viewEl.addEventListener('pointerup', () => { void endDrag(); });
+viewEl.addEventListener('pointerleave', () => { void endDrag(); });
 addEventListener('keydown', e => {
   if (!pathEditActive) return;
   if (e.key === 'Escape') { stopPathEdit(); e.preventDefault(); }
@@ -1109,7 +1627,6 @@ function drawMinimap(x, y) {
 }
 
 // ---- telemetry + SSE ----
-let selectedVid = 0;
 function fmtFt(Ft) {
   if (!Ft || !Ft.length) return '—';
   return Ft.map((t, i) => {
@@ -1140,29 +1657,63 @@ function updateTelemetry(s) {
 }
 
 
+function updatePlayBtn() {
+  const btn = $('sim_play');
+  if (!simRunning) {
+    btn.textContent = '▶';
+    btn.title = 'Commit draft → write run_config.yaml & start core';
+    btn.classList.add('on');
+  } else if (simPaused) {
+    btn.textContent = '▶';
+    btn.title = 'Resume simulation';
+    btn.classList.remove('on');
+  } else {
+    btn.textContent = '⏸';
+    btn.title = 'Pause simulation';
+    btn.classList.remove('on');
+  }
+}
+
 function updateSimModeUI(running) {
   if (running && !simRunning && camMode !== 'top') playCamMode = camMode;
   simRunning = running;
+  if (!running) simPaused = false;
   $('setup_panel').classList.toggle('hidden', running);
   $('telemetry_aside').classList.toggle('hidden', !running);
-  $('sim_play').classList.toggle('on', !running);
   $('sim_stop').classList.toggle('on', running);
+  updatePlayBtn();
+  refreshFleetEditControls();
   $('cam_path_edit').style.display = running ? 'none' : '';
   if (running) {
     stopPathEdit();
     setCam(playCamMode);
-    if (manualMode) toggleManualBar(true);
+    if ((window._fleetSpec?.length || 0) > 1) {
+      car.visible = false;
+      tgt.has = false;
+    }
+    const autopilotOn = $('drv_auto')?.classList.contains('on');
+    manualMode = $('drv_auto') ? !autopilotOn
+      : ((window._fleetSpec || []).find(f => +f.id === selectedVid)?.driver === false);
+    toggleManualBar(manualMode);
   } else {
+    car.visible = true;
     tgt.vx = 0; tgt.vy = 0; tgt.r = 0;
+    _lastStoppedPoseSig = '';
     setCam('top');
     loadSetupForm();
-    toggleManualBar(manualMode);
+    toggleManualBar(false);
+    manualMode = false;
   }
+  refreshSpawnHint();
+  refreshViewControls();
   refreshIllustration();
+  refreshDriverUI();
   resizeView();
+  updateConn(window._lastState);
 }
 
-function previewSpawn(st) {
+function previewSpawn(st, force = false) {
+  if (!force && dragSpawnVid >= 0) return;
   if (!st || st.x == null) return;
   tgt.pos.copy(toThree(st.x, st.y, 0)); tgt.yaw = st.yaw || 0;
   tgt.roll = 0; tgt.pitch = 0; tgt.vx = 0; tgt.vy = 0; tgt.r = 0;
@@ -1171,17 +1722,26 @@ function previewSpawn(st) {
   renderForces([], [], []);
   for (const i of steerIdx) { if (wheels[i]) wheels[i].rotation.y = 0; }
   wheelRoll = wheels.map(() => 0);
+  wheels.forEach(w => { w.rotation.y = 0; w.rotation.z = 0; });
   drawMinimap(st.x, st.y);
 }
 
 function applyState(s) {
-  if (s.live_vid != null) selectedVid = s.live_vid;
-  if (s.fleet_spec?.length) window._fleetSpec = s.fleet_spec;
-  if (!$('veh_tree').children.length && (s.fleet_spec?.length || window._fleetSpec?.length)) {
+  if (s.fleet_spec?.length) window._fleetSpec = mergeFleetSpecFromServer(s.fleet_spec);
+  const stopped = !!s.setup_mode || !s.running;
+  if (s.paused != null) simPaused = !!s.paused;
+  if (stopped) {
+    const sig = (s.fleet_spec || window._fleetSpec || []).map(v => v.id).join(',');
+    if (sig && sig !== _fleetUiSig) {
+      void syncFleetPanels(s.fleet_spec || window._fleetSpec, s.live_vid ?? selectedVid);
+    } else if (!$('veh_tree').children.length && (s.fleet_spec?.length || window._fleetSpec?.length)) {
+      void buildVehicleTree(s.fleet_spec || window._fleetSpec, s.live_vid ?? selectedVid);
+    }
+  } else if (!$('veh_tree').children.length && (s.fleet_spec?.length || window._fleetSpec?.length)) {
     void buildVehicleTree(s.fleet_spec || window._fleetSpec, s.live_vid ?? selectedVid);
   }
-  const stopped = !!s.setup_mode || !s.running;
   if (stopped !== !simRunning) updateSimModeUI(!stopped);
+  else if (simRunning) updatePlayBtn();
   if (stopped && s.plant_error) updateConn(s);
   if (s.grade != null && (s.grade !== roadGrade || s.bank !== roadBank)) {
     roadGrade = s.grade; roadBank = s.bank || 0; updateRoadTilt();
@@ -1192,71 +1752,193 @@ function applyState(s) {
     drawTerrain().then(() => { drawRoad(); drawPath(); });
   }
   if (stopped) {
+    if (dragSpawnVid >= 0) {
+      window._lastState = s;
+      updateConn(s);
+      return;
+    }
     purgeOrphanFleetMeshes();
-    if (s.fleet) void syncFleetMeshes(filterFleet(s.fleet), selectedVid);
-    const st = (s.fleet && s.fleet[String(selectedVid)]) ? s.fleet[String(selectedVid)] : s;
-    previewSpawn(st);
+    const localFleet = localFleetPreview();
+    const ps = fleetPoseSig(localFleet);
+    const sel = s.live_vid ?? selectedVid;
+    if (ps !== _lastStoppedPoseSig || sel !== _lastFleetViewSel) {
+      _lastStoppedPoseSig = ps;
+      _lastFleetViewSel = sel;
+      void syncFleetMeshes(localFleet, sel);
+      const st = localFleet[String(sel)] || localFleet[String(window._fleetSpec?.[0]?.id)];
+      if (st) previewSpawn(st);
+    }
     window._lastState = s;
     updateConn(s);
     return;
   }
-  if (s.fleet) void syncFleetMeshes(filterFleet(s.fleet), selectedVid);
-  if (s.x == null) return;
-  tgt.pos.copy(toThree(s.x, s.y, 0)); tgt.yaw = s.yaw;
-  const dyn3 = (s.level === 'L3');
-  tgt.roll = dyn3 ? (s.roll || 0) : 0; tgt.pitch = dyn3 ? (s.pitch || 0) : 0;
-  tgt.vx = s.vx || 0; tgt.vy = s.vy || 0; tgt.r = s.r || 0;
-  tgt.wheelSpin = s.wheel_spin || [0, 0, 0, 0];
-  if (!tgt.has) { car.position.copy(tgt.pos); car.rotation.set(0, tgt.yaw, 0); tgt.has = true; }
-  if (s.level && s.level !== renderLevel && !rebuilding) rebuildCar(s.level);
-  renderForces(s.Ft, s.Fz, s.susp);
-  pushTrail(tgt.pos.x, tgt.pos.z);
-  for (const i of steerIdx) { if (wheels[i]) wheels[i].rotation.y = s.steer || 0; }
-  updateTelemetry(s);
-  drawMinimap(s.x, s.y);
+  const fd = s.fleet_driver?.[String(selectedVid)];
+  if (fd != null) {
+    manualMode = !fd;
+    toggleManualBar(manualMode);
+    const spec = (window._fleetSpec || []).find(f => +f.id === selectedVid);
+    if (spec) spec.driver = fd;
+  } else if (s.driver != null && +selectedVid === +(s.live_vid ?? selectedVid)) {
+    manualMode = !s.driver;
+    toggleManualBar(manualMode);
+  }
+  refreshDriverUI();
   window._lastState = s;
   updateConn(s);
-  updateIoMonitor(s);
+  if (multiFleetActive() && s.fleet) {
+    car.visible = false;
+    const fl = filterFleet(s.fleet);
+    void syncRunningFleetMeshes(fl).then(() => applyFleetDetailViz(s));
+    syncFleetWheelTelemetry(s);
+    applyFleetDetailViz(s);
+  } else if (s.fleet && simRunning) {
+    syncFleetWheelTelemetry(s);
+  }
+  if (!multiFleetActive()) {
+    car.visible = true;
+    if (s.fleet) updateFleetPoses(filterFleet(s.fleet), selectedVid);
+    if (s.x == null) return;
+    tgt.pos.copy(toThree(s.x, s.y, 0)); tgt.yaw = s.yaw;
+    const dyn3 = (s.level === 'L3');
+    tgt.roll = dyn3 ? (s.roll || 0) : 0; tgt.pitch = dyn3 ? (s.pitch || 0) : 0;
+    tgt.vx = s.vx || 0; tgt.vy = s.vy || 0; tgt.r = s.r || 0;
+    tgt.wheelSpin = s.wheel_spin || [0, 0, 0, 0];
+    if (!tgt.has) { car.position.copy(tgt.pos); car.rotation.set(0, tgt.yaw, 0); tgt.has = true; }
+    if (s.level && s.level !== renderLevel && !rebuilding) rebuildCar(s.level, selectedVid);
+    renderForces(s.Ft, s.Fz, s.susp);
+    pushTrail(tgt.pos.x, tgt.pos.z);
+    applySteerToWheels(wheels, steerIdx, s.steer);
+  }
+  if (s.x != null) {
+    if (multiFleetActive()) {
+      const sel = fleetVehicleState(s, selectedVid);
+      if (sel) {
+        updateTelemetry({ ...s, ...sel, x: sel.x, y: sel.y, z: sel.z ?? 0 });
+      }
+    } else {
+      updateTelemetry(s);
+    }
+    drawMinimap(s.x, s.y);
+    updateIoMonitor(s);
+  }
 }
 
 function updateConn(s) {
   const kw = $('kin_warnings');
-  if (s?.kinematics_warnings?.length) {
-    $('conn').textContent = '● kinematics warning';
-    $('conn').style.color = '#ff9500';
+  const conn = $('conn');
+  if (!conn) return;
+  if (!s) {
+    conn.textContent = simRunning ? '● running' : '● setup';
+    conn.style.color = simRunning ? '#34c759' : 'var(--dim)';
+    return;
+  }
+  if (s.kinematics_warnings?.length) {
+    conn.textContent = '● kinematics warning';
+    conn.style.color = '#ff9500';
     kw.className = 'on';
     kw.innerHTML = s.kinematics_warnings.map(w => `<div>● ${w}</div>`).join('');
-  } else {
-    kw.className = '';
-    kw.innerHTML = '';
+    return;
   }
-  if (s?.kinematics_warnings?.length) return;
-  if (s?.plant_error) {
-    $('conn').textContent = '● ' + s.plant_error;
-    $('conn').style.color = '#ff9500';
-  } else if (s?.running && s?.source === 'waiting') {
+  kw.className = '';
+  kw.innerHTML = '';
+  if (s.plant_error) {
+    conn.textContent = '● ' + s.plant_error;
+    conn.style.color = '#ff9500';
+  } else if (s.running && s.source === 'waiting') {
     const attach = $('setup_attach')?.checked;
-    $('conn').textContent = attach
+    conn.textContent = attach
       ? '● waiting for external plant (Attach)…'
       : '● waiting for plant… (retry ▶ Play)';
-    $('conn').style.color = '#ff9500';
-  } else if (s?.running && s?.source === 'cosim') {
-    $('conn').textContent = '● running';
-    $('conn').style.color = '#34c759';
-  } else if (!simRunning) {
-    $('conn').textContent = manualMode ? '● setup — manual needs ▶ Play' : '● setup';
-    $('conn').style.color = 'var(--dim)';
+    conn.style.color = '#ff9500';
+  } else if (simRunning || s.running) {
+    conn.textContent = '● running';
+    conn.style.color = '#34c759';
+  } else {
+    conn.textContent = manualMode ? '● setup — manual needs ▶ Play' : '● setup — press ▶ Play';
+    conn.style.color = 'var(--dim)';
   }
 }
 // ---- scenario setup panel ----
+const SETUP_BAR_H_KEY = 'vdsim_setup_bar_h';
+const SETUP_BAR_H_MIN = 140;
+const SETUP_BAR_H_MAX = () => Math.min(Math.round(window.innerHeight * 0.72), window.innerHeight - 120);
+function setSetupBarHeight(px, persist = true) {
+  const h = Math.round(Math.max(SETUP_BAR_H_MIN, Math.min(SETUP_BAR_H_MAX(), px)));
+  document.documentElement.style.setProperty('--setup-bar-h', h + 'px');
+  if (persist) try { localStorage.setItem(SETUP_BAR_H_KEY, String(h)); } catch (_e) {}
+  resizeView();
+  return h;
+}
+(function initSetupBarResize() {
+  try {
+    const saved = +localStorage.getItem(SETUP_BAR_H_KEY);
+    if (saved >= SETUP_BAR_H_MIN) setSetupBarHeight(saved, false);
+  } catch (_e) {}
+  const grip = $('setup_resize');
+  if (!grip) return;
+  let drag = null;
+  const onMove = e => {
+    if (!drag) return;
+    const dy = drag.y0 - e.clientY;
+    setSetupBarHeight(drag.h0 + dy, false);
+    e.preventDefault();
+  };
+  const onEnd = () => {
+    if (!drag) return;
+    grip.classList.remove('dragging');
+    drag = null;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('mouseup', onEnd);
+    try {
+      const h = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--setup-bar-h'), 10);
+      if (h >= SETUP_BAR_H_MIN) localStorage.setItem(SETUP_BAR_H_KEY, String(h));
+    } catch (_e) {}
+    resizeView();
+  };
+  grip.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    const h0 = $('setup_panel')?.getBoundingClientRect().height || 252;
+    drag = { y0: e.clientY, h0 };
+    grip.classList.add('dragging');
+    document.body.style.cursor = 'ns-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onEnd);
+    e.preventDefault();
+  });
+  window.addEventListener('resize', () => {
+    const h = $('setup_panel')?.getBoundingClientRect().height;
+    if (h) setSetupBarHeight(h, false);
+  });
+})();
 let ioPanelBuilt = false;
+function invalidateIoPanel() {
+  ioPanelBuilt = false;
+  const el = $('io_body');
+  if (el) el.innerHTML = '';
+}
+function refreshIoPlantBanner(s) {
+  const el = $('io_plant');
+  if (!el) return;
+  const c = s?.comms;
+  if (c) {
+    el.textContent = c.plant_running ? (c.attach ? 'external (attached)' : 'local') : 'stopped';
+    el.style.color = c.plant_running ? '#34c759' : 'var(--dim)';
+    return;
+  }
+  const run = s?.running && !s?.setup_mode;
+  el.textContent = run ? 'running' : 'stopped';
+  el.style.color = run ? '#34c759' : 'var(--dim)';
+}
 document.querySelectorAll('.setup-tab').forEach(btn => {
   btn.onclick = () => {
     document.querySelectorAll('.setup-tab').forEach(b => b.classList.toggle('on', b === btn));
     document.querySelectorAll('.setup-tab-pane').forEach(p => p.classList.remove('on'));
     const pane = $('setup_pane_' + btn.dataset.setupTab);
     if (pane) pane.classList.add('on');
-    if (btn.dataset.setupTab === 'sim' && !ioPanelBuilt) void buildDataPort();
+    if (btn.dataset.setupTab === 'options' && !ioPanelBuilt) void buildDataPort();
   };
 });
 async function buildDataPort() {
@@ -1264,9 +1946,19 @@ async function buildDataPort() {
   if (!el) return;
   ioPanelBuilt = true;
   const base = location.origin;
+  let comms = {};
+  try { comms = await (await fetch('/api/comms')).json(); } catch (_e) {}
+  const host = comms.host || '127.0.0.1';
+  const cmdP = comms.cmd_port ?? 7401;
+  const stP = comms.state_port ?? 7402;
+  const plant = comms.plant_running
+    ? (comms.attach ? 'external (attached)' : 'local') : 'stopped';
   el.innerHTML = `
-   <div class="grp" id="g_cosim">Co-sim server</div>
-   <div id="cosim_ctl"></div>
+   <div class="grp">VDS1 UDP</div>
+   <div class="sub" style="line-height:1.5;margin-bottom:6px">
+     CMD <b>${host}:${cmdP}</b> · STATE <b>${stP}</b> (${comms.protocol || 'VDS1'} v${comms.protocol_version ?? 4})<br>
+     Plant: <span id="io_plant">${plant}</span>
+   </div>
    <div class="grp">HTTP I/O</div>
    <div class="sub" style="line-height:1.5;margin-bottom:4px">
      <b>POST</b> /api/io · <b>GET</b> /api/stream (SSE)
@@ -1290,40 +1982,13 @@ async function buildDataPort() {
     $('ci_thv').textContent = th.toFixed(2);
     $('ci_brv').textContent = br.toFixed(2);
     $('ci_stv').textContent = st.toFixed(2);
-    const vid = window._lastState?.live_vid ?? selectedVid ?? 0;
+    const vid = selectedVid ?? window._lastState?.live_vid ?? 0;
     post('/api/io', { vehicle: vid, throttle: th, brake: br, steer: st });
   };
   ['ci_th', 'ci_br', 'ci_st'].forEach(id => $(id).oninput = ciSend);
   $('ci_zero').onclick = () => { $('ci_th').value = 0; $('ci_br').value = 0; $('ci_st').value = 0; ciSend(); };
-  addHelp($('g_cosim'), 'cosim');
-  await renderCosim($('cosim_ctl'));
   if (window._lastState) updateIoMonitor(window._lastState);
   renderTx($('tx_ctl'), await (await fetch('/api/io/targets')).json());
-}
-async function renderCosim(box) {
-  const st = await (await fetch('/api/cosim')).json();
-  box.innerHTML = '';
-  if (!st.available) {
-    box.innerHTML = '<div class="sub">vdsim_realtime not built.</div>';
-    return;
-  }
-  const c = st.cfg || {};
-  const num = (v, w) => { const i = document.createElement('input'); i.type = 'number'; i.step = 'any'; i.value = v; i.style.width = (w || 70) + 'px'; return i; };
-  const fld = (label, node) => { const d = document.createElement('div'); d.className = 'fld'; const l = document.createElement('label'); l.textContent = label; d.appendChild(l); d.appendChild(node); box.appendChild(d); };
-  const lvl = document.createElement('select'); lvl.style.width = '90px';
-  lvl.innerHTML = ['L1', 'L2', 'L3'].map(v => `<option ${v === c.level ? 'selected' : ''}>${v}</option>`).join('');
-  const cp = num(c.cmd_port, 80), spp = num(c.state_port, 80), rate = num(c.rate, 70);
-  fld('Level', lvl); fld('cmd', cp); fld('state', spp); fld('Hz', rate);
-  const status = document.createElement('div'); status.className = 'sub'; status.style.margin = '4px 0';
-  status.textContent = st.running ? `● pid ${st.pid}` : 'stopped';
-  status.style.color = st.running ? '#34c759' : 'var(--dim)';
-  box.appendChild(status);
-  const row = document.createElement('div'); row.className = 'row';
-  const start = document.createElement('button'); start.textContent = 'Start';
-  const stop = document.createElement('button'); stop.textContent = 'Stop';
-  start.onclick = async () => { await post('/api/cosim/start', { level: lvl.value, cmd_port: +cp.value, state_port: +spp.value, rate: +rate.value }); renderCosim(box); };
-  stop.onclick = async () => { await post('/api/cosim/stop'); renderCosim(box); };
-  row.appendChild(start); row.appendChild(stop); box.appendChild(row);
 }
 function renderTx(box, cfg, vid) {
   const vehicles = cfg.vehicles || [0];
@@ -1365,10 +2030,11 @@ function renderTx(box, cfg, vid) {
 }
 function updateIoMonitor(s) {
   if (!$('io_vx')) return;
-  const c = s.cmd_in || {};
-  $('io_vx').textContent = f(s.vx);
-  $('io_vy').textContent = f(s.vy);
-  $('io_r').textContent = f(s.r, 3);
+  const sel = fleetVehicleState(s, selectedVid) || s;
+  $('io_vx').textContent = f(sel.vx);
+  $('io_vy').textContent = f(sel.vy);
+  $('io_r').textContent = f(sel.r, 3);
+  refreshIoPlantBanner(s);
   const conn = $('io_conn');
   if (!conn) return;
   const a = s.io_age;
@@ -1376,15 +2042,14 @@ function updateIoMonitor(s) {
   conn.style.color = (a != null && a < 1) ? '#34c759' : 'var(--dim)';
 }
 async function fleetRemoveVehicle(vid) {
+  if (simRunning) return;
   const r = await (await fetch('/api/setup', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ fleet_remove: vid }),
   })).json();
   if (!r.setup) return;
   if (+vid === selectedVid && r.setup.fleet.length) selectedVid = +r.setup.fleet[0].id;
-  await renderFleetSpawn(r.setup.fleet);
-  await buildVehicleTree(r.setup.fleet, selectedVid);
-  await refreshFleetView(r.setup.fleet, selectedVid);
+  await syncFleetPanels(r.setup.fleet, selectedVid);
   lastNpath = -1; await drawPath(); await drawRoad();
 }
 function renderWaypointRows(pts) {
@@ -1406,6 +2071,52 @@ function collectWaypointPts() {
   }).filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]));
 }
 let setupVehicleList = [], setupTireSamples = [], setupSuspList = [], setupSuspL3Count = 0;
+let _fleetUiSig = '';
+let _fleetTreeSig = '';
+let _lastStoppedPoseSig = '';
+let _lastFleetViewSel = -1;
+function fleetUiSig(fleet) {
+  return (fleet || []).map(s =>
+    `${s.id}:${s.level}:${s.vehicle}:${s.tire}:${s.front_susp || ''}:${s.rear_susp || ''}`).join('|');
+}
+async function syncFleetPanels(fleet, liveVid = selectedVid) {
+  if (!fleet?.length) return;
+  window._fleetSpec = fleet;
+  const sig = fleetUiSig(fleet);
+  const fleetChanged = sig !== _fleetUiSig;
+  if (fleetChanged) {
+    _fleetUiSig = sig;
+    _fleetCarIdsSig = '';
+    invalidateIoPanel();
+    await renderFleetSpawn(fleet);
+  }
+  const treeSig = `${sig}:${liveVid}`;
+  const treeChanged = treeSig !== _fleetTreeSig;
+  if (treeChanged) {
+    _fleetTreeSig = treeSig;
+    await buildVehicleTree(fleet, liveVid);
+  }
+  await refreshFleetView(fleet, liveVid, fleetChanged);
+}
+function syncSimLevelSelect(vid, level) {
+  const box = $('setup_fleet')?.querySelector(`.setup-fleet[data-vid="${vid}"] select[data-k=level]`);
+  if (box && box.value !== level) box.value = level;
+}
+async function applyFleetLevel(vid, level) {
+  const spec = window._fleetSpec?.find(f => +f.id === vid);
+  if (!spec) return;
+  spec.level = level;
+  syncSimLevelSelect(vid, level);
+  const box = $('setup_fleet')?.querySelector(`.setup-fleet[data-vid="${vid}"]`);
+  if (box) syncFleetSuspLevel(box, level);
+  if (+vid === selectedVid && level !== renderLevel) {
+    await rebuildCar(level, vid);
+  } else if (+vid !== selectedVid) {
+    if (fleetCars[vid]) { disposeCarGroup(fleetCars[vid].group); delete fleetCars[vid]; }
+    await ensureFleetCar(vid, spec);
+    placeFleetCar(vid, fleetFromSpec([spec])[String(vid)]);
+  }
+}
 function syncFleetSuspLevel(box, level) {
   const l3 = level === 'L3';
   for (const k of ['front_susp', 'rear_susp']) {
@@ -1418,7 +2129,8 @@ function syncFleetSuspLevel(box, level) {
     hint.className = 'susp-hint';
     hint.style.cssText = 'font-size:9px;color:var(--dim);margin-top:2px';
     const row = box.querySelector('.setup-row');
-    box.insertBefore(hint, row);
+    if (row) box.insertBefore(hint, row);
+    else box.appendChild(hint);
   }
   const n = setupSuspL3Count || setupSuspList.length;
   hint.textContent = l3
@@ -1439,55 +2151,72 @@ async function ensureSetupLists() {
     setupSuspL3Count = sj.l3_count ?? setupSuspList.length;
   }
 }
+let setupDraftDirty = false;
+let setupLoadedScenario = '';
+let _suppressSetupDirty = false;
+function fmtRunConfigPath(p) {
+  if (!p) return '—';
+  const m = String(p).match(/runs\/[^/]+\/run_config\.yaml$/);
+  return m ? m[0] : String(p).replace(/^.*\/(runs\/)/, '$1');
+}
+function markDraftDirty() {
+  if (_suppressSetupDirty) return;
+  setupDraftDirty = true;
+  const b = $('setup_draft_badge');
+  if (b) { b.textContent = '● draft changed'; b.className = 'setup-draft-badge dirty'; }
+}
+function markDraftSynced() {
+  setupDraftDirty = false;
+  const b = $('setup_draft_badge');
+  if (b) { b.textContent = '● draft synced'; b.className = 'setup-draft-badge synced'; }
+}
+async function refreshCompositionStatus(runConfigPath) {
+  const scenEl = $('setup_loaded_scenario');
+  if (scenEl) {
+    scenEl.textContent = setupLoadedScenario ? `Scenario: ${setupLoadedScenario}` : '';
+  }
+  let path = runConfigPath;
+  if (!path) {
+    try {
+      const j = await (await fetch('/api/runconfig/last')).json();
+      if (j.ok && j.exists) path = j.path;
+    } catch (_e) {}
+  }
+  const lastEl = $('setup_last_run');
+  if (lastEl) lastEl.textContent = 'Last run: ' + fmtRunConfigPath(path);
+}
 async function renderFleetSpawn(fleet) {
-  await ensureSetupLists();
   const el = $('setup_fleet');
   el.innerHTML = '';
   const n = (fleet || []).length;
+  const addBtn = $('setup_fleet_add');
+  if (addBtn) addBtn.textContent = n >= 2 ? '+ vehicle' : '+ add 2nd vehicle';
   (fleet || []).forEach(spec => {
     const vid = +spec.id;
     const box = document.createElement('div');
     box.className = 'setup-fleet' + (vid === selectedVid ? ' sel' : '');
     box.dataset.vid = vid;
     const head = document.createElement('div');
-    head.style.display = 'flex'; head.style.alignItems = 'center'; head.style.gap = '4px';
-    head.innerHTML = `<b>Vehicle ${vid}</b>`;
+    head.className = 'setup-fleet-h';
+    const title = document.createElement('b');
+    title.textContent = `Vehicle ${vid}`;
+    head.appendChild(title);
+    const ed = document.createElement('button');
+    ed.type = 'button';
+    ed.textContent = 'Edit';
+    ed.className = 'setup-fleet-edit';
+    ed.onclick = e => { e.stopPropagation(); openModal(vid); };
+    head.appendChild(ed);
     if (n > 1) {
       const rm = document.createElement('button');
-      rm.textContent = '×'; rm.className = 'icon'; rm.title = 'Remove vehicle';
-      rm.onclick = async e => { e.stopPropagation(); await fleetRemoveVehicle(vid); };
+      rm.textContent = '×'; rm.className = 'icon fleet-rm'; rm.title = 'Remove vehicle';
+      rm.disabled = simRunning;
+      rm.onclick = async e => { e.stopPropagation(); if (rm.disabled) return; await fleetRemoveVehicle(vid); };
       head.appendChild(rm);
     }
     box.appendChild(head);
-    const mkSel = (k, opts, val) => {
-      const s = document.createElement('select');
-      s.className = 'setup-inp wide'; s.dataset.k = k; s.style.fontSize = '10px'; s.style.marginTop = '2px';
-      opts.forEach(o => { const op = document.createElement('option'); op.value = o; op.textContent = o;
-        if (o === val) op.selected = true; s.appendChild(op); });
-      return s;
-    };
-    box.appendChild(mkSel('vehicle', setupVehicleList, spec.vehicle || 'sedan'));
-    box.appendChild(mkSel('tire', setupTireSamples.length ? setupTireSamples : ['default_pacejka'], spec.tire || 'default_pacejka'));
-    const levelSel = mkSel('level', ['L1', 'L2', 'L3'], spec.level || 'L2');
-    box.appendChild(levelSel);
-    if (setupSuspList.length) {
-      box.appendChild(mkSel('front_susp', setupSuspList, spec.front_susp || ''));
-      box.appendChild(mkSel('rear_susp', setupSuspList, spec.rear_susp || ''));
-      syncFleetSuspLevel(box, spec.level || 'L2');
-      levelSel.addEventListener('change', async () => {
-        syncFleetSuspLevel(box, levelSel.value);
-        if (levelSel.value === 'L3') {
-          const veh = box.querySelector('select[data-k=vehicle]')?.value || 'sedan';
-          const defs = await (await fetch(
-            `/api/suspension/default?vehicle=${encodeURIComponent(veh)}`)).json();
-          for (const [k, v] of [['front_susp', defs.front], ['rear_susp', defs.rear]]) {
-            const sel = box.querySelector(`select[data-k="${k}"]`);
-            if (sel) sel.value = v;
-          }
-        }
-      });
-    }
-    const row = document.createElement('div'); row.className = 'setup-row';
+    const row = document.createElement('div');
+    row.className = 'setup-row';
     for (const [k, lab] of [['x0', 'x'], ['y0', 'y'], ['yaw0', 'ψ'], ['vx0', 'vx']]) {
       const lb = document.createElement('label'); lb.textContent = lab;
       const inp = document.createElement('input');
@@ -1499,18 +2228,23 @@ async function renderFleetSpawn(fleet) {
     box.onclick = e => { if (!/INPUT|SELECT|BUTTON/.test(e.target.tagName)) selectVehicle(vid); };
     el.appendChild(box);
   });
+  refreshFleetEditControls();
 }
-function collectSetupPayload() {
-  const preset = $('setup_path_preset').value;
-  const fleet = [...$('setup_fleet').querySelectorAll('.setup-fleet')].map(box => {
+function collectFleetFromDom() {
+  const bySpec = Object.fromEntries((window._fleetSpec || []).map(s => [+s.id, s]));
+  return [...$('setup_fleet').querySelectorAll('.setup-fleet')].map(box => {
     const id = +box.dataset.vid;
-    const upd = { id };
+    const upd = { ...(bySpec[id] || {}), id };
     box.querySelectorAll('input[data-k], select[data-k]').forEach(inp => {
       if (inp.disabled) return;
       upd[inp.dataset.k] = inp.tagName === 'SELECT' ? inp.value : +inp.value;
     });
     return upd;
   });
+}
+function collectSetupPayload() {
+  const preset = $('setup_path_preset').value;
+  const fleet = collectFleetFromDom();
   const road = {
     mu: +$('setup_mu').value, grade: +$('setup_grade').value, bank: +$('setup_bank').value,
     mu_right: -1, mu_boundary: 0, rough_amp: 0, rough_wl: 4,
@@ -1520,19 +2254,23 @@ function collectSetupPayload() {
     cosim_attach: $('setup_attach').checked,
     cosim_host: $('setup_cosim_host').value.trim() || '127.0.0.1',
     cosim_cmd_port: +$('setup_cosim_port').value || 7401,
+    cosim_state_port: +$('setup_cosim_state_port').value || 7402,
   };
   if (preset === 'custom') payload.path_pts = collectWaypointPts();
   return payload;
 }
 async function loadSetupForm() {
+  _suppressSetupDirty = true;
   try {
     const s = await (await fetch('/api/setup')).json();
     $('setup_path_preset').value = s.path_preset || 'figure8';
     $('setup_wp_box').style.display = s.path_preset === 'custom' ? '' : 'none';
     renderWaypointRows(s.path_pts || []);
-    await renderFleetSpawn(s.fleet || []);
     window._fleetSpec = s.fleet || [];
-    await refreshFleetView(s.fleet || [], selectedVid);
+    _fleetUiSig = fleetUiSig(window._fleetSpec);
+    await renderFleetSpawn(window._fleetSpec);
+    await buildVehicleTree(window._fleetSpec, selectedVid);
+    await refreshFleetView(window._fleetSpec, selectedVid);
     const r = s.road || {};
     $('setup_mu').value = r.mu ?? 1;
     $('setup_grade').value = ((r.grade ?? 0) * 57.2958).toFixed(2);
@@ -1541,65 +2279,167 @@ async function loadSetupForm() {
     $('setup_attach').checked = !!s.cosim_attach;
     $('setup_cosim_host').value = s.cosim_host || '127.0.0.1';
     $('setup_cosim_port').value = s.cosim_cmd_port ?? 7401;
+    $('setup_cosim_state_port').value = s.cosim_state_port ?? 7402;
     const sel = $('setup_scenario');
-    sel.innerHTML = '<option value="">— scenario —</option>' +
+    sel.innerHTML = '<option value="">Saved scenario…</option>' +
       (s.scenarios || []).map(n => `<option value="${n}">${n}</option>`).join('');
+    if (setupLoadedScenario) sel.value = setupLoadedScenario;
     buildInfraTree(s.infra_sensors || []);
+    markDraftSynced();
+    await refreshCompositionStatus();
   } catch (_) {}
+  _suppressSetupDirty = false;
 }
 async function fleetAddVehicle() {
+  if (simRunning) return;
   const r = await (await fetch('/api/setup', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ fleet_add: true }),
   })).json();
-  if (r.setup) {
-    await renderFleetSpawn(r.setup.fleet);
-    await buildVehicleTree(r.setup.fleet, selectedVid);
-    await refreshFleetView(r.setup.fleet, selectedVid);
+  if (r.setup?.fleet) {
+    const nf = r.setup.fleet[r.setup.fleet.length - 1];
+    if (nf) selectedVid = +nf.id;
+    await syncFleetPanels(r.setup.fleet, selectedVid);
   }
 }
-async function applySetupFromForm() {
+async function applySetupFromForm(lite = false) {
   const payload = collectSetupPayload();
   payload.road.grade = (+$('setup_grade').value) * Math.PI / 180;
   payload.road.bank = (+$('setup_bank').value) * Math.PI / 180;
   let r;
-  try { r = await postSetup(payload); } catch (e) { alert(e.message); return; }
+  try { r = await postSetup(payload); } catch (e) { alert(e.message); return false; }
   lastNpath = -1;
-  trailPts = []; trail.visible = false; mmTrail.length = 0;
-  await drawPath(); await drawRoad();
-  if (r.setup) {
-    await renderFleetSpawn(r.setup.fleet);
-    await buildVehicleTree(r.setup.fleet, selectedVid);
-    await refreshFleetView(r.setup.fleet, selectedVid);
+  if (!lite) {
+    trailPts = []; trail.visible = false; mmTrail.length = 0;
+    try { await drawPath(); await drawRoad(); } catch (_e) {}
+    if (r.setup?.fleet) await syncFleetPanels(r.setup.fleet, selectedVid);
+  } else if (r.setup?.fleet) {
+    window._fleetSpec = mergeSetupFleet(r.setup.fleet);
   }
+  markDraftSynced();
+  return true;
 }
+window.__vdsimApplySetup = applySetupFromForm;
+window.__vdsimApplyState = s => { if (sceneReady) applyState(s); else paintConnState(s); };
+window.__vdsimOnPlayStart = async () => {
+  trailPts = []; trail.visible = false; mmTrail.length = 0; tgt.has = false;
+  stopPathEdit();
+  simRunning = false;
+  simPaused = false;
+  if (!$('setup_fleet').children.length && window._fleetSpec?.length) {
+    await renderFleetSpawn(window._fleetSpec);
+  }
+};
+window.__vdsimOnPlayDone = async (j) => {
+  simPaused = false;
+  purgeOrphanFleetMeshes();
+  updateSimModeUI(true);
+  if ((window._fleetSpec?.length || 0) > 1 && window._lastState?.fleet) {
+    await syncRunningFleetMeshes(filterFleet(window._lastState.fleet));
+  }
+  await refreshCompositionStatus(j?.run_config);
+};
+window.__vdsimOnStop = async () => {
+  trailPts = []; trail.visible = false; mmTrail.length = 0; tgt.has = false;
+  simRunning = false;
+  simPaused = false;
+  purgeOrphanFleetMeshes();
+  updateSimModeUI(false);
+  void loadSetupForm().then(() => buildVehicleTree()).catch(() => {});
+};
+window.__vdsimPlay = () => window.__vdsimCore?.playSim();
+window.__vdsimStop = () => window.__vdsimCore?.stopSim();
+window.__vdsimReset = () => window.__vdsimCore?.resetSim();
 $('setup_fleet_add').onclick = () => fleetAddVehicle();
 $('setup_scenario_load').onclick = async () => {
   const name = $('setup_scenario').value;
   if (!name) return;
+  if (setupDraftDirty && !confirm('Unsaved draft changes will be lost. Load scenario?')) return;
   const r = await (await fetch('/api/fleet', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ scenario: name }),
   })).json();
   if (!r.ok) { alert(r.error || 'load failed'); return; }
+  setupLoadedScenario = name;
   selectedVid = r.live_vid;
   window._fleetSpec = r.fleet;
   lastNpath = -1;
+  markDraftSynced();
   await loadSetupForm();
   await buildVehicleTree(r.fleet, selectedVid);
   await drawPath(); await drawRoad();
+  await refreshCompositionStatus();
 };
-$('setup_scenario_save').onclick = async () => {
-  await applySetupFromForm();
-  const name = prompt('Scenario name (configs/scenarios/)');
-  if (!name) return;
+function scenarioNameExists(name) {
+  return [...$('setup_scenario').options].some(o => o.value === name);
+}
+function openScenarioSaveModal() {
+  const bg = $('scenario_save_bg');
+  const inp = $('scenario_save_name');
+  const warn = $('scenario_save_warn');
+  const ow = $('scenario_save_overwrite');
+  if (!bg || !inp) return;
+  inp.value = setupLoadedScenario || $('setup_scenario').value || '';
+  ow.checked = false;
+  warn.style.display = 'none';
+  bg.classList.add('open');
+  inp.focus();
+  inp.select();
+}
+function closeScenarioSaveModal() {
+  $('scenario_save_bg')?.classList.remove('open');
+}
+function refreshScenarioSaveWarn() {
+  const name = $('scenario_save_name').value.trim();
+  const warn = $('scenario_save_warn');
+  const ow = $('scenario_save_overwrite');
+  if (!name) { warn.style.display = 'none'; return; }
+  if (scenarioNameExists(name)) {
+    warn.textContent = `'${name}' already exists — check Overwrite or pick another name`;
+    warn.style.display = '';
+    ow.checked = false;
+  } else {
+    warn.style.display = 'none';
+  }
+}
+async function commitScenarioSave() {
+  const name = $('scenario_save_name').value.trim();
+  if (!name) { alert('Scenario name required'); return; }
+  if (!/^[A-Za-z0-9_.-]+$/.test(name)) {
+    alert('Name: letters, digits, _ . - only');
+    return;
+  }
+  const overwrite = $('scenario_save_overwrite').checked;
+  if (scenarioNameExists(name) && !overwrite) {
+    alert(`'${name}' already exists — enable Overwrite or choose another name`);
+    return;
+  }
+  const ok = await applySetupFromForm();
+  if (!ok) return;
   const r = await (await fetch('/api/scenario/save', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, overwrite }),
   })).json();
-  if (!r.ok) alert(r.error || 'save failed');
-  else await loadSetupForm();
+  if (!r.ok) { alert(r.error || 'save failed'); return; }
+  setupLoadedScenario = r.name || name;
+  closeScenarioSaveModal();
+  await loadSetupForm();
+}
+$('setup_scenario_save').onclick = () => openScenarioSaveModal();
+$('scenario_save_x').onclick = closeScenarioSaveModal;
+$('scenario_save_cancel').onclick = closeScenarioSaveModal;
+$('scenario_save_ok').onclick = () => commitScenarioSave();
+$('scenario_save_name').oninput = refreshScenarioSaveWarn;
+$('scenario_save_bg').onclick = e => { if (e.target.id === 'scenario_save_bg') closeScenarioSaveModal(); };
+$('scenario_save_name').onkeydown = e => {
+  if (e.key === 'Enter') { e.preventDefault(); commitScenarioSave(); }
+  if (e.key === 'Escape') closeScenarioSaveModal();
 };
+$('setup_panel')?.addEventListener('input', markDraftDirty);
+$('setup_panel')?.addEventListener('change', e => {
+  if (e.target.id === 'setup_scenario') return;
+  markDraftDirty();
+});
 $('setup_path_preset').onchange = () => {
   $('setup_wp_box').style.display = $('setup_path_preset').value === 'custom' ? '' : 'none';
 };
@@ -1638,113 +2478,137 @@ $('setup_terrain_clr').onclick = async () => {
   lastTerrain = -1; await loadSetupForm();
   await drawScenery(); await drawTerrain().then(() => { drawRoad(); drawPath(); });
 };
-// ---- SIM controls ----
-$('sim_play').onclick = async () => {
-  trailPts = []; trail.visible = false; mmTrail.length = 0; tgt.has = false;
-  stopPathEdit();
-  await applySetupFromForm();
-  if (manualMode) await post('/api/config', { driver: false });
-  const r = await postJson('/api/control', { action: 'start' });
-  if (!r.running) {
-    alert(r.error || 'Simulation failed to start');
-    purgeOrphanFleetMeshes();
-    updateSimModeUI(false);
-    updateConn({ plant_error: r.error });
-    return;
-  }
-  purgeOrphanFleetMeshes();
-  updateSimModeUI(true);
-};
-$('sim_stop').onclick = async () => {
-  trailPts = []; trail.visible = false; mmTrail.length = 0; tgt.has = false;
-  try {
-    await postJson('/api/control', { action: 'stop' });
-    purgeOrphanFleetMeshes();
-    updateSimModeUI(false);
-    await loadSetupForm();
-    await buildVehicleTree();
-  } catch (e) {
-    alert('Stop failed: ' + e.message);
-  }
-};
-$('sim_reset').onclick = async () => {
-  trailPts = []; trail.visible = false; tgt.has = false; mmTrail.length = 0;
-  await post('/api/control', { action: 'reset' });
-  updateSimModeUI(false);
-};
+// SIM controls: core.js owns ▶/⏹/⟲; hooks above wire 3D + draft apply.
 let tsTimer = null;
-$('ts_slider').oninput = e => {
-  const v = +e.target.value;
+async function syncTimeScaleFromSlider() {
+  const v = +$('ts_slider').value;
   $('ts_val').textContent = v.toFixed(1) + '×';
+  await postJson('/api/sim', { time_scale: v });
+}
+window.__vdsimSyncTimeScale = syncTimeScaleFromSlider;
+$('ts_slider').oninput = e => {
+  $('ts_val').textContent = (+e.target.value).toFixed(1) + '×';
   clearTimeout(tsTimer);
-  tsTimer = setTimeout(() => post('/api/sim', { time_scale: v }), 150);
+  tsTimer = setTimeout(() => syncTimeScaleFromSlider().catch(() => {}), 80);
 };
-$('sim_save').onclick = async () => {
-  const cfg = await (await fetch('/api/simconfig')).json();
-  const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' });
+$('ts_slider').onchange = () => syncTimeScaleFromSlider().catch(() => {});
+function refreshDriverUI() {
+  const spec = (window._fleetSpec || []).find(f => +f.id === selectedVid);
+  const fd = window._lastState?.fleet_driver?.[String(selectedVid)];
+  const autopilot = fd != null ? fd : (spec?.driver !== false);
+  const auto = $('drv_auto');
+  const man = $('drv_manual');
+  if (auto) auto.classList.toggle('on', autopilot);
+  if (man) man.classList.toggle('on', !autopilot);
+}
+async function setVehicleDriver(vid, driver) {
+  if (+vid === selectedVid) {
+    manualMode = !driver;
+    toggleManualBar(manualMode && simRunning);
+  }
+  refreshDriverUI();
+  await postJson('/api/fleet', { vehicle_id: vid, driver });
+  const spec = (window._fleetSpec || []).find(f => +f.id === +vid);
+  if (spec) spec.driver = driver;
+}
+$('drv_auto').onclick = () => setVehicleDriver(selectedVid, true).catch(e => alert(e.message));
+$('drv_manual').onclick = () => setVehicleDriver(selectedVid, false).catch(e => alert(e.message));
+async function exportRunConfigYaml() {
+  const r = await fetch('/api/runconfig/draft.yaml');
+  const blob = new Blob([await r.text()], { type: 'text/yaml' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `vdsim_config_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`;
+  a.download = `vdsim_run_config_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.yaml`;
   a.click();
   URL.revokeObjectURL(a.href);
-};
-$('sim_load').onclick = () => $('sim_load_input').click();
-$('fleet_demo').onclick = async () => {
-  const r = await (await fetch('/api/fleet', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ scenario: 'two_vehicle_race' }),
-  })).json();
-  if (!r.ok) { alert(r.error || 'fleet load failed'); return; }
-  selectedVid = r.live_vid;
-  await buildVehicleTree(r.fleet, selectedVid);
-  lastNpath = -1;
-  await loadSetupForm();
-  await drawPath(); await drawRoad();
-};
+}
+$('setup_export_yaml').onclick = () => exportRunConfigYaml();
+$('sim_save_cfg').onclick = () => exportRunConfigYaml();
+$('sim_load_cfg').onclick = () => $('sim_load_input').click();
+$('setup_import_yaml').onclick = () => $('sim_load_input').click();
 $('sim_load_input').onchange = async e => {
   const f = e.target.files && e.target.files[0];
   e.target.value = '';
   if (!f) return;
   try {
-    const data = JSON.parse(await f.text());
-    const r = await (await fetch('/api/simconfig', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
-    })).json();
-    if (!r.ok) throw new Error(r.error || 'load failed');
-    const ts = r.config.time_scale ?? 1;
+    const text = await f.text();
+    const isYaml = /\.ya?ml$/i.test(f.name);
+    const r = await fetch('/api/runconfig', {
+      method: 'POST',
+      headers: { 'Content-Type': isYaml ? 'text/yaml' : 'application/json' },
+      body: text,
+    });
+    const j = await r.json();
+    if (!r.ok || !j.ok) throw new Error(j.error || 'load failed');
+    const ts = j.config?.time_scale ?? 1;
     $('ts_slider').value = ts; $('ts_val').textContent = (+ts).toFixed(1) + '×';
-    selectedVid = r.config.live_vid ?? selectedVid;
+    selectedVid = j.config?.live_vid ?? selectedVid;
+    setupLoadedScenario = '';
     lastNpath = -1;
+    markDraftSynced();
     await loadSetupForm();
     await buildVehicleTree(window._fleetSpec, selectedVid);
     await drawPath(); await drawRoad();
+    invalidateIoPanel();
+    if (document.querySelector('.setup-tab.on')?.dataset.setupTab === 'options') {
+      void buildDataPort();
+    }
   } catch (err) {
-    alert('Config load failed: ' + err.message);
+    alert('Run config load failed: ' + err.message);
   }
 };
 
 // ---- vehicle tree ----
-const SENSOR_TREE = { IMU: 'IMU', GNSS: 'GNSS', Wheel: 'Wheel speed', Steer: 'Steer', General: 'Sensors' };
+function refreshFleetEditControls() {
+  const on = simRunning;
+  for (const id of ['add_veh', 'setup_fleet_add']) {
+    const el = $(id);
+    if (!el) continue;
+    el.disabled = on;
+    el.style.opacity = on ? '0.35' : '';
+    el.title = on ? 'Stop simulation first' : (id === 'add_veh' ? 'Add vehicle to fleet' : '');
+  }
+  document.querySelectorAll('.fleet-rm').forEach(b => {
+    b.disabled = on;
+    b.style.opacity = on ? '0.35' : '';
+    b.title = on ? 'Stop simulation first' : 'Remove vehicle';
+  });
+}
 async function selectVehicle(vid) {
-  const old = selectedVid;
-  selectedVid = vid;
-  $('tel_veh').textContent = `Vehicle ${vid}`;
-  await post('/api/fleet', { live_vid: vid });
-  const spec = (window._fleetSpec || []).find(f => +f.id === vid);
-  if (old !== vid && window._fleetSpec) {
-    const oldSpec = window._fleetSpec.find(f => +f.id === old);
-    if (oldSpec) await ensureFleetCar(old, oldSpec);
-    if (fleetCars[old] && window._lastState?.fleet?.[String(old)])
-      placeFleetCar(old, window._lastState.fleet[String(old)]);
-    if (fleetCars[vid]) { disposeCarGroup(fleetCars[vid].group); delete fleetCars[vid]; }
+  if (+vid === +selectedVid) return;
+  selectedVid = +vid;
+  car.userData.vid = selectedVid;
+  $('tel_veh').textContent = `Vehicle ${selectedVid}`;
+  await post('/api/fleet', { live_vid: selectedVid });
+  if (simRunning) {
+    try {
+      const st = await (await fetch('/api/state')).json();
+      window._lastState = st;
+      applyFleetDetailViz(st);
+      if (+selectedVid === +(st.live_vid ?? selectedVid)) updateTelemetry(st);
+    } catch (_) {}
   }
-  if (spec?.level && spec.level !== renderLevel) await rebuildCar(spec.level, vid);
-  buildVehicleTree(window._fleetSpec, selectedVid);
-  if (!simRunning && spec) {
-    previewSpawn({ x: spec.x0, y: spec.y0, yaw: spec.yaw0 });
-    await renderFleetSpawn(window._fleetSpec);
-    if (window._lastState?.fleet) void syncFleetMeshes(filterFleet(window._lastState.fleet), selectedVid);
+  const spec = (window._fleetSpec || []).find(f => +f.id === selectedVid);
+  manualMode = spec ? spec.driver === false : false;
+  toggleManualBar(manualMode && simRunning);
+  if (!simRunning) {
+    if (spec?.level && spec.level !== renderLevel) await rebuildCar(spec.level, selectedVid);
+    else applyCarColors(selectedVid);
+    await refreshFleetView(window._fleetSpec, selectedVid);
+  } else if (multiFleetActive() && window._lastState?.fleet) {
+    car.visible = false;
+    await syncRunningFleetMeshes(filterFleet(window._lastState.fleet));
+    applyFleetDetailViz(window._lastState);
+  } else if (spec?.level && spec.level !== renderLevel) {
+    await rebuildCar(spec.level, selectedVid);
+  } else {
+    applyCarColors(selectedVid);
   }
+  await buildVehicleTree(window._fleetSpec, selectedVid);
+  document.querySelectorAll('.setup-fleet').forEach(b => {
+    b.classList.toggle('sel', +b.dataset.vid === selectedVid);
+  });
+  refreshDriverUI();
 }
 async function buildVehicleTree(fleetSpec, liveVid) {
   if (!fleetSpec) {
@@ -1752,12 +2616,7 @@ async function buildVehicleTree(fleetSpec, liveVid) {
     fleetSpec = fr.fleet; liveVid = fr.live_vid;
   }
   window._fleetSpec = fleetSpec;
-  selectedVid = liveVid;
-  $('tel_veh').textContent = `Vehicle ${liveVid}`;
-  const sens = (await (await fetch('/api/sensors')).json()).fields;
-  const groups = {};
-  sens.forEach(f => { if (f.group !== 'General') (groups[f.group] = groups[f.group] || []).push(f); });
-  const enabled = sens.find(f => f.name === 'enabled');
+  $('tel_veh').textContent = `Vehicle ${selectedVid}`;
   const el = $('veh_tree');
   el.innerHTML = '';
   for (const spec of fleetSpec) {
@@ -1774,26 +2633,18 @@ async function buildVehicleTree(fleetSpec, liveVid) {
     edit.title = 'Edit vehicle modules'; edit.onclick = e => { e.stopPropagation(); openModal(vid); };
     acts.appendChild(edit);
     if (fleetSpec.length > 1) {
-      const del = document.createElement('button'); del.className = 'icon'; del.textContent = '×';
-      del.title = 'Remove vehicle'; del.onclick = e => { e.stopPropagation(); fleetRemoveVehicle(vid); };
+      const del = document.createElement('button');
+      del.className = 'icon fleet-rm'; del.textContent = '×';
+      del.disabled = simRunning;
+      del.title = simRunning ? 'Stop simulation first' : 'Remove vehicle';
+      del.onclick = e => { e.stopPropagation(); if (del.disabled) return; fleetRemoveVehicle(vid); };
       acts.appendChild(del);
     }
     row.appendChild(acts);
     el.appendChild(row);
-    if (vid === liveVid) {
-      for (const g of ['IMU', 'GNSS', 'Wheel', 'Steer']) {
-        if (!groups[g]) continue;
-        const sr = document.createElement('div'); sr.className = 'tree-row sens';
-        sr.textContent = SENSOR_TREE[g] || g;
-        el.appendChild(sr);
-      }
-      if (enabled && !enabled.value) {
-        const sr = document.createElement('div'); sr.className = 'tree-row sens sub';
-        sr.textContent = '(sensors off — truth)';
-        el.appendChild(sr);
-      }
-    }
   }
+  refreshFleetEditControls();
+  refreshDriverUI();
 }
 $('add_veh').onclick = () => fleetAddVehicle();
 let infraSensors = [];
@@ -1839,24 +2690,39 @@ $('add_infra').onclick = async () => {
 
 async function boot() {
   initStaticHelp();
+  let s = null;
   try {
-    const s = await (await fetch('/api/state')).json();
-    if (s.fleet_spec?.length) await buildVehicleTree(s.fleet_spec, s.live_vid ?? 0);
-    else await buildVehicleTree();
-    applyState(s);
+    s = await stateBoot;
+  } catch (_e) {
+    try { await loadSetupForm(); } catch (_e2) {}
+    return;
+  }
+  try {
+    if (s.fleet_spec?.length) {
+      window._fleetSpec = s.fleet_spec;
+      _fleetUiSig = fleetUiSig(s.fleet_spec);
+    }
+    if (sceneReady) applyState(s);
+    else paintConnState(s);
     if (!simRunning) await loadSetupForm();
-  } catch (_) {
+    await refreshWorldGraphics();
+    refreshSpawnHint();
+  } catch (e) {
+    console.error('VDSim boot failed:', e);
     updateSimModeUI(false);
+    paintConnState(s);
     try { await buildVehicleTree(); } catch (_e) {}
     try { await loadSetupForm(); } catch (_e) {}
   }
-  refreshIllustration();
+  if (sceneReady) refreshIllustration();
   const es = new EventSource('/api/stream');
   es.onopen = () => updateConn(window._lastState);
-  es.onerror = () => { $('conn').textContent = '● disconnected'; $('conn').style.color = 'var(--dim)'; };
-  es.onmessage = e => { try { applyState(JSON.parse(e.data)); } catch (_) {} };
+  es.onerror = () => {
+    $('conn').textContent = '● disconnected — reload or restart server';
+    $('conn').style.color = '#ff9500';
+  };
+  es.onmessage = e => { try { if (sceneReady) applyState(JSON.parse(e.data)); else paintConnState(JSON.parse(e.data)); } catch (_) {} };
 }
-void boot();
 
 // ---- manual control ----
 let manualMode = false;
@@ -1869,12 +2735,15 @@ addEventListener('keydown', e => {
 });
 addEventListener('keyup', e => { keys[e.key] = false; });
 function toggleManualBar(show) { $('manbar').style.display = show ? 'flex' : 'none'; }
+function driverManualActive() {
+  return $('drv_manual')?.classList.contains('on');
+}
 setInterval(() => {
-  if (!manualMode || !simRunning) return;
+  if (!simRunning || !driverManualActive()) return;
   man.throttle = Math.max(keys['ArrowUp'] ? 0.7 : 0, touchThr);
   man.brake = Math.max(keys['ArrowDown'] ? 0.6 : 0, touchBrk);
   man.steer = Math.max(-0.4, Math.min(0.4, (keys['ArrowLeft'] ? 0.25 : 0) - (keys['ArrowRight'] ? 0.25 : 0) + touchSteer));
-  post('/api/manual', man);
+  post('/api/manual', { ...man, vehicle: selectedVid });
 }, 40);
 function holdBtn(el, on, off) {
   ['pointerdown', 'touchstart'].forEach(ev => el.addEventListener(ev, e => { e.preventDefault(); on(); }, { passive: false }));
@@ -1888,17 +2757,6 @@ const recenterSteer = () => { $('m_steer').value = 0; touchSteer = 0; };
 
 (async () => {
   const cf = await (await fetch('/api/config')).json();
-  const setMode = drv => {
-    manualMode = !drv;
-    post('/api/config', { driver: drv });
-    $('mode_drv').classList.toggle('on', drv);
-    $('mode_man').classList.toggle('on', !drv);
-    toggleManualBar(!drv);
-    updateConn(window._lastState);
-  };
-  $('mode_drv').onclick = () => setMode(true);
-  $('mode_man').onclick = () => setMode(false);
-  setMode(!!cf.config.driver);
   const ts = cf.config.time_scale ?? 1;
   $('ts_slider').value = ts; $('ts_val').textContent = (+ts).toFixed(1) + '×';
 })();
@@ -2209,7 +3067,7 @@ async function refreshModalPreview() {
   const geom = geomFromModalForm();
   const lvl = modalLvl;
   clearGroup(modalPreview.carRoot);
-  const built = buildStaticCar(geom, lvl, 0x01A0E9);
+  const built = buildStaticCar(geom, lvl, fleetColor(0), 0, fleetCabinColor(0));
   modalPreview.carRoot.add(built.group);
   const links = new THREE.Group();
   modalPreview.carRoot.add(links);
@@ -2505,6 +3363,8 @@ function closeModal() {
 }
 $('modal_x').onclick = closeModal;
 $('modal_bg').addEventListener('click', e => { if (e.target === $('modal_bg')) closeModal(); });
+window.__vdsimModuleReady = true;
+void boot();
 </script>
 </body>
 </html>

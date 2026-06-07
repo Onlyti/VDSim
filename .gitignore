@@ -79,4 +79,5 @@ configs/tires/measured/
 
 # Transient run outputs (batch / validation campaigns)
 /results/
+runs/
 apps/validation/results/

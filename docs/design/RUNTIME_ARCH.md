@@ -1,7 +1,9 @@
 # Runtime architecture — three branches over one core
 
-Status: design / alignment (not yet executed). Supersedes the ad-hoc wiring that
-accreted across `gui/`, `viewer/`, `cosim/`, `python/vdsim_comms.py`.
+Status: **aligned with v0.2 GUI** (2026-06-06). Historical sprawl notes below;
+**[1] GUI role updated** — scenario editor + run controller + viewer (see
+§ Target). Supersedes the ad-hoc wiring that accreted across `gui/`, `viewer/`,
+`cosim/`, `python/vdsim_comms.py`.
 
 ## Why this doc exists
 
@@ -12,19 +14,21 @@ owners of a live simulation** and **multiple incompatible comm paths**:
 |---|---|---|---|
 | `cosim/realtime_server.cpp` | own `SimSession` + `RealTimeRunner` | UDP | VDS1 binary, CRC32, versioned (`cosim_protocol.hpp`) — canonical |
 | `python/vdsim_comms.py` | own `Simulation` (via lab) | UDP | toy templates (`vds1_cmd = <Iddd`, json, nmea) — divergent, NOT wire-compatible with the above |
-| `gui/server.py` | own `RUNNER` | HTTP SSE + HTTP `/api/manual` + UDP 8101 (FFB) + HTTP `/api/io` fan-out | ad-hoc JSON |
+| `gui/server.py` | **no SimSession step**; orchestrates draft + plant lifecycle | HTTP REST + SSE `/api/stream` | JSON (draft snapshot or relayed STATE) |
 
 Additional sprawl:
 - Two overlapping web viewers: `gui/` and `viewer/` (`realtime_server.py`,
   `suspension_editor`).
-- `gui/server.py` alone fuses all three branches (viz + control + signal
-  fan-out + its own sim loop). The FFB-over-UDP port (8101) bolted onto it is
-  the clearest symptom.
+- `gui/server.py` holds an in-memory **run-config draft** (fleet, path, road),
+  materializes `run_config.yaml` on ▶ Play, spawns/attaches `vdsim_realtime`,
+  relays UDP STATE to the browser via SSE. It does **not** integrate the plant.
+- Legacy sprawl still to trim: `/api/manual`, FFB UDP (8101), `/api/io` fan-out
+  ideally move to branch [2] clients/router (see Consolidation).
 - Two definitions of "VDS1" that cannot talk to each other.
 
 This is the sprawl to remove before adding more features.
 
-## Target: one core, three thin adapters, one-way control
+## Target: one core, three thin adapters
 
 ```
                   +-----------------------------------+
@@ -32,43 +36,62 @@ This is the sprawl to remove before adding more features.
                   |  == vdsim_lab.Simulation (python)  |   step / set_control / get_data
                   +------------------+----------------+
         +----------------------------+----------------------------+
-   [3] Sync API                 [2] UDP comms                [1] Web viewer
-   direct calls                 control in / signal out      subscribe only (read-only)
-   batch, embedded              ONE protocol + router         never owns a sim
-   (foundation of the other 2)  wheel / HIL / external node   no control logic
+   [3] Sync API                 [2] Real-time runtime          [1] Web GUI
+   direct calls                 vdsim_realtime + VDS1 UDP      scenario editor +
+   batch, embedded              CMD in / STATE out              run controller + viewer
+   (foundation of the other 2)  wheel / HIL / external node     **no physics step**
 ```
 
 Three rules:
 
 1. **[3] Sync API is the foundation.** `Simulation.step / set_control /
-   get_data` is the only stepping path. Batch and embedded callers use only
-   this. (`python/vdsim_lab.py`, `tools/vdsim_batch.py`, the `vdsim` .so.)
+   get_data` is the only stepping path for offline/batch. (`python/vdsim_lab.py`,
+   `tools/vdsim_batch.py`, the `vdsim` .so.)
 
-2. **[2] is the real-time runtime, not merely "comms."** `vdsim_realtime` is
-   VDSim's real-time application: it drives the *same* SimSession core as [3],
-   but paced by `RealTimeRunner` against a wall clock, with UDP as its I/O. So
-   [3] and [2] are the two ways to run one core — offline/deterministic vs
-   real-time (CarMaker's ERG-batch vs HIL analogue). UDP is just the app's I/O
-   surface: control SOURCES (autopilot, wheel, external node, AutoHYU bridge) in,
-   signal SINKS (viewer, logger, HIL, FFB) out. One wire spec, canonical =
-   `cosim/cosim_protocol.hpp`, Python mirror = `cosim/protocol.py`. Bringing the
-   server to feature parity with the in-process sim (road/terrain/sensors,
-   extended STATE) is what makes it the *full* runtime — until then it is a
-   flat-ground half (see Open items).
+2. **[2] is the real-time runtime, not merely "comms."** `vdsim_realtime` drives
+   the *same* SimSession core as [3], paced by `RealTimeRunner` against a wall
+   clock, with UDP as its I/O. [3] and [2] are offline/deterministic vs
+   real-time. UDP wire spec: `cosim/cosim_protocol.hpp`, Python mirror =
+   `cosim/protocol.py`.
 
-3. **[1] Web viewer observes only.** It subscribes to the signal stream (the
-   same data branch [2] emits, or a read-only state feed) and renders. It holds
-   no authoritative control. A human driving with a wheel is a control SOURCE on
-   branch [2], not logic living in the web server.
+3. **[1] Web GUI — scenario editor, run controller, viewer.** The browser never
+   steps SimSession. `gui/server.py` is a thin **orchestrator**:
+   - **Setup (draft):** edit fleet/path/road/parts in memory; preview in Three.js;
+     SSE pushes a synthetic snapshot (`setup_mode`, `source: "setup"`) built from
+     spawn poses — not plant telemetry.
+   - **▶ Play:** write `run_config.yaml`, start or attach `vdsim_realtime`; relay
+     CMD (autopilot/manual/io); SSE pushes relayed plant STATE (`source: "cosim"`).
+   - **REST** = authoring + lifecycle (`/api/setup`, `/api/runconfig`, `/api/control`, …).
+   - **SSE** = one-way live state bus to the browser (~60 Hz); see § SSE below.
 
-Control always flows in through [2]'s in-channel or [3]'s `set_control`. The web
-never holds control. This is the invariant that keeps the branches from
-re-tangling.
+   A human with a wheel is still a control **source** on branch [2] (UDP CMD), not
+   physics inside the web server. The GUI *starts/stops* the plant and *edits* the
+   scenario; it does not *integrate* it.
 
-## Consolidation actions
+**Invariant:** physics stepping only in [2] (real-time) or [3] (batch). [1] may
+command and configure [2], but never replaces it as the plant.
 
-- `gui/server.py`: strip to viz-only (SSE + static). Move `/api/manual`,
-  `_udp_control` (8101), `/api/io` + `/api/io/targets` out to branch [2].
+## SSE (`GET /api/stream`)
+
+**Server-Sent Events** — HTTP long-lived connection; server → browser only.
+
+| | REST `/api/*` | SSE `/api/stream` |
+|---|---|---|
+| Direction | request/response | server push |
+| Rate | on user/action | ~60 Hz |
+| Setup | draft CRUD (`POST /api/setup`, …) | draft mirror: `fleet_spec` spawn → pose fields |
+| Running | start/stop/pause, manual, io | relayed VDS1 STATE + `fleet`, telemetry |
+
+Browser: `EventSource('/api/stream')` → `applyState(json)` drives 3D, minimap,
+connection badge, right-hand telemetry. Same JSON schema in both modes; **`setup_mode`
+and `source`** distinguish draft preview from live plant data.
+
+Implementation note: `gui_architecture.md` originally specified WebSocket for the
+state stream; the realized server uses SSE (stdlib `http.server`, sufficient for
+60 Hz JSON). A future backend swap must keep the **field schema**, transport may
+change.
+
+## Consolidation actions (remaining)
 - `viewer/` vs `gui/`: pick one web viewer; fold `suspension_editor` in as a
   panel or move it to `builder/` (authoring concern).
 - VDS1: one wire format. `cosim_protocol.hpp` is canonical; Python mirrors it.
@@ -100,8 +123,8 @@ cosim/                 # [2] the one comms layer
   realtime_server.cpp       # the single comms server (CMD in / STATE out)
   test_udp_client.py   # smoke test, uses protocol.py
 configs/comms/*.yaml   # routing spec (fan-out not yet realized in the server)
-gui/                   # [1] the one web viewer: SSE + static, subscribes
-builder/               # authoring tool (incl. suspension editor), separate concern
+gui/                   # [1] app.html + server.py: draft, Play/Stop, SSE relay
+builder/               # hardpoint / suspension authoring (offline)
 ```
 
 ## Decisions taken (2026-06-04)
@@ -115,10 +138,18 @@ builder/               # authoring tool (incl. suspension editor), separate conc
 ## B-track progress (2026-06-04, post-v0.1.0)
 
 - B1 STATE v2 (rack_torque/slip/susp/measured); B2 server road/terrain config;
-  B3 server SensorParams yaml; B4 `gui/server.py` now owns no sim — it auto-
-  starts `vdsim_realtime`, relays CMD, and renders its STATE. DONE.
-- The real-time app is renamed `vdsim_realtime` (core pacing class stays
-  `RealTimeRunner`).
+  B3 server SensorParams yaml; B4 `gui/server.py` no longer steps SimSession —
+  auto-starts `vdsim_realtime`, relays CMD, SSE relays STATE. DONE.
+- Real-time app renamed `vdsim_realtime` (core pacing class stays `RealTimeRunner`).
+
+## v0.2 GUI alignment (2026-06-06)
+
+- **Setup = draft session:** `Runner.apply_setup()` updates in-memory run spec;
+  `_setup_snapshot()` feeds SSE until ▶ Play.
+- **Play:** `_materialize_run_config()` → `runs/live/run_config.yaml` → `vdsim_realtime
+  --scenario=…`; SSE switches to cosim STATE. Override dir: env `VDSIM_RUN_DIR`.
+- **Single page:** `gui/app.html` — SIM bar, fleet tree, setup panel, 3D, telemetry.
+- See also `docs/design/V0.2_GUI_REDESIGN.md`, `docs/HANDOFF.md` §6b.
 
 ## Open items
 

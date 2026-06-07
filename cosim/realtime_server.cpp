@@ -33,6 +33,7 @@
 #include <csignal>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <string>
 #include <thread>
@@ -47,6 +48,21 @@ double optd(int c, char** v, const char* k, double d) {
     const size_t L = std::strlen(k);
     for (int i = 1; i < c; ++i) if (!std::strncmp(v[i], k, L)) return std::atof(v[i] + L);
     return d;
+}
+
+double clamp_time_scale(double v) {
+    if (v < 0.05) return 0.05;
+    if (v > 10.0) return 10.0;
+    return v;
+}
+
+double read_live_time_scale(const std::string& scenario_path, double fallback) {
+    const auto p = std::filesystem::path(scenario_path).parent_path() / "time_scale";
+    std::ifstream f(p);
+    if (!f) return clamp_time_scale(fallback);
+    double v = fallback;
+    f >> v;
+    return clamp_time_scale(v);
 }
 std::string opts(int c, char** v, const char* k, const std::string& d) {
     const size_t L = std::strlen(k);
@@ -346,6 +362,10 @@ int run_world(const std::string& scenario_path, int argc, char** argv) {
     const double cmd_to = world.cmd_timeout > 0.0 ? world.cmd_timeout
                                                   : optd(argc, argv, "--cmd-timeout=", 0.1);
     const double dt = 1.0 / rate;
+    double time_scale = world.time_scale > 0.0 ? world.time_scale : 1.0;
+    const double cli_ts = optd(argc, argv, "--time-scale=", 0.0);
+    if (cli_ts > 0.0) time_scale = cli_ts;
+    time_scale = clamp_time_scale(time_scale);
     const auto& rd = world.road;
 
     vdsim::SolverParams sp;
@@ -437,11 +457,13 @@ int run_world(const std::string& scenario_path, int argc, char** argv) {
 
     uint32_t seq = 0;
     auto next = std::chrono::steady_clock::now();
-    const auto period = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
-        std::chrono::duration<double>(dt));
     const auto failsafe_dur = std::chrono::duration<double>(cmd_to);
     uint8_t out[vdsim::cosim::kStateBytes];
     while (g_run.load()) {
+        time_scale = read_live_time_scale(scenario_path, time_scale);
+        const double period_s = dt / time_scale;
+        const auto period = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+            std::chrono::duration<double>(period_s));
         const double t = now_s();
         touch_sub(subscribers, seed, t);   // keep --state-port subscriber alive
         prune_subs(subscribers, t, 2.0);
@@ -492,7 +514,7 @@ int main(int argc, char** argv) {
             "usage: %s <vehicle.yaml> <tire.yaml> [options]\n"
             "   or: %s --scenario=<world.yaml> [options]\n"
             "  [--cmd-port=7001] [--state-ip=127.0.0.1] [--state-port=7002]\n"
-            "  [--rate=200] [--vx0=0] [--cmd-timeout=0.1] [--mu=1] [--grade=0] ...\n",
+            "  [--rate=200] [--time-scale=1] [--vx0=0] [--cmd-timeout=0.1] [--mu=1] [--grade=0] ...\n",
             argv[0], argv[0]);
         rc = 2;
     }
