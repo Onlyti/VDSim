@@ -1,0 +1,21 @@
+type: trailing_arm
+side: left
+wheel:
+  center:
+  - -1.35
+  - 0.78
+  - 0.305
+  spin_axis:
+  - 0.0
+  - 1.0
+  - 0.0
+  static_radius: 0.305
+arm_pivot:
+  chassis_inboard:
+  - -0.8
+  - 0.42
+  - 0.22
+  chassis_outboard:
+  - -0.75
+  - 0.62
+  - 0.2

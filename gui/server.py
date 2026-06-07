@@ -42,17 +42,21 @@ from runner.params_schema import (
     VEHICLE_FIELDS, VEHICLES,
 )
 from runner.params_io import apply_fields, get_dotted, serialize_fields, set_dotted
+from runner.catalog_bridge import (
+    catalog_resolver,
+    fleet_entry_for_cosim,
+    normalize_fleet_spec,
+)
 from runner.suspension import (
-    SUSP_DIR,
     l3_susp_path_warnings,
     list_l3_kinematics_configs,
     list_suspension_api,
     list_suspension_configs,
     strip_fleet_susp_if_not_l3,
-    susp_rel_path,
     suspension_default_for_vehicle,
     suspension_schematic,
 )
+from catalog.ids import BLUEPRINTS, DEFAULT_BLUEPRINT, blueprint_for_vehicle
 from api.handler import make_handler
 from api.routes import ApiContext
 
@@ -61,23 +65,25 @@ try:
 except ImportError as e:
     sys.exit(f"import vdsim failed ({e}). Build with -DVDSIM_BUILD_PYTHON=ON.")
 
-TIRE_DIR = REPO / "configs" / "tires"
-
-
 def parts_registry():
     comp = REPO / "configs" / "components" / "suspension"
     presets = sorted(x.stem for x in comp.glob("*.yaml")) if comp.is_dir() else []
-    veh = REPO / "configs" / "vehicles"
-    tires = REPO / "configs" / "tires"
+    r = catalog_resolver()
+    r.load_manifest()
+    tires = [p for p in r.list_parts("tire")]
+    chassis = [p for p in r.list_parts("chassis")]
     return {
-        "vehicles": sorted(x.stem for x in veh.glob("*.yaml")),
-        "tires": sorted(x.stem for x in tires.glob("*.yaml")),
+        "blueprints": list(BLUEPRINTS),
+        "vehicles": [b.replace("vehicle.", "") for b in BLUEPRINTS],
+        "tires": [p["id"].replace("tire.", "") for p in tires],
+        "chassis": [p["id"].replace("chassis.", "") for p in chassis],
         "suspensions": list_suspension_configs(),
         "l3_kinematics": list_l3_kinematics_configs(),
         "suspension_presets": presets,
         "vehicle_suspension_defaults": {
             v: suspension_default_for_vehicle(v) for v in VEHICLES
         },
+        "catalog_id": "vdsim.builtin",
     }
 
 
@@ -129,12 +135,12 @@ class Runner(DraftMixin):
         self.time_scale = 1.0
         self.live_vid = 0
         self.ports = {0: VehiclePort()}
-        _p0 = suspension_default_for_vehicle("sedan")
         self.fleet_spec = [
-            {"id": 0, "vehicle": "sedan", "tire": "default_pacejka", "level": "L2",
-             "x0": 0.0, "y0": 0.0, "yaw0": 0.0, "vx0": 0.0,
-             "front_susp": _p0["front"], "rear_susp": _p0["rear"]},
+            {"id": 0, "blueprint": DEFAULT_BLUEPRINT, "parts": {}, "level": "L2",
+             "vehicle": "sedan", "tire": "default_pacejka",
+             "x0": 0.0, "y0": 0.0, "yaw0": 0.0, "vx0": 0.0},
         ]
+        normalize_fleet_spec(self.fleet_spec[0])
         self.fleet_overrides = {}
         self.plant_error = None
         self._wait_since = None
@@ -146,10 +152,11 @@ class Runner(DraftMixin):
         self.latest = {}
         self._last_run_config = None
         self.path = FigureEight()
-        self.vp = vdsim.VehicleParams.from_yaml(
-            str(REPO / "configs/vehicles/sedan.yaml"))
-        self.tp = vdsim.TireParams.from_yaml(
-            str(REPO / "configs/tires/default_pacejka.yaml"))
+        self._catalog = catalog_resolver()
+        _live = self._catalog.resolve_blueprint(
+            DEFAULT_BLUEPRINT, out_dir=Path(self.cosim._tmp) / "_boot")
+        self.vp = vdsim.VehicleParams.from_yaml(str(_live.vehicle_yaml))
+        self.tp = vdsim.TireParams.from_yaml(str(_live.tire_yaml))
         self.act = vdsim.ActuatorParams()        # all effects off by default
         self.sensors = vdsim.SensorParams()      # disabled -> measured == truth
         self.solver = vdsim.SolverParams()
@@ -172,17 +179,7 @@ class Runner(DraftMixin):
 
     @staticmethod
     def _ensure_fleet_parts(spec):
-        veh = str(spec.get("vehicle", "sedan"))
-        defaults = suspension_default_for_vehicle(veh)
-        spec.setdefault("front_susp", defaults["front"])
-        spec.setdefault("rear_susp", defaults["rear"])
-
-    @staticmethod
-    def _susp_yaml_path(stem):
-        if not stem:
-            return None
-        p = SUSP_DIR / f"{Path(str(stem)).stem}.yaml"
-        return str(p) if p.is_file() else None
+        normalize_fleet_spec(spec)
 
     def _renumber_fleet(self):
         want = list(range(len(self.fleet_spec)))
@@ -217,24 +214,20 @@ class Runner(DraftMixin):
         if vid == self.live_vid:
             return self.vp
         spec = self._spec_for_vid(vid)
-        vp = vdsim.VehicleParams.from_yaml(
-            str(REPO / f"configs/vehicles/{spec['vehicle']}.yaml"))
-        ov = self.fleet_overrides.get(vid, {}).get("vehicle")
-        if ov:
-            apply_fields(vp, VEHICLE_FIELDS, ov)
-        return vp
+        normalize_fleet_spec(spec)
+        out = Path(self.cosim._tmp) / f"_vp_{vid}"
+        row = fleet_entry_for_cosim(self._catalog, spec, out, self.fleet_overrides)
+        return vdsim.VehicleParams.from_yaml(row["vehicle_yaml"])
 
     def _tp_for_vid(self, vid):
         vid = int(vid)
         if vid == self.live_vid:
             return self.tp
         spec = self._spec_for_vid(vid)
-        tp = vdsim.TireParams.from_yaml(
-            str(REPO / f"configs/tires/{spec['tire']}.yaml"))
-        ov = self.fleet_overrides.get(vid, {}).get("tire")
-        if ov:
-            apply_fields(tp, TIRE_FIELDS, ov)
-        return tp
+        normalize_fleet_spec(spec)
+        out = Path(self.cosim._tmp) / f"_tp_{vid}"
+        row = fleet_entry_for_cosim(self._catalog, spec, out, self.fleet_overrides)
+        return vdsim.TireParams.from_yaml(row["tire_yaml"])
 
     def vehicle_geom(self, vid):
         vp = self._vp_for_vid(vid)
@@ -244,31 +237,12 @@ class Runner(DraftMixin):
 
     def _fleet_launch(self):
         fleet = []
+        resolve_dir = Path(self.cosim._tmp) / "_launch"
+        resolve_dir.mkdir(parents=True, exist_ok=True)
         for spec in self.fleet_spec:
-            self._ensure_fleet_parts(spec)
-            vid = int(spec["id"])
-            vy = os.path.join(self.cosim._tmp, f"vehicle_{vid}.yaml")
-            ty = os.path.join(self.cosim._tmp, f"tire_{vid}.yaml")
-            self._vp_for_vid(vid).to_yaml(vy)
-            self._tp_for_vid(vid).to_yaml(ty)
-            row = {
-                "id": vid,
-                "vehicle_yaml": vy,
-                "tire_yaml": ty,
-                "level": spec.get("level", self.cfg["level"]),
-                "x0": float(spec.get("x0", self.cfg["init_x"])),
-                "y0": float(spec.get("y0", self.cfg["init_y"])),
-                "yaw0": float(spec.get("yaw0", self.cfg["init_yaw"])),
-                "vx0": float(spec.get("vx0", self.cfg["init_v"])),
-            }
-            if str(spec.get("level", self.cfg["level"])) == "L3":
-                fs = susp_rel_path(spec.get("front_susp"))
-                rs = susp_rel_path(spec.get("rear_susp"))
-                if fs:
-                    row["front_susp_yaml"] = fs
-                if rs:
-                    row["rear_susp_yaml"] = rs
-            fleet.append(row)
+            normalize_fleet_spec(spec)
+            fleet.append(fleet_entry_for_cosim(
+                self._catalog, spec, resolve_dir, self.fleet_overrides))
         return fleet
 
     def _sync_live_from_fleet(self):
@@ -282,14 +256,12 @@ class Runner(DraftMixin):
         if spec.get("vehicle"):
             self.cfg["vehicle"] = str(spec["vehicle"])
             self.load_vehicle(self.cfg["vehicle"])
-        tire_stem = str(spec.get("tire", ""))
-        if tire_stem:
-            tp = vdsim.TireParams.from_yaml(
-                str(REPO / f"configs/tires/{tire_stem}.yaml"))
-            ov = self.fleet_overrides.get(self.live_vid, {}).get("tire")
-            if ov:
-                apply_fields(tp, TIRE_FIELDS, ov)
-            self.tp = tp
+        normalize_fleet_spec(spec)
+        out = Path(self.cosim._tmp) / "_live_sync"
+        row = fleet_entry_for_cosim(
+            self._catalog, spec, out, self.fleet_overrides)
+        self.vp = vdsim.VehicleParams.from_yaml(row["vehicle_yaml"])
+        self.tp = vdsim.TireParams.from_yaml(row["tire_yaml"])
 
     def _live_run_dir(self):
         if self._time_scale_path:
@@ -340,7 +312,7 @@ class Runner(DraftMixin):
             scenario = self._last_run_config
         if self.cosim.available():
             c = self.cosim.cfg
-            args = [str(COSIM_BIN), f"--scenario={scenario}",
+            args = [str(COSIM_BIN), f"--scene={scenario}",
                     f"--cmd-port={int(c['cmd_port'])}", "--state-ip=127.0.0.1",
                     f"--state-port={int(c['state_port'])}",
                     f"--rate={1.0 / self.dt if self.dt > 1e-6 else 200.0}",
@@ -358,8 +330,10 @@ class Runner(DraftMixin):
             self._build()
 
     def load_vehicle(self, name):
-        self.vp = vdsim.VehicleParams.from_yaml(
-            str(REPO / f"configs/vehicles/{name}.yaml"))
+        bid = blueprint_for_vehicle(str(name), self.cfg.get("level", "L2"))
+        resolved = self._catalog.resolve_blueprint(
+            bid, out_dir=Path(self.cosim._tmp) / f"_veh_{name}")
+        self.vp = vdsim.VehicleParams.from_yaml(str(resolved.vehicle_yaml))
 
     def reconfigure(self, **kw):
         with self.lock:
@@ -544,19 +518,21 @@ class Runner(DraftMixin):
 
     def _default_fleet_spec(self, vid=0, offset_xy=(0.0, 0.0)):
         veh = str(self.cfg.get("vehicle", "sedan"))
-        parts = suspension_default_for_vehicle(veh)
-        return {
+        level = str(self.cfg.get("level", "L2"))
+        row = {
             "id": int(vid),
+            "blueprint": blueprint_for_vehicle(veh, level),
+            "parts": {},
             "vehicle": veh,
             "tire": "default_pacejka",
-            "level": str(self.cfg.get("level", "L2")),
+            "level": level,
             "x0": float(self.cfg.get("init_x", 0.0)) + float(offset_xy[0]),
             "y0": float(self.cfg.get("init_y", 0.0)) + float(offset_xy[1]),
             "yaw0": float(self.cfg.get("init_yaw", 0.0)),
             "vx0": 0.0,
-            "front_susp": parts["front"],
-            "rear_susp": parts["rear"],
         }
+        normalize_fleet_spec(row)
+        return row
 
     def _fleet_add(self):
         if not self.fleet_spec:
@@ -569,20 +545,24 @@ class Runner(DraftMixin):
         ids = [int(s["id"]) for s in self.fleet_spec]
         nid = max(ids) + 1
         ref = self.fleet_spec[-1]
-        veh = str(ref.get("vehicle", "sedan"))
-        parts = suspension_default_for_vehicle(veh)
-        self.fleet_spec.append({
+        row = {
             "id": nid,
-            "vehicle": veh,
+            "blueprint": str(ref.get("blueprint", DEFAULT_BLUEPRINT)),
+            "parts": dict(ref.get("parts") or {}),
+            "vehicle": str(ref.get("vehicle", "sedan")),
             "tire": str(ref.get("tire", "default_pacejka")),
             "level": str(ref.get("level", self.cfg["level"])),
             "x0": float(ref.get("x0", 0.0)) + 3.0,
             "y0": float(ref.get("y0", 0.0)),
             "yaw0": float(ref.get("yaw0", 0.0)),
             "vx0": float(ref.get("vx0", 0.0)),
-            "front_susp": str(ref.get("front_susp", parts["front"])),
-            "rear_susp": str(ref.get("rear_susp", parts["rear"])),
-        })
+        }
+        if ref.get("front_susp"):
+            row["front_susp"] = ref["front_susp"]
+        if ref.get("rear_susp"):
+            row["rear_susp"] = ref["rear_susp"]
+        normalize_fleet_spec(row)
+        self.fleet_spec.append(row)
         strip_fleet_susp_if_not_l3(self.fleet_spec[-1])
         self._ensure_ports()
 
@@ -613,7 +593,7 @@ class Runner(DraftMixin):
         self._prune_cosim_states()
 
     def list_scenarios(self):
-        d = REPO / "configs" / "scenarios"
+        d = REPO / "configs" / "scenes"
         if not d.is_dir():
             return []
         mtime = max((p.stat().st_mtime for p in d.glob("*.yaml")), default=0.0)

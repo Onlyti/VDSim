@@ -8,8 +8,8 @@ from typing import Any, Dict, List, Mapping, Optional
 import yaml
 
 PART_TYPES = frozenset({
-    "chassis", "tire", "susp_kinematics", "susp_ride", "brake", "steering",
-    "drivetrain", "actuator", "sensor_suite",
+    "chassis", "tire", "susp_kinematics", "susp_topology", "susp_ride", "brake",
+    "steering", "drivetrain", "actuator", "sensor_suite",
 })
 
 SCHEMAS = frozenset({
@@ -139,8 +139,6 @@ class CatalogResolver:
             raise PartEnvelopeError(f"unknown schema: {doc['schema']}")
         if not isinstance(doc["body"], Mapping):
             raise PartEnvelopeError("part body must be a mapping")
-        if doc["schema"] == "topology_preview_v1":
-            raise PartEnvelopeError("topology_preview_v1 is not attachable at runtime")
 
     def load_blueprint(self, blueprint_id: str) -> dict:
         self.load_manifest()
@@ -186,9 +184,9 @@ class CatalogResolver:
             elif slot in ("brake", "steering", "drivetrain"):
                 vehicle_body.update(body)
             elif slot == "front_susp_kin":
-                susp_front = self._kinematics_path(body, part["schema"])
+                susp_front = self._kinematics_path(body, part["schema"], slot)
             elif slot == "rear_susp_kin":
-                susp_rear = self._kinematics_path(body, part["schema"])
+                susp_rear = self._kinematics_path(body, part["schema"], slot)
             elif slot in ("front_susp_ride", "rear_susp_ride"):
                 vehicle_body.update(body)
 
@@ -229,14 +227,18 @@ class CatalogResolver:
                 if slot not in parts:
                     raise CatalogError(f"L3 blueprint missing required slot: {slot}")
 
-    @staticmethod
-    def _kinematics_path(body: Mapping[str, Any], schema: str) -> Path:
+    def _kinematics_path(self, body: Mapping[str, Any], schema: str, slot: str) -> Path:
+        if schema == "topology_preview_v1":
+            raise CatalogError(f"{slot} cannot use topology_preview_v1 part")
         if schema != "kinematics_l3_native_v1":
             raise CatalogError(f"susp kinematics slot requires kinematics_l3_native_v1, got {schema}")
         path = body.get("path")
         if not path:
             raise CatalogError("susp kinematics body needs path")
-        return Path(path)
+        p = Path(str(path))
+        if not p.is_absolute():
+            p = (self.catalog_root / p).resolve()
+        return p
 
     @staticmethod
     def _read_yaml(path: Path) -> dict:

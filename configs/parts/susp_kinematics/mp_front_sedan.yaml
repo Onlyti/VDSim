@@ -1,0 +1,9 @@
+id: susp.mp_front_sedan
+type: susp_kinematics
+version: 1
+schema: kinematics_l3_native_v1
+label: mp_front_sedan kinematics
+tags:
+- susp_kinematics
+body:
+  path: parts/susp_kinematics/kin/mp_front_sedan.yaml

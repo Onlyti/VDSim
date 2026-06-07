@@ -1,0 +1,9 @@
+id: susp.dw_front_sports
+type: susp_kinematics
+version: 1
+schema: kinematics_l3_native_v1
+label: dw_front_sports kinematics
+tags:
+- susp_kinematics
+body:
+  path: parts/susp_kinematics/kin/dw_front_sports.yaml

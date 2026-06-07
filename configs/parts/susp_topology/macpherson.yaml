@@ -1,0 +1,9 @@
+id: susp_topo.macpherson
+type: susp_topology
+version: 1
+schema: topology_preview_v1
+label: macpherson topology preview
+tags:
+- susp_topology
+body:
+  path: parts/susp_topology/macpherson.yaml

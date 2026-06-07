@@ -1,0 +1,10 @@
+id: brake.fsk_formula
+type: brake
+version: 1
+schema: brake_subsystem_v1
+label: fsk_formula brakes
+tags:
+- brake
+body:
+  brake_bias_front: 0.58
+  max_brake_torque: 1200.0

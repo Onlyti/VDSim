@@ -109,7 +109,11 @@ def vehicle_preview(data):
         vp = vdsim.VehicleParams.from_yaml(str(tmp))
     finally:
         tmp.unlink(missing_ok=True)
-    tp = vdsim.TireParams.from_yaml(str(REPO / "configs/tires/default_pacejka.yaml"))
+    sys.path.insert(0, str(REPO / "python"))
+    from catalog import CatalogResolver
+    rv = CatalogResolver(REPO).resolve_blueprint(
+        "vehicle.sedan_comfort", out_dir=REPO / "build" / ".builder_resolve")
+    tp = vdsim.TireParams.from_yaml(str(rv.tire_yaml))
     sess = vdsim.make_sim_session(vp, tp, "L2", nominal_dt=0.005, mu=1.0)
     s = vdsim.make_init_state(x=0, y=0, yaw=0, v=0.0, wheel_radius=vp.wheel_radius_nominal)
     sess.reset(s)

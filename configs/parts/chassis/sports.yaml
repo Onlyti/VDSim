@@ -1,0 +1,45 @@
+id: chassis.sports
+type: chassis
+version: 1
+schema: vehicle_params_v1
+label: Sports chassis
+tags:
+- chassis
+body:
+  roll_center_height_rear: 0.12
+  arb_stiffness_front: 0.0
+  wheelbase: 2.55
+  arb_stiffness_rear: 0.0
+  spring_stiffness:
+  - 45000
+  - 45000
+  - 42000
+  - 42000
+  inertia_diag:
+  - 420.0
+  - 1700.0
+  - 2050.0
+  unsprung_mass:
+  - 42
+  - 42
+  - 38
+  - 38
+  aero_lift_front: 0.4
+  frontal_area: 2.05
+  cg_to_front: 1.2
+  roll_center_height_front: 0.08
+  damper_coefficient:
+  - 4200
+  - 4200
+  - 3900
+  - 3900
+  mass_sprung: 1180.0
+  track_front: 1.58
+  track_rear: 1.56
+  mass: 1320.0
+  wheel_radius_nominal: 0.33
+  cg_height: 0.42
+  aero_lift_rear: 0.6
+  cg_to_rear: 1.35
+  pitch_center_height: 0.15
+  aero_drag_coeff: 0.34

@@ -1,0 +1,9 @@
+id: susp_topo.multi_link_5
+type: susp_topology
+version: 1
+schema: topology_preview_v1
+label: multi_link_5 topology preview
+tags:
+- susp_topology
+body:
+  path: parts/susp_topology/multi_link_5.yaml

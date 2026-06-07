@@ -1,13 +1,11 @@
-// vdsim_realtime — real-time UDP co-simulation server (single or multi-vehicle).
+// vdsim_realtime — real-time UDP co-simulation server (catalog scene or world YAML).
 //
-// Flat (N=1):  vdsim_realtime <vehicle.yaml> <tire.yaml> [options]
-// World (N>1): vdsim_realtime --scenario=<world.yaml> [options]
+//   vdsim_realtime --scene=<scene.yaml|world.yaml> [options]
 #include "cosim_protocol.hpp"
-#include "world_scenario.hpp"
+#include "scene_loader.hpp"
 
 #include "vdsim/coordinate.hpp"
 #include "vdsim/interfaces.hpp"
-#include "vdsim/realtime_runner.hpp"
 #include "vdsim/sensors.hpp"
 #include "vdsim/sim_session.hpp"
 #include "vdsim/suspension.hpp"
@@ -84,7 +82,7 @@ std::string resolve_susp_yaml(std::string ref) {
     const std::string stem = (slash == std::string::npos) ? ref : ref.substr(slash + 1);
     const auto dot = stem.find_last_of('.');
     const std::string base = (dot == std::string::npos) ? stem : stem.substr(0, dot);
-    const std::string candidate = "configs/suspensions/" + base + ".yaml";
+    const std::string candidate = "configs/parts/susp_kinematics/kin/" + base + ".yaml";
     std::ifstream f2(candidate);
     if (f2.good()) return candidate;
     return ref;
@@ -207,137 +205,6 @@ void broadcast_state(socket_t sock, const std::vector<Subscriber>& subs,
 using socklen_t = int;
 #endif
 
-int run_flat(int argc, char** argv) {
-    const auto vp = vdsim::VehicleParams::from_yaml(argv[1]);
-    const auto tp = vdsim::TireParams::from_yaml(argv[2]);
-    vdsim::SolverParams sp;
-
-    const std::string level = opts(argc, argv, "--level=", "L2");
-    const int cmd_port      = static_cast<int>(optd(argc, argv, "--cmd-port=", 7001));
-    const std::string st_ip = opts(argc, argv, "--state-ip=", "127.0.0.1");
-    const int st_port       = static_cast<int>(optd(argc, argv, "--state-port=", 7002));
-    const double rate       = optd(argc, argv, "--rate=", 200.0);
-    const double vx0        = optd(argc, argv, "--vx0=", 0.0);
-    const double cmd_to     = optd(argc, argv, "--cmd-timeout=", 0.1);
-    const double dt         = 1.0 / rate;
-
-    const double mu          = optd(argc, argv, "--mu=", 1.0);
-    const double mu_right    = optd(argc, argv, "--mu-right=", -1.0);
-    const double mu_boundary = optd(argc, argv, "--mu-boundary=", 0.0);
-    const double grade       = optd(argc, argv, "--grade=", 0.0);
-    const double bank        = optd(argc, argv, "--bank=", 0.0);
-    const double rough_amp   = optd(argc, argv, "--rough-amp=", 0.0);
-    const double rough_wl    = optd(argc, argv, "--rough-wl=", 4.0);
-    const int    iso_class   = static_cast<int>(optd(argc, argv, "--iso-class=", -1.0));
-    const std::string terrain = opts(argc, argv, "--terrain=", "");
-    const std::string sensors_yaml = opts(argc, argv, "--sensors=", "");
-    const double sensor_delay = optd(argc, argv, "--sensor-delay=", 0.0);
-    const double x0   = optd(argc, argv, "--x0=", 0.0);
-    const double y0   = optd(argc, argv, "--y0=", 0.0);
-    const double yaw0 = optd(argc, argv, "--yaw0=", 0.0);
-    const std::string front_susp = opts(argc, argv, "--front-susp=", "");
-    const std::string rear_susp  = opts(argc, argv, "--rear-susp=", "");
-
-    vdsim::SimConfig cfg; cfg.nominal_dt = dt;
-    if (!sensors_yaml.empty()) cfg.sensors = vdsim::SensorParams::from_yaml(sensors_yaml);
-    cfg.sensor_delay_s = sensor_delay;
-    auto dyn = make_dyn(level);
-    attach_susp_parts(*dyn, level, front_susp, rear_susp);
-    vdsim::SimSession sim(std::move(dyn),
-        make_ground(terrain, mu, mu_right, mu_boundary, grade, bank, rough_amp, rough_wl, iso_class),
-        vp, tp, sp, cfg);
-    vdsim::State s0;
-    s0.position = vdsim::Vec3(x0, y0, 0.0);
-    s0.orientation = vdsim::quat_from_euler(vdsim::Euler{0.0, 0.0, yaw0});
-    s0.velocity.x() = vx0;
-    const double w0 = (vp.wheel_radius_nominal > 0.0) ? vx0 / vp.wheel_radius_nominal : 0.0;
-    s0.wheel_spin = {{w0, w0, w0, w0}};
-    sim.reset(s0);
-
-    socket_t sock = ::socket(AF_INET, SOCK_DGRAM, 0);
-    if (sock == INVALID_SOCKET) { std::perror("socket"); return 1; }
-    sockaddr_in bind_addr{}; bind_addr.sin_family = AF_INET;
-    bind_addr.sin_addr.s_addr = INADDR_ANY; bind_addr.sin_port = htons(static_cast<uint16_t>(cmd_port));
-    if (::bind(sock, reinterpret_cast<sockaddr*>(&bind_addr), sizeof(bind_addr)) < 0) {
-        std::perror("bind"); close_socket(sock); return 1;
-    }
-#ifdef _WIN32
-    DWORD rcvto = 100;
-    ::setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&rcvto), sizeof(rcvto));
-#else
-    timeval rcvto{}; rcvto.tv_sec = 0; rcvto.tv_usec = 100000;
-    ::setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &rcvto, sizeof(rcvto));
-#endif
-
-    std::vector<Subscriber> subscribers;
-    sockaddr_in seed{}; seed.sin_family = AF_INET;
-    seed.sin_port = htons(static_cast<uint16_t>(st_port));
-    ::inet_pton(AF_INET, st_ip.c_str(), &seed.sin_addr);
-    touch_sub(subscribers, seed, now_s());
-
-    std::signal(SIGINT, on_sigint);
-
-    vdsim::RealTimeRunner::Config rc;
-    rc.dt = dt; rc.cmd_timeout_s = cmd_to;
-    rc.failsafe = vdsim::CmdL4{0.0, 0.3, 0.0, 1, false};
-    vdsim::RealTimeRunner runner(sim, rc);
-
-    std::atomic<uint32_t> last_seq {0};
-    std::atomic<uint64_t> cmd_count {0};
-    std::thread recv_thread([&] {
-        uint8_t buf[256];
-        while (g_run.load()) {
-            sockaddr_in from {}; socklen_t flen = sizeof(from);
-            const int n = ::recvfrom(sock, reinterpret_cast<char*>(buf),
-                                     static_cast<int>(sizeof(buf)), 0,
-                                     reinterpret_cast<sockaddr*>(&from), &flen);
-            if (n <= 0) continue;
-            vdsim::cosim::CmdFields f;
-            if (!vdsim::cosim::decode_cmd(buf, static_cast<size_t>(n), f)) continue;
-            if (f.vehicle_id != 0) continue;
-            if (f.seq != 0 && f.seq <= last_seq.load()) continue;
-            last_seq.store(f.seq);
-            vdsim::CmdL4 u; u.throttle = f.throttle; u.brake = f.brake;
-            u.steer_angle_wheel = f.steer_tire; u.gear = f.gear;
-            u.handbrake = (f.handbrake != 0);
-            sim.set_input(u);
-            cmd_count.fetch_add(1);
-            touch_sub(subscribers, from, now_s());
-        }
-    });
-
-    runner.start();
-    std::fprintf(stderr,
-        "[vdsim_realtime] flat %s @ %.0f Hz | cmd :%d | subscribers (incl. %s:%d)\n",
-        level.c_str(), rate, cmd_port, st_ip.c_str(), st_port);
-
-    uint32_t seq = 0;
-    auto next = std::chrono::steady_clock::now();
-    const auto period = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
-        std::chrono::duration<double>(dt));
-    uint8_t out[vdsim::cosim::kStateBytes];
-    while (g_run.load()) {
-        const double t = now_s();
-        touch_sub(subscribers, seed, t);   // keep --state-port subscriber alive
-        prune_subs(subscribers, t, 2.0);
-        const auto o = sim.output();
-        vdsim::cosim::StateFields s;
-        s.seq = seq++; s.timestamp = t;
-        fill_state(s, o, vp.wheel_radius_nominal, 0);
-        const int len = vdsim::cosim::encode_state(out, s);
-        broadcast_state(sock, subscribers, out, len);
-        next += period;
-        std::this_thread::sleep_until(next);
-    }
-
-    runner.stop();
-    recv_thread.join();
-    close_socket(sock);
-    std::fprintf(stderr, "[vdsim_realtime] stopped. sim_time=%.2fs, cmds=%llu\n",
-                 sim.sim_time(), static_cast<unsigned long long>(cmd_count.load()));
-    return 0;
-}
-
 struct WorldVehicle {
     uint32_t id;
     vdsim::VehicleParams vp;
@@ -346,12 +213,12 @@ struct WorldVehicle {
     std::chrono::steady_clock::time_point last_cmd {std::chrono::steady_clock::now()};
 };
 
-int run_world(const std::string& scenario_path, int argc, char** argv) {
+int run_scene(const std::string& scene_path, int argc, char** argv) {
     vdsim::cosim::WorldScenario world;
     try {
-        world = vdsim::cosim::load_world_scenario(scenario_path);
+        world = vdsim::cosim::load_scene(scene_path);
     } catch (const std::exception& e) {
-        std::fprintf(stderr, "[vdsim_realtime] scenario: %s\n", e.what());
+        std::fprintf(stderr, "[vdsim_realtime] scene: %s\n", e.what());
         return 1;
     }
 
@@ -453,14 +320,14 @@ int run_world(const std::string& scenario_path, int argc, char** argv) {
 
     std::fprintf(stderr,
         "[vdsim_realtime] world %zu vehicles @ %.0f Hz | cmd :%d | %s\n",
-        fleet.size(), rate, cmd_port, scenario_path.c_str());
+        fleet.size(), rate, cmd_port, scene_path.c_str());
 
     uint32_t seq = 0;
     auto next = std::chrono::steady_clock::now();
     const auto failsafe_dur = std::chrono::duration<double>(cmd_to);
     uint8_t out[vdsim::cosim::kStateBytes];
     while (g_run.load()) {
-        time_scale = read_live_time_scale(scenario_path, time_scale);
+        time_scale = read_live_time_scale(scene_path, time_scale);
         const double period_s = dt / time_scale;
         const auto period = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
             std::chrono::duration<double>(period_s));
@@ -497,7 +364,9 @@ int run_world(const std::string& scenario_path, int argc, char** argv) {
 }  // namespace
 
 int main(int argc, char** argv) {
-    const std::string scenario = opts(argc, argv, "--scenario=", "");
+    std::string scene = opts(argc, argv, "--scene=", "");
+    if (scene.empty())
+        scene = opts(argc, argv, "--scenario=", "");
 #ifdef _WIN32
     WSADATA wsa;
     if (::WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
@@ -505,17 +374,15 @@ int main(int argc, char** argv) {
     }
 #endif
     int rc;
-    if (!scenario.empty()) {
-        rc = run_world(scenario, argc, argv);
-    } else if (argc >= 3) {
-        rc = run_flat(argc, argv);
+    if (!scene.empty()) {
+        rc = run_scene(scene, argc, argv);
     } else {
         std::fprintf(stderr,
-            "usage: %s <vehicle.yaml> <tire.yaml> [options]\n"
-            "   or: %s --scenario=<world.yaml> [options]\n"
+            "usage: %s --scene=<scene.yaml|world.yaml> [options]\n"
+            "  (--scenario= accepted as deprecated alias)\n"
             "  [--cmd-port=7001] [--state-ip=127.0.0.1] [--state-port=7002]\n"
-            "  [--rate=200] [--time-scale=1] [--vx0=0] [--cmd-timeout=0.1] [--mu=1] [--grade=0] ...\n",
-            argv[0], argv[0]);
+            "  [--rate=200] [--time-scale=1] [--cmd-timeout=0.1]\n",
+            argv[0]);
         rc = 2;
     }
 #ifdef _WIN32

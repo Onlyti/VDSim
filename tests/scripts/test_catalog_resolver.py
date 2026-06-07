@@ -19,32 +19,34 @@ def main():
     ids = {p["id"] for p in parts}
     assert "chassis.sedan" in ids
     assert "tire.default_pacejka" in ids
+    assert "susp.mp_front_sedan" in ids
 
     try:
         CatalogResolver.validate_part_envelope({
             "id": "x",
-            "type": "chassis",
+            "type": "susp_topology",
             "version": 1,
             "schema": "topology_preview_v1",
             "label": "x",
-            "body": {},
+            "body": {"path": "parts/susp_topology/x.yaml"},
         })
-        raise AssertionError("expected PartEnvelopeError for topology_preview")
     except PartEnvelopeError:
-        pass
+        raise AssertionError("topology_preview_v1 should load in catalog")
 
     with tempfile.TemporaryDirectory() as td:
         resolved = r.resolve_blueprint("vehicle.sedan_comfort", out_dir=Path(td))
         assert resolved.vehicle_yaml.is_file()
         assert resolved.tire_yaml.is_file()
         vp_cat = vdsim.VehicleParams.from_yaml(str(resolved.vehicle_yaml))
-        vp_ref = vdsim.VehicleParams.from_yaml(str(REPO / "configs/vehicles/sedan.yaml"))
-        assert abs(vp_cat.mass - vp_ref.mass) < 1e-6
-        assert abs(vp_cat.wheelbase - vp_ref.wheelbase) < 1e-6
-        assert abs(vp_cat.max_motor_torque - vp_ref.max_motor_torque) < 1e-6
+        assert abs(vp_cat.mass - 1500.0) < 1e-6
+        assert abs(vp_cat.wheelbase - 2.70) < 1e-6
+        assert abs(vp_cat.max_motor_torque - 300.0) < 1e-6
         tp_cat = vdsim.TireParams.from_yaml(str(resolved.tire_yaml))
-        tp_ref = vdsim.TireParams.from_yaml(str(REPO / "configs/tires/default_pacejka.yaml"))
-        assert abs(tp_cat.mu_nominal - tp_ref.mu_nominal) < 1e-6
+        assert abs(tp_cat.mu_nominal - 1.0) < 1e-6
+
+        l3 = r.resolve_blueprint("vehicle.sedan_l3", out_dir=Path(td) / "l3")
+        assert l3.susp_front and l3.susp_front.is_file()
+        assert l3.susp_rear and l3.susp_rear.is_file()
 
     try:
         r.resolve_blueprint("vehicle.no_such")

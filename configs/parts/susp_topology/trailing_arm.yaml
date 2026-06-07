@@ -1,0 +1,9 @@
+id: susp_topo.trailing_arm
+type: susp_topology
+version: 1
+schema: topology_preview_v1
+label: trailing_arm topology preview
+tags:
+- susp_topology
+body:
+  path: parts/susp_topology/trailing_arm.yaml

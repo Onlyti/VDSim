@@ -1,0 +1,9 @@
+id: susp_topo.double_wishbone
+type: susp_topology
+version: 1
+schema: topology_preview_v1
+label: double_wishbone topology preview
+tags:
+- susp_topology
+body:
+  path: parts/susp_topology/double_wishbone.yaml

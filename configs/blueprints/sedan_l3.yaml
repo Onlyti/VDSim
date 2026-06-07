@@ -1,0 +1,13 @@
+id: vehicle.sedan_l3
+version: 1
+label: Sedan L3 kinematics
+level: L3
+parts:
+  chassis: chassis.sedan
+  tire: tire.default_pacejka
+  brake: brake.sedan
+  steering: steering.sedan
+  drivetrain: drivetrain.sedan
+  front_susp_kin: susp.mp_front_sedan
+  rear_susp_kin: susp.ta_rear_sedan
+overrides: {}

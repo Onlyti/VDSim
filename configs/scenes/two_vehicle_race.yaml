@@ -1,0 +1,23 @@
+id: scene.two_vehicle_race
+version: 1
+label: Two-car straight launch
+rate: 200
+cmd_timeout: 0.1
+mu: 1.0
+fleet:
+- id: 0
+  blueprint: vehicle.sedan_comfort
+  level: L2
+  x0: -15
+  y0: -1.5
+  yaw0: 0
+  vx0: 12
+- id: 1
+  blueprint: vehicle.sports_aggressive
+  level: L2
+  x0: -15
+  y0: 1.5
+  yaw0: 0
+  vx0: 12
+  parts:
+    tire: tire.sport_grip

@@ -1,0 +1,14 @@
+id: drivetrain.race_car
+type: drivetrain
+version: 1
+schema: drivetrain_v1
+label: race_car AWD LSD
+tags:
+- drivetrain
+body:
+  differential: LSD
+  lsd_ramp: 0.6
+  drive_type: AWD
+  final_drive_ratio: 4.5
+  lsd_preload: 0.25
+  max_motor_torque: 700.0

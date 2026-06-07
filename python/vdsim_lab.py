@@ -38,8 +38,6 @@ def _conf_root():
 
 
 _CONF = _conf_root()
-_VEH = _CONF / "vehicles"
-_TIRE = _CONF / "tires"
 _ROAD = _CONF / "roads"
 _MAP = _CONF / "maps"
 _SENS = _CONF / "sensors"
@@ -83,13 +81,36 @@ def resolve_line(dl):
 # --------------------------------------------------------------------------- #
 # Vehicle / Tire
 # --------------------------------------------------------------------------- #
+def _catalog_root():
+    for c in (REPO, REPO.parent if (REPO / "configs").is_dir() else None):
+        if c and (c / "configs" / "catalog" / "manifest.yaml").is_file():
+            return c
+    return REPO
+
+
+def _resolve_preset(vehicle="sedan", tire="default_pacejka"):
+    sys.path.insert(0, str(_catalog_root() / "python"))
+    from catalog import CatalogResolver
+    from catalog.ids import blueprint_for_vehicle, tire_id_from_stem
+    cache = _CONF / ".resolve_cache" / f"{vehicle}_{tire}"
+    cache.mkdir(parents=True, exist_ok=True)
+    r = CatalogResolver(_catalog_root())
+    rv = r.resolve_blueprint(
+        blueprint_for_vehicle(vehicle),
+        instance_parts={"tire": tire_id_from_stem(tire)},
+        out_dir=cache,
+    )
+    return rv.vehicle_yaml, rv.tire_yaml
+
+
 class Vehicle:
     def __init__(self, vp):
         self.vp = vp
 
     @classmethod
     def preset(cls, name="sedan"):
-        return cls(vdsim.VehicleParams.from_yaml(str(_VEH / f"{name}.yaml")))
+        vp_path, _ = _resolve_preset(name)
+        return cls(vdsim.VehicleParams.from_yaml(str(vp_path)))
 
     @classmethod
     def from_yaml(cls, path):
@@ -107,7 +128,8 @@ class Tire:
 
     @classmethod
     def preset(cls, name="default_pacejka"):
-        return cls(vdsim.TireParams.from_yaml(str(_TIRE / f"{name}.yaml")))
+        _, tp_path = _resolve_preset("sedan", name)
+        return cls(vdsim.TireParams.from_yaml(str(tp_path)))
 
     @classmethod
     def from_yaml(cls, path):

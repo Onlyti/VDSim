@@ -1,0 +1,14 @@
+id: drivetrain.sports
+type: drivetrain
+version: 1
+schema: drivetrain_v1
+label: sports RWD LSD
+tags:
+- drivetrain
+body:
+  differential: LSD
+  lsd_ramp: 0.4
+  drive_type: RWD
+  final_drive_ratio: 5.0
+  lsd_preload: 0.18
+  max_motor_torque: 480.0

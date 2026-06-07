@@ -1,0 +1,58 @@
+type: five_link
+side: left
+wheel:
+  center:
+  - -1.35
+  - 0.78
+  - 0.305
+  spin_axis:
+  - 0.0
+  - 1.0
+  - 0.0
+  static_radius: 0.305
+links:
+  upper_fore:
+    chassis:
+    - -1.1
+    - 0.42
+    - 0.5
+    knuckle:
+    - -1.3
+    - 0.72
+    - 0.48
+  upper_aft:
+    chassis:
+    - -1.6
+    - 0.42
+    - 0.5
+    knuckle:
+    - -1.4
+    - 0.72
+    - 0.48
+  lower_fore:
+    chassis:
+    - -1.1
+    - 0.42
+    - 0.15
+    knuckle:
+    - -1.3
+    - 0.74
+    - 0.16
+  lower_aft:
+    chassis:
+    - -1.6
+    - 0.42
+    - 0.15
+    knuckle:
+    - -1.4
+    - 0.74
+    - 0.16
+  toe_link:
+    chassis:
+    - -1.55
+    - 0.42
+    - 0.32
+    knuckle:
+    - -1.42
+    - 0.74
+    - 0.32

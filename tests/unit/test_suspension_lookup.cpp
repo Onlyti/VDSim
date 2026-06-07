@@ -82,7 +82,7 @@ TEST_F(LookupKinematicsFixture, TrackChangeLinearInTravel) {
 // =============================================================================
 TEST(DWNativeKinematics, MatchesLookupAtGridPoints) {
     const std::string yaml_path =
-        std::string(VDSIM_SOURCE_DIR) + "/configs/suspensions/dw_front_sports.yaml";
+        std::string(VDSIM_SOURCE_DIR) + "/configs/parts/susp_kinematics/kin/dw_front_sports.yaml";
     const std::string csv_path  =
         std::string(VDSIM_SOURCE_DIR) + "/docs/tasks/T27_ld4_dw/run3d/sweep_3d.csv";
 
@@ -106,7 +106,7 @@ TEST(DWNativeKinematics, MatchesLookupAtGridPoints) {
 }
 
 TEST(SuspensionFactory, DispatchesByYamlType) {
-    const std::string base = std::string(VDSIM_SOURCE_DIR) + "/configs/suspensions/";
+    const std::string base = std::string(VDSIM_SOURCE_DIR) + "/configs/parts/susp_kinematics/kin/";
     auto k = vdsim::create_native_kinematics_from_yaml(base + "mp_front_sedan.yaml");
     ASSERT_NE(k, nullptr);
     const auto o = k->compute(0.0, 0.0);
@@ -115,13 +115,13 @@ TEST(SuspensionFactory, DispatchesByYamlType) {
 
 TEST(SuspensionFactory, RejectsTopologyOnlyYaml) {
     const std::string path =
-        std::string(VDSIM_SOURCE_DIR) + "/configs/suspensions/double_wishbone.yaml";
+        std::string(VDSIM_SOURCE_DIR) + "/configs/parts/susp_topology/double_wishbone.yaml";
     EXPECT_THROW(vdsim::create_native_kinematics_from_yaml(path), std::exception);
 }
 
 TEST(DWNativeKinematics, StaticReturnsZero) {
     auto k = vdsim::create_dw_native_kinematics(
-        std::string(VDSIM_SOURCE_DIR) + "/configs/suspensions/dw_front_sports.yaml");
+        std::string(VDSIM_SOURCE_DIR) + "/configs/parts/susp_kinematics/kin/dw_front_sports.yaml");
     const auto o = k->compute(0.0, 0.0);
     EXPECT_NEAR(o.camber, 0.0, 1e-6);
     EXPECT_NEAR(o.toe,    0.0, 1e-6);
@@ -135,7 +135,7 @@ TEST(DWNativeKinematics, StaticReturnsZero) {
 // =============================================================================
 TEST(TANativeKinematics, MatchesLookupAtGridPoints) {
     auto k_n = vdsim::create_ta_native_kinematics(
-        std::string(VDSIM_SOURCE_DIR) + "/configs/suspensions/ta_rear_sedan.yaml");
+        std::string(VDSIM_SOURCE_DIR) + "/configs/parts/susp_kinematics/kin/ta_rear_sedan.yaml");
     auto k_l = vdsim::create_lookup_kinematics(
         std::string(VDSIM_SOURCE_DIR) + "/docs/tasks/T29_ld4_ta/run01/sweep_3d.csv");
     for (double t : {-0.04, 0.0, +0.04}) {
@@ -148,7 +148,7 @@ TEST(TANativeKinematics, MatchesLookupAtGridPoints) {
 
 TEST(MPNativeKinematics, MatchesLookupAtGridPoints) {
     auto k_n = vdsim::create_mp_native_kinematics(
-        std::string(VDSIM_SOURCE_DIR) + "/configs/suspensions/mp_front_sedan.yaml");
+        std::string(VDSIM_SOURCE_DIR) + "/configs/parts/susp_kinematics/kin/mp_front_sedan.yaml");
     auto k_l = vdsim::create_lookup_kinematics(
         std::string(VDSIM_SOURCE_DIR) + "/docs/tasks/T28_ld4_mp/run01/sweep_3d.csv");
     for (double t : {-0.04, 0.0, +0.04}) {
@@ -161,7 +161,7 @@ TEST(MPNativeKinematics, MatchesLookupAtGridPoints) {
 
 TEST(FiveLinkNativeKinematics, MatchesLookupAtGridPoints) {
     auto k_n = vdsim::create_5link_native_kinematics(
-        std::string(VDSIM_SOURCE_DIR) + "/configs/suspensions/5link_rear_sports.yaml");
+        std::string(VDSIM_SOURCE_DIR) + "/configs/parts/susp_kinematics/kin/5link_rear_sports.yaml");
     auto k_l = vdsim::create_lookup_kinematics(
         std::string(VDSIM_SOURCE_DIR) + "/docs/tasks/T30_ld4_5link/run01/sweep_3d.csv");
     for (double t : {-0.025, 0.0, +0.025}) {

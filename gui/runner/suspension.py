@@ -1,9 +1,19 @@
 from pathlib import Path
 
+import yaml
+
 from runner.config import REPO
 
-SUSP_DIR = REPO / "configs" / "suspensions"
-SUSP_REL_PREFIX = "configs/suspensions"
+KIN_DIR = REPO / "configs" / "parts" / "susp_kinematics" / "kin"
+TOPO_DIR = REPO / "configs" / "parts" / "susp_topology"
+KIN_REL = "configs/parts/susp_kinematics/kin"
+
+BLUEPRINT_L3_SUSP = {
+    "vehicle.sedan_l3": {"front": "mp_front_sedan", "rear": "ta_rear_sedan"},
+    "vehicle.fsk_formula": {"front": "dw_front_sports", "rear": "5link_rear_sports"},
+    "vehicle.race_gt": {"front": "dw_front_sports", "rear": "5link_rear_sports"},
+}
+
 VEHICLE_SUSP_DEFAULT = {
     "sedan": {"front": "mp_front_sedan", "rear": "ta_rear_sedan"},
     "sports": {"front": "dw_front_sports", "rear": "5link_rear_sports"},
@@ -15,36 +25,47 @@ VEHICLE_SUSP_DEFAULT = {
 def susp_stem_from_ref(ref):
     if not ref:
         return ""
-    return Path(str(ref)).stem
+    s = str(ref)
+    if s.startswith("susp."):
+        return s.rsplit(".", 1)[-1]
+    return Path(s).stem
+
+
+def kin_yaml_path(stem):
+    stem = susp_stem_from_ref(stem)
+    if not stem:
+        return None
+    p = KIN_DIR / f"{stem}.yaml"
+    return p if p.is_file() else None
 
 
 def susp_rel_path(stem_or_ref):
-    stem = susp_stem_from_ref(stem_or_ref)
-    if not stem:
+    p = kin_yaml_path(stem_or_ref)
+    if p is None:
         return None
-    if not (SUSP_DIR / f"{stem}.yaml").is_file():
-        return None
-    return f"{SUSP_REL_PREFIX}/{stem}.yaml"
+    return f"{KIN_REL}/{p.name}"
 
 
 def is_l3_kinematics_yaml(path_or_stem):
-    stem = susp_stem_from_ref(path_or_stem)
-    path = SUSP_DIR / f"{stem}.yaml"
-    if not path.is_file():
+    p = kin_yaml_path(path_or_stem)
+    if p is None:
         return False
-    import yaml
-    doc = yaml.safe_load(path.read_text()) or {}
+    doc = yaml.safe_load(p.read_text()) or {}
     return bool(doc.get("type"))
 
 
 def list_suspension_configs():
-    if not SUSP_DIR.is_dir():
+    if not KIN_DIR.is_dir() and not TOPO_DIR.is_dir():
         return []
-    return sorted(p.stem for p in SUSP_DIR.glob("*.yaml"))
+    stems = {p.stem for p in KIN_DIR.glob("*.yaml")}
+    stems |= {p.stem for p in TOPO_DIR.glob("*.yaml")}
+    return sorted(stems)
 
 
 def list_l3_kinematics_configs():
-    return sorted(s for s in list_suspension_configs() if is_l3_kinematics_yaml(s))
+    if not KIN_DIR.is_dir():
+        return []
+    return sorted(p.stem for p in KIN_DIR.glob("*.yaml"))
 
 
 def list_suspension_api(preview_all=False):
@@ -72,8 +93,8 @@ def l3_susp_path_warnings(fleet_spec):
             if not stem:
                 continue
             ref = susp_stem_from_ref(stem)
-            path = SUSP_DIR / f"{ref}.yaml"
-            if not path.is_file():
+            path = kin_yaml_path(ref)
+            if path is None:
                 warnings.append(
                     f"[vdsim] vehicle {vid}: {side} susp '{stem}' not found")
             elif not is_l3_kinematics_yaml(ref):
@@ -87,7 +108,8 @@ def validate_l3_susp_stem(stem, side, vid):
     if not stem:
         return
     ref = susp_stem_from_ref(stem)
-    if not (SUSP_DIR / f"{ref}.yaml").is_file():
+    path = kin_yaml_path(ref)
+    if path is None:
         raise ValueError(f"vehicle {vid}: {side} suspension '{stem}' not found")
     if not is_l3_kinematics_yaml(ref):
         raise ValueError(
@@ -111,6 +133,12 @@ def validate_fleet_updates(updates, fleet_spec):
 def suspension_default_for_vehicle(vehicle):
     stem = Path(str(vehicle)).stem
     return dict(VEHICLE_SUSP_DEFAULT.get(stem, {
+        "front": "mp_front_sedan", "rear": "ta_rear_sedan",
+    }))
+
+
+def suspension_default_for_blueprint(blueprint_id):
+    return dict(BLUEPRINT_L3_SUSP.get(blueprint_id, {
         "front": "mp_front_sedan", "rear": "ta_rear_sedan",
     }))
 
@@ -164,9 +192,8 @@ def corner_kinematic_links(doc):
 
 
 def suspension_schematic(name):
-    import yaml
-    stem = Path(str(name)).stem
-    path = SUSP_DIR / f"{stem}.yaml"
+    stem = susp_stem_from_ref(name)
+    path = kin_yaml_path(stem) or (TOPO_DIR / f"{stem}.yaml")
     if not path.is_file():
         raise ValueError(f"unknown suspension: {name}")
     doc = yaml.safe_load(path.read_text()) or {}

@@ -1,0 +1,43 @@
+type: macpherson
+side: left
+wheel:
+  center:
+  - 0.0
+  - 0.775
+  - 0.305
+  spin_axis:
+  - 0.0
+  - 1.0
+  - 0.0
+  static_radius: 0.305
+lca:
+  chassis_front:
+  - 0.1
+  - 0.32
+  - 0.18
+  chassis_rear:
+  - -0.2
+  - 0.32
+  - 0.18
+  knuckle:
+  - -0.02
+  - 0.74
+  - 0.2
+strut:
+  top:
+  - -0.04
+  - 0.6
+  - 0.65
+  bottom:
+  - -0.04
+  - 0.72
+  - 0.31
+tie_rod:
+  rack:
+  - -0.3
+  - 0.4
+  - 0.22
+  knuckle:
+  - -0.3
+  - 0.73
+  - 0.25

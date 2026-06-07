@@ -1,17 +1,79 @@
 catalog_id: vdsim.builtin
 catalog_version: 1
 parts:
-  - id: chassis.sedan
-    path: parts/chassis/sedan.yaml
-  - id: tire.default_pacejka
-    path: parts/tire/default_pacejka.yaml
-  - id: drivetrain.sedan_rwd
-    path: parts/drivetrain/sedan_rwd.yaml
-  - id: brake.sedan_default
-    path: parts/brake/sedan_default.yaml
-  - id: steering.sedan_rack
-    path: parts/steering/sedan_rack.yaml
+- id: brake.fsk_formula
+  path: parts/brake/fsk_formula.yaml
+- id: brake.race_car
+  path: parts/brake/race_car.yaml
+- id: brake.sedan
+  path: parts/brake/sedan.yaml
+- id: brake.sedan_default
+  path: parts/brake/sedan_default.yaml
+- id: brake.sports
+  path: parts/brake/sports.yaml
+- id: chassis.fsk_formula
+  path: parts/chassis/fsk_formula.yaml
+- id: chassis.race_car
+  path: parts/chassis/race_car.yaml
+- id: chassis.sedan
+  path: parts/chassis/sedan.yaml
+- id: chassis.sports
+  path: parts/chassis/sports.yaml
+- id: drivetrain.fsk_formula
+  path: parts/drivetrain/fsk_formula.yaml
+- id: drivetrain.race_car
+  path: parts/drivetrain/race_car.yaml
+- id: drivetrain.sedan
+  path: parts/drivetrain/sedan.yaml
+- id: drivetrain.sedan_rwd
+  path: parts/drivetrain/sedan_rwd.yaml
+- id: drivetrain.sports
+  path: parts/drivetrain/sports.yaml
+- id: steering.fsk_formula
+  path: parts/steering/fsk_formula.yaml
+- id: steering.race_car
+  path: parts/steering/race_car.yaml
+- id: steering.sedan
+  path: parts/steering/sedan.yaml
+- id: steering.sedan_rack
+  path: parts/steering/sedan_rack.yaml
+- id: steering.sports
+  path: parts/steering/sports.yaml
+- id: susp.5link_rear_sports
+  path: parts/susp_kinematics/5link_rear_sports.yaml
+- id: susp.dw_front_sports
+  path: parts/susp_kinematics/dw_front_sports.yaml
+- id: susp.mp_front_sedan
+  path: parts/susp_kinematics/mp_front_sedan.yaml
+- id: susp.ta_rear_sedan
+  path: parts/susp_kinematics/ta_rear_sedan.yaml
+- id: susp_topo.beam_axle
+  path: parts/susp_topology/beam_axle.yaml
+- id: susp_topo.double_wishbone
+  path: parts/susp_topology/double_wishbone.yaml
+- id: susp_topo.macpherson
+  path: parts/susp_topology/macpherson.yaml
+- id: susp_topo.multi_link_5
+  path: parts/susp_topology/multi_link_5.yaml
+- id: susp_topo.trailing_arm
+  path: parts/susp_topology/trailing_arm.yaml
+- id: susp_topo.twist_beam
+  path: parts/susp_topology/twist_beam.yaml
+- id: tire.default_pacejka
+  path: parts/tire/default_pacejka.yaml
+- id: tire.low_mu
+  path: parts/tire/low_mu.yaml
+- id: tire.sport_grip
+  path: parts/tire/sport_grip.yaml
 blueprints:
-  - id: vehicle.sedan_comfort
-    path: blueprints/sedan_comfort.yaml
+- id: vehicle.fsk_formula
+  path: blueprints/fsk_formula.yaml
+- id: vehicle.race_gt
+  path: blueprints/race_gt.yaml
+- id: vehicle.sedan_comfort
+  path: blueprints/sedan_comfort.yaml
+- id: vehicle.sedan_l3
+  path: blueprints/sedan_l3.yaml
+- id: vehicle.sports_aggressive
+  path: blueprints/sports_aggressive.yaml
 packages: []

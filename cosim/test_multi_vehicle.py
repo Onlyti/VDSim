@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Smoke test: world scenario with 2 vehicles, distinct vehicle_id in STATE."""
+"""Smoke test: catalog scene with 2 vehicles, distinct vehicle_id in STATE."""
 import socket
 import subprocess
 import time
@@ -9,7 +9,7 @@ from protocol import pack_cmd, decode_state
 
 REPO = Path(__file__).resolve().parent.parent
 BIN = REPO / "build" / "bin" / "vdsim_realtime"
-SCN = REPO / "configs" / "scenarios" / "two_vehicle_race.yaml"
+SCENE = REPO / "configs" / "scenes" / "two_vehicle_race.yaml"
 
 
 def _free_udp_port():
@@ -24,17 +24,24 @@ def main():
     if not BIN.is_file():
         print("SKIP: vdsim_realtime not built")
         return 0
+    if not SCENE.is_file():
+        print(f"FAIL: missing {SCENE}")
+        return 1
     cmd_port = _free_udp_port()
     state_port = _free_udp_port()
     while state_port == cmd_port:
         state_port = _free_udp_port()
     proc = subprocess.Popen(
-        [str(BIN), f"--scenario={SCN}",
+        [str(BIN), f"--scene={SCENE}",
          f"--cmd-port={cmd_port}", "--state-ip=127.0.0.1",
          f"--state-port={state_port}", "--rate=200"],
-        cwd=str(REPO), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        cwd=str(REPO), stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     try:
         time.sleep(0.8)
+        if proc.poll() is not None:
+            err = proc.stderr.read().decode() if proc.stderr else ""
+            print(f"FAIL: plant exited early\n{err}")
+            return 1
         rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         rx.bind(("127.0.0.1", state_port))
         rx.settimeout(0.05)

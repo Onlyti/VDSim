@@ -6,45 +6,28 @@ from runner.autopilot import WaypointPath
 from runner.config import REPO, prepare_gui_run_dir
 from runner.params_io import apply_fields, flat_actuator, flat_sensors, params_dict
 from runner.params_schema import ENUM_MAPS, TIRE_FIELDS, VEHICLE_FIELDS
+from runner.catalog_bridge import (
+    apply_fleet_field_update,
+    catalog_resolver,
+    fleet_entry_for_cosim,
+    legacy_vehicle_row,
+    normalize_fleet_spec,
+)
 from runner.suspension import (
     strip_fleet_susp_if_not_l3,
-    susp_rel_path,
-    susp_stem_from_ref,
-    suspension_default_for_vehicle,
     validate_fleet_updates,
 )
+from catalog.materialize import fleet_spec_from_scene, load_scene_doc
 
 
 class DraftMixin:
     def load_fleet_scenario(self, name):
-        path = REPO / "configs" / "scenarios" / f"{name}.yaml"
-        if not path.is_file():
-            raise ValueError(f"unknown scenario: {name}")
-        import yaml
-        doc = yaml.safe_load(path.read_text())
+        doc = load_scene_doc(REPO, name)
         self.fleet_overrides = {}
-        self.fleet_spec = []
-        for v in doc.get("vehicles", []):
-            veh = Path(str(v["vehicle"]))
-            tire = Path(str(v["tire"]))
-            if not veh.is_absolute():
-                veh = REPO / veh
-            if not tire.is_absolute():
-                tire = REPO / tire
-            parts = suspension_default_for_vehicle(veh.stem)
-            self.fleet_spec.append({
-                "id": int(v["id"]),
-                "vehicle": veh.stem,
-                "tire": tire.stem,
-                "level": str(v.get("level", "L2")),
-                "x0": float(v.get("x0", 0.0)),
-                "y0": float(v.get("y0", 0.0)),
-                "yaw0": float(v.get("yaw0", 0.0)),
-                "vx0": float(v.get("vx0", 0.0)),
-                "front_susp": susp_stem_from_ref(v.get("front_susp", parts["front"])),
-                "rear_susp": susp_stem_from_ref(v.get("rear_susp", parts["rear"])),
-            })
-            strip_fleet_susp_if_not_l3(self.fleet_spec[-1])
+        self.fleet_spec = fleet_spec_from_scene(doc)
+        for row in self.fleet_spec:
+            normalize_fleet_spec(row)
+            strip_fleet_susp_if_not_l3(row)
         if not self.fleet_spec:
             raise ValueError(f"scenario '{name}' has no vehicles")
         self._ensure_ports()
@@ -103,24 +86,41 @@ class DraftMixin:
     def _run_config_draft_doc(self):
         with self.lock:
             vehs = []
+            resolver = catalog_resolver()
+            resolve_dir = Path(self.cosim._tmp) / "_draft_resolve"
+            resolve_dir.mkdir(parents=True, exist_ok=True)
+            fleet_meta = []
             for s in self.fleet_spec:
-                row = {
+                normalize_fleet_spec(s)
+                entry = {
                     "id": int(s["id"]),
-                    "vehicle": f"configs/vehicles/{s['vehicle']}.yaml",
-                    "tire": f"configs/tires/{s['tire']}.yaml",
+                    "blueprint": str(s["blueprint"]),
                     "level": str(s.get("level", "L2")),
                     "x0": float(s.get("x0", 0.0)),
                     "y0": float(s.get("y0", 0.0)),
                     "yaw0": float(s.get("yaw0", 0.0)),
                     "vx0": float(s.get("vx0", 0.0)),
                 }
-                if str(s.get("level", "L2")) == "L3":
-                    fp = susp_rel_path(s.get("front_susp"))
-                    rp = susp_rel_path(s.get("rear_susp"))
-                    if fp:
-                        row["front_susp"] = fp
-                    if rp:
-                        row["rear_susp"] = rp
+                parts = dict(s.get("parts") or {})
+                if parts:
+                    entry["parts"] = parts
+                fleet_meta.append(entry)
+                cosim_row = fleet_entry_for_cosim(
+                    resolver, s, resolve_dir, self.fleet_overrides)
+                row = {
+                    "id": int(s["id"]),
+                    "vehicle": cosim_row["vehicle_yaml"],
+                    "tire": cosim_row["tire_yaml"],
+                    "level": str(s.get("level", "L2")),
+                    "x0": float(s.get("x0", 0.0)),
+                    "y0": float(s.get("y0", 0.0)),
+                    "yaw0": float(s.get("yaw0", 0.0)),
+                    "vx0": float(s.get("vx0", 0.0)),
+                }
+                if cosim_row.get("front_susp_yaml"):
+                    row["front_susp"] = cosim_row["front_susp_yaml"]
+                if cosim_row.get("rear_susp_yaml"):
+                    row["rear_susp"] = cosim_row["rear_susp_yaml"]
                 vehs.append(row)
             doc = {
                 "name": "run",
@@ -131,6 +131,7 @@ class DraftMixin:
                 "bank": float(self.cfg["road_bank"]),
                 "v_target": float(self.cfg["v_target"]),
                 "path_preset": self.path_preset,
+                "fleet": fleet_meta,
                 "vehicles": vehs,
                 "gui": self._run_config_gui_meta(),
             }
@@ -205,15 +206,45 @@ class DraftMixin:
             raise ValueError("scenario name required")
         if not re.fullmatch(r"[A-Za-z0-9_.-]+", stem):
             raise ValueError("name: letters, digits, _ . - only")
-        path = REPO / "configs" / "scenarios" / f"{stem}.yaml"
+        path = REPO / "configs" / "scenes" / f"{stem}.yaml"
         existed = path.is_file()
         if existed and not overwrite:
             raise ValueError(f"scenario '{stem}' already exists")
-        doc = self._run_config_draft_doc()
-        doc["name"] = stem
+        fleet = []
+        with self.lock:
+            for s in self.fleet_spec:
+                normalize_fleet_spec(s)
+                entry = {
+                    "id": int(s["id"]),
+                    "blueprint": str(s["blueprint"]),
+                    "level": str(s.get("level", "L2")),
+                    "x0": float(s.get("x0", 0.0)),
+                    "y0": float(s.get("y0", 0.0)),
+                    "yaw0": float(s.get("yaw0", 0.0)),
+                    "vx0": float(s.get("vx0", 0.0)),
+                }
+                parts = dict(s.get("parts") or {})
+                if parts:
+                    entry["parts"] = parts
+                fleet.append(entry)
+            doc = {
+                "id": f"scene.{stem}",
+                "version": 1,
+                "label": stem,
+                "rate": 1.0 / self.dt if self.dt > 1e-6 else 200.0,
+                "cmd_timeout": float(self.cosim.cfg.get("cmd_timeout", 0.1)),
+                "mu": float(self.cfg["road_mu"]),
+                "fleet": fleet,
+            }
+            if self.path_preset == "custom":
+                doc["path_pts"] = [[float(p[0]), float(p[1])] for p in self.path.pts]
+            if self.path_preset and self.path_preset != "custom":
+                doc["path_preset"] = self.path_preset
+            if self.infra_sensors:
+                doc["infra_sensors"] = list(self.infra_sensors)
         path.write_text(yaml.safe_dump(doc, sort_keys=False))
         self._scenario_cache = None
-        rel = f"configs/scenarios/{stem}.yaml"
+        rel = f"configs/scenes/{stem}.yaml"
         return {"ok": True, "name": stem, "path": rel, "overwritten": existed}
 
     def apply_setup(self, data):
@@ -255,24 +286,7 @@ class DraftMixin:
                     spec = next((f for f in self.fleet_spec if int(f["id"]) == vid), None)
                     if spec is None:
                         continue
-                    old_level = str(spec.get("level", "L2"))
-                    for k in ("x0", "y0", "yaw0", "vx0", "level", "vehicle", "tire",
-                              "front_susp", "rear_susp"):
-                        if k in upd:
-                            spec[k] = upd[k]
-                    if "level" in upd:
-                        new_level = str(upd["level"])
-                        if new_level == "L3" and old_level != "L3":
-                            d = suspension_default_for_vehicle(str(spec.get("vehicle", "sedan")))
-                            spec["front_susp"] = d["front"]
-                            spec["rear_susp"] = d["rear"]
-                    if "vehicle" in upd and "front_susp" not in upd and "rear_susp" not in upd:
-                        d = suspension_default_for_vehicle(str(upd["vehicle"]))
-                        spec["front_susp"] = d["front"]
-                        spec["rear_susp"] = d["rear"]
-                    if str(spec.get("level", "L2")) == "L3":
-                        self._ensure_fleet_parts(spec)
-                    strip_fleet_susp_if_not_l3(spec)
+                    apply_fleet_field_update(spec, upd)
                     if vid == self.live_vid:
                         self._sync_live_from_fleet()
                 refresh_snap = True
@@ -326,7 +340,7 @@ class DraftMixin:
         self.fleet_spec = []
         for spec in data["fleet_spec"]:
             row = dict(spec)
-            self._ensure_fleet_parts(row)
+            normalize_fleet_spec(row)
             strip_fleet_susp_if_not_l3(row)
             self.fleet_spec.append(row)
         self._ensure_ports()
@@ -378,27 +392,15 @@ class DraftMixin:
             elif preset != "custom":
                 self.set_path_preset(preset)
         self.fleet_spec = []
-        for v in data.get("vehicles", []):
-            veh = Path(str(v["vehicle"]))
-            tire = Path(str(v["tire"]))
-            if not veh.is_absolute():
-                veh = REPO / veh
-            if not tire.is_absolute():
-                tire = REPO / tire
-            parts = suspension_default_for_vehicle(veh.stem)
-            self.fleet_spec.append({
-                "id": int(v["id"]),
-                "vehicle": veh.stem,
-                "tire": tire.stem,
-                "level": str(v.get("level", "L2")),
-                "x0": float(v.get("x0", 0.0)),
-                "y0": float(v.get("y0", 0.0)),
-                "yaw0": float(v.get("yaw0", 0.0)),
-                "vx0": float(v.get("vx0", 0.0)),
-                "front_susp": susp_stem_from_ref(v.get("front_susp", parts["front"])),
-                "rear_susp": susp_stem_from_ref(v.get("rear_susp", parts["rear"])),
-            })
-            strip_fleet_susp_if_not_l3(self.fleet_spec[-1])
+        if data.get("fleet"):
+            self.fleet_spec = fleet_spec_from_scene(data)
+        else:
+            for v in data.get("vehicles", []):
+                row = legacy_vehicle_row(v)
+                self.fleet_spec.append(row)
+        for row in self.fleet_spec:
+            normalize_fleet_spec(row)
+            strip_fleet_susp_if_not_l3(row)
         self._ensure_ports()
         gui = data.get("gui") or {}
         if gui.get("live_vid") is not None:

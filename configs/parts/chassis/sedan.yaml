@@ -2,28 +2,43 @@ id: chassis.sedan
 type: chassis
 version: 1
 schema: vehicle_params_v1
-label: "Mid-sedan reference chassis"
-tags: [sedan, demo]
-
+label: Sedan chassis
+tags:
+- chassis
 body:
-  mass: 1500.0
+  roll_center_height_rear: 0.0
+  arb_stiffness_front: 0.0
+  wheelbase: 2.7
+  arb_stiffness_rear: 0.0
+  spring_stiffness:
+  - 30000
+  - 30000
+  - 30000
+  - 30000
+  inertia_diag:
+  - 500.0
+  - 2000.0
+  - 2500.0
+  unsprung_mass:
+  - 40
+  - 40
+  - 40
+  - 40
+  aero_lift_front: 0.05
+  frontal_area: 2.2
+  cg_to_front: 1.2
+  roll_center_height_front: 0.0
+  damper_coefficient:
+  - 3000
+  - 3000
+  - 3000
+  - 3000
   mass_sprung: 1350.0
-  inertia_diag: [500.0, 2000.0, 2500.0]
-  wheelbase: 2.70
-  cg_to_front: 1.20
-  cg_to_rear: 1.50
   track_front: 1.55
   track_rear: 1.55
-  cg_height: 0.55
+  mass: 1500.0
   wheel_radius_nominal: 0.32
-  spring_stiffness: [30000, 30000, 30000, 30000]
-  damper_coefficient: [3000, 3000, 3000, 3000]
-  unsprung_mass: [40, 40, 40, 40]
-  arb_stiffness_front: 0.0
-  arb_stiffness_rear: 0.0
-  roll_center_height_front: 0.0
-  roll_center_height_rear: 0.0
-  aero_drag_coeff: 0.30
-  frontal_area: 2.20
-  aero_lift_front: 0.05
+  cg_height: 0.55
   aero_lift_rear: 0.05
+  cg_to_rear: 1.5
+  aero_drag_coeff: 0.3

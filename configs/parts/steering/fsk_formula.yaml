@@ -1,0 +1,11 @@
+id: steering.fsk_formula
+type: steering
+version: 1
+schema: steering_subsystem_v1
+label: fsk_formula steering
+tags:
+- steering
+body:
+  max_steer_angle_wheel: 0.5
+  ackerman_percent: 100.0
+  steering_ratio: 4.0

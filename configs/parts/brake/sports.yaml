@@ -1,0 +1,10 @@
+id: brake.sports
+type: brake
+version: 1
+schema: brake_subsystem_v1
+label: sports brakes
+tags:
+- brake
+body:
+  brake_bias_front: 0.65
+  max_brake_torque: 3000.0

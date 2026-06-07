@@ -2,16 +2,16 @@ id: tire.default_pacejka
 type: tire
 version: 1
 schema: pacejka_mf96_v1
-label: "Default Pacejka MF96 (simple)"
-tags: [pacejka, demo]
-
+label: default pacejka
+tags:
+- tire
 body:
   B_long: 10.0
   C_long: 1.65
   D_long: 1.0
   E_long: 0.97
   B_lat: 8.0
-  C_lat: 1.30
+  C_lat: 1.3
   D_lat: 1.0
   E_lat: -1.0
   mu_nominal: 1.0

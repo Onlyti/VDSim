@@ -1,0 +1,9 @@
+id: susp_topo.beam_axle
+type: susp_topology
+version: 1
+schema: topology_preview_v1
+label: beam_axle topology preview
+tags:
+- susp_topology
+body:
+  path: parts/susp_topology/beam_axle.yaml

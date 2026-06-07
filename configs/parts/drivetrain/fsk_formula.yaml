@@ -1,0 +1,14 @@
+id: drivetrain.fsk_formula
+type: drivetrain
+version: 1
+schema: drivetrain_v1
+label: fsk_formula RWD Locked
+tags:
+- drivetrain
+body:
+  differential: Locked
+  lsd_ramp: 0.0
+  drive_type: RWD
+  final_drive_ratio: 4.0
+  lsd_preload: 0.0
+  max_motor_torque: 150.0

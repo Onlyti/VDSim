@@ -234,37 +234,30 @@ class CosimBridge:
                     self.cfg[k] = over[k]
             self.cfg["level"] = str(self.cfg["level"])
             c = self.cfg
-            if fleet and len(fleet) > 1:
-                wy = self._write_world_yaml(
-                    fleet, road, terrain, sensors, sensor_delay,
-                    c["rate"], c["cmd_timeout"])
-                args = [str(COSIM_BIN), f"--scenario={wy}",
-                        f"--cmd-port={int(c['cmd_port'])}", "--state-ip=127.0.0.1",
-                        f"--state-port={int(c['state_port'])}",
-                        f"--rate={float(c['rate'])}",
-                        f"--cmd-timeout={float(c['cmd_timeout'])}"]
-                self._launch(args, c["state_port"])
-            else:
+            if not fleet:
                 vy = os.path.join(self._tmp, "vehicle.yaml")
                 ty = os.path.join(self._tmp, "tire.yaml")
                 vp.to_yaml(vy)
                 tp.to_yaml(ty)
-                args = [str(COSIM_BIN), vy, ty, f"--level={c['level']}",
-                        f"--cmd-port={int(c['cmd_port'])}", "--state-ip=127.0.0.1",
-                        f"--state-port={int(c['state_port'])}", f"--rate={float(c['rate'])}",
-                        f"--vx0={float(c['vx0'])}", f"--cmd-timeout={float(c['cmd_timeout'])}"]
-                if fleet:
-                    fe = fleet[0]
-                    if fe.get("front_susp_yaml"):
-                        args.append(f"--front-susp={fe['front_susp_yaml']}")
-                    if fe.get("rear_susp_yaml"):
-                        args.append(f"--rear-susp={fe['rear_susp_yaml']}")
-                self._road_cli(args, road, terrain, sensors, sensor_delay)
-                if pose:
-                    for flag, key in (("--x0=", "x0"), ("--y0=", "y0"), ("--yaw0=", "yaw0")):
-                        if pose.get(key) is not None:
-                            args.append(f"{flag}{float(pose[key])}")
-                self._launch(args, c["state_port"])
+                fleet = [{
+                    "id": 0,
+                    "vehicle_yaml": vy,
+                    "tire_yaml": ty,
+                    "level": c["level"],
+                    "x0": float(pose.get("x0", 0.0) if pose else 0.0),
+                    "y0": float(pose.get("y0", 0.0) if pose else 0.0),
+                    "yaw0": float(pose.get("yaw0", 0.0) if pose else 0.0),
+                    "vx0": float(c["vx0"]),
+                }]
+            wy = self._write_world_yaml(
+                fleet, road, terrain, sensors, sensor_delay,
+                c["rate"], c["cmd_timeout"])
+            args = [str(COSIM_BIN), f"--scene={wy}",
+                    f"--cmd-port={int(c['cmd_port'])}", "--state-ip=127.0.0.1",
+                    f"--state-port={int(c['state_port'])}",
+                    f"--rate={float(c['rate'])}",
+                    f"--cmd-timeout={float(c['cmd_timeout'])}"]
+            self._launch(args, c["state_port"])
         return self.status()
 
     def stop(self):

@@ -1,0 +1,13 @@
+id: vehicle.race_gt
+version: 1
+label: Race Gt
+level: L3
+parts:
+  chassis: chassis.race_car
+  tire: tire.default_pacejka
+  brake: brake.race_car
+  steering: steering.race_car
+  drivetrain: drivetrain.race_car
+  front_susp_kin: susp.dw_front_sports
+  rear_susp_kin: susp.5link_rear_sports
+overrides: {}

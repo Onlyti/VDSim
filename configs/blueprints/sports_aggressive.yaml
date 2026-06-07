@@ -1,0 +1,11 @@
+id: vehicle.sports_aggressive
+version: 1
+label: Sports Aggressive
+level: L2
+parts:
+  chassis: chassis.sports
+  tire: tire.sport_grip
+  brake: brake.sports
+  steering: steering.sports
+  drivetrain: drivetrain.sports
+overrides: {}

@@ -1,0 +1,14 @@
+id: scene.l3_sedan_kinematics
+version: 1
+label: L3 sedan kinematics demo
+rate: 200
+cmd_timeout: 0.1
+mu: 1.0
+fleet:
+- id: 0
+  blueprint: vehicle.sedan_l3
+  level: L3
+  x0: 0.0
+  y0: 0.0
+  yaw0: 0.0
+  vx0: 0.0

@@ -1,0 +1,10 @@
+id: brake.race_car
+type: brake
+version: 1
+schema: brake_subsystem_v1
+label: race_car brakes
+tags:
+- brake
+body:
+  brake_bias_front: 0.62
+  max_brake_torque: 5000.0

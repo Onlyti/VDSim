@@ -27,8 +27,9 @@ if(pybind11_FOUND)
             ${CMAKE_SOURCE_DIR}/examples/rd5_route.py
             DESTINATION ".")
         install(DIRECTORY
-            ${CMAKE_SOURCE_DIR}/configs/vehicles
-            ${CMAKE_SOURCE_DIR}/configs/tires
+            ${CMAKE_SOURCE_DIR}/configs/parts
+            ${CMAKE_SOURCE_DIR}/configs/blueprints
+            ${CMAKE_SOURCE_DIR}/configs/catalog
             ${CMAKE_SOURCE_DIR}/configs/roads
             DESTINATION "vdsim_configs"
             FILES_MATCHING PATTERN "*.yaml")
