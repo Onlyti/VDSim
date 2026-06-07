@@ -82,8 +82,10 @@
 
 ## 4. 다음 작업
 
-1. **ISO re-baseline** — drivetrain/LuGre 반영 후 `run_validation.py` (VALIDATION.md 수치 갱신).
-2. **v0.4** 스턴트 (`design/V0.4_PLAN.md`); 타이어 T1–T2 (`design/TIRE_ROADMAP.md`).
+1. **v0.4 slope + jump** — [`design/V0.4_SLOPE_JUMP_DYNAMICS.md`](design/V0.4_SLOPE_JUMP_DYNAMICS.md):
+   P0 contact `is_valid` → P1 grade/terrain → P2 T23 jump C++ → P3 Ld5 loop.
+2. **ISO re-baseline** — drivetrain/LuGre (`run_validation.py`).
+3. 타이어 T1–T2 (`design/TIRE_ROADMAP.md`) — v0.4와 병렬 가능.
 
 ## 5. 주의
 

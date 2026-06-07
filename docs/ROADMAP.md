@@ -20,7 +20,7 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 
 | Area | Shipped (high level) | Next |
 |------|----------------------|------|
-| Dynamics L1–L3 | Full planar + 14-DOF ride | Ld4 kinematics, Ld5 stunt (v0.4) |
+| Dynamics L1–L3 | Full planar + 14-DOF ride | **Slope/jump** → [`V0.4_SLOPE_JUMP_DYNAMICS.md`](design/V0.4_SLOPE_JUMP_DYNAMICS.md); Ld5 loop (v0.4) |
 | Tire | MF96 + LuGre **default**; kinematic fallback part | MF2002 catalog, belt transient |
 | Drivetrain | Engine inertia + open-diff coupling | Torque–RPM map, gearbox |
 | Brake / steer | Pluggable modules + deadtime | Booster/MDPS physics |
@@ -333,6 +333,7 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 |-----|------|
 | [`design/V0.2_PLAN.md`](design/V0.2_PLAN.md) | v0.2 workstreams (historical + status) |
 | [`design/V0.4_PLAN.md`](design/V0.4_PLAN.md) | Stunt / Ld5 |
+| [`design/V0.4_SLOPE_JUMP_DYNAMICS.md`](design/V0.4_SLOPE_JUMP_DYNAMICS.md) | Grade, terrain, T23 jump path |
 | [`design/TIRE_ROADMAP.md`](design/TIRE_ROADMAP.md) | Tire phases T1–T6 detail |
 | [`design/V0.2_DRIVETRAIN.md`](design/V0.2_DRIVETRAIN.md) | Engine inertia |
 | [`design/V0.2_TIRE_LUGRE.md`](design/V0.2_TIRE_LUGRE.md) | LuGre shipped spec |
