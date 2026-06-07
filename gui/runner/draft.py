@@ -45,6 +45,8 @@ class DraftMixin:
                 "rear_susp": susp_stem_from_ref(v.get("rear_susp", parts["rear"])),
             })
             strip_fleet_susp_if_not_l3(self.fleet_spec[-1])
+        if not self.fleet_spec:
+            raise ValueError(f"scenario '{name}' has no vehicles")
         self._ensure_ports()
         if self.fleet_spec:
             s0 = self.fleet_spec[0]

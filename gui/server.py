@@ -542,9 +542,32 @@ class Runner(DraftMixin):
         elif name == "straight":
             self.path = WaypointPath([(-40.0, 0.0), (40.0, 0.0)])
 
+    def _default_fleet_spec(self, vid=0, offset_xy=(0.0, 0.0)):
+        veh = str(self.cfg.get("vehicle", "sedan"))
+        parts = suspension_default_for_vehicle(veh)
+        return {
+            "id": int(vid),
+            "vehicle": veh,
+            "tire": "default_pacejka",
+            "level": str(self.cfg.get("level", "L2")),
+            "x0": float(self.cfg.get("init_x", 0.0)) + float(offset_xy[0]),
+            "y0": float(self.cfg.get("init_y", 0.0)) + float(offset_xy[1]),
+            "yaw0": float(self.cfg.get("init_yaw", 0.0)),
+            "vx0": 0.0,
+            "front_susp": parts["front"],
+            "rear_susp": parts["rear"],
+        }
+
     def _fleet_add(self):
+        if not self.fleet_spec:
+            row = self._default_fleet_spec(0)
+            strip_fleet_susp_if_not_l3(row)
+            self.fleet_spec.append(row)
+            self.live_vid = 0
+            self._ensure_ports()
+            return
         ids = [int(s["id"]) for s in self.fleet_spec]
-        nid = (max(ids) + 1) if ids else 0
+        nid = max(ids) + 1
         ref = self.fleet_spec[-1]
         veh = str(ref.get("vehicle", "sedan"))
         parts = suspension_default_for_vehicle(veh)

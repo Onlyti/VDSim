@@ -66,6 +66,22 @@ def main():
         assert p0.tx["rate"] == 42.0
         assert p0.targets[0]["ip"] == "10.0.0.5"
         assert len(r.infra_sensors) == 1
+
+        fleet_bak = list(r.fleet_spec)
+        live_bak = r.live_vid
+        try:
+            with r.lock:
+                r.fleet_spec = []
+            r._fleet_add()
+            assert len(r.fleet_spec) == 1
+            assert r.fleet_spec[0]["id"] == 0
+            r._fleet_add()
+            assert len(r.fleet_spec) == 2
+        finally:
+            with r.lock:
+                r.fleet_spec = fleet_bak
+                r.live_vid = live_bak
+
         print("test_runconfig_roundtrip: ok")
     finally:
         _restore(r, bak)
