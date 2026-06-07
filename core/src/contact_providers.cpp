@@ -323,6 +323,98 @@ private:
     PsdProfile prof_;
 };
 
+void wheel_world_positions(const State& vehicle, const VehicleParams& vp,
+                         std::array<Vec3, NUM_WHEELS>& pw) {
+    const double a = vp.cg_to_front, b = vp.cg_to_rear;
+    const double tf2 = 0.5 * vp.track_front, tr2 = 0.5 * vp.track_rear;
+    const Vec3 body_offsets[NUM_WHEELS] = {
+        Vec3(a, tf2, 0.0), Vec3(a, -tf2, 0.0),
+        Vec3(-b, tr2, 0.0), Vec3(-b, -tr2, 0.0)};
+    for (int i = 0; i < NUM_WHEELS; ++i)
+        pw[i] = vehicle.position + vehicle.orientation * body_offsets[i];
+}
+
+// T23 half-cosine ramp + lip + cliff (1D in world x).
+class RampGround final : public IContactProvider {
+public:
+    RampGround(double x_start, double x_top, double height, double lip, double mu)
+        : xs_(x_start), xt_(x_top), h_(height), lip_(lip), mu_(mu),
+          xl_(x_top + lip) {}
+
+    static double profile_z(double x, double xs, double xt, double h, double xl) {
+        if (x < xs) return 0.0;
+        if (x < xt) {
+            const double u = (x - xs) / std::max(1e-6, xt - xs);
+            return h * 0.5 * (1.0 - std::cos(M_PI * u));
+        }
+        if (x < xl) return h;
+        return 0.0;
+    }
+
+    void query(const State& vehicle, const VehicleParams& vp,
+               ContactArray& out) override {
+        std::array<Vec3, NUM_WHEELS> pw{};
+        wheel_world_positions(vehicle, vp, pw);
+        const double r = vp.wheel_radius_nominal;
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            const double x = pw[i].x();
+            const double z = profile_z(x, xs_, xt_, h_, xl_);
+            const double eps = 0.05;
+            const double zl = profile_z(x - eps, xs_, xt_, h_, xl_);
+            const double zr = profile_z(x + eps, xs_, xt_, h_, xl_);
+            const Vec3 n = Vec3(-(zr - zl) / (2.0 * eps), 0.0, 1.0).normalized();
+            out[i].is_valid    = true;
+            out[i].normal      = n;
+            out[i].mu_long     = mu_;
+            out[i].mu_lat      = mu_;
+            out[i].surface_id  = 1;
+            out[i].position    = Vec3(x, pw[i].y(), z);
+            out[i].penetration = std::max(0.0, (z + r) - pw[i].z());
+            out[i].road_dz     = z;
+        }
+    }
+
+private:
+    double xs_, xt_, h_, lip_, xl_, mu_;
+};
+
+// Vertical loop in x-z: center (xc, zc), radius R. Bottom at (xc, zc-R).
+class LoopGround final : public IContactProvider {
+public:
+    LoopGround(double xc, double zc, double radius, double mu)
+        : xc_(xc), zc_(zc), R_(std::max(2.0, radius)), mu_(mu) {}
+
+    void query(const State& vehicle, const VehicleParams& vp,
+               ContactArray& out) override {
+        std::array<Vec3, NUM_WHEELS> pw{};
+        wheel_world_positions(vehicle, vp, pw);
+        const double r = vp.wheel_radius_nominal;
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            const double dx = pw[i].x() - xc_;
+            const double dz = pw[i].z() - zc_;
+            const double theta = std::atan2(dx, -dz);
+            const double px = xc_ + R_ * std::sin(theta);
+            const double pz = zc_ - R_ * std::cos(theta);
+            const Vec3 n(std::sin(theta), 0.0, -std::cos(theta));
+            const double radial = std::hypot(dx, dz);
+            out[i].is_valid    = radial > 0.5 * R_;
+            out[i].normal      = n.normalized();
+            out[i].mu_long     = mu_;
+            out[i].mu_lat      = mu_;
+            out[i].surface_id  = 2;
+            out[i].position    = Vec3(px, pw[i].y(), pz);
+            out[i].penetration = std::max(0.0, (pz + r) - pw[i].z());
+            out[i].road_dz     = pz;
+        }
+    }
+
+    double radius() const { return R_; }
+    double v_min() const { return std::sqrt(5.0 * 9.80665 * R_); }
+
+private:
+    double xc_, zc_, R_, mu_;
+};
+
 class FlatRoughness final : public IRoughnessProvider {
 public:
     double sample_height(const Vec2& /*world_xy*/) const override { return 0.0; }
@@ -354,6 +446,16 @@ std::unique_ptr<IContactProvider> create_split_mu_ground(
 std::unique_ptr<IContactProvider> create_inclined_ground(
     double z0, double grade, double bank, double mu) {
     return std::make_unique<InclinedGround>(z0, grade, bank, mu);
+}
+
+std::unique_ptr<IContactProvider> create_ramp_ground(
+    double x_start, double x_top, double height, double lip_length, double mu) {
+    return std::make_unique<RampGround>(x_start, x_top, height, lip_length, mu);
+}
+
+std::unique_ptr<IContactProvider> create_loop_ground(
+    double xc, double zc, double radius, double mu) {
+    return std::make_unique<LoopGround>(xc, zc, radius, mu);
 }
 
 std::unique_ptr<IContactProvider> create_rough_ground(

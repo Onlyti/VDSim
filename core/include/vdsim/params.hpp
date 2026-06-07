@@ -43,6 +43,9 @@ struct VehicleParams {
     double anti_dive_front      {0.0};                                 // [0, 1] fraction
     double anti_squat_rear      {0.0};                                 // [0, 1] fraction
     double camber_per_roll      {0.0};                                 // [rad/rad] roll-to-camber gain
+    // Stunt / jump: progressive bump stop as multiple of static corner load (educative).
+    double spring_bump_ratio    {3.0};                                 // [-]
+    double spring_droop_ratio   {0.0};                                 // [0,1] min spring force fraction
 
     // ---- Drivetrain ----
     enum class Drive { FWD, RWD, AWD };
@@ -159,6 +162,10 @@ struct SolverParams {
     Integrator integrator   {Integrator::RK4};
     double     max_substep_dt {1e-3};           // [s]
     int        max_substeps   {10};
+    bool       stunt_physics  {false};          // world-z, airborne, full gravity (L3+/L5)
+    double     loop_radius    {0.0};            // [m] 0=off; educative loop pitch guide
+    double     loop_center_x  {0.0};
+    double     loop_center_z  {0.0};
 
     static SolverParams from_yaml(const std::string& path);
     void                to_yaml (const std::string& path) const;

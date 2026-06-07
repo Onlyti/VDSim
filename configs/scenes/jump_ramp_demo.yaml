@@ -1,0 +1,19 @@
+name: jump_ramp_demo
+description: T23 half-cosine ramp jump (L5 stunt physics)
+level: L5
+vehicle: chassis/sedan
+tire: tire/kinematic_fallback
+fleet:
+  - id: 0
+    x0: 10.0
+    y0: 0.0
+    yaw0: 0.0
+    vx0: 15.0
+stunt:
+  ground: ramp
+  x_start: 20.0
+  x_top: 24.0
+  height_m: 0.6
+  lip_m: 0.4
+mu: 1.0
+rate: 200

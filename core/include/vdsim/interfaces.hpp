@@ -17,7 +17,7 @@ namespace vdsim {
 // =============================================================================
 class IVehicleDynamics {
 public:
-    enum class Level { L1_Bicycle, L2_SevenDOF, L3_FourteenDOF, Lk_Kinematic };
+    enum class Level { L1_Bicycle, L2_SevenDOF, L3_FourteenDOF, L5_Stunt, Lk_Kinematic };
 
     virtual ~IVehicleDynamics() = default;
 
@@ -74,6 +74,7 @@ public:
 std::unique_ptr<IVehicleDynamics> create_bicycle();
 std::unique_ptr<IVehicleDynamics> create_seven_dof();
 std::unique_ptr<IVehicleDynamics> create_fourteen_dof();
+std::unique_ptr<IVehicleDynamics> create_stunt_dof();
 // Kinematic bicycle (no tire forces / no slip): yaw_rate = v*tan(delta)/L.
 // For path-planning / kinematic-MPC use and as the simplest ladder rung.
 std::unique_ptr<IVehicleDynamics> create_kinematic();
@@ -134,6 +135,15 @@ std::unique_ptr<IContactProvider> create_split_mu_ground(
 // Inclined plane: grade [rad] (uphill toward +x), bank [rad] (up toward +y).
 std::unique_ptr<IContactProvider> create_inclined_ground(
     double z0, double grade, double bank, double mu = 1.0);
+
+// Half-cosine ramp + lip + cliff (T23 profile). x_start..x_top rise, lip, then drop.
+std::unique_ptr<IContactProvider> create_ramp_ground(
+    double x_start, double x_top, double height, double lip_length,
+    double mu = 1.0);
+
+// Vertical loop in x-z plane: center (xc, zc), radius R [m]. y ignored.
+std::unique_ptr<IContactProvider> create_loop_ground(
+    double xc, double zc, double radius, double mu = 1.0);
 
 // Rough flat plane: two-tone road profile -> road_dz (L3 ride excitation).
 std::unique_ptr<IContactProvider> create_rough_ground(

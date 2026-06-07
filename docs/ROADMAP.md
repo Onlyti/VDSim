@@ -1,6 +1,6 @@
 # VDSim product roadmap
 
-**Last updated:** 2026-06-06 · **Tests:** 209/209 ctest green
+**Last updated:** 2026-06-05 · **Tests:** 214/214 ctest green (branch `feat/v0.4-slope-jump-m5`)
 
 Living roadmap from early PoC through v0.3. Tracks what shipped in mainline vs what
 is planned. Detail specs link to `docs/design/*`; tire phases in

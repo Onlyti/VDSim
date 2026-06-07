@@ -1,6 +1,6 @@
 # VDSim 핸드오프
 
-작성: **2026-06-05** (GUI·Ackermann·cosim v5·LuGre polish). 브랜치 `main`.
+작성: **2026-06-05** (v0.4 slope/jump M0–M5 on `feat/v0.4-slope-jump-m5`).
 
 ## 1. 문서 인덱스
 
@@ -80,29 +80,43 @@
 - **`210/210` ctest green** (`cmake --build build -j` → `cd build && ctest --output-on-failure`)
 - 신규/관련: `SevenDOF.AckermanInnerWheelLargerSlipBothTurnDirections`, `LuGreTire/*`, `cosim_multi_vehicle`
 
-## 4. 다음 작업
+## 4. v0.4 slope/jump (브랜치 `feat/v0.4-slope-jump-m5`)
 
-1. **v0.4 slope + jump** — [`design/V0.4_SLOPE_JUMP_DYNAMICS.md`](design/V0.4_SLOPE_JUMP_DYNAMICS.md):
-   P0 contact `is_valid` → P1 grade/terrain → P2 T23 jump C++ → P3 Ld5 loop.
-2. **ISO re-baseline** — drivetrain/LuGre (`run_validation.py`).
-3. 타이어 T1–T2 (`design/TIRE_ROADMAP.md`) — v0.4와 병렬 가능.
+| M | 상태 | 내용 |
+|---|------|------|
+| M0 | done | L2 `is_valid` → Fz/Fx/Fy off per wheel |
+| M1 | done | `Stunt.GradeL2CoastSlowsOnUphill` |
+| M2–M3 | done | `SolverParams::stunt_physics` world-z, −g, tire compression airborne |
+| M4 | partial | `RampGround`, scenes `jump_ramp_demo.yaml` / `vertical_loop_demo.yaml` |
+| M5 | done | `L5_Stunt`, `LoopGround`, loop rail guide + `Stunt.VerticalLoopCompletesLap` |
 
-## 5. 주의
+- 코어: `create_ramp_ground`, `create_loop_ground`, `create_stunt_dof()`
+- 루프: educative rail (`loop_radius` + θ integration) — full free Ld5는 v0.4 후속
+- **214/214** ctest (`Stunt/*` +4)
+
+## 5. 다음 작업
+
+1. **ISO re-baseline** — drivetrain/LuGre (`run_validation.py`).
+2. Scene loader에 `stunt.ground` → `make_ground` 연동 (M4 GUI).
+3. 타이어 T1–T2 · free Ld5 loop (물리 루프, rail off).
+4. `main` ← PR merge after review.
+
+## 6. 주의
 
 - Hyundai (TUR) `.tir` **confidential** — 커밋 금지.
 - Default subsystem **숫자 리베이스 금지** (ISO/benchmark 이동 시 중단·보고).
 - GUI 시각 검증 = 유저. Cosim **v5** ↔ `vdsim_realtime` 버전 일치.
 - Wheel index: **FL=0, FR=1, RL=2, RR=3**; ISO 8855 RH.
 
-## 6. 빌드·검증
+## 7. 빌드·검증
 
 ```bash
 cmake --build build -j
-cd build && ctest --output-on-failure   # 210/210
+cd build && ctest --output-on-failure   # 214/214
 # GUI
 python3 gui/server.py   # http://127.0.0.1:8080
 ```
 
-## 7. Git
+## 8. Git
 
-최근 커밋: physics (LuGre + Ackermann) · GUI/cosim v5. **push** — 명시 요청 시에만.
+브랜치 `feat/v0.4-slope-jump-m5` — **main 미병합**. push/merge는 명시 요청 시.

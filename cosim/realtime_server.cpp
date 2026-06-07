@@ -93,6 +93,7 @@ void apply_lugre_cli(vdsim::TireParams& tp, int c, char** v) {
 std::unique_ptr<vdsim::IVehicleDynamics> make_dyn(const std::string& lvl) {
     if (lvl == "L1") return vdsim::create_bicycle();
     if (lvl == "L3") return vdsim::create_fourteen_dof();
+    if (lvl == "L5") return vdsim::create_stunt_dof();
     return vdsim::create_seven_dof();
 }
 std::string resolve_susp_yaml(std::string ref) {

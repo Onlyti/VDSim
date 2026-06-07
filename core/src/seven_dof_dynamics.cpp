@@ -297,6 +297,8 @@ private:
         Fz[WHEEL_RL] = Fz_static_r + dFz_long_half - dFz_lat_r;
         Fz[WHEEL_RR] = Fz_static_r + dFz_long_half + dFz_lat_r;
         for (auto& v : Fz) if (v < 0.0) v = 0.0;
+        for (int i = 0; i < NUM_WHEELS; ++i)
+            if (!contacts[i].is_valid) Fz[i] = 0.0;
         // L3 may supply a dynamic (ride/road-coupled) tire load for grip in place
         // of this quasi-static Fz. One-shot: consumed here, re-set each L3 step.
         if (use_ext_fz_) { Fz = ext_fz_; use_ext_fz_ = false; }
@@ -358,6 +360,15 @@ private:
         std::array<double, NUM_WHEELS> fx_kin {{0.0, 0.0, 0.0, 0.0}};
 
         for (int i = 0; i < NUM_WHEELS; ++i) {
+            if (!contacts[i].is_valid) {
+                F_body[i]      = Vec3::Zero();
+                tire_F_disp[i] = Vec3::Zero();
+                kappa[i]       = 0.0;
+                alpha[i]       = 0.0;
+                mz_wheel[i]    = 0.0;
+                fx_kin[i]      = 0.0;
+                continue;
+            }
             const double v_x_body = vx - r * r_y[i];
             const double v_y_body = vy + r * r_x[i];
 
@@ -372,10 +383,6 @@ private:
             const double denom  = std::max(std::abs(v_x_wheel), kSpeedEps);
             const double k_slip = (R * s.wheel_spin[i] - v_x_wheel) / denom;
 
-            // LIMITATION: only contact mu is consumed. is_valid / penetration /
-            // normal are ignored, so a wheel flagged off-ground still develops
-            // full static-geometry Fz and tire force. Correct for flat ground;
-            // must be wired in before any non-flat IContactProvider is used.
             const double mu_long_i = contacts[i].mu_long;
             const double mu_lat_i  = contacts[i].mu_lat;
 

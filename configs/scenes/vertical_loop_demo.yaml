@@ -1,0 +1,18 @@
+name: vertical_loop_demo
+description: Vertical loop in x-z plane (L5 stunt + loop pitch guide)
+level: L5
+vehicle: chassis/sedan
+tire: tire/kinematic_fallback
+fleet:
+  - id: 0
+    x0: 50.0
+    y0: 0.0
+    yaw0: 0.0
+    vx0: 30.0
+stunt:
+  ground: loop
+  center_x: 50.0
+  center_z: 15.0
+  radius_m: 10.0
+mu: 1.0
+rate: 200
