@@ -28,6 +28,12 @@ try:
     HAVE_VDSIM = True
 except ImportError:
     HAVE_VDSIM = False
+
+
+def _catalog_vp_tp(vehicle="sports", tire="default_pacejka"):
+    sys.path.insert(0, str(REPO / "python"))
+    from vdsim_lab import Tire, Vehicle
+    return Vehicle.preset(vehicle).vp, Tire.preset(tire).tp
     print("[fig] vdsim not built — physics figures will be skipped")
 
 
@@ -128,8 +134,7 @@ def fig_02_coriolis():
 def fig_03_tire():
     if not HAVE_VDSIM:
         return
-    tp = vdsim.TireParams.from_yaml(
-        str(REPO / "configs/tires/default_pacejka.yaml"))
+    _, tp = _catalog_vp_tp()
     tire = vdsim.create_pacejka_mf96()
     tire.initialize(tp)
 
@@ -214,8 +219,7 @@ def fig_04_bicycle_geom():
 def fig_04_understeer():
     if not HAVE_VDSIM:
         return
-    vp = vdsim.VehicleParams.from_yaml(str(REPO/"configs/vehicles/sports.yaml"))
-    tp = vdsim.TireParams.from_yaml(str(REPO/"configs/tires/default_pacejka.yaml"))
+    vp, tp = _catalog_vp_tp()
     sp = vdsim.SolverParams()
 
     delta = 0.03
@@ -336,8 +340,7 @@ def fig_09_pure_pursuit():
 # helper: build a dynamics + flat contacts + initial state
 # ---------------------------------------------------------------------------
 def _make(level, vehicle="sports", v0=0.0):
-    vp = vdsim.VehicleParams.from_yaml(str(REPO/f"configs/vehicles/{vehicle}.yaml"))
-    tp = vdsim.TireParams.from_yaml(str(REPO/"configs/tires/default_pacejka.yaml"))
+    vp, tp = _catalog_vp_tp(vehicle)
     sp = vdsim.SolverParams()
     dyn = {"L1": vdsim.create_bicycle, "L3": vdsim.create_fourteen_dof}.get(
         level, vdsim.create_seven_dof)()
@@ -362,7 +365,7 @@ def _contacts(mu=1.0):
 # ---------------------------------------------------------------------------
 def fig_03b_tire_mz_fx():
     if not HAVE_VDSIM: return
-    tp = vdsim.TireParams.from_yaml(str(REPO/"configs/tires/default_pacejka.yaml"))
+    _, tp = _catalog_vp_tp()
     tire = vdsim.create_pacejka_mf96(); tire.initialize(tp)
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.5))
     alphas = np.linspace(-0.30, 0.30, 200)
@@ -422,7 +425,7 @@ def fig_05_ackermann():
     if not HAVE_VDSIM: return
     fig, ax = plt.subplots(figsize=(7,4.5))
     steers = np.linspace(0.0, 0.45, 40)
-    vp = vdsim.VehicleParams.from_yaml(str(REPO/"configs/vehicles/sports.yaml"))
+    vp, _ = _catalog_vp_tp()
     L, Tw = vp.wheelbase, vp.track_front
     for pct,lbl in [(0,"0% (parallel)"),(50,"50%"),(100,"100% (perfect)")]:
         din=[]; dout=[]
@@ -482,8 +485,7 @@ def fig_06_transient():
 def fig_08_pid():
     if not HAVE_VDSIM: return
     try:
-        vp=vdsim.VehicleParams.from_yaml(str(REPO/"configs/vehicles/sports.yaml"))
-        tp=vdsim.TireParams.from_yaml(str(REPO/"configs/tires/default_pacejka.yaml"))
+        vp, tp = _catalog_vp_tp()
         sp=vdsim.SolverParams()
         dyn=vdsim.create_seven_dof(); dyn.initialize(vp,tp,sp)
         s0=vdsim.State(); s0.velocity=[5,0,0]
@@ -564,8 +566,7 @@ def fig_11_integrator():
     fig,ax=plt.subplots(figsize=(7,4.5))
     # reference: tiny dt RK4
     def run(integrator, outer_dt):
-        vp=vdsim.VehicleParams.from_yaml(str(REPO/"configs/vehicles/sports.yaml"))
-        tp=vdsim.TireParams.from_yaml(str(REPO/"configs/tires/default_pacejka.yaml"))
+        vp, tp = _catalog_vp_tp()
         sp=vdsim.SolverParams(); sp.integrator=integrator
         sp.max_substep_dt=outer_dt; sp.max_substeps=1
         dyn=vdsim.create_seven_dof(); dyn.initialize(vp,tp,sp)
