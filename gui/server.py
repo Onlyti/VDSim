@@ -56,7 +56,7 @@ from runner.suspension import (
     suspension_default_for_vehicle,
     suspension_schematic,
 )
-from catalog.ids import BLUEPRINTS, DEFAULT_BLUEPRINT, blueprint_for_vehicle
+from catalog.ids import BLUEPRINTS, DEFAULT_BLUEPRINT, blueprint_for_vehicle, tire_id_from_stem
 from api.handler import make_handler
 from api.routes import ApiContext
 
@@ -314,6 +314,7 @@ class Runner(DraftMixin):
 
     def _rebuild_if_running(self):
         if self.cfg["running"]:
+            self._materialize_run_config()
             self._build()
 
     def load_vehicle(self, name):
@@ -359,18 +360,19 @@ class Runner(DraftMixin):
     def set_params(self, which, data, vehicle_id=None):
         vid = int(vehicle_id) if vehicle_id is not None else self.live_vid
         with self.lock:
-            if vid == self.live_vid:
-                if which == "vehicle":
+            if which == "vehicle":
+                if vid == self.live_vid:
                     apply_fields(self.vp, VEHICLE_FIELDS, data)
-                elif which == "tire":
+                self.fleet_overrides.setdefault(vid, {}).setdefault("vehicle", {}).update(data)
+            elif which == "tire":
+                if vid == self.live_vid:
                     apply_fields(self.tp, TIRE_FIELDS, data)
-                elif which == "sensors":
+                self.fleet_overrides.setdefault(vid, {}).setdefault("tire", {}).update(data)
+            elif vid == self.live_vid:
+                if which == "sensors":
                     self._apply_sensors(data)
                 else:
                     self._apply_actuator(data)
-            elif which in ("vehicle", "tire"):
-                bucket = self.fleet_overrides.setdefault(vid, {}).setdefault(which, {})
-                bucket.update(data)
             self._rebuild_if_running()
 
     def serialize_vehicle(self, vehicle_id=None):
@@ -616,7 +618,10 @@ class Runner(DraftMixin):
             "x": st["x"], "y": st["y"], "z": st["z"],
             "yaw": st["yaw"], "roll": st["roll"], "pitch": st["pitch"],
             "vx": st["vx"], "vy": st["vy"], "r": st["r"],
-            "steer": st["steer"], "Fz": st.get("Fz", []),
+            "steer": st["steer"],
+            "throttle_applied": st.get("throttle_applied", 0.0),
+            "brake_applied": st.get("brake_applied", 0.0),
+            "Fz": st.get("Fz", []),
             "Ft": st.get("Ft", []),
             "wheel_spin": spin,
             "susp": st.get("susp", []),
@@ -752,7 +757,7 @@ class Runner(DraftMixin):
         cs = self.cosim.status()
         return {
             "attach": attach, "host": host, "cmd_port": cmd, "state_port": st,
-            "protocol": "VDS1", "protocol_version": 4,
+            "protocol": "VDS1", "protocol_version": 5,
             "plant_running": bool(cs.get("running")),
             "plant_attach": bool(cs.get("attach")),
         }
@@ -967,7 +972,10 @@ class Runner(DraftMixin):
                         "yaw": cs["yaw"], "roll": cs["roll"], "pitch": cs["pitch"],
                         "vx": cs["vx"], "vy": cs["vy"], "r": cs["r"],
                         "wx": cs["wx"], "wy": cs["wy"], "ax": cs["ax"], "ay": cs["ay"],
-                        "steer": cs["steer"], "Fz": cs["Fz"], "Ft": cs.get("Ft", []),
+                        "steer": cs["steer"],
+                        "throttle_applied": cs.get("throttle_applied", 0.0),
+                        "brake_applied": cs.get("brake_applied", 0.0),
+                        "Fz": cs["Fz"], "Ft": cs.get("Ft", []),
                         "wheel_spin": self._norm_spin(cs),
                         "susp": cs.get("susp", []),
                         "rack_torque": cs.get("rack_torque", 0.0),
@@ -1083,6 +1091,8 @@ class Runner(DraftMixin):
             snap["vehicles"] = sorted(self.ports)
             snap["fleet_spec"] = list(self.fleet_spec)
             snap["cmd_in"] = dict(p.applied)
+            snap["fleet_cmd"] = {str(vid): dict(pt.applied)
+                                 for vid, pt in self.ports.items()}
             snap["io_age"] = (time.monotonic() - p.io_last_t
                               if p.io_last_t is not None else None)
             snap["cosim"] = self.cosim.running()
@@ -1351,22 +1361,42 @@ class Runner(DraftMixin):
         c["comms"] = self.comms_info()
         return c
 
+    def _tire_part_stems(self):
+        parts = self._catalog.list_parts(type_filter="tire")
+        stems = []
+        for p in parts:
+            pid = str(p.get("id", ""))
+            if pid.startswith("tire."):
+                stems.append(pid.split(".", 1)[1])
+        return sorted(set(stems))
+
+    def _load_tire_part(self, stem):
+        import yaml
+        part = self._catalog.load_part(tire_id_from_stem(str(stem)))
+        body = part.get("body")
+        if not isinstance(body, dict):
+            raise ValueError(f"tire part {stem} has no body")
+        path = Path(self.cosim._tmp) / f"tire_load_{stem}.yaml"
+        path.write_text(yaml.safe_dump(body, sort_keys=False))
+        return vdsim.TireParams.from_yaml(str(path))
+
     def tire_samples(self):
-        return sorted(p.stem for p in TIRE_DIR.glob("*.yaml"))
+        return self._tire_part_stems()
 
     def load_tire(self, name, vehicle_id=None):
         stem = Path(str(name)).stem
-        path = (TIRE_DIR / f"{stem}.yaml").resolve()
-        if not str(path).startswith(str(TIRE_DIR.resolve())) or not path.is_file():
-            raise ValueError(f"unknown tire preset: {name}")
+        try:
+            tp = self._load_tire_part(stem)
+        except Exception as e:
+            raise ValueError(f"unknown tire preset: {name}") from e
         vid = int(vehicle_id) if vehicle_id is not None else self.live_vid
         with self.lock:
             if vid == self.live_vid:
-                self.tp = vdsim.TireParams.from_yaml(str(path))
+                self.tp = tp
             else:
                 spec = self._spec_for_vid(vid)
                 spec["tire"] = stem
-                self.fleet_overrides.get(vid, {}).pop("tire", None)
+            self.fleet_overrides.setdefault(vid, {}).pop("tire", None)
             self._rebuild_if_running()
 
     def import_tir(self, text, vehicle_id=None):
@@ -1379,9 +1409,7 @@ class Runner(DraftMixin):
         with self.lock:
             if vid == self.live_vid:
                 apply_fields(self.tp, TIRE_FIELDS, mapped)
-            else:
-                bucket = self.fleet_overrides.setdefault(vid, {}).setdefault("tire", {})
-                bucket.update(mapped)
+            self.fleet_overrides.setdefault(vid, {}).setdefault("tire", {}).update(mapped)
             self._rebuild_if_running()
         return {"parsed": len(raw), "mapped": sorted(mapped.keys())}
 

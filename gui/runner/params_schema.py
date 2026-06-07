@@ -63,6 +63,11 @@ VEHICLE_FIELDS = [
     ("aero_lift_rear", "Lift coeff rear [-]", "Aero", "num", "L1,L2,L3"),
 ]
 TIRE_FIELDS = [
+    ("lugre.enabled", "LuGre dynamic tire (off → kinematic blend)", "LuGre", "bool", "L1,L2,L3"),
+    ("lugre.sigma0", "LuGre σ₀ [N/m]", "LuGre", "num", "L1,L2,L3"),
+    ("lugre.sigma1", "LuGre σ₁ [N·s/m] (0 → critical)", "LuGre", "num", "L1,L2,L3"),
+    ("lugre.sigma2", "LuGre σ₂ [N·s/m]", "LuGre", "num", "L1,L2,L3"),
+    ("lugre.m_eff", "LuGre m_eff [kg]", "LuGre", "num", "L1,L2,L3"),
     ("B_long", "B long", "Longitudinal", "num", "L1,L2,L3"),
     ("C_long", "C long", "Longitudinal", "num", "L1,L2,L3"),
     ("D_long", "D long", "Longitudinal", "num", "L1,L2,L3"),

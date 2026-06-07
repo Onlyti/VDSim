@@ -6,6 +6,7 @@
 
 #include "vdsim/coordinate.hpp"
 #include "vdsim/interfaces.hpp"
+#include "vdsim/params.hpp"
 #include "vdsim/sensors.hpp"
 #include "vdsim/sim_session.hpp"
 #include "vdsim/suspension.hpp"
@@ -28,6 +29,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <optional>
 #include <csignal>
 #include <cstdio>
 #include <cstring>
@@ -66,6 +68,27 @@ std::string opts(int c, char** v, const char* k, const std::string& d) {
     const size_t L = std::strlen(k);
     for (int i = 1; i < c; ++i) if (!std::strncmp(v[i], k, L)) return std::string(v[i] + L);
     return d;
+}
+
+static bool parse_on_off(const char* val) {
+    if (!val || !*val) return true;
+    if (!std::strcmp(val, "1") || !std::strcmp(val, "on") || !std::strcmp(val, "true")) return true;
+    if (!std::strcmp(val, "0") || !std::strcmp(val, "off") || !std::strcmp(val, "false")) return false;
+    return std::atof(val) > 0.5;
+}
+
+std::optional<bool> lugre_cli_override(int c, char** v) {
+    for (int i = 1; i < c; ++i) {
+        if (!std::strcmp(v[i], "--lugre")) return true;
+        if (!std::strcmp(v[i], "--no-lugre")) return false;
+        if (!std::strncmp(v[i], "--lugre=", 8)) return parse_on_off(v[i] + 8);
+    }
+    return std::nullopt;
+}
+
+void apply_lugre_cli(vdsim::TireParams& tp, int c, char** v) {
+    if (const auto ov = lugre_cli_override(c, v))
+        tp.lugre.enabled = *ov;
 }
 std::unique_ptr<vdsim::IVehicleDynamics> make_dyn(const std::string& lvl) {
     if (lvl == "L1") return vdsim::create_bicycle();
@@ -173,7 +196,10 @@ void fill_state(vdsim::cosim::StateFields& s, const vdsim::SimOutput& o,
         s.susp[i] = o.state.susp_compression[i];
         s.fx[i] = o.tire_forces[i].x(); s.fy[i] = o.tire_forces[i].y();
     }
-    s.steer_applied = o.steer_applied; s.wheel_radius = wheel_radius;
+    s.steer_applied = o.steer_applied;
+    s.throttle_applied = o.throttle_applied;
+    s.brake_applied = o.brake_applied;
+    s.wheel_radius = wheel_radius;
     s.rack_torque = o.rack_torque;
     s.m_ax = o.sensors.ax; s.m_ay = o.sensors.ay; s.m_wz = o.sensors.wz;
     s.m_steer = o.sensors.steer; s.m_gnss_x = o.sensors.gnss_x; s.m_gnss_y = o.sensors.gnss_y;
@@ -246,7 +272,8 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
         WorldVehicle wv;
         wv.id = spn.id;
         wv.vp = vdsim::VehicleParams::from_yaml(spn.vehicle_yaml);
-        const auto tp = vdsim::TireParams::from_yaml(spn.tire_yaml);
+        auto tp = vdsim::TireParams::from_yaml(spn.tire_yaml);
+        apply_lugre_cli(tp, argc, argv);
         auto dyn = make_dyn(spn.level);
         attach_susp_parts(*dyn, spn.level, spn.front_susp, spn.rear_susp);
         wv.sim = std::make_unique<vdsim::SimSession>(
@@ -381,7 +408,8 @@ int main(int argc, char** argv) {
             "usage: %s --scene=<scene.yaml|world.yaml> [options]\n"
             "  (--scenario= accepted as deprecated alias)\n"
             "  [--cmd-port=7001] [--state-ip=127.0.0.1] [--state-port=7002]\n"
-            "  [--rate=200] [--time-scale=1] [--cmd-timeout=0.1]\n",
+            "  [--rate=200] [--time-scale=1] [--cmd-timeout=0.1]\n"
+            "  [--lugre] [--no-lugre]  (override tire YAML lugre.enabled)\n",
             argv[0]);
         rc = 2;
     }

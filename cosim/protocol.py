@@ -16,16 +16,17 @@ Layout (little-endian, tightly packed), see cosim_protocol.hpp:
                     rack_torque slip_ratio[4] slip_angle[4] susp[4]
                     m_ax m_ay m_wz m_steer m_gnss_x m_gnss_y  (152, v2)
                     Fx[4] Fy[4]                                (64, v3)
-                                                         -> 436 total incl. crc
+                    throttle_applied brake_applied             (16, v5)
+                                                         -> 452 total incl. crc
   trailing crc (4): crc32 over all preceding bytes
 """
 import struct
 import zlib
 
 MAGIC = 0x56445331  # "VDS1"
-VERSION = 4  # v2: rack/slip/susp/measured; v3: + tire Fx/Fy; v4: header pad -> vehicle_id
+VERSION = 5  # v5: + throttle_applied/brake_applied; v4: header vehicle_id
 MSG_CMD, MSG_STATE = 1, 2
-CMD_BYTES, STATE_BYTES = 76, 436
+CMD_BYTES, STATE_BYTES = 76, 452
 
 # default ports (server listens CMD, emits STATE)
 CMD_PORT, STATE_PORT = 7001, 7002
@@ -95,4 +96,5 @@ def decode_state(buf):
     out["Fx"] = list(fx)
     out["Fy"] = list(fy)
     out["Ft"] = [[fx[i], fy[i]] for i in range(4)]   # [[Fx,Fy]] per wheel (viewer arrows)
+    out["throttle_applied"], out["brake_applied"] = struct.unpack_from("<dd", buf, 432)
     return out

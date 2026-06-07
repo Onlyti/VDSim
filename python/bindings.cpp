@@ -528,7 +528,9 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readonly("tire_forces",   &vdsim::SimOutput::tire_forces)
         .def_readonly("slip_ratio",    &vdsim::SimOutput::slip_ratio)
         .def_readonly("slip_angle",    &vdsim::SimOutput::slip_angle)
-        .def_readonly("steer_applied", &vdsim::SimOutput::steer_applied)
+        .def_readonly("steer_applied",     &vdsim::SimOutput::steer_applied)
+        .def_readonly("throttle_applied",  &vdsim::SimOutput::throttle_applied)
+        .def_readonly("brake_applied",     &vdsim::SimOutput::brake_applied)
         .def_readonly("rack_torque",   &vdsim::SimOutput::rack_torque)
         .def_readonly("sensors",       &vdsim::SimOutput::sensors);
 

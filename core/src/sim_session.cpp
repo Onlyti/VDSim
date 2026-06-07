@@ -72,6 +72,8 @@ void SimSession::tick(double dt) {
         meas_state_ = meas;
         ax_ = ax; ay_ = ay; roll_ = roll; pitch_ = pitch; rack_ = rack;
         steer_applied_ = realized.steer_angle_wheel;
+        throttle_applied_ = realized.throttle;
+        brake_applied_ = realized.brake;
         Fz_ = Fz; tire_forces_ = Ft;
         slip_ratio_ = kappa; slip_angle_ = alpha;
         sensors_meas_ = sm;
@@ -88,6 +90,8 @@ SimOutput SimSession::output() const {
     o.ax = ax_; o.ay = ay_; o.roll = roll_; o.pitch = pitch_;
     o.rack_torque = rack_;
     o.steer_applied = steer_applied_;
+    o.throttle_applied = throttle_applied_;
+    o.brake_applied = brake_applied_;
     o.Fz = Fz_;
     o.tire_forces = tire_forces_;
     o.slip_ratio = slip_ratio_;

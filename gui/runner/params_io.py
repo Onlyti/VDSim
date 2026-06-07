@@ -30,12 +30,23 @@ def field_value(obj, attr, kind):
     return float(getattr(obj, attr))
 
 
+def _read_field(obj, attr, kind):
+    if "." in attr:
+        v = get_dotted(obj, attr)
+        if kind == "bool":
+            return bool(v)
+        if kind == "arr":
+            return [float(x) for x in v]
+        return float(v)
+    return field_value(obj, attr, kind)
+
+
 def serialize_fields(obj, fields):
     out = []
     for attr, label, group, kind, *rest in fields:
         levels = rest[0] if rest else "L1,L2,L3"
         d = {"name": attr, "label": label, "group": group, "kind": kind,
-             "levels": levels.split(","), "value": field_value(obj, attr, kind)}
+             "levels": levels.split(","), "value": _read_field(obj, attr, kind)}
         if kind == "enum":
             d["choices"] = list(ENUM_MAPS[attr].keys())
         out.append(d)
@@ -43,7 +54,7 @@ def serialize_fields(obj, fields):
 
 
 def params_dict(obj, fields):
-    return {f[0]: field_value(obj, f[0], f[3]) for f in fields}
+    return {f[0]: _read_field(obj, f[0], f[3]) for f in fields}
 
 
 def flat_sensors(sensors):
@@ -72,9 +83,18 @@ def apply_fields(obj, fields, data):
     kinds = {f[0]: f[3] for f in fields}
     for k, v in data.items():
         kind = kinds.get(k)
-        if kind is None or not hasattr(obj, k):
+        if kind is None:
             continue
-        if kind == "enum":
+        if "." in k:
+            if kind == "bool":
+                set_dotted(obj, k, bool(v))
+            elif kind == "arr":
+                set_dotted(obj, k, [float(x) for x in v])
+            else:
+                set_dotted(obj, k, float(v))
+        elif not hasattr(obj, k):
+            continue
+        elif kind == "enum":
             setattr(obj, k, ENUM_MAPS[k][v])
         elif kind == "bool":
             setattr(obj, k, bool(v))

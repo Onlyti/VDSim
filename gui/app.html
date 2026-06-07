@@ -135,6 +135,9 @@
   .fld label { margin:0; font-size:11px; flex:1; color:var(--ink); }
   .fld input { width:72px; background:#f4f7fa; color:var(--ink); border:1px solid var(--border);
                border-radius:4px; padding:3px; font-size:12px; }
+  .fld .arr { display:flex; gap:5px; flex-wrap:wrap; }
+  .fld .arr-cell { display:flex; flex-direction:column; align-items:center; gap:1px; }
+  .fld .arr-corner { font:600 8px Tahoma; color:var(--dim); letter-spacing:0.02em; }
   .fld .arr input { width:44px; }
   .fld.na { opacity:.35; }
   .badge { font-size:9px; color:var(--dim); border:1px solid var(--border); border-radius:3px;
@@ -288,7 +291,7 @@
           <div class="setup-tab-pane" id="setup_pane_vehicle">
             <section class="setup-section" style="min-width:300px;max-width:440px">
               <div class="grp" data-help="frames">Vehicles</div>
-              <div class="setup-hint-line">Drag in view to set spawn · <b>Edit</b> or left-tree for vehicle modules.</div>
+              <div class="setup-hint-line">Drag in view to set spawn · <b>Edit</b> for level, parts, and modules.</div>
               <div id="setup_fleet"></div>
               <button id="setup_fleet_add" style="width:100%;padding:4px;font-size:10px;margin-top:4px">+ add 2nd vehicle</button>
             </section>
@@ -349,6 +352,10 @@
     <div class="grp" data-help="frames">Accel</div>
     <div class="kv"><span>ax</span><b id="tel_ax">—</b></div>
     <div class="kv"><span>ay</span><b id="tel_ay">—</b></div>
+    <div class="grp" data-help="Steering">Controls (cmd → applied)</div>
+    <div class="kv"><span>throttle</span><b id="tel_thr">—</b></div>
+    <div class="kv"><span>brake</span><b id="tel_brk">—</b></div>
+    <div class="kv"><span>steer</span><b id="tel_steer">—</b></div>
     <div class="grp" data-help="Tire">wheel spin [rad/s] FL FR RL RR</div>
     <div class="sub" id="tel_spin">—</div>
     <div class="grp" data-help="Tire">slip ratio κ FL FR RL RR</div>
@@ -455,7 +462,8 @@ const DOCS = 'https://onlyti.github.io/VDSim/main/theory/';
 const DOC_MAP = {
   'Preset': '', 'Mass & inertia': '02_rigid_body_dynamics', 'Geometry': '04_ld1_bicycle',
   'Suspension': '05_ld2_seven_dof', 'Drivetrain': '05_ld2_seven_dof', 'Steering': '05_ld2_seven_dof',
-  'Aero': '04_ld1_bicycle', 'Tire': '03_tire_pacejka_mf96', 'Actuator & feedback': '17_actuator_and_sensing',
+  'Aero': '04_ld1_bicycle', 'Tire': '03_tire_pacejka_mf96', 'LuGre': '19_lugre_dynamic_tire',
+  'Actuator & feedback': '17_actuator_and_sensing',
   'model': '', 'numerics': '11_numerical_integration', 'run': '09_pure_pursuit_path', 'cosim': '18_runtime_and_cosim',
   'frames': '01_frames_and_conventions', 'road': '03_tire_pacejka_mf96',
 };
@@ -1648,6 +1656,17 @@ function updateTelemetry(s) {
   $('tel_r').textContent = f(s.r, 3) + ' rad/s';
   $('tel_ax').textContent = f(s.ax);
   $('tel_ay').textContent = f(s.ay);
+  const vid = String(selectedVid ?? s.live_vid ?? 0);
+  const cmd = (s.fleet_cmd && s.fleet_cmd[vid]) || s.cmd_in || {};
+  const pct = v => (v == null || Number.isNaN(v)) ? '—' : (v * 100).toFixed(0) + ' %';
+  const pairPct = (c, a) => `${pct(c)} → ${pct(a)}`;
+  const deg = 57.2958;
+  const steerOne = v => (v == null || Number.isNaN(v)) ? '—'
+    : `${f(v, 3)} rad (${(v * deg).toFixed(1)}°)`;
+  const pairSteer = (c, a) => `${steerOne(c)} → ${steerOne(a)}`;
+  $('tel_thr').textContent = pairPct(cmd.throttle, s.throttle_applied);
+  $('tel_brk').textContent = pairPct(cmd.brake, s.brake_applied);
+  $('tel_steer').textContent = pairSteer(cmd.steer, s.steer);
   $('tel_spin').textContent = s.wheel_spin ? fmtArr(s.wheel_spin, 2) : '—';
   $('tel_kappa').textContent = s.kappa ? fmtArr(s.kappa, 3) : '—';
   $('tel_alpha').textContent = s.alpha ? s.alpha.map(v => (v * 57.2958).toFixed(2)).join('  ') : '—';
@@ -1956,7 +1975,7 @@ async function buildDataPort() {
   el.innerHTML = `
    <div class="grp">VDS1 UDP</div>
    <div class="sub" style="line-height:1.5;margin-bottom:6px">
-     CMD <b>${host}:${cmdP}</b> · STATE <b>${stP}</b> (${comms.protocol || 'VDS1'} v${comms.protocol_version ?? 4})<br>
+     CMD <b>${host}:${cmdP}</b> · STATE <b>${stP}</b> (${comms.protocol || 'VDS1'} v${comms.protocol_version ?? 5})<br>
      Plant: <span id="io_plant">${plant}</span>
    </div>
    <div class="grp">HTTP I/O</div>
@@ -2098,17 +2117,10 @@ async function syncFleetPanels(fleet, liveVid = selectedVid) {
   }
   await refreshFleetView(fleet, liveVid, fleetChanged);
 }
-function syncSimLevelSelect(vid, level) {
-  const box = $('setup_fleet')?.querySelector(`.setup-fleet[data-vid="${vid}"] select[data-k=level]`);
-  if (box && box.value !== level) box.value = level;
-}
 async function applyFleetLevel(vid, level) {
   const spec = window._fleetSpec?.find(f => +f.id === vid);
   if (!spec) return;
   spec.level = level;
-  syncSimLevelSelect(vid, level);
-  const box = $('setup_fleet')?.querySelector(`.setup-fleet[data-vid="${vid}"]`);
-  if (box) syncFleetSuspLevel(box, level);
   if (+vid === selectedVid && level !== renderLevel) {
     await rebuildCar(level, vid);
   } else if (+vid !== selectedVid) {
@@ -2116,26 +2128,138 @@ async function applyFleetLevel(vid, level) {
     await ensureFleetCar(vid, spec);
     placeFleetCar(vid, fleetFromSpec([spec])[String(vid)]);
   }
+  if ($('modal_bg')?.classList.contains('open') && +vid === modalVid) {
+    modalLvl = level;
+    if (modalPreview) refreshModalPreview();
+  }
 }
-function syncFleetSuspLevel(box, level) {
-  const l3 = level === 'L3';
-  for (const k of ['front_susp', 'rear_susp']) {
-    const s = box.querySelector(`select[data-k="${k}"]`);
-    if (s) { s.disabled = !l3; s.style.opacity = l3 ? '' : '0.45'; }
+async function modalFleetUpdate(key, value) {
+  const sp = window._fleetSpec?.find(f => +f.id === modalVid);
+  if (sp) sp[key] = value;
+  if (key === 'level') await applyFleetLevel(modalVid, value);
+  if (key === 'tire') {
+    const lr = await (await fetch('/api/tire/load', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: value, vehicle_id: modalVid }),
+    })).json();
+    if (!lr.ok) throw new Error(lr.error || 'tire load failed');
+    tireFields = (await (await fetch(`/api/tire?vehicle_id=${modalVid}`)).json()).fields;
   }
-  let hint = box.querySelector('.susp-hint');
-  if (!hint) {
-    hint = document.createElement('div');
-    hint.className = 'susp-hint';
-    hint.style.cssText = 'font-size:9px;color:var(--dim);margin-top:2px';
-    const row = box.querySelector('.setup-row');
-    if (row) box.insertBefore(hint, row);
-    else box.appendChild(hint);
+  try {
+    const r = await postSetup({ fleet: [{ id: modalVid, [key]: value }] });
+    if (r.setup?.fleet) {
+      window._fleetSpec = mergeSetupFleet(r.setup.fleet);
+      const updated = window._fleetSpec.find(f => +f.id === modalVid);
+      await buildVehicleTree(window._fleetSpec, selectedVid);
+      if (key === 'vehicle') {
+        cfgVehicle = value;
+        suspDefaults = await (await fetch(
+          `/api/suspension/default?vehicle=${encodeURIComponent(value)}`)).json();
+        modalSuspFront = updated?.front_susp || suspDefaults.front;
+        modalSuspRear = updated?.rear_susp || suspDefaults.rear;
+        vehFields = (await (await fetch(`/api/vehicle?vehicle_id=${modalVid}`)).json()).fields;
+      }
+      if (key === 'front_susp') modalSuspFront = value;
+      if (key === 'rear_susp') modalSuspRear = value;
+      const rerenderTab = {
+        level: ['chassis', 'suspension'],
+        vehicle: ['chassis', 'suspension'],
+        tire: ['tire'],
+        front_susp: ['suspension'],
+        rear_susp: ['suspension'],
+      };
+      if ($('modal_bg').classList.contains('open') && rerenderTab[key]?.includes(modalTab)) {
+        renderModalPane();
+      } else if (modalPreview && (key === 'front_susp' || key === 'rear_susp' || key === 'level')) {
+        refreshModalPreview();
+      }
+    }
+    markDraftDirty();
+  } catch (e) {
+    alert(e.message);
   }
-  const n = setupSuspL3Count || setupSuspList.length;
-  hint.textContent = l3
-    ? `L3 kinematics attach (${n} configs)`
-    : 'Suspension parts: L3 only';
+}
+function appendFleetSelectRow(parent, label, key, opts, val, disabled) {
+  const wrap = document.createElement('div');
+  wrap.className = 'fld';
+  const lab = document.createElement('label');
+  lab.textContent = label;
+  const sel = document.createElement('select');
+  sel.disabled = !!disabled;
+  if (disabled) sel.style.opacity = '0.45';
+  for (const o of opts) {
+    const opt = document.createElement('option');
+    if (typeof o === 'string') {
+      opt.value = o;
+      opt.textContent = o;
+    } else {
+      opt.value = o.v;
+      opt.textContent = o.t;
+    }
+    if (opt.value === String(val ?? '')) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  sel.onchange = () => { void modalFleetUpdate(key, sel.value); };
+  wrap.appendChild(lab);
+  wrap.appendChild(sel);
+  parent.appendChild(wrap);
+}
+function appendChassisDynamicsTools(parent, spec) {
+  if (!spec) spec = window._fleetSpec?.find(f => +f.id === modalVid);
+  if (!spec) return;
+  const lvl = spec.level || 'L2';
+  modalLvl = lvl;
+  const head = document.createElement('div');
+  head.className = 'subgrp';
+  head.textContent = 'Dynamics';
+  addHelp(head, 'Run');
+  parent.appendChild(head);
+  const row = document.createElement('div');
+  row.className = 'modal-tools';
+  appendFleetSelectRow(row, 'Level', 'level', ['K', 'L1', 'L2', 'L3'], lvl);
+  appendFleetSelectRow(row, 'Vehicle', 'vehicle', setupVehicleList, spec.vehicle || 'sedan');
+  parent.appendChild(row);
+}
+function appendSuspensionFleetTools(parent, spec) {
+  if (!spec) spec = window._fleetSpec?.find(f => +f.id === modalVid);
+  if (!spec) return;
+  const lvl = spec.level || 'L2';
+  const head = document.createElement('div');
+  head.className = 'subgrp';
+  head.textContent = 'Kinematics (L3)';
+  addHelp(head, 'Suspension');
+  parent.appendChild(head);
+  const row = document.createElement('div');
+  row.className = 'modal-tools';
+  const l3 = lvl === 'L3';
+  appendFleetSelectRow(row, 'Front axle', 'front_susp', setupSuspList,
+    spec.front_susp || setupSuspList[0] || '', !l3);
+  appendFleetSelectRow(row, 'Rear axle', 'rear_susp', setupSuspList,
+    spec.rear_susp || setupSuspList[0] || '', !l3);
+  if (!l3) {
+    const note = document.createElement('div');
+    note.className = 'sub';
+    note.style.cssText = 'width:100%;margin:0 0 4px';
+    note.textContent = 'Hardpoint kinematics attach at dynamics Level L3.';
+    row.appendChild(note);
+  }
+  parent.appendChild(row);
+}
+function appendTireFleetTools(parent, spec) {
+  if (!spec) spec = window._fleetSpec?.find(f => +f.id === modalVid);
+  if (!spec) return;
+  const head = document.createElement('div');
+  head.className = 'subgrp';
+  head.textContent = 'Tire catalog';
+  addHelp(head, 'Tire');
+  parent.appendChild(head);
+  const row = document.createElement('div');
+  row.className = 'modal-tools';
+  const cur = spec.tire || 'default_pacejka';
+  const samples = setupTireSamples.length ? setupTireSamples : tireSamples;
+  appendFleetSelectRow(row, 'Preset', 'tire', samples, cur);
+  parent.appendChild(row);
 }
 async function ensureSetupLists() {
   if (!setupVehicleList.length) {
@@ -2186,6 +2310,7 @@ async function refreshCompositionStatus(runConfigPath) {
   if (lastEl) lastEl.textContent = 'Last run: ' + fmtRunConfigPath(path);
 }
 async function renderFleetSpawn(fleet) {
+  await ensureSetupLists();
   const el = $('setup_fleet');
   el.innerHTML = '';
   const n = (fleet || []).length;
@@ -2738,13 +2863,40 @@ function toggleManualBar(show) { $('manbar').style.display = show ? 'flex' : 'no
 function driverManualActive() {
   return $('drv_manual')?.classList.contains('on');
 }
-setInterval(() => {
-  if (!simRunning || !driverManualActive()) return;
+function sampleManualCmd() {
   man.throttle = Math.max(keys['ArrowUp'] ? 0.7 : 0, touchThr);
   man.brake = Math.max(keys['ArrowDown'] ? 0.6 : 0, touchBrk);
-  man.steer = Math.max(-0.4, Math.min(0.4, (keys['ArrowLeft'] ? 0.25 : 0) - (keys['ArrowRight'] ? 0.25 : 0) + touchSteer));
-  post('/api/manual', { ...man, vehicle: selectedVid });
-}, 40);
+  man.steer = Math.max(-0.4, Math.min(0.4,
+    (keys['ArrowLeft'] ? 0.25 : 0) - (keys['ArrowRight'] ? 0.25 : 0) + touchSteer));
+  return { throttle: man.throttle, brake: man.brake, steer: man.steer, vehicle: selectedVid };
+}
+let manualSendBusy = false;
+let manualSendLatest = null;
+async function drainManualSend() {
+  if (manualSendBusy) return;
+  manualSendBusy = true;
+  while (manualSendLatest !== null) {
+    const body = manualSendLatest;
+    manualSendLatest = null;
+    try {
+      await fetch('/api/manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    } catch (_) {}
+  }
+  manualSendBusy = false;
+}
+function pushManualSend() {
+  if (!simRunning || !driverManualActive()) {
+    manualSendLatest = null;
+    return;
+  }
+  manualSendLatest = sampleManualCmd();
+  void drainManualSend();
+}
+setInterval(pushManualSend, 40);
 function holdBtn(el, on, off) {
   ['pointerdown', 'touchstart'].forEach(ev => el.addEventListener(ev, e => { e.preventDefault(); on(); }, { passive: false }));
   ['pointerup', 'pointerleave', 'pointercancel', 'touchend'].forEach(ev => el.addEventListener(ev, off));
@@ -2790,9 +2942,20 @@ function fieldRow(f, lvl) {
   row.appendChild(lab);
   if (f.kind === 'arr') {
     const wrap = document.createElement('span'); wrap.className = 'arr';
+    const corners = f.value.length === 4 ? ['FL', 'FR', 'RL', 'RR'] : null;
     f.value.forEach((v, i) => {
+      const cell = document.createElement('span');
+      cell.className = 'arr-cell';
+      if (corners) {
+        const tag = document.createElement('span');
+        tag.className = 'arr-corner';
+        tag.textContent = corners[i];
+        cell.appendChild(tag);
+      }
       const inp = document.createElement('input'); inp.type = 'number'; inp.step = 'any';
-      inp.value = v; inp.dataset.name = f.name; inp.dataset.idx = i; inp.disabled = !applies; wrap.appendChild(inp);
+      inp.value = v; inp.dataset.name = f.name; inp.dataset.idx = i; inp.disabled = !applies;
+      cell.appendChild(inp);
+      wrap.appendChild(cell);
     });
     row.appendChild(wrap);
   } else if (f.kind === 'bool') {
@@ -2951,6 +3114,32 @@ function chassisFilter(f) {
   if (MODAL_SUBSYS_NAMES.has(f.name)) return false;
   return true;
 }
+const TIRE_GRP_ORDER = ['LuGre', 'General', 'Longitudinal', 'Lateral', 'Aligning', 'Camber', 'Transient', 'Vertical'];
+function tireGroupOrder(a, b) {
+  const ia = TIRE_GRP_ORDER.indexOf(a), ib = TIRE_GRP_ORDER.indexOf(b);
+  return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+}
+function plantEnhanceTire(el) {
+  const q = n => el.querySelector(`[data-name="${n}"]`);
+  const rowOf = n => n && n.closest('.fld');
+  const dim = (n, off) => { const r = rowOf(n); if (r) r.classList.toggle('na', off); if (n) n.disabled = off; };
+  const lug = q('lugre.enabled');
+  if (!lug) return;
+  const sig = ['lugre.sigma0', 'lugre.sigma1', 'lugre.sigma2', 'lugre.m_eff'].map(q);
+  const r = rowOf(lug); let hint = null;
+  if (r) { hint = document.createElement('div'); hint.className = 'sub'; hint.style.margin = '-2px 0 6px'; r.after(hint); }
+  const upd = () => {
+    const on = lug.checked;
+    sig.forEach(n => dim(n, !on));
+    if (hint) {
+      hint.textContent = on
+        ? '▸ LuGre on: kinematic blend off — brush states z_x/z_y (theory ch.19)'
+        : '▸ LuGre off: default low-speed kinematic blend';
+      hint.style.color = on ? 'var(--acc)' : 'var(--dim)';
+    }
+  };
+  lug.addEventListener('change', upd); upd();
+}
 const MODAL_TABS = [
   { id: 'chassis', label: 'Chassis', help: 'Preset', type: 'chassis' },
   { id: 'suspension', label: 'Suspension', help: 'Suspension', type: 'vehicle', filter: f => f.group === 'Suspension' },
@@ -3101,12 +3290,8 @@ function wrapModalPreview(inner) {
   const plab = document.createElement('div'); plab.className = 'sub';
   plab.textContent = '차량·하드포인트 미리보기';
   const cv = document.createElement('canvas'); cv.id = 'modal_preview_cv';
-  const tools = document.createElement('div'); tools.style.marginBottom = '6px';
-  tools.appendChild(selectRow('Preview level', ['K', 'L1', 'L2', 'L3'], modalLvl, v => {
-    modalLvl = v; refreshModalPreview();
-  }));
   const hint = document.createElement('div'); hint.className = 'sub'; hint.id = 'modal_preview_hint';
-  preview.appendChild(plab); preview.appendChild(cv); preview.appendChild(tools); preview.appendChild(hint);
+  preview.appendChild(plab); preview.appendChild(cv); preview.appendChild(hint);
   split.appendChild(preview);
   split.appendChild(inner);
   requestAnimationFrame(() => { initModalPreview(cv); refreshModalPreview(); });
@@ -3159,20 +3344,8 @@ function renderModalPane() {
   const withPreview = tab.id === 'chassis' || tab.id === 'suspension';
   const shell = document.createElement('div'); shell.className = 'modal-form-wrap';
   if (tab.type === 'chassis') {
-    const tools = document.createElement('div'); tools.className = 'modal-tools';
-    tools.appendChild(selectRow('Vehicle preset', vehicleList, cfgVehicle, async v => {
-      await post('/api/config', { vehicle: v });
-      cfgVehicle = v;
-      suspDefaults = await (await fetch(`/api/suspension/default?vehicle=${encodeURIComponent(v)}`)).json();
-      modalSuspFront = suspDefaults.front;
-      modalSuspRear = suspDefaults.rear;
-      vehFields = (await (await fetch(`/api/vehicle?vehicle_id=${modalVid}`)).json()).fields;
-      renderModalPane();
-    }));
-    const note = document.createElement('div'); note.className = 'sub';
-    note.textContent = 'Fleet dynamics level: Scenario setup. Preview level (left) is visual only.';
-    tools.appendChild(note);
-    shell.appendChild(tools);
+    const spec = window._fleetSpec?.find(f => +f.id === modalVid);
+    appendChassisDynamicsTools(shell, spec);
     const vg = {};
     vehFields.filter(chassisFilter).forEach(f => { (vg[f.group] = vg[f.group] || []).push(f); });
     for (const g in vg) {
@@ -3189,25 +3362,8 @@ function renderModalPane() {
     body.appendChild(withPreview ? wrapModalPreview(shell) : shell);
   } else if (tab.type === 'vehicle') {
     if (tab.id === 'suspension') {
+      appendSuspensionFleetTools(shell, window._fleetSpec?.find(f => +f.id === modalVid));
       const tools = document.createElement('div'); tools.className = 'modal-tools';
-      tools.appendChild(selectRow('Front kinematics', suspList,
-        modalSuspFront || suspDefaults.front, async v => {
-          modalSuspFront = v; refreshModalPreview();
-          try {
-            await postSetup({ fleet: [{ id: modalVid, front_susp: v }] });
-          } catch (e) { alert(e.message); return; }
-          const sp = (window._fleetSpec || []).find(s => +s.id === modalVid);
-          if (sp) sp.front_susp = v;
-        }));
-      tools.appendChild(selectRow('Rear kinematics', suspList,
-        modalSuspRear || suspDefaults.rear, async v => {
-          modalSuspRear = v; refreshModalPreview();
-          try {
-            await postSetup({ fleet: [{ id: modalVid, rear_susp: v }] });
-          } catch (e) { alert(e.message); return; }
-          const sp = (window._fleetSpec || []).find(s => +s.id === modalVid);
-          if (sp) sp.rear_susp = v;
-        }));
       tools.appendChild(selectRow('Level preset', ['soft', 'med', 'stiff'], 'med', v => {
         const p = SUSP_PRESETS[v]; if (!p) return;
         Object.entries(p).forEach(([nm, val]) => {
@@ -3242,19 +3398,10 @@ function renderModalPane() {
       body.appendChild(shell);
     }
   } else if (tab.type === 'tire') {
+    const tireShell = document.createElement('div');
+    tireShell.className = 'modal-form-wrap';
+    appendTireFleetTools(tireShell, window._fleetSpec?.find(f => +f.id === modalVid));
     const tools = document.createElement('div'); tools.className = 'modal-tools';
-    const sel = document.createElement('select');
-    sel.innerHTML = tireSamples.map(s => `<option value="${s}">${s}</option>`).join('');
-    const loadBtn = document.createElement('button'); loadBtn.textContent = 'Load sample';
-    loadBtn.onclick = async () => {
-      const r = await (await fetch('/api/tire/load', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: sel.value, vehicle_id: modalVid }),
-      })).json();
-      if (!r.ok) { $('modal_status').textContent = '● ' + (r.error || 'load failed'); return; }
-      tireFields = (await (await fetch(`/api/tire?vehicle_id=${modalVid}`)).json()).fields;
-      renderModalPane();
-    };
     const imp = document.createElement('button'); imp.textContent = 'Import .tir';
     const tirIn = document.createElement('input'); tirIn.type = 'file'; tirIn.accept = '.tir,text/plain'; tirIn.style.display = 'none';
     imp.onclick = () => tirIn.click();
@@ -3270,20 +3417,30 @@ function renderModalPane() {
         : '● ' + (r.error || 'import failed');
       if (r.ok) { tireFields = (await (await fetch(`/api/tire?vehicle_id=${modalVid}`)).json()).fields; renderModalPane(); }
     };
-    tools.appendChild(sel); tools.appendChild(loadBtn); tools.appendChild(imp); tools.appendChild(tirIn);
-    body.appendChild(tools);
+    tools.appendChild(imp); tools.appendChild(tirIn);
+    tireShell.appendChild(tools);
+    body.appendChild(tireShell);
     const tg = {};
     tireFields.forEach(f => { (tg[f.group] = tg[f.group] || []).push(f); });
-    for (const g in tg) {
+    const hasLuGre = tireFields.some(f => f.name && f.name.startsWith('lugre.'));
+    if (!hasLuGre) {
+      const warn = document.createElement('div');
+      warn.className = 'sub';
+      warn.style.cssText = 'color:#ff9500;margin-bottom:8px';
+      warn.textContent = 'LuGre fields missing — restart gui/server.py after updating the repo, then hard-refresh the browser (Ctrl+Shift+R).';
+      tireShell.appendChild(warn);
+    }
+    Object.keys(tg).sort(tireGroupOrder).forEach(g => {
       const l = document.createElement('div'); l.className = 'subgrp'; l.textContent = g;
       addHelp(l, DOC_MAP[g] !== undefined ? g : 'Tire');
       form.appendChild(l);
       tg[g].forEach(f => form.appendChild(fieldRow(f, modalLvl)));
-    }
-    body.appendChild(form);
+    });
+    tireShell.appendChild(form);
     wireLive(form, '/api/tire', refreshTireCurves);
+    plantEnhanceTire(form);
     const curves = document.createElement('div'); curves.className = 'modal-curves'; curves.id = 'modal_tire_curves';
-    body.appendChild(curves);
+    tireShell.appendChild(curves);
     refreshTireCurves();
   } else if (tab.type === 'actuator') {
     const ag = {};
@@ -3355,6 +3512,7 @@ async function openModal(vid) {
     };
     tabs.appendChild(b);
   });
+  await ensureSetupLists();
   renderModalPane();
   $('modal_bg').classList.add('open');
 }

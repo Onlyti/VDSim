@@ -12,12 +12,12 @@
 namespace vdsim::cosim {
 
 constexpr uint32_t kMagic       = 0x56445331u;  // "VDS1"
-constexpr uint16_t kVersion     = 4;  // v2: rack_torque/slip/susp/measured; v3: + tire Fx/Fy; v4: header pad -> vehicle_id
+constexpr uint16_t kVersion     = 5;  // v5: + throttle_applied/brake_applied; v4: header vehicle_id
 constexpr uint16_t kMsgCmd      = 1;
 constexpr uint16_t kMsgState    = 2;
 constexpr int      kHeaderBytes = 24;
 constexpr int      kCmdBytes    = 76;
-constexpr int      kStateBytes  = 436;
+constexpr int      kStateBytes  = 452;
 
 // ---- CRC32 (IEEE 802.3, matches Python zlib.crc32) ----
 inline uint32_t crc32(const uint8_t* d, size_t n) {
@@ -74,6 +74,8 @@ struct StateFields {
     double m_ax{0}, m_ay{0}, m_wz{0}, m_steer{0}, m_gnss_x{0}, m_gnss_y{0};
     double fx[4] {0,0,0,0};   // v3: per-wheel tire force (body) Fx
     double fy[4] {0,0,0,0};   // v3: per-wheel tire force (body) Fy
+    double throttle_applied {0};  // v5: post-actuator pedal [0,1]
+    double brake_applied {0};     // v5: post-actuator pedal [0,1]
     uint32_t seq {0};
     double timestamp {0};
     uint32_t vehicle_id {0};   // v4: header field (was _pad)
@@ -106,6 +108,7 @@ inline int encode_state(uint8_t* buf, const StateFields& s) {
     w.put(s.m_steer); w.put(s.m_gnss_x); w.put(s.m_gnss_y);
     for (double v : s.fx) w.put(v);
     for (double v : s.fy) w.put(v);
+    w.put(s.throttle_applied); w.put(s.brake_applied);  // v5 tail
     const uint32_t c = crc32(buf, w.off);   // crc over header+payload
     w.put(c);
     return static_cast<int>(w.off);
