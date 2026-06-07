@@ -1278,10 +1278,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-architecture" class="md-nav__link">
+  <a href="#3-architecture-realized-v02" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Architecture
+        3. Architecture (realized: v0.2)
       
     </span>
   </a>
@@ -2124,10 +2124,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-architecture" class="md-nav__link">
+  <a href="#3-architecture-realized-v02" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Architecture
+        3. Architecture (realized: v0.2)
       
     </span>
   </a>
@@ -2210,9 +2210,10 @@
 
 
 <h1 id="vdsim-gui-web-architecture">VDSim GUI / Web Architecture<a class="headerlink" href="#vdsim-gui-web-architecture" title="Permanent link">&para;</a></h1>
-<p>Status: DESIGN (decided). Concept: VDSim computes only; all visualization and
-configuration happen in a web browser on the receiving device. The simulator
-sends/receives physics + config over the network and renders nothing itself.</p>
+<p>Status: <strong>aligned with v0.2</strong> (2026-06-06). See <code>docs/design/RUNTIME_ARCH.md</code> for
+branch [1] vs [2] split. Concept: the <strong>plant</strong> (C++ <code>vdsim_realtime</code>) computes
+only; the browser edits scenarios, controls run lifecycle, and reconstructs viz
+from compact state — not pixel streaming.</p>
 <p>This is an accessibility / deployment differentiator vs license-locked desktop
 VD tools (CarMaker / CarSim / Adams), not a research novelty. The technical fit
 is that VDSim's output is compact physics state (not pixels), so the client
@@ -2235,42 +2236,54 @@ message schema — never on the backend implementation. Same decoupling as the
 UDP co-sim protocol. Define the API spec first, implement it in Python, and a
 future C++ server implements the identical contract -&gt; frontend unchanged.
 Migration = backend swap, no frontend change.</p>
-<h2 id="3-architecture">3. Architecture<a class="headerlink" href="#3-architecture" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>[VDSim compute server]                         [any device: browser]
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  C++ core: SimSession (set_input / tick / output)   &lt;- hard real-time loop
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>        |
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  Web/API server (Python: FastAPI + websockets, pybind vdsim)
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>        |  REST  : config CRUD, scenario, start/stop/reset  &lt;--- config UI (forms)
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        |  WS    : state stream (binary/JSON) @ sim rate     ---&gt; 3D viz (Three.js)
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        |  WS    : time-series                               ---&gt; plots
+<h2 id="3-architecture-realized-v02">3. Architecture (realized: v0.2)<a class="headerlink" href="#3-architecture-realized-v02" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>[gui/server.py Runner]                         [browser: gui/app.html]
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  in-memory run-config draft (Setup)
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  on Play: runs/live/run_config.yaml → vdsim_realtime
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  CosimBridge: UDP STATE in, CMD out
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>        |  REST  : /api/setup, /api/runconfig, /api/control, /api/vehicle, …
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        |  SSE   : /api/stream @ ~60 Hz  ---&gt; applyState → Three.js + telemetry
 </span></code></pre></div>
-<p>Three concerns, same split as the udp_server:</p>
 <table>
 <thead>
 <tr>
 <th>Concern</th>
 <th>Transport</th>
 <th>Direction</th>
+<th>Notes</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Configuration (vehicle/tire/solver/scenario/actuator)</td>
-<td>REST (HTTP)</td>
-<td>browser -&gt; server; validate -&gt; YAML</td>
+<td>Scenario / draft (fleet, path, road, parts)</td>
+<td>REST</td>
+<td>browser → server</td>
+<td><code>POST /api/setup</code>; YAML via <code>/api/runconfig</code></td>
 </tr>
 <tr>
-<td>Control (start/stop/reset/manual input)</td>
-<td>REST or WS</td>
-<td>browser -&gt; server -&gt; set_input</td>
+<td>Run lifecycle (start/stop/pause/reset)</td>
+<td>REST</td>
+<td>browser → server</td>
+<td><code>POST /api/control</code>; server spawns plant</td>
 </tr>
 <tr>
-<td>State stream (viz/plots)</td>
-<td>WebSocket (high-rate)</td>
-<td>server -&gt; browser, from output()</td>
+<td>Manual / io control while running</td>
+<td>REST</td>
+<td>browser → server → UDP CMD</td>
+<td>relayed to [2]</td>
+</tr>
+<tr>
+<td>State stream (viz, telemetry, minimap)</td>
+<td><strong>SSE</strong></td>
+<td>server → browser</td>
+<td>Setup: draft snapshot; Running: relayed STATE</td>
 </tr>
 </tbody>
 </table>
+<p><strong>GUI does not step SimSession.</strong> Python <code>vdsim</code> on the server loads YAML for
+forms, geometry, and draft validation only.</p>
+<p>Original sketch used FastAPI + WebSocket; realized stack is stdlib <code>http.server</code> +
+SSE — same logical split, different transport.</p>
 <h2 id="4-wire-contract-to-be-frozen-as-the-migration-boundary">4. Wire contract (to be frozen as the migration boundary)<a class="headerlink" href="#4-wire-contract-to-be-frozen-as-the-migration-boundary" title="Permanent link">&para;</a></h2>
 <p>REST (draft):
 - <code>GET  /api/config/vehicle</code> / <code>PUT /api/config/vehicle</code> — VehicleParams (JSON)
@@ -2278,9 +2291,11 @@ Migration = backend swap, no frontend change.</p>
 - <code>POST /api/sim/start</code>, <code>/api/sim/stop</code>, <code>/api/sim/reset</code>
 - <code>POST /api/sim/input</code> — manual CmdL4 (throttle/brake/steer/gear)
 - <code>GET  /api/schema/vehicle</code> ... — JSON schema driving the config forms</p>
-<p>WS:
-- <code>/ws/state</code> — server pushes SimOutput frames (state + ax/ay/roll/pitch/Fz/
-  steer_applied) at the sim rate. Binary preferred for high rate.</p>
+<p>WS / SSE (migration boundary — <strong>schema</strong> matters more than transport):
+- <code>/api/stream</code> (SSE, realized) — server pushes JSON snapshots @ ~60 Hz.
+  Fields mirror cosim STATE + <code>setup_mode</code>, <code>fleet_spec</code>, <code>live_vid</code>, errors.
+  Setup: synthetic pose from spawn; Running: relayed plant output.
+- (Future) <code>/ws/state</code> — optional binary WebSocket at sim rate; same field set.</p>
 <p>Frozen field names/units mirror the existing CSV/STATE-packet conventions
 (ENU world [m], ISO 8855 body, wheel FL=0..RR=3).</p>
 <h2 id="5-frontend">5. Frontend<a class="headerlink" href="#5-frontend" title="Permanent link">&para;</a></h2>
@@ -2310,12 +2325,8 @@ Migration = backend swap, no frontend change.</p>
 <td>Python access to SimSession (Phase 1)</td>
 </tr>
 <tr>
-<td><code>gui/index.html</code> (Three.js)</td>
-<td>realized frontend</td>
-</tr>
-<tr>
-<td><code>gui/server.py</code> (HTTP/SSE + pybind)</td>
-<td>realized backend (stdlib http.server)</td>
+<td><code>gui/app.html</code> + <code>gui/server.py</code></td>
+<td>scenario editor, run control, SSE relay</td>
 </tr>
 <tr>
 <td><code>cosim</code> STATE/CMD field set</td>

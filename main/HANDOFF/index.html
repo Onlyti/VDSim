@@ -1980,10 +1980,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-v020" class="md-nav__link">
+  <a href="#3-v03" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. v0.2.0 완료
+        3. v0.3 진행
       
     </span>
   </a>
@@ -1991,10 +1991,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-v021-1c979c6" class="md-nav__link">
+  <a href="#4-http-api-m4" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. v0.2.1 완료 (1c979c6)
+        4. HTTP API (M4)
       
     </span>
   </a>
@@ -2002,10 +2002,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#5-v022-ee53f31" class="md-nav__link">
+  <a href="#5" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. v0.2.2 완료 (ee53f31)
+        5. 주의
       
     </span>
   </a>
@@ -2013,43 +2013,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#6-v023-f3f9815" class="md-nav__link">
+  <a href="#6" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6. v0.2.3 완료 (f3f9815)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#7-v03" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        7. 다음 (v0.3+)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#8" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        8. 주의
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#9" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        9. 경로
+        6. 경로
       
     </span>
   </a>
@@ -2077,59 +2044,106 @@
 
 
 <h1 id="vdsim">VDSim 핸드오프<a class="headerlink" href="#vdsim" title="Permanent link">&para;</a></h1>
-<p>작성: 2026-06-06. <strong>v0.2.3</strong> <code>f3f9815</code> push 완료. v0.3 = drivetrain + LuGre.</p>
+<p>작성: 2026-06-06. <strong>v0.3 M4</strong> catalog API + scene v3. M5 = docs sweep.</p>
 <h2 id="1">1. 목표<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
-<p>v0.2 "composable vehicle": 차량 = chassis + parts, 워크샵 + 씬 UI. <strong><code>gui/app.html</code></strong>
-단일 GUI. <code>docs/design/V0.2_PLAN.md</code>.</p>
+<p>v0.3 parts catalog + scene-based runtime. <code>docs/design/PARTS_CATALOG.md</code>.</p>
 <h2 id="2">2. 현재 상태<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>v0.2.0</strong> 태그 = 로컬 HEAD (push 후 origin 갱신).</li>
-<li>빌드 <code>cmake --build build -j</code>; <strong>ctest 191/191</strong> (v0.2.3 후).</li>
-<li>v0.1.0 태그 <code>4c77d7f</code>. GitHub Topics / 데모 GIF (#155) = 사용자 UI.</li>
+<li><strong>M1–M4</strong> 완료. <code>main</code> pushed (<code>ce8b446</code> + M4 local).</li>
+<li><strong>ctest 195/195</strong> (<code>catalog_api</code> 추가 후).</li>
+<li>CLI: <code>vdsim_realtime --scene=</code> only.</li>
 </ul>
-<h2 id="3-v020">3. v0.2.0 완료<a class="headerlink" href="#3-v020" title="Permanent link">&para;</a></h2>
+<h2 id="3-v03">3. v0.3 진행<a class="headerlink" href="#3-v03" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>상태</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M1–M3</td>
+<td>완료</td>
+<td>catalog, migrate, <code>--scene=</code></td>
+</tr>
+<tr>
+<td><strong>M4</strong></td>
+<td><strong>완료</strong></td>
+<td><code>/api/catalog</code>, <code>/api/scene</code>, simconfig v3</td>
+</tr>
+<tr>
+<td>M5</td>
+<td>대기</td>
+<td>docs sweep, <code>tools/import_part_pack</code> stub</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-http-api-m4">4. HTTP API (M4)<a class="headerlink" href="#4-http-api-m4" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /api/catalog</code></td>
+<td>manifest index; <code>?type=</code> <code>?q=</code></td>
+</tr>
+<tr>
+<td><code>GET /api/catalog/parts</code></td>
+<td>list parts</td>
+</tr>
+<tr>
+<td><code>GET /api/catalog/parts/:id</code></td>
+<td>part envelope + body</td>
+</tr>
+<tr>
+<td><code>GET /api/catalog/blueprints/:id</code></td>
+<td>blueprint doc</td>
+</tr>
+<tr>
+<td><code>GET /api/scene/list</code></td>
+<td>saved scenes (<code>configs/scenes/</code>)</td>
+</tr>
+<tr>
+<td><code>GET /api/scene/:name</code></td>
+<td>scene YAML as JSON</td>
+</tr>
+<tr>
+<td><code>POST /api/scene</code></td>
+<td>import scene v3</td>
+</tr>
+<tr>
+<td><code>POST /api/scene/save</code></td>
+<td>save scene (alias <code>/api/scenario/save</code>)</td>
+</tr>
+<tr>
+<td><code>GET /api/simconfig</code></td>
+<td>export scene <strong>version 3</strong></td>
+</tr>
+<tr>
+<td><code>POST /api/simconfig</code></td>
+<td>import scene v3 (<strong>v2 rejected</strong>)</td>
+</tr>
+<tr>
+<td><code>GET/POST /api/runconfig</code></td>
+<td>materialized world (vehicles[] + gui)</td>
+</tr>
+</tbody>
+</table>
+<p>Legacy shims: <code>/api/parts/registry</code>, <code>/api/suspension/list</code>, <code>/api/scenario/list</code>.</p>
+<h2 id="5">5. 주의<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>WS1</strong> 서브시스템 골격 + deadtime (#159-162).</li>
-<li><strong>WS2</strong> edit 모달 workshops (tire .tir, susp presets, actuator curves); Engine stub → v0.3.</li>
-<li><strong>WS3</strong> 3-tab setup, data-comms, minimap, simconfig v2, fleet tree, legacy GUI 제거.</li>
-<li><strong>WS4</strong> fleet parts (<code>vehicle</code>/<code>tire</code>/<code>front_susp</code>/<code>rear_susp</code>), <code>/api/parts/registry</code>,
-  L3 <code>attach_*_kinematics</code> in <code>vdsim_realtime</code>, infra sensor list (authoring).</li>
-<li><strong>멀티차량</strong> #157/#158, VDS1 vehicle_id, shared-world scenarios.</li>
+<li>GUI 시각검증 = 유저. TUR confidential. ISO 리베이스 금지 until drivetrain.</li>
 </ul>
-<h2 id="4-v021-1c979c6">4. v0.2.1 완료 (<code>1c979c6</code>)<a class="headerlink" href="#4-v021-1c979c6" title="Permanent link">&para;</a></h2>
+<h2 id="6">6. 경로<a class="headerlink" href="#6" title="Permanent link">&para;</a></h2>
 <ul>
-<li>fsk_formula L3 susp default, scenario susp 경로, L3-only fleet UI, attach warnings.</li>
-<li><code>cosim_multi_vehicle</code> ctest; topology-only YAML attach 거부 테스트.</li>
-</ul>
-<h2 id="5-v022-ee53f31">5. v0.2.2 완료 (<code>ee53f31</code>)<a class="headerlink" href="#5-v022-ee53f31" title="Permanent link">&para;</a></h2>
-<ul>
-<li>모달 kinematics 드롭다운 L3-native only; <code>Popen(cwd=REPO)</code>.</li>
-<li>L3 missing/topology-only stem → pre-launch <code>kinematics_warnings</code>.</li>
-</ul>
-<h2 id="6-v023-f3f9815">6. v0.2.3 완료 (<code>f3f9815</code>)<a class="headerlink" href="#6-v023-f3f9815" title="Permanent link">&para;</a></h2>
-<ul>
-<li>경고 패널, setup API L3 검증, L3 전환 default, log tail, rel world susp paths.</li>
-<li><code>l3_sedan_kinematics.yaml</code> + <code>l3_scenario_susp_paths</code> ctest.</li>
-</ul>
-<h2 id="7-v03">7. 다음 (v0.3+)<a class="headerlink" href="#7-v03" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Drivetrain inertia + torque–RPM (<code>V0.2_DRIVETRAIN.md</code>).</li>
-<li>LuGre tire (<code>V0.2_TIRE_LUGRE.md</code>).</li>
-<li>Engine workshop (실구현).</li>
-<li>Infra sensor runtime mount (<code>SIM_CONFIG_ARCH.md</code> host field).</li>
-<li>v0.4 스턴트 (<code>V0.4_PLAN.md</code> M1–M6).</li>
-</ul>
-<h2 id="8">8. 주의<a class="headerlink" href="#8" title="Permanent link">&para;</a></h2>
-<ul>
-<li>GUI 시각검증 = 유저. 에이전트 = markup/API/ctest.</li>
-<li><strong>191 green</strong> on default modules.</li>
-<li>TUR tire confidential. Simon Q/R. VDS1 v4.</li>
-</ul>
-<h2 id="9">9. 경로<a class="headerlink" href="#9" title="Permanent link">&para;</a></h2>
-<ul>
-<li>GUI: <code>gui/app.html</code>, <code>gui/server.py</code></li>
-<li>Parts: <code>configs/components/</code>, <code>configs/suspensions/</code></li>
-<li>설계: <code>docs/design/V0.2_*.md</code>, <code>V0.4_PLAN.md</code></li>
+<li><code>gui/runner/catalog_api.py</code>, <code>gui/api/routes.py</code></li>
+<li><code>python/catalog/resolver.py</code> (<code>list_blueprints</code>)</li>
 </ul>
 
 

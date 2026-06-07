@@ -2070,6 +2070,12 @@
 (MORAI / CarMaker-CLI style): separate vehicle / sensor / map configs, a scenario
 that composes them, a communication config for data routing, and two execution
 modes (real-time comms, or embedded API).</p>
+<blockquote>
+<p><strong>v0.3 data layout:</strong> part files, vehicle blueprints, and scene composition are
+specified in <strong><code>PARTS_CATALOG.md</code></strong> (big-bang cutover; no v0.2 stem paths). This
+doc remains authoritative for <strong>comms routing</strong>, <strong>sensor host</strong>, <strong>run modes</strong>,
+and the <strong><code>vdsim.Simulation</code> API</strong> facade.</p>
+</blockquote>
 <h2 id="1-principle">1. Principle<a class="headerlink" href="#1-principle" title="Permanent link">&para;</a></h2>
 <p>Setup = configuration, no code. Concerns are separate files, the scenario
 references them, and the same scenario runs headless (CLI/batch), over the

@@ -1969,10 +1969,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#target-one-core-three-thin-adapters-one-way-control" class="md-nav__link">
+  <a href="#target-one-core-three-thin-adapters" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Target: one core, three thin adapters, one-way control
+        Target: one core, three thin adapters
       
     </span>
   </a>
@@ -1980,10 +1980,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#consolidation-actions" class="md-nav__link">
+  <a href="#sse-get-apistream" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Consolidation actions
+        SSE (GET /api/stream)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consolidation-actions-remaining" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consolidation actions (remaining)
       
     </span>
   </a>
@@ -2024,6 +2035,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v02-gui-alignment-2026-06-06" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.2 GUI alignment (2026-06-06)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#open-items" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2055,8 +2077,10 @@
 
 
 <h1 id="runtime-architecture-three-branches-over-one-core">Runtime architecture — three branches over one core<a class="headerlink" href="#runtime-architecture-three-branches-over-one-core" title="Permanent link">&para;</a></h1>
-<p>Status: design / alignment (not yet executed). Supersedes the ad-hoc wiring that
-accreted across <code>gui/</code>, <code>viewer/</code>, <code>cosim/</code>, <code>python/vdsim_comms.py</code>.</p>
+<p>Status: <strong>aligned with v0.2 GUI</strong> (2026-06-06). Historical sprawl notes below;
+<strong>[1] GUI role updated</strong> — scenario editor + run controller + viewer (see
+§ Target). Supersedes the ad-hoc wiring that accreted across <code>gui/</code>, <code>viewer/</code>,
+<code>cosim/</code>, <code>python/vdsim_comms.py</code>.</p>
 <h2 id="why-this-doc-exists">Why this doc exists<a class="headerlink" href="#why-this-doc-exists" title="Permanent link">&para;</a></h2>
 <p>The runtime grew by accretion. Concretely, today there are <strong>three independent
 owners of a live simulation</strong> and <strong>multiple incompatible comm paths</strong>:</p>
@@ -2084,65 +2108,106 @@ owners of a live simulation</strong> and <strong>multiple incompatible comm path
 </tr>
 <tr>
 <td><code>gui/server.py</code></td>
-<td>own <code>RUNNER</code></td>
-<td>HTTP SSE + HTTP <code>/api/manual</code> + UDP 8101 (FFB) + HTTP <code>/api/io</code> fan-out</td>
-<td>ad-hoc JSON</td>
+<td><strong>no SimSession step</strong>; orchestrates draft + plant lifecycle</td>
+<td>HTTP REST + SSE <code>/api/stream</code></td>
+<td>JSON (draft snapshot or relayed STATE)</td>
 </tr>
 </tbody>
 </table>
 <p>Additional sprawl:
 - Two overlapping web viewers: <code>gui/</code> and <code>viewer/</code> (<code>realtime_server.py</code>,
   <code>suspension_editor</code>).
-- <code>gui/server.py</code> alone fuses all three branches (viz + control + signal
-  fan-out + its own sim loop). The FFB-over-UDP port (8101) bolted onto it is
-  the clearest symptom.
+- <code>gui/server.py</code> holds an in-memory <strong>run-config draft</strong> (fleet, path, road),
+  materializes <code>run_config.yaml</code> on ▶ Play, spawns/attaches <code>vdsim_realtime</code>,
+  relays UDP STATE to the browser via SSE. It does <strong>not</strong> integrate the plant.
+- Legacy sprawl still to trim: <code>/api/manual</code>, FFB UDP (8101), <code>/api/io</code> fan-out
+  ideally move to branch [2] clients/router (see Consolidation).
 - Two definitions of "VDS1" that cannot talk to each other.</p>
 <p>This is the sprawl to remove before adding more features.</p>
-<h2 id="target-one-core-three-thin-adapters-one-way-control">Target: one core, three thin adapters, one-way control<a class="headerlink" href="#target-one-core-three-thin-adapters-one-way-control" title="Permanent link">&para;</a></h2>
+<h2 id="target-one-core-three-thin-adapters">Target: one core, three thin adapters<a class="headerlink" href="#target-one-core-three-thin-adapters" title="Permanent link">&para;</a></h2>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>                  +-----------------------------------+
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>                  |  core: vdsim.SimSession (C++)      |   single source of truth
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>                  |  == vdsim_lab.Simulation (python)  |   step / set_control / get_data
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>                  +------------------+----------------+
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>        +----------------------------+----------------------------+
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>   [3] Sync API                 [2] UDP comms                [1] Web viewer
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>   direct calls                 control in / signal out      subscribe only (read-only)
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>   batch, embedded              ONE protocol + router         never owns a sim
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>   (foundation of the other 2)  wheel / HIL / external node   no control logic
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>   [3] Sync API                 [2] Real-time runtime          [1] Web GUI
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>   direct calls                 vdsim_realtime + VDS1 UDP      scenario editor +
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>   batch, embedded              CMD in / STATE out              run controller + viewer
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>   (foundation of the other 2)  wheel / HIL / external node     **no physics step**
 </span></code></pre></div>
 <p>Three rules:</p>
 <ol>
 <li>
 <p><strong>[3] Sync API is the foundation.</strong> <code>Simulation.step / set_control /
-   get_data</code> is the only stepping path. Batch and embedded callers use only
-   this. (<code>python/vdsim_lab.py</code>, <code>tools/vdsim_batch.py</code>, the <code>vdsim</code> .so.)</p>
+   get_data</code> is the only stepping path for offline/batch. (<code>python/vdsim_lab.py</code>,
+   <code>tools/vdsim_batch.py</code>, the <code>vdsim</code> .so.)</p>
 </li>
 <li>
-<p><strong>[2] is the real-time runtime, not merely "comms."</strong> <code>vdsim_realtime</code> is
-   VDSim's real-time application: it drives the <em>same</em> SimSession core as [3],
-   but paced by <code>RealTimeRunner</code> against a wall clock, with UDP as its I/O. So
-   [3] and [2] are the two ways to run one core — offline/deterministic vs
-   real-time (CarMaker's ERG-batch vs HIL analogue). UDP is just the app's I/O
-   surface: control SOURCES (autopilot, wheel, external node, AutoHYU bridge) in,
-   signal SINKS (viewer, logger, HIL, FFB) out. One wire spec, canonical =
-   <code>cosim/cosim_protocol.hpp</code>, Python mirror = <code>cosim/protocol.py</code>. Bringing the
-   server to feature parity with the in-process sim (road/terrain/sensors,
-   extended STATE) is what makes it the <em>full</em> runtime — until then it is a
-   flat-ground half (see Open items).</p>
+<p><strong>[2] is the real-time runtime, not merely "comms."</strong> <code>vdsim_realtime</code> drives
+   the <em>same</em> SimSession core as [3], paced by <code>RealTimeRunner</code> against a wall
+   clock, with UDP as its I/O. [3] and [2] are offline/deterministic vs
+   real-time. UDP wire spec: <code>cosim/cosim_protocol.hpp</code>, Python mirror =
+   <code>cosim/protocol.py</code>.</p>
 </li>
 <li>
-<p><strong>[1] Web viewer observes only.</strong> It subscribes to the signal stream (the
-   same data branch [2] emits, or a read-only state feed) and renders. It holds
-   no authoritative control. A human driving with a wheel is a control SOURCE on
-   branch [2], not logic living in the web server.</p>
+<p><strong>[1] Web GUI — scenario editor, run controller, viewer.</strong> The browser never
+   steps SimSession. <code>gui/server.py</code> is a thin <strong>orchestrator</strong>:</p>
 </li>
+<li><strong>Setup (draft):</strong> edit fleet/path/road/parts in memory; preview in Three.js;
+     SSE pushes a synthetic snapshot (<code>setup_mode</code>, <code>source: "setup"</code>) built from
+     spawn poses — not plant telemetry.</li>
+<li><strong>▶ Play:</strong> write <code>run_config.yaml</code>, start or attach <code>vdsim_realtime</code>; relay
+     CMD (autopilot/manual/io); SSE pushes relayed plant STATE (<code>source: "cosim"</code>).</li>
+<li><strong>REST</strong> = authoring + lifecycle (<code>/api/setup</code>, <code>/api/runconfig</code>, <code>/api/control</code>, …).</li>
+<li><strong>SSE</strong> = one-way live state bus to the browser (~60 Hz); see § SSE below.</li>
 </ol>
-<p>Control always flows in through [2]'s in-channel or [3]'s <code>set_control</code>. The web
-never holds control. This is the invariant that keeps the branches from
-re-tangling.</p>
-<h2 id="consolidation-actions">Consolidation actions<a class="headerlink" href="#consolidation-actions" title="Permanent link">&para;</a></h2>
+<p>A human with a wheel is still a control <strong>source</strong> on branch [2] (UDP CMD), not
+   physics inside the web server. The GUI <em>starts/stops</em> the plant and <em>edits</em> the
+   scenario; it does not <em>integrate</em> it.</p>
+<p><strong>Invariant:</strong> physics stepping only in [2] (real-time) or [3] (batch). [1] may
+command and configure [2], but never replaces it as the plant.</p>
+<h2 id="sse-get-apistream">SSE (<code>GET /api/stream</code>)<a class="headerlink" href="#sse-get-apistream" title="Permanent link">&para;</a></h2>
+<p><strong>Server-Sent Events</strong> — HTTP long-lived connection; server → browser only.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>REST <code>/api/*</code></th>
+<th>SSE <code>/api/stream</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Direction</td>
+<td>request/response</td>
+<td>server push</td>
+</tr>
+<tr>
+<td>Rate</td>
+<td>on user/action</td>
+<td>~60 Hz</td>
+</tr>
+<tr>
+<td>Setup</td>
+<td>draft CRUD (<code>POST /api/setup</code>, …)</td>
+<td>draft mirror: <code>fleet_spec</code> spawn → pose fields</td>
+</tr>
+<tr>
+<td>Running</td>
+<td>start/stop/pause, manual, io</td>
+<td>relayed VDS1 STATE + <code>fleet</code>, telemetry</td>
+</tr>
+</tbody>
+</table>
+<p>Browser: <code>EventSource('/api/stream')</code> → <code>applyState(json)</code> drives 3D, minimap,
+connection badge, right-hand telemetry. Same JSON schema in both modes; <strong><code>setup_mode</code>
+and <code>source</code></strong> distinguish draft preview from live plant data.</p>
+<p>Implementation note: <code>gui_architecture.md</code> originally specified WebSocket for the
+state stream; the realized server uses SSE (stdlib <code>http.server</code>, sufficient for
+60 Hz JSON). A future backend swap must keep the <strong>field schema</strong>, transport may
+change.</p>
+<h2 id="consolidation-actions-remaining">Consolidation actions (remaining)<a class="headerlink" href="#consolidation-actions-remaining" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>gui/server.py</code>: strip to viz-only (SSE + static). Move <code>/api/manual</code>,
-  <code>_udp_control</code> (8101), <code>/api/io</code> + <code>/api/io/targets</code> out to branch [2].</li>
 <li><code>viewer/</code> vs <code>gui/</code>: pick one web viewer; fold <code>suspension_editor</code> in as a
   panel or move it to <code>builder/</code> (authoring concern).</li>
 <li>VDS1: one wire format. <code>cosim_protocol.hpp</code> is canonical; Python mirrors it.
@@ -2170,8 +2235,8 @@ The existing <code>cosim/</code> is branch [2].</p>
 </span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>  realtime_server.cpp       # the single comms server (CMD in / STATE out)
 </span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>  test_udp_client.py   # smoke test, uses protocol.py
 </span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>configs/comms/*.yaml   # routing spec (fan-out not yet realized in the server)
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>gui/                   # [1] the one web viewer: SSE + static, subscribes
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>builder/               # authoring tool (incl. suspension editor), separate concern
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>gui/                   # [1] app.html + server.py: draft, Play/Stop, SSE relay
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>builder/               # hardpoint / suspension authoring (offline)
 </span></code></pre></div>
 <h2 id="decisions-taken-2026-06-04">Decisions taken (2026-06-04)<a class="headerlink" href="#decisions-taken-2026-06-04" title="Permanent link">&para;</a></h2>
 <ul>
@@ -2184,10 +2249,18 @@ The existing <code>cosim/</code> is branch [2].</p>
 <h2 id="b-track-progress-2026-06-04-post-v010">B-track progress (2026-06-04, post-v0.1.0)<a class="headerlink" href="#b-track-progress-2026-06-04-post-v010" title="Permanent link">&para;</a></h2>
 <ul>
 <li>B1 STATE v2 (rack_torque/slip/susp/measured); B2 server road/terrain config;
-  B3 server SensorParams yaml; B4 <code>gui/server.py</code> now owns no sim — it auto-
-  starts <code>vdsim_realtime</code>, relays CMD, and renders its STATE. DONE.</li>
-<li>The real-time app is renamed <code>vdsim_realtime</code> (core pacing class stays
-  <code>RealTimeRunner</code>).</li>
+  B3 server SensorParams yaml; B4 <code>gui/server.py</code> no longer steps SimSession —
+  auto-starts <code>vdsim_realtime</code>, relays CMD, SSE relays STATE. DONE.</li>
+<li>Real-time app renamed <code>vdsim_realtime</code> (core pacing class stays <code>RealTimeRunner</code>).</li>
+</ul>
+<h2 id="v02-gui-alignment-2026-06-06">v0.2 GUI alignment (2026-06-06)<a class="headerlink" href="#v02-gui-alignment-2026-06-06" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Setup = draft session:</strong> <code>Runner.apply_setup()</code> updates in-memory run spec;
+  <code>_setup_snapshot()</code> feeds SSE until ▶ Play.</li>
+<li><strong>Play:</strong> <code>_materialize_run_config()</code> → <code>runs/live/run_config.yaml</code> → <code>vdsim_realtime
+  --scenario=…</code>; SSE switches to cosim STATE. Override dir: env <code>VDSIM_RUN_DIR</code>.</li>
+<li><strong>Single page:</strong> <code>gui/app.html</code> — SIM bar, fleet tree, setup panel, 3D, telemetry.</li>
+<li>See also <code>docs/design/V0.2_GUI_REDESIGN.md</code>, <code>docs/HANDOFF.md</code> §6b.</li>
 </ul>
 <h2 id="open-items">Open items<a class="headerlink" href="#open-items" title="Permanent link">&para;</a></h2>
 <ul>
