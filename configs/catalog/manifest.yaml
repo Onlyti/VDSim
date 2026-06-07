@@ -1,0 +1,17 @@
+catalog_id: vdsim.builtin
+catalog_version: 1
+parts:
+  - id: chassis.sedan
+    path: parts/chassis/sedan.yaml
+  - id: tire.default_pacejka
+    path: parts/tire/default_pacejka.yaml
+  - id: drivetrain.sedan_rwd
+    path: parts/drivetrain/sedan_rwd.yaml
+  - id: brake.sedan_default
+    path: parts/brake/sedan_default.yaml
+  - id: steering.sedan_rack
+    path: parts/steering/sedan_rack.yaml
+blueprints:
+  - id: vehicle.sedan_comfort
+    path: blueprints/sedan_comfort.yaml
+packages: []

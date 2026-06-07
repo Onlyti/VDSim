@@ -1,0 +1,23 @@
+id: tire.default_pacejka
+type: tire
+version: 1
+schema: pacejka_mf96_v1
+label: "Default Pacejka MF96 (simple)"
+tags: [pacejka, demo]
+
+body:
+  B_long: 10.0
+  C_long: 1.65
+  D_long: 1.0
+  E_long: 0.97
+  B_lat: 8.0
+  C_lat: 1.30
+  D_lat: 1.0
+  E_lat: -1.0
+  mu_nominal: 1.0
+  Fz_nominal: 4000.0
+  load_sensitivity: 0.15
+  relaxation_length_lat: 0.6
+  relaxation_length_long: 0.15
+  cornering_stiffness: 80000.0
+  rolling_resistance: 0.015

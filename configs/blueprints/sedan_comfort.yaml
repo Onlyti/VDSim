@@ -1,0 +1,13 @@
+id: vehicle.sedan_comfort
+version: 1
+label: "Sedan comfort package"
+level: L2
+
+parts:
+  chassis: chassis.sedan
+  tire: tire.default_pacejka
+  brake: brake.sedan_default
+  steering: steering.sedan_rack
+  drivetrain: drivetrain.sedan_rwd
+
+overrides: {}

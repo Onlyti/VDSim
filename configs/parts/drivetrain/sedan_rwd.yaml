@@ -1,0 +1,14 @@
+id: drivetrain.sedan_rwd
+type: drivetrain
+version: 1
+schema: drivetrain_v1
+label: "Sedan RWD open diff"
+tags: [sedan, rwd]
+
+body:
+  drive_type: RWD
+  differential: Open
+  lsd_preload: 0.10
+  lsd_ramp: 0.20
+  max_motor_torque: 300.0
+  final_drive_ratio: 5.0

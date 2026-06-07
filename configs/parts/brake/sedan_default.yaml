@@ -1,0 +1,10 @@
+id: brake.sedan_default
+type: brake
+version: 1
+schema: brake_subsystem_v1
+label: "Sedan default brakes"
+tags: [sedan]
+
+body:
+  max_brake_torque: 2000.0
+  brake_bias_front: 0.62

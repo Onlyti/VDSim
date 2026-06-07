@@ -1,0 +1,11 @@
+id: steering.sedan_rack
+type: steering
+version: 1
+schema: steering_subsystem_v1
+label: "Sedan rack steering"
+tags: [sedan]
+
+body:
+  steering_ratio: 15.0
+  max_steer_angle_wheel: 0.50
+  ackerman_percent: 60.0
