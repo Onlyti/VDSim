@@ -66,25 +66,12 @@ except ImportError as e:
     sys.exit(f"import vdsim failed ({e}). Build with -DVDSIM_BUILD_PYTHON=ON.")
 
 def parts_registry():
+    from runner.catalog_api import catalog_legacy_registry
     comp = REPO / "configs" / "components" / "suspension"
-    presets = sorted(x.stem for x in comp.glob("*.yaml")) if comp.is_dir() else []
-    r = catalog_resolver()
-    r.load_manifest()
-    tires = [p for p in r.list_parts("tire")]
-    chassis = [p for p in r.list_parts("chassis")]
-    return {
-        "blueprints": list(BLUEPRINTS),
-        "vehicles": [b.replace("vehicle.", "") for b in BLUEPRINTS],
-        "tires": [p["id"].replace("tire.", "") for p in tires],
-        "chassis": [p["id"].replace("chassis.", "") for p in chassis],
-        "suspensions": list_suspension_configs(),
-        "l3_kinematics": list_l3_kinematics_configs(),
-        "suspension_presets": presets,
-        "vehicle_suspension_defaults": {
-            v: suspension_default_for_vehicle(v) for v in VEHICLES
-        },
-        "catalog_id": "vdsim.builtin",
-    }
+    out = catalog_legacy_registry()
+    out["suspension_presets"] = (
+        sorted(x.stem for x in comp.glob("*.yaml")) if comp.is_dir() else [])
+    return out
 
 
 LOG_COLS = ["t", "x", "y", "z", "yaw", "roll", "pitch", "vx", "vy", "r",

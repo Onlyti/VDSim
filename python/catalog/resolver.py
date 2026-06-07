@@ -98,6 +98,21 @@ class CatalogResolver:
         self._manifest = doc
         return doc
 
+    def list_blueprints(self) -> List[dict]:
+        self.load_manifest()
+        out: List[dict] = []
+        for bid, path in sorted(self._blueprint_index.items()):
+            doc = self._read_yaml(path)
+            if doc.get("id") != bid:
+                raise CatalogError(f"blueprint id mismatch: {doc.get('id')!r} != {bid!r}")
+            out.append({
+                "id": bid,
+                "label": doc.get("label", bid),
+                "level": doc.get("level", "L2"),
+                "parts": dict(doc.get("parts") or {}),
+            })
+        return out
+
     def list_parts(self, type_filter: Optional[str] = None) -> List[dict]:
         self.load_manifest()
         out: List[dict] = []

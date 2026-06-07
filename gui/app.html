@@ -2139,8 +2139,8 @@ function syncFleetSuspLevel(box, level) {
 }
 async function ensureSetupLists() {
   if (!setupVehicleList.length) {
-    const cf = await (await fetch('/api/config')).json();
-    setupVehicleList = cf.vehicles || ['sedan'];
+    const reg = await (await fetch('/api/parts/registry')).json();
+    setupVehicleList = reg.vehicles || reg.blueprints?.map(b => b.replace('vehicle.', '')) || ['sedan'];
   }
   if (!setupTireSamples.length) {
     setupTireSamples = (await (await fetch('/api/tire/samples')).json()).samples || [];
@@ -2282,7 +2282,7 @@ async function loadSetupForm() {
     $('setup_cosim_state_port').value = s.cosim_state_port ?? 7402;
     const sel = $('setup_scenario');
     sel.innerHTML = '<option value="">Saved scenario…</option>' +
-      (s.scenarios || []).map(n => `<option value="${n}">${n}</option>`).join('');
+      (s.scenarios || s.scenes || []).map(n => `<option value="${n}">${n}</option>`).join('');
     if (setupLoadedScenario) sel.value = setupLoadedScenario;
     buildInfraTree(s.infra_sensors || []);
     markDraftSynced();

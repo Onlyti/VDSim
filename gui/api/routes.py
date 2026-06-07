@@ -30,6 +30,18 @@ class ApiContext:
         self.suspension_schematic = suspension_schematic
 
 
+def _scene_list(h, ctx):
+    json_response(h, {"scenes": ctx.runner.list_scenarios(),
+                      "scenarios": ctx.runner.list_scenarios()})
+
+
+def _get_catalog(h, qs):
+    from runner.catalog_api import catalog_index
+    type_filter = (qs.get("type") or [None])[0]
+    query = (qs.get("q") or [None])[0]
+    json_response(h, catalog_index(type_filter=type_filter, query=query))
+
+
 def _get_debug(h, qs, ctx):
     r = ctx.runner
     with r.lock:
@@ -95,6 +107,7 @@ GET_EXACT = {
         "samples": ctx.runner.tire_samples(),
     }),
     "/api/parts/registry": lambda h, qs, ctx: json_response(h, ctx.parts_registry()),
+    "/api/catalog": lambda h, qs, ctx: _get_catalog(h, qs),
     "/api/simconfig": lambda h, qs, ctx: json_response(h, ctx.runner.export_simconfig()),
     "/api/fleet": lambda h, qs, ctx: json_response(h, {
         "fleet": ctx.runner.fleet_enriched(),
@@ -112,9 +125,8 @@ GET_EXACT = {
                        and Path(ctx.runner._last_run_config).is_file()),
     }),
     "/api/setup": lambda h, qs, ctx: json_response(h, ctx.runner.get_setup()),
-    "/api/scenario/list": lambda h, qs, ctx: json_response(h, {
-        "scenarios": ctx.runner.list_scenarios(),
-    }),
+    "/api/scenario/list": lambda h, qs, ctx: _scene_list(h, ctx),
+    "/api/scene/list": lambda h, qs, ctx: _scene_list(h, ctx),
     "/api/actuator/step": lambda h, qs, ctx: json_response(h, {
         "plots": ctx.runner.actuator_step(),
     }),
@@ -156,9 +168,39 @@ def handle_get(h, route, qs, ctx):
     if route in ("/api/state", "/api/io"):
         json_response(h, ctx.runner.snapshot())
         return True
+    if route == "/api/catalog/parts":
+        from runner.catalog_api import catalog_parts_list
+        type_filter = (qs.get("type") or [None])[0]
+        json_response(h, catalog_parts_list(type_filter))
+        return True
+    if route.startswith("/api/catalog/parts/"):
+        from runner.catalog_api import catalog_part_get
+        pid = route.split("/api/catalog/parts/", 1)[1].strip("/")
+        try:
+            json_response(h, {"ok": True, "part": catalog_part_get(pid)})
+        except Exception as e:
+            json_response(h, {"ok": False, "error": str(e)}, 400)
+        return True
+    if route.startswith("/api/catalog/blueprints/"):
+        from runner.catalog_api import catalog_blueprint_get
+        bid = route.split("/api/catalog/blueprints/", 1)[1].strip("/")
+        try:
+            json_response(h, {"ok": True, "blueprint": catalog_blueprint_get(bid)})
+        except Exception as e:
+            json_response(h, {"ok": False, "error": str(e)}, 400)
+        return True
+    if route.startswith("/api/scene/") and route not in ("/api/scene/list",):
+        name = route.split("/api/scene/", 1)[1].strip("/")
+        if name:
+            try:
+                json_response(h, {"ok": True, "scene": ctx.runner.get_scene_doc(name)})
+            except ValueError as e:
+                json_response(h, {"ok": False, "error": str(e)}, 400)
+            return True
     if route == "/api/suspension/list":
+        from runner.catalog_api import catalog_suspension_samples
         preview = (qs.get("preview") or ["0"])[0] in ("1", "true", "yes")
-        json_response(h, ctx.list_suspension_api(preview_all=preview))
+        json_response(h, catalog_suspension_samples(preview_all=preview))
         return True
     if route == "/api/suspension/default":
         veh = (qs.get("vehicle") or ["sedan"])[0]
@@ -291,10 +333,16 @@ def handle_post(h, path, body, ctx):
         except ValueError as e:
             json_response(h, {"ok": False, "error": str(e)}, 400)
         return True
-    if path == "/api/scenario/save":
+    if path in ("/api/scenario/save", "/api/scene/save"):
         try:
             json_response(h, r.save_scenario(body.get("name", ""),
                                              overwrite=bool(body.get("overwrite"))))
+        except ValueError as e:
+            json_response(h, {"ok": False, "error": str(e)}, 400)
+        return True
+    if path == "/api/scene":
+        try:
+            json_response(h, {"ok": True, "config": r.import_simconfig(body)})
         except ValueError as e:
             json_response(h, {"ok": False, "error": str(e)}, 400)
         return True
@@ -325,7 +373,13 @@ def handle_post(h, path, body, ctx):
         json_response(h, {"ok": ok, "cosim": r.cosim.status(),
                           "error": r.plant_error})
         return True
-    if path in ("/api/runconfig", "/api/simconfig"):
+    if path == "/api/simconfig":
+        try:
+            json_response(h, {"ok": True, "config": r.import_simconfig(body)})
+        except ValueError as e:
+            json_response(h, {"ok": False, "error": str(e)}, 400)
+        return True
+    if path == "/api/runconfig":
         try:
             json_response(h, {"ok": True, "config": r.import_run_config(body)})
         except ValueError as e:
@@ -401,7 +455,7 @@ def handle_post(h, path, body, ctx):
 
 
 def parse_post_body(h, raw, ct, path):
-    if "yaml" in ct and path in ("/api/simconfig", "/api/runconfig"):
+    if "yaml" in ct and path in ("/api/simconfig", "/api/runconfig", "/api/scene"):
         import yaml
         return yaml.safe_load(raw) or {}
     return json.loads(raw or b"{}")

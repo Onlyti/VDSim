@@ -199,6 +199,55 @@ class DraftMixin:
                 out["scenarios"] = self.list_scenarios()
             return out
 
+    def export_scene_v3(self, stem="draft"):
+        with self.lock:
+            fleet = []
+            for s in self.fleet_spec:
+                normalize_fleet_spec(s)
+                entry = {
+                    "id": int(s["id"]),
+                    "blueprint": str(s["blueprint"]),
+                    "level": str(s.get("level", "L2")),
+                    "x0": float(s.get("x0", 0.0)),
+                    "y0": float(s.get("y0", 0.0)),
+                    "yaw0": float(s.get("yaw0", 0.0)),
+                    "vx0": float(s.get("vx0", 0.0)),
+                }
+                parts = dict(s.get("parts") or {})
+                if parts:
+                    entry["parts"] = parts
+                fleet.append(entry)
+            doc = {
+                "version": 3,
+                "id": f"scene.{stem}",
+                "label": stem,
+                "rate": 1.0 / self.dt if self.dt > 1e-6 else 200.0,
+                "cmd_timeout": float(self.cosim.cfg.get("cmd_timeout", 0.1)),
+                "mu": float(self.cfg["road_mu"]),
+                "grade": float(self.cfg["road_grade"]),
+                "bank": float(self.cfg["road_bank"]),
+                "v_target": float(self.cfg["v_target"]),
+                "fleet": fleet,
+                "gui": self._run_config_gui_meta(),
+            }
+            if self.path_preset == "custom":
+                doc["path_pts"] = [[float(p[0]), float(p[1])] for p in self.path.pts]
+            if self.path_preset and self.path_preset != "custom":
+                doc["path_preset"] = self.path_preset
+            if self.infra_sensors:
+                doc["infra_sensors"] = list(self.infra_sensors)
+            return doc
+
+    def get_scene_doc(self, name):
+        return load_scene_doc(REPO, name)
+
+    def import_scene_v3(self, data):
+        if int(data.get("version", 0)) == 2 or data.get("fleet_spec"):
+            raise ValueError("simconfig v2 is no longer supported; use scene version 3")
+        if not data.get("fleet"):
+            raise ValueError("scene document requires fleet[]")
+        self._import_run_config_doc(data)
+
     def save_scenario(self, name, overwrite=False):
         import yaml
         stem = Path(str(name)).strip().stem
@@ -312,10 +361,10 @@ class DraftMixin:
                 self.latest = self._setup_snapshot()
 
     def export_simconfig(self):
-        return self._run_config_draft_doc()
+        return self.export_scene_v3()
 
     def export_run_config(self):
-        return self.export_simconfig()
+        return self._run_config_draft_doc()
 
     def _import_simconfig_v2(self, data):
         c = data.get("config") or {}
@@ -443,8 +492,11 @@ class DraftMixin:
 
     def import_run_config(self, data):
         with self.lock:
-            if int(data.get("version", 0)) == 2 and data.get("fleet_spec"):
-                self._import_simconfig_v2(data)
+            ver = int(data.get("version", 0))
+            if ver == 2 and data.get("fleet_spec"):
+                raise ValueError("simconfig v2 is no longer supported; use scene version 3")
+            if ver == 3 or (data.get("fleet") and not data.get("vehicles")):
+                self.import_scene_v3(data)
             elif data.get("vehicles"):
                 self._import_run_config_doc(data)
             else:
@@ -453,4 +505,7 @@ class DraftMixin:
         return self.config()
 
     def import_simconfig(self, data):
-        return self.import_run_config(data)
+        with self.lock:
+            self.import_scene_v3(data)
+            self._rebuild_if_running()
+        return self.config()
