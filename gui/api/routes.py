@@ -11,12 +11,12 @@ class ApiContext:
     __slots__ = (
         "runner", "here", "vehicles", "levels", "cosim_cmd_port", "cosim_state_port",
         "qvid", "parts_registry", "list_suspension_api", "suspension_default_for_vehicle",
-        "suspension_schematic",
+        "suspension_schematic", "suspension_kc_plots",
     )
 
     def __init__(self, runner, here, vehicles, levels, cosim_cmd_port, cosim_state_port,
                  qvid, parts_registry, list_suspension_api, suspension_default_for_vehicle,
-                 suspension_schematic):
+                 suspension_schematic, suspension_kc_plots):
         self.runner = runner
         self.here = here
         self.vehicles = vehicles
@@ -28,6 +28,7 @@ class ApiContext:
         self.list_suspension_api = list_suspension_api
         self.suspension_default_for_vehicle = suspension_default_for_vehicle
         self.suspension_schematic = suspension_schematic
+        self.suspension_kc_plots = suspension_kc_plots
 
 
 def _scene_list(h, ctx):
@@ -213,6 +214,13 @@ def handle_get(h, route, qs, ctx):
         except ValueError as e:
             json_response(h, {"ok": False, "error": str(e)})
         return True
+    if route == "/api/suspension/kc":
+        name = (qs.get("name") or [""])[0]
+        try:
+            json_response(h, ctx.suspension_kc_plots(name))
+        except ValueError as e:
+            json_response(h, {"ok": False, "error": str(e)}, 400)
+        return True
     if route == "/api/runconfig/draft.yaml":
         import yaml
         doc = ctx.runner.export_run_config()
@@ -275,7 +283,8 @@ def handle_post(h, path, body, ctx):
                 r.load_fleet_scenario(str(body["scenario"]))
                 r._rebuild_if_running()
                 json_response(h, {"ok": True, "fleet": r.fleet_enriched(),
-                                  "live_vid": r.live_vid})
+                                  "live_vid": r.live_vid,
+                                  "stunt": dict(r.cfg.get("stunt") or {})})
             elif "driver" in body:
                 vid = int(body.get("vehicle_id", body.get("vehicle", r.live_vid)))
                 drv = r.set_fleet_driver(vid, body["driver"])

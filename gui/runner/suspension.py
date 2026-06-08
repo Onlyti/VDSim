@@ -8,6 +8,8 @@ KIN_DIR = REPO / "configs" / "parts" / "susp_kinematics" / "kin"
 TOPO_DIR = REPO / "configs" / "parts" / "susp_topology"
 KIN_REL = "configs/parts/susp_kinematics/kin"
 
+KIN_LEVELS = frozenset({"L3", "L4"})
+
 BLUEPRINT_L3_SUSP = {
     "vehicle.sedan_l3": {"front": "mp_front_sedan", "rear": "ta_rear_sedan"},
     "vehicle.fsk_formula": {"front": "dw_front_sports", "rear": "5link_rear_sports"},
@@ -77,7 +79,7 @@ def list_suspension_api(preview_all=False):
 
 
 def strip_fleet_susp_if_not_l3(spec):
-    if str(spec.get("level", "L2")) != "L3":
+    if str(spec.get("level", "L2")) not in KIN_LEVELS:
         spec.pop("front_susp", None)
         spec.pop("rear_susp", None)
 
@@ -85,7 +87,7 @@ def strip_fleet_susp_if_not_l3(spec):
 def l3_susp_path_warnings(fleet_spec):
     warnings = []
     for spec in fleet_spec:
-        if str(spec.get("level", "L2")) != "L3":
+        if str(spec.get("level", "L2")) not in KIN_LEVELS:
             continue
         vid = int(spec.get("id", 0))
         for side, key in (("front", "front_susp"), ("rear", "rear_susp")):
@@ -123,7 +125,7 @@ def validate_fleet_updates(updates, fleet_spec):
         if spec is None:
             continue
         level = str(upd.get("level", spec.get("level", "L2")))
-        if level != "L3":
+        if level not in KIN_LEVELS:
             continue
         for side, key in (("front", "front_susp"), ("rear", "rear_susp")):
             if key in upd:
@@ -200,3 +202,63 @@ def suspension_schematic(name):
     typ = str(doc.get("type") or doc.get("topology") or "unknown")
     links, pts = corner_kinematic_links(doc)
     return {"name": stem, "type": typ, "links": links, "points": pts}
+
+
+def _kc_series(samples, y_attr, label, color):
+    return {
+        "x": [float(s.abscissa) for s in samples],
+        "y": [float(getattr(s, y_attr)) for s in samples],
+        "label": label,
+        "color": color,
+    }
+
+
+def suspension_kc_plots(name):
+    import vdsim
+
+    stem = susp_stem_from_ref(name)
+    path = kin_yaml_path(stem)
+    if path is None or not path.is_file():
+        raise ValueError(f"unknown suspension: {name}")
+    if not is_l3_kinematics_yaml(stem):
+        raise ValueError(f"suspension '{stem}' has no native kinematics YAML")
+    doc = yaml.safe_load(path.read_text()) or {}
+    typ = str(doc.get("type") or "unknown")
+    r = vdsim.run_kc_sweep(str(path))
+    plots = [
+        {
+            "title": "Camber vs wheel travel",
+            "series": [_kc_series(r.travel, "camber_deg", "camber [deg]", "#01A0E9")],
+        },
+        {
+            "title": "Toe vs wheel travel (bump steer)",
+            "series": [_kc_series(r.travel, "toe_deg", "toe [deg]", "#e67e22")],
+        },
+        {
+            "title": "Track change vs wheel travel",
+            "series": [_kc_series(r.travel, "track_mm", "track [mm]", "#27ae60")],
+        },
+        {
+            "title": "Toe vs steer rack",
+            "series": [_kc_series(r.steer, "toe_deg", "toe [deg]", "#9b59b6")],
+        },
+        {
+            "title": "Caster vs steer rack",
+            "series": [_kc_series(r.steer, "caster_deg", "caster [deg]", "#34495e")],
+        },
+        {
+            "title": "Compliance toe vs Fy",
+            "series": [
+                _kc_series(r.compliance_fy, "compliance_toe_deg", "Δtoe [deg]", "#c0392b"),
+            ],
+        },
+        {
+            "title": "Compliance camber vs Fy",
+            "series": [
+                _kc_series(
+                    r.compliance_fy, "compliance_camber_deg", "Δcamber [deg]", "#16a085"
+                ),
+            ],
+        },
+    ]
+    return {"name": stem, "type": typ, "plots": plots}

@@ -14,6 +14,7 @@
 #include "vdsim/sim_session.hpp"
 #include "vdsim/scenario.hpp"
 #include "vdsim/state.hpp"
+#include "vdsim/multibody.hpp"
 #include "vdsim/suspension.hpp"
 
 namespace py = pybind11;
@@ -40,6 +41,7 @@ PYBIND11_MODULE(vdsim, m) {
         .value("L1_Bicycle",     vdsim::IVehicleDynamics::Level::L1_Bicycle)
         .value("L2_SevenDOF",    vdsim::IVehicleDynamics::Level::L2_SevenDOF)
         .value("L3_FourteenDOF", vdsim::IVehicleDynamics::Level::L3_FourteenDOF)
+        .value("L4_Kinematic",   vdsim::IVehicleDynamics::Level::L4_Kinematic)
         .value("Lk_Kinematic",   vdsim::IVehicleDynamics::Level::Lk_Kinematic)
         .export_values();
 
@@ -195,6 +197,58 @@ PYBIND11_MODULE(vdsim, m) {
               return vdsim::attach_rear_kinematics(dyn, std::move(k));
           });
 
+    py::class_<vdsim::mb::KcSweepSample>(m, "KcSweepSample")
+        .def_readonly("abscissa", &vdsim::mb::KcSweepSample::abscissa)
+        .def_readonly("toe_deg", &vdsim::mb::KcSweepSample::toe_deg)
+        .def_readonly("camber_deg", &vdsim::mb::KcSweepSample::camber_deg)
+        .def_readonly("caster_deg", &vdsim::mb::KcSweepSample::caster_deg)
+        .def_readonly("track_mm", &vdsim::mb::KcSweepSample::track_mm)
+        .def_readonly("compliance_toe_deg",
+                       &vdsim::mb::KcSweepSample::compliance_toe_deg)
+        .def_readonly("compliance_camber_deg",
+                       &vdsim::mb::KcSweepSample::compliance_camber_deg);
+    py::class_<vdsim::mb::KcSweepResult>(m, "KcSweepResult")
+        .def_readonly("travel", &vdsim::mb::KcSweepResult::travel)
+        .def_readonly("steer", &vdsim::mb::KcSweepResult::steer)
+        .def_readonly("compliance_fy", &vdsim::mb::KcSweepResult::compliance_fy);
+    m.def("run_kc_sweep",
+          [](const std::string& kin_yaml_path) {
+              auto topo = vdsim::mb::SuspensionTopology::from_yaml(kin_yaml_path);
+              return vdsim::mb::run_kc_sweep(topo);
+          },
+          py::arg("kin_yaml_path"));
+    py::class_<vdsim::mb::KcMetrics>(m, "KcMetrics")
+        .def_readonly("toe_gain_travel_deg_per_mm",
+                       &vdsim::mb::KcMetrics::toe_gain_travel_deg_per_mm)
+        .def_readonly("camber_gain_travel_deg_per_mm",
+                       &vdsim::mb::KcMetrics::camber_gain_travel_deg_per_mm)
+        .def_readonly("track_gain_travel_mm_per_mm",
+                       &vdsim::mb::KcMetrics::track_gain_travel_mm_per_mm)
+        .def_readonly("toe_gain_steer_deg_per_mm",
+                       &vdsim::mb::KcMetrics::toe_gain_steer_deg_per_mm)
+        .def_readonly("caster_gain_steer_deg_per_mm",
+                       &vdsim::mb::KcMetrics::caster_gain_steer_deg_per_mm);
+    py::class_<vdsim::mb::KcMetricDelta>(m, "KcMetricDelta")
+        .def_readonly("name", &vdsim::mb::KcMetricDelta::name)
+        .def_readonly("reference", &vdsim::mb::KcMetricDelta::reference)
+        .def_readonly("candidate", &vdsim::mb::KcMetricDelta::candidate)
+        .def_readonly("rel_error", &vdsim::mb::KcMetricDelta::rel_error)
+        .def_readonly("ok", &vdsim::mb::KcMetricDelta::ok);
+    py::class_<vdsim::mb::KcXcheckReport>(m, "KcXcheckReport")
+        .def_readonly("all_ok", &vdsim::mb::KcXcheckReport::all_ok)
+        .def_readonly("deltas", &vdsim::mb::KcXcheckReport::deltas);
+    m.def("compute_kc_metrics", &vdsim::mb::compute_kc_metrics);
+    m.def("compare_kc_metrics", &vdsim::mb::compare_kc_metrics,
+          py::arg("reference"), py::arg("candidate"), py::arg("rtol") = 0.05,
+          py::arg("atol") = 1e-4);
+    m.def("run_kc_xcheck",
+          [](const std::string& reference_yaml, const std::string& candidate_yaml,
+             double rtol) {
+              return vdsim::mb::run_kc_xcheck(reference_yaml, candidate_yaml, rtol);
+          },
+          py::arg("reference_yaml"), py::arg("candidate_yaml"),
+          py::arg("rtol") = 0.05);
+
     // -------- SolverParams --------
     py::class_<vdsim::SolverParams>(m, "SolverParams")
         .def(py::init<>())
@@ -247,6 +301,7 @@ PYBIND11_MODULE(vdsim, m) {
                   if (level == "K" || level == "L0") return vdsim::create_kinematic();
                   if (level == "L1") return vdsim::create_bicycle();
                   if (level == "L3") return vdsim::create_fourteen_dof();
+                  if (level == "L4") return vdsim::create_fourteen_dof_kinematic();
                   return vdsim::create_seven_dof();
               };
               auto dyn = make_dyn();
@@ -346,6 +401,8 @@ PYBIND11_MODULE(vdsim, m) {
     m.def("create_bicycle",      static_cast<DynFactory>(&vdsim::create_bicycle));
     m.def("create_seven_dof",    static_cast<DynFactory>(&vdsim::create_seven_dof));
     m.def("create_fourteen_dof", static_cast<DynFactory>(&vdsim::create_fourteen_dof));
+    m.def("create_fourteen_dof_kinematic",
+          static_cast<DynFactory>(&vdsim::create_fourteen_dof_kinematic));
     // Opaque holder so create_*_ground can return providers to Python and be
     // handed to make_sim_session_ground (ownership transfers on that call).
     py::class_<vdsim::IContactProvider>(m, "ContactProvider");
@@ -555,6 +612,7 @@ PYBIND11_MODULE(vdsim, m) {
                   (level == "K" || level == "L0") ? vdsim::create_kinematic()
                   : (level == "L1") ? vdsim::create_bicycle()
                   : (level == "L3") ? vdsim::create_fourteen_dof()
+                  : (level == "L4") ? vdsim::create_fourteen_dof_kinematic()
                                     : vdsim::create_seven_dof();
               vdsim::SimConfig cfg;
               cfg.actuator       = actuator;
@@ -607,6 +665,7 @@ PYBIND11_MODULE(vdsim, m) {
                   (level == "K" || level == "L0") ? vdsim::create_kinematic()
                   : (level == "L1") ? vdsim::create_bicycle()
                   : (level == "L3") ? vdsim::create_fourteen_dof()
+                  : (level == "L4") ? vdsim::create_fourteen_dof_kinematic()
                                     : vdsim::create_seven_dof();
               vdsim::SimConfig cfg; cfg.nominal_dt = nominal_dt;
               return std::make_unique<vdsim::SimSession>(
@@ -631,6 +690,7 @@ PYBIND11_MODULE(vdsim, m) {
                   (level == "K" || level == "L0") ? vdsim::create_kinematic()
                   : (level == "L1") ? vdsim::create_bicycle()
                   : (level == "L3") ? vdsim::create_fourteen_dof()
+                  : (level == "L4") ? vdsim::create_fourteen_dof_kinematic()
                                     : vdsim::create_seven_dof();
               std::unique_ptr<vdsim::IContactProvider> ground =
                   (!n.empty() && n.size() == gd.size())

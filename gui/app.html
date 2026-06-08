@@ -548,6 +548,10 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(devicePixelRatio);
 view.appendChild(renderer.domElement);
 const controls = new OrbitControls(camera, renderer.domElement);
+controls.minDistance = 4;
+controls.maxDistance = 480;
+controls.minPolarAngle = 0.12;
+controls.maxPolarAngle = Math.PI - 0.12;
 let orthoSize = 70;
 let _a0 = 1;
 const orthoCam = new THREE.OrthographicCamera(-orthoSize / 2, orthoSize / 2, orthoSize / 2, -orthoSize / 2, 0.1, 2000);
@@ -575,6 +579,27 @@ function updateRoadTilt() {
 }
 
 function toThree(x, y, z) { return new THREE.Vector3(x, z, -y); }
+
+// VDSim world (Z-up) ISO ZYX -> Three scene (Y-up); same as coordinate.cpp / server euler_to_quat.
+const _vdToTh = new THREE.Matrix4().set(1, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1);
+const _vdToThT = _vdToTh.clone().transpose();
+const _attMvd = new THREE.Matrix4();
+const _attMth = new THREE.Matrix4();
+const _attEzyx = new THREE.Euler(0, 0, 0, 'ZYX');
+const _qAtt = new THREE.Quaternion();
+const _qSprungTgt = new THREE.Quaternion();
+
+function vdsimIsoToThreeQuat(roll, pitch, yaw, out = _qAtt) {
+  _attEzyx.set(roll, pitch, yaw);
+  _attMvd.makeRotationFromEuler(_attEzyx);
+  _attMth.copy(_vdToTh).multiply(_attMvd).multiply(_vdToThT);
+  return out.setFromRotationMatrix(_attMth);
+}
+
+// Road slope: positive along heading = uphill (geometric); ISO pitch uses opposite sign.
+function roadSlopeToThreeQuat(roll, fwdSlope, yaw, out = _qAtt) {
+  return vdsimIsoToThreeQuat(roll, -fwdSlope, yaw, out);
+}
 
 let pathLine = null, lastNpath = -1;
 async function drawPath() {
@@ -662,6 +687,122 @@ async function drawScenery() {
   scene.add(sceneryGroup);
 }
 
+let stuntGroup = null;
+function rampProfileZ(x, xs, xt, h, lip) {
+  const xl = xt + lip;
+  if (x < xs) return 0;
+  if (x < xt) { const u = (x - xs) / Math.max(1e-6, xt - xs); return h * 0.5 * (1 - Math.cos(Math.PI * u)); }
+  if (x < xl) return h;
+  return 0;
+}
+function drawStuntTrack(stunt) {
+  if (stuntGroup) {
+    stuntGroup.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+    scene.remove(stuntGroup); stuntGroup = null;
+  }
+  window._lastStunt = stunt && stunt.ground ? { ...stunt } : null;
+  window._stuntActive = !!(stunt && stunt.ground);
+  if (!window._stuntActive) return;
+  stuntGroup = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0x5a6a78, roughness: 0.92, metalness: 0.05, side: THREE.DoubleSide,
+  });
+  const edgeMat = new THREE.LineBasicMaterial({ color: 0x2f6d8f });
+  if (stunt.ground === 'ramp') {
+    const xs = +stunt.x_start || 20, xt = +stunt.x_top || 24, h = +stunt.height_m || 0.6;
+    const lip = +stunt.lip_m || 0.4, xl = xt + lip, x0 = xs - 15, x1 = xl + 12, n = 80;
+    const hw = 4.0, arr = [], idx = [];
+    for (let i = 0; i <= n; i++) {
+      const x = x0 + (x1 - x0) * i / n, z = rampProfileZ(x, xs, xt, h, lip);
+      const pl = toThree(x, -hw, z), pr = toThree(x, hw, z);
+      arr.push(pl.x, pl.y, pl.z, pr.x, pr.y, pr.z);
+      if (i < n) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(arr), 3));
+    g.setIndex(idx); g.computeVertexNormals();
+    stuntGroup.add(new THREE.Mesh(g, mat));
+    const lipLn = [];
+    for (let x = xt; x <= xl; x += 0.25) lipLn.push(toThree(x, 0, h));
+    stuntGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(lipLn), edgeMat));
+  } else if (stunt.ground === 'loop') {
+    const xc = +stunt.center_x || 50, zc = +stunt.center_z || 15, R = +stunt.radius_m || 10;
+    const segs = 96, tube = 3.5, arr = [], idx = [];
+    for (let i = 0; i <= segs; i++) {
+      const th = -Math.PI / 2 + (2 * Math.PI * i) / segs;
+      const x = xc + R * Math.sin(th), z = zc - R * Math.cos(th);
+      const th2 = th + 0.04;
+      const x2 = xc + R * Math.sin(th2), z2 = zc - R * Math.cos(th2);
+      const p = toThree(x, 0, z), q = toThree(x2, 0, z2);
+      const nx = q.x - p.x, ny = q.y - p.y, nz = q.z - p.z;
+      const nl = Math.hypot(nx, ny, nz) || 1;
+      const pl = toThree(x, -tube, z), pr = toThree(x, tube, z);
+      arr.push(pl.x, pl.y, pl.z, pr.x, pr.y, pr.z);
+      if (i < segs) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(arr), 3));
+    g.setIndex(idx); g.computeVertexNormals();
+    stuntGroup.add(new THREE.Mesh(g, mat));
+    const loopLn = [];
+    for (let i = 0; i <= segs; i++) {
+      const th = -Math.PI / 2 + (2 * Math.PI * i) / segs;
+      loopLn.push(toThree(xc + R * Math.sin(th), 0, zc - R * Math.cos(th)));
+    }
+    stuntGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(loopLn), edgeMat));
+  }
+  scene.add(stuntGroup);
+  if (window._stuntActive) clearFlatTrackViz();
+  frameStuntView(stunt);
+}
+
+function clearFlatTrackViz() {
+  if (roadGroup) {
+    roadGroup.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+    scene.remove(roadGroup); roadGroup = null;
+  }
+  if (pathLine) {
+    scene.remove(pathLine); pathLine.geometry.dispose(); pathLine = null;
+  }
+}
+
+function stuntSpawnZ(stunt, st) {
+  if (st?.z0 != null && +st.z0 > 0.1) return +st.z0;
+  if (!stunt?.ground) return null;
+  const Rwh = 0.32, cgH = 0.5;
+  if (stunt.ground === 'loop') {
+    const zc = +stunt.center_z || 15, R = +stunt.radius_m || 10;
+    return zc - R - Rwh + cgH + 0.02;
+  }
+  if (stunt.ground === 'ramp') return cgH;
+  return null;
+}
+
+function frameStuntView(stunt) {
+  if (!stunt?.ground) return;
+  if (stunt.ground === 'loop') {
+    const xc = +stunt.center_x || 50, zc = +stunt.center_z || 15;
+    const p = toThree(xc, 0, zc);
+    setupControls.target.copy(p);
+    orthoCam.position.set(p.x, Math.max(80, zc + (+stunt.radius_m || 10) + 40), p.z);
+    orthoCam.lookAt(p);
+    if (!simRunning) { playCamMode = 'chase'; setCam('chase'); }
+    const hint = $('spawn_hint');
+    if (hint) hint.textContent = 'Loop — Manual, hold ~45–50% throttle on ▶ Play; chase cam';
+  } else if (stunt.ground === 'ramp') {
+    const xs = +stunt.x_start || 20;
+    const p = toThree(xs + 8, 0, 0);
+    setupControls.target.copy(p);
+    if (!simRunning) { playCamMode = 'chase'; setCam('chase'); }
+  }
+}
+
+function previewStuntSpawn(st) {
+  if (!st || st.x == null) return;
+  const z = stuntSpawnZ(window._lastStunt, st) ?? st.z ?? 0;
+  previewSpawn({ ...st, z }, true);
+}
+
 let roadGroup = null, roadHalfW = 6.0;
 async function drawRoad() {
   const j = await (await fetch('/api/path')).json(); let pts = j.pts;
@@ -745,9 +886,8 @@ function viewTargetPos(out = new THREE.Vector3()) {
   return out.copy(car.position);
 }
 const car = new THREE.Group();
-car.rotation.order = 'YXZ';
 car.userData.vid = 0;
-const ground = new THREE.Group(); ground.rotation.order = 'YXZ';
+const ground = new THREE.Group();
 const sprung = new THREE.Group();
 car.add(ground); car.add(sprung); scene.add(car);
 const fleetCars = {};
@@ -847,7 +987,7 @@ function buildStaticCar(geom, level, bodyColor, vid, cabinColor = fleetCabinColo
   const spr = new THREE.Group();
   grp.add(gnd); grp.add(spr);
   const a = geom.cg_to_front, b = geom.cg_to_rear, tf = geom.track_front, tr = geom.track_rear, R = geom.wheel_radius_nominal;
-  const bike = (level === 'K' || level === 'L1'), susp = (level === 'L3');
+  const bike = (level === 'K' || level === 'L1'), susp = (level === 'L3' || level === 'L4' || level === 'L5');
   const wp = susp ? gnd : grp;
   const L = a + b, W = Math.max(tf, tr, 0.6);
   const bodyH = 0.5, bodyY = R + 0.45, bodyW = bike ? 0.45 : Math.max(0.4, W - 0.5);
@@ -893,7 +1033,7 @@ function placeFleetCar(vid, st) {
   const fc = fleetCars[vid]; if (!fc || st.x == null) return;
   fc.group.position.copy(toThree(st.x, st.y, 0));
   fc.group.position.y = terrainGrid ? sampleTerrain(fc.group.position.x, -fc.group.position.z) : 0;
-  fc.group.rotation.set(0, st.yaw || 0, 0);
+  vdsimIsoToThreeQuat(0, 0, st.yaw || 0, fc.group.quaternion);
   const spin = fleetWheelSpin(st);
   if (spin) fc.wheelSpin = spin;
 }
@@ -1057,7 +1197,7 @@ async function rebuildCar(level, vid = selectedVid) {
   clearGroup(sprung);
   [...wheels, ...springs, ...unspr, ...axx, ...axy, ...axz].forEach(m => { car.remove(m); ground.remove(m); });
   wheels = []; axx = []; axy = []; axz = []; springs = []; unspr = [];
-  const bike = (level === 'K' || level === 'L1'), susp = (level === 'L3');
+  const bike = (level === 'K' || level === 'L1'), susp = (level === 'L3' || level === 'L4' || level === 'L5');
   const wp = susp ? ground : car;
   const L = a + b, W = Math.max(tf, tr, 0.6);
   const bodyH = 0.5, bodyY = R + 0.45, bodyBottom = bodyY - bodyH / 2;
@@ -1215,21 +1355,27 @@ function carGroundPose(nyaw) {
     car.position.y = sampleTerrain(wx, wy);
     grade = (sampleTerrain(wx + e, wy) - sampleTerrain(wx - e, wy)) / (2 * e);
     bank = (sampleTerrain(wx, wy + e) - sampleTerrain(wx, wy - e)) / (2 * e);
-  } else {
+  } else if (!window._stuntActive) {
     car.position.y = roadGrade * car.position.x + roadBank * (-car.position.z);
   }
   const rPitch = grade * Math.cos(nyaw) + bank * Math.sin(nyaw);
   const rRoll = -grade * Math.sin(nyaw) + bank * Math.cos(nyaw);
-  const l3 = (renderLevel === 'L3');
-  if (l3) {
-    car.rotation.set(0, nyaw, 0);
-    ground.rotation.set(rRoll, 0, -rPitch);
+  const l3 = (renderLevel === 'L3' || renderLevel === 'L4' || renderLevel === 'L5');
+  const l5stunt = (renderLevel === 'L5' && window._stuntActive);
+  if (l5stunt) {
+    vdsimIsoToThreeQuat(tgt.roll, tgt.pitch, nyaw, car.quaternion);
+    ground.quaternion.set(0, 0, 0, 1);
+    sprung.quaternion.set(0, 0, 0, 1);
+  } else if (l3) {
+    vdsimIsoToThreeQuat(0, 0, nyaw, car.quaternion);
+    roadSlopeToThreeQuat(rRoll, rPitch, 0, ground.quaternion);
+    vdsimIsoToThreeQuat(tgt.roll, tgt.pitch, 0, _qSprungTgt);
+    sprung.quaternion.slerp(_qSprungTgt, 0.3);
   } else {
-    car.rotation.set(rRoll, nyaw, -rPitch);
-    ground.rotation.set(0, 0, 0);
+    roadSlopeToThreeQuat(rRoll, rPitch, nyaw, car.quaternion);
+    ground.quaternion.set(0, 0, 0, 1);
+    sprung.quaternion.set(0, 0, 0, 1);
   }
-  sprung.rotation.x += (tgt.roll - sprung.rotation.x) * 0.3;
-  sprung.rotation.z += ((-tgt.pitch) - sprung.rotation.z) * 0.3;
 }
 function refreshViewControls() {
   const canInteract = !simRunning && dragSpawnVid < 0 && !pathEditActive && dragIdx < 0;
@@ -1253,17 +1399,22 @@ function frame() {
   const dt = Math.min(clock.getDelta(), 0.1);
   if (tgt.has) {
     if (simRunning) {
-      const yaw = car.rotation.y;
-      const vE = tgt.vx * Math.cos(yaw) - tgt.vy * Math.sin(yaw);
-      const vN = tgt.vx * Math.sin(yaw) + tgt.vy * Math.cos(yaw);
-      car.position.x += vE * dt;
-      car.position.z += -vN * dt;
-      car.position.lerp(tgt.pos, 0.10);
-      carGroundPose(lerpAngle(yaw + tgt.r * dt, tgt.yaw, 0.15));
+      const yaw = tgt.yaw || 0;
+      if (renderLevel === 'L5' && window._stuntActive) {
+        car.position.lerp(tgt.pos, 0.18);
+        carGroundPose(tgt.yaw);
+      } else {
+        const vE = tgt.vx * Math.cos(yaw) - tgt.vy * Math.sin(yaw);
+        const vN = tgt.vx * Math.sin(yaw) + tgt.vy * Math.cos(yaw);
+        car.position.x += vE * dt;
+        car.position.z += -vN * dt;
+        car.position.lerp(tgt.pos, 0.10);
+        carGroundPose(lerpAngle(yaw + tgt.r * dt, tgt.yaw, 0.15));
+      }
     } else {
       tgt.vx = 0; tgt.vy = 0; tgt.r = 0;
       if (dragSpawnVid < 0) car.position.copy(tgt.pos);
-      carGroundPose(dragSpawnVid >= 0 ? car.rotation.y : (tgt.yaw || 0));
+      carGroundPose(tgt.yaw || 0);
     }
   }
   const cp = viewTargetPos();
@@ -1271,11 +1422,18 @@ function frame() {
   let activeCam = camera;
   if (simRunning) {
     const yaw = multiFleetActive() && fleetCars[selectedVid]
-      ? fleetCars[selectedVid].group.rotation.y : car.rotation.y;
+      ? fleetCars[selectedVid].group.rotation.y : (tgt.yaw || 0);
     if (camMode === 'orbit') {
-      const d = cp.clone().sub(prevCarPos);
-      camera.position.add(d); controls.target.add(d);
-      controls.enabled = true; controls.update();
+      controls.enabled = true;
+      if (orbitCtrlDirty) {
+        const d = cp.clone().sub(prevCarPos);
+        camera.position.add(d);
+        controls.target.add(d);
+        controls.update();
+        captureOrbitRig();
+        orbitCtrlDirty = false;
+      }
+      applyOrbitFollow(cp);
     } else if (camMode === 'chase') {
       controls.enabled = false;
       const fx = Math.cos(yaw), fz = -Math.sin(yaw);
@@ -1283,8 +1441,10 @@ function frame() {
       camera.lookAt(cp.x, cp.y + 1.2, cp.z);
     } else {
       controls.enabled = false;
-      orthoCam.position.set(cp.x, 120, cp.z);
-      orthoCam.lookAt(cp.x, 0, cp.z);
+      const camY = window._stuntActive ? Math.max(80, cp.y + 60) : 120;
+      const lookY = window._stuntActive ? cp.y : 0;
+      orthoCam.position.set(cp.x, camY, cp.z);
+      orthoCam.lookAt(cp.x, lookY, cp.z);
       activeCam = orthoCam;
     }
   } else if (camMode === 'top') {
@@ -1294,8 +1454,9 @@ function frame() {
     controls.update();
   } else {
     const t = setupControls.target;
-    camera.position.lerp(new THREE.Vector3(t.x - 11, 5, t.z), 0.08);
-    camera.lookAt(t.x, 1.2, t.z);
+    const elev = window._stuntActive ? Math.max(8, t.y + 5) : 5;
+    camera.position.lerp(new THREE.Vector3(t.x - 11, elev, t.z - 8), 0.08);
+    camera.lookAt(t.x, t.y + 1.2, t.z);
   }
   prevCarPos.copy(cp);
   refreshViewControls();
@@ -1339,10 +1500,77 @@ function setIllustrationMode(on) {
 }
 function refreshIllustration() { setIllustrationMode(!simRunning && camMode === 'top'); }
 
+const _orbitFocus = new THREE.Vector3();
+const _orbitOff = new THREE.Vector3();
+const _orbitSph = new THREE.Spherical();
+const orbitRig = { radius: 24, phi: 1.1, theta: -0.6, ok: false };
+let orbitCtrlDirty = false;
+controls.addEventListener('change', () => { orbitCtrlDirty = true; });
+
+function captureOrbitRig() {
+  _orbitOff.copy(camera.position).sub(controls.target);
+  _orbitSph.setFromVector3(_orbitOff);
+  orbitRig.radius = Math.max(controls.minDistance, Math.min(controls.maxDistance, _orbitSph.radius));
+  orbitRig.theta = _orbitSph.theta;
+  orbitRig.phi = Math.max(controls.minPolarAngle, Math.min(controls.maxPolarAngle, _orbitSph.phi));
+  orbitRig.ok = true;
+}
+function applyOrbitFollow(cp) {
+  if (!orbitRig.ok) captureOrbitRig();
+  _orbitSph.set(orbitRig.radius, orbitRig.phi, orbitRig.theta);
+  _orbitOff.setFromSpherical(_orbitSph);
+  controls.target.copy(cp);
+  camera.position.copy(cp).add(_orbitOff);
+  camera.up.set(0, 1, 0);
+  camera.lookAt(cp);
+}
+function resetOrbitRig() {
+  orbitRig.ok = false;
+  orbitCtrlDirty = false;
+}
+
+function orbitFocus(out = _orbitFocus) {
+  if (simRunning) return viewTargetPos(out);
+  return out.copy(setupControls.target);
+}
+function orbitDistForScene() {
+  if (window._stuntActive?.ground === 'loop') {
+    const R = +(window._lastStunt?.radius_m || 10);
+    return Math.max(32, R * 3.2);
+  }
+  if (window._stuntActive?.ground === 'ramp') return 26;
+  return 22;
+}
+function placeOrbitCamera(focus, { keepWorldPos = false } = {}) {
+  controls.target.copy(focus);
+  if (!keepWorldPos) {
+    const d = orbitDistForScene();
+    const yLift = window._stuntActive ? Math.max(8, focus.y * 0.2) : 6;
+    camera.position.set(
+      focus.x - d * 0.62,
+      focus.y + d * 0.38 + yLift * 0.25,
+      focus.z - d * 0.55,
+    );
+  }
+  camera.up.set(0, 1, 0);
+  controls.update();
+  captureOrbitRig();
+}
+function engageOrbitMode({ keepWorldPos = false } = {}) {
+  resetOrbitRig();
+  const focus = orbitFocus();
+  placeOrbitCamera(focus, { keepWorldPos });
+  prevCarPos.copy(focus);
+}
+
 function setCam(m) {
+  const prev = camMode;
+  if (prev === 'orbit' && m !== 'orbit') resetOrbitRig();
   camMode = m;
   ['orbit', 'chase', 'top'].forEach(id => $(`cam_${id}`).classList.toggle('on', id === m));
-  if (simRunning && m === 'orbit') controls.target.copy(car.position);
+  if (m === 'orbit') {
+    engageOrbitMode({ keepWorldPos: simRunning && prev === 'chase' });
+  }
   if (m !== 'cockpit') camera.up.set(0, 1, 0);
   refreshIllustration();
   refreshViewControls();
@@ -1734,10 +1962,13 @@ function updateSimModeUI(running) {
 function previewSpawn(st, force = false) {
   if (!force && dragSpawnVid >= 0) return;
   if (!st || st.x == null) return;
-  tgt.pos.copy(toThree(st.x, st.y, 0)); tgt.yaw = st.yaw || 0;
+  tgt.pos.copy(toThree(st.x, st.y, st.z || 0)); tgt.yaw = st.yaw || 0;
   tgt.roll = 0; tgt.pitch = 0; tgt.vx = 0; tgt.vy = 0; tgt.r = 0;
   tgt.wheelSpin = st.wheel_spin || [0, 0, 0, 0];
-  car.position.copy(tgt.pos); car.rotation.set(0, tgt.yaw, 0); tgt.has = true;
+  car.position.copy(tgt.pos);
+  vdsimIsoToThreeQuat(0, 0, tgt.yaw, car.quaternion);
+  sprung.quaternion.set(0, 0, 0, 1);
+  tgt.has = true;
   renderForces([], [], []);
   for (const i of steerIdx) { if (wheels[i]) wheels[i].rotation.y = 0; }
   wheelRoll = wheels.map(() => 0);
@@ -1817,12 +2048,17 @@ function applyState(s) {
     car.visible = true;
     if (s.fleet) updateFleetPoses(filterFleet(s.fleet), selectedVid);
     if (s.x == null) return;
-    tgt.pos.copy(toThree(s.x, s.y, 0)); tgt.yaw = s.yaw;
-    const dyn3 = (s.level === 'L3');
+    tgt.pos.copy(toThree(s.x, s.y, s.z ?? 0)); tgt.yaw = s.yaw;
+    const dyn3 = (s.level === 'L3' || s.level === 'L4' || s.level === 'L5');
     tgt.roll = dyn3 ? (s.roll || 0) : 0; tgt.pitch = dyn3 ? (s.pitch || 0) : 0;
     tgt.vx = s.vx || 0; tgt.vy = s.vy || 0; tgt.r = s.r || 0;
     tgt.wheelSpin = s.wheel_spin || [0, 0, 0, 0];
-    if (!tgt.has) { car.position.copy(tgt.pos); car.rotation.set(0, tgt.yaw, 0); tgt.has = true; }
+    if (!tgt.has) {
+      car.position.copy(tgt.pos);
+      vdsimIsoToThreeQuat(0, 0, tgt.yaw, car.quaternion);
+      sprung.quaternion.set(0, 0, 0, 1);
+      tgt.has = true;
+    }
     if (s.level && s.level !== renderLevel && !rebuilding) rebuildCar(s.level, selectedVid);
     renderForces(s.Ft, s.Fz, s.susp);
     pushTrail(tgt.pos.x, tgt.pos.z);
@@ -2089,6 +2325,7 @@ function collectWaypointPts() {
     return [x, y];
   }).filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]));
 }
+const FLEET_LEVELS = ['K', 'L1', 'L2', 'L3', 'L4', 'L5'];
 let setupVehicleList = [], setupTireSamples = [], setupSuspList = [], setupSuspL3Count = 0;
 let _fleetUiSig = '';
 let _fleetTreeSig = '';
@@ -2217,8 +2454,13 @@ function appendChassisDynamicsTools(parent, spec) {
   parent.appendChild(head);
   const row = document.createElement('div');
   row.className = 'modal-tools';
-  appendFleetSelectRow(row, 'Level', 'level', ['K', 'L1', 'L2', 'L3'], lvl);
+  appendFleetSelectRow(row, 'Level', 'level', FLEET_LEVELS, lvl);
   appendFleetSelectRow(row, 'Vehicle', 'vehicle', setupVehicleList, spec.vehicle || 'sedan');
+  const lnote = document.createElement('div');
+  lnote.className = 'sub';
+  lnote.style.cssText = 'width:100%;margin:2px 0 0';
+  lnote.textContent = 'L4 = L3 + hardpoint kinematics; L5 = free 3D stunt (jump/loop).';
+  row.appendChild(lnote);
   parent.appendChild(row);
 }
 function appendSuspensionFleetTools(parent, spec) {
@@ -2227,21 +2469,28 @@ function appendSuspensionFleetTools(parent, spec) {
   const lvl = spec.level || 'L2';
   const head = document.createElement('div');
   head.className = 'subgrp';
-  head.textContent = 'Kinematics (L3)';
+  head.textContent = 'Kinematics (L3/L4)';
   addHelp(head, 'Suspension');
   parent.appendChild(head);
   const row = document.createElement('div');
   row.className = 'modal-tools';
-  const l3 = lvl === 'L3';
+  const l3 = lvl === 'L3' || lvl === 'L4';
+  const l5 = lvl === 'L5';
   appendFleetSelectRow(row, 'Front axle', 'front_susp', setupSuspList,
     spec.front_susp || setupSuspList[0] || '', !l3);
   appendFleetSelectRow(row, 'Rear axle', 'rear_susp', setupSuspList,
     spec.rear_susp || setupSuspList[0] || '', !l3);
-  if (!l3) {
+  if (l5) {
     const note = document.createElement('div');
     note.className = 'sub';
     note.style.cssText = 'width:100%;margin:0 0 4px';
-    note.textContent = 'Hardpoint kinematics attach at dynamics Level L3.';
+    note.textContent = 'L5 rigid contact — edit unsprung/wheel inertia; springs are preview-only.';
+    row.appendChild(note);
+  } else if (!l3) {
+    const note = document.createElement('div');
+    note.className = 'sub';
+    note.style.cssText = 'width:100%;margin:0 0 4px';
+    note.textContent = 'Hardpoint kinematics attach at dynamics Level L3 or L4.';
     row.appendChild(note);
   }
   parent.appendChild(row);
@@ -2326,6 +2575,10 @@ async function renderFleetSpawn(fleet) {
     const title = document.createElement('b');
     title.textContent = `Vehicle ${vid}`;
     head.appendChild(title);
+    const lvlTag = document.createElement('span');
+    lvlTag.className = 'sub';
+    lvlTag.textContent = spec.level || 'L2';
+    head.appendChild(lvlTag);
     const ed = document.createElement('button');
     ed.type = 'button';
     ed.textContent = 'Edit';
@@ -2410,6 +2663,12 @@ async function loadSetupForm() {
       (s.scenarios || s.scenes || []).map(n => `<option value="${n}">${n}</option>`).join('');
     if (setupLoadedScenario) sel.value = setupLoadedScenario;
     buildInfraTree(s.infra_sensors || []);
+    const stunt = s.stunt || {};
+    drawStuntTrack(stunt);
+    if (stunt.ground) {
+      const st = fleetFromSpec(window._fleetSpec)[String(selectedVid)];
+      if (st) previewStuntSpawn(st);
+    }
     markDraftSynced();
     await refreshCompositionStatus();
   } catch (_) {}
@@ -2493,6 +2752,16 @@ $('setup_scenario_load').onclick = async () => {
   await loadSetupForm();
   await buildVehicleTree(r.fleet, selectedVid);
   await drawPath(); await drawRoad();
+  const stunt = r.stunt || window._lastState?.stunt || {};
+  drawStuntTrack(stunt);
+  if (stunt.ground) {
+    manualMode = true;
+    $('mode_drv').classList.remove('on');
+    $('mode_man').classList.add('on');
+    toggleManualBar(false);
+    const st = fleetFromSpec(r.fleet)[String(selectedVid)];
+    if (st) previewStuntSpawn(st);
+  }
   await refreshCompositionStatus();
 };
 function scenarioNameExists(name) {
@@ -3317,6 +3586,11 @@ function wireLive(el, url, after) {
     });
   });
 }
+function suspKinNameForCorner() {
+  const front = modalSuspFront || suspDefaults.front;
+  const rear = modalSuspRear || suspDefaults.rear;
+  return (modalCorner < 2) ? front : rear;
+}
 function redrawSuspCurve() {
   const cv = $('modal_susp_cv'); if (!cv) return;
   const kinp = document.querySelector('#modal_form [data-name="spring_stiffness"][data-idx="' + modalCorner + '"]');
@@ -3325,6 +3599,29 @@ function redrawSuspCurve() {
   for (let i = 0; i <= n; i++) { const d = xmin + (xmax - xmin) * i / n; x.push(d); y.push(-k * d); }
   plotChart(cv, { title: `Spring F–δ (${WS_CORNERS[modalCorner]}, k=${k.toFixed(0)} N/m)`,
     series: [{ x, y, label: 'F [N]', color: '#01A0E9' }] });
+  refreshSuspKcCurves();
+}
+async function refreshSuspKcCurves() {
+  const box = $('modal_susp_kc_curves'); if (!box) return;
+  const spec = window._fleetSpec?.find(f => +f.id === modalVid);
+  const lvl = spec?.level || modalLvl || 'L2';
+  if (lvl !== 'L3' && lvl !== 'L4') { box.innerHTML = ''; return; }
+  const name = suspKinNameForCorner();
+  if (!name) { box.innerHTML = ''; return; }
+  try {
+    const r = await (await fetch(`/api/suspension/kc?name=${encodeURIComponent(name)}`)).json();
+    if (r.error) { box.innerHTML = `<div class="sub">${r.error}</div>`; return; }
+    const head = document.createElement('div');
+    head.className = 'subgrp';
+    head.textContent = `K&C — ${r.name} (${r.type})`;
+    box.innerHTML = '';
+    box.appendChild(head);
+    const curves = document.createElement('div'); curves.className = 'modal-curves';
+    box.appendChild(curves);
+    renderPlots(curves, r.plots || []);
+  } catch (e) {
+    box.innerHTML = `<div class="sub">K&C charts unavailable (${e})</div>`;
+  }
 }
 async function refreshTireCurves() {
   const box = $('modal_tire_curves'); if (!box) return;
@@ -3389,6 +3686,7 @@ function renderModalPane() {
       const curves = document.createElement('div'); curves.className = 'modal-curves';
       const cv = document.createElement('canvas'); cv.id = 'modal_susp_cv'; curves.appendChild(cv);
       shell.appendChild(curves);
+      const kc = document.createElement('div'); kc.id = 'modal_susp_kc_curves'; shell.appendChild(kc);
       form.querySelectorAll('[data-name]').forEach(inp => {
         inp.addEventListener(inp.type === 'checkbox' ? 'change' : 'input', () => redrawSuspCurve());
       });

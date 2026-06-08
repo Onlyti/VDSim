@@ -1,0 +1,47 @@
+type: double_wishbone
+side: left
+wheel:
+  spin_axis:
+  - 0.0
+  - 1.0
+  - 0.0
+  static_radius: 0.33
+  center:
+  - 0.0
+  - 0.79
+  - 0.33
+lca:
+  knuckle:
+  - -0.02
+  - 0.75
+  - 0.15
+  chassis_front:
+  - 0.15
+  - 0.3
+  - 0.08
+  chassis_rear:
+  - -0.18
+  - 0.3
+  - 0.08
+uca:
+  knuckle:
+  - -0.01
+  - 0.7
+  - 0.55
+  chassis_front:
+  - 0.08
+  - 0.45
+  - 0.32
+  chassis_rear:
+  - -0.22
+  - 0.45
+  - 0.32
+tie_rod:
+  rack:
+  - -0.3
+  - 0.35
+  - 0.18
+  knuckle:
+  - -0.3
+  - 0.74
+  - 0.21

@@ -26,6 +26,8 @@ add_library(vdsim_core
     src/multibody_compliance.cpp
     src/multibody_dynamics.cpp
     src/multibody_hard_dae.cpp
+    src/multibody_kc_sweep.cpp
+    src/multibody_kc_xcheck.cpp
 )
 
 target_include_directories(vdsim_core PUBLIC

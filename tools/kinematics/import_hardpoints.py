@@ -168,6 +168,17 @@ def build_yaml(points: Dict[str, Tuple[float, float, float]],
 # -----------------------------------------------------------------------------
 # Main
 # -----------------------------------------------------------------------------
+def import_csv_to_yaml(input_path: Path, output_path: Path,
+                       type_: str = "auto", side: str = "left",
+                       wheel_radius: float = 0.30) -> dict:
+    points = read_csv(input_path)
+    resolved = autodetect_type(points) if type_ == "auto" else type_
+    doc = build_yaml(points, resolved, side, wheel_radius)
+    with open(output_path, "w") as f:
+        yaml.safe_dump(doc, f, default_flow_style=False, sort_keys=False)
+    return doc
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--input", required=True, type=Path,
@@ -184,9 +195,7 @@ def main():
     type_ = autodetect_type(points) if args.type == "auto" else args.type
     print(f"[import] type = {type_}, side = {args.side}, {len(points)} hardpoints")
 
-    y = build_yaml(points, type_, args.side, args.wheel_radius)
-    with open(args.output, "w") as f:
-        yaml.safe_dump(y, f, default_flow_style=False, sort_keys=False)
+    import_csv_to_yaml(args.input, args.output, type_, args.side, args.wheel_radius)
     print(f"[import] wrote {args.output}")
 
 
