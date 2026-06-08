@@ -264,13 +264,13 @@ reference 이므로, gain 이 ±5 % 안에 들면 kinematic 모델의 신뢰성�
 > | Stage | 상태 | deliverable |
 > |---|---|---|
 > | M0 | done | header + topology YAML stub |
-> | M1 | done | MacPherson FK + native solver (ch14.4) |
-> | M2 | done | DW + trailing arm + 5-link FK (ch14.3/5/6) |
-> | M3 | Phase 2 | quasi-static compliance (bushing) — 보류 |
-> | M4 | Phase 2 | full DAE (Featherstone) |
-> | M5 | 부분 | sweep CSV + plot; 표준 K&C chart 미완 |
-> | M6 | done | Adams CSV import (ch14.9) |
-> | M7 | Phase 2 | Adams vs VDSim cross-validation (실측 대기) |
+> | M1 | done | FK attach, `L4_Kinematic`, native + lookup |
+> | M2 | done | topology graph (MP/DW/TA/5-link) |
+> | M3 | done | quasi-static bushing compliance |
+> | M4 | done | hard-joint corner DAE + Baumgarte travel (**L4 runtime**) |
+> | M5 | done | K&C sweep + GUI charts |
+> | M6 | done | Adams import x-check (5 gains, 5% rtol) |
+> | M7 | done | lumped 1-DOF revolute RNEA (**offline**, not L4 step) |
 >
-> FK 가 lookup + native 두 backend 로 구현됨 (ch14.7). M3 compliance 가 Ld5
-> 핵심으로 남음.
+> Spec: [`docs/design/LD4_MULTIBODY.md`](../../design/LD4_MULTIBODY.md). Full loop
+> Featherstone / augmented Lagrangian → v0.6+.

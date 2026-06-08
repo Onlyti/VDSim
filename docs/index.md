@@ -15,7 +15,7 @@ single C++17 + Python ABI.
 - **v0.3**: parts catalog + scene runtime (`--scene=`), GUI catalog API.
 - **Physics**: drivetrain `engine_rotational_inertia` (default on); LuGre tire
   default on (`lugre.enabled`); kinematic fallback via `tire.kinematic_fallback` or `--no-lugre`.
-- **Tests**: [209 / 209 ctest](VALIDATION.md) (2026-06-06).
+- **Tests**: **254 / 254 ctest** (2026-06-08, branch `feat/v0.4-slope-jump-m5`).
 - **Roadmap**: [Product roadmap](ROADMAP.md) — shipped vs planned by subsystem.
 - **User guide**: [Catalog & physics options](CATALOG_AND_PHYSICS.md).
 - **10 CLI demo binaries**, **Python bindings**, **CARLA-ready raycast ABI**,
@@ -32,8 +32,8 @@ VDSim 의 차별화 — single ABI 안에서 두 사다리 m × n 매트릭스.
 | Ld1-Bicycle | 5 | done |
 | Ld2-SevenDOF | 7 | done |
 | Ld3-FourteenDOF | 14 (sprung 3 + unsprung 4) | done |
-| Ld4-MultibodyKinematic | hardpoint-driven | M0 stub (planned M1-M7) |
-| Ld5-MultibodyCompliant | DAE constrained | planned |
+| Ld4-MultibodyKinematic | hardpoint FK + hard-joint DAE | **shipped M1–M7** ([spec](design/LD4_MULTIBODY.md)) |
+| Ld5-Free3D | quaternion 6-DOF + hub contact | **shipped** (v0.4 stunt); terrain → v0.5 |
 
 ### Control ladder (abstraction)
 

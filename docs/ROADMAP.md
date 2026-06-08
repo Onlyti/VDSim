@@ -1,6 +1,6 @@
 # VDSim product roadmap
 
-**Last updated:** 2026-06-05 · **Tests:** 214/214 ctest green (branch `feat/v0.4-slope-jump-m5`)
+**Last updated:** 2026-06-08 · **Tests:** 254/254 ctest green (branch `feat/v0.4-slope-jump-m5`)
 
 Living roadmap from early PoC through v0.3. Tracks what shipped in mainline vs what
 is planned. Detail specs link to `docs/design/*`; tire phases in
@@ -20,13 +20,13 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 
 | Area | Shipped (high level) | Next |
 |------|----------------------|------|
-| Dynamics L1–L3 | Full planar + 14-DOF ride | **Slope/jump** → [`V0.4_SLOPE_JUMP_DYNAMICS.md`](design/V0.4_SLOPE_JUMP_DYNAMICS.md); Ld5 loop (v0.4) |
+| Dynamics L1–L5 | L1–L3 planar/14-DOF; **Ld4** hard-joint; **Ld5** stunt | v0.5 terrain → [`V0.5_TERRAIN_L5.md`](design/V0.5_TERRAIN_L5.md) |
 | Tire | MF96 + LuGre **default**; kinematic fallback part | MF2002 catalog, belt transient |
 | Drivetrain | Engine inertia + open-diff coupling | Torque–RPM map, gearbox |
 | Brake / steer | Pluggable modules + deadtime | Booster/MDPS physics |
 | Catalog / runtime | `--scene=`, fleet, FMI | External part packs, VDS1 v4 |
 | GUI | 3-tab scene UI, catalog API, workshops | Tire `.tir` import UI |
-| Validation | ISO 7401/4138/3888, 209 ctest | Re-baseline post-drivetrain; stunt suite |
+| Validation | ISO 7401/4138/3888, 254 ctest | Re-baseline flat; Adams x-check rtol |
 
 ```mermaid
 timeline
@@ -42,8 +42,11 @@ timeline
         Parts catalog M1-M5 : 2026-06
         Drivetrain inertia : 2026-06
         LuGre tire tuned : 2026-06
+    section v0.4
+        Ld5 stunt jump loop : 2026-06
+        Ld4 multibody M1-M7 : 2026-06
     section Next
-        v0.4 stunt Ld5 : planned
+        v0.5 terrain L5 : planned
         Tire belt transient : planned
 ```
 
@@ -59,10 +62,11 @@ timeline
 | [x] L1↔L2↔L3 cross-model consistency | Shipped | `PlanarMotionMatchesL2`, grid sweeps |
 | [x] Low-speed kinematic blend (default tire) | Shipped | [`LOW_SPEED_HANDLING.md`](design/LOW_SPEED_HANDLING.md) |
 | [x] LuGre path skips blend | Shipped opt-in | Full dynamic EOM at all speeds |
-| [x] Ld4 hardpoint kinematics (attach) | Shipped | Native kin YAML; fleet parts wiring |
-| [ ] Ld4 full multibody (M1–M7) | Planned | Theory ch.13–14; dependent axle stubs |
-| [ ] Ld5 6-DOF 3D body + quaternion | Planned v0.4 | [`V0.4_PLAN.md`](design/V0.4_PLAN.md) WS-C |
-| [ ] 3D contact / airborne / ramp jump | Planned v0.4 | T23 port; `is_valid` wired |
+| [x] Ld4 hardpoint kinematics (attach) | Shipped | Native kin YAML; `level=L4` |
+| [x] Ld4 multibody M1–M7 | Shipped | [`LD4_MULTIBODY.md`](design/LD4_MULTIBODY.md); M4 runtime, M7 offline |
+| [x] Ld5 6-DOF 3D body + quaternion | Shipped v0.4 (stunt) | `free_3d_dynamics.cpp`; terrain → v0.5 |
+| [x] 3D contact / airborne / ramp jump | Shipped v0.4 | [`V0.4_SLOPE_JUMP_DYNAMICS.md`](design/V0.4_SLOPE_JUMP_DYNAMICS.md) |
+| [ ] **Terrain + L5 general driving** | Planned v0.5 | [`V0.5_TERRAIN_L5.md`](design/V0.5_TERRAIN_L5.md) |
 | [ ] V2V collision | Planned | [`V0.2_MULTIVEHICLE.md`](design/V0.2_MULTIVEHICLE.md) |
 
 ---
@@ -172,7 +176,7 @@ LuGre (contact bristle, presliding). See [`TIRE_ROADMAP.md`](design/TIRE_ROADMAP
 | [ ] Progressive / bump-stop spring curves | Planned | v0.4 droop/bump |
 | [ ] Unsprung vs sprung damper split (L3) | Planned | PoC backlog |
 | [ ] Dependent axle (twist-beam, solid beam) | Planned | Config stubs only |
-| [ ] Full Ld4 compliant multibody | Planned | M1–M7 |
+| [x] Ld4 multibody M1–M7 | Shipped | [`LD4_MULTIBODY.md`](design/LD4_MULTIBODY.md); bushing step off in L4 |
 
 ---
 

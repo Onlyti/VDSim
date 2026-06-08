@@ -128,11 +128,24 @@ Theory: [Chapter 19 — LuGre / brush-dynamic tire](theory/19_lugre_dynamic_tire
 | Python | `Tire.preset().lugre(True)` or `Experiment().tire(...)` |
 | Demo | `python3 examples/lugre_demo.py` · scene `configs/scenes/lugre_grade_demo.yaml` |
 
+## L4 kinematic multibody
+
+Blueprint `level: L4` (or scene fleet entry) uses `create_fourteen_dof_kinematic()`:
+native suspension kin YAML per corner + **hard-joint corner DAE** in the step loop.
+
+| Item | Location |
+|------|----------|
+| Kin parts | `configs/parts/susp_kinematics/kin/*.yaml` |
+| Example scene | `configs/scenes/l4_sedan_kinematics.yaml` |
+| Design spec | [`design/LD4_MULTIBODY.md`](design/LD4_MULTIBODY.md) |
+| K&C charts (GUI) | Suspension modal → `/api/suspension/kc` |
+| Adams x-check | `tools/kinematics/adams_xcheck.py` |
+
 ## Verification
 
 ```bash
 cmake --build build -j
-cd build && ctest --output-on-failure    # 209 tests (2026-06)
+cd build && ctest --output-on-failure    # 254 tests (2026-06-08)
 ```
 
 Relevant ctests: `catalog_*`, `scene_materialize`, `import_part_pack`,
