@@ -27,7 +27,13 @@
 #include <variant>
 #include <vector>
 
+#include <Eigen/Core>
+
 #include "vdsim/types.hpp"
+
+namespace vdsim {
+class IVehicleDynamics;
+}
 
 namespace vdsim::mb {
 
@@ -116,15 +122,18 @@ enum class TopologyKind {
 struct SuspensionTopology {
     TopologyKind                 kind;
     std::string                  name;            // human-readable
+    std::string                  kin_yaml_path;   // native ISuspensionKinematics config
     std::vector<RigidBody>       bodies;          // links + knuckle + (sprung body ref)
     std::vector<Joint>           joints;          // ball / revolute / etc.
     std::vector<Bushing>         bushings;        // optional compliant elements
     std::map<std::string, Hardpoint> hardpoints;  // labeled coordinates
 
-    // Diagnostic outputs filled by forward kinematics evaluation.
+    // Diagnostic outputs filled by forward kinematics + compliance (M3).
     double toe_deg            {0.0};
     double camber_deg         {0.0};
     double caster_deg         {0.0};
+    double compliance_toe_deg    {0.0};
+    double compliance_camber_deg {0.0};
     double kingpin_incl_deg   {0.0};
     double scrub_radius_mm    {0.0};
     double mech_trail_mm      {0.0};
@@ -141,8 +150,8 @@ struct SuspensionTopology {
 //       compute wheel pose (toe, camber, caster) and bushing deflections.
 //     * Compliance / static balance: given external loads at wheel center
 //       (Fx, Fy, Fz, Mz), compute equilibrium.
-//     * Dynamic: full DAE (Featherstone or augmented Lagrangian); reserved
-//       for M4.
+//     * Dynamic: hard-joint corner DAE (revolute + Baumgarte travel constraint);
+//       bushing compliance optional / off by default.
 // -----------------------------------------------------------------------------
 struct WheelLoad {
     Vec3 force_world  {Vec3::Zero()};       // [N]  Fx, Fy, Fz at wheel center, world frame
@@ -157,12 +166,53 @@ struct WheelPose {
     double caster_rad     {0.0};
 };
 
+struct PrescribedCornerMotion {
+    double travel_z       {0.0};
+    double travel_z_dot   {0.0};
+    double travel_z_ddot  {0.0};
+    double steer_rack_dy  {0.0};
+    double steer_rack_dy_dot {0.0};
+};
+
+struct HardJointCornerState {
+    double q  {0.0};
+    double qd {0.0};
+    Vec3   knuckle_aa {Vec3::Zero()};
+};
+
+struct CornerDaeParams {
+    double m_toe    {0.15};
+    double m_camber {0.15};
+    double c_toe    {0.0};
+    double c_camber {0.0};
+    double k_toe    {1.0};
+    double k_camber {1.0};
+};
+
+struct CornerDynamicsState {
+    double q_toe_rad    {0.0};
+    double q_toe_dot      {0.0};
+    double q_camber_rad   {0.0};
+    double q_camber_dot   {0.0};
+};
+
+class IHardJointDaeModel {
+public:
+    virtual ~IHardJointDaeModel() = default;
+    virtual void initialize(HardJointCornerState& st,
+                            const PrescribedCornerMotion& mot) const = 0;
+    virtual WheelPose step(HardJointCornerState& st,
+                           const PrescribedCornerMotion& mot,
+                           const WheelLoad& load,
+                           double dt) const = 0;
+};
+
 class IMultibodySolver {
 public:
     virtual ~IMultibodySolver() = default;
 
     // M1 forward kinematics: travel + steer -> wheel pose
-    virtual WheelPose forward_kinematics(const SuspensionTopology& topo,
+    virtual WheelPose forward_kinematics(SuspensionTopology& topo,
                                           double travel_z,
                                           double steer_rad) const = 0;
 
@@ -170,11 +220,142 @@ public:
     virtual void quasi_static_compliance(SuspensionTopology& topo,
                                           const WheelLoad& load) const = 0;
 
-    // M4 full dynamics (placeholder)
-    virtual void step_dynamics(SuspensionTopology& topo, double dt) const = 0;
+    // M4 bushing dynamics: F -> q'', integrated over dt
+    virtual void step_dynamics(SuspensionTopology& topo,
+                               CornerDynamicsState& state,
+                               const WheelLoad& load,
+                               double dt) const = 0;
 };
 
 // Factory (M1 implementation slot).
 std::unique_ptr<IMultibodySolver> create_kinematic_solver();
+
+bool attach_topology_front(IVehicleDynamics& dyn, const SuspensionTopology& topo);
+bool attach_topology_rear(IVehicleDynamics& dyn, const SuspensionTopology& topo);
+
+int topology_hardpoint_count(const SuspensionTopology& topo);
+
+void ensure_default_bushings(SuspensionTopology& topo);
+void solve_quasi_static_compliance(SuspensionTopology& topo, const WheelLoad& load);
+void compliance_targets_rad(const SuspensionTopology& topo, const WheelLoad& load,
+                            double& toe_rad, double& camber_rad);
+CornerDaeParams corner_dae_params(SuspensionTopology& topo);
+void step_corner_dynamics(CornerDynamicsState& state,
+                          SuspensionTopology& topo,
+                          const WheelLoad& load,
+                          double dt);
+
+std::unique_ptr<IHardJointDaeModel> create_hard_joint_dae_model(
+    const SuspensionTopology& topo);
+void step_hard_joint_dae(HardJointCornerState& state,
+                         IHardJointDaeModel& model,
+                         SuspensionTopology& topo,
+                         const PrescribedCornerMotion& mot,
+                         const WheelLoad& load,
+                         double dt);
+
+struct KcSweepParams {
+    double travel_min_m    {-0.10};
+    double travel_max_m    { 0.10};
+    int    travel_n        {41};
+    double steer_rack_min_m {-0.04};
+    double steer_rack_max_m { 0.04};
+    int    steer_n         {17};
+    double fy_min_n        {-4000.0};
+    double fy_max_n        { 4000.0};
+    int    fy_n            {9};
+    double fz_nominal_n    {4500.0};
+};
+
+struct KcSweepSample {
+    double abscissa            {0.0};
+    double toe_deg             {0.0};
+    double camber_deg          {0.0};
+    double caster_deg          {0.0};
+    double track_mm            {0.0};
+    double compliance_toe_deg    {0.0};
+    double compliance_camber_deg {0.0};
+};
+
+struct KcSweepResult {
+    std::vector<KcSweepSample> travel;
+    std::vector<KcSweepSample> steer;
+    std::vector<KcSweepSample> compliance_fy;
+};
+
+KcSweepResult run_kc_sweep(const SuspensionTopology& topo,
+                           const KcSweepParams& params = {});
+
+struct KcMetrics {
+    double toe_gain_travel_deg_per_mm     {0.0};
+    double camber_gain_travel_deg_per_mm  {0.0};
+    double track_gain_travel_mm_per_mm    {0.0};
+    double toe_gain_steer_deg_per_mm      {0.0};
+    double caster_gain_steer_deg_per_mm   {0.0};
+};
+
+struct KcMetricDelta {
+    std::string name;
+    double reference {0.0};
+    double candidate {0.0};
+    double rel_error {0.0};
+    bool   ok        {false};
+};
+
+struct KcXcheckReport {
+    bool all_ok {false};
+    std::vector<KcMetricDelta> deltas;
+};
+
+KcMetrics compute_kc_metrics(const KcSweepResult& sweep);
+KcXcheckReport compare_kc_metrics(const KcMetrics& reference,
+                                  const KcMetrics& candidate,
+                                  double rtol = 0.05,
+                                  double atol = 1e-4);
+KcXcheckReport run_kc_xcheck(const std::string& reference_yaml,
+                             const std::string& candidate_yaml,
+                             double rtol = 0.05,
+                             const KcSweepParams& params = {});
+
+struct RevoluteLink {
+    int    parent {-1};
+    Vec3   axis_in_parent {Vec3::UnitY()};
+    Vec3   r_joint_in_parent {Vec3::Zero()};
+    double mass {1.0};
+    Vec3   com_in_child {Vec3::Zero()};
+    Mat3   inertia_com {Mat3::Identity()};
+};
+
+struct LinkTreeModel {
+    std::vector<RevoluteLink> links;
+    int num_dof() const { return static_cast<int>(links.size()); }
+};
+
+struct LinkTreeState {
+    Eigen::VectorXd q;
+    Eigen::VectorXd qd;
+};
+
+struct LinkTreeExternalLoad {
+    Vec3 force_world {Vec3::Zero()};
+    Vec3 point_world {Vec3::Zero()};
+};
+
+LinkTreeModel build_revolute_tree(const SuspensionTopology& topo);
+Eigen::VectorXd rnea_revolute_tree(const LinkTreeModel& model,
+                                   const Eigen::VectorXd& q,
+                                   const Eigen::VectorXd& qd,
+                                   const Eigen::VectorXd& qdd,
+                                   const std::vector<LinkTreeExternalLoad>& ext,
+                                   const Vec3& gravity_world = Vec3(0, 0, -9.81));
+Eigen::VectorXd forward_dynamics_revolute_tree(
+    const LinkTreeModel& model, const Eigen::VectorXd& q, const Eigen::VectorXd& qd,
+    const Eigen::VectorXd& tau, const std::vector<LinkTreeExternalLoad>& ext,
+    const Vec3& gravity_world = Vec3(0, 0, -9.81));
+void step_revolute_link_tree(const LinkTreeModel& model, LinkTreeState& st,
+                             const Eigen::VectorXd& tau,
+                             const std::vector<LinkTreeExternalLoad>& ext,
+                             double dt,
+                             const Vec3& gravity_world = Vec3(0, 0, -9.81));
 
 }  // namespace vdsim::mb
