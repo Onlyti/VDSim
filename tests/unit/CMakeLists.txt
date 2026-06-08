@@ -10,6 +10,7 @@ add_executable(vdsim_unit_tests
     test_carla_plugin.cpp
     test_multibody_header.cpp
     test_multibody_kinematics.cpp
+    test_multibody_featherstone.cpp
     test_suspension_lookup.cpp
     test_actuator.cpp
     test_sim_session.cpp

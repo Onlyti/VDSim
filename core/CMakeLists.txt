@@ -28,6 +28,7 @@ add_library(vdsim_core
     src/multibody_hard_dae.cpp
     src/multibody_kc_sweep.cpp
     src/multibody_kc_xcheck.cpp
+    src/multibody_featherstone.cpp
 )
 
 target_include_directories(vdsim_core PUBLIC
