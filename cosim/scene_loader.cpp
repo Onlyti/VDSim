@@ -19,6 +19,9 @@ namespace vdsim::cosim {
 
 static bool is_catalog_scene(const std::string& path) {
     const YAML::Node root = YAML::LoadFile(path);
+    const auto veh = root["vehicles"];
+    if (veh && veh.IsSequence() && veh.size() > 0)
+        return false;
     const auto fleet = root["fleet"];
     return fleet && fleet.IsSequence() && fleet.size() > 0;
 }

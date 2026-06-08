@@ -8,6 +8,7 @@ add_library(vdsim_core
     src/kinematic_dynamics.cpp
     src/seven_dof_dynamics.cpp
     src/fourteen_dof_dynamics.cpp
+    src/free_3d_dynamics.cpp
     src/contact_providers.cpp
     src/params.cpp
     src/scenario.cpp

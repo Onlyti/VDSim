@@ -5,6 +5,7 @@
 
 #include "vdsim/coordinate.hpp"
 #include "vdsim/interfaces.hpp"
+#include "vdsim/multibody.hpp"
 #include "vdsim/suspension.hpp"
 
 #include <gtest/gtest.h>
@@ -37,6 +38,54 @@ TEST(FourteenDOF, ConstructionAndLevel) {
     auto p = vdsim::create_fourteen_dof();
     ASSERT_NE(p, nullptr);
     EXPECT_EQ(p->level(), vdsim::IVehicleDynamics::Level::L3_FourteenDOF);
+}
+
+TEST(FourteenDOF, L4MultibodyDynamicsInStep) {
+    const std::string kin = std::string(VDSIM_SOURCE_DIR)
+        + "/configs/parts/susp_kinematics/kin/mp_front_sedan.yaml";
+    auto dyn = vdsim::create_fourteen_dof_kinematic();
+    vdsim::VehicleParams vp; vp.aero_drag_coeff = 0.0;
+    vdsim::TireParams tp; tp.lugre.enabled = false;
+    vdsim::SolverParams sp;
+    dyn->initialize(vp, tp, sp);
+    auto topo = vdsim::mb::SuspensionTopology::from_yaml(kin);
+    ASSERT_TRUE(vdsim::mb::attach_topology_front(*dyn, topo));
+    vdsim::State s0; s0.velocity.x() = 15.0;
+    const double w0 = 15.0 / vp.wheel_radius_nominal;
+    s0.wheel_spin = {{w0, w0, w0, w0}};
+    dyn->reset(s0);
+    vdsim::CmdL4 cmd; cmd.steer_angle_wheel = 0.08;
+    const vdsim::ContactArray contacts = flat_contacts();
+    for (int i = 0; i < 800; ++i) dyn->step(cmd, contacts, 0.005);
+    EXPECT_NEAR(dyn->compliance_toe_rad(0), 0.0, 1e-12);
+    EXPECT_GT(std::abs(dyn->wheel_slip_angle()[vdsim::WHEEL_FL]), 1e-4);
+}
+
+TEST(FourteenDOF, L4KinematicLevelAndAttach) {
+    const std::string kin = std::string(VDSIM_SOURCE_DIR)
+        + "/configs/parts/susp_kinematics/kin/mp_front_sedan.yaml";
+    auto dyn = vdsim::create_fourteen_dof_kinematic();
+    ASSERT_NE(dyn, nullptr);
+    EXPECT_EQ(dyn->level(), vdsim::IVehicleDynamics::Level::L4_Kinematic);
+    vdsim::VehicleParams vp; vp.aero_drag_coeff = 0.0;
+    vdsim::TireParams tp; tp.lugre.enabled = false;
+    vdsim::SolverParams sp;
+    dyn->initialize(vp, tp, sp);
+    auto topo = vdsim::mb::SuspensionTopology::from_yaml(kin);
+    ASSERT_TRUE(vdsim::mb::attach_topology_front(*dyn, topo));
+    vdsim::State s0; s0.velocity.x() = 10.0;
+    const double w0 = 10.0 / vp.wheel_radius_nominal;
+    s0.wheel_spin = {{w0, w0, w0, w0}};
+    dyn->reset(s0);
+    vdsim::CmdL4 cmd; cmd.steer_angle_wheel = 0.05;
+    vdsim::ContactArray contacts;
+    for (auto& p : contacts) {
+        p.is_valid = true;
+        p.normal = vdsim::Vec3::UnitZ();
+        p.mu_long = 1.0; p.mu_lat = 1.0;
+    }
+    for (int i = 0; i < 200; ++i) dyn->step(cmd, contacts, 0.001);
+    EXPECT_GT(std::abs(dyn->state().velocity.x()), 5.0);
 }
 
 TEST(FourteenDOF, StaticSuspensionPopulatedAtRest) {

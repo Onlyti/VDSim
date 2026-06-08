@@ -93,6 +93,7 @@ void apply_lugre_cli(vdsim::TireParams& tp, int c, char** v) {
 std::unique_ptr<vdsim::IVehicleDynamics> make_dyn(const std::string& lvl) {
     if (lvl == "L1") return vdsim::create_bicycle();
     if (lvl == "L3") return vdsim::create_fourteen_dof();
+    if (lvl == "L4") return vdsim::create_fourteen_dof_kinematic();
     if (lvl == "L5") return vdsim::create_stunt_dof();
     return vdsim::create_seven_dof();
 }
@@ -113,7 +114,7 @@ std::string resolve_susp_yaml(std::string ref) {
 }
 void attach_susp_parts(vdsim::IVehicleDynamics& dyn, const std::string& lvl,
                        const std::string& front_yaml, const std::string& rear_yaml) {
-    if (lvl != "L3") return;
+    if (lvl != "L3" && lvl != "L4") return;
     const std::string front = resolve_susp_yaml(front_yaml);
     const std::string rear  = resolve_susp_yaml(rear_yaml);
     if (!front.empty()) {
@@ -143,8 +144,23 @@ double now_s() {
 }
 
 std::unique_ptr<vdsim::IContactProvider> make_ground(
-    const std::string& terrain, double mu, double mu_right, double mu_boundary,
-    double grade, double bank, double rough_amp, double rough_wl, int iso_class) {
+    const vdsim::cosim::RoadConfig& rd, const vdsim::cosim::StuntConfig& stunt) {
+    if (!stunt.ground.empty()) {
+        if (stunt.ground == "ramp")
+            return vdsim::create_ramp_ground(
+                stunt.ramp_x_start, stunt.ramp_x_top, stunt.ramp_height,
+                stunt.ramp_lip, rd.mu);
+        if (stunt.ground == "loop")
+            return vdsim::create_loop_ground(
+                stunt.loop_center_x, stunt.loop_center_z, stunt.loop_radius, rd.mu);
+        std::fprintf(stderr, "[vdsim_realtime] unknown stunt.ground=%s (flat)\n",
+                     stunt.ground.c_str());
+    }
+    const std::string& terrain = rd.terrain;
+    const double mu = rd.mu, mu_right = rd.mu_right, mu_boundary = rd.mu_boundary;
+    const double grade = rd.grade, bank = rd.bank;
+    const double rough_amp = rd.rough_amp, rough_wl = rd.rough_wl;
+    const int iso_class = rd.iso_class;
     if (!terrain.empty()) {
         std::ifstream f(terrain, std::ios::binary);
         int32_t nx = 0, ny = 0; double x0 = 0, y0 = 0, dx = 0, dy = 0;
@@ -167,6 +183,42 @@ std::unique_ptr<vdsim::IContactProvider> make_ground(
     if (grade != 0.0 || bank != 0.0) return vdsim::create_inclined_ground(0.0, grade, bank, mu);
     if (mu_right >= 0.0) return vdsim::create_split_mu_ground(0.0, mu, mu_right, mu_boundary);
     return vdsim::create_flat_ground(0.0, mu);
+}
+
+void settle_spawn_on_ground(vdsim::IContactProvider& ground,
+                            const vdsim::VehicleParams& vp, vdsim::State& s) {
+    auto max_pen = [&]() {
+        vdsim::ContactArray c{};
+        ground.query(s, vp, c);
+        double lift = 0.0;
+        for (int i = 0; i < vdsim::NUM_WHEELS; ++i) {
+            if (c[i].is_valid)
+                lift = std::max(lift, c[i].penetration);
+        }
+        return lift;
+    };
+    if (s.position.z() < 1e-6) s.position.z() = vp.cg_height;
+    for (int drop = 0; drop < 120; ++drop) {
+        if (max_pen() > 1e-5) break;
+        s.position.z() -= 0.04;
+        if (s.position.z() < -2.0) break;
+    }
+    for (int climb = 0; climb < 400; ++climb) {
+        if (max_pen() > 1e-5) break;
+        s.position.z() += 0.08;
+        if (s.position.z() > 250.0) break;
+    }
+    for (int k = 0; k < 24; ++k) {
+        const double lift = max_pen();
+        if (lift < 1e-5) break;
+        s.position.z() += lift;
+    }
+    for (int k = 0; k < 32; ++k) {
+        const double pen = max_pen();
+        if (pen < 1e-6) break;
+        s.position.z() -= std::min(pen * 0.5, 0.02);
+    }
+    s.velocity.z() = 0.0;
 }
 
 bool addr_same(const sockaddr_in& a, const sockaddr_in& b) {
@@ -266,6 +318,18 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
     vdsim::SimConfig cfg; cfg.nominal_dt = dt;
     if (!rd.sensors.empty()) cfg.sensors = vdsim::SensorParams::from_yaml(rd.sensors);
     cfg.sensor_delay_s = rd.sensor_delay;
+    const bool stunt_world = !world.stunt.ground.empty();
+    if (stunt_world) {
+        sp.stunt_physics = true;
+        sp.max_substep_dt = 1e-4;
+        sp.max_substeps = 24;
+        if (world.stunt.ground == "loop") {
+            sp.loop_radius = world.stunt.loop_radius;
+            sp.loop_center_x = world.stunt.loop_center_x;
+            sp.loop_center_z = world.stunt.loop_center_z;
+            sp.loop_rail_guide = world.stunt.rail_guide;
+        }
+    }
 
     std::vector<WorldVehicle> fleet;
     std::unordered_map<uint32_t, WorldVehicle*> by_id;
@@ -275,20 +339,24 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
         wv.vp = vdsim::VehicleParams::from_yaml(spn.vehicle_yaml);
         auto tp = vdsim::TireParams::from_yaml(spn.tire_yaml);
         apply_lugre_cli(tp, argc, argv);
+        vdsim::SolverParams sp_v = sp;
+        if (spn.level == "L5" && !stunt_world) {
+            sp_v.stunt_physics = true;
+            sp_v.max_substep_dt = 2e-4;
+        }
         auto dyn = make_dyn(spn.level);
         attach_susp_parts(*dyn, spn.level, spn.front_susp, spn.rear_susp);
-        wv.sim = std::make_unique<vdsim::SimSession>(
-            std::move(dyn),
-            make_ground(rd.terrain, rd.mu, rd.mu_right, rd.mu_boundary,
-                        rd.grade, rd.bank, rd.rough_amp, rd.rough_wl, rd.iso_class),
-            wv.vp, tp, sp, cfg);
+        auto gnd = make_ground(rd, world.stunt);
         vdsim::State s0;
-        s0.position = vdsim::Vec3(spn.x0, spn.y0, 0.0);
+        s0.position = vdsim::Vec3(spn.x0, spn.y0, spn.z0);
         s0.orientation = vdsim::quat_from_euler(vdsim::Euler{0.0, 0.0, spn.yaw0});
         s0.velocity.x() = spn.vx0;
         const double w0 = (wv.vp.wheel_radius_nominal > 0.0)
             ? spn.vx0 / wv.vp.wheel_radius_nominal : 0.0;
         s0.wheel_spin = {{w0, w0, w0, w0}};
+        settle_spawn_on_ground(*gnd, wv.vp, s0);
+        wv.sim = std::make_unique<vdsim::SimSession>(
+            std::move(dyn), std::move(gnd), wv.vp, tp, sp_v, cfg);
         wv.sim->reset(s0);
         fleet.push_back(std::move(wv));
     }

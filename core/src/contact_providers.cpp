@@ -327,9 +327,10 @@ void wheel_world_positions(const State& vehicle, const VehicleParams& vp,
                          std::array<Vec3, NUM_WHEELS>& pw) {
     const double a = vp.cg_to_front, b = vp.cg_to_rear;
     const double tf2 = 0.5 * vp.track_front, tr2 = 0.5 * vp.track_rear;
+    const double hz  = -(vp.cg_height - vp.wheel_radius_nominal);
     const Vec3 body_offsets[NUM_WHEELS] = {
-        Vec3(a, tf2, 0.0), Vec3(a, -tf2, 0.0),
-        Vec3(-b, tr2, 0.0), Vec3(-b, -tr2, 0.0)};
+        Vec3(a, tf2, hz), Vec3(a, -tf2, hz),
+        Vec3(-b, tr2, hz), Vec3(-b, -tr2, hz)};
     for (int i = 0; i < NUM_WHEELS; ++i)
         pw[i] = vehicle.position + vehicle.orientation * body_offsets[i];
 }
@@ -356,6 +357,7 @@ public:
         std::array<Vec3, NUM_WHEELS> pw{};
         wheel_world_positions(vehicle, vp, pw);
         const double r = vp.wheel_radius_nominal;
+        constexpr double kAirReach = 0.22;
         for (int i = 0; i < NUM_WHEELS; ++i) {
             const double x = pw[i].x();
             const double z = profile_z(x, xs_, xt_, h_, xl_);
@@ -363,13 +365,22 @@ public:
             const double zl = profile_z(x - eps, xs_, xt_, h_, xl_);
             const double zr = profile_z(x + eps, xs_, xt_, h_, xl_);
             const Vec3 n = Vec3(-(zr - zl) / (2.0 * eps), 0.0, 1.0).normalized();
-            out[i].is_valid    = true;
+            const Vec3 road_pt(x, pw[i].y(), z);
+            const Vec3 target = road_pt + n * r;
+            const double pen = std::max(0.0, (target - pw[i]).dot(n));
+            const bool past_lip = x >= xl_;
+            if (past_lip && pen <= 0.0 && pw[i].z() > z + kAirReach) {
+                out[i].is_valid    = false;
+                out[i].penetration = 0.0;
+                continue;
+            }
+            out[i].is_valid    = pen > 0.0;
             out[i].normal      = n;
             out[i].mu_long     = mu_;
             out[i].mu_lat      = mu_;
             out[i].surface_id  = 1;
-            out[i].position    = Vec3(x, pw[i].y(), z);
-            out[i].penetration = std::max(0.0, (z + r) - pw[i].z());
+            out[i].position    = road_pt;
+            out[i].penetration = pen;
             out[i].road_dz     = z;
         }
     }
@@ -392,18 +403,21 @@ public:
         for (int i = 0; i < NUM_WHEELS; ++i) {
             const double dx = pw[i].x() - xc_;
             const double dz = pw[i].z() - zc_;
+            const double hub_rad = std::hypot(dx, dz);
             const double theta = std::atan2(dx, -dz);
             const double px = xc_ + R_ * std::sin(theta);
             const double pz = zc_ - R_ * std::cos(theta);
-            const Vec3 n(std::sin(theta), 0.0, -std::cos(theta));
-            const double radial = std::hypot(dx, dz);
-            out[i].is_valid    = radial > 0.5 * R_;
+            const Vec3 n(-std::sin(theta), 0.0, std::cos(theta));
+            const double surface_rad = R_ + r;
+            constexpr double kReach = 0.48;
+            const double pen_raw = surface_rad - hub_rad + kReach;
+            out[i].is_valid    = hub_rad > 0.5 * R_ && hub_rad < surface_rad + kReach + 0.55;
             out[i].normal      = n.normalized();
             out[i].mu_long     = mu_;
             out[i].mu_lat      = mu_;
             out[i].surface_id  = 2;
             out[i].position    = Vec3(px, pw[i].y(), pz);
-            out[i].penetration = std::max(0.0, (pz + r) - pw[i].z());
+            out[i].penetration = std::max(0.0, pen_raw);
             out[i].road_dz     = pz;
         }
     }

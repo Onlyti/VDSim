@@ -23,6 +23,6 @@ body:
   rolling_resistance: 0.012
   lugre:
     enabled: true
-    sigma0: 300000.0
-    sigma2: 120.0
+    sigma0: 90000.0
+    sigma2: 75.0
     m_eff: 40.0

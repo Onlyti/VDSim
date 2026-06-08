@@ -12,12 +12,17 @@
 
 namespace vdsim {
 
+namespace mb {
+struct SuspensionTopology;
+}
+
 // =============================================================================
 // IVehicleDynamics — top-level vehicle dynamics interface
 // =============================================================================
 class IVehicleDynamics {
 public:
-    enum class Level { L1_Bicycle, L2_SevenDOF, L3_FourteenDOF, L5_Stunt, Lk_Kinematic };
+    enum class Level { L1_Bicycle, L2_SevenDOF, L3_FourteenDOF, L4_Kinematic,
+                       L5_Stunt, Lk_Kinematic };
 
     virtual ~IVehicleDynamics() = default;
 
@@ -69,12 +74,23 @@ public:
     // the next step().  Default no-op.
     virtual void set_external_fz(
         const std::array<double, NUM_WHEELS>& /*fz*/) noexcept {}
+
+    // L4 multibody bushing compliance state [rad]; axle 0=front, 1=rear.
+    virtual double compliance_toe_rad(int /*axle*/) const noexcept { return 0.0; }
 };
 
 std::unique_ptr<IVehicleDynamics> create_bicycle();
 std::unique_ptr<IVehicleDynamics> create_seven_dof();
 std::unique_ptr<IVehicleDynamics> create_fourteen_dof();
+std::unique_ptr<IVehicleDynamics> create_fourteen_dof_kinematic();
+bool fourteen_dof_attach_multibody(IVehicleDynamics& dyn,
+                                   bool front_axle,
+                                   const mb::SuspensionTopology& topo,
+                                   bool enable_dynamics);
+bool fourteen_dof_mb_dynamics_enabled(const IVehicleDynamics& dyn, int axle);
 std::unique_ptr<IVehicleDynamics> create_stunt_dof();
+// L3+L2 stunt with optional loop rail / circular CG snap (pre-L5).
+std::unique_ptr<IVehicleDynamics> create_legacy_stunt_dof();
 // Kinematic bicycle (no tire forces / no slip): yaw_rate = v*tan(delta)/L.
 // For path-planning / kinematic-MPC use and as the simplest ladder rung.
 std::unique_ptr<IVehicleDynamics> create_kinematic();

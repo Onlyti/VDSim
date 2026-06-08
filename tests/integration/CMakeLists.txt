@@ -10,6 +10,9 @@ add_executable(vdsim_integration_tests
     test_stunt.cpp
 )
 
+target_compile_definitions(vdsim_integration_tests PRIVATE
+    VDSIM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+
 target_link_libraries(vdsim_integration_tests PRIVATE
     vdsim::core
     GTest::gtest

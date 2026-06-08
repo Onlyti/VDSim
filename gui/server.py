@@ -54,6 +54,7 @@ from runner.suspension import (
     list_suspension_configs,
     strip_fleet_susp_if_not_l3,
     suspension_default_for_vehicle,
+    suspension_kc_plots,
     suspension_schematic,
 )
 from catalog.ids import BLUEPRINTS, DEFAULT_BLUEPRINT, blueprint_for_vehicle, tire_id_from_stem
@@ -115,6 +116,7 @@ class Runner(DraftMixin):
                     "road_mu": 1.0, "road_mu_right": -1.0, "road_boundary": 0.0,
                     "road_grade": 0.0, "road_bank": 0.0,
                     "road_rough_amp": 0.0, "road_rough_wl": 4.0,
+                    "stunt": {},
                     "cosim_attach": False, "cosim_host": "127.0.0.1",
                     "cosim_cmd_port": COSIM_CMD_PORT,
                     "cosim_state_port": COSIM_STATE_PORT}
@@ -405,7 +407,7 @@ class Runner(DraftMixin):
             else:
                 val = float(get_dotted(self.sensors, attr))
             out.append({"name": attr, "label": label, "group": group,
-                        "kind": kind, "levels": ["K", "L1", "L2", "L3"], "value": val})
+                        "kind": kind, "levels": LEVELS, "value": val})
         return out
 
     def _apply_sensors(self, data):
@@ -429,7 +431,7 @@ class Runner(DraftMixin):
             else:
                 val = float(get_dotted(self.act, attr))
             out.append({"name": attr, "label": label, "group": group,
-                        "kind": kind, "levels": ["K", "L1", "L2", "L3"],
+                        "kind": kind, "levels": LEVELS,
                         "value": val})
         return out
 
@@ -1426,7 +1428,7 @@ def _qvid(qs, default=None):
 Handler = make_handler(ApiContext(
     RUNNER, HERE, VEHICLES, LEVELS, COSIM_CMD_PORT, COSIM_STATE_PORT,
     _qvid, parts_registry, list_suspension_api, suspension_default_for_vehicle,
-    suspension_schematic,
+    suspension_schematic, suspension_kc_plots,
 ))
 
 

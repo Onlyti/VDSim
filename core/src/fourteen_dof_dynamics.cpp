@@ -36,9 +36,11 @@
 //
 // matches the Task 22 quasi-static formulas.  Damper gives transient ringing.
 
+#include "vdsim/control.hpp"
 #include "vdsim/coordinate.hpp"
 #include "vdsim/default_subsystems.hpp"
 #include "vdsim/interfaces.hpp"
+#include "vdsim/multibody.hpp"
 #include "vdsim/subsystems.hpp"
 #include "vdsim/suspension.hpp"
 
@@ -54,6 +56,18 @@ namespace vdsim {
 namespace {
 
 constexpr double kGravity = 9.80665;
+constexpr double kRackPerRad = 0.08;
+
+double steer_wheel_rad(const ControlInput& u) noexcept {
+    return std::visit([](const auto& cmd) -> double {
+        using T = std::decay_t<decltype(cmd)>;
+        if constexpr (std::is_same_v<T, CmdL1> || std::is_same_v<T, CmdL2>
+                   || std::is_same_v<T, CmdL3> || std::is_same_v<T, CmdL4>
+                   || std::is_same_v<T, CmdL5> || std::is_same_v<T, CmdL6>)
+            return cmd.steer_angle_wheel;
+        return 0.0;
+    }, u);
+}
 
 class FourteenDOFDynamics : public IVehicleDynamics {
 public:
@@ -110,7 +124,11 @@ public:
             for (int i = 0; i < NUM_WHEELS; ++i)
                 z_u_[i] = r - Fz_static_[i] / k_tire;
             state_.position.z() = z_s_;
-            if (sp_.loop_radius > 1.0) loop_theta_ = 0.0;
+            if (sp_.loop_radius > 1.0) {
+                const double dx = state_.position.x() - sp_.loop_center_x;
+                const double dz = state_.position.z() - sp_.loop_center_z;
+                loop_theta_ = std::atan2(dx, -dz);
+            }
         } else {
             z_s_ = 0.0; z_s_dot_ = 0.0;
         }
@@ -128,6 +146,44 @@ public:
         if (!arb_rear_)   arb_rear_   = make_default_antirollbar(vp_, 1);
     }
 
+    void apply_loop_kinematics(double dt) noexcept {
+        const double R = sp_.loop_radius;
+        const double xc = sp_.loop_center_x;
+        const double zc = sp_.loop_center_z;
+        const double Rcg = R - vp_.wheel_radius_nominal + vp_.cg_height;
+
+        if (sp_.loop_rail_guide) {
+            const double tx = std::cos(loop_theta_);
+            const double tz = std::sin(loop_theta_);
+            const double v = std::max(5.0, state_.velocity.x() * tx + state_.velocity.z() * tz);
+            if (dt > 0.0) loop_theta_ += (v / R) * dt;
+            state_.position.x() = xc + R * std::sin(loop_theta_);
+            state_.position.z() = zc - R * std::cos(loop_theta_)
+                                + vp_.cg_height - vp_.wheel_radius_nominal;
+            z_s_ = state_.position.z();
+            const double c = std::cos(loop_theta_);
+            const double s = std::sin(loop_theta_);
+            state_.velocity.x() = v * c;
+            state_.velocity.z() = v * s;
+            return;
+        }
+
+        const double c = std::cos(loop_theta_);
+        const double s = std::sin(loop_theta_);
+        double v = state_.velocity.x() * c + state_.velocity.z() * s;
+        if (v < 0.0) v = 0.0;
+        if (dt > 0.0)
+            loop_theta_ += (v / std::max(Rcg, 1.0)) * dt;
+        const double c2 = std::cos(loop_theta_);
+        const double s2 = std::sin(loop_theta_);
+        state_.position.x() = xc + Rcg * s2;
+        state_.position.z() = zc - Rcg * c2;
+        z_s_ = state_.position.z();
+        state_.velocity.x() = v * c2;
+        state_.velocity.z() = v * s2;
+        th_dot_ = v / std::max(Rcg, 1.0);
+    }
+
     void step(const ControlInput& u,
               const ContactArray& contacts,
               double dt) noexcept override {
@@ -138,25 +194,37 @@ public:
         //      no toe contribution in fallback (matches pre-Ld4 behavior).
         std::array<double, NUM_WHEELS> gamma {{0.0, 0.0, 0.0, 0.0}};
         std::array<double, NUM_WHEELS> toe   {{0.0, 0.0, 0.0, 0.0}};
+        const double steer_rad = steer_wheel_rad(u);
+        if (mb_dyn_front_ && mb_dae_front_) {
+            apply_hard_joint_axle_pose(0, steer_rad, gamma, toe);
+        }
+        if (mb_dyn_rear_ && mb_dae_rear_) {
+            apply_hard_joint_axle_pose(2, steer_rad, gamma, toe);
+        }
         if (kine_front_ || kine_rear_) {
             for (int i = 0; i < NUM_WHEELS; ++i) {
+                if ((i < 2 && mb_dyn_front_ && mb_dae_front_)
+                    || (i >= 2 && mb_dyn_rear_ && mb_dae_rear_))
+                    continue;
                 const double z_corner_s = z_s_ + ry_[i] * std::sin(phi_)
                                                 - rx_[i] * std::sin(th_);
                 const double wheel_travel = z_u_[i] - z_corner_s;
                 ISuspensionKinematics* k = (i < 2) ? kine_front_.get()
                                                    : kine_rear_.get();
                 if (k) {
-                    const auto o = k->compute(wheel_travel, 0.0);
+                    const double rack_dy = (i < 2) ? steer_rad * kRackPerRad : 0.0;
+                    const auto o = k->compute(wheel_travel, rack_dy);
                     const bool right = (i == WHEEL_FR || i == WHEEL_RR);
-                    gamma[i] = right ? -o.camber : o.camber;
-                    toe[i]   = right ? -o.toe    : o.toe;
+                    const double s = right ? -1.0 : 1.0;
+                    gamma[i] = s * o.camber;
+                    toe[i]   = s * o.toe;
                 } else {
                     gamma[i] = (i == WHEEL_FR || i == WHEEL_RR)
                                 ? -vp_.camber_per_roll * phi_
                                 : +vp_.camber_per_roll * phi_;
                 }
             }
-        } else {
+        } else if (!mb_dyn_front_ && !mb_dyn_rear_) {
             const double k_cam = vp_.camber_per_roll;
             gamma = {{ +k_cam * phi_, -k_cam * phi_,
                        +k_cam * phi_, -k_cam * phi_ }};
@@ -197,23 +265,25 @@ public:
 
         inner_->step(u, contacts, dt);
         state_ = inner_->state();
+        if (dt > 0.0 && (mb_dyn_front_ || mb_dyn_rear_)) {
+            const auto F = inner_->tire_forces_body();
+            if (mb_dyn_front_ && mb_dae_front_) {
+                mb::WheelLoad wl;
+                wl.force_world = 0.5 * (F[WHEEL_FL] + F[WHEEL_FR]);
+                mb::step_hard_joint_dae(mb_state_front_, *mb_dae_front_, mb_topo_front_,
+                                        axle_prescribed_motion(0, steer_rad), wl, dt);
+            }
+            if (mb_dyn_rear_ && mb_dae_rear_) {
+                mb::WheelLoad wl;
+                wl.force_world = 0.5 * (F[WHEEL_RL] + F[WHEEL_RR]);
+                mb::step_hard_joint_dae(mb_state_rear_, *mb_dae_rear_, mb_topo_rear_,
+                                        axle_prescribed_motion(2, steer_rad), wl, dt);
+            }
+        }
         for (int i = 0; i < NUM_WHEELS; ++i) road_dz_[i] = contacts[i].road_dz;
         if (dt > 0.0) integrate_vertical(dt);
-        if (stunt_ && sp_.loop_radius > 1.0) {
-            const double R = sp_.loop_radius;
-            const double tx = std::cos(loop_theta_);
-            const double tz = std::sin(loop_theta_);
-            const double v = std::max(5.0, state_.velocity.x() * tx + state_.velocity.z() * tz);
-            loop_theta_ += (v / R) * dt;
-            state_.position.x() = sp_.loop_center_x + R * std::sin(loop_theta_);
-            state_.position.z() = sp_.loop_center_z - R * std::cos(loop_theta_)
-                                + vp_.cg_height - vp_.wheel_radius_nominal;
-            z_s_ = state_.position.z();
-            const double tx2 = std::cos(loop_theta_);
-            const double tz2 = std::sin(loop_theta_);
-            state_.velocity.x() = v * tx2;
-            state_.velocity.z() = v * tz2;
-        }
+        if (stunt_ && sp_.loop_radius > 1.0)
+            apply_loop_kinematics(dt);
         write_pose_and_suspension();
         if (stunt_) inner_->reset(state_);
     }
@@ -226,6 +296,69 @@ public:
     void set_kinematics_rear(std::unique_ptr<ISuspensionKinematics> k) {
         kine_rear_ = std::move(k);
     }
+
+    void attach_mb_corner(bool front, mb::SuspensionTopology topo, bool enable) {
+        if (!mb_solver_) mb_solver_ = mb::create_kinematic_solver();
+        mb::PrescribedCornerMotion mot {};
+        if (front) {
+            mb_topo_front_ = std::move(topo);
+            mb_dyn_front_  = enable;
+            mb_state_front_ = {};
+            mb_dae_front_ = enable ? mb::create_hard_joint_dae_model(mb_topo_front_) : nullptr;
+            if (mb_dae_front_) mb_dae_front_->initialize(mb_state_front_, mot);
+        } else {
+            mb_topo_rear_ = std::move(topo);
+            mb_dyn_rear_  = enable;
+            mb_state_rear_ = {};
+            mb_dae_rear_ = enable ? mb::create_hard_joint_dae_model(mb_topo_rear_) : nullptr;
+            if (mb_dae_rear_) mb_dae_rear_->initialize(mb_state_rear_, mot);
+        }
+    }
+
+    double compliance_toe_rad(int /*axle*/) const noexcept override { return 0.0; }
+
+    mb::PrescribedCornerMotion axle_prescribed_motion(int wheel_base,
+                                                      double steer_rad) const {
+        mb::PrescribedCornerMotion mot;
+        double travel = 0.0;
+        double travel_dot = 0.0;
+        for (int j = 0; j < 2; ++j) {
+            const int i = wheel_base + j;
+            const double z_corner_s = z_s_ + ry_[i] * std::sin(phi_)
+                                            - rx_[i] * std::sin(th_);
+            const double v_corner_s = z_s_dot_ + ry_[i] * std::cos(phi_) * phi_dot_
+                                    - rx_[i] * std::cos(th_) * th_dot_;
+            travel += 0.5 * (z_u_[i] - z_corner_s);
+            travel_dot += 0.5 * (z_u_dot_[i] - v_corner_s);
+        }
+        mot.travel_z = travel;
+        mot.travel_z_dot = travel_dot;
+        mot.steer_rack_dy = (wheel_base == 0) ? steer_rad * kRackPerRad : 0.0;
+        return mot;
+    }
+
+    void apply_hard_joint_axle_pose(int wheel_base, double steer_rad,
+                                    std::array<double, NUM_WHEELS>& gamma,
+                                    std::array<double, NUM_WHEELS>& toe) {
+        mb::IHardJointDaeModel* dae = (wheel_base == 0) ? mb_dae_front_.get()
+                                                        : mb_dae_rear_.get();
+        mb::HardJointCornerState* st = (wheel_base == 0) ? &mb_state_front_
+                                                         : &mb_state_rear_;
+        if (!dae || !st) return;
+        mb::WheelLoad zl {};
+        const auto mot = axle_prescribed_motion(wheel_base, steer_rad);
+        const auto wp = dae->step(*st, mot, zl, 0.0);
+        for (int j = 0; j < 2; ++j) {
+            const int i = wheel_base + j;
+            const bool right = (i == WHEEL_FR || i == WHEEL_RR);
+            const double s = right ? -1.0 : 1.0;
+            gamma[i] = s * wp.camber_rad;
+            toe[i]   = s * wp.toe_rad;
+        }
+    }
+
+    bool mb_dyn_front_enabled() const noexcept { return mb_dyn_front_; }
+    bool mb_dyn_rear_enabled()  const noexcept { return mb_dyn_rear_;  }
 
     const State& state() const noexcept override { return state_; }
 
@@ -463,6 +596,16 @@ private:
     // the lumped vp_.camber_per_roll · phi heuristic for the corresponding axle.
     std::unique_ptr<ISuspensionKinematics> kine_front_;
     std::unique_ptr<ISuspensionKinematics> kine_rear_;
+
+    std::unique_ptr<mb::IMultibodySolver> mb_solver_;
+    bool mb_dyn_front_ {false};
+    bool mb_dyn_rear_  {false};
+    mb::SuspensionTopology mb_topo_front_;
+    mb::SuspensionTopology mb_topo_rear_;
+    mb::HardJointCornerState mb_state_front_;
+    mb::HardJointCornerState mb_state_rear_;
+    std::unique_ptr<mb::IHardJointDaeModel> mb_dae_front_;
+    std::unique_ptr<mb::IHardJointDaeModel> mb_dae_rear_;
 };
 
 class StuntDOFDynamics final : public FourteenDOFDynamics {
@@ -477,6 +620,12 @@ public:
     }
 };
 
+class KinematicFourteenDOFDynamics : public FourteenDOFDynamics {
+public:
+    using FourteenDOFDynamics::FourteenDOFDynamics;
+    Level level() const noexcept override { return Level::L4_Kinematic; }
+};
+
 }  // namespace
 
 std::unique_ptr<IVehicleDynamics> create_fourteen_dof() {
@@ -487,7 +636,16 @@ std::unique_ptr<IVehicleDynamics> create_fourteen_dof(std::unique_ptr<ITireModel
     return std::make_unique<FourteenDOFDynamics>(std::move(tire));
 }
 
-std::unique_ptr<IVehicleDynamics> create_stunt_dof() {
+std::unique_ptr<IVehicleDynamics> create_fourteen_dof_kinematic() {
+    return std::make_unique<KinematicFourteenDOFDynamics>();
+}
+
+std::unique_ptr<IVehicleDynamics> create_fourteen_dof_kinematic(
+    std::unique_ptr<ITireModel> tire) {
+    return std::make_unique<KinematicFourteenDOFDynamics>(std::move(tire));
+}
+
+std::unique_ptr<IVehicleDynamics> create_legacy_stunt_dof() {
     return std::make_unique<StuntDOFDynamics>();
 }
 
@@ -507,6 +665,22 @@ bool attach_rear_kinematics(IVehicleDynamics& dyn,
     if (!p) return false;
     p->set_kinematics_rear(std::move(k));
     return true;
+}
+
+bool fourteen_dof_attach_multibody(IVehicleDynamics& dyn,
+                                   bool front_axle,
+                                   const mb::SuspensionTopology& topo,
+                                   bool enable_dynamics) {
+    auto* p = dynamic_cast<FourteenDOFDynamics*>(&dyn);
+    if (!p) return false;
+    p->attach_mb_corner(front_axle, topo, enable_dynamics);
+    return true;
+}
+
+bool fourteen_dof_mb_dynamics_enabled(const IVehicleDynamics& dyn, int axle) {
+    const auto* p = dynamic_cast<const FourteenDOFDynamics*>(&dyn);
+    if (!p) return false;
+    return (axle == 0) ? p->mb_dyn_front_enabled() : p->mb_dyn_rear_enabled();
 }
 
 }  // namespace vdsim

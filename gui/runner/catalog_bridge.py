@@ -37,7 +37,7 @@ def normalize_fleet_spec(spec: Dict[str, Any]) -> None:
         parts.setdefault("tire", tire_id_from_stem(str(spec["tire"])))
     spec["vehicle"] = vehicle_stem_from_blueprint(str(spec["blueprint"]))
     spec["tire"] = tire_stem_from_id(parts.get("tire", "tire.default_pacejka"))
-    if level == "L3":
+    if level in ("L3", "L4"):
         defaults = suspension_default_for_blueprint(str(spec["blueprint"]))
         if not defaults and spec.get("vehicle"):
             defaults = suspension_default_for_vehicle(spec["vehicle"])
@@ -54,7 +54,7 @@ def normalize_fleet_spec(spec: Dict[str, Any]) -> None:
 
 def apply_fleet_field_update(spec: Dict[str, Any], upd: Mapping[str, Any]) -> None:
     old_level = str(spec.get("level", "L2"))
-    for k in ("x0", "y0", "yaw0", "vx0", "level", "vehicle", "tire", "front_susp", "rear_susp"):
+    for k in ("x0", "y0", "z0", "yaw0", "vx0", "level", "vehicle", "tire", "front_susp", "rear_susp"):
         if k in upd:
             spec[k] = upd[k]
     if "blueprint" in upd:
@@ -68,13 +68,13 @@ def apply_fleet_field_update(spec: Dict[str, Any], upd: Mapping[str, Any]) -> No
         spec.setdefault("parts", {})["tire"] = tire_id_from_stem(str(upd["tire"]))
     if "level" in upd:
         new_level = str(upd["level"])
-        if new_level == "L3" and old_level != "L3":
+        if new_level in ("L3", "L4") and old_level not in ("L3", "L4"):
             d = suspension_default_for_vehicle(str(spec.get("vehicle", "sedan")))
             spec["front_susp"] = d["front"]
             spec["rear_susp"] = d["rear"]
     if "vehicle" in upd and "front_susp" not in upd and "rear_susp" not in upd:
         d = suspension_default_for_vehicle(str(upd["vehicle"]))
-        if str(spec.get("level", "L2")) == "L3":
+        if str(spec.get("level", "L2")) in ("L3", "L4"):
             spec["front_susp"] = d["front"]
             spec["rear_susp"] = d["rear"]
     if "front_susp" in upd:
@@ -111,6 +111,7 @@ def fleet_entry_for_cosim(
         "level": row["level"],
         "x0": row["x0"],
         "y0": row["y0"],
+        "z0": float(row.get("z0", 0.0)),
         "yaw0": row["yaw0"],
         "vx0": row["vx0"],
         **({"front_susp_yaml": row["front_susp"]} if row.get("front_susp") else {}),

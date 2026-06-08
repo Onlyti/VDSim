@@ -27,6 +27,18 @@ WorldScenario load_world_scenario(const std::string& path) {
     if (root["terrain"]) w.road.terrain = root["terrain"].as<std::string>();
     if (root["sensors"]) w.road.sensors = root["sensors"].as<std::string>();
     if (root["sensor_delay"]) w.road.sensor_delay = root["sensor_delay"].as<double>();
+    if (root["stunt"]) {
+        const auto st = root["stunt"];
+        if (st["ground"]) w.stunt.ground = st["ground"].as<std::string>();
+        w.stunt.ramp_x_start  = node_d(st, "x_start", w.stunt.ramp_x_start);
+        w.stunt.ramp_x_top    = node_d(st, "x_top", w.stunt.ramp_x_top);
+        w.stunt.ramp_height   = node_d(st, "height_m", w.stunt.ramp_height);
+        w.stunt.ramp_lip      = node_d(st, "lip_m", w.stunt.ramp_lip);
+        w.stunt.loop_center_x = node_d(st, "center_x", w.stunt.loop_center_x);
+        w.stunt.loop_center_z = node_d(st, "center_z", w.stunt.loop_center_z);
+        w.stunt.loop_radius   = node_d(st, "radius_m", w.stunt.loop_radius);
+        if (st["rail_guide"]) w.stunt.rail_guide = st["rail_guide"].as<bool>();
+    }
     const auto veh = root["vehicles"];
     if (!veh || !veh.IsSequence() || veh.size() == 0)
         throw std::runtime_error("world scenario: missing vehicles[]");
@@ -42,6 +54,7 @@ WorldScenario load_world_scenario(const std::string& path) {
         if (v["rear_susp"]) s.rear_susp = v["rear_susp"].as<std::string>();
         s.x0   = node_d(v, "x0", 0.0);
         s.y0   = node_d(v, "y0", 0.0);
+        s.z0   = node_d(v, "z0", 0.0);
         s.yaw0 = node_d(v, "yaw0", 0.0);
         s.vx0  = node_d(v, "vx0", 0.0);
         w.vehicles.push_back(s);

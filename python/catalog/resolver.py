@@ -237,10 +237,10 @@ class CatalogResolver:
         for slot in L1L2_PART_SLOTS:
             if slot not in parts:
                 raise CatalogError(f"blueprint missing required part slot: {slot}")
-        if level == "L3":
+        if level in ("L3", "L4"):
             for slot in L3_EXTRA_SLOTS:
                 if slot not in parts:
-                    raise CatalogError(f"L3 blueprint missing required slot: {slot}")
+                    raise CatalogError(f"L3/L4 blueprint missing required slot: {slot}")
 
     def _kinematics_path(self, body: Mapping[str, Any], schema: str, slot: str) -> Path:
         if schema == "topology_preview_v1":

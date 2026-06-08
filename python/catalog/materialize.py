@@ -52,12 +52,25 @@ def is_catalog_scene_file(path: Path) -> bool:
     return bool(doc.get("fleet"))
 
 
+def _scene_vehicle_stem(doc: Mapping[str, Any]) -> str:
+    ref = doc.get("vehicle")
+    if not ref:
+        return "sedan"
+    p = Path(str(ref))
+    return p.stem or "sedan"
+
+
 def fleet_spec_from_scene(doc: Mapping[str, Any]) -> List[dict]:
     out = []
+    doc_level = str(doc.get("level", "L2"))
+    doc_tire = doc.get("tire")
+    doc_vehicle = _scene_vehicle_stem(doc)
     for entry in doc["fleet"]:
-        bid = str(entry["blueprint"])
-        level = str(entry.get("level", "L2"))
+        level = str(entry.get("level", doc_level))
+        bid = str(entry.get("blueprint") or blueprint_for_vehicle(doc_vehicle, level))
         parts = dict(entry.get("parts") or {})
+        if doc_tire and "tire" not in parts:
+            parts["tire"] = tire_id_from_stem(Path(str(doc_tire)).stem)
         row = {
             "id": int(entry["id"]),
             "blueprint": bid,
@@ -65,12 +78,13 @@ def fleet_spec_from_scene(doc: Mapping[str, Any]) -> List[dict]:
             "level": level,
             "x0": float(entry.get("x0", 0.0)),
             "y0": float(entry.get("y0", 0.0)),
+            "z0": float(entry.get("z0", 0.0)),
             "yaw0": float(entry.get("yaw0", 0.0)),
             "vx0": float(entry.get("vx0", 0.0)),
             "vehicle": vehicle_stem_from_blueprint(bid),
             "tire": tire_stem_from_id(parts.get("tire", "tire.default_pacejka")),
         }
-        if level == "L3":
+        if level in ("L3", "L4"):
             bp_path = Path(__file__).resolve().parents[2] / "configs" / "blueprints"
             bp_name = bid.replace("vehicle.", "") + ".yaml"
             bp = yaml.safe_load((bp_path / bp_name).read_text()) or {}
@@ -110,7 +124,7 @@ def fleet_spec_from_legacy_vehicle_row(v: Mapping[str, Any], repo: Path) -> dict
         "vehicle": veh.stem,
         "tire": tire.stem,
     }
-    if level == "L3":
+    if level in ("L3", "L4"):
         for key, slot in (("front_susp", "front_susp_kin"), ("rear_susp", "rear_susp_kin")):
             if key in v:
                 stem = Path(str(v[key])).stem
@@ -133,7 +147,7 @@ def resolve_fleet_entry(
     if spec.get("tire") and "tire" not in instance_parts:
         instance_parts["tire"] = tire_id_from_stem(str(spec["tire"]))
     level = str(spec.get("level", "L2"))
-    if level == "L3":
+    if level in ("L3", "L4"):
         if spec.get("front_susp"):
             instance_parts.setdefault(
                 "front_susp_kin", susp_id_from_stem(str(spec["front_susp"])))
@@ -152,10 +166,11 @@ def resolve_fleet_entry(
         "level": level,
         "x0": float(spec.get("x0", 0.0)),
         "y0": float(spec.get("y0", 0.0)),
+        "z0": float(spec.get("z0", 0.0)),
         "yaw0": float(spec.get("yaw0", 0.0)),
         "vx0": float(spec.get("vx0", 0.0)),
     }
-    if level == "L3":
+    if level in ("L3", "L4"):
         if resolved.susp_front:
             row["front_susp"] = str(resolved.susp_front)
         if resolved.susp_rear:
@@ -186,6 +201,8 @@ def materialize_scene_file(
     for key in ("grade", "bank", "mu_right", "mu_boundary", "time_scale"):
         if key in doc:
             world[key] = doc[key]
+    if doc.get("stunt"):
+        world["stunt"] = dict(doc["stunt"])
     env = doc.get("environment")
     if isinstance(env, dict):
         for key in ("mu", "grade", "bank"):

@@ -38,7 +38,7 @@ BLUEPRINTS = sorted({
 
 
 def blueprint_for_vehicle(vehicle_stem: str, level: str = "L2") -> str:
-    if vehicle_stem == "sedan" and str(level) == "L3":
+    if vehicle_stem == "sedan" and str(level) in ("L3", "L4"):
         return "vehicle.sedan_l3"
     return STEM_TO_BLUEPRINT.get(vehicle_stem, DEFAULT_BLUEPRINT)
 

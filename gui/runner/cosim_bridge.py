@@ -187,7 +187,25 @@ class CosimBridge:
         if sensor_delay:
             args.append(f"--sensor-delay={float(sensor_delay)}")
 
-    def _write_world_yaml(self, fleet, road, terrain, sensors, sensor_delay, rate, cmd_timeout):
+    @staticmethod
+    def _stunt_yaml_lines(stunt):
+        if not stunt or not stunt.get("ground"):
+            return []
+        lines = [f"stunt:", f"  ground: {stunt['ground']}"]
+        key_map = (
+            ("x_start", "x_start"), ("x_top", "x_top"), ("height_m", "height_m"),
+            ("lip_m", "lip_m"), ("center_x", "center_x"), ("center_z", "center_z"),
+            ("radius_m", "radius_m"),
+        )
+        for sk, dk in key_map:
+            if stunt.get(dk) is not None:
+                lines.append(f"  {sk}: {float(stunt[dk])}")
+        if stunt.get("rail_guide") is not None:
+            lines.append(f"  rail_guide: {bool(stunt['rail_guide'])}")
+        return lines
+
+    def _write_world_yaml(self, fleet, road, terrain, sensors, sensor_delay, rate, cmd_timeout,
+                          stunt=None):
         wy = os.path.join(self._tmp, "world.yaml")
         lines = [f"rate: {float(rate)}", f"cmd_timeout: {float(cmd_timeout)}"]
         if terrain is not None:
@@ -205,6 +223,7 @@ class CosimBridge:
             lines.append(f"sensors: {sf}")
         if sensor_delay:
             lines.append(f"sensor_delay: {float(sensor_delay)}")
+        lines.extend(self._stunt_yaml_lines(stunt))
         lines.append("vehicles:")
         for e in fleet:
             lines += [
@@ -214,6 +233,7 @@ class CosimBridge:
                 f"    level: {e.get('level', 'L2')}",
                 f"    x0: {float(e.get('x0', 0.0))}",
                 f"    y0: {float(e.get('y0', 0.0))}",
+                f"    z0: {float(e.get('z0', 0.0))}",
                 f"    yaw0: {float(e.get('yaw0', 0.0))}",
                 f"    vx0: {float(e.get('vx0', 0.0))}",
             ]

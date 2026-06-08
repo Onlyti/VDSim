@@ -40,6 +40,13 @@ def main():
         assert "front_susp" in v0 and "rear_susp" in v0
         assert Path(v0["front_susp"]).is_file()
 
+        jump = REPO / "configs" / "scenes" / "jump_ramp_demo.yaml"
+        jump_out = Path(td) / "jump_world.yaml"
+        materialize_scene_file(jump, jump_out)
+        jump_doc = yaml.safe_load(jump_out.read_text()) or {}
+        assert jump_doc["vehicles"][0]["level"] == "L5"
+        assert jump_doc.get("stunt", {}).get("ground") == "ramp"
+
     r = CatalogResolver(REPO)
     assert r.load_blueprint("vehicle.sedan_comfort")
     print("test_scene_materialize: ok")

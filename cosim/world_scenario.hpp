@@ -20,6 +20,19 @@ struct RoadConfig {
     double sensor_delay {0.0};
 };
 
+// stunt.ground: "ramp" | "loop" (L5). YAML keys match configs/scenes/*_demo.yaml.
+struct StuntConfig {
+    std::string ground;
+    double ramp_x_start {20.0};
+    double ramp_x_top   {24.0};
+    double ramp_height  {0.6};
+    double ramp_lip     {0.4};
+    double loop_center_x {50.0};
+    double loop_center_z {15.0};
+    double loop_radius   {10.0};
+    bool   rail_guide    {false};
+};
+
 struct VehicleSpawn {
     uint32_t    id {0};
     std::string vehicle_yaml;
@@ -27,7 +40,7 @@ struct VehicleSpawn {
     std::string level {"L2"};
     std::string front_susp;
     std::string rear_susp;
-    double x0 {0.0}, y0 {0.0}, yaw0 {0.0}, vx0 {0.0};
+    double x0 {0.0}, y0 {0.0}, z0 {0.0}, yaw0 {0.0}, vx0 {0.0};
 };
 
 struct WorldScenario {
@@ -35,6 +48,7 @@ struct WorldScenario {
     double cmd_timeout {0.1};
     double time_scale  {1.0};
     RoadConfig road;
+    StuntConfig stunt;
     std::vector<VehicleSpawn> vehicles;
 };
 

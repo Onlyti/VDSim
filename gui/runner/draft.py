@@ -59,6 +59,24 @@ class DraftMixin:
                     self.cfg[ck] = float(r[k])
         if doc.get("infra_sensors") is not None:
             self.infra_sensors = list(doc["infra_sensors"])
+        if doc.get("stunt"):
+            self.cfg["stunt"] = dict(doc["stunt"])
+        elif doc.get("level") != "L5":
+            self.cfg["stunt"] = {}
+        if doc.get("stunt", {}).get("ground") in ("loop", "ramp"):
+            self.cfg["driver"] = False
+            for p in self.ports.values():
+                p.driver = False
+        stunt = doc.get("stunt") or {}
+        if stunt.get("ground") == "loop":
+            zc = float(stunt.get("center_z", 15.0))
+            R = float(stunt.get("radius_m", 10.0))
+            z_spawn = zc - R - 0.32 + 0.55 + 0.02
+            for row in self.fleet_spec:
+                row["z0"] = z_spawn
+        elif stunt.get("ground") == "ramp":
+            for row in self.fleet_spec:
+                row["z0"] = 0.55
 
     def _run_config_gui_meta(self):
         return {
@@ -98,6 +116,7 @@ class DraftMixin:
                     "level": str(s.get("level", "L2")),
                     "x0": float(s.get("x0", 0.0)),
                     "y0": float(s.get("y0", 0.0)),
+                    "z0": float(s.get("z0", 0.0)),
                     "yaw0": float(s.get("yaw0", 0.0)),
                     "vx0": float(s.get("vx0", 0.0)),
                 }
@@ -114,6 +133,7 @@ class DraftMixin:
                     "level": str(s.get("level", "L2")),
                     "x0": float(s.get("x0", 0.0)),
                     "y0": float(s.get("y0", 0.0)),
+                    "z0": float(s.get("z0", 0.0)),
                     "yaw0": float(s.get("yaw0", 0.0)),
                     "vx0": float(s.get("vx0", 0.0)),
                 }
@@ -135,6 +155,8 @@ class DraftMixin:
                 "vehicles": vehs,
                 "gui": self._run_config_gui_meta(),
             }
+            if self.cfg.get("stunt"):
+                doc["stunt"] = dict(self.cfg["stunt"])
             if self.path_preset == "custom":
                 doc["path_pts"] = [[float(p[0]), float(p[1])] for p in self.path.pts]
             return doc
@@ -153,7 +175,8 @@ class DraftMixin:
             rate = 1.0 / self.dt if self.dt > 1e-6 else 200.0
             cmd_timeout = float(self.cosim.cfg.get("cmd_timeout", 0.1))
             wy = self.cosim._write_world_yaml(
-                fleet, road, self.terrain, sensors, self.sensor_delay, rate, cmd_timeout)
+                fleet, road, self.terrain, sensors, self.sensor_delay, rate, cmd_timeout,
+                stunt=self.cfg.get("stunt"))
             doc = yaml.safe_load(Path(wy).read_text())
             doc["name"] = "run"
             doc["time_scale"] = float(self.time_scale)
@@ -163,6 +186,8 @@ class DraftMixin:
                 doc["path_pts"] = [[float(p[0]), float(p[1])] for p in self.path.pts]
             if self.infra_sensors:
                 doc["infra_sensors"] = list(self.infra_sensors)
+            if self.cfg.get("stunt"):
+                doc["stunt"] = dict(self.cfg["stunt"])
             doc["gui"] = self._run_config_gui_meta()
             run_path = Path(self.cosim._tmp) / "run_config.yaml"
             run_path.write_text(yaml.safe_dump(doc, sort_keys=False))
@@ -194,6 +219,7 @@ class DraftMixin:
                 "cosim_cmd_port": int(self.cfg.get("cosim_cmd_port", 7401)),
                 "cosim_state_port": int(self.cfg.get("cosim_state_port", 7402)),
                 "infra_sensors": list(self.infra_sensors),
+                "stunt": dict(self.cfg.get("stunt") or {}),
             }
             if include_scenarios:
                 out["scenarios"] = self.list_scenarios()
@@ -487,6 +513,10 @@ class DraftMixin:
             self.infra_sensors = list(data["infra_sensors"])
         elif gui.get("infra_sensors") is not None:
             self.infra_sensors = list(gui["infra_sensors"])
+        if data.get("stunt"):
+            self.cfg["stunt"] = dict(data["stunt"])
+        else:
+            self.cfg["stunt"] = {}
         if gui.get("telemetry"):
             self._telemetry_import_unlocked(gui["telemetry"])
 

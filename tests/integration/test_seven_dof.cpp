@@ -159,6 +159,41 @@ TEST(SevenDOF, AckermanInfluencesTurningRadiusLowSpeed) {
     EXPECT_GE(r_ack, r_par * 0.97);   // at least within 3 % of parallel
 }
 
+TEST(SevenDOF, SteadyTurnRearSlipLuGreVsFallback) {
+    vdsim::VehicleParams vp;
+    vp.aero_drag_coeff = 0.0;
+    vdsim::TireParams tp;
+    vdsim::SolverParams sp;
+    const auto contacts = flat_contacts();
+
+    auto peak_slip = [&](bool lugre) {
+        tp.lugre.enabled = lugre;
+        auto dyn = vdsim::create_seven_dof();
+        dyn->initialize(vp, tp, sp);
+        dyn->reset(init_state(18.0, vp.wheel_radius_nominal));
+        vdsim::CmdL4 cmd;
+        cmd.steer_angle_wheel = 0.12;
+        cmd.throttle = 0.15;
+        double af = 0.0, ar = 0.0;
+        for (int i = 0; i < 2400; ++i) {
+            dyn->step(cmd, contacts, 0.005);
+            if (i < 1200) continue;
+            const auto a = dyn->wheel_slip_angle();
+            af = std::max(af, 0.5 * (std::abs(a[vdsim::WHEEL_FL]) + std::abs(a[vdsim::WHEEL_FR])));
+            ar = std::max(ar, 0.5 * (std::abs(a[vdsim::WHEEL_RL]) + std::abs(a[vdsim::WHEEL_RR])));
+        }
+        return std::pair{af, ar};
+    };
+
+    const auto [af_k, ar_k] = peak_slip(false);
+    const auto [af_l, ar_l] = peak_slip(true);
+    EXPECT_GT(af_k, 0.02);
+    EXPECT_GT(ar_k, 0.02);
+    EXPECT_GT(af_l, 0.02);
+    EXPECT_GT(ar_l, 0.02);
+    EXPECT_GT(ar_l, 0.25 * af_l);
+}
+
 TEST(SevenDOF, AckermanInnerWheelLargerSlipBothTurnDirections) {
     vdsim::VehicleParams vp;
     vp.ackerman_percent = 100.0;

@@ -98,9 +98,9 @@ inline double axle_roll_stiffness(const VehicleParams& vp, int axle) {
 
 struct LuGreTireParams {
     bool   enabled {true};
-    double sigma0  {3.0e5};    // bristle stiffness [N/m]
+    double sigma0  {9.0e4};    // bristle stiffness [N/m]
     double sigma1  {0.0};      // micro-damping [N·s/m]; 0 -> critical from m_eff
-    double sigma2  {120.0};    // viscous [N·s/m]
+    double sigma2  {75.0};     // viscous [N·s/m]
     double m_eff   {40.0};     // contact mass for critical sigma1 [kg]
 };
 
@@ -163,9 +163,10 @@ struct SolverParams {
     double     max_substep_dt {1e-3};           // [s]
     int        max_substeps   {10};
     bool       stunt_physics  {false};          // world-z, airborne, full gravity (L3+/L5)
-    double     loop_radius    {0.0};            // [m] 0=off; educative loop pitch guide
+    double     loop_radius    {0.0};            // [m] 0=off; loop track active
     double     loop_center_x  {0.0};
     double     loop_center_z  {0.0};
+    bool       loop_rail_guide {false};         // true=kinematic rail; false=tire-driven arc
 
     static SolverParams from_yaml(const std::string& path);
     void                to_yaml (const std::string& path) const;
