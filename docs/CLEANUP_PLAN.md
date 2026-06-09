@@ -28,8 +28,11 @@ part for the ISO baseline / stunt scenes), pacejka "legacy tests preserved").
 - TODO `-Wunused` + grep: dead code / unused includes / unused functions. Tidy stale comments.
 
 ## Phase C — Dynamics dedup
-- Shared low-speed blend / brake-hold / ARB / drivetrain-split across bicycle /
-  seven_dof / fourteen_dof -> shared header. byte-identical (267 green).
+- **DONE** (`c1939bf`) low-speed trio kStickBlend/kStickC/kKinTau -> `vdsim/low_speed.hpp`
+  (byte-identical in bicycle+seven_dof). 266 green.
+- NOT extracted (not byte-identical): brake-hold *application* (bicycle uses 2*kStickC
+  damper, seven_dof uses -kStickC*vx*gate), ARB (per-wheel, L3-only), drivetrain
+  open-diff split (L2 detail). Leave per-source — false dedup would change behaviour.
 
 ## Phase B — GUI monolith split
 - `app.html` (4873 L) inline JS -> `gui/static/*.js` (scene / stream / sidebar /
