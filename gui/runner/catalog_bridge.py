@@ -58,7 +58,12 @@ def apply_fleet_field_update(spec: Dict[str, Any], upd: Mapping[str, Any]) -> No
         if k in upd:
             spec[k] = upd[k]
     if "blueprint" in upd:
-        spec["blueprint"] = str(upd["blueprint"])
+        bid = str(upd["blueprint"])
+        spec["blueprint"] = bid
+        bp = catalog_resolver().load_blueprint(bid)
+        spec["parts"] = dict(bp.get("parts") or {})
+        if "level" not in upd and bp.get("level"):
+            spec["level"] = str(bp["level"])
     if "parts" in upd and isinstance(upd["parts"], dict):
         spec.setdefault("parts", {}).update(upd["parts"])
     if "vehicle" in upd:

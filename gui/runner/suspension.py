@@ -228,32 +228,46 @@ def suspension_kc_plots(name):
     plots = [
         {
             "title": "Camber vs wheel travel",
+            "xlabel": "wheel travel [mm]",
+            "ylabel": "camber [deg]",
             "series": [_kc_series(r.travel, "camber_deg", "camber [deg]", "#01A0E9")],
         },
         {
             "title": "Toe vs wheel travel (bump steer)",
+            "xlabel": "wheel travel [mm]",
+            "ylabel": "toe [deg]",
             "series": [_kc_series(r.travel, "toe_deg", "toe [deg]", "#e67e22")],
         },
         {
             "title": "Track change vs wheel travel",
+            "xlabel": "wheel travel [mm]",
+            "ylabel": "track Δ [mm]",
             "series": [_kc_series(r.travel, "track_mm", "track [mm]", "#27ae60")],
         },
         {
             "title": "Toe vs steer rack",
+            "xlabel": "rack displacement [mm]",
+            "ylabel": "toe [deg]",
             "series": [_kc_series(r.steer, "toe_deg", "toe [deg]", "#9b59b6")],
         },
         {
             "title": "Caster vs steer rack",
+            "xlabel": "rack displacement [mm]",
+            "ylabel": "caster [deg]",
             "series": [_kc_series(r.steer, "caster_deg", "caster [deg]", "#34495e")],
         },
         {
             "title": "Compliance toe vs Fy",
+            "xlabel": "lateral force Fy [N]",
+            "ylabel": "Δtoe [deg]",
             "series": [
                 _kc_series(r.compliance_fy, "compliance_toe_deg", "Δtoe [deg]", "#c0392b"),
             ],
         },
         {
             "title": "Compliance camber vs Fy",
+            "xlabel": "lateral force Fy [N]",
+            "ylabel": "Δcamber [deg]",
             "series": [
                 _kc_series(
                     r.compliance_fy, "compliance_camber_deg", "Δcamber [deg]", "#16a085"

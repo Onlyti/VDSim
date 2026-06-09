@@ -3,7 +3,7 @@ import vdsim
 
 
 VEHICLES = ["sedan", "sports", "fsk_formula", "race_car"]
-LEVELS = ["K", "L1", "L2", "L3", "L4", "L5"]   # L4 = L3 + hardpoint kin; L5 = stunt
+from catalog.levels import LEVELS  # K, L1–L5 — names in catalog/levels.py
 _ALL = "K,L1,L2,L3,L4,L5"
 _L1UP = "L1,L2,L3,L4,L5"
 _L2UP = "L2,L3,L4,L5"

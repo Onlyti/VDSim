@@ -9,18 +9,19 @@ from api.responses import bytes_response, json_response
 
 class ApiContext:
     __slots__ = (
-        "runner", "here", "vehicles", "levels", "cosim_cmd_port", "cosim_state_port",
-        "qvid", "parts_registry", "list_suspension_api", "suspension_default_for_vehicle",
-        "suspension_schematic", "suspension_kc_plots",
+        "runner", "here", "vehicles", "levels", "level_ladder", "cosim_cmd_port",
+        "cosim_state_port", "qvid", "parts_registry", "list_suspension_api",
+        "suspension_default_for_vehicle", "suspension_schematic", "suspension_kc_plots",
     )
 
-    def __init__(self, runner, here, vehicles, levels, cosim_cmd_port, cosim_state_port,
-                 qvid, parts_registry, list_suspension_api, suspension_default_for_vehicle,
-                 suspension_schematic, suspension_kc_plots):
+    def __init__(self, runner, here, vehicles, levels, level_ladder, cosim_cmd_port,
+                 cosim_state_port, qvid, parts_registry, list_suspension_api,
+                 suspension_default_for_vehicle, suspension_schematic, suspension_kc_plots):
         self.runner = runner
         self.here = here
         self.vehicles = vehicles
         self.levels = levels
+        self.level_ladder = level_ladder
         self.cosim_cmd_port = cosim_cmd_port
         self.cosim_state_port = cosim_state_port
         self.qvid = qvid
@@ -83,11 +84,26 @@ def _get_debug(h, qs, ctx):
     })
 
 
+def _get_assembly(h, qs, ctx):
+    vid = ctx.qvid(qs, ctx.runner.live_vid)
+    slot = (qs.get("slot") or [None])[0]
+    candidate = (qs.get("candidate") or [None])[0]
+    try:
+        json_response(h, {
+            "ok": True,
+            "assembly": ctx.runner.fleet_assembly(
+                vid, preview_slot=slot, preview_candidate=candidate),
+        })
+    except Exception as e:
+        json_response(h, {"ok": False, "error": str(e)}, 400)
+
+
 GET_EXACT = {
     "/api/config": lambda h, qs, ctx: json_response(h, {
         "config": ctx.runner.config(),
         "vehicles": ctx.vehicles,
         "levels": ctx.levels,
+        "level_ladder": ctx.level_ladder,
     }),
     "/api/vehicle": lambda h, qs, ctx: json_response(h, {
         "fields": ctx.runner.serialize_vehicle(ctx.qvid(qs)),
@@ -109,6 +125,7 @@ GET_EXACT = {
     }),
     "/api/parts/registry": lambda h, qs, ctx: json_response(h, ctx.parts_registry()),
     "/api/catalog": lambda h, qs, ctx: _get_catalog(h, qs),
+    "/api/catalog/assembly": _get_assembly,
     "/api/simconfig": lambda h, qs, ctx: json_response(h, ctx.runner.export_simconfig()),
     "/api/fleet": lambda h, qs, ctx: json_response(h, {
         "fleet": ctx.runner.fleet_enriched(),
@@ -172,7 +189,28 @@ def handle_get(h, route, qs, ctx):
     if route == "/api/catalog/parts":
         from runner.catalog_api import catalog_parts_list
         type_filter = (qs.get("type") or [None])[0]
-        json_response(h, catalog_parts_list(type_filter))
+        query = (qs.get("q") or [None])[0]
+        tag = (qs.get("tag") or [None])[0]
+        sort = (qs.get("sort") or ["label"])[0]
+        json_response(h, catalog_parts_list(type_filter, query=query, tag=tag, sort=sort))
+        return True
+    if route == "/api/catalog/parts/types":
+        from runner.catalog_api import catalog_part_types
+        json_response(h, {"ok": True, **catalog_part_types()})
+        return True
+    if route == "/api/catalog/parts/editor":
+        from runner.catalog_api import catalog_part_editor
+        type_name = (qs.get("type") or ["chassis"])[0]
+        part_id = (qs.get("part_id") or [None])[0]
+        stem = (qs.get("stem") or [None])[0]
+        label = (qs.get("label") or [None])[0]
+        clone = (qs.get("clone") or ["0"])[0] in ("1", "true", "yes")
+        try:
+            payload = catalog_part_editor(
+                type_name, part_id=part_id, stem=stem, label=label, clone=clone)
+            json_response(h, {"ok": True, **payload})
+        except Exception as e:
+            json_response(h, {"ok": False, "error": str(e)}, 400)
         return True
     if route.startswith("/api/catalog/parts/"):
         from runner.catalog_api import catalog_part_get
@@ -183,8 +221,16 @@ def handle_get(h, route, qs, ctx):
             json_response(h, {"ok": False, "error": str(e)}, 400)
         return True
     if route.startswith("/api/catalog/blueprints/"):
-        from runner.catalog_api import catalog_blueprint_get
-        bid = route.split("/api/catalog/blueprints/", 1)[1].strip("/")
+        from runner.catalog_api import catalog_blueprint_export, catalog_blueprint_get
+        rest = route.split("/api/catalog/blueprints/", 1)[1].strip("/")
+        if rest.endswith("/export"):
+            bid = rest[: -len("/export")].strip("/")
+            try:
+                json_response(h, {"ok": True, **catalog_blueprint_export(bid)})
+            except Exception as e:
+                json_response(h, {"ok": False, "error": str(e)}, 400)
+            return True
+        bid = rest
         try:
             json_response(h, {"ok": True, "blueprint": catalog_blueprint_get(bid)})
         except Exception as e:
@@ -340,6 +386,68 @@ def handle_post(h, path, body, ctx):
             info = r.import_tir(body.get("text", ""), vehicle_id=body.get("vehicle_id"))
             json_response(h, {"ok": True, **info})
         except ValueError as e:
+            json_response(h, {"ok": False, "error": str(e)}, 400)
+        return True
+    if path == "/api/catalog/parts/save-fields":
+        try:
+            out = r.save_catalog_part_fields(
+                body.get("type", "chassis"),
+                body.get("stem", "custom"),
+                body.get("label", "Custom part"),
+                body.get("fields") or {},
+                base_part_id=body.get("base_part_id"),
+                doc=body.get("doc"),
+            )
+            json_response(h, {"ok": True, **out})
+        except Exception as e:
+            json_response(h, {"ok": False, "error": str(e)}, 400)
+        return True
+    if path == "/api/catalog/parts/import-yaml":
+        try:
+            out = r.import_catalog_part_yaml(body.get("yaml", ""))
+            json_response(h, {"ok": True, **out})
+        except Exception as e:
+            json_response(h, {"ok": False, "error": str(e)}, 400)
+        return True
+    if path == "/api/catalog/parts/import-tir":
+        try:
+            out = r.import_catalog_part_tir(
+                body.get("text", ""),
+                body.get("stem", "tir_import"),
+                body.get("label", "TIR import"),
+            )
+            json_response(h, {"ok": True, **out})
+        except Exception as e:
+            json_response(h, {"ok": False, "error": str(e)}, 400)
+        return True
+    if path == "/api/catalog/parts/import-kin":
+        try:
+            out = r.import_catalog_part_kin(
+                body.get("yaml", ""),
+                body.get("stem", "kin_import"),
+                body.get("label", "Kin import"),
+            )
+            json_response(h, {"ok": True, **out})
+        except Exception as e:
+            json_response(h, {"ok": False, "error": str(e)}, 400)
+        return True
+    if path == "/api/catalog/parts/delete":
+        try:
+            out = r.delete_catalog_part(body.get("part_id", ""))
+            json_response(h, {"ok": True, **out})
+        except Exception as e:
+            json_response(h, {"ok": False, "error": str(e)}, 400)
+        return True
+    if path == "/api/catalog/blueprint/save":
+        try:
+            vid = int(body.get("vehicle_id", r.live_vid))
+            out = r.save_catalog_blueprint(
+                vid,
+                body.get("stem", "custom_build"),
+                body.get("label", "Custom build"),
+            )
+            json_response(h, {"ok": True, **out})
+        except Exception as e:
             json_response(h, {"ok": False, "error": str(e)}, 400)
         return True
     if path in ("/api/scenario/save", "/api/scene/save"):

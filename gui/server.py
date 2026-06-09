@@ -37,6 +37,7 @@ from runner.cosim_bridge import (
     cleanup_stale_plant as _cleanup_stale_plant,
 )
 from runner.draft import DraftMixin
+from catalog.levels import LEVEL_LADDER
 from runner.params_schema import (
     ACTUATOR_FIELDS, ENUM_MAPS, LEVELS, SENSOR_FIELDS, TIRE_FIELDS,
     VEHICLE_FIELDS, VEHICLES,
@@ -399,6 +400,73 @@ class Runner(DraftMixin):
                 out.append(row)
             return out
 
+    def reload_catalog(self):
+        self._catalog.clear_cache()
+
+    def save_catalog_part(self, doc):
+        from runner.catalog_api import catalog_part_save
+        with self.lock:
+            out = catalog_part_save(doc)
+            self.reload_catalog()
+            return out
+
+    def save_catalog_part_fields(self, type_name, stem, label, fields,
+                                 base_part_id=None, doc=None):
+        from runner.catalog_api import catalog_part_save_fields
+        with self.lock:
+            out = catalog_part_save_fields(
+                type_name, stem, label, fields,
+                base_part_id=base_part_id, doc=doc)
+            self.reload_catalog()
+            return out
+
+    def import_catalog_part_yaml(self, text):
+        from runner.catalog_api import catalog_part_import_yaml
+        with self.lock:
+            out = catalog_part_import_yaml(text)
+            self.reload_catalog()
+            return out
+
+    def import_catalog_part_tir(self, text, stem, label):
+        from runner.catalog_api import catalog_part_import_tir
+        with self.lock:
+            out = catalog_part_import_tir(text, stem, label)
+            self.reload_catalog()
+            return out
+
+    def import_catalog_part_kin(self, text, stem, label):
+        from runner.catalog_api import catalog_part_import_kin
+        with self.lock:
+            out = catalog_part_import_kin(text, stem, label)
+            self.reload_catalog()
+            return out
+
+    def delete_catalog_part(self, part_id):
+        from runner.catalog_api import catalog_part_delete
+        with self.lock:
+            out = catalog_part_delete(part_id)
+            self.reload_catalog()
+            return out
+
+    def save_catalog_blueprint(self, vehicle_id, stem, label):
+        from runner.catalog_api import catalog_blueprint_save_fleet
+        with self.lock:
+            out = catalog_blueprint_save_fleet(vehicle_id, stem, label, self)
+            self.reload_catalog()
+            return out
+
+    def fleet_assembly(self, vehicle_id=None, preview_slot=None, preview_candidate=None):
+        from catalog.assembly import fleet_assembly_view
+        with self.lock:
+            vid = int(vehicle_id) if vehicle_id is not None else self.live_vid
+            spec = self._spec_for_vid(vid)
+            out = Path(self.cosim._tmp) / f"_asm_{vid}"
+            return fleet_assembly_view(
+                spec, resolver=self._catalog, out_dir=out,
+                fleet_overrides=self.fleet_overrides,
+                preview_slot=preview_slot,
+                preview_candidate=preview_candidate)
+
     def serialize_sensors(self):
         out = []
         for attr, label, group, kind in SENSOR_FIELDS:
@@ -479,7 +547,8 @@ class Runner(DraftMixin):
         plots = []
         for ch, amp, unit, col in chans:
             r = vdsim.actuator_step_response(act, ch, amp, 0.002, 0.8, 15.0)
-            plots.append({"title": f"{ch} step → {amp}{unit}", "xlabel": "t [s]", "ylabel": ch,
+            ylab = f"{ch} [{unit}]" if unit else f"{ch} [-]"
+            plots.append({"title": f"{ch} step → {amp}{unit}", "xlabel": "time [s]", "ylabel": ylab,
                           "series": [
                               {"label": "cmd", "color": "#b6c2cf", "dash": True,
                                "x": list(r["t"]), "y": list(r["cmd"])},
@@ -1426,7 +1495,7 @@ def _qvid(qs, default=None):
 
 
 Handler = make_handler(ApiContext(
-    RUNNER, HERE, VEHICLES, LEVELS, COSIM_CMD_PORT, COSIM_STATE_PORT,
+    RUNNER, HERE, VEHICLES, LEVELS, LEVEL_LADDER, COSIM_CMD_PORT, COSIM_STATE_PORT,
     _qvid, parts_registry, list_suspension_api, suspension_default_for_vehicle,
     suspension_schematic, suspension_kc_plots,
 ))

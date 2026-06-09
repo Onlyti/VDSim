@@ -127,8 +127,14 @@
   .modal-h { display:flex; align-items:center; justify-content:space-between; padding:12px 16px;
              border-bottom:1px solid var(--border); background:#eef2f6; border-radius:12px 12px 0 0; }
   .modal-h b { font:600 14px Tahoma; color:#16202b; }
-  .modal-tabs { display:flex; flex-wrap:wrap; gap:4px; padding:8px 12px; border-bottom:1px solid var(--border); }
+  .modal-tabs { display:flex; flex-wrap:wrap; gap:4px; padding:8px 12px; border-bottom:1px solid var(--border);
+    align-items:center; }
   .modal-tabs button { flex:none; padding:6px 10px; font-size:11px; display:inline-flex; align-items:center; }
+  .modal-tune-wrap { display:inline-flex; align-items:center; gap:6px; margin-left:4px; padding:2px 6px;
+    border:1px solid var(--border); border-radius:5px; background:#f8fbfd; }
+  .modal-tune-wrap.on { border-color:var(--acc); background:#e8f4fc; }
+  .modal-tune-lab { font-size:10px; color:var(--dim); white-space:nowrap; }
+  .modal-tune-sel { font-size:11px; border:1px solid var(--border); border-radius:4px; padding:4px 6px; }
   .modal-body { flex:1; overflow:auto; padding:12px 16px; max-height:58vh; }
   .modal-foot { padding:8px 16px; border-top:1px solid var(--border); font-size:11px; color:var(--dim); }
   .fld { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:3px 0; }
@@ -148,6 +154,94 @@
   .modal-tools { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; align-items:center; }
   .modal-tools button { flex:none; width:auto; padding:5px 10px; font-size:11px; }
   .modal-tools select { font-size:11px; padding:4px; border:1px solid var(--border); border-radius:4px; }
+  .asm-blueprint { margin-bottom: 8px; }
+  .asm-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:8px 0; }
+  .asm-slot { border:1px solid var(--border); border-radius:6px; padding:8px 10px; background:#fafcfe; }
+  .asm-slot.on { border-color:var(--acc); box-shadow:0 0 0 1px rgba(1,160,233,.22); }
+  .asm-slot-type { font-size:9px; color:var(--dim); text-transform:uppercase; letter-spacing:.04em; }
+  .asm-slot-lab { font-size:11px; font-weight:600; margin:2px 0 6px; }
+  .asm-slot .fld { margin:0; }
+  .asm-slot select { width:100%; font-size:11px; }
+  .asm-summary { border:1px dashed var(--border); border-radius:6px; padding:8px 10px;
+    font-size:11px; line-height:1.55; margin:8px 0; color:#2a3a48; }
+  .asm-tune-note { font-size:10px; color:var(--dim); margin:0 0 10px; line-height:1.45; }
+  .garage { display:flex; flex-direction:column; gap:8px; }
+  .garage-top { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  .garage-presets { display:flex; flex-wrap:wrap; gap:4px; }
+  .garage-presets button { width:auto; padding:3px 8px; font-size:10px; border-radius:12px;
+    border:1px solid var(--border); background:#f4f8fb; cursor:pointer; }
+  .garage-presets button:hover { border-color:var(--acc); }
+  .garage-main { display:grid; grid-template-columns:118px 1fr 168px; gap:10px; min-height:280px; }
+  .garage-cat { border:1px solid var(--border); border-radius:6px; padding:4px 0; background:#fafcfe; }
+  .garage-cat button { display:block; width:100%; text-align:left; padding:7px 10px; border:none;
+    background:transparent; font-size:11px; cursor:pointer; border-bottom:1px solid #eef2f5; }
+  .garage-cat button.on { background:#e8f4fc; font-weight:600; border-left:3px solid var(--acc); }
+  .garage-center { display:flex; flex-direction:column; gap:8px; min-width:0; }
+  .garage-diagram { position:relative; height:148px; border:1px solid var(--border); border-radius:8px;
+    background:linear-gradient(180deg,#f8fbfd,#eef4f8); }
+  .garage-diagram .dg-slot { position:absolute; font-size:9px; padding:4px 6px; border-radius:5px;
+    border:1px solid var(--border); background:#fff; cursor:pointer; max-width:88px; overflow:hidden;
+    text-overflow:ellipsis; white-space:nowrap; }
+  .garage-diagram .dg-slot.on { border-color:var(--acc); box-shadow:0 0 0 1px rgba(1,160,233,.25); font-weight:600; }
+  .garage-diagram .dg-slot.warn { border-color:#e6a817; }
+  .garage-diagram .dg-slot.err { border-color:#d44; }
+  .garage-diagram .dg-chassis { left:50%; top:54%; transform:translate(-50%,-50%); min-width:72px; text-align:center; z-index:2; }
+  .garage-diagram .dg-fl { left:8%; top:18%; }
+  .garage-diagram .dg-fr { right:8%; top:18%; }
+  .garage-diagram .dg-rl { left:8%; bottom:18%; }
+  .garage-diagram .dg-rr { right:8%; bottom:18%; }
+  .garage-diagram .dg-ctrl { left:50%; bottom:6%; transform:translateX(-50%); font-size:8px; opacity:.85; }
+  .garage-diagram .dg-tire-hub { left:50%; top:10%; transform:translate(-50%,0); min-width:96px; text-align:center;
+    line-height:1.35; padding:6px 8px; z-index:3; }
+  .garage-diagram .dg-tire-hub .dg-tire-title { display:block; font-size:8px; color:var(--dim); text-transform:uppercase; }
+  .garage-diagram .dg-tire-hub .dg-tire-stem { display:block; font-weight:600; }
+  .garage-diagram .dg-tire-hub .dg-tire-wh { display:block; font-size:8px; color:var(--dim); letter-spacing:.04em; }
+  .garage-diagram .dg-whl { position:absolute; font-size:8px; color:var(--dim); pointer-events:none; }
+  .garage-diagram .dg-whl.fl { left:10%; top:12%; }
+  .garage-diagram .dg-whl.fr { right:10%; top:12%; }
+  .garage-diagram .dg-whl.rl { left:10%; bottom:28%; }
+  .garage-diagram .dg-whl.rr { right:10%; bottom:28%; }
+  .garage-card.preview { border-color:#7ab8e8; box-shadow:0 0 0 1px rgba(1,160,233,.35); }
+  .garage-card-hint { font-size:9px; color:var(--dim); margin:0 0 4px; }
+  .garage-cards { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 8px; scroll-snap-type:x mandatory; }
+  .garage-card { flex:0 0 148px; scroll-snap-align:start; border:1px solid var(--border); border-radius:8px;
+    padding:8px; background:#fff; cursor:pointer; position:relative; }
+  .garage-card.on { border-color:var(--acc); box-shadow:0 0 0 1px rgba(1,160,233,.22); }
+  .garage-card.bad { opacity:.55; }
+  .garage-card .gc-tier { font-size:8px; text-transform:uppercase; color:var(--dim); letter-spacing:.05em; }
+  .garage-card .gc-lab { font-size:11px; font-weight:600; margin:2px 0 4px; line-height:1.25; }
+  .garage-card .gc-lines { font-size:9px; color:#4a5a68; line-height:1.4; }
+  .garage-card .gc-badge { position:absolute; top:6px; right:6px; font-size:8px; padding:1px 4px;
+    border-radius:3px; background:#fde8e8; color:#a33; }
+  .garage-stats { border:1px solid var(--border); border-radius:6px; padding:8px 10px; font-size:10px;
+    line-height:1.55; background:#fafcfe; }
+  .garage-stats .gs-row { display:flex; justify-content:space-between; gap:6px; }
+  .garage-stats .gs-delta { color:var(--acc); font-size:9px; }
+  .garage-stats .gs-delta.neg { color:#c55; }
+  .garage-stats .gs-warn { color:#a66; margin-top:6px; font-size:9px; }
+  .parts-lib { display:flex; gap:12px; align-items:flex-start; }
+  .parts-lib-split { display:grid; grid-template-columns:minmax(200px,34%) 1fr; gap:12px; align-items:start;
+    min-height:360px; }
+  .parts-lib-cards { display:flex; flex-direction:column; gap:6px; max-height:58vh; overflow:auto; }
+  .parts-lib-card .plc-clone { margin-top:4px; font-size:9px; color:var(--acc); text-decoration:underline; }
+  .parts-lib-toolbar { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 8px; align-items:center; }
+  .parts-lib-toolbar input, .parts-lib-toolbar select { font-size:11px; padding:4px 6px;
+    border:1px solid var(--border); border-radius:4px; }
+  .parts-lib-card { border:1px solid var(--border); border-radius:6px; padding:8px; cursor:pointer;
+    background:#fff; font-size:10px; }
+  .parts-lib-card.on { border-color:var(--acc); background:#e8f4fc; }
+  .parts-lib-card .plc-tier { font-size:8px; color:var(--dim); text-transform:uppercase; }
+  .parts-lib-card .plc-lab { font-weight:600; margin:2px 0; font-size:11px; }
+  .parts-lib-list { width:190px; flex-shrink:0; border:1px solid var(--border); border-radius:6px;
+    overflow:auto; max-height:52vh; padding:4px 0; }
+  .parts-lib-list button { display:block; width:100%; text-align:left; padding:6px 10px; border:none;
+    background:transparent; font-size:11px; cursor:pointer; border-bottom:1px solid #eef2f5; }
+  .parts-lib-list button.on { background:#e8f4fc; font-weight:600; }
+  .parts-lib-editor { flex:1; min-width:0; }
+  .parts-lib-actions { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 10px; align-items:center; }
+  .parts-lib-actions button { flex:none; width:auto; padding:4px 10px; font-size:11px; }
+  .parts-yaml { width:100%; min-height:96px; font-family:ui-monospace,monospace; font-size:10px;
+    margin-top:8px; border:1px solid var(--border); border-radius:4px; padding:6px; }
   .modal-curves canvas { width:100%; height:132px; display:block; margin:6px 0;
     background:#fff; border:1px solid var(--border); border-radius:5px; }
   #sim_load_input { display:none; }
@@ -291,7 +385,7 @@
           <div class="setup-tab-pane" id="setup_pane_vehicle">
             <section class="setup-section" style="min-width:300px;max-width:440px">
               <div class="grp" data-help="frames">Vehicles</div>
-              <div class="setup-hint-line">Drag in view to set spawn · <b>Edit</b> for level, parts, and modules.</div>
+              <div class="setup-hint-line">Drag in view to set spawn · <b>Edit</b> to assemble catalog parts.</div>
               <div id="setup_fleet"></div>
               <button id="setup_fleet_add" style="width:100%;padding:4px;font-size:10px;margin-top:4px">+ add 2nd vehicle</button>
             </section>
@@ -501,6 +595,21 @@ async function postJson(url, obj) {
     throw new Error(r.ok ? text.slice(0, 120) : (`HTTP ${r.status}: ${text.slice(0, 120)}`));
   }
   if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+  return j;
+}
+async function getJson(url) {
+  const r = await fetch(url);
+  const ct = r.headers.get('Content-Type') || '';
+  let j = {};
+  if (ct.includes('json')) {
+    j = await r.json();
+  } else {
+    const text = await r.text();
+    const hint = r.status === 404 ? ' — restart gui/server.py and hard-refresh' : '';
+    throw new Error(`HTTP ${r.status}${hint}: ${text.replace(/<[^>]+>/g, '').slice(0, 100)}`);
+  }
+  if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+  if (j.ok === false) throw new Error(j.error || 'request failed');
   return j;
 }
 async function startSimulation() {
@@ -2326,7 +2435,16 @@ function collectWaypointPts() {
   }).filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]));
 }
 const FLEET_LEVELS = ['K', 'L1', 'L2', 'L3', 'L4', 'L5'];
+let setupLevelLadder = [];
 let setupVehicleList = [], setupTireSamples = [], setupSuspList = [], setupSuspL3Count = 0;
+function fleetLevelOptions() {
+  if (!setupLevelLadder.length) return FLEET_LEVELS.map(id => ({ v: id, t: id }));
+  return setupLevelLadder.map(l => ({ v: l.id, t: `${l.id} — ${l.name}` }));
+}
+function fleetLevelHint(id) {
+  const e = setupLevelLadder.find(l => l.id === id);
+  return e ? `${e.ld}: ${e.title} — ${e.summary}` : '';
+}
 let _fleetUiSig = '';
 let _fleetTreeSig = '';
 let _lastStoppedPoseSig = '';
@@ -2400,11 +2518,11 @@ async function modalFleetUpdate(key, value) {
       if (key === 'front_susp') modalSuspFront = value;
       if (key === 'rear_susp') modalSuspRear = value;
       const rerenderTab = {
-        level: ['chassis', 'suspension'],
-        vehicle: ['chassis', 'suspension'],
-        tire: ['tire'],
-        front_susp: ['suspension'],
-        rear_susp: ['suspension'],
+        level: ['assembly', 'chassis', 'suspension'],
+        vehicle: ['assembly', 'chassis', 'suspension'],
+        tire: ['assembly', 'tire'],
+        front_susp: ['assembly', 'suspension'],
+        rear_susp: ['assembly', 'suspension'],
       };
       if ($('modal_bg').classList.contains('open') && rerenderTab[key]?.includes(modalTab)) {
         renderModalPane();
@@ -2416,6 +2534,259 @@ async function modalFleetUpdate(key, value) {
   } catch (e) {
     alert(e.message);
   }
+}
+function appendAssemblySelectRow(parent, label, opts, val, onchange) {
+  const wrap = document.createElement('div');
+  wrap.className = 'fld';
+  const lab = document.createElement('label');
+  lab.textContent = label;
+  const sel = document.createElement('select');
+  for (const o of opts) {
+    const opt = document.createElement('option');
+    if (typeof o === 'string') { opt.value = o; opt.textContent = o; }
+    else { opt.value = o.v; opt.textContent = o.t; }
+    if (opt.value === String(val ?? '')) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  sel.onchange = () => { void onchange(sel.value); };
+  wrap.appendChild(lab);
+  wrap.appendChild(sel);
+  parent.appendChild(wrap);
+}
+async function fetchModalAssembly(opts = {}) {
+  const qs = new URLSearchParams({ vehicle_id: String(modalVid) });
+  if (opts.slot) qs.set('slot', opts.slot);
+  if (opts.candidate) qs.set('candidate', opts.candidate);
+  const r = await getJson(`/api/catalog/assembly?${qs}`);
+  modalAssembly = r.assembly;
+  if (r.assembly?.preview) modalAsmPreview = r.assembly.preview;
+  return modalAssembly;
+}
+function installSlotForPartType(typeName, partId) {
+  if (typeName === 'susp_kinematics') {
+    const s = (partId || '').toLowerCase();
+    if (s.includes('rear')) return 'rear_susp_kin';
+    if (s.includes('front')) return 'front_susp_kin';
+    return 'front_susp_kin';
+  }
+  return PART_TYPE_INSTALL_SLOT[typeName] || null;
+}
+function fmtDelta(key, v) {
+  if (v == null || Math.abs(v) < 1e-9) return '';
+  const sign = v > 0 ? '+' : '';
+  if (key === 'mass_kg') return `${sign}${v.toFixed(0)} kg`;
+  if (key.includes('_m')) return `${sign}${v.toFixed(3)} m`;
+  if (key === 'tire_mu') return `${sign}${v.toFixed(2)} μ`;
+  return `${sign}${v.toFixed(3)}`;
+}
+function slotCompatClass(slot) {
+  const cur = slot.candidates?.find(c => c.id === slot.part_id);
+  if (!cur?.compat?.length) return '';
+  if (cur.compat.some(c => c.level === 'error')) return 'err';
+  if (cur.compat.some(c => c.level === 'warn')) return 'warn';
+  return '';
+}
+function debouncedAsmPreview(slot, candidateId) {
+  clearTimeout(modalAsmPreviewTimer);
+  modalAsmPreviewTimer = setTimeout(async () => {
+    try {
+      await fetchModalAssembly({ slot, candidate: candidateId });
+      const statsEl = $('garage_stats');
+      if (statsEl) renderGarageStats(statsEl, modalAssembly, modalAsmPreview);
+    } catch (_) { /* hover preview optional */ }
+  }, 180);
+}
+function renderGarageStats(el, asm, preview) {
+  const s = (preview?.summary && !preview.summary.error) ? preview.summary : (asm.summary || {});
+  const delta = preview?.delta || {};
+  const rows = [
+    ['Mass', s.mass_kg, 'mass_kg', 0],
+    ['Wheelbase', s.wheelbase_m, 'wheelbase_m', 2],
+    ['CG height', s.cg_height_m, 'cg_height_m', 2],
+    ['Tire μ', s.tire_mu, 'tire_mu', 2],
+    ['Drive', s.drive_type, null, 0],
+  ];
+  el.innerHTML = '';
+  const title = document.createElement('div');
+  title.className = 'subgrp';
+  title.textContent = preview ? 'Preview stats' : 'Resolved stats';
+  el.appendChild(title);
+  if (s.error) {
+    const err = document.createElement('div');
+    err.className = 'gs-warn';
+    err.textContent = s.error;
+    el.appendChild(err);
+    return;
+  }
+  for (const [lab, val, dkey, prec] of rows) {
+    const row = document.createElement('div');
+    row.className = 'gs-row';
+    const l = document.createElement('span');
+    l.textContent = lab;
+    const r = document.createElement('span');
+    if (dkey) {
+      r.innerHTML = `<b>${(+val).toFixed(prec)}</b>`;
+      const d = delta[dkey];
+      if (d != null && Math.abs(d) > 1e-9) {
+        const sp = document.createElement('span');
+        sp.className = 'gs-delta' + (d < 0 ? ' neg' : '');
+        sp.textContent = ' ' + fmtDelta(dkey, d);
+        r.appendChild(sp);
+      }
+    } else {
+      r.innerHTML = `<b>${val || '—'}</b>`;
+    }
+    row.appendChild(l);
+    row.appendChild(r);
+    el.appendChild(row);
+  }
+  if (asm.build_complete === false) {
+    const w = document.createElement('div');
+    w.className = 'gs-warn';
+    w.textContent = 'Incomplete build — fill all slots.';
+    el.appendChild(w);
+  }
+}
+function buildGarageDiagram(parent, asm, activeSlot, onSelect) {
+  parent.innerHTML = '';
+  const slotMap = Object.fromEntries(asm.slots.map(s => [s.slot, s]));
+  const mk = (cls, slotKey, label) => {
+    if (!slotMap[slotKey]) return;
+    const s = slotMap[slotKey];
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'dg-slot ' + cls + (activeSlot === slotKey ? ' on' : '') + slotCompatClass(s);
+    b.textContent = label + ': ' + (s.part_stem || '—');
+    b.title = s.part_label;
+    b.onclick = () => onSelect(slotKey);
+    parent.appendChild(b);
+  };
+  mk('dg-chassis', 'chassis', 'Chassis');
+  if (slotMap.tire) {
+    const s = slotMap.tire;
+    for (const [cls, lab] of [['fl', 'FL'], ['fr', 'FR'], ['rl', 'RL'], ['rr', 'RR']]) {
+      const w = document.createElement('span');
+      w.className = 'dg-whl ' + cls;
+      w.textContent = lab;
+      parent.appendChild(w);
+    }
+    const hub = document.createElement('button');
+    hub.type = 'button';
+    hub.className = 'dg-slot dg-tire-hub' + (activeSlot === 'tire' ? ' on' : '') + slotCompatClass(s);
+    hub.title = s.part_label;
+    hub.innerHTML = `<span class="dg-tire-title">Tire package</span>`
+      + `<span class="dg-tire-stem">${s.part_stem || '—'}</span>`
+      + `<span class="dg-tire-wh">shared · all wheels</span>`;
+    hub.onclick = () => onSelect('tire');
+    parent.appendChild(hub);
+  }
+  const ctrl = ['brake', 'steering', 'drivetrain'].filter(k => slotMap[k]);
+  if (ctrl.length) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'dg-slot dg-ctrl' + (ctrl.includes(activeSlot) ? ' on' : '');
+    b.textContent = ctrl.map(k => slotMap[k].part_stem || k).join(' · ');
+    b.onclick = () => onSelect(ctrl[0]);
+    parent.appendChild(b);
+  }
+  ['front_susp_kin', 'rear_susp_kin'].forEach((k, i) => {
+    if (!slotMap[k]) return;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'dg-slot ' + (i ? 'dg-rr' : 'dg-fl') + (activeSlot === k ? ' on' : '') + slotCompatClass(slotMap[k]);
+    b.style.top = i ? '62%' : '62%';
+    b.style[i ? 'right' : 'left'] = '32%';
+    b.textContent = (i ? 'Rear' : 'Front') + ' susp';
+    b.onclick = () => onSelect(k);
+    parent.appendChild(b);
+  });
+}
+function renderGarageCards(container, slot, onInstall, onHover, onPin) {
+  container.innerHTML = '';
+  if (!slot) return;
+  const hint = document.createElement('div');
+  hint.className = 'garage-card-hint';
+  hint.textContent = 'Click to preview Δ stats · click again to install';
+  container.appendChild(hint);
+  for (const c of slot.candidates || []) {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.dataset.candidateId = c.id;
+    const pinned = modalAsmPinnedCandidate === c.id && c.id !== slot.part_id;
+    card.className = 'garage-card'
+      + (c.id === slot.part_id ? ' on' : '')
+      + (pinned ? ' preview' : '')
+      + (c.ok === false ? ' bad' : '');
+    const tier = document.createElement('div');
+    tier.className = 'gc-tier';
+    tier.textContent = (c.card?.tier || 'oem');
+    const lab = document.createElement('div');
+    lab.className = 'gc-lab';
+    lab.textContent = c.label || c.id;
+    card.appendChild(tier);
+    card.appendChild(lab);
+    const lines = document.createElement('div');
+    lines.className = 'gc-lines';
+    lines.textContent = (c.card?.lines || []).join(' · ') || c.id;
+    card.appendChild(lines);
+    const bad = (c.compat || []).find(x => x.level === 'error');
+    if (bad) {
+      const badge = document.createElement('span');
+      badge.className = 'gc-badge';
+      badge.textContent = '!';
+      badge.title = bad.msg;
+      card.appendChild(badge);
+    }
+    card.onclick = () => {
+      if (c.id === slot.part_id) return;
+      if (modalAsmPinnedCandidate === c.id) {
+        modalAsmPinnedCandidate = null;
+        onInstall(c.id);
+      } else {
+        modalAsmPinnedCandidate = c.id;
+        onPin(c.id);
+      }
+    };
+    card.onmouseenter = () => { if (!modalAsmPinnedCandidate) onHover(c.id); };
+    container.appendChild(card);
+  }
+}
+async function exportBlueprintJson(blueprintId) {
+  const r = await getJson(`/api/catalog/blueprints/${encodeURIComponent(blueprintId)}/export`);
+  const blob = new Blob([r.yaml || JSON.stringify(r.blueprint, null, 2)], { type: 'text/yaml' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${blueprintId.replace(/\./g, '_')}.yaml`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+async function modalFleetBlueprintUpdate(blueprintId) {
+  try {
+    const r = await postSetup({ fleet: [{ id: modalVid, blueprint: blueprintId }] });
+    if (r.setup?.fleet) window._fleetSpec = mergeSetupFleet(r.setup.fleet);
+    await reloadModalFromAssembly();
+    markDraftDirty();
+  } catch (e) { alert(e.message); }
+}
+async function modalFleetPartUpdate(slot, partId) {
+  try {
+    const r = await postSetup({ fleet: [{ id: modalVid, parts: { [slot]: partId } }] });
+    if (r.setup?.fleet) window._fleetSpec = mergeSetupFleet(r.setup.fleet);
+    await reloadModalFromAssembly();
+    markDraftDirty();
+  } catch (e) { alert(e.message); }
+}
+async function reloadModalFromAssembly() {
+  const spec = window._fleetSpec?.find(f => +f.id === modalVid);
+  modalLvl = spec?.level || modalLvl;
+  if (spec?.front_susp) modalSuspFront = spec.front_susp;
+  if (spec?.rear_susp) modalSuspRear = spec.rear_susp;
+  vehFields = (await getJson(`/api/vehicle?vehicle_id=${modalVid}`)).fields;
+  tireFields = (await getJson(`/api/tire?vehicle_id=${modalVid}`)).fields;
+  await fetchModalAssembly();
+  if (modalTab === 'assembly') renderModalPane();
+  else if (modalPreview) refreshModalPreview();
+  await buildVehicleTree(window._fleetSpec, selectedVid);
 }
 function appendFleetSelectRow(parent, label, key, opts, val, disabled) {
   const wrap = document.createElement('div');
@@ -2454,12 +2825,12 @@ function appendChassisDynamicsTools(parent, spec) {
   parent.appendChild(head);
   const row = document.createElement('div');
   row.className = 'modal-tools';
-  appendFleetSelectRow(row, 'Level', 'level', FLEET_LEVELS, lvl);
+  appendFleetSelectRow(row, 'Level', 'level', fleetLevelOptions(), lvl);
   appendFleetSelectRow(row, 'Vehicle', 'vehicle', setupVehicleList, spec.vehicle || 'sedan');
   const lnote = document.createElement('div');
   lnote.className = 'sub';
   lnote.style.cssText = 'width:100%;margin:2px 0 0';
-  lnote.textContent = 'L4 = L3 + hardpoint kinematics; L5 = free 3D stunt (jump/loop).';
+  lnote.textContent = fleetLevelHint(lvl) || 'L4 = hardpoint kin; L5 = free 3D stunt.';
   row.appendChild(lnote);
   parent.appendChild(row);
 }
@@ -2511,6 +2882,12 @@ function appendTireFleetTools(parent, spec) {
   parent.appendChild(row);
 }
 async function ensureSetupLists() {
+  if (!setupLevelLadder.length) {
+    try {
+      const cf = await (await fetch('/api/config')).json();
+      setupLevelLadder = cf.level_ladder || [];
+    } catch (_) { setupLevelLadder = []; }
+  }
   if (!setupVehicleList.length) {
     const reg = await (await fetch('/api/parts/registry')).json();
     setupVehicleList = reg.vehicles || reg.blueprints?.map(b => b.replace('vehicle.', '')) || ['sedan'];
@@ -2593,6 +2970,13 @@ async function renderFleetSpawn(fleet) {
       head.appendChild(rm);
     }
     box.appendChild(head);
+    const asm = document.createElement('div');
+    asm.className = 'sub';
+    asm.style.cssText = 'font-size:9px;margin:0 0 3px;line-height:1.35';
+    const bp = (spec.blueprint || '').replace(/^vehicle\./, '') || spec.vehicle || 'sedan';
+    const tireId = (spec.parts && spec.parts.tire) || `tire.${spec.tire || 'default_pacejka'}`;
+    asm.textContent = `${bp} · ${tireId.replace(/^tire\./, '')}`;
+    box.appendChild(asm);
     const row = document.createElement('div');
     row.className = 'setup-row';
     for (const [k, lab] of [['x0', 'x'], ['y0', 'y'], ['yaw0', 'ψ'], ['vx0', 'vx']]) {
@@ -3018,7 +3402,8 @@ async function buildVehicleTree(fleetSpec, liveVid) {
     const row = document.createElement('div'); row.className = 'tree-row veh';
     if (vid === liveVid) row.style.outline = '1px solid var(--acc)';
     const label = document.createElement('span');
-    label.textContent = `▾ Vehicle ${vid}` + (spec.vehicle ? ` (${spec.vehicle})` : '');
+    const bp = (spec.blueprint || '').replace(/^vehicle\./, '') || spec.vehicle || '';
+    label.textContent = `▾ Vehicle ${vid}` + (bp ? ` (${bp})` : '');
     label.style.cursor = 'pointer';
     label.onclick = () => selectVehicle(vid);
     row.appendChild(label);
@@ -3337,27 +3722,96 @@ function selectRow(label, opts, cur, onChange, labelMap) {
   sel.innerHTML = opts.map(v => `<option value="${v}" ${v === cur ? 'selected' : ''}>${labelMap ? (labelMap[v] || v) : v}</option>`).join('');
   sel.onchange = e => onChange(e.target.value); row.appendChild(sel); return row;
 }
+function formatPlotTick(v) {
+  const a = Math.abs(v);
+  if (a >= 1000) return v.toFixed(0);
+  if (a >= 100) return v.toFixed(0);
+  if (a >= 10) return v.toFixed(1);
+  if (a >= 1) return v.toFixed(2);
+  if (a >= 0.01) return v.toFixed(3);
+  return v.toExponential(1);
+}
+function nicePlotTicks(lo, hi, target = 5) {
+  if (!isFinite(lo) || !isFinite(hi)) return [0, 1];
+  if (lo > hi) { const t = lo; lo = hi; hi = t; }
+  const span = hi - lo;
+  if (span < 1e-12) return [lo, lo + 1];
+  const raw = span / Math.max(2, target - 1);
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / mag;
+  let step = mag;
+  if (norm > 5) step = 10 * mag;
+  else if (norm > 2) step = 5 * mag;
+  else if (norm > 1) step = 2 * mag;
+  const start = Math.floor(lo / step) * step;
+  const ticks = [];
+  for (let v = start; v <= hi + step * 1e-6; v += step) ticks.push(+v.toFixed(12));
+  if (ticks.length < 2) return [lo, hi];
+  return ticks;
+}
 function plotChart(cv, p) {
-  const dpr = devicePixelRatio || 1, W = cv.clientWidth || 300, H = cv.clientHeight || 132;
+  const dpr = devicePixelRatio || 1, W = cv.clientWidth || 300, H = cv.clientHeight || 148;
   cv.width = W * dpr; cv.height = H * dpr;
   const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
   g.clearRect(0, 0, W, H);
-  const ml = 44, mr = 8, mt = 18, mb = 22, pw = W - ml - mr, ph = H - mt - mb;
+  const ml = p.ylabel ? 54 : 44, mr = 10, mt = 20, mb = p.xlabel ? 34 : 24;
+  const pw = W - ml - mr, ph = H - mt - mb;
   let xmin = 1 / 0, xmax = -1 / 0, ymin = 1 / 0, ymax = -1 / 0;
   p.series.forEach(s => s.x.forEach((x, i) => {
     const y = s.y[i]; if (x < xmin) xmin = x; if (x > xmax) xmax = x; if (y < ymin) ymin = y; if (y > ymax) ymax = y;
   }));
   if (!isFinite(xmin)) return;
-  if (ymin === ymax) { ymin -= 1; ymax += 1; } if (xmin === xmax) { xmax = xmin + 1; }
-  const padY = (ymax - ymin) * 0.08; ymin -= padY; ymax += padY;
-  const X = x => ml + (x - xmin) / (xmax - xmin) * pw, Y = y => mt + (1 - (y - ymin) / (ymax - ymin)) * ph;
-  g.strokeStyle = '#d2dae3'; g.lineWidth = 1; g.strokeRect(ml, mt, pw, ph);
+  if (ymin === ymax) { ymin -= 1; ymax += 1; }
+  if (xmin === xmax) { xmax = xmin + 1; }
+  const padY = (ymax - ymin) * 0.06; ymin -= padY; ymax += padY;
+  const xTicks = nicePlotTicks(xmin, xmax);
+  const yTicks = nicePlotTicks(ymin, ymax);
+  xmin = xTicks[0]; xmax = xTicks[xTicks.length - 1];
+  ymin = yTicks[0]; ymax = yTicks[yTicks.length - 1];
+  const X = x => ml + (x - xmin) / (xmax - xmin) * pw;
+  const Y = y => mt + (1 - (y - ymin) / (ymax - ymin)) * ph;
+  g.strokeStyle = '#e9edf2'; g.lineWidth = 1;
+  xTicks.forEach(v => {
+    const px = X(v); g.beginPath(); g.moveTo(px, mt); g.lineTo(px, mt + ph); g.stroke();
+  });
+  yTicks.forEach(v => {
+    const py = Y(v); g.beginPath(); g.moveTo(ml, py); g.lineTo(ml + pw, py); g.stroke();
+  });
+  g.strokeStyle = '#c5cdd6'; g.lineWidth = 1; g.strokeRect(ml, mt, pw, ph);
   g.fillStyle = '#6b7480'; g.font = '9px Tahoma';
+  g.textAlign = 'center';
+  xTicks.forEach(v => g.fillText(formatPlotTick(v), X(v), mt + ph + 12));
+  g.textAlign = 'right';
+  yTicks.forEach(v => g.fillText(formatPlotTick(v), ml - 5, Y(v) + 3));
+  if (p.xlabel) {
+    g.fillStyle = '#4a5560'; g.textAlign = 'center';
+    g.fillText(p.xlabel, ml + pw / 2, H - 6);
+  }
+  if (p.ylabel) {
+    g.save(); g.translate(14, mt + ph / 2); g.rotate(-Math.PI / 2);
+    g.fillStyle = '#4a5560'; g.textAlign = 'center'; g.font = '9px Tahoma';
+    g.fillText(p.ylabel, 0, 0); g.restore();
+  }
   g.fillStyle = '#2a2f37'; g.font = '600 10px Tahoma'; g.textAlign = 'left';
-  g.fillText(p.title, ml, 12);
+  g.fillText(p.title, ml, 13);
+  if (p.series.length > 1 && p.series.some(s => s.label)) {
+    let ly = mt + 6;
+    g.textAlign = 'right';
+    p.series.forEach(s => {
+      if (!s.label) return;
+      const lx = ml + pw - 4;
+      g.strokeStyle = s.color; g.lineWidth = 2; g.setLineDash(s.dash ? [4, 3] : []);
+      g.beginPath(); g.moveTo(lx - 48, ly + 4); g.lineTo(lx - 34, ly + 4); g.stroke();
+      g.setLineDash([]);
+      g.fillStyle = '#5a6270'; g.font = '8px Tahoma';
+      g.fillText(s.label, lx, ly + 7);
+      ly += 11;
+    });
+  }
   p.series.forEach(s => {
     g.strokeStyle = s.color; g.lineWidth = 1.6; g.setLineDash(s.dash ? [4, 3] : []);
-    g.beginPath(); s.x.forEach((x, i) => { const px = X(x), py = Y(s.y[i]); i ? g.lineTo(px, py) : g.moveTo(px, py); });
+    g.beginPath();
+    s.x.forEach((x, i) => { const px = X(x), py = Y(s.y[i]); i ? g.lineTo(px, py) : g.moveTo(px, py); });
     g.stroke();
   });
   g.setLineDash([]);
@@ -3409,7 +3863,11 @@ function plantEnhanceTire(el) {
   };
   lug.addEventListener('change', upd); upd();
 }
-const MODAL_TABS = [
+const MODAL_PRIMARY_TABS = [
+  { id: 'assembly', label: 'Assembly', help: 'Preset', type: 'assembly' },
+  { id: 'parts', label: 'Parts library', help: 'Preset', type: 'parts' },
+];
+const MODAL_TUNE_TABS = [
   { id: 'chassis', label: 'Chassis', help: 'Preset', type: 'chassis' },
   { id: 'suspension', label: 'Suspension', help: 'Suspension', type: 'vehicle', filter: f => f.group === 'Suspension' },
   { id: 'brake', label: 'Brake', help: 'Drivetrain', type: 'vehicle', filter: f => ['max_brake_torque', 'brake_bias_front', 'brake_ebd_enabled', 'brake_deadtime_s'].includes(f.name) },
@@ -3420,6 +3878,50 @@ const MODAL_TABS = [
   { id: 'actuator', label: 'Actuator', help: 'Actuator & feedback', type: 'actuator' },
   { id: 'sensors', label: 'Sensors', help: 'Actuator & feedback', type: 'sensors' },
 ];
+function modalTabDef(id) {
+  return MODAL_PRIMARY_TABS.find(t => t.id === id) || MODAL_TUNE_TABS.find(t => t.id === id);
+}
+function isTuneModalTab(id) {
+  return MODAL_TUNE_TABS.some(t => t.id === id);
+}
+function buildModalTabs(tabsEl) {
+  tabsEl.innerHTML = '';
+  for (const t of MODAL_PRIMARY_TABS) {
+    const b = document.createElement('button');
+    b.textContent = t.label;
+    if (t.help) addHelp(b, t.help);
+    b.classList.toggle('on', modalTab === t.id);
+    b.onclick = () => { modalTab = t.id; buildModalTabs(tabsEl); renderModalPane(); };
+    tabsEl.appendChild(b);
+  }
+  const wrap = document.createElement('div');
+  wrap.className = 'modal-tune-wrap' + (isTuneModalTab(modalTab) ? ' on' : '');
+  const lab = document.createElement('span');
+  lab.className = 'modal-tune-lab';
+  lab.textContent = 'Session tune';
+  const sel = document.createElement('select');
+  sel.className = 'modal-tune-sel';
+  const ph = document.createElement('option');
+  ph.value = '';
+  ph.textContent = '— select —';
+  sel.appendChild(ph);
+  for (const t of MODAL_TUNE_TABS) {
+    const o = document.createElement('option');
+    o.value = t.id;
+    o.textContent = t.label;
+    if (modalTab === t.id) o.selected = true;
+    sel.appendChild(o);
+  }
+  sel.onchange = () => {
+    if (!sel.value) return;
+    modalTab = sel.value;
+    buildModalTabs(tabsEl);
+    renderModalPane();
+  };
+  wrap.appendChild(lab);
+  wrap.appendChild(sel);
+  tabsEl.appendChild(wrap);
+}
 const SUBGRP_HELP = { IMU: 'Actuator & feedback', GNSS: 'Actuator & feedback', Wheel: 'Actuator & feedback', Steer: 'Actuator & feedback', General: 'Actuator & feedback' };
 const SUSP_PRESETS = {
   soft: { spring_stiffness: [22000, 22000, 24000, 24000], damper_coefficient: [2200, 2200, 2400, 2400] },
@@ -3427,7 +3929,20 @@ const SUSP_PRESETS = {
   stiff: { spring_stiffness: [48000, 48000, 52000, 52000], damper_coefficient: [4800, 4800, 5200, 5200] },
 };
 const WS_CORNERS = ['FL', 'FR', 'RL', 'RR'];
-let modalTab = 'chassis', modalLvl = 'L2', modalCorner = 0, modalVid = 0;
+let modalTab = 'assembly', modalLvl = 'L2', modalCorner = 0, modalVid = 0;
+let modalAssembly = null;
+let modalAsmSlot = 'chassis', modalAsmPreview = null, modalAsmPreviewTimer = null;
+let modalAsmPinnedCandidate = null;
+let partsLibType = 'chassis', partsLibSelId = '', partsLibEditor = null;
+let partsLibQuery = '', partsLibTag = '', partsLibSort = 'label';
+const PART_LIB_TYPES = [
+  ['chassis', 'Chassis'], ['tire', 'Tire'], ['brake', 'Brake'],
+  ['steering', 'Steering'], ['drivetrain', 'Drivetrain'], ['susp_kinematics', 'Susp kin'],
+];
+const PART_TYPE_INSTALL_SLOT = {
+  chassis: 'chassis', tire: 'tire', brake: 'brake',
+  steering: 'steering', drivetrain: 'drivetrain',
+};
 let vehFields = [], tireFields = [], sensFields = [], actFields = [], tireSamples = [];
 let vehicleList = [], cfgVehicle = 'sedan';
 let suspList = [], suspDefaults = { front: '', rear: '' };
@@ -3439,12 +3954,14 @@ let postTimer = null;
 function geomFromModalForm() {
   const el = $('modal_form');
   const q = n => el?.querySelector(`[data-name="${n}"]`);
+  const spec = window._fleetSpec?.find(f => +f.id === modalVid);
+  const g = spec?.geom || {};
   return {
-    cg_to_front: +(q('cg_to_front')?.value || 1.2),
-    cg_to_rear: +(q('cg_to_rear')?.value || 1.5),
-    track_front: +(q('track_front')?.value || 1.55),
-    track_rear: +(q('track_rear')?.value || 1.55),
-    wheel_radius_nominal: +(q('wheel_radius_nominal')?.value || 0.32),
+    cg_to_front: +(q('cg_to_front')?.value ?? g.cg_to_front ?? 1.2),
+    cg_to_rear: +(q('cg_to_rear')?.value ?? g.cg_to_rear ?? 1.5),
+    track_front: +(q('track_front')?.value ?? g.track_front ?? 1.55),
+    track_rear: +(q('track_rear')?.value ?? g.track_rear ?? 1.55),
+    wheel_radius_nominal: +(q('wheel_radius_nominal')?.value ?? g.wheel_radius_nominal ?? 0.32),
   };
 }
 function disposeModalPreview() {
@@ -3541,7 +4058,10 @@ async function refreshModalPreview() {
   const hint = $('modal_preview_hint');
   if (hint) {
     const bike = (lvl === 'K' || lvl === 'L1');
-    hint.textContent = `Level ${lvl}${bike ? ' (bicycle)' : ''} · front ${front || '—'} · rear ${rear || '—'}`;
+    const l3 = lvl === 'L3' || lvl === 'L4';
+    hint.textContent = l3
+      ? `Level ${lvl} · front ${front || '—'} · rear ${rear || '—'}`
+      : `Level ${lvl}${bike ? ' (bicycle)' : ''} · ride/summary preview (kinematics at L3+)`;
   }
 }
 function wireModalPreview(el) {
@@ -3595,10 +4115,18 @@ function redrawSuspCurve() {
   const cv = $('modal_susp_cv'); if (!cv) return;
   const kinp = document.querySelector('#modal_form [data-name="spring_stiffness"][data-idx="' + modalCorner + '"]');
   const k = kinp ? +kinp.value : 30000;
-  const n = 60, xmin = -0.06, xmax = 0.06, x = [], y = [];
-  for (let i = 0; i <= n; i++) { const d = xmin + (xmax - xmin) * i / n; x.push(d); y.push(-k * d); }
-  plotChart(cv, { title: `Spring F–δ (${WS_CORNERS[modalCorner]}, k=${k.toFixed(0)} N/m)`,
-    series: [{ x, y, label: 'F [N]', color: '#01A0E9' }] });
+  const n = 60, dmin = -60, dmax = 60, x = [], y = [];
+  for (let i = 0; i <= n; i++) {
+    const dmm = dmin + (dmax - dmin) * i / n;
+    x.push(dmm);
+    y.push(-k * (dmm / 1000));
+  }
+  plotChart(cv, {
+    title: `Spring F–δ (${WS_CORNERS[modalCorner]}, k=${k.toFixed(0)} N/m)`,
+    xlabel: 'wheel travel δ [mm]',
+    ylabel: 'F [N]',
+    series: [{ x, y, label: 'F [N]', color: '#01A0E9' }],
+  });
   refreshSuspKcCurves();
 }
 async function refreshSuspKcCurves() {
@@ -3631,18 +4159,534 @@ async function refreshActuatorStep() {
   const box = $('modal_act_curves'); if (!box) return;
   renderPlots(box, (await (await fetch('/api/actuator/step')).json()).plots);
 }
+async function fetchCatalogParts(type, opts = {}) {
+  const qs = new URLSearchParams({ type });
+  const q = opts.q ?? partsLibQuery;
+  const tag = opts.tag ?? partsLibTag;
+  const sort = opts.sort ?? partsLibSort;
+  if (q) qs.set('q', q);
+  if (tag) qs.set('tag', tag);
+  if (sort) qs.set('sort', sort);
+  const r = await getJson(`/api/catalog/parts?${qs}`);
+  return r.parts || [];
+}
+async function loadPartsLibraryEditor(opts = {}) {
+  const qs = new URLSearchParams({ type: partsLibType });
+  if (opts.part_id) qs.set('part_id', opts.part_id);
+  if (opts.stem) qs.set('stem', opts.stem);
+  if (opts.label) qs.set('label', opts.label);
+  if (opts.clone) qs.set('clone', '1');
+  const r = await getJson(`/api/catalog/parts/editor?${qs}`);
+  partsLibEditor = r;
+  partsLibSelId = r.doc?.id || '';
+  return r;
+}
+function partsLibFieldRow(name, label, kind, value, idx) {
+  const row = document.createElement('div');
+  row.className = 'fld';
+  const lab = document.createElement('label');
+  lab.textContent = label;
+  const inp = document.createElement('input');
+  inp.dataset.name = name;
+  if (kind === 'num') { inp.type = 'number'; inp.step = 'any'; }
+  if (idx !== undefined) inp.dataset.idx = String(idx);
+  if (kind === 'bool') {
+    inp.type = 'checkbox';
+    inp.checked = !!value;
+  } else if (Array.isArray(value)) {
+    inp.value = value[idx ?? 0];
+  } else {
+    inp.value = value ?? '';
+  }
+  row.appendChild(lab);
+  row.appendChild(inp);
+  return row;
+}
+function collectPartsLibFields(form) {
+  const fields = {};
+  form.querySelectorAll('[data-name]').forEach(inp => {
+    const n = inp.dataset.name;
+    if (inp.dataset.idx !== undefined) {
+      const i = +inp.dataset.idx;
+      fields[n] = fields[n] || [];
+      fields[n][i] = inp.type === 'checkbox' ? inp.checked : +inp.value;
+    } else if (inp.type === 'checkbox') {
+      fields[n] = inp.checked;
+    } else {
+      fields[n] = inp.type === 'number' ? +inp.value : inp.value;
+    }
+  });
+  return fields;
+}
+async function savePartsLibrary(installSlot) {
+  const form = $('parts_lib_form');
+  if (!form || !partsLibEditor) return;
+  const fields = collectPartsLibFields(form);
+  const stem = fields.stem || partsLibEditor.values?.stem || 'custom';
+  const label = fields.label || partsLibEditor.values?.label || 'Custom part';
+  delete fields.stem;
+  delete fields.label;
+  const r = await postJson('/api/catalog/parts/save-fields', {
+    type: partsLibType,
+    stem, label, fields,
+    doc: partsLibEditor.doc,
+  });
+  $('modal_status').textContent = `● saved ${r.part_id} → package ${r.package}`;
+  setupTireSamples = [];
+  await loadPartsLibraryEditor({ part_id: r.part_id });
+  if (installSlot) {
+    const slot = installSlotForPartType(partsLibType, r.part_id);
+    if (slot) await modalFleetPartUpdate(slot, r.part_id);
+  }
+  renderPartsLibraryPane($('modal_body'));
+}
+async function deletePartsLibraryPart() {
+  if (!partsLibSelId || !partsLibEditor?.editable) return;
+  if (!confirm(`Delete registered part ${partsLibSelId}?`)) return;
+  await postJson('/api/catalog/parts/delete', { part_id: partsLibSelId });
+  partsLibSelId = '';
+  partsLibEditor = null;
+  $('modal_status').textContent = '● part deleted from gui_custom';
+  renderPartsLibraryPane($('modal_body'));
+}
+async function registerBlueprintFromFleet() {
+  const stem = prompt('Blueprint stem (a-z, digits, _)', 'my_build');
+  if (!stem) return;
+  const label = prompt('Display label', 'My build') || 'My build';
+  const r = await postJson('/api/catalog/blueprint/save', {
+    vehicle_id: modalVid,
+    stem,
+    label,
+  });
+  $('modal_status').textContent = `● blueprint ${r.blueprint_id} registered`;
+  await fetchModalAssembly();
+  if (modalTab === 'assembly') renderModalPane();
+}
+async function renderPartsLibraryPane(body) {
+  body.innerHTML = '';
+  $('modal_panel').classList.add('wide');
+  const wrap = document.createElement('div');
+  wrap.className = 'modal-form-wrap';
+  const note = document.createElement('div');
+  note.className = 'asm-tune-note';
+  note.textContent = 'Parts workshop — register components into gui_custom. Builtin: read-only; clone to edit. Save & install mounts on fleet.';
+  wrap.appendChild(note);
+  const typeRow = document.createElement('div');
+  typeRow.className = 'parts-lib-actions';
+  for (const [t, lab] of PART_LIB_TYPES) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = lab;
+    b.classList.toggle('on', partsLibType === t);
+    b.onclick = async () => {
+      partsLibType = t;
+      partsLibSelId = '';
+      partsLibEditor = null;
+      await loadPartsLibraryEditor({ stem: 'custom', label: `New ${t}` });
+      renderPartsLibraryPane(body);
+    };
+    typeRow.appendChild(b);
+  }
+  wrap.appendChild(typeRow);
+  const toolbar = document.createElement('div');
+  toolbar.className = 'parts-lib-toolbar';
+  const search = document.createElement('input');
+  search.type = 'search';
+  search.placeholder = 'Search id, label, tag…';
+  search.value = partsLibQuery;
+  search.oninput = () => {
+    partsLibQuery = search.value.trim();
+    clearTimeout(search._t);
+    search._t = setTimeout(() => renderPartsLibraryPane(body), 220);
+  };
+  toolbar.appendChild(search);
+  const tagSel = document.createElement('select');
+  [['', 'All tags'], ['sport', 'sport'], ['race', 'race'], ['brake', 'brake'],
+   ['gui_custom', 'custom']].forEach(([v, t]) => {
+    const o = document.createElement('option');
+    o.value = v;
+    o.textContent = t;
+    if (partsLibTag === v) o.selected = true;
+    tagSel.appendChild(o);
+  });
+  tagSel.onchange = () => { partsLibTag = tagSel.value; renderPartsLibraryPane(body); };
+  toolbar.appendChild(tagSel);
+  const sortSel = document.createElement('select');
+  [['label', 'Sort: name'], ['tier', 'Sort: tier'], ['id', 'Sort: id']].forEach(([v, t]) => {
+    const o = document.createElement('option');
+    o.value = v;
+    o.textContent = t;
+    if (partsLibSort === v) o.selected = true;
+    sortSel.appendChild(o);
+  });
+  sortSel.onchange = () => { partsLibSort = sortSel.value; renderPartsLibraryPane(body); };
+  toolbar.appendChild(sortSel);
+  wrap.appendChild(toolbar);
+  const split = document.createElement('div');
+  split.className = 'parts-lib-split';
+  const cardsGrid = document.createElement('div');
+  cardsGrid.className = 'parts-lib-cards';
+  const parts = await fetchCatalogParts(partsLibType);
+  if (!partsLibEditor) {
+    const pick = partsLibSelId || parts[0]?.id;
+    await loadPartsLibraryEditor(pick
+      ? { part_id: pick }
+      : { stem: 'custom', label: `New ${partsLibType}` });
+  }
+  for (const p of parts) {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'parts-lib-card' + (p.id === partsLibSelId ? ' on' : '');
+    const tier = document.createElement('div');
+    tier.className = 'plc-tier';
+    tier.textContent = (p.card?.tier || p.type || '');
+    const lab = document.createElement('div');
+    lab.className = 'plc-lab';
+    lab.textContent = p.label || p.id;
+    card.appendChild(tier);
+    card.appendChild(lab);
+    const ln = document.createElement('div');
+    ln.textContent = (p.card?.lines || []).join(' · ') || p.id;
+    card.appendChild(ln);
+    if (!(p.tags || []).includes('gui_custom')) {
+      const cl = document.createElement('span');
+      cl.className = 'plc-clone';
+      cl.textContent = 'Clone to edit →';
+      cl.onclick = async ev => {
+        ev.stopPropagation();
+        const stem = prompt('New stem', `${p.id.split('.').pop()}_copy`);
+        if (!stem) return;
+        const label = prompt('Label', `${p.label} (copy)`) || 'Clone';
+        await loadPartsLibraryEditor({ stem, label, part_id: p.id, clone: true });
+        renderPartsLibraryPane(body);
+      };
+      card.appendChild(cl);
+    }
+    card.onclick = async () => {
+      partsLibSelId = p.id;
+      await loadPartsLibraryEditor({ part_id: p.id });
+      renderPartsLibraryPane(body);
+    };
+    cardsGrid.appendChild(card);
+  }
+  split.appendChild(cardsGrid);
+  const ed = document.createElement('div');
+  ed.className = 'parts-lib-editor';
+  const actions = document.createElement('div');
+  actions.className = 'parts-lib-actions';
+  const mkBtn = (txt, fn) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = txt;
+    b.onclick = () => { void fn().catch(e => alert(e.message)); };
+    return b;
+  };
+  actions.appendChild(mkBtn('New', async () => {
+    const stem = prompt('Part stem (a-z, digits, _)', 'custom');
+    if (!stem) return;
+    const label = prompt('Display label', `Custom ${partsLibType}`) || `Custom ${partsLibType}`;
+    await loadPartsLibraryEditor({ stem, label });
+    renderPartsLibraryPane(body);
+  }));
+  actions.appendChild(mkBtn('Clone', async () => {
+    if (!partsLibSelId) return;
+    const stem = prompt('New stem', `${partsLibEditor.values.stem}_copy`);
+    if (!stem) return;
+    const label = prompt('Label', `${partsLibEditor.values.label} (copy)`) || 'Clone';
+    await loadPartsLibraryEditor({ stem, label, part_id: partsLibSelId, clone: true });
+    renderPartsLibraryPane(body);
+  }));
+  const yamlIn = document.createElement('input');
+  yamlIn.type = 'file'; yamlIn.accept = '.yaml,.yml,text/yaml'; yamlIn.style.display = 'none';
+  actions.appendChild(mkBtn('Import YAML', () => yamlIn.click()));
+  yamlIn.onchange = async e => {
+    const f = e.target.files?.[0]; e.target.value = '';
+    if (!f) return;
+    const r = await postJson('/api/catalog/parts/import-yaml', { yaml: await f.text() });
+    partsLibSelId = r.part_id;
+    await loadPartsLibraryEditor({ part_id: r.part_id });
+    renderPartsLibraryPane(body);
+  };
+  actions.appendChild(yamlIn);
+  if (partsLibType === 'tire') {
+    const tirIn = document.createElement('input');
+    tirIn.type = 'file'; tirIn.accept = '.tir,text/plain'; tirIn.style.display = 'none';
+    actions.appendChild(mkBtn('Import .tir', () => tirIn.click()));
+    tirIn.onchange = async e => {
+      const f = e.target.files?.[0]; e.target.value = '';
+      if (!f) return;
+      const stem = prompt('Part stem', 'tir_import') || 'tir_import';
+      const label = prompt('Label', 'TIR import') || 'TIR import';
+      const r = await postJson('/api/catalog/parts/import-tir', {
+        text: await f.text(), stem, label,
+      });
+      partsLibSelId = r.part_id;
+      await loadPartsLibraryEditor({ part_id: r.part_id });
+      renderPartsLibraryPane(body);
+    };
+    actions.appendChild(tirIn);
+  }
+  if (partsLibType === 'susp_kinematics') {
+    const kinIn = document.createElement('input');
+    kinIn.type = 'file'; kinIn.accept = '.yaml,.yml,text/yaml'; kinIn.style.display = 'none';
+    actions.appendChild(mkBtn('Import kin YAML', () => kinIn.click()));
+    kinIn.onchange = async e => {
+      const f = e.target.files?.[0]; e.target.value = '';
+      if (!f) return;
+      const stem = prompt('Part stem', 'kin_import') || 'kin_import';
+      const label = prompt('Label', 'Kin import') || 'Kin import';
+      const r = await postJson('/api/catalog/parts/import-kin', {
+        yaml: await f.text(), stem, label,
+      });
+      partsLibSelId = r.part_id;
+      await loadPartsLibraryEditor({ part_id: r.part_id });
+      renderPartsLibraryPane(body);
+    };
+    actions.appendChild(kinIn);
+  }
+  if (partsLibEditor?.editable) {
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.textContent = 'Delete';
+    del.style.color = '#a33';
+    del.onclick = () => { void deletePartsLibraryPart().catch(e => alert(e.message)); };
+    actions.appendChild(del);
+  }
+  actions.appendChild(mkBtn('Export YAML', () => {
+    const blob = new Blob([partsLibEditor?.yaml || ''], { type: 'text/yaml' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${partsLibEditor?.doc?.id || 'part'}.yaml`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }));
+  actions.appendChild(mkBtn('Save', () => savePartsLibrary(null)));
+  const slotLab = installSlotForPartType(partsLibType, partsLibSelId) || partsLibType;
+  actions.appendChild(mkBtn(`Save & install (${slotLab})`, () => savePartsLibrary(partsLibType)));
+  ed.appendChild(actions);
+  const form = document.createElement('div');
+  form.id = 'parts_lib_form';
+  const meta = partsLibEditor?.schema || {};
+  form.appendChild(partsLibFieldRow('stem', 'Part stem (id suffix)', 'text', partsLibEditor?.values?.stem));
+  form.appendChild(partsLibFieldRow('label', 'Display label', 'text', partsLibEditor?.values?.label));
+  const metaHead = document.createElement('div');
+  metaHead.className = 'subgrp';
+  metaHead.textContent = 'Catalog metadata';
+  form.appendChild(metaHead);
+  for (const [name, lab, kind] of (meta.meta_fields || [])) {
+    form.appendChild(partsLibFieldRow(name, lab, kind, partsLibEditor?.values?.[name]));
+  }
+  const physHead = document.createElement('div');
+  physHead.className = 'subgrp';
+  physHead.textContent = 'Physics parameters';
+  form.appendChild(physHead);
+  for (const [name, lab, kind] of (meta.fields || [])) {
+    form.appendChild(partsLibFieldRow(name, lab, kind, partsLibEditor?.values?.[name]));
+  }
+  for (const [name, lab, n] of (meta.array_fields || [])) {
+    const vals = partsLibEditor?.values?.[name] || Array(n).fill(0);
+    for (let i = 0; i < n; ++i) {
+      form.appendChild(partsLibFieldRow(name, `${lab.split(' ')[0]} [${i}]`, 'num', vals, i));
+    }
+  }
+  for (const [dotted, lab] of (meta.bool_fields || [])) {
+    form.appendChild(partsLibFieldRow(dotted, lab, 'bool', partsLibEditor?.values?.[dotted]));
+  }
+  if (partsLibType === 'susp_kinematics') {
+    const kinHint = document.createElement('div');
+    kinHint.className = 'sub';
+    kinHint.style.marginTop = '6px';
+    kinHint.textContent = 'Import kin YAML copies hardpoints into gui_custom. Path must resolve under configs/.';
+    form.appendChild(kinHint);
+  }
+  ed.appendChild(form);
+  const yamlLab = document.createElement('div');
+  yamlLab.className = 'sub';
+  yamlLab.textContent = 'Full part YAML (read-only preview)';
+  ed.appendChild(yamlLab);
+  const yamlTa = document.createElement('textarea');
+  yamlTa.className = 'parts-yaml';
+  yamlTa.readOnly = true;
+  yamlTa.value = partsLibEditor?.yaml || '';
+  ed.appendChild(yamlTa);
+  if (partsLibEditor && partsLibEditor.editable === false) {
+    const ro = document.createElement('div');
+    ro.className = 'sub';
+    ro.style.color = 'var(--dim)';
+    ro.textContent = 'Builtin part — use Clone to register an editable copy.';
+    ed.insertBefore(ro, form);
+    form.querySelectorAll('input').forEach(i => { if (i.dataset.name !== 'stem' && i.dataset.name !== 'label') i.disabled = true; });
+  }
+  split.appendChild(ed);
+  wrap.appendChild(split);
+  body.appendChild(wrap);
+  $('modal_status').textContent = `package gui_custom · ${parts.length} ${partsLibType} parts in catalog`;
+}
+async function renderAssemblyPane(body) {
+  disposeModalPreview();
+  body.innerHTML = '';
+  let asm;
+  try {
+    asm = modalAssembly || await fetchModalAssembly();
+  } catch (e) {
+    const err = document.createElement('div');
+    err.className = 'asm-tune-note';
+    err.style.color = 'var(--warn)';
+    err.textContent = e.message;
+    body.appendChild(err);
+    return;
+  }
+  if (!asm.slots?.some(s => s.slot === modalAsmSlot)) {
+    modalAsmSlot = asm.slots[0]?.slot || 'chassis';
+  }
+  const activeSlot = asm.slots.find(s => s.slot === modalAsmSlot) || asm.slots[0];
+  if (modalAsmPinnedCandidate && activeSlot?.part_id === modalAsmPinnedCandidate) {
+    modalAsmPinnedCandidate = null;
+  }
+  const shell = document.createElement('div');
+  shell.className = 'modal-form-wrap garage';
+  const intro = document.createElement('div');
+  intro.className = 'asm-tune-note';
+  intro.textContent = 'Garage: pick a blueprint preset, select a slot, install catalog parts. Stats update from physics resolve.';
+  shell.appendChild(intro);
+  const top = document.createElement('div');
+  top.className = 'garage-top';
+  appendAssemblySelectRow(top, 'Blueprint',
+    asm.blueprints.map(b => ({ v: b.id, t: `${b.label} (${b.level})` })),
+    asm.blueprint.id, modalFleetBlueprintUpdate);
+  appendAssemblySelectRow(top, 'Level', fleetLevelOptions(), asm.level, async v => {
+    await modalFleetUpdate('level', v);
+    await fetchModalAssembly();
+    if (modalTab === 'assembly') renderModalPane();
+  });
+  const presets = document.createElement('div');
+  presets.className = 'garage-presets';
+  for (const p of (asm.recommended || [])) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = p.label;
+    b.onclick = () => modalFleetBlueprintUpdate(p.id);
+    presets.appendChild(b);
+  }
+  top.appendChild(presets);
+  const toParts = document.createElement('button');
+  toParts.type = 'button';
+  toParts.textContent = 'Parts library';
+  toParts.style.cssText = 'width:auto;padding:4px 10px;font-size:11px';
+  toParts.onclick = () => {
+    modalTab = 'parts';
+    partsLibType = activeSlot?.type || 'chassis';
+    buildModalTabs($('modal_tabs'));
+    renderModalPane();
+  };
+  top.appendChild(toParts);
+  const exp = document.createElement('button');
+  exp.type = 'button';
+  exp.textContent = 'Export blueprint';
+  exp.style.cssText = 'width:auto;padding:4px 10px;font-size:11px';
+  exp.onclick = () => exportBlueprintJson(asm.blueprint.id).catch(e => alert(e.message));
+  top.appendChild(exp);
+  const regBp = document.createElement('button');
+  regBp.type = 'button';
+  regBp.textContent = 'Register blueprint';
+  regBp.style.cssText = 'width:auto;padding:4px 10px;font-size:11px';
+  regBp.title = 'Save current fleet build as a new catalog blueprint (gui_custom)';
+  regBp.onclick = () => registerBlueprintFromFleet().catch(e => alert(e.message));
+  top.appendChild(regBp);
+  shell.appendChild(top);
+  const main = document.createElement('div');
+  main.className = 'garage-main';
+  const catNav = document.createElement('nav');
+  catNav.className = 'garage-cat';
+  for (const cat of (asm.categories || [])) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = cat.label;
+    const first = cat.slots[0];
+    b.classList.toggle('on', cat.slots.includes(modalAsmSlot));
+    b.onclick = () => {
+      modalAsmSlot = first;
+      modalAsmPinnedCandidate = null;
+      renderAssemblyPane(body);
+    };
+    catNav.appendChild(b);
+  }
+  main.appendChild(catNav);
+  const center = document.createElement('div');
+  center.className = 'garage-center';
+  const diagram = document.createElement('div');
+  diagram.className = 'garage-diagram';
+  buildGarageDiagram(diagram, asm, modalAsmSlot, sk => {
+    modalAsmSlot = sk;
+    modalAsmPinnedCandidate = null;
+    renderAssemblyPane(body);
+  });
+  center.appendChild(diagram);
+  const slotHead = document.createElement('div');
+  slotHead.className = 'subgrp';
+  slotHead.textContent = activeSlot ? `${activeSlot.label} — install part` : 'Parts';
+  center.appendChild(slotHead);
+  const cards = document.createElement('div');
+  cards.className = 'garage-cards';
+  const installPart = async pid => {
+    try {
+      await modalFleetPartUpdate(activeSlot.slot, pid);
+      modalAsmPinnedCandidate = null;
+      modalAsmPreview = null;
+      await fetchModalAssembly();
+      renderAssemblyPane(body);
+    } catch (e) { alert(e.message); }
+  };
+  const pinPreview = async cid => {
+    try {
+      await fetchModalAssembly({ slot: activeSlot.slot, candidate: cid });
+      const statsEl = $('garage_stats');
+      if (statsEl) renderGarageStats(statsEl, modalAssembly, modalAssembly?.preview);
+      cards.querySelectorAll('.garage-card').forEach(el => {
+        el.classList.toggle('preview', el.dataset.candidateId === cid);
+      });
+    } catch (e) { alert(e.message); }
+  };
+  renderGarageCards(cards, activeSlot, installPart, cid => debouncedAsmPreview(activeSlot.slot, cid), pinPreview);
+  center.appendChild(cards);
+  main.appendChild(center);
+  const stats = document.createElement('aside');
+  stats.className = 'garage-stats';
+  stats.id = 'garage_stats';
+  const pinnedPreview = modalAsmPinnedCandidate && modalAssembly?.preview?.candidate === modalAsmPinnedCandidate
+    ? modalAssembly.preview : null;
+  renderGarageStats(stats, asm, pinnedPreview);
+  main.appendChild(stats);
+  shell.appendChild(main);
+  const ghost = document.createElement('div');
+  ghost.id = 'modal_form';
+  ghost.style.display = 'none';
+  shell.appendChild(ghost);
+  body.appendChild(wrapModalPreview(shell));
+}
 function renderModalPane() {
   disposeModalPreview();
   $('modal_panel').classList.remove('wide');
   const body = $('modal_body');
   body.innerHTML = '';
-  const tab = MODAL_TABS.find(t => t.id === modalTab) || MODAL_TABS[0];
+  const tab = modalTabDef(modalTab) || MODAL_PRIMARY_TABS[0];
   const form = document.createElement('div'); form.id = 'modal_form';
-  const withPreview = tab.id === 'chassis' || tab.id === 'suspension';
+  const withPreview = tab.id === 'chassis' || tab.id === 'suspension' || tab.id === 'assembly';
   const shell = document.createElement('div'); shell.className = 'modal-form-wrap';
+  if (tab.type === 'assembly') {
+    $('modal_panel').classList.add('wide');
+    void renderAssemblyPane(body);
+    return;
+  }
+  if (tab.type === 'parts') {
+    void renderPartsLibraryPane(body);
+    return;
+  }
   if (tab.type === 'chassis') {
-    const spec = window._fleetSpec?.find(f => +f.id === modalVid);
-    appendChassisDynamicsTools(shell, spec);
+    const note = document.createElement('div');
+    note.className = 'asm-tune-note';
+    note.textContent = 'Session overrides on the resolved chassis part. Change chassis in Assembly.';
+    shell.appendChild(note);
     const vg = {};
     vehFields.filter(chassisFilter).forEach(f => { (vg[f.group] = vg[f.group] || []).push(f); });
     for (const g in vg) {
@@ -3658,8 +4702,13 @@ function renderModalPane() {
     wireModalPreview(form);
     body.appendChild(withPreview ? wrapModalPreview(shell) : shell);
   } else if (tab.type === 'vehicle') {
+    const tuneNote = document.createElement('div');
+    tuneNote.className = 'asm-tune-note';
+    tuneNote.textContent = tab.id === 'suspension'
+      ? 'Ride coefficients override — install axle kinematics in Assembly (L3/L4).'
+      : 'Subsystem coefficient overrides — swap catalog parts in Assembly.';
+    shell.appendChild(tuneNote);
     if (tab.id === 'suspension') {
-      appendSuspensionFleetTools(shell, window._fleetSpec?.find(f => +f.id === modalVid));
       const tools = document.createElement('div'); tools.className = 'modal-tools';
       tools.appendChild(selectRow('Level preset', ['soft', 'med', 'stiff'], 'med', v => {
         const p = SUSP_PRESETS[v]; if (!p) return;
@@ -3698,7 +4747,10 @@ function renderModalPane() {
   } else if (tab.type === 'tire') {
     const tireShell = document.createElement('div');
     tireShell.className = 'modal-form-wrap';
-    appendTireFleetTools(tireShell, window._fleetSpec?.find(f => +f.id === modalVid));
+    const tnote = document.createElement('div');
+    tnote.className = 'asm-tune-note';
+    tnote.textContent = 'Pacejka / LuGre coefficient overrides — select tire part in Assembly.';
+    tireShell.appendChild(tnote);
     const tools = document.createElement('div'); tools.className = 'modal-tools';
     const imp = document.createElement('button'); imp.textContent = 'Import .tir';
     const tirIn = document.createElement('input'); tirIn.type = 'file'; tirIn.accept = '.tir,text/plain'; tirIn.style.display = 'none';
@@ -3776,7 +4828,9 @@ function renderModalPane() {
 async function openModal(vid) {
   modalVid = vid;
   if (vid !== selectedVid) await selectVehicle(vid);
-  $('modal_title').textContent = `Vehicle ${vid} — modules`;
+  $('modal_title').textContent = `Vehicle ${vid} — assembly & tune`;
+  modalAssembly = null;
+  partsLibEditor = null;
   const spec = (window._fleetSpec || []).find(f => +f.id === vid);
   modalLvl = spec?.level || (await (await fetch('/api/config')).json()).config.level;
   const cf = await (await fetch('/api/config')).json();
@@ -3796,21 +4850,13 @@ async function openModal(vid) {
   if (fspec?.rear_susp) modalSuspRear = fspec.rear_susp;
   if (!modalSuspFront || !suspList.includes(modalSuspFront)) modalSuspFront = suspDefaults.front;
   if (!modalSuspRear || !suspList.includes(modalSuspRear)) modalSuspRear = suspDefaults.rear;
-  const tabs = $('modal_tabs'); tabs.innerHTML = '';
-  MODAL_TABS.forEach(t => {
-    const b = document.createElement('button');
-    b.textContent = t.label;
-    if (t.help) addHelp(b, t.help);
-    b.classList.toggle('on', t.id === modalTab);
-    b.onclick = () => {
-      modalTab = t.id;
-      [...tabs.children].forEach(x => x.classList.remove('on'));
-      b.classList.add('on');
-      renderModalPane();
-    };
-    tabs.appendChild(b);
-  });
+  buildModalTabs($('modal_tabs'));
   await ensureSetupLists();
+  try {
+    await fetchModalAssembly();
+  } catch (e) {
+    $('modal_status').textContent = e.message;
+  }
   renderModalPane();
   $('modal_bg').classList.add('open');
 }

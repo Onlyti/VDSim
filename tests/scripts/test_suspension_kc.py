@@ -15,6 +15,13 @@ def main():
     assert len(r.steer) == 17
     assert len(r.compliance_fy) == 9
     assert abs(r.compliance_fy[-1].compliance_toe_deg) > 0.01
+    sys.path.insert(0, str(REPO / "gui"))
+    from runner.suspension import suspension_kc_plots  # noqa: E402
+
+    plots = suspension_kc_plots("mp_front_sedan")["plots"]
+    assert plots[0]["xlabel"] == "wheel travel [mm]"
+    assert plots[0]["ylabel"] == "camber [deg]"
+    assert plots[5]["xlabel"] == "lateral force Fy [N]"
     print("ok", path.stem, len(r.travel), "travel samples")
 
 
