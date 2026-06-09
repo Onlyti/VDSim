@@ -150,6 +150,15 @@ struct TireParams {
     // Vertical tire stiffness (for L3 ride dynamics). Typical 150-300 kN/m.
     double tire_vertical_stiffness {220000.0};  // [N/m]
 
+    // Force backend selector (T1):
+    //   "mf96"          — parametric Pacejka MF96 from the B/C/D/E fields above (default)
+    //   "magic_formula" — full MF2002 evaluated from a `.tir` at `tir_path`
+    //   "linear"        — linear cornering-stiffness fallback
+    // `tir_path` is a runtime path; `.tir` files hold (often confidential) measured
+    // coefficients and are never committed (see `.gitignore`).
+    std::string backend  {"mf96"};
+    std::string tir_path {};
+
     LuGreTireParams lugre;
 
     static TireParams from_yaml(const std::string& path);

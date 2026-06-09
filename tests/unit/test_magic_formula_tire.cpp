@@ -113,3 +113,50 @@ TEST(Mf2002Catalog, SampleTirRunsAndIsSane) {
         EXPECT_DOUBLE_EQ(o.Fy, 0.0);
     }
 }
+
+// T1.2 — backend dispatch from TireParams.
+TEST(Mf2002Catalog, DispatchByBackend) {
+    using namespace vdsim;
+    { TireParams tp;                       // default -> mf96
+      EXPECT_NE(create_tire_from_params(tp), nullptr); }
+    { TireParams tp; tp.backend = "linear";
+      EXPECT_NE(create_tire_from_params(tp), nullptr); }
+    { TireParams tp; tp.backend = "magic_formula";   // needs a .tir path
+      EXPECT_THROW(create_tire_from_params(tp), std::runtime_error); }
+    { const auto p = write_synthetic_tir();
+      TireParams tp; tp.backend = "magic_formula"; tp.tir_path = p.string();
+      auto t = create_tire_from_params(tp);
+      fs::remove(p);
+      ASSERT_NE(t, nullptr);
+      EXPECT_GT(t->compute(slip_input(0.1, 0.0, 4000.0)).Fx, 500.0); }
+}
+
+// initialize() must swap the dynamics' tire to the requested backend and run.
+TEST(Mf2002Catalog, L5UsesMagicFormulaBackend) {
+    using namespace vdsim;
+    const auto p = write_synthetic_tir();
+    VehicleParams vp; vp.aero_drag_coeff = 0.0;
+    TireParams tp; tp.backend = "magic_formula"; tp.tir_path = p.string();
+    SolverParams sp; sp.stunt_physics = true; sp.max_substep_dt = 2e-4; sp.max_substeps = 16;
+    auto dyn = create_stunt_dof();
+    dyn->initialize(vp, tp, sp);     // <- backend swap happens here
+    fs::remove(p);
+
+    State s;
+    s.position.z() = vp.cg_height;
+    s.velocity.x() = 10.0;
+    const double w = 10.0 / vp.wheel_radius_nominal;
+    s.wheel_spin = {{w, w, w, w}};
+    dyn->reset(s);
+
+    auto ground = create_flat_ground(0.0, 1.0);
+    CmdL4 cmd; cmd.throttle = 0.5;
+    const ControlInput u = cmd;
+    for (int i = 0; i < 2500; ++i) {
+        ContactArray c;
+        ground->query(dyn->state(), vp, c);
+        dyn->step(u, c, 0.001);
+    }
+    EXPECT_TRUE(std::isfinite(dyn->state().velocity.x()));
+    EXPECT_GT(dyn->state().velocity.x(), 10.3);   // accelerated under the MF2002 backend
+}

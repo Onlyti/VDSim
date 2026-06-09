@@ -222,4 +222,15 @@ std::unique_ptr<ITireModel> create_magic_formula_tire_from_tir(const std::string
     return std::make_unique<MagicFormulaTire>(parse_tir(tir_path));
 }
 
+std::unique_ptr<ITireModel> create_tire_from_params(const TireParams& tp) {
+    if (tp.backend == "magic_formula" || tp.backend == "mf2002") {
+        if (tp.tir_path.empty())
+            throw std::runtime_error(
+                "tire backend '" + tp.backend + "' requires a .tir path (tir_path)");
+        return create_magic_formula_tire_from_tir(tp.tir_path);
+    }
+    if (tp.backend == "linear") return create_linear_tire();
+    return create_pacejka_mf96();   // "mf96" / default
+}
+
 }  // namespace vdsim

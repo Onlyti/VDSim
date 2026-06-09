@@ -89,6 +89,8 @@ public:
         vp_ = vp;
         tp_ = tp;
         sp_ = sp;
+        if (tp.backend != "mf96" && !tp.backend.empty())
+            tire_ = create_tire_from_params(tp);
         tire_->initialize(tp);
         spdlog::debug("[L1 Bicycle] init: mass={:.0f} kg, L={:.2f} m, wr={:.3f} m, "
                       "RWD={}, ackerman={:.0f}%",

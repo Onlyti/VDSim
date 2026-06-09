@@ -265,6 +265,8 @@ TireParams TireParams::from_yaml(const std::string& path) {
     pull(root, "relaxation_length_lat", p.relaxation_length_lat);
     pull(root, "relaxation_length_long", p.relaxation_length_long);
     pull(root, "tire_vertical_stiffness", p.tire_vertical_stiffness);
+    pull(root, "backend",  p.backend);
+    pull(root, "tir_path", p.tir_path);
     if (const auto n = root["lugre"]; n && n.IsMap()) {
         pull(n, "enabled", p.lugre.enabled);
         pull(n, "sigma0",  p.lugre.sigma0);

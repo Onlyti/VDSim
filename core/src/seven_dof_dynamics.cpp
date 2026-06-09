@@ -86,6 +86,8 @@ public:
         vp_ = vp;
         tp_ = tp;
         sp_ = sp;
+        if (tp.backend != "mf96" && !tp.backend.empty())
+            tire_ = create_tire_from_params(tp);
         tire_->initialize(tp);
         const double R = vp.wheel_radius_nominal;
         for (int i = 0; i < NUM_WHEELS; ++i) {

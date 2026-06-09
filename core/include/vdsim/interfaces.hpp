@@ -125,6 +125,11 @@ public:
 std::unique_ptr<ITireModel> create_pacejka_mf96();
 std::unique_ptr<ITireModel> create_linear_tire();
 
+// Dispatch a tire force model from TireParams.backend:
+//   "mf96" (default) -> create_pacejka_mf96; "linear" -> create_linear_tire;
+//   "magic_formula" / "mf2002" -> MF2002 from tp.tir_path (throws if path empty).
+std::unique_ptr<ITireModel> create_tire_from_params(const TireParams& tp);
+
 // Dynamics factories that inject a custom tire model (e.g. full Magic Formula
 // from a .tir).  Ownership transfers to the dynamics; for Ld3 the tire is
 // forwarded to the inner Ld2.  Declared here, after ITireModel.
