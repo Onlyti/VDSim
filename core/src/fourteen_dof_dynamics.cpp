@@ -81,7 +81,6 @@ public:
                     const TireParams& tp,
                     const SolverParams& sp) override {
         vp_ = vp; tp_ = tp; sp_ = sp;
-        stunt_ = sp.stunt_physics;
         inner_->initialize(vp, tp, sp);
         suspension_ = make_default_suspension(vp);
         arb_front_  = make_default_antirollbar(vp, 0);
@@ -116,78 +115,15 @@ public:
             state_.susp_compression[i] = static_compression_[i];
             state_.susp_velocity[i]    = 0.0;
         }
-        if (stunt_) {
-            z_s_ = vp_.cg_height;
-            z_s_dot_ = 0.0;
-            const double r = vp_.wheel_radius_nominal;
-            const double k_tire = std::max(1.0, tp_.tire_vertical_stiffness);
-            for (int i = 0; i < NUM_WHEELS; ++i)
-                z_u_[i] = r - Fz_static_[i] / k_tire;
-            state_.position.z() = z_s_;
-            if (sp_.loop_radius > 1.0) {
-                const double dx = state_.position.x() - sp_.loop_center_x;
-                const double dz = state_.position.z() - sp_.loop_center_z;
-                loop_theta_ = std::atan2(dx, -dz);
-            }
-        } else {
-            z_s_ = 0.0; z_s_dot_ = 0.0;
-        }
+        z_s_ = 0.0; z_s_dot_ = 0.0;
         inner_->reset(state_);
         phi_ = 0.0; phi_dot_ = 0.0;
         th_  = 0.0; th_dot_  = 0.0;
-        if (!stunt_) {
-            z_u_     = {{0.0, 0.0, 0.0, 0.0}};
-            z_u_dot_ = {{0.0, 0.0, 0.0, 0.0}};
-        } else {
-            z_u_dot_ = {{0.0, 0.0, 0.0, 0.0}};
-        }
+        z_u_     = {{0.0, 0.0, 0.0, 0.0}};
+        z_u_dot_ = {{0.0, 0.0, 0.0, 0.0}};
         if (!suspension_) suspension_ = make_default_suspension(vp_);
         if (!arb_front_)  arb_front_  = make_default_antirollbar(vp_, 0);
         if (!arb_rear_)   arb_rear_   = make_default_antirollbar(vp_, 1);
-    }
-
-    // Educative KINEMATIC rail (opt-in, L3): the CG position is scripted onto the
-    // loop circle, advanced by the tangential speed — the loop trajectory is NOT
-    // emergent from the dynamics (no centripetal/normal-force condition; the car
-    // cannot fall off if too slow). The DEFAULT loop is the dynamic Free3D (Ld5)
-    // plant where contact normal force holds the car and the loop emerges. Use this
-    // only with loop_rail_guide=true for teaching. See docs VALIDATION.md (stunt).
-    void apply_loop_kinematics(double dt) noexcept {
-        const double R = sp_.loop_radius;
-        const double xc = sp_.loop_center_x;
-        const double zc = sp_.loop_center_z;
-        const double Rcg = R - vp_.wheel_radius_nominal + vp_.cg_height;
-
-        if (sp_.loop_rail_guide) {
-            const double tx = std::cos(loop_theta_);
-            const double tz = std::sin(loop_theta_);
-            const double v = std::max(5.0, state_.velocity.x() * tx + state_.velocity.z() * tz);
-            if (dt > 0.0) loop_theta_ += (v / R) * dt;
-            state_.position.x() = xc + R * std::sin(loop_theta_);
-            state_.position.z() = zc - R * std::cos(loop_theta_)
-                                + vp_.cg_height - vp_.wheel_radius_nominal;
-            z_s_ = state_.position.z();
-            const double c = std::cos(loop_theta_);
-            const double s = std::sin(loop_theta_);
-            state_.velocity.x() = v * c;
-            state_.velocity.z() = v * s;
-            return;
-        }
-
-        const double c = std::cos(loop_theta_);
-        const double s = std::sin(loop_theta_);
-        double v = state_.velocity.x() * c + state_.velocity.z() * s;
-        if (v < 0.0) v = 0.0;
-        if (dt > 0.0)
-            loop_theta_ += (v / std::max(Rcg, 1.0)) * dt;
-        const double c2 = std::cos(loop_theta_);
-        const double s2 = std::sin(loop_theta_);
-        state_.position.x() = xc + Rcg * s2;
-        state_.position.z() = zc - Rcg * c2;
-        z_s_ = state_.position.z();
-        state_.velocity.x() = v * c2;
-        state_.velocity.z() = v * s2;
-        th_dot_ = v / std::max(Rcg, 1.0);
     }
 
     void step(const ControlInput& u,
@@ -238,15 +174,9 @@ public:
         inner_->set_camber_per_wheel(gamma);
         inner_->set_toe_per_wheel(toe);
 
-        if (stunt_) {
-            state_.position.z() = z_s_;
-            inner_->reset(state_);
-        }
-
         {
             constexpr double kAirDensity = 1.225;
             const double k_tire = std::max(1.0, tp_.tire_vertical_stiffness);
-            const double r    = vp_.wheel_radius_nominal;
             const double Lwb  = vp_.wheelbase;
             const double vx   = state_.velocity.x();
             const double q_aero = 0.5 * kAirDensity * vp_.frontal_area * vx * std::abs(vx);
@@ -256,15 +186,10 @@ public:
             const double st_r = vp_.mass * kGravity * vp_.cg_to_front / (2.0 * Lwb);
             std::array<double, NUM_WHEELS> fz_dyn;
             for (int i = 0; i < NUM_WHEELS; ++i) {
-                ground_z_[i] = contacts[i].position.z();
-                if (stunt_) {
-                    fz_dyn[i] = k_tire * std::max(0.0, (ground_z_[i] + r) - z_u_[i]);
-                } else {
-                    const double cos_slope = std::max(0.1, contacts[i].normal.z());
-                    const double st = ((i < 2) ? st_f : st_r) * cos_slope
-                                    + ((i < 2) ? aero_f : aero_r);
-                    fz_dyn[i] = std::max(0.0, st + k_tire * (contacts[i].road_dz - z_u_[i]));
-                }
+                const double cos_slope = std::max(0.1, contacts[i].normal.z());
+                const double st = ((i < 2) ? st_f : st_r) * cos_slope
+                                + ((i < 2) ? aero_f : aero_r);
+                fz_dyn[i] = std::max(0.0, st + k_tire * (contacts[i].road_dz - z_u_[i]));
             }
             inner_->set_external_fz(fz_dyn);
         }
@@ -288,10 +213,7 @@ public:
         }
         for (int i = 0; i < NUM_WHEELS; ++i) road_dz_[i] = contacts[i].road_dz;
         if (dt > 0.0) integrate_vertical(dt);
-        if (stunt_ && sp_.loop_radius > 1.0)
-            apply_loop_kinematics(dt);
         write_pose_and_suspension();
-        if (stunt_) inner_->reset(state_);
     }
 
     // Attach an ISuspensionKinematics for the front (L) or rear (R) axle.
@@ -454,18 +376,9 @@ private:
         // i.e. theta>0, so the inertial pitch moment is -m_s*ax*h.
         const double M_inertia_pitch = -m_s * ax * h * (1.0 - anti);
 
-        if (stunt_) {
-            for (int i = 0; i < NUM_WHEELS; ++i) {
-                const double Flim = vp_.spring_bump_ratio * Fz_static_[i];
-                const double Fmin = vp_.spring_droop_ratio * Fz_static_[i];
-                if (F_susp[i] > Flim) F_susp[i] = Flim;
-                if (F_susp[i] < Fmin) F_susp[i] = Fmin;
-            }
-        }
-
         Deriv6 d;
         d.dz       = z_dot;
-        d.dz_dot   = Fz_sum / std::max(1.0, m_s) - (stunt_ ? kGravity : 0.0);
+        d.dz_dot   = Fz_sum / std::max(1.0, m_s);
         d.dphi     = phi_dot;
         d.dphi_dot = (M_roll_spring + m_s * ay * h) / std::max(1e-3, Ixx);
         d.dth      = th_dot;
@@ -475,16 +388,10 @@ private:
         // = +F_susp_on_unsprung - k_tire · z_u
         // F_susp_on_unsprung = -F_susp(on sprung) (Newton III)
         const double k_tire = std::max(1.0, tp_.tire_vertical_stiffness);
-        const double r      = vp_.wheel_radius_nominal;
         for (int i = 0; i < NUM_WHEELS; ++i) {
             const double m_u = std::max(1.0, vp_.unsprung_mass[i]);
             d.dz_u[i] = zu_dot[i];
-            if (stunt_) {
-                const double Ft = k_tire * std::max(0.0, (ground_z_[i] + r) - zu[i]);
-                d.dz_u_dot[i] = (-F_susp[i] + Ft - m_u * kGravity) / m_u;
-            } else {
-                d.dz_u_dot[i] = (-F_susp[i] - k_tire * (zu[i] - road_dz_[i])) / m_u;
-            }
+            d.dz_u_dot[i] = (-F_susp[i] - k_tire * (zu[i] - road_dz_[i])) / m_u;
         }
         return d;
     }
@@ -552,11 +459,6 @@ private:
     void write_pose_and_suspension() {
         const double yaw = yaw_from_quat(state_.orientation);
         state_.orientation = quat_from_euler({phi_, th_, yaw});
-        if (stunt_) {
-            state_.position.z() = z_s_;
-            if (sp_.loop_radius > 1.0)
-                th_ = loop_theta_;
-        }
         // Roll/pitch rates live in the L3 vertical model; publish them into the
         // body angular velocity so the gyro/IMU sees them (z = yaw rate from inner).
         state_.angular_velocity.x() = phi_dot_;
@@ -594,9 +496,6 @@ private:
     std::array<double, NUM_WHEELS> z_u_     {{0.0, 0.0, 0.0, 0.0}};
     std::array<double, NUM_WHEELS> z_u_dot_ {{0.0, 0.0, 0.0, 0.0}};
     std::array<double, NUM_WHEELS> road_dz_ {{0.0, 0.0, 0.0, 0.0}};
-    std::array<double, NUM_WHEELS> ground_z_ {{0.0, 0.0, 0.0, 0.0}};
-    bool stunt_ {false};
-    double loop_theta_ {0.0};
 
     // Optional hardpoint kinematics (Ld4 Stage D).  When attached, replaces
     // the lumped vp_.camber_per_roll · phi heuristic for the corresponding axle.
@@ -612,18 +511,6 @@ private:
     mb::HardJointCornerState mb_state_rear_;
     std::unique_ptr<mb::IHardJointDaeModel> mb_dae_front_;
     std::unique_ptr<mb::IHardJointDaeModel> mb_dae_rear_;
-};
-
-class StuntDOFDynamics final : public FourteenDOFDynamics {
-public:
-    using FourteenDOFDynamics::FourteenDOFDynamics;
-    Level level() const noexcept override { return Level::L5_Stunt; }
-    void initialize(const VehicleParams& vp, const TireParams& tp,
-                    const SolverParams& sp) override {
-        SolverParams s = sp;
-        s.stunt_physics = true;
-        FourteenDOFDynamics::initialize(vp, tp, s);
-    }
 };
 
 class KinematicFourteenDOFDynamics : public FourteenDOFDynamics {
@@ -649,10 +536,6 @@ std::unique_ptr<IVehicleDynamics> create_fourteen_dof_kinematic() {
 std::unique_ptr<IVehicleDynamics> create_fourteen_dof_kinematic(
     std::unique_ptr<ITireModel> tire) {
     return std::make_unique<KinematicFourteenDOFDynamics>(std::move(tire));
-}
-
-std::unique_ptr<IVehicleDynamics> create_legacy_stunt_dof() {
-    return std::make_unique<StuntDOFDynamics>();
 }
 
 // Public attach helpers — callers can build the kinematics object (e.g. via

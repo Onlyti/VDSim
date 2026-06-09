@@ -143,45 +143,6 @@ TEST(Stunt, JumpLandingNoSink) {
     EXPECT_GT(z_min_late, 0.38);
 }
 
-TEST(Stunt, VerticalLoopCompletesLap) {
-    const double R = 10.0;
-    const double xc = 50.0;
-    const double zc = 15.0;
-    const double v_min = std::sqrt(5.0 * G * R);
-    const double v0 = 1.35 * v_min;
-
-    vdsim::VehicleParams vp;
-    vp.aero_drag_coeff = 0.0;
-    vdsim::TireParams tp;
-    tp.lugre.enabled = false;
-    vdsim::SolverParams sp;
-    sp.stunt_physics = true;
-    sp.loop_radius = R;
-    sp.loop_center_x = xc;
-    sp.loop_center_z = zc;
-    sp.loop_rail_guide = true;
-    sp.max_substep_dt = 2e-4;
-
-    auto dyn = vdsim::create_legacy_stunt_dof();
-    dyn->initialize(vp, tp, sp);
-    const double z0 = zc - R + vp.cg_height;
-    dyn->reset(init_on_ground(xc, v0, z0, vp.wheel_radius_nominal));
-
-    auto loop = vdsim::create_loop_ground(xc, zc, R, 1.0);
-    vdsim::CmdL4 cmd;
-    cmd.throttle = 0.4;
-
-    double theta_max = 0.0;
-    const int n = 10000;
-    for (int i = 0; i < n; ++i) {
-        vdsim::ContactArray contacts;
-        loop->query(dyn->state(), vp, contacts);
-        dyn->step(cmd, contacts, 0.001);
-        theta_max = std::max(theta_max, dyn->pitch_angle_qs());
-    }
-    EXPECT_GT(theta_max, 5.8);
-}
-
 TEST(Stunt, FreeLoopCompletesLap) {
     const double R = 10.0;
     const double xc = 50.0;

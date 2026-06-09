@@ -117,16 +117,13 @@ in the matrix below were measured *before* this change — re-run
   Kinematic blend path: `LOW_SPEED_HANDLING.md`.
 - **L3 grip Fz** couples ride/road dynamically but omits the unsprung lateral-
   transfer term (small); see ch06 §6.4.
-- **Stunt / vertical loop (v0.4):** two modes. The **default** loop is the dynamic
-  Free3D (Ld5) plant — the car is held on the track by the contact normal force
-  (penalty from penetration), the centripetal condition is *emergent*, and it loses
-  the track if too slow. It is robust-tuned for stunts, not validated road contact:
-  the loop surface uses stiffened/capped contact (higher Fz cap, capped penetration,
-  track-tangent longitudinal), so it is a plausible-but-not-quantitatively-validated
-  demo, not a benchmarked maneuver. The opt-in `loop_rail_guide=true` (L3) mode is a
-  **purely kinematic rail** — the CG position is scripted on the loop circle, the
-  trajectory is NOT emergent and the car cannot fall off; it is educative only.
-  See `docs/design/V0.4_SLOPE_JUMP_DYNAMICS.md`.
+- **Stunt / vertical loop (v0.4):** the dynamic Free3D (Ld5) plant — the car is held
+  on the track by the contact normal force (penalty from penetration), the
+  centripetal condition is *emergent*, and it loses the track if too slow. It is
+  robust-tuned for stunts, not validated road contact: the loop surface uses
+  stiffened/capped contact (higher Fz cap, capped penetration, track-tangent
+  longitudinal), so it is a plausible-but-not-quantitatively-validated demo, not a
+  benchmarked maneuver. See `docs/design/V0.4_SLOPE_JUMP_DYNAMICS.md`.
 
 ## Reproducing the whole report
 

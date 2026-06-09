@@ -93,8 +93,6 @@ bool fourteen_dof_attach_multibody(IVehicleDynamics& dyn,
                                    bool enable_dynamics);
 bool fourteen_dof_mb_dynamics_enabled(const IVehicleDynamics& dyn, int axle);
 std::unique_ptr<IVehicleDynamics> create_stunt_dof();
-// L3+L2 stunt with optional loop rail / circular CG snap (pre-L5).
-std::unique_ptr<IVehicleDynamics> create_legacy_stunt_dof();
 // Kinematic bicycle (no tire forces / no slip): yaw_rate = v*tan(delta)/L.
 // For path-planning / kinematic-MPC use and as the simplest ladder rung.
 std::unique_ptr<IVehicleDynamics> create_kinematic();
