@@ -55,6 +55,13 @@ def main():
         assert "terrain" in terr_doc, "terrain path must reach the world YAML"
         assert Path(terr_doc["terrain"]).is_file(), terr_doc["terrain"]
 
+        bank = REPO / "configs" / "scenes" / "banked_grade_demo.yaml"
+        bank_out = Path(td) / "bank_world.yaml"
+        materialize_scene_file(bank, bank_out)
+        bank_doc = yaml.safe_load(bank_out.read_text()) or {}
+        assert bank_doc["vehicles"][0]["level"] == "L5"
+        assert bank_doc.get("grade") and bank_doc.get("bank"), "grade/bank must reach world"
+
     r = CatalogResolver(REPO)
     assert r.load_blueprint("vehicle.sedan_comfort")
     print("test_scene_materialize: ok")

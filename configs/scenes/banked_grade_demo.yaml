@@ -1,0 +1,19 @@
+id: scene.banked_grade_demo
+version: 1
+label: Banked + grade (L5, inclined plane)
+rate: 200
+cmd_timeout: 0.1
+mu: 1.0
+# Analytic inclined plane (no .bin): grade rises toward +x, bank toward +y.
+# Drives InclinedGround in the cosim runtime (make_ground: grade||bank != 0).
+grade: 0.06
+bank: 0.10
+fleet:
+- id: 0
+  blueprint: vehicle.sedan_comfort
+  level: L5
+  x0: 0.0
+  y0: 0.0
+  z0: 0.6
+  yaw0: 0.0
+  vx0: 12.0

@@ -163,7 +163,62 @@ TEST(Terrain, L5SettlesOnHillFlank) {
     EXPECT_GT(sum, 0.3 * h.vp.mass * 9.80665);   // still carrying weight
 }
 
-// Driving off a step-down cliff: the body goes briefly airborne (all wheels lose
+// L5 plant on an analytic inclined plane (grade along +x, bank along +y).
+struct InclinedSetup {
+    vdsim::VehicleParams vp;
+    vdsim::TireParams tp;
+    vdsim::SolverParams sp;
+    std::unique_ptr<vdsim::IVehicleDynamics> dyn;
+    std::unique_ptr<vdsim::IContactProvider> ground;
+
+    InclinedSetup(double grade, double bank, double mu) {
+        vp.aero_drag_coeff = 0.0;
+        tp.lugre.enabled = false;
+        sp.stunt_physics = true;
+        sp.max_substep_dt = 2e-4;
+        sp.max_substeps = 16;
+        dyn = vdsim::create_stunt_dof();
+        dyn->initialize(vp, tp, sp);
+        ground = vdsim::create_inclined_ground(0.0, grade, bank, mu);
+    }
+    void run(const vdsim::CmdL4& cmd, int n, double dt) {
+        const vdsim::ControlInput u = cmd;
+        for (int i = 0; i < n; ++i) {
+            vdsim::ContactArray c;
+            ground->query(dyn->state(), vp, c);
+            dyn->step(u, c, dt);
+        }
+    }
+};
+
+// Coasting up a grade bleeds more speed than flat (gravity component along -x).
+TEST(Terrain, L5CoastUphillSlows) {
+    vdsim::CmdL4 cmd;
+    InclinedSetup flat(0.0, 0.0, 1.0);
+    flat.dyn->reset(spawn(0.0, 0.0, 18.0, flat.vp.cg_height, flat.vp.wheel_radius_nominal));
+    flat.run(cmd, 2500, 0.001);
+    const double vx_flat = flat.dyn->state().velocity.x();
+
+    InclinedSetup hill(0.10, 0.0, 1.0);
+    hill.dyn->reset(spawn(0.0, 0.0, 18.0, hill.vp.cg_height, hill.vp.wheel_radius_nominal));
+    hill.run(cmd, 2500, 0.001);
+    EXPECT_LT(hill.dyn->state().velocity.x(), vx_flat * 0.92);
+}
+
+// On a banked plane the body settles toward the surface normal -> non-trivial
+// roll attitude with the bank's sign (bank>0 rises toward +y).
+TEST(Terrain, L5BankInducesRoll) {
+    const double bank = 0.12;   // ~6.9 deg
+    InclinedSetup h(0.0, bank, 1.0);
+    h.dyn->reset(spawn(0.0, 0.0, 6.0, h.vp.cg_height, h.vp.wheel_radius_nominal));
+    vdsim::CmdL4 cmd;
+    h.run(cmd, 1500, 0.001);
+    const double roll = h.dyn->roll_angle_qs();
+    EXPECT_TRUE(std::isfinite(roll));
+    EXPECT_GT(std::abs(roll), 0.3 * bank);   // body leans with the bank
+    EXPECT_LT(std::abs(roll), 2.0 * bank);
+}
+
 // contact -> Fz ~ 0, no mid-air phantom load), then lands on the lower plateau.
 TEST(Terrain, L5BriefAirOverCliff) {
     const double x_cliff = 15.0, z_low = -1.5;
