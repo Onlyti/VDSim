@@ -9,6 +9,7 @@ add_executable(vdsim_integration_tests
     test_lugre_tire.cpp
     test_stunt.cpp
     test_l5_driving.cpp
+    test_terrain_l5.cpp
 )
 
 target_compile_definitions(vdsim_integration_tests PRIVATE

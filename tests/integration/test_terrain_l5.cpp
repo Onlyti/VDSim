@@ -1,0 +1,150 @@
+// v0.5 M1 — L5 driving on heightmap terrain.
+//
+// HeightmapGround already produces hub-consistent per-wheel contact (bilinear
+// height + gradient normal, hub_penetration); M0 unified that with the other
+// providers. This suite is the CI gap M1 closes: prove an L5 body sits on a flat
+// heightmap without sinking and climbs a synthetic hill. Cliff / airborne is M2.
+//
+// Synthetic terrain is built in-memory (no committed .bin blobs).
+
+#include "vdsim/coordinate.hpp"
+#include "vdsim/interfaces.hpp"
+#include "vdsim/params.hpp"
+
+#include <gtest/gtest.h>
+
+#include <cmath>
+#include <memory>
+#include <vector>
+
+namespace {
+
+// Regular grid over x in [x0, x0+(nx-1)dx], y in [y0, y0+(ny-1)dy].
+struct Grid {
+    int nx, ny;
+    double x0, y0, dx, dy;
+    std::vector<double> h;
+};
+
+// Flat heightmap at height z (constant). Exercises the heightmap query path
+// rather than FlatGround.
+Grid flat_grid(double z) {
+    Grid g{41, 41, -20.0, -20.0, 1.0, 1.0, {}};
+    g.h.assign(static_cast<std::size_t>(g.nx) * g.ny, z);
+    return g;
+}
+
+// Gaussian hill centred at (xc, yc): h = h_max * exp(-(r^2)/sigma^2).
+Grid hill_grid(double h_max, double xc, double yc, double sigma) {
+    Grid g{91, 41, -15.0, -20.0, 1.0, 1.0, {}};
+    g.h.resize(static_cast<std::size_t>(g.nx) * g.ny);
+    for (int iy = 0; iy < g.ny; ++iy) {
+        for (int ix = 0; ix < g.nx; ++ix) {
+            const double x = g.x0 + ix * g.dx;
+            const double y = g.y0 + iy * g.dy;
+            const double r2 = (x - xc) * (x - xc) + (y - yc) * (y - yc);
+            g.h[static_cast<std::size_t>(iy) * g.nx + ix] =
+                h_max * std::exp(-r2 / (sigma * sigma));
+        }
+    }
+    return g;
+}
+
+std::unique_ptr<vdsim::IContactProvider> ground_from(const Grid& g, double mu) {
+    return vdsim::create_heightmap_ground(g.h, g.nx, g.ny, g.x0, g.y0, g.dx, g.dy, mu);
+}
+
+vdsim::State spawn(double x, double y, double vx, double cg_z, double R) {
+    vdsim::State s;
+    s.position.x() = x;
+    s.position.y() = y;
+    s.position.z() = cg_z;
+    s.velocity.x() = vx;
+    const double w = (R > 0.0) ? vx / R : 0.0;
+    s.wheel_spin = {{w, w, w, w}};
+    return s;
+}
+
+struct TerrainSetup {
+    vdsim::VehicleParams vp;
+    vdsim::TireParams tp;
+    vdsim::SolverParams sp;
+    std::unique_ptr<vdsim::IVehicleDynamics> dyn;
+    std::unique_ptr<vdsim::IContactProvider> ground;
+
+    TerrainSetup(const Grid& g, double mu) {
+        vp.aero_drag_coeff = 0.0;
+        tp.lugre.enabled = false;   // MF96 for deterministic CI climb
+        sp.stunt_physics = true;    // L5 world-z + full gravity path
+        sp.max_substep_dt = 2e-4;
+        sp.max_substeps = 16;
+        dyn = vdsim::create_stunt_dof();
+        dyn->initialize(vp, tp, sp);
+        ground = ground_from(g, mu);
+    }
+
+    double run(const vdsim::CmdL4& cmd, int n, double dt) {
+        const vdsim::ControlInput u = cmd;
+        double z_peak = dyn->state().position.z();
+        for (int i = 0; i < n; ++i) {
+            vdsim::ContactArray contacts;
+            ground->query(dyn->state(), vp, contacts);
+            dyn->step(u, contacts, dt);
+            z_peak = std::max(z_peak, dyn->state().position.z());
+        }
+        return z_peak;
+    }
+};
+
+}  // namespace
+
+// Flat heightmap holds the body at ride height (no sink, no NaN) over 4 s coast.
+TEST(Terrain, L5NoSinkOnFlat) {
+    TerrainSetup h(flat_grid(0.0), 1.0);
+    h.dyn->reset(spawn(0.0, 0.0, 12.0, h.vp.cg_height, h.vp.wheel_radius_nominal));
+    vdsim::CmdL4 cmd;
+    h.run(cmd, 800, 0.001);                 // settle
+    const double z0 = h.dyn->state().position.z();
+    h.run(cmd, 3200, 0.001);
+    EXPECT_TRUE(std::isfinite(z0));
+    EXPECT_NEAR(h.dyn->state().position.z(), z0, 0.04);
+    EXPECT_GT(z0, 0.45);
+}
+
+// Driving up a Gaussian hill raises the body well above the start ride height.
+TEST(Terrain, L5ClimbsHill) {
+    const Grid g = hill_grid(1.5, 30.0, 0.0, 8.0);   // ~16% max grade
+    TerrainSetup h(g, 1.0);
+    const double cg = h.vp.cg_height;       // start on flat region (h~0) at x=0
+    h.dyn->reset(spawn(0.0, 0.0, 18.0, cg, h.vp.wheel_radius_nominal));
+    const double z0 = h.dyn->state().position.z();
+    vdsim::CmdL4 cmd;
+    cmd.throttle = 0.6;
+    const double z_peak = h.run(cmd, 5000, 0.001);
+    EXPECT_GT(h.dyn->state().position.x(), 25.0);    // actually drove onto the hill
+    EXPECT_GT(z_peak, z0 + 0.3);                     // climbed >= 0.3 m
+    EXPECT_TRUE(std::isfinite(z_peak));
+}
+
+// Spawned on the hill flank at the local ground height, the body stays in
+// contact and stable (no sink-through, bounded attitude) over a short coast.
+TEST(Terrain, L5SettlesOnHillFlank) {
+    const Grid g = hill_grid(1.5, 30.0, 0.0, 8.0);
+    auto probe = ground_from(g, 1.0);
+    TerrainSetup h(g, 1.0);
+    const double x_flank = 22.0;            // up the near side of the hill
+    // local ground height at the flank for the spawn z
+    vdsim::State tmp = spawn(x_flank, 0.0, 0.0, 0.0, h.vp.wheel_radius_nominal);
+    vdsim::ContactArray c0;
+    probe->query(tmp, h.vp, c0);
+    const double z_ground = c0[vdsim::WHEEL_FL].position.z();
+    h.dyn->reset(spawn(x_flank, 0.0, 0.0, z_ground + h.vp.cg_height,
+                       h.vp.wheel_radius_nominal));
+    vdsim::CmdL4 cmd;
+    h.run(cmd, 1500, 0.001);
+    EXPECT_TRUE(std::isfinite(h.dyn->state().position.z()));
+    EXPECT_LT(std::abs(h.dyn->pitch_angle_qs()), 0.5);
+    const auto fz = h.dyn->tire_Fz();
+    const double sum = fz[0] + fz[1] + fz[2] + fz[3];
+    EXPECT_GT(sum, 0.3 * h.vp.mass * 9.80665);   // still carrying weight
+}
