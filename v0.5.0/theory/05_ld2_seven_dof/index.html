@@ -1,0 +1,3497 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Open-core vehicle dynamics simulator — theory + PoC reports">
+      
+      
+      
+        <link rel="canonical" href="https://onlyti.github.io/VDSim/v0.5.0/theory/05_ld2_seven_dof/">
+      
+      
+        <link rel="prev" href="../04_ld1_bicycle/">
+      
+      
+        <link rel="next" href="../06_ld3_fourteen_dof/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>05 — Ld2-SevenDOF - VDSim</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#05-ld2-sevendof-per-tire-7-dof" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="VDSim" class="md-header__button md-logo" aria-label="VDSim" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            VDSim
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              05 — Ld2-SevenDOF
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Onlyti/VDSim" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Onlyti/VDSim
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../.." class="md-tabs__link">
+          
+  
+  
+    
+  
+  Home
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Theory
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../ROADMAP/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  User guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../references/actuator_nonlinearity/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  References
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Phase 2 — Multibody & Integration
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../tasks/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  PoC Reports
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../examples/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Examples
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="VDSim" class="md-nav__button md-logo" aria-label="VDSim" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    VDSim
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Onlyti/VDSim" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Onlyti/VDSim
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../.." class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Home
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Theory
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Theory
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01_frames_and_conventions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    01 — Frames & conventions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02_rigid_body_dynamics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    02 — Rigid-body dynamics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../03_tire_pacejka_mf96/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    03 — Tire (Pacejka MF96)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../19_lugre_dynamic_tire/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    19 — Tire (LuGre / brush)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04_ld1_bicycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    04 — Ld1-Bicycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    05 — Ld2-SevenDOF
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    05 — Ld2-SevenDOF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#learning-objectives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Learning objectives
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#51-ld1-ld2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 동기 — Ld1 → Ld2
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#52" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 가정
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5.2 가정">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ladder-level" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        노면 기울기와 ladder level (중요)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#53-per-tire-fz-lateral-longitudinal-transfer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 Per-tire Fz — lateral + longitudinal transfer
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5.3 Per-tire Fz — lateral + longitudinal transfer">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#geometric-vs-elastic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        유도 — geometric vs elastic
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#roll-dof-l2-roll-stiffness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        roll-DOF 없는 L2 가 roll stiffness 를 쓰는 근거 (중요)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a_y" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        \(a_y\) 의 정확한 정의
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#54-per-wheel-velocity-slip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.4 Per-wheel velocity / slip
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#55-ackermann-steering-geometry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.5 Ackermann steering geometry
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5.5 Ackermann steering geometry">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        문제
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#perfect-ackermann" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Perfect Ackermann
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#percent-interpolation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Percent-interpolation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#56-differential-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.6 Differential model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5.6 Differential model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#open" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Open
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#locked-spool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Locked (spool)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lsd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LSD
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#57-steering-rack-torque" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.7 Steering rack torque
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#58-body-force-moment-eom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.8 Body force / moment + EoM
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#59" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.9 검증 전략
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#510" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.10 한계
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#511-chapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.11 다음 chapter 와의 연결
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#512" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.12 참고문헌
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#513-self-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.13 Self-check
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#514-vdsim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.14 VDSim 구현 노트
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../06_ld3_fourteen_dof/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    06 — Ld3-FourteenDOF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../20_ld5_stunt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    20 — Ld5-Stunt (jump/loop)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../07_control_ladder/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    07 — Control ladder Lc1-Lc8
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../08_pid_controllers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    08 — PID controllers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../09_pure_pursuit_path/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    09 — Pure Pursuit / path
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../10_driver_model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10 — Driver model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../11_numerical_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11 — Numerical integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../12_software_architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12 — Software architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13_multibody_outlook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13 — Multibody (Ld4) overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../14_hardpoint_kinematics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    14 — Hardpoint kinematics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../15_validation_and_doe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    15 — Validation & DOE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../16_fmi_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16 — FMI 2.0 integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../17_actuator_and_sensing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    17 — Actuator dynamics & sensing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../18_runtime_and_cosim/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18 — Runtime kernel & co-simulation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ROADMAP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Product roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CATALOG_AND_PHYSICS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalog, scenes & physics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RUNNING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running VDSim
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../VALIDATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    References
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    References
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../references/actuator_nonlinearity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Actuator/sensor nonlinearity & delay
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gui_architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GUI architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vdsim_bridge_interface_requirements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Co-sim bridge interface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../map_import_strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Map import strategy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase 2 — Multibody & Integration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Phase 2 — Multibody & Integration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T22 — CARLA Python bridge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/T23_jump_14dof/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T23 — Jump 14-DOF (world-z)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/T27_ld4_dw/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T27 — Ld4 double wishbone
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/T28_ld4_mp/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T28 — Ld4 MacPherson
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/T29_ld4_ta/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T29 — Ld4 trailing arm
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/T30_ld4_5link/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T30 — Ld4 5-link rear
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../tasks/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PoC Reports
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    PoC Reports
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/68_poc_summary_v3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PoC Summary v3 (95%)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/69_competitive_matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Competitive matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/62_cycles_overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cycles overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmark matrix (4 vehicles)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/20_l1_l2_grid_sweep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    L1 vs L2 grid sweep
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/30_l3_dynamic_suspension/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    L3 dynamic suspension
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/31_l6_l7_l8_control/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    L5-L8 control cascade
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/57_58_59_driver_skidpad/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Driver / skidpad / brake-in-turn
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmark matrix (4 vehicles)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../examples/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#learning-objectives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Learning objectives
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#51-ld1-ld2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 동기 — Ld1 → Ld2
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#52" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 가정
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5.2 가정">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ladder-level" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        노면 기울기와 ladder level (중요)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#53-per-tire-fz-lateral-longitudinal-transfer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 Per-tire Fz — lateral + longitudinal transfer
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5.3 Per-tire Fz — lateral + longitudinal transfer">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#geometric-vs-elastic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        유도 — geometric vs elastic
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#roll-dof-l2-roll-stiffness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        roll-DOF 없는 L2 가 roll stiffness 를 쓰는 근거 (중요)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a_y" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        \(a_y\) 의 정확한 정의
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#54-per-wheel-velocity-slip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.4 Per-wheel velocity / slip
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#55-ackermann-steering-geometry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.5 Ackermann steering geometry
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5.5 Ackermann steering geometry">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        문제
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#perfect-ackermann" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Perfect Ackermann
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#percent-interpolation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Percent-interpolation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#56-differential-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.6 Differential model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5.6 Differential model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#open" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Open
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#locked-spool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Locked (spool)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lsd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LSD
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#57-steering-rack-torque" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.7 Steering rack torque
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#58-body-force-moment-eom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.8 Body force / moment + EoM
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#59" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.9 검증 전략
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#510" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.10 한계
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#511-chapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.11 다음 chapter 와의 연결
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#512" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.12 참고문헌
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#513-self-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.13 Self-check
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#514-vdsim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.14 VDSim 구현 노트
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="05-ld2-sevendof-per-tire-7-dof">05. Ld2-SevenDOF (Per-Tire, 7 DOF)<a class="headerlink" href="#05-ld2-sevendof-per-tire-7-dof" title="Permanent link">&para;</a></h1>
+<h2 id="learning-objectives">Learning objectives<a class="headerlink" href="#learning-objectives" title="Permanent link">&para;</a></h2>
+<p>이 chapter 를 마치면 다음을 할 수 있다.</p>
+<ol>
+<li>Ld2 가 Ld1 위에 더하는 것 (per-tire Fz, lateral transfer, Ackermann,
+   differential) 을 정확히 열거한다.</li>
+<li>lateral weight transfer 를 geometric(roll center) + elastic(roll-stiffness
+   분배) + unsprung 성분으로 분해해 유도한다. roll stiffness 는 corner spring
+   에서 유도되고 ARB·roll-center 만 입력임을 안다.</li>
+<li>Ackermann steering geometry 의 inner/outer wheel 각도 식을 유도하고
+   percent-interpolation 의 의미를 설명한다.</li>
+<li>Open / Locked / LSD differential 의 torque 분배 메커니즘과 split-mu 거동
+   차이를 설명한다.</li>
+<li>linear region 에서 Ld2 ↔ Ld1 이 일치하고 nonlinear 에서 갈라지는 이유를
+   설명한다.</li>
+</ol>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Chapter 04</strong> — single-track, longitudinal transfer, 1-step lag.</li>
+<li><strong>Chapter 02</strong> — body EoM, 3 종류의 <span class="arithmatex">\(a_x\)</span>.</li>
+<li><strong>Chapter 03</strong> — Pacejka <span class="arithmatex">\(F_x, F_y, M_z\)</span>.</li>
+</ul>
+<hr />
+<h2 id="51-ld1-ld2">5.1 동기 — Ld1 → Ld2<a class="headerlink" href="#51-ld1-ld2" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>Ld1</th>
+<th>Ld2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wheel count</td>
+<td>2 (axle 평균)</td>
+<td>4 (per-tire)</td>
+</tr>
+<tr>
+<td>Fz</td>
+<td>axle static + long</td>
+<td>per-tire static + long + lat transfer</td>
+</tr>
+<tr>
+<td>Pacejka call</td>
+<td>2</td>
+<td>4</td>
+</tr>
+<tr>
+<td>Wheel spin</td>
+<td>2</td>
+<td>4 (independent)</td>
+</tr>
+<tr>
+<td>Differential</td>
+<td>없음</td>
+<td>Open / Locked / LSD</td>
+</tr>
+<tr>
+<td>Ackermann</td>
+<td>평균 δ</td>
+<td>per-wheel <span class="arithmatex">\(\delta_{\text{inner}}/\delta_{\text{outer}}\)</span></td>
+</tr>
+<tr>
+<td>Steering rack torque</td>
+<td>없음</td>
+<td>front Mz sum × ratio</td>
+</tr>
+<tr>
+<td>Roll/pitch 진단</td>
+<td>0</td>
+<td>quasi-static estimate</td>
+</tr>
+</tbody>
+</table>
+<p>Ld2 는 본격 차량 dynamics validation 의 entry level — ADAS 도메인의 표준
+fidelity.</p>
+<p><img alt="Weight transfer in a left turn" src="../figures/05_weight_transfer.png" /></p>
+<hr />
+<h2 id="52">5.2 가정<a class="headerlink" href="#52" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>가정</th>
+<th>의미</th>
+<th>깨지는 case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Quasi-static transfer</td>
+<td>weight transfer 가 즉시 (suspension transient 없음)</td>
+<td>chapter 06 (Ld3 dynamic roll)</td>
+</tr>
+<tr>
+<td>1-step lag <span class="arithmatex">\(a_y\)</span></td>
+<td>lateral transfer 가 직전 step <span class="arithmatex">\(a_y\)</span> 기반</td>
+<td>chapter 11 (iteration 옵션)</td>
+</tr>
+<tr>
+<td>Symmetric LSD</td>
+<td>drive/coast ramp 대칭</td>
+<td>실차 LSD 비대칭</td>
+</tr>
+<tr>
+<td>Zero camber</td>
+<td>roll 로부터 camber 없음 (<span class="arithmatex">\(\gamma=0\)</span>)</td>
+<td>chapter 06</td>
+</tr>
+<tr>
+<td>Rigid roll axis</td>
+<td>geometric(roll center) + elastic(roll-stiffness 비율) + unsprung 으로 분배</td>
+<td>chapter 06 (compliance)</td>
+</tr>
+<tr>
+<td>Planar body (no road attitude)</td>
+<td>노면 기울기는 force 로만, body 자세로는 X</td>
+<td>chapter 06 (Ld3)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="ladder-level">노면 기울기와 ladder level (중요)<a class="headerlink" href="#ladder-level" title="Permanent link">&para;</a></h3>
+<p>노면(grade/bank/지형)이 거동에 들어오는 통로는 level 마다 다르다:</p>
+<ul>
+<li><strong>L1 (Bicycle)</strong>: planar, slope 는 slope-gravity + <span class="arithmatex">\(F_z\propto\cos(\text{slope})\)</span>
+  만. roll/pitch·하중이동 없음.</li>
+<li><strong>L2 (7DOF)</strong>: <strong>roll/pitch 자유도(state)는 없다</strong> (transient 동특성 없음). 그러나
+  noise 기울기는 두 경로로 들어간다: (1) slope-gravity + <span class="arithmatex">\(\cos(\text{slope})\)</span> 수직하중
+  스케일, (2) <strong>quasi-static 하중이동·roll/pitch 추정에 specific force</strong>
+  <span class="arithmatex">\(a_\text{felt}=a_\text{kin}-g_\text{tangential}\)</span> 를 사용. 일정 bank 직진처럼
+  <span class="arithmatex">\(a_y^\text{kin}\to0\)</span> 이라도 타이어가 중력 횡성분을 받치는 <span class="arithmatex">\(a_y^\text{felt}=-g_{y,b}\)</span>
+  가 남아 <strong>bank 에 의한 좌우 하중이동과 quasi-static roll 추정</strong>이 생긴다 (예: 8°
+  bank → downhill 측 +660 N, roll≈0.76°). 단 이는 정상상태 대수해이며 <strong>차체 자세를
+  state 로 적분하지 않는다</strong> — transient·실제 attitude state 는 L3 의 몫. 뷰어가 차를
+  노면에 기울여 그리는 것은 시각 표현이다.</li>
+<li>자유 coasting incline 은 종방향 하중이동 0 (중력·관성이 CG 에서 상쇄, <span class="arithmatex">\(\cos\)</span>
+    재분배만), 제동/등판 유지 시 종방향 이동 발생 — specific-force 정식화에서 자동.</li>
+<li><strong>CG-migration (jacking)</strong>: roll <span class="arithmatex">\(\phi\)</span> 가 sprung CG 를 횡으로
+    <span class="arithmatex">\((h_{cg}-h_{ra})\sin\phi\)</span> 이동시켜 추가 중력 roll moment 를 만든다 →
+    유효 roll stiffness 가 <span class="arithmatex">\(m_s g_\perp (h_{cg}-h_{ra})\)</span> 만큼 감소
+    (<span class="arithmatex">\(M_\text{roll}\)</span>·종방향 transfer 를 <span class="arithmatex">\(1/(1-\varepsilon)\)</span> 로 증폭,
+    <span class="arithmatex">\(\varepsilon=m_s g_\perp\,\text{arm}/K\)</span>). pitch 도 동일. sedan flat 코너링
+    ~6-10%, 8° bank 에서 roll 0.76→0.81°, 횡 transfer 660→696 N. flat 직진은 불변.</li>
+<li><strong>L3 (14DOF)</strong>: 바퀴별 <code>road_dz</code> 가 unsprung↔노면 tire spring 에 들어가 sprung
+  body 의 roll/pitch 가 노면 평면을 <strong>자세로</strong> 따라간다 (chapter 06 §6.4). 단
+  grip <span class="arithmatex">\(F_z\)</span> 는 아직 quasi-static (같은 chapter 한계 box).</li>
+</ul>
+<hr />
+<h2 id="53-per-tire-fz-lateral-longitudinal-transfer">5.3 Per-tire Fz — lateral + longitudinal transfer<a class="headerlink" href="#53-per-tire-fz-lateral-longitudinal-transfer" title="Permanent link">&para;</a></h2>
+<p>Static per-tire:</p>
+<div class="arithmatex">\[
+F_{z,f}^{\text{static}} = \frac{m g b}{2 L}, \qquad
+F_{z,r}^{\text{static}} = \frac{m g a}{2 L}
+\]</div>
+<p>Longitudinal transfer (axle 의 절반):</p>
+<div class="arithmatex">\[
+\Delta F_{z,\text{long,half}} = \frac{m\, a_x\, h_{cg}}{2 L}
+\]</div>
+<p>Lateral transfer — geometric + elastic + unsprung 분해:</p>
+<div class="arithmatex">\[
+\Delta F_{z,\text{lat},f} = \frac{1}{T_{w,f}}\Big[
+\underbrace{F_{y,s}\,\tfrac{b}{L}\,h_{rc,f}}_{\text{geometric (jacking)}}
++ \underbrace{M_{\text{roll}}\, s_f}_{\text{elastic (roll)}}
++ \underbrace{m_{u,f}\, a_y\, h_{u}}_{\text{unsprung}} \Big]
+\]</div>
+<p>(rear 도 <span class="arithmatex">\(a\leftrightarrow b\)</span>, <span class="arithmatex">\(f\leftrightarrow r\)</span> 대칭). 여기서</p>
+<div class="arithmatex">\[
+F_{y,s} = m_s\, a_y, \quad
+M_{\text{roll}} = F_{y,s}\,(h_{cg}-h_{ra}), \quad
+h_{ra} = h_{rc,f}\tfrac{b}{L} + h_{rc,r}\tfrac{a}{L},
+\]</div>
+<div class="arithmatex">\[
+s_f = \frac{K_{\phi,f}}{K_{\phi,f}+K_{\phi,r}}, \qquad
+K_{\phi,\text{axle}} = (k_{\text{left}}+k_{\text{right}})\left(\tfrac{T_w}{2}\right)^2 + K_{\text{ARB}}.
+\]</div>
+<p>핵심: axle roll stiffness <span class="arithmatex">\(K_\phi\)</span> 는 <strong>corner spring 에서 유도</strong>되며 (<span class="arithmatex">\(spring \cdot arm^2\)</span>),
+ARB 는 roll 전용 추가항이다 (입력은 ARB 와 roll-center height 만). <span class="arithmatex">\(h_u\)</span> 는 unsprung
+CG 높이 (<span class="arithmatex">\(\approx\)</span> wheel radius).</p>
+<h3 id="geometric-vs-elastic">유도 — geometric vs elastic<a class="headerlink" href="#geometric-vs-elastic" title="Permanent link">&para;</a></h3>
+<p>lateral force 가 sprung mass 에 작용할 때 전달 경로는 둘로 갈린다.
+- <strong>Geometric (jacking)</strong>: roll center 를 통해 suspension link 로 즉시 전달되는
+  성분. roll 을 일으키지 않고 <span class="arithmatex">\(F_{y,s}\,h_{rc}/T_w\)</span> 만큼 직접 Fz 차이.
+- <strong>Elastic (roll)</strong>: roll axis (front/rear roll center 를 잇는 선, CG 아래 높이
+  <span class="arithmatex">\(h_{ra}\)</span>) 둘레의 roll moment <span class="arithmatex">\(M_{\text{roll}} = F_{y,s}(h_{cg}-h_{ra})\)</span> 가 두
+  axle 의 roll spring 에 stiffness 비율 <span class="arithmatex">\(s_f\)</span> 로 분배.</p>
+<p>front 가 더 stiff (또는 front ARB↑) → front share↑ → front outer 가 더 loaded
+→ understeer 경향. <span class="arithmatex">\(h_{rc}=0\)</span> 이면 geometric=0, <span class="arithmatex">\(h_{ra}=0\)</span> 으로 elastic-only
+(<span class="arithmatex">\(M_{\text{roll}}=m_s a_y h_{cg}\)</span>) 이 되어 단순 모델로 환원된다.</p>
+<h3 id="roll-dof-l2-roll-stiffness">roll-DOF 없는 L2 가 roll stiffness 를 쓰는 근거 (중요)<a class="headerlink" href="#roll-dof-l2-roll-stiffness" title="Permanent link">&para;</a></h3>
+<p>elastic 분배 <span class="arithmatex">\(s_f = K_{\phi,f}/(K_{\phi,f}+K_{\phi,r})\)</span> 는 <strong>sprung mass 의 roll 이
+front/rear roll spring 에 분배되는</strong> roll 매개 효과다. L2 는 roll 자유도를 적분하지
+않는데 이걸 쓰는 것이 모순처럼 보이지만, 다음으로 정당화된다:</p>
+<ul>
+<li><strong>total transfer (front+rear 합)</strong> 은 순수 statics — roll 무관.</li>
+<li><strong>front/rear 분배</strong> 는 정상상태에서 실제로 roll-stiffness 비율로 결정된다
+  (<strong>TLLTD</strong>, total lateral load transfer distribution — 측정 가능한 실물리량).
+  따라서 <strong>정상상태에서는 근사가 아니라 정확</strong>하다.</li>
+<li>L2 는 "roll 이 무한히 빠르게 정상상태로 settle 한다"는 <strong>quasi-static roll
+  가정</strong>(§5.2) 하에 그 정상상태 결과만 대수적으로 가져온다. roll 이 없다고 보는 게
+  아니라 transient 를 무시(즉시 settle)하는 것.</li>
+<li><strong>transient 한계</strong>: turn-in 같은 빠른 과도에서 실제 elastic transfer 는 roll
+  시상수만큼 지연되며 쌓이는데 L2 는 lag 없이 즉시 full split 을 건다 → 과도
+  구간에서 약간 aggressive. 이 lag 는 roll 을 상태로 갖는 chapter 06 (Ld3) 가 메운다.</li>
+<li>"순수 2D" 를 원하면 분배를 정적하중 <span class="arithmatex">\(b/L, a/L\)</span> 로 바꿀 수 있으나, ARB·spring 의
+  front/rear balance 튜닝(understeer 의 #1 손잡이)이 L2 에서 무력화된다. 본 시리즈는
+  balance tunability 를 위해 roll-stiffness 분배(TLLTD)를 채택한다.</li>
+</ul>
+<p>부호 직관: <span class="arithmatex">\(a_y &gt; 0\)</span> (좌선회, centripetal <span class="arithmatex">\(+y\)</span>) → 차체가 <span class="arithmatex">\(-y\)</span> 쪽으로 기울고
+→ right side (FR, RR) loaded → <span class="arithmatex">\(F_{z,FR} &gt; F_{z,FL}\)</span>.</p>
+<h3 id="a_y"><span class="arithmatex">\(a_y\)</span> 의 정확한 정의<a class="headerlink" href="#a_y" title="Permanent link">&para;</a></h3>
+<p>lateral acceleration 은 <span class="arithmatex">\(a_y = \dot v_y + v_x r = F_y/m\)</span> 이지 frame 도함수
+<span class="arithmatex">\(\dot v_y\)</span> 가 아니다 (chapter 02 §2.7). 이를 혼동하면 lateral transfer 가 두
+자릿수 N 으로 비현실적으로 작아진다. 정량 사례는 §5.13 box.</p>
+<hr />
+<h2 id="54-per-wheel-velocity-slip">5.4 Per-wheel velocity / slip<a class="headerlink" href="#54-per-wheel-velocity-slip" title="Permanent link">&para;</a></h2>
+<p>각 wheel 의 body-frame velocity:</p>
+<div class="arithmatex">\[
+v_{x,\text{body},i} = v_x - r\, r_{y,i}, \qquad
+v_{y,\text{body},i} = v_y + r\, r_{x,i}
+\]</div>
+<p>wheel 의 body-frame 위치 <span class="arithmatex">\((r_{x,i}, r_{y,i})\)</span>:</p>
+<ul>
+<li>FL: <span class="arithmatex">\((+a, +T_{w,f}/2)\)</span></li>
+<li>FR: <span class="arithmatex">\((+a, -T_{w,f}/2)\)</span></li>
+<li>RL: <span class="arithmatex">\((-b, +T_{w,r}/2)\)</span></li>
+<li>RR: <span class="arithmatex">\((-b, -T_{w,r}/2)\)</span></li>
+</ul>
+<p>(ISO 8855 RH: <span class="arithmatex">\(+y\)</span> = leftward → left wheels <span class="arithmatex">\(+y\)</span>, right wheels <span class="arithmatex">\(-y\)</span>.)</p>
+<p>front wheels 는 추가로 steer <span class="arithmatex">\(\delta_i\)</span> (Ackermann 시 wheel 마다 다름) 회전:</p>
+<div class="arithmatex">\[
+v_{x,\text{wheel}} =  v_{x,\text{body}}\cos\delta_i + v_{y,\text{body}}\sin\delta_i, \qquad
+v_{y,\text{wheel}} = -v_{x,\text{body}}\sin\delta_i + v_{y,\text{body}}\cos\delta_i
+\]</div>
+<p>rear: wheel frame = body frame. 이것이 chapter 03 Pacejka input
+(<span class="arithmatex">\(\alpha, \kappa\)</span>) 의 source.</p>
+<p><img alt="Ackermann inner/outer wheel angle vs interpolation %" src="../figures/05_ackermann.png" /></p>
+<hr />
+<h2 id="55-ackermann-steering-geometry">5.5 Ackermann steering geometry<a class="headerlink" href="#55-ackermann-steering-geometry" title="Permanent link">&para;</a></h2>
+<h3 id="_1">문제<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h3>
+<p>low-speed cornering 에서 inner/outer wheel 의 path radius 가 다르다. parallel
+steer (양 wheel 동일 <span class="arithmatex">\(\delta\)</span>) 면 inner wheel 이 의도 path 보다 큰 radius 를
+그리려 해 불필요한 slip 발생.</p>
+<h3 id="perfect-ackermann">Perfect Ackermann<a class="headerlink" href="#perfect-ackermann" title="Permanent link">&para;</a></h3>
+<p>instantaneous center of rotation (ICR) 이 rear axle 연장선과 front steering
+plane 의 교점. 양 front wheel 의 angle 이 그 ICR 로 align:</p>
+<div class="arithmatex">\[
+R = \frac{L}{\tan\delta_{\text{avg}}}, \qquad
+R_{\text{inner}} = R - \tfrac{T_{w,f}}{2}, \qquad
+R_{\text{outer}} = R + \tfrac{T_{w,f}}{2}
+\]</div>
+<div class="arithmatex">\[
+\delta_{\text{inner}} = \arctan\frac{L}{R_{\text{inner}}}, \qquad
+\delta_{\text{outer}} = \arctan\frac{L}{R_{\text{outer}}}
+\]</div>
+<p><span class="arithmatex">\(\delta_{\text{inner}} &gt; \delta_{\text{outer}}\)</span> (inner 가 더 꺾임).</p>
+<h3 id="percent-interpolation">Percent-interpolation<a class="headerlink" href="#percent-interpolation" title="Permanent link">&para;</a></h3>
+<div class="arithmatex">\[
+f = \frac{\text{ackermann\_percent}}{100}, \qquad
+\delta_{i,\text{eff}} = \delta + f\,(\delta_{i,\text{ack}} - \delta)
+\]</div>
+<ul>
+<li><span class="arithmatex">\(0\)</span> → parallel steer (Ld1 호환).</li>
+<li><span class="arithmatex">\(100\)</span> → perfect Ackermann.</li>
+</ul>
+<p>차종 default: sedan 60 %, sports 85 %, FSK formula 100 %, race 90 %.</p>
+<hr />
+<h2 id="56-differential-model">5.6 Differential model<a class="headerlink" href="#56-differential-model" title="Permanent link">&para;</a></h2>
+<h3 id="open">Open<a class="headerlink" href="#open" title="Permanent link">&para;</a></h3>
+<div class="arithmatex">\[
+T_L = T_R = \frac{T_{\text{axle}}}{2}
+\]</div>
+<p>split-mu 면 low-mu side 가 spin up, 차량 traction = lower-mu side 한계.</p>
+<h3 id="locked-spool">Locked (spool)<a class="headerlink" href="#locked-spool" title="Permanent link">&para;</a></h3>
+<p>좌우 <span class="arithmatex">\(\omega\)</span> 동등화 (실제는 algebraic constraint/DAE). smooth approximation:</p>
+<div class="arithmatex">\[
+\Delta\omega = \omega_L - \omega_R, \quad
+\text{bias} = 0.45\tanh(2\Delta\omega), \quad
+T_L = (0.5 - \text{bias})T_{\text{axle}}, \quad
+T_R = (0.5 + \text{bias})T_{\text{axle}}
+\]</div>
+<p><span class="arithmatex">\(\Delta\omega&gt;0\)</span> (L faster) → bias<span class="arithmatex">\(&gt;0\)</span> → R 가 더 받음 (slower wheel gets more
+torque). 0.45 cap 으로 발산 방지.</p>
+<h3 id="lsd">LSD<a class="headerlink" href="#lsd" title="Permanent link">&para;</a></h3>
+<p>preload + ramp:</p>
+<div class="arithmatex">\[
+\text{mag} = \operatorname{clamp}(\text{preload} + \text{ramp}\cdot|\Delta\omega|,\;0,\;0.45), \quad
+\text{bias} = \text{mag}\cdot\tanh(2\Delta\omega)
+\]</div>
+<p>sedan default preload 0.10, ramp 0.20. 실차 ramp angle (drive/coast 비대칭)
+보다 단순화된 대칭 모델.</p>
+<p>split-mu accel 에서 종단 <span class="arithmatex">\(\Delta\omega\)</span> ordering: Open &gt; LSD &gt; Locked (정성
+정확). 정량은 §5.13 box.</p>
+<hr />
+<h2 id="57-steering-rack-torque">5.7 Steering rack torque<a class="headerlink" href="#57-steering-rack-torque" title="Permanent link">&para;</a></h2>
+<div class="arithmatex">\[
+M_{\text{rack}} = (M_{z,FL} + M_{z,FR}) \cdot \text{steering\_ratio}
+\]</div>
+<p>좌선회 (<span class="arithmatex">\(\delta&gt;0\)</span>) 에서 <span class="arithmatex">\(M_z&gt;0\)</span> (self-aligning) → rack torque<span class="arithmatex">\(&gt;0\)</span> → 운전자가
+놓으면 centering. DriverModel force-feedback 통합용.</p>
+<hr />
+<h2 id="58-body-force-moment-eom">5.8 Body force / moment + EoM<a class="headerlink" href="#58-body-force-moment-eom" title="Permanent link">&para;</a></h2>
+<div class="arithmatex">\[
+\begin{aligned}
+F_{x,\text{total}} &amp;= \textstyle\sum_i F_{x,\text{body},i} - F_{\text{aero}} - F_{rr} \\
+F_{y,\text{total}} &amp;= \textstyle\sum_i F_{y,\text{body},i} \\
+M_{z,\text{total}} &amp;= \textstyle\sum_i (r_{x,i} F_{y,\text{body},i} - r_{y,i} F_{x,\text{body},i}) + \textstyle\sum_i M_{z,\text{wheel},i}
+\end{aligned}
+\]</div>
+<div class="arithmatex">\[
+m\dot v_x = F_{x,\text{total}} + m v_y r, \quad
+m\dot v_y = F_{y,\text{total}} - m v_x r, \quad
+I_{zz}\dot r = M_{z,\text{total}}
+\]</div>
+<div class="arithmatex">\[
+a_{x,\text{body}} = F_{x,\text{total}}/m, \qquad
+a_{y,\text{body}} = F_{y,\text{total}}/m \quad (\text{1-step lag input})
+\]</div>
+<p>per-wheel spin EoM:</p>
+<div class="arithmatex">\[
+I_w\,\dot\omega_i = T_{\text{drive},i} + T_{\text{brake},i} - F_{x,\text{wheel},i}\, R,
+\qquad I_w = 0.5\, m_{\text{unsprung}}\, R^2
+\]</div>
+<hr />
+<h2 id="59">5.9 검증 전략<a class="headerlink" href="#59" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>검증</th>
+<th>케이스</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Static Fz</td>
+<td>at-rest sum <span class="arithmatex">\(= mg\)</span>, per-axle 정확</td>
+</tr>
+<tr>
+<td>Hard brake</td>
+<td><span class="arithmatex">\(F_{z,f} &gt; 1.05\,F_{z,f}^{\text{static}}\)</span></td>
+</tr>
+<tr>
+<td>Left turn</td>
+<td><span class="arithmatex">\(F_{z,FR} &gt; F_{z,FL}\)</span>, <span class="arithmatex">\(F_{z,RR} &gt; F_{z,RL}\)</span></td>
+</tr>
+<tr>
+<td>Ld1↔Ld2 linear</td>
+<td>$v_x\le 15,</td>
+</tr>
+<tr>
+<td>Differential ordering</td>
+<td>split-mu <span class="arithmatex">\(\Delta\omega\)</span>: Open &gt; LSD &gt; Locked</td>
+</tr>
+<tr>
+<td>Ackermann</td>
+<td>tight turn 에서 percent <span class="arithmatex">\(0\to100\)</span> 시 SS yaw rate 증가</td>
+</tr>
+</tbody>
+</table>
+<p>linear region 에서 Ld2≈Ld1, nonlinear (<span class="arithmatex">\(v_x=20,\delta=0.10\)</span>) 에서 outer-tire
+saturation 으로 최대 ~89 % 차이 — Ld2 의 가치는 nonlinear region 에 있다.</p>
+<hr />
+<h2 id="510">5.10 한계<a class="headerlink" href="#510" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>한계</th>
+<th>다루는 chapter</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Suspension dynamics</td>
+<td>quasi-static (transient 없음)</td>
+<td>chapter 06</td>
+</tr>
+<tr>
+<td>Roll/pitch dynamic response</td>
+<td>1-step estimate 만</td>
+<td>chapter 06</td>
+</tr>
+<tr>
+<td>Wheel hop / unsprung 진동</td>
+<td>없음</td>
+<td>chapter 06</td>
+</tr>
+<tr>
+<td>Anti-dive / anti-squat</td>
+<td>없음</td>
+<td>chapter 06</td>
+</tr>
+<tr>
+<td>Camber from roll</td>
+<td><span class="arithmatex">\(\gamma=0\)</span></td>
+<td>chapter 06</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="511-chapter">5.11 다음 chapter 와의 연결<a class="headerlink" href="#511-chapter" title="Permanent link">&para;</a></h2>
+<p>Ld2 는 weight transfer 를 quasi-static 으로 처리한다. chapter 06 (Ld3,
+14-DOF) 는 sprung/unsprung mass 를 분리하여 suspension 의 dynamic response
+(roll/pitch transient, wheel hop, camber) 를 추가한다.</p>
+<hr />
+<h2 id="512">5.12 참고문헌<a class="headerlink" href="#512" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Genta, G.</strong> <em>Motor Vehicle Dynamics</em>, §6 per-tire and weight transfer.</li>
+<li><strong>Milliken &amp; Milliken</strong>, <em>Race Car Vehicle Dynamics</em>, §6 weight transfer, §15 Ackermann/diff.</li>
+<li><strong>Reimpell, J.</strong> <em>The Automotive Chassis</em>, §3 steering geometry.</li>
+</ul>
+<hr />
+<h2 id="513-self-check">5.13 Self-check<a class="headerlink" href="#513-self-check" title="Permanent link">&para;</a></h2>
+<details>
+<summary>1. front roll stiffness 를 키우면 understeer/oversteer 중 어느 쪽?</summary>
+
+understeer. front share $s_f$ 증가 → front lateral transfer 증가 → front
+outer tire 과대 loading → tire saturation 으로 front cornering 능력 저하 →
+understeer.
+</details>
+
+<details>
+<summary>2. <code>ay_prev</code> 를 <code>v̇y</code> 로 두면 무슨 일이 생기나?</summary>
+
+$a_y = \dot v_y + v_x r$ 인데 $\dot v_y$ 만 쓰면 $v_x r$ centripetal 항이
+빠져 lateral transfer 가 수십 N 으로 비현실적으로 작아진다. $a_y = F_y/m$ 로
+써야 한다.
+</details>
+
+<details>
+<summary>3. split-mu 에서 Open diff 가 Locked 보다 traction 이 나쁜 이유?</summary>
+
+Open 은 좌우 torque 동일 → low-mu wheel 이 먼저 spin up 하고 high-mu wheel
+도 같은 (낮은) torque 만 받음. Locked 는 slower(high-mu) wheel 로 torque 를
+몰아줘 traction 확보.
+</details>
+
+<details>
+<summary>4. parallel steer (0 % Ackermann) 의 low-speed 문제는?</summary>
+
+inner wheel 의 필요 steer 각이 outer 보다 큰데 둘이 같으면 inner 가 의도보다
+큰 radius 를 그리려 해 slip/타이어 마모 발생. tight/low-speed turn 에서 두드러짐.
+</details>
+
+<details>
+<summary>5. Ld2 가 Ld1 대비 의미를 갖는 영역은?</summary>
+
+nonlinear region. linear 에서는 lateral transfer 효과가 작아 SS yaw rate 가
+거의 동일 (≤0.5 %). 고 $a_y$ 에서 outer-tire saturation 이 본격화되며 갈라진다.
+</details>
+
+<hr />
+<h2 id="514-vdsim">5.14 VDSim 구현 노트<a class="headerlink" href="#514-vdsim" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p><strong>[VDSim impl] § 5.3 — Lateral transfer 코드</strong></p>
+<p><code>core/src/seven_dof_dynamics.cpp:158-176</code>:</p>
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">Kf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">axle_roll_stiffness</span><span class="p">(</span><span class="n">vp_</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span><span class="w">   </span><span class="c1">// (k_l+k_r)*(tw/2)^2 + ARB</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">Kr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">axle_roll_stiffness</span><span class="p">(</span><span class="n">vp_</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">h_ra</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">hrc_f</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="n">b</span><span class="o">/</span><span class="n">L</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">hrc_r</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="n">a</span><span class="o">/</span><span class="n">L</span><span class="p">);</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">Fys</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">vp_</span><span class="p">.</span><span class="n">mass_sprung</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">ay_prev_</span><span class="p">;</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">Mroll</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Fys</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="n">h_cg</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">h_ra</span><span class="p">);</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">dFz_lat_f</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">Tw_f</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">1e-3</span><span class="p">)</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="o">?</span><span class="w"> </span><span class="p">(</span><span class="n">Fys</span><span class="o">*</span><span class="p">(</span><span class="n">b</span><span class="o">/</span><span class="n">L</span><span class="p">)</span><span class="o">*</span><span class="n">hrc_f</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">Mroll</span><span class="o">*</span><span class="p">(</span><span class="n">Kf</span><span class="o">/</span><span class="p">(</span><span class="n">Kf</span><span class="o">+</span><span class="n">Kr</span><span class="p">))</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">m_uf</span><span class="o">*</span><span class="n">ay_prev_</span><span class="o">*</span><span class="n">R</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">Tw_f</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">;</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">Fz</span><span class="p">[</span><span class="n">WHEEL_FL</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Fz_static_f</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">dFz_long_half</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">dFz_lat_f</span><span class="p">;</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">Fz</span><span class="p">[</span><span class="n">WHEEL_FR</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Fz_static_f</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">dFz_long_half</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">dFz_lat_f</span><span class="p">;</span>
+</span></code></pre></div>
+<p>3-성분(geometric+elastic+unsprung). <code>+dFz_lat_f</code> 가 FR 에 더해져 좌선회 시
+<span class="arithmatex">\(F_{z,FR}&gt;F_{z,FL}\)</span> 부호 정확. roll stiffness 는 spring 에서 유도되며 ARB·roll-center
+만 입력.</p>
+<p><strong>[VDSim impl] § 5.3 — ay 정의 버그 history</strong></p>
+<p>초기 구현이 <code>ay_prev = k.dvy</code> (frame 도함수). 격자 sweep 에서 lateral
+transfer 가 37 N 으로 비현실적 (예상 ~2000 N). <code>ay_prev = Fy_total/m</code> 로
+수정 후 3693 N 으로 수렴. chapter 02 §2.7 "3 종류 ax" 의 실전 사례.
+<code>core/src/seven_dof_dynamics.cpp:353-354</code> 의 <code>ax_body/ay_body</code> 가 명시적으로
+<code>Fx/m, Fy/m</code>.</p>
+<p><strong>[VDSim impl] § 5.5 — Ackermann 코드</strong></p>
+<p><code>core/src/seven_dof_dynamics.cpp:212-228</code>. 좌선회 (<span class="arithmatex">\(\delta&gt;0\)</span>) 시 inside=FL,
+outside=FR. 검증: tight turn (<span class="arithmatex">\(R=20, v_x=2, \delta=0.35\)</span>) 에서 percent
+<span class="arithmatex">\(0\to100\)</span> 시 SS yaw rate +37 %.</p>
+<p><strong>[VDSim impl] § 5.6 — Differential 검증</strong></p>
+<p>split-mu accel 종단 <span class="arithmatex">\(\Delta\omega\)</span>: Open 0.605, LSD 0.353, Locked 0.207 rad/s.
+정성 ordering 일치.</p>
+<p><strong>[VDSim impl] § 5.7 — Rack torque 코드</strong></p>
+<p><code>core/src/seven_dof_dynamics.cpp:114-117</code>:</p>
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kt">double</span><span class="w"> </span><span class="nf">steering_rack_torque</span><span class="p">()</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="p">(</span><span class="n">mz_front_sum_</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">vp_</span><span class="p">.</span><span class="n">steering_ratio</span><span class="p">);</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="p">}</span>
+</span></code></pre></div>
+<p><strong>[VDSim impl] § 5.9 — 검증 test</strong></p>
+<p><code>SevenDOF.*</code> 18 tests: <code>ConstructionAndLevel</code>, <code>AtRestStaticFz</code>,
+<code>HardBrakeLoadsBothFrontWheels</code>, <code>LeftTurnLoadsRightWheels</code>,
+<code>SmallSteerYawRateMatchesBicycle</code>, <code>AeroDownforceIncreasesFzAtSpeed</code>,
+<code>OpenDifferentialSplitMu</code>, <code>LockedDifferentialReducesSpread</code>,
+<code>LSDBetweenOpenAndLocked</code>, <code>AckermanInfluencesTurningRadius</code>,
+<code>AckermanZeroReproducesBaseline</code>, <code>RollAngleSignAndScale</code>,
+<code>PitchAngleSignDuringBrake</code>, <code>SteeringRackTorqueSignOpposesSteer</code>,
+<code>IndependentWheelSpinUnderSplitMu</code> 외. 전 18 pass.</p>
+</blockquote>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/Onlyti/VDSim" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.expand", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
