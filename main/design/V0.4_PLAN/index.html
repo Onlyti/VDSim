@@ -276,7 +276,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../CATALOG_AND_PHYSICS/" class="md-tabs__link">
+        <a href="../../ROADMAP/" class="md-tabs__link">
           
   
   
@@ -543,6 +543,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -690,6 +694,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../theory/19_lugre_dynamic_tire/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    19 — Tire (LuGre / brush)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../theory/04_ld1_bicycle/" class="md-nav__link">
         
   
@@ -754,6 +786,34 @@
     
   
     06 — Ld3-FourteenDOF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/20_ld5_stunt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    20 — Ld5-Stunt (jump/loop)
   
 
     
@@ -1125,6 +1185,8 @@
       
         
       
+        
+      
     
     
     
@@ -1171,6 +1233,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ROADMAP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Product roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2246,6 +2336,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Milestones (single release v0.4.0)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#confirmed-gaps-at-v04-close-2026-06-09-audit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Confirmed gaps at v0.4 close (2026-06-09 audit)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2313,8 +2420,10 @@
 
 
 <h1 id="vdsim-v04-stunt-physics-jump-vertical-loop">VDSim v0.4 — stunt physics (jump → vertical loop)<a class="headerlink" href="#vdsim-v04-stunt-physics-jump-vertical-loop" title="Permanent link">&para;</a></h1>
-<p>Status: planning (2026-06-06). <strong>All stunt capability ships in v0.4.0</strong> — no v0.5/v0.6
-split. v0.3.0 remains drivetrain + LuGre only (<code>V0.2_DRIVETRAIN.md</code>, <code>V0.2_TIRE_LUGRE.md</code>).</p>
+<p>Status: <strong>near-complete</strong> (updated 2026-06-09, branch <code>feat/v0.4-slope-jump-m5</code>). Core
+stunt (jump + vertical loop + Ld5 + loop validation) shipped; <strong>M3 banked curve descoped
+to v0.5</strong>, theory doc <code>20_ld5_stunt.md</code> outstanding. See "Milestones" for the close-out
+list. v0.3.0 remains drivetrain + LuGre only (<code>V0.2_DRIVETRAIN.md</code>, <code>V0.2_TIRE_LUGRE.md</code>).</p>
 <h2 id="baseline-at-v04-entry">Baseline at v0.4 entry<a class="headerlink" href="#baseline-at-v04-entry" title="Permanent link">&para;</a></h2>
 <ul>
 <li>v0.2 done: composable subsystems, scene GUI (<code>app.html</code>), multi-vehicle runtime.</li>
@@ -2484,7 +2593,7 @@ are opt-in (<code>level=L5</code>, stunt scenario YAML).</p>
 <td>new <strong>Stunt</strong> section — not ISO 4138; demo/education tier</td>
 </tr>
 <tr>
-<td><code>docs/theory/07_ld5_stunt.md</code></td>
+<td><code>docs/theory/20_ld5_stunt.md</code></td>
 <td>Ld5 equations + loop entry speed</td>
 </tr>
 </tbody>
@@ -2504,7 +2613,7 @@ are opt-in (<code>level=L5</code>, stunt scenario YAML).</p>
 <th>#</th>
 <th>Milestone</th>
 <th>WS</th>
-<th>Blocker for</th>
+<th>Status (2026-06-09)</th>
 </tr>
 </thead>
 <tbody>
@@ -2512,41 +2621,52 @@ are opt-in (<code>level=L5</code>, stunt scenario YAML).</p>
 <td>M1</td>
 <td>T23 C++ jump + contact wired</td>
 <td>A</td>
-<td>all stunt</td>
+<td>✓ done (<code>Stunt.JumpAirborneInterval</code>, <code>JumpLandingNoSink</code>)</td>
 </tr>
 <tr>
 <td>M2</td>
-<td>RampGround + <code>jump_ramp.yaml</code> + GUI preset</td>
+<td>RampGround + ramp scene + GUI</td>
 <td>A,B,D</td>
-<td>curved track</td>
+<td>✓ done (<code>RampGround</code>, <code>jump_ramp_demo.yaml</code>, app.js render)</td>
 </tr>
 <tr>
 <td>M3</td>
 <td>CurvedGround + banked scenario</td>
 <td>B</td>
-<td>Ld5 on curves</td>
+<td><strong>→ moved to v0.5</strong> (banked curve groups with terrain)</td>
 </tr>
 <tr>
 <td>M4</td>
 <td>Ld5 core + jump on Ld5</td>
 <td>C</td>
-<td>loop</td>
+<td>✓ done (<code>Free3DDynamics</code>, <code>L5CoastOnFlatNoSink</code>)</td>
 </tr>
 <tr>
 <td>M5</td>
-<td>MeshGround loop + <code>vertical_loop.yaml</code></td>
+<td>loop ground + <code>vertical_loop</code> scene</td>
 <td>B,C</td>
-<td>ship</td>
+<td>✓ done (<code>LoopGround</code>, <code>vertical_loop_demo.yaml</code>, <code>FreeLoopCompletesLap</code>)</td>
 </tr>
 <tr>
 <td>M6</td>
 <td>Loop validation suite + theory doc</td>
 <td>E</td>
-<td>tag v0.4.0</td>
+<td><strong>partial</strong> — validation tests ✓ (loop 4 + jump); theory <code>20_ld5_stunt.md</code> not written</td>
 </tr>
 </tbody>
 </table>
-<p>Tag <strong>v0.4.0</strong> only when M1–M6 are green.</p>
+<p>Tag <strong>v0.4.0</strong> when M1, M2, M4, M5, M6 are green. <strong>M3 (banked curve) is descoped to
+v0.5</strong> (see <a href="../V0.5_TERRAIN_L5/"><code>V0.5_TERRAIN_L5.md</code></a> M5/M5b) — <code>CurvedGround</code> arc/spline
+and a banked-oval scenario belong with the terrain/L5 work, not stunt presets.</p>
+<h3 id="confirmed-gaps-at-v04-close-2026-06-09-audit">Confirmed gaps at v0.4 close (2026-06-09 audit)<a class="headerlink" href="#confirmed-gaps-at-v04-close-2026-06-09-audit" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>theory <code>docs/theory/20_ld5_stunt.md</code></strong> (M6) — Ld5 EOM + loop entry speed
+  <code>v_min ≈ √(5gR)</code>. Documents already-shipped behaviour; write before the tag.</li>
+<li><strong>GUI stunt <em>authoring</em> preset panel</strong> (WS-D) — confirmed absent: <code>app.html</code>/<code>app.js</code>
+  <em>render</em> loaded stunt scenes (ramp/loop mesh, z/pitch/roll telemetry) but there is <strong>no
+  setup panel to author</strong> a ramp/loop scene from the GUI. Descoped to v0.5 GUI work.</li>
+<li>M3 banked curve (above) — to v0.5.</li>
+</ul>
 <h2 id="explicit-non-goals-v040">Explicit non-goals (v0.4.0)<a class="headerlink" href="#explicit-non-goals-v040" title="Permanent link">&para;</a></h2>
 <ul>
 <li>V2V collision, double loop, corkscrew (v0.5+ backlog).</li>

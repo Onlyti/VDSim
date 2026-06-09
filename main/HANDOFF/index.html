@@ -276,7 +276,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../CATALOG_AND_PHYSICS/" class="md-tabs__link">
+        <a href="../ROADMAP/" class="md-tabs__link">
           
   
   
@@ -543,6 +543,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -690,6 +694,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../theory/19_lugre_dynamic_tire/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    19 — Tire (LuGre / brush)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../theory/04_ld1_bicycle/" class="md-nav__link">
         
   
@@ -754,6 +786,34 @@
     
   
     06 — Ld3-FourteenDOF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/20_ld5_stunt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    20 — Ld5-Stunt (jump/loop)
   
 
     
@@ -1125,6 +1185,8 @@
       
         
       
+        
+      
     
     
     
@@ -1171,6 +1233,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ROADMAP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Product roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2147,19 +2237,19 @@
   <a href="#2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. 구현 상태 (요약)
+        2. 브랜치 스냅샷
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="2. 구현 상태 (요약)">
+    <nav class="md-nav" aria-label="2. 브랜치 스냅샷">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#v03-catalog-m1m5" class="md-nav__link">
+  <a href="#v04-stunt-m0m5-shipped" class="md-nav__link">
     <span class="md-ellipsis">
       
-        v0.3 catalog (M1–M5)
+        v0.4 stunt (M0–M5) — shipped
       
     </span>
   </a>
@@ -2167,10 +2257,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#physics-postv03" class="md-nav__link">
+  <a href="#ld4-multibody-m1m7-shipped" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Physics (post–v0.3)
+        Ld4 multibody (M1–M7) — shipped
       
     </span>
   </a>
@@ -2178,10 +2268,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#tests" class="md-nav__link">
+  <a href="#gui-cosim-v02-carry-over" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tests
+        GUI / cosim (v0.2 carry-over)
       
     </span>
   </a>
@@ -2197,7 +2287,7 @@
   <a href="#3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. 다음
+        3. 빌드·검증
       
     </span>
   </a>
@@ -2208,7 +2298,29 @@
   <a href="#4" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. 주의
+        4. 다음 작업
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 주의
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-git" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Git
       
     </span>
   </a>
@@ -2236,51 +2348,46 @@
 
 
 <h1 id="vdsim">VDSim 핸드오프<a class="headerlink" href="#vdsim" title="Permanent link">&para;</a></h1>
-<p>작성: 2026-06-06. v0.3 catalog + drivetrain inertia + LuGre tire 완료.</p>
+<p>작성: <strong>2026-06-08</strong> · 브랜치 <code>feat/v0.5-terrain-m1</code> · <strong>273/273 ctest green</strong></p>
 <h2 id="1">1. 문서 인덱스<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
 <th>Topic</th>
-<th>User guide</th>
+<th>User / ops</th>
 <th>Design spec</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Catalog + scenes + CLI</td>
+<td>Catalog + scenes</td>
 <td><a href="../CATALOG_AND_PHYSICS/"><code>CATALOG_AND_PHYSICS.md</code></a></td>
 <td><a href="../design/PARTS_CATALOG/"><code>design/PARTS_CATALOG.md</code></a></td>
 </tr>
 <tr>
-<td>GUI catalog API</td>
-<td>§ GUI in above</td>
-<td><code>PARTS_CATALOG.md</code> §8</td>
+<td><strong>Ld4 multibody M1–M7</strong></td>
+<td>§ L4 in catalog doc</td>
+<td><strong><a href="../design/LD4_MULTIBODY/"><code>design/LD4_MULTIBODY.md</code></a></strong></td>
 </tr>
 <tr>
-<td>External packs</td>
-<td>§ External packs</td>
-<td><code>PARTS_CATALOG.md</code> §7</td>
+<td>v0.4 slope / jump / loop</td>
+<td><a href="../RUNNING/"><code>RUNNING.md</code></a></td>
+<td><a href="../design/V0.4_SLOPE_JUMP_DYNAMICS/"><code>design/V0.4_SLOPE_JUMP_DYNAMICS.md</code></a></td>
 </tr>
 <tr>
-<td>Drivetrain inertia</td>
-<td>§ Drivetrain</td>
-<td><a href="../design/V0.2_DRIVETRAIN/"><code>design/V0.2_DRIVETRAIN.md</code></a></td>
+<td>v0.5 terrain + L5</td>
+<td>—</td>
+<td><a href="../design/V0.5_TERRAIN_L5/"><code>design/V0.5_TERRAIN_L5.md</code></a></td>
 </tr>
 <tr>
 <td>LuGre tire</td>
-<td>§ LuGre</td>
+<td>theory ch.19</td>
 <td><a href="../design/V0.2_TIRE_LUGRE/"><code>design/V0.2_TIRE_LUGRE.md</code></a></td>
 </tr>
 <tr>
-<td>Low-speed (default tire)</td>
-<td>—</td>
-<td><a href="../design/LOW_SPEED_HANDLING/"><code>design/LOW_SPEED_HANDLING.md</code></a></td>
-</tr>
-<tr>
-<td>Run modes</td>
-<td><a href="../RUNNING/"><code>RUNNING.md</code></a></td>
-<td><a href="../design/RUNTIME_ARCH/"><code>design/RUNTIME_ARCH.md</code></a></td>
+<td>Roadmap</td>
+<td><a href="../ROADMAP/"><code>ROADMAP.md</code></a></td>
+<td><a href="../design/TIRE_ROADMAP/"><code>design/TIRE_ROADMAP.md</code></a></td>
 </tr>
 <tr>
 <td>Validation</td>
@@ -2289,34 +2396,98 @@
 </tr>
 </tbody>
 </table>
-<h2 id="2">2. 구현 상태 (요약)<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
-<h3 id="v03-catalog-m1m5">v0.3 catalog (M1–M5)<a class="headerlink" href="#v03-catalog-m1m5" title="Permanent link">&para;</a></h3>
+<h2 id="2">2. 브랜치 스냅샷<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
+<h3 id="v04-stunt-m0m5-shipped">v0.4 stunt (M0–M5) — shipped<a class="headerlink" href="#v04-stunt-m0m5-shipped" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>configs/catalog/</code>, <code>parts/</code>, <code>blueprints/</code>, <code>scenes/</code>, <code>maneuvers/</code></li>
-<li>CLI: <code>vdsim_realtime --scene=</code> only</li>
-<li>GUI: <code>/api/catalog</code>, <code>/api/scene</code>, simconfig v3</li>
-<li><code>tools/import_part_pack.py</code> stub</li>
-<li>Legacy <code>configs/vehicles|tires|scenarios/</code> removed</li>
+<li><code>create_stunt_dof()</code> → <code>Free3DDynamics</code> (<code>free_3d_dynamics.cpp</code>): pos+quat+ω, 4-wheel MF, no rail snap</li>
+<li><code>create_legacy_stunt_dof()</code> → L3+L2 rail / loop CG snap (<code>Stunt.VerticalLoopCompletesLap</code>)</li>
+<li>Scenes: <code>jump_ramp_demo.yaml</code>, <code>vertical_loop_demo.yaml</code>; cosim <code>stunt:</code> → <code>make_ground</code> (ramp/loop)</li>
+<li>GUI: stunt mesh, <strong>z</strong> / pitch / roll telemetry; <code>settle_spawn_on_ground</code></li>
+<li>LuGre default retune for L5 loop (<code>sigma0</code> 9e4, <code>sigma2</code> 75)</li>
+<li><strong>v0.5 M0 (partial):</strong> <code>FlatGround</code> / <code>InclinedGround</code> / <code>SplitMu</code> / <code>Rough</code> / <code>Heightmap</code> / <code>Psd</code> → hub <code>wheel_world_positions</code> + <code>hub_penetration</code> (Ramp/Loop와 동일)</li>
+<li><strong>L5 주행 회귀:</strong> <code>tests/integration/test_l5_driving.cpp</code> — 평지 침하·가속·제동·자세·조향·하중·LuGre·오르막</li>
 </ul>
-<h3 id="physics-postv03">Physics (post–v0.3)<a class="headerlink" href="#physics-postv03" title="Permanent link">&para;</a></h3>
+<h3 id="ld4-multibody-m1m7-shipped">Ld4 multibody (M1–M7) — shipped<a class="headerlink" href="#ld4-multibody-m1m7-shipped" title="Permanent link">&para;</a></h3>
+<p>상세: <a href="../design/LD4_MULTIBODY/"><code>design/LD4_MULTIBODY.md</code></a></p>
+<table>
+<thead>
+<tr>
+<th>M</th>
+<th>Runtime</th>
+<th>Summary</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M1</td>
+<td>L4</td>
+<td>FK attach, <code>create_fourteen_dof_kinematic()</code></td>
+</tr>
+<tr>
+<td>M2</td>
+<td>—</td>
+<td>Topology graph from kin YAML</td>
+</tr>
+<tr>
+<td>M3</td>
+<td>design</td>
+<td>Quasi-static bushing compliance</td>
+</tr>
+<tr>
+<td><strong>M4</strong></td>
+<td><strong>L4 step</strong></td>
+<td>Hard-joint DAE (TA/MP/DW/5-link) + Baumgarte travel</td>
+</tr>
+<tr>
+<td>M5</td>
+<td>GUI/py</td>
+<td>K&amp;C sweep charts</td>
+</tr>
+<tr>
+<td>M6</td>
+<td>CLI/py</td>
+<td>Adams CSV import x-check (5 gains, 5% rtol)</td>
+</tr>
+<tr>
+<td>M7</td>
+<td>offline</td>
+<td>Lumped 1-DOF revolute RNEA (TA/MP/DW/5-link)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="gui-cosim-v02-carry-over">GUI / cosim (v0.2 carry-over)<a class="headerlink" href="#gui-cosim-v02-carry-over" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Drivetrain:</strong> <code>engine_rotational_inertia</code> + open-diff carrier coupling</li>
-<li><strong>Tire:</strong> <code>TireParams.lugre</code> opt-in (default off)</li>
+<li>Vehicle Edit: Chassis / Tire / Suspension tabs; FL FR RL RR</li>
+<li>VDS1 protocol <strong>v5</strong> (<code>throttle_applied</code>, <code>brake_applied</code>)</li>
+<li>L4 in <code>make_dyn("L4")</code>, catalog, <code>l4_sedan_kinematics.yaml</code></li>
 </ul>
-<h3 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h3>
+<h2 id="3">3. 빌드·검증<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>cmake<span class="w"> </span>--build<span class="w"> </span>build<span class="w"> </span>-j
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ctest<span class="w"> </span>--output-on-failure<span class="w">   </span><span class="c1"># 263/263</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>python3<span class="w"> </span>gui/server.py<span class="w">                   </span><span class="c1"># http://127.0.0.1:8080</span>
+</span></code></pre></div>
+<h2 id="4">4. 다음 작업<a class="headerlink" href="#4" title="Permanent link">&para;</a></h2>
+<p><strong>Shipped:</strong> v0.4.0 (stunt Ld5 + Ld4 multibody + theory ch.20) and <strong>v0.5.0</strong>
+(terrain + L5, headless/batch/cosim) are tagged on <code>main</code>. v0.5.0 work landed on
+<code>feat/v0.5-terrain-m1</code>: M0 hub contact · M1 heightmap (no-sink/climb/flank) · M2 cliff
+airborne · M3 terrain scene+bake · M5 inclined/banked · M5b CurvedGround banked turn ·
+M6 docs. 273 ctest. Scenes: <code>terrain_hill_demo</code>, <code>banked_grade_demo</code>, <code>banked_oval</code>.</p>
+<p><strong>v0.5.1 (deferred — needs browser, no headless path):</strong>
+1. <strong>M4 GUI terrain load + L5 Play</strong> — chase cam uses <code>position.z</code>, spawn on mesh.
+2. <strong>M5c GUI stunt authoring</strong> — author ramp/loop/banked scenes (today render-only).</p>
+<p><strong>v0.6+:</strong>
+1. <strong>ISO re-baseline</strong> — flat only (<code>run_validation.py</code>).
+2. Ld4 v0.6 — shared inertia helpers; full loop dynamics; Featherstone in step (optional).</p>
+<h2 id="5">5. 주의<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>201/201</strong> ctest green (<code>cd build &amp;&amp; ctest</code>)</li>
+<li>Hyundai (TUR) <code>.tir</code> <strong>confidential</strong> — 커밋 금지</li>
+<li>Default subsystem <strong>숫자 리베이스 금지</strong></li>
+<li>Wheel: <strong>FL=0, FR=1, RL=2, RR=3</strong> · ISO 8855 RH</li>
+<li>Cosim plant <strong>v5</strong> ↔ rebuilt <code>vdsim_realtime</code></li>
+<li><code>configs/.resolve_cache/</code> — 커밋하지 않음</li>
 </ul>
-<h2 id="3">3. 다음<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
-<ul>
-<li>v0.4 스턴트 (<code>design/V0.4_PLAN.md</code>)</li>
-<li>ISO re-baseline after drivetrain (<code>apps/validation/run_validation.py</code>)</li>
-</ul>
-<h2 id="4">4. 주의<a class="headerlink" href="#4" title="Permanent link">&para;</a></h2>
-<ul>
-<li>TUR confidential. GUI 시각검증 = 유저.</li>
-<li>Default subsystem behaviour unchanged until catalog parts set non-default physics.</li>
-</ul>
+<h2 id="6-git">6. Git<a class="headerlink" href="#6-git" title="Permanent link">&para;</a></h2>
+<p>브랜치 <code>feat/v0.4-slope-jump-m5</code> — <strong>main 미병합</strong>. push/merge는 명시 요청 시.</p>
 
 
 

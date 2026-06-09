@@ -282,7 +282,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../CATALOG_AND_PHYSICS/" class="md-tabs__link">
+        <a href="../../ROADMAP/" class="md-tabs__link">
           
   
   
@@ -551,6 +551,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -699,6 +703,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../19_lugre_dynamic_tire/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    19 — Tire (LuGre / brush)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../04_ld1_bicycle/" class="md-nav__link">
         
   
@@ -763,6 +795,34 @@
     
   
     06 — Ld3-FourteenDOF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../20_ld5_stunt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    20 — Ld5-Stunt (jump/loop)
   
 
     
@@ -1374,6 +1434,8 @@
       
         
       
+        
+      
     
     
     
@@ -1420,6 +1482,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ROADMAP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Product roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2924,42 +3014,42 @@ strut_to_knuckle, tie_rod_inner/outer, wheel_center.</p>
 <tr>
 <td>M1</td>
 <td>done</td>
-<td>MacPherson FK + native solver (ch14.4)</td>
+<td>FK attach, <code>L4_Kinematic</code>, native + lookup</td>
 </tr>
 <tr>
 <td>M2</td>
 <td>done</td>
-<td>DW + trailing arm + 5-link FK (ch14.&#8535;/6)</td>
+<td>topology graph (MP/DW/TA/5-link)</td>
 </tr>
 <tr>
 <td>M3</td>
-<td>Phase 2</td>
-<td>quasi-static compliance (bushing) — 보류</td>
+<td>done</td>
+<td>quasi-static bushing compliance</td>
 </tr>
 <tr>
 <td>M4</td>
-<td>Phase 2</td>
-<td>full DAE (Featherstone)</td>
+<td>done</td>
+<td>hard-joint corner DAE + Baumgarte travel (<strong>L4 runtime</strong>)</td>
 </tr>
 <tr>
 <td>M5</td>
-<td>부분</td>
-<td>sweep CSV + plot; 표준 K&amp;C chart 미완</td>
+<td>done</td>
+<td>K&amp;C sweep + GUI charts</td>
 </tr>
 <tr>
 <td>M6</td>
 <td>done</td>
-<td>Adams CSV import (ch14.9)</td>
+<td>Adams import x-check (5 gains, 5% rtol)</td>
 </tr>
 <tr>
 <td>M7</td>
-<td>Phase 2</td>
-<td>Adams vs VDSim cross-validation (실측 대기)</td>
+<td>done</td>
+<td>lumped 1-DOF revolute RNEA (<strong>offline</strong>, not L4 step)</td>
 </tr>
 </tbody>
 </table>
-<p>FK 가 lookup + native 두 backend 로 구현됨 (ch14.7). M3 compliance 가 Ld5
-핵심으로 남음.</p>
+<p>Spec: <a href="../../design/LD4_MULTIBODY.md"><code>docs/design/LD4_MULTIBODY.md</code></a>. Full loop
+Featherstone / augmented Lagrangian → v0.6+.</p>
 </blockquote>
 
 

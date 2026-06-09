@@ -282,7 +282,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../CATALOG_AND_PHYSICS/" class="md-tabs__link">
+        <a href="../ROADMAP/" class="md-tabs__link">
           
   
   
@@ -549,6 +549,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -696,6 +700,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../theory/19_lugre_dynamic_tire/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    19 — Tire (LuGre / brush)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../theory/04_ld1_bicycle/" class="md-nav__link">
         
   
@@ -760,6 +792,34 @@
     
   
     06 — Ld3-FourteenDOF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/20_ld5_stunt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    20 — Ld5-Stunt (jump/loop)
   
 
     
@@ -1133,6 +1193,8 @@
       
         
       
+        
+      
     
     
     
@@ -1180,6 +1242,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ROADMAP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Product roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2461,10 +2551,22 @@ wire format is the canonical VDS1 binary protocol (<code>cosim/cosim_protocol.hp
 CRC32, 76B CMD / 220B STATE).
 <div class="language-sh highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>build/bin/vdsim_realtime<span class="w"> </span>--scene<span class="o">=</span>configs/scenes/two_vehicle_race.yaml<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span>--cmd-port<span class="o">=</span><span class="m">7001</span><span class="w"> </span>--state-ip<span class="o">=</span><span class="m">127</span>.0.0.1<span class="w"> </span>--state-port<span class="o">=</span><span class="m">7002</span><span class="w"> </span>--rate<span class="o">=</span><span class="m">200</span>
-</span></code></pre></div>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1"># LuGre tire (override YAML default): add --lugre or use scene lugre_grade_demo.yaml</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>build/bin/vdsim_realtime<span class="w"> </span>--scene<span class="o">=</span>configs/scenes/lugre_grade_demo.yaml
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>python3<span class="w"> </span>examples/lugre_demo.py
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="c1"># L5 terrain / stunt scenes (v0.5): heightmap hill, banked plane, banked turn, loop</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>build/bin/vdsim_realtime<span class="w"> </span>--scene<span class="o">=</span>configs/scenes/terrain_hill_demo.yaml
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>build/bin/vdsim_realtime<span class="w"> </span>--scene<span class="o">=</span>configs/scenes/banked_oval.yaml
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="c1"># bake your own analytic hill heightmap (.bin) for a terrain scene:</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>python3<span class="w"> </span>tools/bake_synthetic_hill.py<span class="w"> </span>--out<span class="w"> </span>assets/terrain/hill_demo.bin
+</span></code></pre></div></p>
+<blockquote>
+<p>v0.5 ships terrain + L5 for the headless / batch / cosim paths. GUI terrain load
+and L5 Play (the in-browser viewer) are a v0.5.1 item — see <code>design/V0.5_TERRAIN_L5.md</code>.
 Python participants (wheel/pedal clients, viewer bridge, HIL harnesses) encode
 CMD / decode STATE through <code>cosim/protocol.py</code> — one definition of the wire
 format, byte-compatible with the server. (See <code>cosim/test_udp_client.py</code>.)</p>
+</blockquote>
 <h3 id="c-batch-campaign-headless-parallel">C. Batch / campaign (headless, parallel)<a class="headerlink" href="#c-batch-campaign-headless-parallel" title="Permanent link">&para;</a></h3>
 <p><div class="language-sh highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>python3<span class="w"> </span>tools/vdsim_batch.py<span class="w"> </span>run<span class="w"> </span>campaign.yaml<span class="w">          </span><span class="c1"># run</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>python3<span class="w"> </span>tools/vdsim_batch.py<span class="w"> </span>run<span class="w"> </span>campaign.yaml<span class="w"> </span>--dry<span class="w">    </span><span class="c1"># list expanded runs</span>

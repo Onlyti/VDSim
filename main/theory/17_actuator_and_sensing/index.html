@@ -282,7 +282,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../CATALOG_AND_PHYSICS/" class="md-tabs__link">
+        <a href="../../ROADMAP/" class="md-tabs__link">
           
   
   
@@ -551,6 +551,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -699,6 +703,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../19_lugre_dynamic_tire/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    19 — Tire (LuGre / brush)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../04_ld1_bicycle/" class="md-nav__link">
         
   
@@ -763,6 +795,34 @@
     
   
     06 — Ld3-FourteenDOF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../20_ld5_stunt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    20 — Ld5-Stunt (jump/loop)
   
 
     
@@ -1363,6 +1423,8 @@
       
         
       
+        
+      
     
     
     
@@ -1409,6 +1471,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ROADMAP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Product roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2776,6 +2866,10 @@ T_f = \sigma_0\,z + \sigma_1\,\dot z + \sigma_2\,\omega
 <li><span class="arithmatex">\(\dot z = (z_{k+1}-z)/h\)</span> 로 <span class="arithmatex">\(T_f\)</span> 계산. (참고: ch15 ref #2 Canudas-de-Wit LuGre,
   #1 Beal&amp;Brennan 의 실차 steering friction ID.)</li>
 </ul>
+<p><strong>Tire LuGre (different module):</strong> Chapter <strong>19</strong> (<a href="../19_lugre_dynamic_tire/">brush-dynamic tire</a>)
+uses the same semi-implicit <span class="arithmatex">\(z\)</span> update but slip velocity <span class="arithmatex">\(v_r\)</span> [m/s], stiffness
+<span class="arithmatex">\(\sigma_0\)</span> [N/m], and MF96 as <span class="arithmatex">\(g(\cdot)\)</span> [N]. Do not reuse steering <code>lugre</code> YAML
+fields for tire <code>lugre</code>.</p>
 <hr />
 <h2 id="177-brake-thermal-fade-mut">17.7 Brake thermal fade — mu(T)<a class="headerlink" href="#177-brake-thermal-fade-mut" title="Permanent link">&para;</a></h2>
 <p>연속·강한 제동에서 디스크 온도가 올라 마찰계수가 떨어지는 fade:</p>

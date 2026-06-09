@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://onlyti.github.io/VDSim/main/CATALOG_AND_PHYSICS/">
       
       
-        <link rel="prev" href="../theory/18_runtime_and_cosim/">
+        <link rel="prev" href="../ROADMAP/">
       
       
         <link rel="next" href="../RUNNING/">
@@ -282,7 +282,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="./" class="md-tabs__link">
+        <a href="../ROADMAP/" class="md-tabs__link">
           
   
   
@@ -549,6 +549,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -696,6 +700,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../theory/19_lugre_dynamic_tire/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    19 — Tire (LuGre / brush)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../theory/04_ld1_bicycle/" class="md-nav__link">
         
   
@@ -760,6 +792,34 @@
     
   
     06 — Ld3-FourteenDOF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/20_ld5_stunt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    20 — Ld5-Stunt (jump/loop)
   
 
     
@@ -1133,6 +1193,8 @@
       
         
       
+        
+      
     
     
     
@@ -1180,6 +1242,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ROADMAP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Product roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1259,6 +1349,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#dynamics-ladder-k-l1l5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dynamics ladder (K, L1–L5)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#running-a-scene" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1307,6 +1408,17 @@
     <span class="md-ellipsis">
       
         LuGre dynamic tire (opt-in)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#l4-kinematic-multibody" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L4 kinematic multibody
       
     </span>
   </a>
@@ -2277,6 +2389,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#dynamics-ladder-k-l1l5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dynamics ladder (K, L1–L5)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#running-a-scene" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2332,6 +2455,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#l4-kinematic-multibody" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L4 kinematic multibody
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verification" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2367,7 +2501,8 @@
 v0.3+ physics extensions (drivetrain inertia, LuGre tire). Design specs:
 <a href="../design/PARTS_CATALOG/"><code>design/PARTS_CATALOG.md</code></a>,
 <a href="../design/V0.2_DRIVETRAIN/"><code>design/V0.2_DRIVETRAIN.md</code></a>,
-<a href="../design/V0.2_TIRE_LUGRE/"><code>design/V0.2_TIRE_LUGRE.md</code></a>.</p>
+<a href="../design/V0.2_TIRE_LUGRE/"><code>design/V0.2_TIRE_LUGRE.md</code></a>.
+Roadmap: <a href="../ROADMAP/"><code>ROADMAP.md</code></a>.</p>
 <h2 id="layout">Layout<a class="headerlink" href="#layout" title="Permanent link">&para;</a></h2>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>configs/catalog/manifest.yaml     # builtin part + blueprint index
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>configs/parts/**                  # chassis, tire, drivetrain, susp_*, …
@@ -2378,6 +2513,60 @@ v0.3+ physics extensions (drivetrain inertia, LuGre tire). Design specs:
 <p>Legacy flat paths (<code>configs/vehicles/</code>, <code>tires/</code>, <code>scenarios/</code>) are <strong>removed</strong>.
 Resolve presets in Python via <code>vdsim_lab.Vehicle.preset()</code> / <code>Tire.preset()</code>
 (catalog-backed).</p>
+<h2 id="dynamics-ladder-k-l1l5">Dynamics ladder (K, L1–L5)<a class="headerlink" href="#dynamics-ladder-k-l1l5" title="Permanent link">&para;</a></h2>
+<p>Runtime / YAML / GUI use <strong>K, L1–L5</strong>; theory chapters use <strong>Ld0–Ld5</strong> (Ld0 = K).
+Canonical names: <code>python/catalog/levels.py</code>.</p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Ld</th>
+<th>Name</th>
+<th>Model</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>K</strong></td>
+<td>Ld0</td>
+<td>Kinematic</td>
+<td>Kinematic bicycle — no tire slip</td>
+</tr>
+<tr>
+<td><strong>L1</strong></td>
+<td>Ld1</td>
+<td>Bicycle</td>
+<td>Single-track bicycle (5-DOF planar)</td>
+</tr>
+<tr>
+<td><strong>L2</strong></td>
+<td>Ld2</td>
+<td>Seven-DOF</td>
+<td>Planar seven-DOF — 3 chassis + 4 wheel ω, per-wheel Pacejka, Ackermann</td>
+</tr>
+<tr>
+<td><strong>L3</strong></td>
+<td>Ld3</td>
+<td>Fourteen-DOF</td>
+<td>Ride fourteen-DOF — sprung + unsprung vertical</td>
+</tr>
+<tr>
+<td><strong>L4</strong></td>
+<td>Ld4</td>
+<td>Hardpoint</td>
+<td>Hardpoint kinematic multibody (L3 + attach kin)</td>
+</tr>
+<tr>
+<td><strong>L5</strong></td>
+<td>Ld5</td>
+<td>Free-3D</td>
+<td>Free 3D stunt — 6-DOF body, hub contact, airborne</td>
+</tr>
+</tbody>
+</table>
+<p>L2 is <strong>not</strong> “3-DOF Ackermann”: the chassis is planar 3-DOF (x, y, yaw); the
+ladder name <strong>Seven-DOF</strong> counts four wheel-spin states. Ackermann steering is one
+feature of L2, not the level name.</p>
 <h2 id="running-a-scene">Running a scene<a class="headerlink" href="#running-a-scene" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>build/bin/vdsim_realtime<span class="w"> </span>--scene<span class="o">=</span>configs/scenes/two_vehicle_race.yaml<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span>--cmd-port<span class="o">=</span><span class="m">7001</span><span class="w"> </span>--state-port<span class="o">=</span><span class="m">7002</span><span class="w"> </span>--rate<span class="o">=</span><span class="m">200</span>
@@ -2436,6 +2625,9 @@ into per-vehicle <code>vehicle.yaml</code> / <code>tire.yaml</code> (+ L3 suspen
 </span></code></pre></div>
 <p>Install target: <code>configs/catalog/packages/&lt;package_id&gt;/</code>. Id collision with
 builtin catalog is an error (no override).</p>
+<p><strong>GUI parts library</strong> (Vehicle Edit → Parts library): registers chassis/tire YAML
+into <code>configs/catalog/packages/gui_custom/</code> and merges via manifest <code>packages:</code>.
+Builtin parts are read-only — clone to customize. Import: YAML file or <code>.tir</code> (tire).</p>
 <h2 id="drivetrain-engine-inertia">Drivetrain engine inertia<a class="headerlink" href="#drivetrain-engine-inertia" title="Permanent link">&para;</a></h2>
 <p><strong>Param:</strong> <code>VehicleParams.engine_rotational_inertia</code> [kg·m²] at the crank
 (catalog: <code>configs/parts/drivetrain/*.yaml</code>). Default <code>0.25</code>.</p>
@@ -2465,24 +2657,99 @@ driven axle and coupled on open diffs (<code>core/include/vdsim/drivetrain_inert
 <h2 id="lugre-dynamic-tire-opt-in">LuGre dynamic tire (opt-in)<a class="headerlink" href="#lugre-dynamic-tire-opt-in" title="Permanent link">&para;</a></h2>
 <p><strong>Param:</strong> <code>TireParams.lugre</code> (catalog: <code>lugre:</code> block under tire parts).</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">lugre</span><span class="p">:</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">    </span><span class="c1"># default — keeps kinematic blend path</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">sigma0</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">200000.0</span><span class="w">   </span><span class="c1"># bristle stiffness [N/m]</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">     </span><span class="c1"># catalog default (tire.default_pacejka); set false for kinematic fallback</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">sigma0</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">300000.0</span><span class="w">   </span><span class="c1"># bristle stiffness [N/m]</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">sigma1</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0</span><span class="w">        </span><span class="c1"># 0 → critical damping from m_eff</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="nt">sigma2</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">50.0</span><span class="w">       </span><span class="c1"># viscous [N·s/m]</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="nt">sigma2</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">120.0</span><span class="w">      </span><span class="c1"># viscous [N·s/m]</span>
 </span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="nt">m_eff</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">40.0</span><span class="w">        </span><span class="c1"># contact mass for critical sigma1 [kg]</span>
 </span></code></pre></div>
+<p><strong>Kinematic fallback:</strong> <code>tire.kinematic_fallback</code> (<code>lugre.enabled: false</code>) — MF96 +
+kinematic blend + brake-hold (legacy ISO baseline). CLI: <code>--no-lugre</code>.</p>
 <p>When <code>enabled: true</code> (L1 + L2 + L3 via inner L2):</p>
 <ul>
-<li>MF96 supplies the steady-state friction envelope <code>g()</code>.</li>
-<li>Per-wheel bristle states <code>z</code> (long/lat); semi-implicit update each substep.</li>
+<li>MF96 supplies the breakaway envelope <code>g()</code> at current slip; floors are
+  <strong>asymmetric</strong>: longitudinal <code>g_x = max(|Fx_MF|, 1 N)</code> (no <code>mu*Fz</code> — avoids
+  phantom drive/brake at rest); lateral <code>g_y = max(|Fy_MF|, w(alpha)*mu_lat*Fz, 1 N)</code>
+  with <code>w = exp(-(alpha/0.03)^2)</code> for presliding cornering stiffness.</li>
+<li>Per-wheel bristle states <code>z_long</code>, <code>z_lat</code>; semi-implicit update; RK4 advances
+  <code>z</code> four times per substep (<code>h/4</code> after each stage).</li>
+<li>Combined slip: peak-axis friction ellipse (<code>D*mu*Fz</code> per axis), same as MF96
+  task 15; outer circular <code>mu*Fz</code> clip is skipped when LuGre + combined slip.</li>
+<li>Lateral force: <code>Fy = -F_raw</code> so ISO 8855 sign matches Pacejka.</li>
+<li>Wheel spin couples to the same clipped LuGre <code>Fx</code> (<code>fx_kin</code>).</li>
 <li>Kinematic blend, brake-hold damper, and lambda force fades are <strong>skipped</strong>.</li>
 <li><code>relaxation_length_*</code> is ignored (LuGre handles transients).</li>
 </ul>
-<p>When <code>enabled: false</code> (default): unchanged low-speed path documented in
+<p>When <code>enabled: false</code> (<code>tire.kinematic_fallback</code> or <code>--no-lugre</code>): low-speed path in
 <a href="../design/LOW_SPEED_HANDLING/"><code>design/LOW_SPEED_HANDLING.md</code></a>.</p>
+<p>Theory: <a href="../theory/19_lugre_dynamic_tire/">Chapter 19 — LuGre / brush-dynamic tire</a>.</p>
+<p><strong>Try it</strong></p>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Catalog part</td>
+<td>Default <code>tire.default_pacejka</code> (LuGre on); fallback <code>tire.kinematic_fallback</code></td>
+</tr>
+<tr>
+<td>CLI</td>
+<td><code>--no-lugre</code> (kinematic fallback) / <code>--lugre</code> (force on)</td>
+</tr>
+<tr>
+<td>GUI</td>
+<td>Tire panel → <strong>LuGre</strong> group → <em>LuGre dynamic tire</em> toggle (saved in scene <code>fleet_overrides</code> on Play)</td>
+</tr>
+<tr>
+<td>Python</td>
+<td><code>Tire.preset().lugre(True)</code> or <code>Experiment().tire(...)</code></td>
+</tr>
+<tr>
+<td>Demo</td>
+<td><code>python3 examples/lugre_demo.py</code> · scene <code>configs/scenes/lugre_grade_demo.yaml</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="l4-kinematic-multibody">L4 kinematic multibody<a class="headerlink" href="#l4-kinematic-multibody" title="Permanent link">&para;</a></h2>
+<p>Blueprint <code>level: L4</code> (or scene fleet entry) uses <code>create_fourteen_dof_kinematic()</code>:
+native suspension kin YAML per corner + <strong>hard-joint corner DAE</strong> in the step loop.</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Location</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Kin parts</td>
+<td><code>configs/parts/susp_kinematics/kin/*.yaml</code></td>
+</tr>
+<tr>
+<td>Example scene</td>
+<td><code>configs/scenes/l4_sedan_kinematics.yaml</code></td>
+</tr>
+<tr>
+<td>Design spec</td>
+<td><a href="../design/LD4_MULTIBODY/"><code>design/LD4_MULTIBODY.md</code></a></td>
+</tr>
+<tr>
+<td>K&amp;C charts (GUI)</td>
+<td>Suspension modal → <code>/api/suspension/kc</code></td>
+</tr>
+<tr>
+<td>Adams x-check</td>
+<td><code>tools/kinematics/adams_xcheck.py</code></td>
+</tr>
+</tbody>
+</table>
 <h2 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>cmake<span class="w"> </span>--build<span class="w"> </span>build<span class="w"> </span>-j
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">cd</span><span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ctest<span class="w"> </span>--output-on-failure<span class="w">    </span><span class="c1"># 201 tests (2026-06-06)</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">cd</span><span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ctest<span class="w"> </span>--output-on-failure<span class="w">    </span><span class="c1"># 254 tests (2026-06-08)</span>
 </span></code></pre></div>
 <p>Relevant ctests: <code>catalog_*</code>, <code>scene_materialize</code>, <code>import_part_pack</code>,
 <code>EngineInertiaSlowsLowMuWheelSpinup</code>, <code>LuGreTire/*</code>, <code>TireYaml.LuGreRoundtrip</code>.</p>

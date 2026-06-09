@@ -16,7 +16,7 @@
         <link rel="prev" href="../02_rigid_body_dynamics/">
       
       
-        <link rel="next" href="../04_ld1_bicycle/">
+        <link rel="next" href="../19_lugre_dynamic_tire/">
       
       
         
@@ -282,7 +282,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../CATALOG_AND_PHYSICS/" class="md-tabs__link">
+        <a href="../../ROADMAP/" class="md-tabs__link">
           
   
   
@@ -513,6 +513,10 @@
       
         
           
+        
+      
+        
+      
         
       
         
@@ -1139,6 +1143,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../19_lugre_dynamic_tire/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    19 — Tire (LuGre / brush)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../04_ld1_bicycle/" class="md-nav__link">
         
   
@@ -1203,6 +1235,34 @@
     
   
     06 — Ld3-FourteenDOF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../20_ld5_stunt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    20 — Ld5-Stunt (jump/loop)
   
 
     
@@ -1574,6 +1634,8 @@
       
         
       
+        
+      
     
     
     
@@ -1620,6 +1682,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ROADMAP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Product roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -3313,6 +3403,10 @@ F_y &amp;= -(D_{\text{lat}}  F_z \mu_{\text{eff,lat}})  \sin(C_{\text{lat}}  \ar
 <code>ITireModel::compute</code> 는 stateless 를 유지하고, dynamics 가 매 substep
 <code>α_dyn</code> 을 업데이트 한 후 tire model 에 넘긴다. 이렇게 하면 tire model 의 thread
 safety 와 reentrancy 가 유지된다.</p>
+<p><strong>Alternative (VDSim opt-in):</strong> Chapter <strong>19</strong> (<a href="../19_lugre_dynamic_tire/">LuGre / brush-dynamic tire</a>)
+replaces the algebraic slip map with bristle states <span class="arithmatex">\(z\)</span> and uses MF96 as the
+steady envelope <span class="arithmatex">\(g(\cdot)\)</span>. It can subsume both quasi-static slip and low-speed
+stick without a kinematic blend when <code>lugre.enabled: true</code>.</p>
 <hr />
 <h2 id="310">3.10 검증 전략<a class="headerlink" href="#310" title="Permanent link">&para;</a></h2>
 <p>본 chapter 의 식은 다음과 같이 자동 검증한다.</p>
@@ -3417,7 +3511,7 @@ safety 와 reentrancy 가 유지된다.</p>
 <tr>
 <td>Transient</td>
 <td>lateral 만 1차 relaxation</td>
-<td>longitudinal relaxation 누락, carcass 동역학</td>
+<td>longitudinal relaxation 누락; see <strong>Ch.19</strong> LuGre brush</td>
 </tr>
 <tr>
 <td><code>γ</code> source</td>

@@ -280,7 +280,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="CATALOG_AND_PHYSICS/" class="md-tabs__link">
+        <a href="ROADMAP/" class="md-tabs__link">
           
   
   
@@ -550,6 +550,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -697,6 +701,34 @@
   
   
     <li class="md-nav__item">
+      <a href="theory/19_lugre_dynamic_tire/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    19 — Tire (LuGre / brush)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="theory/04_ld1_bicycle/" class="md-nav__link">
         
   
@@ -761,6 +793,34 @@
     
   
     06 — Ld3-FourteenDOF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="theory/20_ld5_stunt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    20 — Ld5-Stunt (jump/loop)
   
 
     
@@ -1132,6 +1192,8 @@
       
         
       
+        
+      
     
     
     
@@ -1178,6 +1240,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="ROADMAP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Product roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2243,8 +2333,9 @@ single C++17 + Python ABI.</p>
 <ul>
 <li><strong>v0.3</strong>: parts catalog + scene runtime (<code>--scene=</code>), GUI catalog API.</li>
 <li><strong>Physics</strong>: drivetrain <code>engine_rotational_inertia</code> (default on); LuGre tire
-  opt-in (<code>lugre.enabled</code>, default off).</li>
-<li><strong>Tests</strong>: <a href="VALIDATION/">201 / 201 ctest</a> (2026-06-06).</li>
+  default on (<code>lugre.enabled</code>); kinematic fallback via <code>tire.kinematic_fallback</code> or <code>--no-lugre</code>.</li>
+<li><strong>Tests</strong>: <strong>254 / 254 ctest</strong> (2026-06-08, branch <code>feat/v0.4-slope-jump-m5</code>).</li>
+<li><strong>Roadmap</strong>: <a href="ROADMAP/">Product roadmap</a> — shipped vs planned by subsystem.</li>
 <li><strong>User guide</strong>: <a href="CATALOG_AND_PHYSICS/">Catalog &amp; physics options</a>.</li>
 <li><strong>10 CLI demo binaries</strong>, <strong>Python bindings</strong>, <strong>CARLA-ready raycast ABI</strong>,
   <strong>Web GUI</strong> (3D viewer + catalog/scene authoring).</li>
@@ -2278,13 +2369,13 @@ single C++17 + Python ABI.</p>
 </tr>
 <tr>
 <td>Ld4-MultibodyKinematic</td>
-<td>hardpoint-driven</td>
-<td>M0 stub (planned M1-M7)</td>
+<td>hardpoint FK + hard-joint DAE</td>
+<td><strong>shipped M1–M7</strong> (<a href="design/LD4_MULTIBODY/">spec</a>)</td>
 </tr>
 <tr>
-<td>Ld5-MultibodyCompliant</td>
-<td>DAE constrained</td>
-<td>planned</td>
+<td>Ld5-Free3D</td>
+<td>quaternion 6-DOF + hub contact</td>
+<td><strong>shipped</strong> (v0.4 stunt); terrain → v0.5</td>
 </tr>
 </tbody>
 </table>

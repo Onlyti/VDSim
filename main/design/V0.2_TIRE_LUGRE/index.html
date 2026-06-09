@@ -23,7 +23,7 @@
     
     
       
-        <title>v0.2 — unified brush/LuGre dynamic tire - VDSim</title>
+        <title>v0.2 — LuGre dynamic tire (shipped) - VDSim</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#v02-unified-brushlugre-dynamic-tire" class="md-skip">
+        <a href="#v02-lugre-dynamic-tire-shipped" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              v0.2 — unified brush/LuGre dynamic tire
+              v0.2 — LuGre dynamic tire (shipped)
             
           </span>
         </div>
@@ -276,7 +276,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../CATALOG_AND_PHYSICS/" class="md-tabs__link">
+        <a href="../../ROADMAP/" class="md-tabs__link">
           
   
   
@@ -543,6 +543,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -690,6 +694,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../theory/19_lugre_dynamic_tire/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    19 — Tire (LuGre / brush)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../theory/04_ld1_bicycle/" class="md-nav__link">
         
   
@@ -754,6 +786,34 @@
     
   
     06 — Ld3-FourteenDOF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/20_ld5_stunt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    20 — Ld5-Stunt (jump/loop)
   
 
     
@@ -1125,6 +1185,8 @@
       
         
       
+        
+      
     
     
     
@@ -1171,6 +1233,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ROADMAP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Product roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2133,10 +2223,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#goal" class="md-nav__link">
+  <a href="#1-role-in-vdsim" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Goal
+        1. Role in VDSim
       
     </span>
   </a>
@@ -2144,10 +2234,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#why-this-is-the-right-model" class="md-nav__link">
+  <a href="#2-state-and-kinematics-per-wheel" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why this is the right model
+        2. State and kinematics (per wheel)
       
     </span>
   </a>
@@ -2155,10 +2245,121 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#model-lugre-brush-dynamic" class="md-nav__link">
+  <a href="#3-constitutive-law" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Model (LuGre / brush-dynamic)
+        3. Constitutive law
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Constitutive law">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-iso-lateral-sign" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 ISO lateral sign
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-breakaway-envelope-g" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Breakaway envelope \(g\)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-combined-slip-friction-ellipse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Combined slip (friction ellipse)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-aligning-moment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 Aligning moment
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-time-discretization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Time discretization
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Time discretization">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-semi-implicit-z-update" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Semi-implicit \(z\) update
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-rk4-coupling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 RK4 coupling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-wheel-spin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Wheel spin
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-what-lugre-disables-in-the-host" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. What LuGre disables in the host
       
     </span>
   </a>
@@ -2166,10 +2367,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#integration-notes" class="md-nav__link">
+  <a href="#6-parameters-and-catalog" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Integration notes
+        6. Parameters and catalog
       
     </span>
   </a>
@@ -2177,10 +2378,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#payoff-vs-current-v01-approach" class="md-nav__link">
+  <a href="#7-validation-ctest" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Payoff vs current v0.1 approach
+        7. Validation (ctest)
       
     </span>
   </a>
@@ -2188,10 +2389,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#references" class="md-nav__link">
+  <a href="#8-known-limits-future-work" class="md-nav__link">
     <span class="md-ellipsis">
       
-        References
+        8. Known limits / future work
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. References
       
     </span>
   </a>
@@ -2218,74 +2430,293 @@
   
 
 
-<h1 id="v02-unified-brushlugre-dynamic-tire">v0.2 — unified brush/LuGre dynamic tire<a class="headerlink" href="#v02-unified-brushlugre-dynamic-tire" title="Permanent link">&para;</a></h1>
-<p>Status: <strong>implemented</strong> (2026-06-06), opt-in via <code>TireParams.lugre.enabled</code>.
-Default off preserves the kinematic blend + brake-hold path (<code>LOW_SPEED_HANDLING.md</code>).
-When enabled, MF96 supplies the steady-state friction envelope <code>g()</code> and per-wheel
-bristle states replace the low-speed blend.</p>
-<h2 id="goal">Goal<a class="headerlink" href="#goal" title="Permanent link">&para;</a></h2>
-<p>Replace the low-speed blend with a single physically-grounded tire model in which
-the brush (bristle) behaviour and the slip-curve behaviour are the <em>same</em> model at
-different operating points: brush/stiction dominant as Vx -&gt; 0 (true static hold,
-no slip singularity), slip curve dominant while sliding. One state, smooth
-transition, no blend/switch.</p>
-<h2 id="why-this-is-the-right-model">Why this is the right model<a class="headerlink" href="#why-this-is-the-right-model" title="Permanent link">&para;</a></h2>
-<p>The brush model is the physical origin of the slip curve: tread bristles deflect
-elastically in the adhesion zone (force proportional to slip) and saturate at
-mu<em>Fz in the sliding zone; the integral of that over the contact patch is what
-gives a Pacejka-shaped steady-state slip curve. So "brush" and "slip" are not two
-models to mix — the slip curve is the *steady state</em> of the brush model. Making
-the bristle deflection a dynamic state (LuGre) adds the missing standstill regime.</p>
-<h2 id="model-lugre-brush-dynamic">Model (LuGre / brush-dynamic)<a class="headerlink" href="#model-lugre-brush-dynamic" title="Permanent link">&para;</a></h2>
-<p>Per contact (longitudinal shown; do the lateral analogously, or 2D coupled per
-Deur 2004), with relative (slip) velocity v_r:</p>
-<div class="language-text highlight"><pre><span></span><code>z_dot = v_r - (sigma0 * |v_r| / g(v_r)) * z
-F     = sigma0 * z + sigma1 * z_dot + sigma2 * v_r
-</code></pre></div>
+<h1 id="v02-lugre-dynamic-tire-shipped">v0.2 — LuGre dynamic tire (shipped)<a class="headerlink" href="#v02-lugre-dynamic-tire-shipped" title="Permanent link">&para;</a></h1>
+<p>Status: <strong>implemented and tuned</strong> (2026-06). <strong>Default on</strong> via <code>TireParams.lugre.enabled</code>
+and catalog <code>tire.default_pacejka</code>. Kinematic blend is the <strong>fallback</strong> when
+<code>enabled: false</code> (<code>tire.kinematic_fallback</code>, <code>--no-lugre</code>).</p>
+<p><strong>Theory:</strong> <a href="../../theory/19_lugre_dynamic_tire/"><code>docs/theory/19_lugre_dynamic_tire.md</code></a><br />
+<strong>Default low-speed path (LuGre off):</strong> <a href="../LOW_SPEED_HANDLING/"><code>LOW_SPEED_HANDLING.md</code></a><br />
+<strong>User guide:</strong> <a href="../../CATALOG_AND_PHYSICS/"><code>CATALOG_AND_PHYSICS.md</code></a></p>
+<hr />
+<h2 id="1-role-in-vdsim">1. Role in VDSim<a class="headerlink" href="#1-role-in-vdsim" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Tire constitutive law</th>
+<th>Low-speed host path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lugre.enabled: false</code> (<strong>fallback</strong>)</td>
+<td>Algebraic MF96 (<code>pacejka_mf96.cpp</code>)</td>
+<td>Kinematic–dynamic blend, λ force fades, brake-hold damper</td>
+</tr>
+<tr>
+<td><code>lugre.enabled: true</code> (<strong>default</strong>)</td>
+<td>LuGre brush on <span class="arithmatex">\(z_x\)</span>, <span class="arithmatex">\(z_y\)</span>; MF96 shapes <span class="arithmatex">\(g(\cdot)\)</span></td>
+<td><strong>None of the above</strong> — full dynamic EOM at all speeds</td>
+</tr>
+</tbody>
+</table>
+<p>LuGre is <strong>not</strong> a display overlay: when on, the same <span class="arithmatex">\(F_x\)</span>, <span class="arithmatex">\(F_y\)</span> feed body Newton–Euler
+and wheel-spin dynamics (<code>fx_kin</code>).</p>
+<p>Hosts: L1 <code>bicycle_dynamics.cpp</code>, L2 <code>seven_dof_dynamics.cpp</code>, L3 (inner L2).</p>
+<p>Code: <code>core/include/vdsim/lugre_tire.hpp</code>, call sites in the dynamics <code>.cpp</code> files above.</p>
+<hr />
+<h2 id="2-state-and-kinematics-per-wheel">2. State and kinematics (per wheel)<a class="headerlink" href="#2-state-and-kinematics-per-wheel" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>z_long</code></td>
+<td>Longitudinal bristle deflection [m]</td>
+</tr>
+<tr>
+<td><code>z_lat</code></td>
+<td>Lateral bristle deflection [m]</td>
+</tr>
+</tbody>
+</table>
+<p>Slip velocities (wheel frame, ISO 8855 — Chapter 01):</p>
+<table>
+<thead>
+<tr>
+<th>Channel</th>
+<th><span class="arithmatex">\(v_r\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Longitudinal</td>
+<td><span class="arithmatex">\(v_{r,x} = R\omega - v_{x,\mathrm{wheel}}\)</span></td>
+</tr>
+<tr>
+<td>Lateral</td>
+<td><span class="arithmatex">\(v_{r,y} = v_{y,\mathrm{wheel}}\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>MF96 inputs <span class="arithmatex">\((\kappa, \alpha, F_z, \mu_{\mathrm{long}}, \mu_{\mathrm{lat}})\)</span> are still computed
+for <span class="arithmatex">\(g(\cdot)\)</span>, combined-slip axes, and <span class="arithmatex">\(M_z\)</span> trail — same as the algebraic tire path.</p>
+<hr />
+<h2 id="3-constitutive-law">3. Constitutive law<a class="headerlink" href="#3-constitutive-law" title="Permanent link">&para;</a></h2>
+<p>Canudas de Wit LuGre (decoupled channels):</p>
+<div class="arithmatex">\[
+\dot z = v_r - \frac{\sigma_0 |v_r|}{g}\, z, \qquad
+F_{\mathrm{raw}} = \sigma_0 z + \sigma_1 \dot z + \sigma_2 v_r
+\]</div>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>YAML</th>
+<th>Default behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="arithmatex">\(\sigma_0\)</span></td>
+<td><code>sigma0</code></td>
+<td>Bristle stiffness [N/m]; catalog <code>lugre_on</code>: <code>3e5</code></td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(\sigma_1\)</span></td>
+<td><code>sigma1</code></td>
+<td><code>0</code> → auto <span class="arithmatex">\(2\sqrt{\sigma_0 m_{\mathrm{eff}}}\)</span> (critical)</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(\sigma_2\)</span></td>
+<td><code>sigma2</code></td>
+<td>Viscous [N·s/m]; <code>lugre_on</code>: <code>120</code></td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(m_{\mathrm{eff}}\)</span></td>
+<td><code>m_eff</code></td>
+<td>For auto <span class="arithmatex">\(\sigma_1\)</span> [kg]; default <code>40</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="31-iso-lateral-sign">3.1 ISO lateral sign<a class="headerlink" href="#31-iso-lateral-sign" title="Permanent link">&para;</a></h3>
+<p>Pacejka lateral force is <span class="arithmatex">\(F_y = -D\sin(\cdots)\)</span> (restoring). Bristle <span class="arithmatex">\(v_{r,y}\)</span> has the
+<strong>same sign as <span class="arithmatex">\(\alpha\)</span></strong> at moderate speed, so the host applies:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>F_y = -F_raw(z_lat, v_{r,y}, g_y)     // lugre_wheel_forces()
+</span></code></pre></div>
+<p>Longitudinal <span class="arithmatex">\(F_x = F_{\mathrm{raw}}(z_{\mathrm{long}}, v_{r,x}, g_x)\)</span> — no extra sign flip.</p>
+<h3 id="32-breakaway-envelope-g">3.2 Breakaway envelope <span class="arithmatex">\(g\)</span><a class="headerlink" href="#32-breakaway-envelope-g" title="Permanent link">&para;</a></h3>
+<p>MF96 at current slip defines the sliding limit; VDSim adds a <strong>presliding floor only where
+MF goes to zero at small slip</strong>:</p>
+<div class="arithmatex">\[
+g_x = \max\bigl(|F_x^{\mathrm{MF}}|,\; 1\,\mathrm{N}\bigr)
+\]</div>
+<div class="arithmatex">\[
+g_y = \max\Bigl(|F_y^{\mathrm{MF}}|,\;
+  w(\alpha)\,\mu_{\mathrm{lat}} F_z,\; 1\,\mathrm{N}\Bigr),
+\quad
+w(\alpha) = \exp\!\left(-\left(\frac{\alpha}{0.03}\right)^2\right)
+\]</div>
+<table>
+<thead>
+<tr>
+<th>Design choice</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>No</strong> <span class="arithmatex">\(\mu F_z\)</span> floor on <span class="arithmatex">\(g_x\)</span></td>
+<td>At <span class="arithmatex">\(\kappa \approx 0\)</span>, a longitudinal floor produced phantom <span class="arithmatex">\(F_x\)</span> / wheel-spin chatter with zero throttle</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(\mu_{\mathrm{lat}} F_z\)</span> floor <strong>gated</strong> by <span class="arithmatex">\(w(\alpha)\)</span></td>
+<td>Presliding cornering stiffness at <span class="arithmatex">\(\alpha \to 0\)</span> without saturating <span class="arithmatex">\(F_y\)</span> during turn+drive</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(g\)</span> from <strong>instantaneous</strong> MF</td>
+<td>Transient envelope tracks the slip curve, not a fixed Coulomb cap</td>
+</tr>
+</tbody>
+</table>
+<p><code>lugre_breakaway()</code> in <code>lugre_tire.hpp</code>.</p>
+<h3 id="33-combined-slip-friction-ellipse">3.3 Combined slip (friction ellipse)<a class="headerlink" href="#33-combined-slip-friction-ellipse" title="Permanent link">&para;</a></h3>
+<p>When <code>combined_slip_enabled: true</code> (catalog default), decoupled <span class="arithmatex">\((F_x, F_y)\)</span> are rescaled
+with the <strong>same peak axes as MF96</strong> (Chapter 03 / task 15):</p>
+<div class="arithmatex">\[
+F_{x,\max} = D_{\mathrm{long}}\,\mu_{\mathrm{long}}\,\mu_{\mathrm{eff}}\,F_z, \quad
+F_{y,\max} = D_{\mathrm{lat}}\,\mu_{\mathrm{lat}}\,\mu_{\mathrm{eff}}\,F_z
+\]</div>
+<div class="arithmatex">\[
+\text{if } (F_x/F_{x,\max})^2 + (F_y/F_{y,\max})^2 &gt; 1
+\;\Rightarrow\; \text{scale } (F_x, F_y) \text{ onto the ellipse}
+\]</div>
+<p><code>lugre_friction_ellipse()</code> — <strong>not</strong> the instantaneous <span class="arithmatex">\(|F_x^{\mathrm{MF}}|\)</span>, <span class="arithmatex">\(|F_y^{\mathrm{MF}}|\)</span>.</p>
+<p>When LuGre is on <strong>and</strong> <code>combined_slip_enabled</code>, the host <strong>skips</strong> the extra
+<span class="arithmatex">\(\sqrt{F_x^2 + F_y^2} \le \mu F_z\)</span> circular clip in <code>seven_dof_dynamics.cpp</code> /
+<code>bicycle_dynamics.cpp</code> (avoids triple-counting grip loss in turn+throttle).</p>
+<h3 id="34-aligning-moment">3.4 Aligning moment<a class="headerlink" href="#34-aligning-moment" title="Permanent link">&para;</a></h3>
+<p><span class="arithmatex">\(M_z = -t_p(\alpha)\,F_y\)</span> with pneumatic trail falloff — same as MF96 path.</p>
+<hr />
+<h2 id="4-time-discretization">4. Time discretization<a class="headerlink" href="#4-time-discretization" title="Permanent link">&para;</a></h2>
+<h3 id="41-semi-implicit-z-update">4.1 Semi-implicit <span class="arithmatex">\(z\)</span> update<a class="headerlink" href="#41-semi-implicit-z-update" title="Permanent link">&para;</a></h3>
+<div class="arithmatex">\[
+z_{k+1} = \mathrm{clamp}\!\left(
+  \frac{z_k + \Delta t\, v_r}{1 + \Delta t\,\sigma_0 |v_r| / g},\;
+  \pm g/\sigma_0 \right)
+\]</div>
+<p><code>lugre_advance_z()</code>. <span class="arithmatex">\(\dot z\)</span> in the force law uses <span class="arithmatex">\((z_{k+1}-z_k)/\Delta t\)</span> when needed
+via <code>lugre_z_dot()</code>.</p>
+<h3 id="42-rk4-coupling">4.2 RK4 coupling<a class="headerlink" href="#42-rk4-coupling" title="Permanent link">&para;</a></h3>
+<p><span class="arithmatex">\(z\)</span> is <strong>not</strong> frozen for the whole step:</p>
+<ol>
+<li><code>derivatives(s0)</code> → forces use current <span class="arithmatex">\(z\)</span></li>
+<li><code>advance_lugre_states(Δt/4)</code></li>
+<li>Repeat for RK2, RK3, RK4 stages</li>
+<li><strong>No</strong> fifth advance at step end (total bristle integration = <span class="arithmatex">\(\Delta t\)</span>)</li>
+</ol>
+<p>Euler: one <code>derivatives</code> + one <code>advance_lugre_states(Δt)</code>.</p>
+<p>Within a single <code>derivatives()</code> call, <span class="arithmatex">\(z\)</span> is held fixed (all four RK substates in that
+evaluation see the same <span class="arithmatex">\(z\)</span>).</p>
+<h3 id="43-wheel-spin">4.3 Wheel spin<a class="headerlink" href="#43-wheel-spin" title="Permanent link">&para;</a></h3>
+<p>Same longitudinal force as the body (after ellipse):</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>fx_kin = Fx_wheel   // clipped LuGre Fx
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>dω = (T_drive + T_brake - fx_kin * R) / I_wheel   // + engine inertia share if open diff
+</span></code></pre></div>
+<p>No split MF/LuGre coupling on <code>fx_kin</code> — one constitutive law avoids <span class="arithmatex">\(\kappa\)</span> sign oscillation.</p>
+<hr />
+<h2 id="5-what-lugre-disables-in-the-host">5. What LuGre disables in the host<a class="headerlink" href="#5-what-lugre-disables-in-the-host" title="Permanent link">&para;</a></h2>
+<p>When <code>lugre.enabled: true</code>:</p>
 <ul>
-<li>z   : bristle deflection state [m]</li>
-<li>g(v_r) : steady-state friction curve. Set g(v_r) = mu(Fz)*Fz * (shape) so that in
-  steady sliding F -&gt; the existing Pacejka MF96 output. i.e. reuse MF96 as g().</li>
-<li>sigma0 : bristle stiffness [N/m]</li>
-<li>sigma1 : bristle micro-damping [N.s/m] -- MUST be ~critical,
-  sigma1 ~ 2*sqrt(sigma0 * m_eff), or the model rings (this is exactly why the
-  v0.1 spring-stick prototype oscillated; see LOW_SPEED_HANDLING.md).</li>
-<li>sigma2 : viscous term [N.s/m] (small/optional)</li>
+<li>Kinematic <span class="arithmatex">\((v_y, r)\)</span> relaxation (<code>kStickBlend</code>, <code>kKinTau</code>)</li>
+<li><span class="arithmatex">\(\lambda\)</span> fade on lateral tire force (and MF-only longitudinal display fade)</li>
+<li>Brake-hold viscous damper (<code>kStickC</code>)</li>
+<li><code>relaxation_length_lat</code> / <code>relaxation_length_long</code> transients</li>
 </ul>
-<p>Limits:
-- Vx -&gt; 0 (rest): z_dot -&gt; 0, F -&gt; sigma0*z = elastic stick -&gt; static hold on a
-  grade, no 0/0 in the slip definition.
-- steady sliding: z -&gt; g(v_r)/sigma0, F -&gt; g(v_r) = MF96 slip curve recovered.</p>
-<h2 id="integration-notes">Integration notes<a class="headerlink" href="#integration-notes" title="Permanent link">&para;</a></h2>
+<p><code>kSpeedEps</code> (0.15 m/s) still floors the <strong>display</strong> slip ratio <span class="arithmatex">\(\kappa\)</span> denominator only.</p>
+<hr />
+<h2 id="6-parameters-and-catalog">6. Parameters and catalog<a class="headerlink" href="#6-parameters-and-catalog" title="Permanent link">&para;</a></h2>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">lugre</span><span class="p">:</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">sigma0</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">300000.0</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">sigma1</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0</span><span class="w">          </span><span class="c1"># 0 → critical from m_eff</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nt">sigma2</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">120.0</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="nt">m_eff</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">40.0</span>
+</span></code></pre></div>
+<p>Fallback part: <code>configs/parts/tire/kinematic_fallback.yaml</code> (<code>enabled: false</code>).<br />
+Scene demo: <code>configs/scenes/lugre_grade_demo.yaml</code> (alias preset).</p>
+<p>Paths: default catalog; disable via <code>tire.kinematic_fallback</code>, CLI <code>--no-lugre</code>, GUI
+toggle, Python <code>Tire.preset().lugre(False)</code>.</p>
+<hr />
+<h2 id="7-validation-ctest">7. Validation (ctest)<a class="headerlink" href="#7-validation-ctest" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LuGreTire.LateralForceOpposesSlipIso8855</code></td>
+<td><span class="arithmatex">\(\mathrm{sign}(F_y)\)</span> matches MF96; $</td>
+</tr>
+<tr>
+<td><code>LuGreTire.CoastFlatNoPhantomLongitudinal</code></td>
+<td>Zero cmd coast: bounded <span class="arithmatex">\(F_x\)</span>, <span class="arithmatex">\(\omega\)</span></td>
+</tr>
+<tr>
+<td><code>LuGreTire.LongitudinalWithSmallSteer</code></td>
+<td>Throttle + steer: <span class="arithmatex">\(v_x\)</span> ≥ 65% of straight</td>
+</tr>
+<tr>
+<td><code>LuGreTire.RearSlipBoundedUnderThrottle</code></td>
+<td>RWD <span class="arithmatex">\(\kappa\)</span> not runaway vs blend</td>
+</tr>
+<tr>
+<td><code>LuGreTire.ThrottleProducesForwardMotion</code></td>
+<td>From rest, throttle → <span class="arithmatex">\(v_x &gt; 3\)</span> m/s</td>
+</tr>
+<tr>
+<td><code>LuGreTire.LowSpeedYawDoesNotRunaway</code></td>
+<td>Small initial <span class="arithmatex">\(r\)</span> does not spin up</td>
+</tr>
+<tr>
+<td><code>LuGreTire.LessGradeCreepThanKinematicBlend</code></td>
+<td>Grade hold vs blend</td>
+</tr>
+<tr>
+<td><code>LuGreTire.HighSpeedLongitudinalNearPacejka</code></td>
+<td>Cruise <span class="arithmatex">\(F_x\)</span> near MF</td>
+</tr>
+<tr>
+<td><code>LuGreTire.BreakawayFloorMuFzAtZeroSlip</code></td>
+<td><span class="arithmatex">\(g_y(0) \approx \mu F_z\)</span>; <span class="arithmatex">\(g_x(0) \approx 1\)</span> N</td>
+</tr>
+<tr>
+<td><code>TireYaml.LuGreRoundtrip</code></td>
+<td>YAML params</td>
+</tr>
+</tbody>
+</table>
+<p>Run: <code>cd build &amp;&amp; ctest -R LuGreTire --output-on-failure</code></p>
+<hr />
+<h2 id="8-known-limits-future-work">8. Known limits / future work<a class="headerlink" href="#8-known-limits-future-work" title="Permanent link">&para;</a></h2>
 <ul>
-<li>z is stiff at high slip (eigenvalue -sigma0*|v_r|/g); use the same substep the
-  tire relaxation already uses, or an implicit/semi-implicit z update, to stay
-  stable at dt = 0.005 (forward Euler on z went marginally unstable at high slip in
-  the v0.1 prototype -- clamp z to the breakaway deflection g/sigma0 if needed).</li>
-<li>Longitudinal + lateral: prefer the 2D coupled bristle (Deur 2004) so the friction
-  ellipse falls out naturally instead of a separate combined-slip step.</li>
-<li>Keep MF96 as g() so all the existing load-sensitivity / camber / Mz fits carry
-  over; LuGre only changes the <em>transient + low-speed</em> behaviour.</li>
+<li>Decoupled long/lat bristles + ellipse (not Deur 2D brush).</li>
+<li>No temperature, wear, or pressure transients in <span class="arithmatex">\(g\)</span>.</li>
+<li>Reverse driving: <span class="arithmatex">\(\alpha\)</span> continuity at <span class="arithmatex">\(\pm 180^\circ\)</span> not special-cased.</li>
+<li>Optional re-blend of kinematic <span class="arithmatex">\((v_y,r)\)</span> at very low <span class="arithmatex">\(|v_x|\)</span> <strong>with</strong> LuGre (not shipped).</li>
+<li>Steering-column LuGre (Ch. 17) is a <strong>different</strong> module (N·m, Stribeck on <span class="arithmatex">\(\omega\)</span>).</li>
 </ul>
-<h2 id="payoff-vs-current-v01-approach">Payoff vs current v0.1 approach<a class="headerlink" href="#payoff-vs-current-v01-approach" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Removes the kinematic blend, the brake-hold damper, and the lambda force fades --
-  one model does standstill hold, low-speed, and high-speed.</li>
-<li>True static friction (hold on a slope with zero creep), correct stick-slip.</li>
-<li>Physically consistent force at all speeds (no display/dynamics split).</li>
-</ul>
-<p>Pairs naturally with the v0.2 component workshops (tire TIR import + samples) and
-the drivetrain module (<code>V0.2_DRIVETRAIN.md</code>).</p>
-<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Canudas de Wit, Olsson, Astrom, Lischinsky, "A new model for control of systems
-  with friction," IEEE TAC 1995 (original LuGre, point contact).</li>
-<li>Canudas-de-Wit, Tsiotras, Velenis, Basset, Gissinger, "Dynamic Friction Models
-  for Road/Tire Longitudinal Interaction," Vehicle System Dynamics 2003.</li>
-<li>Deur, Asgari, Hrovat, "A 3D brush-type dynamic tire friction model," VSD 2004
-  (brush + LuGre dynamics, coupled long/lat).</li>
-<li>Pacejka, <em>Tyre and Vehicle Dynamics</em>, ch.3 (physical brush model).</li>
-</ul>
+<hr />
+<h2 id="9-references">9. References<a class="headerlink" href="#9-references" title="Permanent link">&para;</a></h2>
+<p>See theory Ch. 19 §19.12. Primary: Canudas de Wit <em>et al.</em> IEEE TAC 1995; Deur <em>et al.</em> VSD 2004;
+Pacejka Ch. 3 brush model.</p>
 
 
 
