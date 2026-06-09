@@ -8,6 +8,7 @@ import { drawMinimap, resetMinimap } from './minimap.js';
 import {
   fieldRow, collectFields, plantEnhance, linkPlantFields, selectRow, plotChart, renderPlots,
 } from './fields.js';
+import { initManualControl } from './manual.js';
 
 const stateBoot = (async () => {
   const ac = new AbortController();
@@ -2889,61 +2890,12 @@ async function boot() {
 
 // ---- manual control ----
 let manualMode = false;
-const man = { throttle: 0, brake: 0, steer: 0 };
-const keys = {}; let touchThr = 0, touchBrk = 0, touchSteer = 0;
-const ARROW_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
-addEventListener('keydown', e => {
-  if (manualMode && simRunning && ARROW_KEYS.has(e.key)) e.preventDefault();
-  keys[e.key] = true;
-});
-addEventListener('keyup', e => { keys[e.key] = false; });
 function toggleManualBar(show) { $('manbar').style.display = show ? 'flex' : 'none'; }
-function driverManualActive() {
-  return $('drv_manual')?.classList.contains('on');
-}
-function sampleManualCmd() {
-  man.throttle = Math.max(keys['ArrowUp'] ? 0.7 : 0, touchThr);
-  man.brake = Math.max(keys['ArrowDown'] ? 0.6 : 0, touchBrk);
-  man.steer = Math.max(-0.4, Math.min(0.4,
-    (keys['ArrowLeft'] ? 0.25 : 0) - (keys['ArrowRight'] ? 0.25 : 0) + touchSteer));
-  return { throttle: man.throttle, brake: man.brake, steer: man.steer, vehicle: selectedVid };
-}
-let manualSendBusy = false;
-let manualSendLatest = null;
-async function drainManualSend() {
-  if (manualSendBusy) return;
-  manualSendBusy = true;
-  while (manualSendLatest !== null) {
-    const body = manualSendLatest;
-    manualSendLatest = null;
-    try {
-      await fetch('/api/manual', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-    } catch (_) {}
-  }
-  manualSendBusy = false;
-}
-function pushManualSend() {
-  if (!simRunning || !driverManualActive()) {
-    manualSendLatest = null;
-    return;
-  }
-  manualSendLatest = sampleManualCmd();
-  void drainManualSend();
-}
-setInterval(pushManualSend, 40);
-function holdBtn(el, on, off) {
-  ['pointerdown', 'touchstart'].forEach(ev => el.addEventListener(ev, e => { e.preventDefault(); on(); }, { passive: false }));
-  ['pointerup', 'pointerleave', 'pointercancel', 'touchend'].forEach(ev => el.addEventListener(ev, off));
-}
-holdBtn($('m_thr'), () => touchThr = 0.7, () => touchThr = 0);
-holdBtn($('m_brk'), () => touchBrk = 0.6, () => touchBrk = 0);
-$('m_steer').addEventListener('input', e => touchSteer = +e.target.value);
-const recenterSteer = () => { $('m_steer').value = 0; touchSteer = 0; };
-['pointerup', 'touchend', 'pointercancel'].forEach(ev => $('m_steer').addEventListener(ev, recenterSteer));
+initManualControl({
+  isManualMode: () => manualMode,
+  isRunning: () => simRunning,
+  getSelectedVid: () => selectedVid,
+});
 
 (async () => {
   const cf = await (await fetch('/api/config')).json();
