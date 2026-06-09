@@ -21,6 +21,24 @@ Legacy flat paths (`configs/vehicles/`, `tires/`, `scenarios/`) are **removed**.
 Resolve presets in Python via `vdsim_lab.Vehicle.preset()` / `Tire.preset()`
 (catalog-backed).
 
+## Dynamics ladder (K, L1–L5)
+
+Runtime / YAML / GUI use **K, L1–L5**; theory chapters use **Ld0–Ld5** (Ld0 = K).
+Canonical names: `python/catalog/levels.py`.
+
+| ID | Ld | Name | Model |
+|----|-----|------|--------|
+| **K** | Ld0 | Kinematic | Kinematic bicycle — no tire slip |
+| **L1** | Ld1 | Bicycle | Single-track bicycle (5-DOF planar) |
+| **L2** | Ld2 | Seven-DOF | Planar seven-DOF — 3 chassis + 4 wheel ω, per-wheel Pacejka, Ackermann |
+| **L3** | Ld3 | Fourteen-DOF | Ride fourteen-DOF — sprung + unsprung vertical |
+| **L4** | Ld4 | Hardpoint | Hardpoint kinematic multibody (L3 + attach kin) |
+| **L5** | Ld5 | Free-3D | Free 3D stunt — 6-DOF body, hub contact, airborne |
+
+L2 is **not** “3-DOF Ackermann”: the chassis is planar 3-DOF (x, y, yaw); the
+ladder name **Seven-DOF** counts four wheel-spin states. Ackermann steering is one
+feature of L2, not the level name.
+
 ## Running a scene
 
 ```bash
@@ -63,6 +81,10 @@ python3 tools/import_part_pack.py /path/to/pack --install
 
 Install target: `configs/catalog/packages/<package_id>/`. Id collision with
 builtin catalog is an error (no override).
+
+**GUI parts library** (Vehicle Edit → Parts library): registers chassis/tire YAML
+into `configs/catalog/packages/gui_custom/` and merges via manifest `packages:`.
+Builtin parts are read-only — clone to customize. Import: YAML file or `.tir` (tire).
 
 ## Drivetrain engine inertia
 

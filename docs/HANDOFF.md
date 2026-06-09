@@ -1,6 +1,6 @@
 # VDSim 핸드오프
 
-작성: **2026-06-08** · 브랜치 `feat/v0.4-slope-jump-m5` · **254/254 ctest green**
+작성: **2026-06-08** · 브랜치 `feat/v0.4-slope-jump-m5` · **263/263 ctest green**
 
 ## 1. 문서 인덱스
 
@@ -23,6 +23,8 @@
 - Scenes: `jump_ramp_demo.yaml`, `vertical_loop_demo.yaml`; cosim `stunt:` → `make_ground` (ramp/loop)
 - GUI: stunt mesh, **z** / pitch / roll telemetry; `settle_spawn_on_ground`
 - LuGre default retune for L5 loop (`sigma0` 9e4, `sigma2` 75)
+- **v0.5 M0 (partial):** `FlatGround` / `InclinedGround` / `SplitMu` / `Rough` / `Heightmap` / `Psd` → hub `wheel_world_positions` + `hub_penetration` (Ramp/Loop와 동일)
+- **L5 주행 회귀:** `tests/integration/test_l5_driving.cpp` — 평지 침하·가속·제동·자세·조향·하중·LuGre·오르막
 
 ### Ld4 multibody (M1–M7) — shipped
 
@@ -48,13 +50,13 @@
 
 ```bash
 cmake --build build -j
-cd build && ctest --output-on-failure   # 254/254
+cd build && ctest --output-on-failure   # 263/263
 python3 gui/server.py                   # http://127.0.0.1:8080
 ```
 
 ## 4. 다음 작업
 
-1. **v0.5 terrain + L5** — hub contact (M0) → heightmap tests → scene/GUI → tag v0.5.0
+1. **v0.5 terrain + L5** — M0 hub contact ✓; heightmap CI hill/cliff → scene/GUI → tag v0.5.0
 2. **ISO re-baseline** — flat only (`run_validation.py`)
 3. Ld4 v0.6 — shared inertia helpers; full loop dynamics; Featherstone in step (optional)
 4. `main` ← PR after review
