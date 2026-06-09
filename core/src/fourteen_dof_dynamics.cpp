@@ -146,6 +146,12 @@ public:
         if (!arb_rear_)   arb_rear_   = make_default_antirollbar(vp_, 1);
     }
 
+    // Educative KINEMATIC rail (opt-in, L3): the CG position is scripted onto the
+    // loop circle, advanced by the tangential speed — the loop trajectory is NOT
+    // emergent from the dynamics (no centripetal/normal-force condition; the car
+    // cannot fall off if too slow). The DEFAULT loop is the dynamic Free3D (Ld5)
+    // plant where contact normal force holds the car and the loop emerges. Use this
+    // only with loop_rail_guide=true for teaching. See docs VALIDATION.md (stunt).
     void apply_loop_kinematics(double dt) noexcept {
         const double R = sp_.loop_radius;
         const double xc = sp_.loop_center_x;
