@@ -13,17 +13,19 @@ part for the ISO baseline / stunt scenes), pacejka "legacy tests preserved").
 1. **DONE** (`da3b855`) GUI dead routes `/legacy` `/classic` `/index.html` -> `/` `/app` only.
 3. **DONE** (`42c82f3`) `create_legacy_stunt_dof` + entire fourteen_dof stunt_ mode +
    kinematic loop rail + legacy test deleted; stunt = Free3D (Ld5) only. 266 green.
-2. **TODO (entangled — careful)** old "vehicles"-format scene loaders: `legacy_vehicle_row`
-   / `fleet_spec_from_legacy_vehicle_row` AND the separate `_import_run_config_doc`
-   path + the `elif data.get("vehicles")` dispatch in `import_run_config`
-   (gui/runner/draft.py). All current scenes are v3/fleet, so these are dead, but it
-   is a multi-loader GUI scene-load surgery (no visual verify here) — do via Cursor
-   with the scene ctests + a fleet-scene import smoke test as gate, or a focused
-   session. test_scene_materialize asserts the *output* "vehicles" key (keep that).
-4. Re-grep `from_legacy` / `*_compat` / compat `*_fallback` -> delete the dead ones.
+2. **DONE** (`ed62b53`) old "vehicles"-format scene loaders removed:
+   `legacy_vehicle_row` / `fleet_spec_from_legacy_vehicle_row` + the `elif
+   data.get("vehicles")` dispatch. `import_scene_v3` now requires `fleet`;
+   `_import_run_config_doc` kept as the single canonical fleet loader (output
+   "vehicles" key unchanged). 266 green; fleet import smoke verified.
+4. **DONE** Re-grep `from_legacy`/`*_compat`: no dead residue. `catalog_legacy_registry`
+   is a LIVE GUI part-registry endpoint (legacy-*shaped* name only) — rename in Phase B,
+   not dead. `part_compat` = slot-fit feature (keep). `sensors.hpp`/`actuator.hpp`
+   "backward-compatible" are descriptive comments (keep).
 
 ## Phase D — Quick wins (interleave)
-- `-Wunused` + grep: dead code / unused includes / unused functions. Tidy stale comments.
+- **DONE** Refreshed stale ctest counts in `VALIDATION.md` (210/201 -> 266, 2026-06-09).
+- TODO `-Wunused` + grep: dead code / unused includes / unused functions. Tidy stale comments.
 
 ## Phase C — Dynamics dedup
 - Shared low-speed blend / brake-hold / ARB / drivetrain-split across bicycle /
