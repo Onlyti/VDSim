@@ -433,7 +433,7 @@ private:
                 Fyd = Fy_w;
             }
             const double Fmag = std::hypot(Fx_w, Fy_w);
-            if (!(lugre_on && tp_.combined_slip_enabled) && Fmag > muFz && Fmag > 1e-9) {
+            if (!tp_.model_provides_combined_slip() && Fmag > muFz && Fmag > 1e-9) {
                 const double c = muFz / Fmag;
                 Fx_w *= c;
                 Fy_w *= c;
@@ -443,7 +443,7 @@ private:
             const double Fy_b = Fx_w * sd_i + Fy_w * cd_i;
             F_body[i] = Vec3(Fx_b, Fy_b, 0.0);
             const double Fdm = std::hypot(Fxd, Fyd);
-            if (!(lugre_on && tp_.combined_slip_enabled) && Fdm > muFz && Fdm > 1e-9) {
+            if (!tp_.model_provides_combined_slip() && Fdm > muFz && Fdm > 1e-9) {
                 const double c = muFz / Fdm;
                 Fxd *= c;
                 Fyd *= c;

@@ -161,6 +161,15 @@ struct TireParams {
 
     LuGreTireParams lugre;
 
+    // True when the tire model itself produces combined-slip forces (so the host
+    // must NOT re-clip them with its circular friction ellipse): LuGre (combined)
+    // or the MF2002 evaluator (Gxa/Gyk weighting). MF96 returns false -> the host
+    // ellipse couples its decoupled Fx/Fy.
+    bool model_provides_combined_slip() const {
+        return combined_slip_enabled &&
+               (lugre.enabled || backend == "magic_formula" || backend == "mf2002");
+    }
+
     static TireParams from_yaml(const std::string& path);
     static TireParams from_tir(const std::string& path);   // AVL .tir (Phase 2)
     void              to_yaml (const std::string& path) const;

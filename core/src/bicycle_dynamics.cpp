@@ -312,11 +312,11 @@ private:
             fx_kin_f = F_f.Fx; fx_kin_r = F_r.Fx;
         }
         const double Fmag_f = std::hypot(Fx_f_wheel, Fy_f_wheel);
-        if (!(lugre_on && tp_.combined_slip_enabled) && Fmag_f > muFz_f && Fmag_f > 1e-9) {
+        if (!tp_.model_provides_combined_slip() && Fmag_f > muFz_f && Fmag_f > 1e-9) {
             const double c = muFz_f / Fmag_f; Fx_f_wheel *= c; Fy_f_wheel *= c;
         }
         const double Fmag_r = std::hypot(Fx_r_axle, Fy_r_axle);
-        if (!(lugre_on && tp_.combined_slip_enabled) && Fmag_r > muFz_r && Fmag_r > 1e-9) {
+        if (!tp_.model_provides_combined_slip() && Fmag_r > muFz_r && Fmag_r > 1e-9) {
             const double c = muFz_r / Fmag_r; Fx_r_axle *= c; Fy_r_axle *= c;
         }
         if (lugre_on) { fx_kin_f = Fx_f_wheel; fx_kin_r = Fx_r_axle; }

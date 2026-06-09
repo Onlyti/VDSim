@@ -329,7 +329,7 @@ private:
                 mz_wheel[i] = out.Mz * lambda;
             }
             const double Fmag = std::hypot(Fx_w, Fy_w);
-            if (!(lugre_on && tp_.combined_slip_enabled) && Fmag > muFz && Fmag > 1e-9) {
+            if (!tp_.model_provides_combined_slip() && Fmag > muFz && Fmag > 1e-9) {
                 const double c = muFz / Fmag;
                 Fx_w *= c;
                 Fy_w *= c;

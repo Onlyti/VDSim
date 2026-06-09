@@ -131,6 +131,31 @@ TEST(Mf2002Catalog, DispatchByBackend) {
       EXPECT_GT(t->compute(slip_input(0.1, 0.0, 4000.0)).Fx, 500.0); }
 }
 
+// T1.4 — the MF2002 evaluator does its own combined slip (Gxa/Gyk), so the host
+// must not re-clip it with the circular friction ellipse.
+TEST(Mf2002Catalog, CombinedSlipBypassesHostEllipse) {
+    using namespace vdsim;
+    // Predicate: MF2002 + LuGre (combined) bypass the host ellipse; MF96 does not.
+    { TireParams tp; tp.backend = "magic_formula"; EXPECT_TRUE(tp.model_provides_combined_slip()); }
+    { TireParams tp; tp.backend = "mf2002";        EXPECT_TRUE(tp.model_provides_combined_slip()); }
+    { TireParams tp; tp.lugre.enabled = true;      EXPECT_TRUE(tp.model_provides_combined_slip()); }
+    // Pure MF96 (LuGre off, default backend) couples via the host ellipse instead.
+    { TireParams tp; tp.lugre.enabled = false;     EXPECT_FALSE(tp.model_provides_combined_slip()); }
+    { TireParams tp; tp.lugre.enabled = false; tp.backend = "magic_formula";
+      tp.combined_slip_enabled = false;            EXPECT_FALSE(tp.model_provides_combined_slip()); }
+
+    // MF2002 peak longitudinal force legitimately exceeds mu_nominal*Fz (its mu is
+    // in PDX1), so a circular host clip at mu_nominal*Fz would corrupt it.
+    const auto p = write_synthetic_tir();
+    auto tire = create_magic_formula_tire_from_tir(p.string());
+    fs::remove(p);
+    const double Fz = 4000.0, muFz = 1.0 * Fz;
+    double fx_peak = 0.0;
+    for (double k = 0.02; k <= 0.4; k += 0.02)
+        fx_peak = std::max(fx_peak, tire->compute(slip_input(k, 0.0, Fz)).Fx);
+    EXPECT_GT(fx_peak, muFz) << "MF2002 peak Fx must exceed mu_nominal*Fz (clip would corrupt)";
+}
+
 // A catalog/tire YAML selects the backend via from_yaml (the path cosim + batch
 // use to load a tire). Proves a tire part can pick MF2002 from a runtime .tir.
 TEST(Mf2002Catalog, YamlSelectsBackend) {
