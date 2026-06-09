@@ -4,6 +4,7 @@ import {
   $, paintConnState, DOCS, DOC_MAP, docHref, helpIcon, addHelp, initStaticHelp,
   f, fmtArr, post, postJson, getJson,
 } from './util.js';
+import { drawMinimap, resetMinimap } from './minimap.js';
 
 const stateBoot = (async () => {
   const ac = new AbortController();
@@ -1351,42 +1352,6 @@ addEventListener('keydown', e => {
   }
 });
 
-// ---- mini-map ----
-const mm = $('minimap');
-const mmCtx = mm.getContext('2d');
-const mmTrail = [];
-const MM_MAX = 400;
-function drawMinimap(x, y) {
-  if (x == null) return;
-  mmTrail.push([x, y]);
-  if (mmTrail.length > MM_MAX) mmTrail.shift();
-  const dpr = devicePixelRatio || 1;
-  const W = mm.clientWidth, H = mm.clientHeight;
-  mm.width = W * dpr; mm.height = H * dpr;
-  mmCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  mmCtx.clearRect(0, 0, W, H);
-  mmCtx.fillStyle = '#f4f7fa'; mmCtx.fillRect(0, 0, W, H);
-  let xmin = x, xmax = x, ymin = y, ymax = y;
-  for (const [px, py] of mmTrail) {
-    if (px < xmin) xmin = px; if (px > xmax) xmax = px;
-    if (py < ymin) ymin = py; if (py > ymax) ymax = py;
-  }
-  const pad = Math.max(20, Math.max(xmax - xmin, ymax - ymin) * 0.15 + 5);
-  xmin -= pad; xmax += pad; ymin -= pad; ymax += pad;
-  if (xmax - xmin < 10) { xmin -= 5; xmax += 5; }
-  if (ymax - ymin < 10) { ymin -= 5; ymax += 5; }
-  const X = v => 8 + (v - xmin) / (xmax - xmin) * (W - 16);
-  const Y = v => H - 8 - (v - ymin) / (ymax - ymin) * (H - 16);
-  mmCtx.strokeStyle = '#d2dae3'; mmCtx.strokeRect(0.5, 0.5, W - 1, H - 1);
-  if (mmTrail.length > 1) {
-    mmCtx.strokeStyle = '#ffb020'; mmCtx.lineWidth = 1.2; mmCtx.beginPath();
-    mmTrail.forEach(([px, py], i) => { const cx = X(px), cy = Y(py); i ? mmCtx.lineTo(cx, cy) : mmCtx.moveTo(cx, cy); });
-    mmCtx.stroke();
-  }
-  mmCtx.fillStyle = '#01A0E9';
-  mmCtx.beginPath(); mmCtx.arc(X(x), Y(y), 4, 0, Math.PI * 2); mmCtx.fill();
-}
-
 // ---- telemetry + SSE ----
 function fmtFt(Ft) {
   if (!Ft || !Ft.length) return '—';
@@ -2494,7 +2459,7 @@ async function applySetupFromForm(lite = false) {
   try { r = await postSetup(payload); } catch (e) { alert(e.message); return false; }
   lastNpath = -1;
   if (!lite) {
-    trailPts = []; trail.visible = false; mmTrail.length = 0;
+    trailPts = []; trail.visible = false; resetMinimap();
     try { await drawPath(); await drawRoad(); } catch (_e) {}
     if (r.setup?.fleet) await syncFleetPanels(r.setup.fleet, selectedVid);
   } else if (r.setup?.fleet) {
@@ -2506,7 +2471,7 @@ async function applySetupFromForm(lite = false) {
 window.__vdsimApplySetup = applySetupFromForm;
 window.__vdsimApplyState = s => { if (sceneReady) applyState(s); else paintConnState(s); };
 window.__vdsimOnPlayStart = async () => {
-  trailPts = []; trail.visible = false; mmTrail.length = 0; tgt.has = false;
+  trailPts = []; trail.visible = false; resetMinimap(); tgt.has = false;
   stopPathEdit();
   simRunning = false;
   simPaused = false;
@@ -2524,7 +2489,7 @@ window.__vdsimOnPlayDone = async (j) => {
   await refreshCompositionStatus(j?.run_config);
 };
 window.__vdsimOnStop = async () => {
-  trailPts = []; trail.visible = false; mmTrail.length = 0; tgt.has = false;
+  trailPts = []; trail.visible = false; resetMinimap(); tgt.has = false;
   simRunning = false;
   simPaused = false;
   purgeOrphanFleetMeshes();
