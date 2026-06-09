@@ -16,15 +16,24 @@
 
 ## 2. 브랜치 스냅샷
 
-### v0.4 stunt (M0–M5) — shipped
+### v0.4.0 stunt (Ld5) — shipped + tagged
 
-- `create_stunt_dof()` → `Free3DDynamics` (`free_3d_dynamics.cpp`): pos+quat+ω, 4-wheel MF, no rail snap
-- `create_legacy_stunt_dof()` → L3+L2 rail / loop CG snap (`Stunt.VerticalLoopCompletesLap`)
-- Scenes: `jump_ramp_demo.yaml`, `vertical_loop_demo.yaml`; cosim `stunt:` → `make_ground` (ramp/loop)
-- GUI: stunt mesh, **z** / pitch / roll telemetry; `settle_spawn_on_ground`
-- LuGre default retune for L5 loop (`sigma0` 9e4, `sigma2` 75)
-- **v0.5 M0 (partial):** `FlatGround` / `InclinedGround` / `SplitMu` / `Rough` / `Heightmap` / `Psd` → hub `wheel_world_positions` + `hub_penetration` (Ramp/Loop와 동일)
-- **L5 주행 회귀:** `tests/integration/test_l5_driving.cpp` — 평지 침하·가속·제동·자세·조향·하중·LuGre·오르막
+- `create_stunt_dof()` → `Free3DDynamics` (`free_3d_dynamics.cpp`): pos+quat+ω, 4-wheel MF, no rail snap. **유일한 stunt plant** — `create_legacy_stunt_dof()`(L3+L2 rail loop)는 cleanup 에서 제거됨.
+- Scenes `jump_ramp_demo.yaml` / `vertical_loop_demo.yaml`; cosim `stunt:` → `make_ground`; GUI stunt mesh + z/pitch/roll telemetry; `settle_spawn_on_ground`.
+- LuGre default retune for L5 loop (`sigma0` 9e4, `sigma2` 75). Theory ch.20.
+
+### v0.5.0 terrain + L5 — shipped + tagged (headless/batch/cosim)
+
+- Hub contact 통일: Flat/SplitMu/Inclined/Rough/Heightmap → `wheel_world_positions` + `hub_penetration`.
+- **`CurvedGround`** banked turn (`create_curved_ground`, cosim `stunt.ground == banked`).
+- Scenes `terrain_hill_demo` / `banked_grade_demo` / `banked_oval`; `tools/bake_synthetic_hill.py` + `assets/terrain/hill_demo.bin`; materialize `terrain:` forwarding.
+- Tests `tests/integration/test_terrain_l5.cpp` (7) + `test_l5_driving.cpp`.
+- **v0.5.1 deferred (browser):** M4 GUI terrain Play, M5c GUI stunt 저작.
+
+### GUI cleanup (이번 세션)
+
+- `app.html` 4873→~250L shell; inline CSS/JS → `gui/static/{app.css, app.js, util.js, minimap.js, fields.js, manual.js}`; `/static/` route.
+- legacy scene loaders 제거, low-speed 상수 → `vdsim/low_speed.hpp`. 검증: esbuild bundle 게이트(node20 @ ~/.nvm).
 
 ### Ld4 multibody (M1–M7) — shipped
 
@@ -50,7 +59,7 @@
 
 ```bash
 cmake --build build -j
-cd build && ctest --output-on-failure   # 263/263
+cd build && ctest --output-on-failure   # 291/291
 python3 gui/server.py                   # http://127.0.0.1:8080
 ```
 
@@ -62,13 +71,30 @@ python3 gui/server.py                   # http://127.0.0.1:8080
 airborne · M3 terrain scene+bake · M5 inclined/banked · M5b CurvedGround banked turn ·
 M6 docs. 273 ctest. Scenes: `terrain_hill_demo`, `banked_grade_demo`, `banked_oval`.
 
+**Tire stack (this session — T1 + T2, merged to `main`):** see
+[`design/TIRE_ROADMAP.md`](design/TIRE_ROADMAP.md) §0/§4 + theory ch.21.
+- **T1 MF2002**: `TireParams.backend` ("mf96" default | "magic_formula" | "linear")
+  + `tir_path`; `create_tire_from_params` dispatch in every dynamics `initialize()`;
+  MF2002 combined slip bypasses the host friction ellipse. `.tir` stays uncommitted
+  (gitignore + confidential). Tests `Mf2002Catalog.*`.
+- **T2 belt transient**: `vdsim/belt_tire.hpp` `belt_relax()` (tau=sigma/|Vx|, exact
+  exp); opt-in `TireParams.belt {enabled, sigma_lat, sigma_long}`; wired in seven_dof
+  (L2/L3) + free_3d (L5), both MF (relax kappa/alpha) and LuGre (relax slip velocity).
+  Tests `BeltTire.*`, `BeltTransient.*`, `BeltValidation.*`. **Default off -> no drift.**
+- **Decision (locked):** keep own lean tire stack; Chrono Pac02 (BSD-3) is a
+  cross-validation *reference*, not a dependency. Belt = own (no permissive OSS exists).
+- **Remaining tire:** bicycle (L1) belt wiring (lowest value); GUI `.tir` import
+  (v0.5.1 GUI); combined-slip parity gate vs Chrono Pac02 (needs Chrono build).
+
 **v0.5.1 (deferred — needs browser, no headless path):**
 1. **M4 GUI terrain load + L5 Play** — chase cam uses `position.z`, spawn on mesh.
 2. **M5c GUI stunt authoring** — author ramp/loop/banked scenes (today render-only).
+3. GUI `.tir` import (Tire T1 tail).
 
 **v0.6+:**
 1. **ISO re-baseline** — flat only (`run_validation.py`).
 2. Ld4 v0.6 — shared inertia helpers; full loop dynamics; Featherstone in step (optional).
+3. Tire T2 belt: bicycle (L1) wiring; Chrono Pac02 parity gate; (later) higher belt eigenmodes are out of scope.
 
 ## 5. 주의
 
@@ -80,4 +106,8 @@ M6 docs. 273 ctest. Scenes: `terrain_hill_demo`, `banked_grade_demo`, `banked_ov
 
 ## 6. Git
 
-브랜치 `feat/v0.4-slope-jump-m5` — **main 미병합**. push/merge는 명시 요청 시.
+- `main` = `v0.5.0` tag + tire T1/T2 (`feat/tire-t2-belt`, which is `feat/tire-t1-mf2002`
+  + belt). Tags: v0.1.0 / v0.2.0 / v0.2.4 / v0.4.0 / v0.5.0. Tire merge is post-v0.5.0,
+  untagged (mid-T: bicycle + GUI .tir import pending) — tag a tire release when those land.
+- All feature work ff-merged (no history rewrite). push/merge/tag는 명시 요청 시에만.
+- Next: new feature branch off `main`.
