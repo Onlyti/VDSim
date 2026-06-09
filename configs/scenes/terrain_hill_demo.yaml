@@ -1,0 +1,19 @@
+id: scene.terrain_hill_demo
+version: 1
+label: Terrain hill (L5, heightmap)
+rate: 200
+cmd_timeout: 0.1
+mu: 1.0
+# Analytic Gaussian hill baked by tools/bake_synthetic_hill.py (peak 1.5 m at
+# x=30). Path is relative to the repo root; materialize resolves it to absolute.
+terrain: assets/terrain/hill_demo.bin
+fleet:
+- id: 0
+  blueprint: vehicle.sedan_comfort
+  level: L5
+  # tire: blueprint default (LuGre). spawn z is settled on the terrain at launch.
+  x0: 0.0
+  y0: 0.0
+  z0: 0.6
+  yaw0: 0.0
+  vx0: 15.0

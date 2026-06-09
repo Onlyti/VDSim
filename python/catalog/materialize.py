@@ -169,6 +169,14 @@ def materialize_scene_file(
             world[key] = doc[key]
     if doc.get("stunt"):
         world["stunt"] = dict(doc["stunt"])
+    for key in ("rough_amp", "rough_wl", "iso_class"):
+        if key in doc:
+            world[key] = doc[key]
+    if doc.get("terrain"):
+        tpath = Path(str(doc["terrain"]))
+        if not tpath.is_absolute():
+            tpath = root / tpath
+        world["terrain"] = str(tpath.resolve())
     env = doc.get("environment")
     if isinstance(env, dict):
         for key in ("mu", "grade", "bank"):

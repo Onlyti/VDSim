@@ -47,6 +47,14 @@ def main():
         assert jump_doc["vehicles"][0]["level"] == "L5"
         assert jump_doc.get("stunt", {}).get("ground") == "ramp"
 
+        terr = REPO / "configs" / "scenes" / "terrain_hill_demo.yaml"
+        terr_out = Path(td) / "terrain_world.yaml"
+        materialize_scene_file(terr, terr_out)
+        terr_doc = yaml.safe_load(terr_out.read_text()) or {}
+        assert terr_doc["vehicles"][0]["level"] == "L5"
+        assert "terrain" in terr_doc, "terrain path must reach the world YAML"
+        assert Path(terr_doc["terrain"]).is_file(), terr_doc["terrain"]
+
     r = CatalogResolver(REPO)
     assert r.load_blueprint("vehicle.sedan_comfort")
     print("test_scene_materialize: ok")
