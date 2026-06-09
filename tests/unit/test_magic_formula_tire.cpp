@@ -131,6 +131,30 @@ TEST(Mf2002Catalog, DispatchByBackend) {
       EXPECT_GT(t->compute(slip_input(0.1, 0.0, 4000.0)).Fx, 500.0); }
 }
 
+// A catalog/tire YAML selects the backend via from_yaml (the path cosim + batch
+// use to load a tire). Proves a tire part can pick MF2002 from a runtime .tir.
+TEST(Mf2002Catalog, YamlSelectsBackend) {
+    using namespace vdsim;
+    const auto tir = write_synthetic_tir();
+    const auto yml = fs::temp_directory_path() /
+        ("vdsim_tire_" + std::to_string(static_cast<long>(::getpid())) + ".yaml");
+    {
+        std::ofstream o(yml);
+        o << "mu_nominal: 1.0\n"
+          << "backend: magic_formula\n"
+          << "tir_path: " << tir.string() << "\n";
+    }
+    const TireParams tp = TireParams::from_yaml(yml.string());
+    fs::remove(yml);
+    EXPECT_EQ(tp.backend, "magic_formula");
+    EXPECT_EQ(tp.tir_path, tir.string());
+
+    auto tire = create_tire_from_params(tp);
+    fs::remove(tir);
+    ASSERT_NE(tire, nullptr);
+    EXPECT_GT(tire->compute(slip_input(0.1, 0.0, 4000.0)).Fx, 500.0);
+}
+
 // initialize() must swap the dynamics' tire to the requested backend and run.
 TEST(Mf2002Catalog, L5UsesMagicFormulaBackend) {
     using namespace vdsim;

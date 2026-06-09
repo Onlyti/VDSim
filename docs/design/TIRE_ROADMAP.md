@@ -154,9 +154,13 @@ with a compatibility matrix in T2 design note.
 > sanity tests on a runtime synthetic `.tir` (`Mf2002Catalog.*`; no `.tir` committed).
 > T1.2 — `TireParams.backend`/`tir_path` + `create_tire_from_params()` dispatch wired
 > into every dynamics `initialize()` (default `mf96` unchanged; `magic_formula` loads
-> MF2002 from `tir_path`; `linear` fallback). 277 ctest. **Remaining:** catalog tire
-> part selecting `backend` + GUI `.tir` import; combined-slip $G_{x\alpha},G_{y\kappa}$
-> on the measured path; parity gate vs Chrono Pac02 reference.
+> MF2002 from `tir_path`; `linear` fallback). T1.3 — a tire YAML selects the backend
+> via `from_yaml` (`Mf2002Catalog.YamlSelectsBackend`); since cosim + batch load tires
+> through `from_yaml`, the **realtime/batch "`.tir` runs" exit is covered** (set
+> `backend: magic_formula` + `tir_path: <your .tir>` in the tire part; `.tir` stays
+> uncommitted). 278 ctest. **Remaining:** GUI `.tir` import (v0.5.1 GUI bundle);
+> combined-slip $G_{x\alpha},G_{y\kappa}$ on the measured path; parity gate vs Chrono
+> Pac02 reference.
 
 | Item | Deliverable |
 |------|-------------|
