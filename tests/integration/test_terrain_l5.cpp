@@ -50,6 +50,20 @@ Grid hill_grid(double h_max, double xc, double yc, double sigma) {
     return g;
 }
 
+// Plateau at z=0 for x <= x_cliff, dropping to z_low beyond (a step-down cliff).
+// Fine x spacing keeps the lip sharp so the body launches rather than ramps.
+Grid cliff_grid(double x_cliff, double z_low) {
+    Grid g{121, 11, -10.0, -10.0, 0.5, 2.0, {}};
+    g.h.resize(static_cast<std::size_t>(g.nx) * g.ny);
+    for (int iy = 0; iy < g.ny; ++iy) {
+        for (int ix = 0; ix < g.nx; ++ix) {
+            const double x = g.x0 + ix * g.dx;
+            g.h[static_cast<std::size_t>(iy) * g.nx + ix] = (x <= x_cliff) ? 0.0 : z_low;
+        }
+    }
+    return g;
+}
+
 std::unique_ptr<vdsim::IContactProvider> ground_from(const Grid& g, double mu) {
     return vdsim::create_heightmap_ground(g.h, g.nx, g.ny, g.x0, g.y0, g.dx, g.dy, mu);
 }
@@ -147,4 +161,37 @@ TEST(Terrain, L5SettlesOnHillFlank) {
     const auto fz = h.dyn->tire_Fz();
     const double sum = fz[0] + fz[1] + fz[2] + fz[3];
     EXPECT_GT(sum, 0.3 * h.vp.mass * 9.80665);   // still carrying weight
+}
+
+// Driving off a step-down cliff: the body goes briefly airborne (all wheels lose
+// contact -> Fz ~ 0, no mid-air phantom load), then lands on the lower plateau.
+TEST(Terrain, L5BriefAirOverCliff) {
+    const double x_cliff = 15.0, z_low = -1.5;
+    TerrainSetup h(cliff_grid(x_cliff, z_low), 1.0);
+    h.dyn->reset(spawn(0.0, 0.0, 24.0, h.vp.cg_height, h.vp.wheel_radius_nominal));
+    vdsim::CmdL4 cmd;
+    cmd.throttle = 0.1;                  // hold approach speed against rolling drag
+    const vdsim::ControlInput u = cmd;
+    const double mg = h.vp.mass * 9.80665;
+    bool saw_air = false;
+    double max_individual_in_air = 0.0;
+    for (int i = 0; i < 2000; ++i) {
+        vdsim::ContactArray contacts;
+        h.ground->query(h.dyn->state(), h.vp, contacts);
+        h.dyn->step(u, contacts, 0.001);
+        const double x = h.dyn->state().position.x();
+        const auto fz = h.dyn->tire_Fz();
+        const double sum = fz[0] + fz[1] + fz[2] + fz[3];
+        if (x > x_cliff + 1.0 && sum < 0.05 * mg) {
+            saw_air = true;
+            for (int w = 0; w < vdsim::NUM_WHEELS; ++w)
+                max_individual_in_air = std::max(max_individual_in_air, fz[w]);
+        }
+    }
+    EXPECT_TRUE(saw_air);                              // there was an airborne interval
+    EXPECT_LT(max_individual_in_air, 0.05 * mg);       // no mid-air phantom Fz
+    EXPECT_TRUE(std::isfinite(h.dyn->state().position.z()));
+    EXPECT_LT(h.dyn->state().position.z(), z_low + h.vp.cg_height + 0.3);  // landed low
+    const auto fz_end = h.dyn->tire_Fz();
+    EXPECT_GT(fz_end[0] + fz_end[1] + fz_end[2] + fz_end[3], 0.2 * mg);    // back in contact
 }
