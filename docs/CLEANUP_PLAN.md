@@ -39,11 +39,16 @@ part for the ISO baseline / stunt scenes), pacejka "legacy tests preserved").
   `<script type=module>` -> static/app.js (byte-identical, cmp-verified). /static/ route
   in routes.py. importmap + core.js stay in HTML. Relocation only; smoke 200s, 266 green.
   **Needs user browser verify** (agent has no browser) before B2.
-- **B2 TODO (high risk)** split static/app.js (4365 L, single module scope: scene/camera/
-  renderer + many shared `let`) into ES sub-modules (scene/stream/sidebar/modal/minimap/
-  telemetry) with explicit import/export. Headless gate is weak (node v10 can't ESM-check;
-  no esbuild) -> needs an esbuild/rollup bundle gate + user browser verify. Do only after B1
-  is browser-confirmed. Then trim server.py/routes.py/draft.py.
+- **B2a DONE** (`192dbb6`) pure leaf helpers -> static/util.js ($, paintConnState,
+  doc-help, f/fmtArr, post/postJson/getJson). Gate: esbuild bundle (node20 @ ~/.nvm,
+  `npx esbuild@0.21.5 app.js --bundle --format=esm --external:three --external:three/addons/*`)
+  -> bundle identical to pre-split except esbuild path-comments. Browser-confirmed by user.
+- **B2b TODO (high risk, browser-in-loop)** the rest of static/app.js (scene/stream/sidebar/
+  modal/minimap/telemetry) shares mutable `let` (pathLine, terrainGrid, ...) + has top-level
+  side-effects (scene.add, animate() kickoff, listener registration). esbuild catches static
+  errors (unresolved import, assign-to-import) but NOT runtime init ordering -> this is a
+  *restructure into a state module + init functions*, not a mechanical move. Do incrementally
+  with the esbuild gate AND a user browser check per increment. Then trim server/routes/draft.
 
 ## Phase E — Wrap
 - Merge `feat/v0.4-slope-jump-m5` -> main + tag. Refresh HANDOFF / doc index.
