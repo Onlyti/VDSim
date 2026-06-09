@@ -1,0 +1,4 @@
+scenario,vx0 [m/s],vx(T) [m/s],r peak [rad/s],y peak [m],x(T) [m]
+step_steer,9.99987,9.7277,0.184407,16.9753,44.6227
+double_lane_change,14.9997,14.286,0.332189,4.71711,87.0571
+throttle_brake_sequence,5.00122,0.0234066,0.0,0.0,27.6714
