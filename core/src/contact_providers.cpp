@@ -18,6 +18,24 @@ namespace vdsim {
 
 namespace {
 
+void wheel_world_positions(const State& vehicle, const VehicleParams& vp,
+                           std::array<Vec3, NUM_WHEELS>& pw) {
+    const double a = vp.cg_to_front, b = vp.cg_to_rear;
+    const double tf2 = 0.5 * vp.track_front, tr2 = 0.5 * vp.track_rear;
+    const double hz  = -(vp.cg_height - vp.wheel_radius_nominal);
+    const Vec3 body_offsets[NUM_WHEELS] = {
+        Vec3(a, tf2, hz), Vec3(a, -tf2, hz),
+        Vec3(-b, tr2, hz), Vec3(-b, -tr2, hz)};
+    for (int i = 0; i < NUM_WHEELS; ++i)
+        pw[i] = vehicle.position + vehicle.orientation * body_offsets[i];
+}
+
+inline double hub_penetration(const Vec3& hub, const Vec3& n_unit,
+                              const Vec3& road_pt, double wheel_r) {
+    const Vec3 target = road_pt + n_unit * wheel_r;
+    return std::max(0.0, (target - hub).dot(n_unit));
+}
+
 class FlatGround final : public IContactProvider {
 public:
     FlatGround(double z, double mu) : z_(z), mu_(mu) {}
@@ -25,29 +43,19 @@ public:
     void query(const State& vehicle,
                const VehicleParams& vp,
                ContactArray& out) override {
-        // Wheel offsets in body frame (FL, FR, RL, RR).
-        const double a   = vp.cg_to_front;
-        const double b   = vp.cg_to_rear;
-        const double tf2 = 0.5 * vp.track_front;
-        const double tr2 = 0.5 * vp.track_rear;
-
-        const Vec3 body_offsets[NUM_WHEELS] = {
-            Vec3( a,  tf2, 0.0),   // FL
-            Vec3( a, -tf2, 0.0),   // FR
-            Vec3(-b,  tr2, 0.0),   // RL
-            Vec3(-b, -tr2, 0.0),   // RR
-        };
-
+        std::array<Vec3, NUM_WHEELS> pw{};
+        wheel_world_positions(vehicle, vp, pw);
+        const double r = vp.wheel_radius_nominal;
+        const Vec3 n = Vec3::UnitZ();
         for (int i = 0; i < NUM_WHEELS; ++i) {
-            const Vec3 pos_world = vehicle.position +
-                                   vehicle.orientation * body_offsets[i];
+            const Vec3 road_pt(pw[i].x(), pw[i].y(), z_);
             out[i].is_valid    = true;
-            out[i].normal      = Vec3::UnitZ();
+            out[i].normal      = n;
             out[i].mu_long     = mu_;
             out[i].mu_lat      = mu_;
             out[i].surface_id  = 0;
-            out[i].position    = Vec3(pos_world.x(), pos_world.y(), z_);
-            out[i].penetration = std::max(0.0, vehicle.position.z() - z_);
+            out[i].position    = road_pt;
+            out[i].penetration = hub_penetration(pw[i], n, road_pt, r);
         }
     }
 
@@ -66,21 +74,20 @@ public:
 
     void query(const State& vehicle, const VehicleParams& vp,
                ContactArray& out) override {
-        const double a = vp.cg_to_front, b = vp.cg_to_rear;
-        const double tf2 = 0.5 * vp.track_front, tr2 = 0.5 * vp.track_rear;
-        const Vec3 body_offsets[NUM_WHEELS] = {
-            Vec3(a, tf2, 0.0), Vec3(a, -tf2, 0.0),
-            Vec3(-b, tr2, 0.0), Vec3(-b, -tr2, 0.0)};
+        std::array<Vec3, NUM_WHEELS> pw{};
+        wheel_world_positions(vehicle, vp, pw);
+        const double r = vp.wheel_radius_nominal;
+        const Vec3 n = Vec3::UnitZ();
         for (int i = 0; i < NUM_WHEELS; ++i) {
-            const Vec3 pw = vehicle.position + vehicle.orientation * body_offsets[i];
-            const double mu = (pw.y() >= by_) ? mu_l_ : mu_r_;
+            const double mu = (pw[i].y() >= by_) ? mu_l_ : mu_r_;
+            const Vec3 road_pt(pw[i].x(), pw[i].y(), z_);
             out[i].is_valid    = true;
-            out[i].normal      = Vec3::UnitZ();
+            out[i].normal      = n;
             out[i].mu_long     = mu;
             out[i].mu_lat      = mu;
-            out[i].surface_id  = (pw.y() >= by_) ? 0 : 1;
-            out[i].position    = Vec3(pw.x(), pw.y(), z_);
-            out[i].penetration = std::max(0.0, vehicle.position.z() - z_);
+            out[i].surface_id  = (pw[i].y() >= by_) ? 0 : 1;
+            out[i].position    = road_pt;
+            out[i].penetration = hub_penetration(pw[i], n, road_pt, r);
         }
     }
 
@@ -99,24 +106,20 @@ public:
     }
     void query(const State& vehicle, const VehicleParams& vp,
                ContactArray& out) override {
-        const double a = vp.cg_to_front, b = vp.cg_to_rear;
-        const double tf2 = 0.5 * vp.track_front, tr2 = 0.5 * vp.track_rear;
-        const Vec3 body_offsets[NUM_WHEELS] = {
-            Vec3(a, tf2, 0.0), Vec3(a, -tf2, 0.0),
-            Vec3(-b, tr2, 0.0), Vec3(-b, -tr2, 0.0)};
-        // per-wheel road height relative to the CG ground point: the tilt part of
-        // this differential drives the L3 ride model's roll/pitch attitude.
+        std::array<Vec3, NUM_WHEELS> pw{};
+        wheel_world_positions(vehicle, vp, pw);
+        const double r = vp.wheel_radius_nominal;
         const double z_cg = z0_ + sx_ * vehicle.position.x() + sy_ * vehicle.position.y();
         for (int i = 0; i < NUM_WHEELS; ++i) {
-            const Vec3 pw = vehicle.position + vehicle.orientation * body_offsets[i];
-            const double z = z0_ + sx_ * pw.x() + sy_ * pw.y();
+            const double z = z0_ + sx_ * pw[i].x() + sy_ * pw[i].y();
+            const Vec3 road_pt(pw[i].x(), pw[i].y(), z);
             out[i].is_valid    = true;
             out[i].normal      = n_;
             out[i].mu_long     = mu_;
             out[i].mu_lat      = mu_;
             out[i].surface_id  = 0;
-            out[i].position    = Vec3(pw.x(), pw.y(), z);
-            out[i].penetration = std::max(0.0, vehicle.position.z() - z);
+            out[i].position    = road_pt;
+            out[i].penetration = hub_penetration(pw[i], n_, road_pt, r);
             out[i].road_dz     = z - z_cg;
         }
     }
@@ -141,21 +144,20 @@ public:
     }
     void query(const State& vehicle, const VehicleParams& vp,
                ContactArray& out) override {
-        const double a = vp.cg_to_front, b = vp.cg_to_rear;
-        const double tf2 = 0.5 * vp.track_front, tr2 = 0.5 * vp.track_rear;
-        const Vec3 body_offsets[NUM_WHEELS] = {
-            Vec3(a, tf2, 0.0), Vec3(a, -tf2, 0.0),
-            Vec3(-b, tr2, 0.0), Vec3(-b, -tr2, 0.0)};
+        std::array<Vec3, NUM_WHEELS> pw{};
+        wheel_world_positions(vehicle, vp, pw);
+        const double r = vp.wheel_radius_nominal;
+        const Vec3 n = Vec3::UnitZ();
         for (int i = 0; i < NUM_WHEELS; ++i) {
-            const Vec3 pw = vehicle.position + vehicle.orientation * body_offsets[i];
-            const double dz = profile(pw.x());
+            const double dz = profile(pw[i].x());
+            const Vec3 road_pt(pw[i].x(), pw[i].y(), z_ + dz);
             out[i].is_valid    = true;
-            out[i].normal      = Vec3::UnitZ();
+            out[i].normal      = n;
             out[i].mu_long     = mu_;
             out[i].mu_lat      = mu_;
             out[i].surface_id  = 0;
-            out[i].position    = Vec3(pw.x(), pw.y(), z_ + dz);
-            out[i].penetration = std::max(0.0, vehicle.position.z() - z_);
+            out[i].position    = road_pt;
+            out[i].penetration = hub_penetration(pw[i], n, road_pt, r);
             out[i].road_dz     = dz;
         }
     }
@@ -188,26 +190,27 @@ public:
     }
     void query(const State& vehicle, const VehicleParams& vp,
                ContactArray& out) override {
-        const double a = vp.cg_to_front, b = vp.cg_to_rear;
-        const double tf2 = 0.5 * vp.track_front, tr2 = 0.5 * vp.track_rear;
-        const Vec3 body_offsets[NUM_WHEELS] = {
-            Vec3(a, tf2, 0.0), Vec3(a, -tf2, 0.0),
-            Vec3(-b, tr2, 0.0), Vec3(-b, -tr2, 0.0)};
-        const double e = 0.25 * std::min(dx_, dy_);   // gradient finite-diff step
+        std::array<Vec3, NUM_WHEELS> pw{};
+        wheel_world_positions(vehicle, vp, pw);
+        const double r = vp.wheel_radius_nominal;
+        const double e = 0.25 * std::min(dx_, dy_);
         const double z_cg = height(vehicle.position.x(), vehicle.position.y());
         for (int i = 0; i < NUM_WHEELS; ++i) {
-            const Vec3 pw = vehicle.position + vehicle.orientation * body_offsets[i];
-            const double z = height(pw.x(), pw.y());
-            const double dhdx = (height(pw.x() + e, pw.y()) - height(pw.x() - e, pw.y())) / (2 * e);
-            const double dhdy = (height(pw.x(), pw.y() + e) - height(pw.x(), pw.y() - e)) / (2 * e);
+            const double z = height(pw[i].x(), pw[i].y());
+            const double dhdx = (height(pw[i].x() + e, pw[i].y())
+                               - height(pw[i].x() - e, pw[i].y())) / (2 * e);
+            const double dhdy = (height(pw[i].x(), pw[i].y() + e)
+                               - height(pw[i].x(), pw[i].y() - e)) / (2 * e);
+            const Vec3 n(-dhdx, -dhdy, 1.0);
+            const Vec3 n_unit = n.normalized();
+            const Vec3 road_pt(pw[i].x(), pw[i].y(), z);
             out[i].is_valid    = true;
-            out[i].normal      = Vec3(-dhdx, -dhdy, 1.0).normalized();
+            out[i].normal      = n_unit;
             out[i].mu_long     = mu_;
             out[i].mu_lat      = mu_;
             out[i].surface_id  = 0;
-            out[i].position    = Vec3(pw.x(), pw.y(), z);
-            out[i].penetration = std::max(0.0, vehicle.position.z() - z);
-            // per-wheel road height relative to the CG ground point -> L3 attitude
+            out[i].position    = road_pt;
+            out[i].penetration = hub_penetration(pw[i], n_unit, road_pt, r);
             out[i].road_dz     = z - z_cg;
         }
     }
@@ -299,22 +302,21 @@ public:
     PsdGround(double z, double mu, PsdProfile prof) : z_(z), mu_(mu), prof_(std::move(prof)) {}
     void query(const State& vehicle, const VehicleParams& vp,
                ContactArray& out) override {
-        const double a = vp.cg_to_front, b = vp.cg_to_rear;
-        const double tf2 = 0.5 * vp.track_front, tr2 = 0.5 * vp.track_rear;
-        const Vec3 body_offsets[NUM_WHEELS] = {
-            Vec3(a, tf2, 0.0), Vec3(a, -tf2, 0.0),
-            Vec3(-b, tr2, 0.0), Vec3(-b, -tr2, 0.0)};
+        std::array<Vec3, NUM_WHEELS> pw{};
+        wheel_world_positions(vehicle, vp, pw);
+        const double r = vp.wheel_radius_nominal;
+        const Vec3 n = Vec3::UnitZ();
         for (int i = 0; i < NUM_WHEELS; ++i) {
-            const Vec3 pw = vehicle.position + vehicle.orientation * body_offsets[i];
             const bool right = (i == WHEEL_FR || i == WHEEL_RR);
-            const double dz = prof_.height(pw.x(), right);   // profile along travel
+            const double dz = prof_.height(pw[i].x(), right);
+            const Vec3 road_pt(pw[i].x(), pw[i].y(), z_ + dz);
             out[i].is_valid    = true;
-            out[i].normal      = Vec3::UnitZ();
+            out[i].normal      = n;
             out[i].mu_long     = mu_;
             out[i].mu_lat      = mu_;
             out[i].surface_id  = 0;
-            out[i].position    = Vec3(pw.x(), pw.y(), z_ + dz);
-            out[i].penetration = std::max(0.0, vehicle.position.z() - z_);
+            out[i].position    = road_pt;
+            out[i].penetration = hub_penetration(pw[i], n, road_pt, r);
             out[i].road_dz     = dz;
         }
     }
@@ -322,18 +324,6 @@ private:
     double z_, mu_;
     PsdProfile prof_;
 };
-
-void wheel_world_positions(const State& vehicle, const VehicleParams& vp,
-                         std::array<Vec3, NUM_WHEELS>& pw) {
-    const double a = vp.cg_to_front, b = vp.cg_to_rear;
-    const double tf2 = 0.5 * vp.track_front, tr2 = 0.5 * vp.track_rear;
-    const double hz  = -(vp.cg_height - vp.wheel_radius_nominal);
-    const Vec3 body_offsets[NUM_WHEELS] = {
-        Vec3(a, tf2, hz), Vec3(a, -tf2, hz),
-        Vec3(-b, tr2, hz), Vec3(-b, -tr2, hz)};
-    for (int i = 0; i < NUM_WHEELS; ++i)
-        pw[i] = vehicle.position + vehicle.orientation * body_offsets[i];
-}
 
 // T23 half-cosine ramp + lip + cliff (1D in world x).
 class RampGround final : public IContactProvider {
