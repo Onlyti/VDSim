@@ -18,6 +18,7 @@
 #include "vdsim/default_subsystems.hpp"
 #include "vdsim/drivetrain_inertia.hpp"
 #include "vdsim/interfaces.hpp"
+#include "vdsim/low_speed.hpp"
 #include "vdsim/lugre_tire.hpp"
 #include "vdsim/subsystems.hpp"
 
@@ -70,9 +71,7 @@ inline CmdL4 lower_to_l4(const ControlInput& u) {
 constexpr double kAirDensity = 1.225;
 constexpr double kGravity    = 9.80665;
 constexpr double kSpeedEps    = 0.15;
-constexpr double kStickBlend  = 3.0;    // [m/s] dynamic <-> low-speed (kinematic) blend
-constexpr double kStickC      = 6.0e4;  // [N·s/m] brake-hold creep damping
-constexpr double kKinTau      = 0.05;   // [s]     low-speed kinematic relaxation time
+// kStickBlend / kStickC / kKinTau: shared low-speed constants in vdsim/low_speed.hpp
 
 class SevenDOFDynamics final : public IVehicleDynamics {
 public:

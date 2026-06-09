@@ -17,6 +17,7 @@
 #include "vdsim/coordinate.hpp"
 #include "vdsim/drivetrain_inertia.hpp"
 #include "vdsim/interfaces.hpp"
+#include "vdsim/low_speed.hpp"
 #include "vdsim/lugre_tire.hpp"
 
 #include <spdlog/spdlog.h>
@@ -69,10 +70,8 @@ inline CmdL4 lower_to_l4(const ControlInput& u) {
 constexpr double kAirDensity   = 1.225;   // [kg/m^3]
 constexpr double kGravity      = 9.80665; // [m/s^2]
 constexpr double kSpeedEps     = 0.15;    // [m/s] minimum denom for slip ratio / angle
-constexpr double kStickBlend   = 3.0;     // [m/s] dynamic <-> low-speed (kinematic) blend
-constexpr double kStickC       = 6.0e4;   // [N·s/m] brake-hold creep damping (per wheel)
-constexpr double kKinTau       = 0.05;    // [s] low-speed kinematic relaxation time
 constexpr double kBrakeWidth   = 1.0;     // [rad/s] tanh transition width
+// kStickBlend / kStickC / kKinTau: shared low-speed constants in vdsim/low_speed.hpp
 
 inline double smooth_sign(double x, double width) {
     return std::tanh(x / width);
