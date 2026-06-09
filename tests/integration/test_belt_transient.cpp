@@ -43,6 +43,33 @@ double step_steer_ay(bool belt, double t_s, bool lugre = false) {
     return std::abs(dyn->ay_body_est());
 }
 
+double l5_step_steer_ay(bool belt, double t_s) {
+    vdsim::VehicleParams vp; vp.aero_drag_coeff = 0.0;
+    vdsim::TireParams tp;
+    tp.lugre.enabled = false;
+    tp.belt.enabled = belt;
+    tp.belt.sigma_lat = 0.6;
+    vdsim::SolverParams sp; sp.stunt_physics = true; sp.max_substep_dt = 2e-4; sp.max_substeps = 16;
+    auto dyn = vdsim::create_stunt_dof();
+    dyn->initialize(vp, tp, sp);
+    vdsim::State s;
+    s.position.z() = vp.cg_height;
+    s.velocity.x() = 20.0;
+    const double w = 20.0 / vp.wheel_radius_nominal;
+    s.wheel_spin = {{w, w, w, w}};
+    dyn->reset(s);
+    auto ground = vdsim::create_flat_ground(0.0, 1.0);
+    vdsim::CmdL4 cmd; cmd.steer_angle_wheel = 0.04;
+    const vdsim::ControlInput u = cmd;
+    const int n = static_cast<int>(t_s / 0.001);
+    for (int i = 0; i < n; ++i) {
+        vdsim::ContactArray c;
+        ground->query(dyn->state(), vp, c);
+        dyn->step(u, c, 0.001);
+    }
+    return std::abs(dyn->ay_body_est());
+}
+
 }  // namespace
 
 TEST(BeltTransient, LateralResponseLagsThenConverges) {
@@ -71,4 +98,12 @@ TEST(BeltTransient, LuGrePathAlsoLagsThenConverges) {
     const double ay_on_ss  = step_steer_ay(true,  0.8, true);
     EXPECT_GT(ay_off_ss, 0.5);
     EXPECT_NEAR(ay_on_ss, ay_off_ss, 0.20 * ay_off_ss);
+}
+
+// T2.4 — belt also wired into the L5 (free_3d) MF path.
+TEST(BeltTransient, L5PathLagsWithBelt) {
+    const double off = l5_step_steer_ay(false, 0.020);
+    const double on  = l5_step_steer_ay(true,  0.020);
+    EXPECT_GT(off, 0.1) << "L5 responds to the step steer";
+    EXPECT_LT(on, off)  << "belt lags the L5 early response";
 }

@@ -1,3 +1,4 @@
+#include "vdsim/belt_tire.hpp"
 #include "vdsim/coordinate.hpp"
 #include "vdsim/default_subsystems.hpp"
 #include "vdsim/drivetrain_inertia.hpp"
@@ -104,6 +105,15 @@ public:
         state_.orientation.normalize();
         ax_prev_ = 0.0;
         ay_prev_ = 0.0;
+        belt_kappa_.fill(0.0);
+        belt_alpha_.fill(0.0);
+        belt_vlong_.fill(0.0);
+        belt_vlat_.fill(0.0);
+        kappa_geom_last_.fill(0.0);
+        alpha_geom_last_.fill(0.0);
+        v_slip_long_last_.fill(0.0);
+        v_slip_lat_last_.fill(0.0);
+        vx_belt_last_.fill(0.0);
         lugre_z_long_.fill(0.0);
         lugre_z_lat_.fill(0.0);
         drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
@@ -299,21 +309,32 @@ private:
                 continue;
             }
 
+            // Belt transient (T2): feed relaxed slip on the MF path, relaxed slip
+            // velocity on the LuGre path. Geometric values stored for the per-
+            // substep belt advance; held frozen within RK4.
+            const bool belt_mf = tp_.belt.enabled && !lugre_on;
             ITireModel::Input in;
             in.Fz = Fz[i];
-            in.kappa = k_slip;
-            in.alpha = a_slip;
+            in.kappa = belt_mf ? belt_kappa_[i] : k_slip;
+            in.alpha = belt_mf ? belt_alpha_[i] : a_slip;
             in.mu_long = contacts[i].mu_long;
             in.mu_lat  = contacts[i].mu_lat;
             in.Vx_wheel = v_long_k;
+            kappa_geom_last_[i] = k_slip;
+            alpha_geom_last_[i] = a_slip;
+            vx_belt_last_[i]    = v_long_k;
 
             const double muFz = std::min(in.mu_long, in.mu_lat) * std::max(0.0, Fz[i]);
             double Fx_w = 0.0, Fy_w = 0.0;
             if (lugre_on) {
-                const double v_slip_long = Rwh * s.wheel_spin[i] - v_long_k;
+                const double v_slip_long_geom = Rwh * s.wheel_spin[i] - v_long_k;
+                v_slip_long_last_[i] = v_slip_long_geom;
+                v_slip_lat_last_[i]  = v_lat;
+                const double v_slip_long = tp_.belt.enabled ? belt_vlong_[i] : v_slip_long_geom;
+                const double v_slip_lat  = tp_.belt.enabled ? belt_vlat_[i]  : v_lat;
                 const auto lugre = lugre_wheel_forces(
                     *tire_, tp_, lugre_z_long_[i], lugre_z_lat_[i],
-                    v_slip_long, v_lat, in);
+                    v_slip_long, v_slip_lat, in);
                 Fx_w = lugre.Fx;
                 Fy_w = lugre.Fy;
                 mz_wheel[i] = lugre.Mz;
@@ -460,6 +481,7 @@ private:
             state_ = apply(s0, k, h);
             ax_prev_ = k.ax_body;
             ay_prev_ = k.ay_body;
+            advance_belt(h);
             return;
         }
         const Deriv k1 = derivatives(s0, cmd, contacts);
@@ -477,6 +499,25 @@ private:
         state_ = apply(s0, k, h);
         ax_prev_ = k.ax_body;
         ay_prev_ = k.ay_body;
+        advance_belt(h);
+    }
+
+    // Belt transient (T2): relax slip (MF) or slip velocity (LuGre) per substep.
+    void advance_belt(double h) {
+        if (!tp_.belt.enabled) return;
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            if (tp_.lugre.enabled) {
+                belt_vlong_[i] = belt_relax(belt_vlong_[i], v_slip_long_last_[i],
+                                            vx_belt_last_[i], tp_.belt.sigma_long, h);
+                belt_vlat_[i]  = belt_relax(belt_vlat_[i], v_slip_lat_last_[i],
+                                            vx_belt_last_[i], tp_.belt.sigma_lat, h);
+            } else {
+                belt_kappa_[i] = belt_relax(belt_kappa_[i], kappa_geom_last_[i],
+                                            vx_belt_last_[i], tp_.belt.sigma_long, h);
+                belt_alpha_[i] = belt_relax(belt_alpha_[i], alpha_geom_last_[i],
+                                            vx_belt_last_[i], tp_.belt.sigma_lat, h);
+            }
+        }
     }
 
     VehicleParams vp_;
@@ -496,6 +537,16 @@ private:
     std::array<double, NUM_WHEELS> tire_Fz_ {};
     std::array<double, NUM_WHEELS> slip_ratio_ {};
     std::array<double, NUM_WHEELS> slip_angle_ {};
+    // Belt transient (T2): relaxed slip (MF) + slip velocity (LuGre) states.
+    std::array<double, NUM_WHEELS> belt_kappa_       {};
+    std::array<double, NUM_WHEELS> belt_alpha_       {};
+    std::array<double, NUM_WHEELS> belt_vlong_       {};
+    std::array<double, NUM_WHEELS> belt_vlat_        {};
+    std::array<double, NUM_WHEELS> kappa_geom_last_  {};
+    std::array<double, NUM_WHEELS> alpha_geom_last_  {};
+    std::array<double, NUM_WHEELS> v_slip_long_last_ {};
+    std::array<double, NUM_WHEELS> v_slip_lat_last_  {};
+    std::array<double, NUM_WHEELS> vx_belt_last_     {};
     std::array<double, NUM_WHEELS> lugre_z_long_ {};
     std::array<double, NUM_WHEELS> lugre_z_lat_ {};
     double mz_front_sum_ {0.0};
