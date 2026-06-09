@@ -1,6 +1,6 @@
 # VDSim 핸드오프
 
-작성: **2026-06-08** · 브랜치 `feat/v0.5-terrain-m1` · **273/273 ctest green**
+작성: **2026-06-10** · `main` (= `v0.5.1`) · **291/291 ctest green**
 
 ## 1. 문서 인덱스
 
@@ -28,7 +28,7 @@
 - **`CurvedGround`** banked turn (`create_curved_ground`, cosim `stunt.ground == banked`).
 - Scenes `terrain_hill_demo` / `banked_grade_demo` / `banked_oval`; `tools/bake_synthetic_hill.py` + `assets/terrain/hill_demo.bin`; materialize `terrain:` forwarding.
 - Tests `tests/integration/test_terrain_l5.cpp` (7) + `test_l5_driving.cpp`.
-- **v0.5.1 deferred (browser):** M4 GUI terrain Play, M5c GUI stunt 저작.
+- **v0.5.2 deferred (browser):** M4 GUI terrain Play, M5c GUI stunt 저작.
 
 ### GUI cleanup (이번 세션)
 
@@ -84,9 +84,9 @@ M6 docs. 273 ctest. Scenes: `terrain_hill_demo`, `banked_grade_demo`, `banked_ov
 - **Decision (locked):** keep own lean tire stack; Chrono Pac02 (BSD-3) is a
   cross-validation *reference*, not a dependency. Belt = own (no permissive OSS exists).
 - **Remaining tire:** bicycle (L1) belt wiring (lowest value); GUI `.tir` import
-  (v0.5.1 GUI); combined-slip parity gate vs Chrono Pac02 (needs Chrono build).
+  (v0.5.2 GUI); combined-slip parity gate vs Chrono Pac02 (needs Chrono build).
 
-**v0.5.1 (deferred — needs browser, no headless path):**
+**v0.5.2 (deferred — needs browser, no headless path):**
 1. **M4 GUI terrain load + L5 Play** — chase cam uses `position.z`, spawn on mesh.
 2. **M5c GUI stunt authoring** — author ramp/loop/banked scenes (today render-only).
 3. GUI `.tir` import (Tire T1 tail).
@@ -106,8 +106,9 @@ M6 docs. 273 ctest. Scenes: `terrain_hill_demo`, `banked_grade_demo`, `banked_ov
 
 ## 6. Git
 
-- `main` = `v0.5.0` tag + tire T1/T2 (`feat/tire-t2-belt`, which is `feat/tire-t1-mf2002`
-  + belt). Tags: v0.1.0 / v0.2.0 / v0.2.4 / v0.4.0 / v0.5.0. Tire merge is post-v0.5.0,
-  untagged (mid-T: bicycle + GUI .tir import pending) — tag a tire release when those land.
+- `main` = `v0.5.1` (tire T1 MF2002 backend + T2 belt transient). Tags:
+  v0.1.0 / v0.2.0 / v0.2.4 / v0.4.0 / v0.5.0 / **v0.5.1**. Remaining tire tail
+  (bicycle L1 belt, Chrono parity, GUI `.tir` import) does NOT block the tag — it lands
+  in v0.5.2 (GUI bundle) / v0.6.
 - All feature work ff-merged (no history rewrite). push/merge/tag는 명시 요청 시에만.
 - Next: new feature branch off `main`.

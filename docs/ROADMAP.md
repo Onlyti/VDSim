@@ -1,6 +1,6 @@
 # VDSim product roadmap
 
-**Last updated:** 2026-06-08 · **Tests:** 273/273 ctest green (branch `feat/v0.5-terrain-m1`)
+**Last updated:** 2026-06-10 · **Tests:** 291/291 ctest green (`main`)
 
 Living roadmap from early PoC through v0.3. Tracks what shipped in mainline vs what
 is planned. Detail specs link to `docs/design/*`; tire phases in
@@ -20,13 +20,13 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 
 | Area | Shipped (high level) | Next |
 |------|----------------------|------|
-| Dynamics L1–L5 | L1–L3 planar/14-DOF; **Ld4** hard-joint; **Ld5** stunt + **terrain (v0.5)** | GUI terrain Play (v0.5.1); V2V |
-| Tire | MF96 + LuGre **default**; kinematic fallback part | MF2002 catalog, belt transient |
+| Dynamics L1–L5 | L1–L3 planar/14-DOF; **Ld4** hard-joint; **Ld5** stunt + **terrain (v0.5)** | GUI terrain Play (v0.5.2); V2V |
+| Tire | MF96 + LuGre **default**; **MF2002 `.tir` backend (T1)**; **belt transient (T2)** | bicycle belt; Chrono Pac02 parity; GUI `.tir` |
 | Drivetrain | Engine inertia + open-diff coupling | Torque–RPM map, gearbox |
 | Brake / steer | Pluggable modules + deadtime | Booster/MDPS physics |
 | Catalog / runtime | `--scene=`, fleet, FMI | External part packs, VDS1 v4 |
 | GUI | 3-tab scene UI, catalog API, workshops | Tire `.tir` import UI |
-| Validation | ISO 7401/4138/3888, 273 ctest | Re-baseline flat; Adams x-check rtol |
+| Validation | ISO 7401/4138/3888, 291 ctest | **Re-baseline flat (debt)**; Adams x-check rtol |
 
 ```mermaid
 timeline
@@ -45,9 +45,13 @@ timeline
     section v0.4
         Ld5 stunt jump loop : 2026-06
         Ld4 multibody M1-M7 : 2026-06
+    section v0.5
+        Terrain + L5 driving : 2026-06
+        Tire T1 MF2002 backend : 2026-06
+        Tire T2 belt transient : 2026-06
     section Next
-        v0.5 terrain L5 : planned
-        Tire belt transient : planned
+        GUI terrain Play (v0.5.2) : planned
+        ISO re-baseline + Ld4 (v0.6) : planned
 ```
 
 ---
@@ -66,7 +70,7 @@ timeline
 | [x] Ld4 multibody M1–M7 | Shipped | [`LD4_MULTIBODY.md`](design/LD4_MULTIBODY.md); M4 runtime, M7 offline |
 | [x] Ld5 6-DOF 3D body + quaternion | Shipped v0.4 (stunt) | `free_3d_dynamics.cpp`; terrain → v0.5 |
 | [x] 3D contact / airborne / ramp jump | Shipped v0.4 | [`V0.4_SLOPE_JUMP_DYNAMICS.md`](design/V0.4_SLOPE_JUMP_DYNAMICS.md) |
-| [x] **Terrain + L5 general driving** (heightmap hub contact, hill/cliff, inclined) | Shipped v0.5 (headless/batch/cosim; GUI → v0.5.1) | [`V0.5_TERRAIN_L5.md`](design/V0.5_TERRAIN_L5.md) |
+| [x] **Terrain + L5 general driving** (heightmap hub contact, hill/cliff, inclined) | Shipped v0.5 (headless/batch/cosim; GUI → v0.5.2) | [`V0.5_TERRAIN_L5.md`](design/V0.5_TERRAIN_L5.md) |
 | [x] Curved banked track (`CurvedGround` + banked oval) | Shipped v0.5 (was v0.4 M3) | `V0.5_TERRAIN_L5.md` M5b |
 | [ ] V2V collision | Planned | [`V0.2_MULTIVEHICLE.md`](design/V0.2_MULTIVEHICLE.md) |
 
@@ -109,11 +113,14 @@ timeline
 
 | Phase | Item | Status |
 |-------|------|--------|
-| T1 | `.tir` / MF2002 as **catalog** tire backend | [ ] |
-| T1 | GUI tire import + public sample `.tir` | [ ] |
+| T1 | `.tir` / MF2002 as **catalog** tire backend (`TireParams.backend`) | [x] merged |
+| T1 | MF2002 combined slip bypasses host friction ellipse | [x] merged |
+| T1 | GUI tire import + public sample `.tir` | [ ] (v0.5.2 GUI) |
+| T1 | Chrono Pac02 parity gate (reference, needs Chrono build) | [ ] |
 | T1 | LuGre $g()$ from MF2002 $F_{x0},F_{y0}$ (optional) | [ ] |
-| T2 | **Belt transient** (carcass states per wheel) | [ ] |
-| T2 | Filtered slip → `ITireModel` / LuGre | [ ] |
+| T2 | **Belt transient** (`belt_relax`, σ/\|Vx\| first-order) | [x] merged |
+| T2 | Filtered slip → MF96/MF2002 + LuGre (L2/L3/L5) | [x] merged |
+| T2 | bicycle (L1) belt wiring (lowest value) | [ ] |
 | T3 | VLOW-class unified low speed (reduce blend reliance) | [ ] |
 | T4 | MF2002 $G_{x\alpha}, G_{y\kappa}$ on dynamic path | [ ] |
 | T5 | Turn-slip, inflation, temperature | [ ] |
@@ -272,10 +279,11 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 | M3 | CurvedGround + banked scenario | → **v0.5** (M5b) |
 | M4 | Ld5 core + jump on Ld5 | [x] |
 | M5 | LoopGround + `vertical_loop_demo.yaml` | [x] |
-| M6 | Loop validation (✓) + theory `20_ld5_stunt` | [~] theory doc TODO |
+| M6 | Loop validation (✓) + theory `20_ld5_stunt` | [x] |
 
-Close-out before tag `v0.4.0`: write `theory/20_ld5_stunt.md` (M6). Descoped to v0.5:
-banked curve (`CurvedGround`/`banked_oval`) + GUI stunt *authoring* panel (render-only today).
+**v0.4.0 tagged.** Descoped to v0.5 (now shipped): banked curve
+(`CurvedGround`/`banked_oval`, M5b). Still deferred to v0.5.2 GUI: stunt
+*authoring* panel (render-only today).
 
 ---
 
@@ -306,12 +314,27 @@ banked curve (`CurvedGround`/`banked_oval`) + GUI stunt *authoring* panel (rende
 - [x] Drivetrain `engine_rotational_inertia`  
 - [x] LuGre tire default on + `kinematic_fallback` part + tests + docs  
 
-### v0.4+ (planned)
+### v0.4 — stunt / Ld5 (2026-06, tagged)
 
-- [ ] Stunt / Ld5 / 3D contact (this doc §11)  
-- [ ] Tire T1–T2 belt + MF2002 catalog (this doc §2.2)  
-- [ ] Drivetrain torque–RPM + gearbox  
-- [ ] Brake/steer physics upgrade  
+- [x] Stunt / Ld5 / 3D contact (this doc §11)
+- [x] Ld4 multibody M1–M7
+
+### v0.5.0 — terrain + L5 (2026-06, tagged)
+
+- [x] Terrain + L5 general driving (heightmap hub contact, hill/cliff/inclined, banked)
+
+### v0.5.1 — tire layers (2026-06, tagged)
+
+- [x] Tire T1 MF2002 `.tir` backend + combined-slip ellipse bypass
+- [x] Tire T2 belt transient (L2/L3/L5, MF+LuGre, validation, theory ch.21)
+
+### v0.5.2+ (planned)
+
+- [ ] GUI terrain Play (M4) + stunt authoring (M5c) + `.tir` import — browser-gated
+- [ ] Tire: bicycle (L1) belt; Chrono Pac02 parity gate
+- [ ] ISO re-baseline (flat) — accrued debt
+- [ ] Drivetrain torque–RPM + gearbox
+- [ ] Brake/steer physics upgrade
 - [ ] CARLA full bridge · open benchmark  
 
 ---

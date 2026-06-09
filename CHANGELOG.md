@@ -4,10 +4,45 @@ All notable changes to VDSim are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow
 [SemVer](https://semver.org/).
 
+## [0.5.1] — 2026-06-10 · tire layers: MF2002 `.tir` backend (T1) + belt transient (T2)
+
+Adds a measured-coefficient steady-force backend and a carcass/belt transient layer
+on top of the MF96 + LuGre stack. Both opt-in; the default MF96/LuGre preset is
+unchanged (no ISO/L2/L3 force drift). GUI `.tir` import is deferred to v0.5.2.
+
+### Added — T1 MF2002 backend
+- `TireParams.backend` (`"mf96"` default | `"magic_formula"` | `"linear"`) + `tir_path`;
+  `create_tire_from_params()` dispatch wired into every dynamics `initialize()`.
+- MF2002 evaluator (`magic_formula_tire.cpp`) full combined slip ($G_{x\alpha}, G_{y\kappa}$
+  + SVyk, combined $M_z$); `model_provides_combined_slip()` gates the host friction-ellipse
+  clip so MF2002 / LuGre forces are not re-clipped.
+- `from_yaml` selects the backend, so cosim + batch run a `.tir` directly. `.tir` files
+  stay uncommitted (gitignore + confidential).
+- Tests `Mf2002Catalog.*` (synthetic `.tir` written to temp at runtime).
+
+### Added — T2 belt transient
+- `vdsim/belt_tire.hpp` `belt_relax()`: first-order slip relaxation, $\tau = \sigma/|V_x|$,
+  exact exponential update, frozen at standstill.
+- Opt-in `TireParams.belt {enabled, sigma_lat, sigma_long}`; wired into seven_dof (L2 /
+  L3-inner) and free_3d (L5), both the MF path (relax κ/α) and the LuGre path (relax slip
+  velocity). **Default off.**
+- Theory **ch.21** (belt transient). Tests `BeltTire.*`, `BeltTransient.*`,
+  `BeltValidation.*` (steady unchanged, early response suppressed at t=τ, more lag at
+  lower speed). **291/291 ctest green.**
+
+### Decision
+- Keep VDSim's own lean tire stack; Chrono Pac02 (BSD-3) is a cross-validation
+  *reference*, not a dependency. No permissive OSS belt model exists → T2 is in-house
+  from Pacejka 3rd ed. Ch.7/9.
+
+### Deferred
+- bicycle (L1) belt wiring (lowest value); Chrono Pac02 parity gate (needs Chrono build);
+  GUI `.tir` import (v0.5.2 GUI bundle).
+
 ## [0.5.0] — 2026-06-09 · terrain + L5 general driving (headless / batch / cosim)
 
 Generalizes the v0.4 Ld5 stunt body to driving on arbitrary ground. GUI terrain
-load + L5 Play and a stunt-scene authoring panel are deferred to v0.5.1.
+load + L5 Play and a stunt-scene authoring panel are deferred to v0.5.2.
 
 ### Added
 - **L5 on terrain**: hub-consistent per-wheel contact unified across Flat / SplitMu /
@@ -23,7 +58,7 @@ load + L5 Play and a stunt-scene authoring panel are deferred to v0.5.1.
   flank, brief airborne over a cliff, uphill coast, bank-induced roll, banked turn
   holds line. **273/273 ctest green.**
 
-### Deferred (v0.5.1)
+### Deferred (v0.5.2)
 - M4 GUI terrain load + L5 Play; M5c GUI stunt authoring panel (render-only today).
 
 ## [0.4.0] — 2026-06-09 · stunt (Ld5) + multibody (Ld4); folds v0.3 catalog + drivetrain

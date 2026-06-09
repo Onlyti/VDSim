@@ -162,7 +162,7 @@ with a compatibility matrix in T2 design note.
 > ($G_{x\alpha},G_{y\kappa}$+SVyk); added `TireParams::model_provides_combined_slip()`
 > and gated the host friction-ellipse clip on it so MF2002 (and LuGre) are not
 > re-clipped (MF2002's peak $F_x$ exceeds $\mu_{nom}F_z$). 279 ctest.
-> **Remaining:** GUI `.tir` import (v0.5.1 GUI bundle); parity gate vs Chrono Pac02
+> **Remaining:** GUI `.tir` import (v0.5.2 GUI bundle); parity gate vs Chrono Pac02
 > reference (needs a Chrono build — external env). Headless T1 core is complete.
 
 | Item | Deliverable |
