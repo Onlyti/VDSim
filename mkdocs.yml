@@ -113,6 +113,7 @@ nav:
       - "04 — Ld1-Bicycle": theory/04_ld1_bicycle.md
       - "05 — Ld2-SevenDOF": theory/05_ld2_seven_dof.md
       - "06 — Ld3-FourteenDOF": theory/06_ld3_fourteen_dof.md
+      - "20 — Ld5-Stunt (jump/loop)": theory/20_ld5_stunt.md
       - "07 — Control ladder Lc1-Lc8": theory/07_control_ladder.md
       - "08 — PID controllers": theory/08_pid_controllers.md
       - "09 — Pure Pursuit / path": theory/09_pure_pursuit_path.md

@@ -57,7 +57,7 @@ python3 gui/server.py                   # http://127.0.0.1:8080
 ## 4. 다음 작업
 
 **v0.4 close-out (태그 전 1건):**
-- `docs/theory/07_ld5_stunt.md` 작성 (M6) — Ld5 EOM + loop 진입속도 `v_min≈√(5gR)`. 이미
+- `docs/theory/20_ld5_stunt.md` 작성 (M6) — Ld5 EOM + loop 진입속도 `v_min≈√(5gR)`. 이미
   shipped 된 거동의 문서화. validation 테스트는 완료(loop 4종 + jump).
 - **descoped → v0.5**: banked curve(`CurvedGround`+`banked_oval`, v0.4 M3) + GUI stunt
   **저작** preset 패널(현재 render-only, 저작 UI 없음). 상세 `V0.5_TERRAIN_L5.md` M5b/M5c.

@@ -272,9 +272,9 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 | M3 | CurvedGround + banked scenario | → **v0.5** (M5b) |
 | M4 | Ld5 core + jump on Ld5 | [x] |
 | M5 | LoopGround + `vertical_loop_demo.yaml` | [x] |
-| M6 | Loop validation (✓) + theory `07_ld5_stunt` | [~] theory doc TODO |
+| M6 | Loop validation (✓) + theory `20_ld5_stunt` | [~] theory doc TODO |
 
-Close-out before tag `v0.4.0`: write `theory/07_ld5_stunt.md` (M6). Descoped to v0.5:
+Close-out before tag `v0.4.0`: write `theory/20_ld5_stunt.md` (M6). Descoped to v0.5:
 banked curve (`CurvedGround`/`banked_oval`) + GUI stunt *authoring* panel (render-only today).
 
 ---
