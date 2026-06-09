@@ -35,8 +35,15 @@ part for the ISO baseline / stunt scenes), pacejka "legacy tests preserved").
   open-diff split (L2 detail). Leave per-source — false dedup would change behaviour.
 
 ## Phase B — GUI monolith split
-- `app.html` (4873 L) inline JS -> `gui/static/*.js` (scene / stream / sidebar /
-  modal / minimap / telemetry); HTML = shell. Trim `server.py`/`routes.py`/`draft.py`.
+- **B1 DONE** (`aa26ee4`) app.html 4873 L -> 246 L shell. `<style>` -> static/app.css,
+  `<script type=module>` -> static/app.js (byte-identical, cmp-verified). /static/ route
+  in routes.py. importmap + core.js stay in HTML. Relocation only; smoke 200s, 266 green.
+  **Needs user browser verify** (agent has no browser) before B2.
+- **B2 TODO (high risk)** split static/app.js (4365 L, single module scope: scene/camera/
+  renderer + many shared `let`) into ES sub-modules (scene/stream/sidebar/modal/minimap/
+  telemetry) with explicit import/export. Headless gate is weak (node v10 can't ESM-check;
+  no esbuild) -> needs an esbuild/rollup bundle gate + user browser verify. Do only after B1
+  is browser-confirmed. Then trim server.py/routes.py/draft.py.
 
 ## Phase E — Wrap
 - Merge `feat/v0.4-slope-jump-m5` -> main + tag. Refresh HANDOFF / doc index.
