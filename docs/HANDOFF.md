@@ -1,6 +1,6 @@
 # VDSim 핸드오프
 
-작성: **2026-06-08** · 브랜치 `feat/v0.4-slope-jump-m5` · **263/263 ctest green**
+작성: **2026-06-08** · 브랜치 `feat/v0.4-slope-jump-m5` · **266/266 ctest green**
 
 ## 1. 문서 인덱스
 
@@ -56,10 +56,17 @@ python3 gui/server.py                   # http://127.0.0.1:8080
 
 ## 4. 다음 작업
 
-1. **v0.5 terrain + L5** — M0 hub contact ✓; heightmap CI hill/cliff → scene/GUI → tag v0.5.0
+**v0.4 close-out (태그 전 1건):**
+- `docs/theory/07_ld5_stunt.md` 작성 (M6) — Ld5 EOM + loop 진입속도 `v_min≈√(5gR)`. 이미
+  shipped 된 거동의 문서화. validation 테스트는 완료(loop 4종 + jump).
+- **descoped → v0.5**: banked curve(`CurvedGround`+`banked_oval`, v0.4 M3) + GUI stunt
+  **저작** preset 패널(현재 render-only, 저작 UI 없음). 상세 `V0.5_TERRAIN_L5.md` M5b/M5c.
+
+**v0.5+:**
+1. **v0.5 terrain + L5** — M0 hub contact ✓; heightmap CI hill/cliff → scene/GUI → +M5b banked + M5c 저작 → tag v0.5.0
 2. **ISO re-baseline** — flat only (`run_validation.py`)
 3. Ld4 v0.6 — shared inertia helpers; full loop dynamics; Featherstone in step (optional)
-4. `main` ← PR after review
+4. `main` ← PR after review (cleanup 브랜치 정리 완료, ctest 266)
 
 ## 5. 주의
 

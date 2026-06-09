@@ -1,6 +1,6 @@
 # VDSim product roadmap
 
-**Last updated:** 2026-06-08 · **Tests:** 254/254 ctest green (branch `feat/v0.4-slope-jump-m5`)
+**Last updated:** 2026-06-08 · **Tests:** 266/266 ctest green (branch `feat/v0.4-slope-jump-m5`)
 
 Living roadmap from early PoC through v0.3. Tracks what shipped in mainline vs what
 is planned. Detail specs link to `docs/design/*`; tire phases in
@@ -26,7 +26,7 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 | Brake / steer | Pluggable modules + deadtime | Booster/MDPS physics |
 | Catalog / runtime | `--scene=`, fleet, FMI | External part packs, VDS1 v4 |
 | GUI | 3-tab scene UI, catalog API, workshops | Tire `.tir` import UI |
-| Validation | ISO 7401/4138/3888, 254 ctest | Re-baseline flat; Adams x-check rtol |
+| Validation | ISO 7401/4138/3888, 266 ctest | Re-baseline flat; Adams x-check rtol |
 
 ```mermaid
 timeline
@@ -67,6 +67,7 @@ timeline
 | [x] Ld5 6-DOF 3D body + quaternion | Shipped v0.4 (stunt) | `free_3d_dynamics.cpp`; terrain → v0.5 |
 | [x] 3D contact / airborne / ramp jump | Shipped v0.4 | [`V0.4_SLOPE_JUMP_DYNAMICS.md`](design/V0.4_SLOPE_JUMP_DYNAMICS.md) |
 | [ ] **Terrain + L5 general driving** | Planned v0.5 | [`V0.5_TERRAIN_L5.md`](design/V0.5_TERRAIN_L5.md) |
+| [ ] Curved banked track (`CurvedGround` + banked oval) | Planned v0.5 (was v0.4 M3) | `V0.5_TERRAIN_L5.md` M5b |
 | [ ] V2V collision | Planned | [`V0.2_MULTIVEHICLE.md`](design/V0.2_MULTIVEHICLE.md) |
 
 ---
@@ -226,7 +227,7 @@ LuGre (contact bristle, presliding). See [`TIRE_ROADMAP.md`](design/TIRE_ROADMAP
 | [x] Catalog part picker in GUI | Shipped | v0.3 M4 |
 | [ ] Tire workshop: `.tir` import button | Planned | WS2-5 |
 | [ ] Engine map workshop (curves) | Planned | WS2-6 |
-| [ ] Stunt preset panel (ramp / loop) | Planned v0.4 | `V0.4_PLAN.md` |
+| [ ] Stunt *authoring* preset panel (ramp / loop / banked) | Planned **v0.5** (render-only today) | `V0.5_TERRAIN_L5.md` M5c |
 
 ---
 
@@ -266,12 +267,15 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 
 | Milestone | Item | Status |
 |-----------|------|--------|
-| M1 | T23 jump C++ + contact `is_valid` | [ ] |
-| M2 | RampGround + `jump_ramp.yaml` + GUI | [ ] |
-| M3 | CurvedGround + banked scenario | [ ] |
-| M4 | Ld5 core + jump on Ld5 | [ ] |
-| M5 | MeshGround loop + `vertical_loop.yaml` | [ ] |
-| M6 | Loop validation + theory `07_ld5_stunt` | [ ] |
+| M1 | T23 jump C++ + contact `is_valid` | [x] |
+| M2 | RampGround + ramp scene + GUI render | [x] |
+| M3 | CurvedGround + banked scenario | → **v0.5** (M5b) |
+| M4 | Ld5 core + jump on Ld5 | [x] |
+| M5 | LoopGround + `vertical_loop_demo.yaml` | [x] |
+| M6 | Loop validation (✓) + theory `07_ld5_stunt` | [~] theory doc TODO |
+
+Close-out before tag `v0.4.0`: write `theory/07_ld5_stunt.md` (M6). Descoped to v0.5:
+banked curve (`CurvedGround`/`banked_oval`) + GUI stunt *authoring* panel (render-only today).
 
 ---
 
