@@ -4,9 +4,31 @@ All notable changes to VDSim are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow
 [SemVer](https://semver.org/).
 
-## [Unreleased] — v0.3 parts catalog + drivetrain inertia
+## [0.4.0] — 2026-06-09 · stunt (Ld5) + multibody (Ld4); folds v0.3 catalog + drivetrain
 
-### Added
+(v0.3 was never tagged; its catalog + drivetrain + LuGre work ships in this release
+alongside the v0.4 stunt/multibody additions below.)
+
+### Added — v0.4 (3D stunt + multibody)
+- **Ld5 free 3D body** (`Free3DDynamics`, `level=L5`): 6-DOF quaternion attitude,
+  Newton–Euler body-frame EOM, per-wheel MF96/LuGre in the wheel **contact frame**
+  (valid inverted), penalty normal-force contact + airborne phase.
+- **Stunt scenarios**: ramp jump (`jump_ramp_demo.yaml`) and vertical loop
+  (`vertical_loop_demo.yaml`); `RampGround` / `LoopGround` providers; loop entry
+  speed `v_min = √(5gR)`.
+- **Ld4 hard-joint multibody M1–M7** (`multibody.hpp`): TA / MP / DW / 5-link
+  topologies, Baumgarte travel, K&C sweep charts, Adams CSV cross-check (5 gains, 5% rtol).
+- **Theory ch.20** (Ld5 stunt EOM + loop entry speed); multibody ch.13/14.
+- Tests: `Stunt/*` (jump airborne interval + landing, loop completes / mid-arc
+  contact / slip balance / wheel-spin bound), `tests/integration/test_l5_driving.cpp`.
+
+### Changed — v0.4 (cleanup)
+- GUI `app.html` (4873 L) externalized: `<style>`→`static/app.css`,
+  `<script>`→`static/{util,minimap,fields,manual}.js` (shell ~250 L); `/static/` route.
+- Removed legacy `vehicles`-format scene loaders, legacy L3 stunt rail mode, and dead
+  GUI route aliases; hoisted shared low-speed blend constants to `vdsim/low_speed.hpp`.
+
+### Added — v0.3 (catalog + drivetrain)
 - User guide `docs/CATALOG_AND_PHYSICS.md` (catalog, scenes, GUI API, drivetrain,
   LuGre); mkdocs nav + README links.
 - Drivetrain engine rotational inertia (`engine_rotational_inertia`) reflected to
