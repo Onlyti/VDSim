@@ -179,6 +179,24 @@ def handle_get(h, route, qs, ctx):
             h.send_response(404)
             h.end_headers()
         return True
+    if route.startswith("/static/"):
+        rel = route.lstrip("/").split("?")[0]
+        fp = (ctx.here / rel).resolve()
+        if str(fp).startswith(str(ctx.here / "static")) and fp.is_file():
+            if fp.suffix == ".css":
+                ct = "text/css; charset=utf-8"
+            elif fp.suffix == ".js":
+                ct = "application/javascript; charset=utf-8"
+            else:
+                h.send_response(404)
+                h.end_headers()
+                return True
+            bytes_response(h, fp.read_bytes(), ct,
+                           extra_headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
+        else:
+            h.send_response(404)
+            h.end_headers()
+        return True
     fn = GET_EXACT.get(route)
     if fn is not None:
         fn(h, qs, ctx)
