@@ -118,6 +118,10 @@ public:
         belt_kappa_.fill(0.0);
         belt_alpha_.fill(0.0);
         kappa_geom_last_.fill(0.0);
+        belt_vlong_.fill(0.0);
+        belt_vlat_.fill(0.0);
+        v_slip_long_last_.fill(0.0);
+        v_slip_lat_last_.fill(0.0);
         alpha_geom_last_.fill(0.0);
         lugre_z_long_.fill(0.0);
         lugre_z_lat_.fill(0.0);
@@ -415,8 +419,16 @@ private:
             wheel_spin_last_[i] = s.wheel_spin[i];
 
             const double muFz = std::min(mu_long_i, mu_lat_i) * std::max(0.0, Fz[i]);
-            const double v_slip_long = R * s.wheel_spin[i] - v_x_wheel;
-            const double v_slip_lat  = v_y_wheel;
+            // Belt transient on the LuGre path relaxes the slip *velocity* feeding
+            // the bristle v_r (belt -> LuGre, complementary; substep advances the
+            // belt_v*_ states). MF path relaxes kappa/alpha above.
+            const double v_slip_long_geom = R * s.wheel_spin[i] - v_x_wheel;
+            const double v_slip_lat_geom  = v_y_wheel;
+            v_slip_long_last_[i] = v_slip_long_geom;
+            v_slip_lat_last_[i]  = v_slip_lat_geom;
+            const bool belt_lugre = tp_.belt.enabled && lugre_on;
+            const double v_slip_long = belt_lugre ? belt_vlong_[i] : v_slip_long_geom;
+            const double v_slip_lat  = belt_lugre ? belt_vlat_[i]  : v_slip_lat_geom;
 
             double Fx_w = 0.0, Fy_w = 0.0;
             double Fxd = 0.0, Fyd = 0.0;
@@ -642,6 +654,13 @@ private:
                 belt_alpha_[i] = belt_relax(belt_alpha_[i], alpha_geom_last_[i],
                                             v_x_wheel_last_[i], tp_.belt.sigma_lat, h);
             }
+        } else if (tp_.belt.enabled && tp_.lugre.enabled) {
+            for (int i = 0; i < NUM_WHEELS; ++i) {
+                belt_vlong_[i] = belt_relax(belt_vlong_[i], v_slip_long_last_[i],
+                                            v_x_wheel_last_[i], tp_.belt.sigma_long, h);
+                belt_vlat_[i]  = belt_relax(belt_vlat_[i], v_slip_lat_last_[i],
+                                            v_x_wheel_last_[i], tp_.belt.sigma_lat, h);
+            }
         }
     }
 
@@ -673,6 +692,11 @@ private:
     std::array<double, NUM_WHEELS> belt_kappa_      {{0.0, 0.0, 0.0, 0.0}};
     std::array<double, NUM_WHEELS> belt_alpha_      {{0.0, 0.0, 0.0, 0.0}};
     std::array<double, NUM_WHEELS> kappa_geom_last_ {{0.0, 0.0, 0.0, 0.0}};
+    // Belt on the LuGre path: relaxed slip *velocities* + geometric last values.
+    std::array<double, NUM_WHEELS> belt_vlong_       {{0.0, 0.0, 0.0, 0.0}};
+    std::array<double, NUM_WHEELS> belt_vlat_        {{0.0, 0.0, 0.0, 0.0}};
+    std::array<double, NUM_WHEELS> v_slip_long_last_ {{0.0, 0.0, 0.0, 0.0}};
+    std::array<double, NUM_WHEELS> v_slip_lat_last_  {{0.0, 0.0, 0.0, 0.0}};
     std::array<double, NUM_WHEELS> v_x_wheel_last_  {{0.0, 0.0, 0.0, 0.0}};
     std::array<double, NUM_WHEELS> v_y_wheel_last_  {{0.0, 0.0, 0.0, 0.0}};
     std::array<double, NUM_WHEELS> wheel_spin_last_ {{0.0, 0.0, 0.0, 0.0}};

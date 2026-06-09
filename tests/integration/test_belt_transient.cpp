@@ -15,10 +15,10 @@
 
 namespace {
 
-double step_steer_ay(bool belt, double t_s) {
+double step_steer_ay(bool belt, double t_s, bool lugre = false) {
     vdsim::VehicleParams vp; vp.aero_drag_coeff = 0.0;
     vdsim::TireParams tp;
-    tp.lugre.enabled = false;          // belt acts on the MF path
+    tp.lugre.enabled = lugre;          // belt acts on MF (lugre off) or LuGre slip-velocity path
     tp.belt.enabled = belt;
     tp.belt.sigma_lat = 0.6;           // tau = 0.6/20 = 30 ms at 20 m/s
     vdsim::SolverParams sp;
@@ -57,4 +57,18 @@ TEST(BeltTransient, LateralResponseLagsThenConverges) {
     const double ay_on_ss  = step_steer_ay(true,  0.8);
     EXPECT_GT(ay_off_ss, 0.5);
     EXPECT_NEAR(ay_on_ss, ay_off_ss, 0.15 * ay_off_ss) << "belt does not change steady state";
+}
+
+// T2.3 — belt stacks on the LuGre (default) path: relaxes the slip velocity
+// feeding v_r, so the early response lags with belt on and converges by steady.
+TEST(BeltTransient, LuGrePathAlsoLagsThenConverges) {
+    const double ay_off_early = step_steer_ay(false, 0.020, /*lugre=*/true);
+    const double ay_on_early  = step_steer_ay(true,  0.020, /*lugre=*/true);
+    EXPECT_GT(ay_off_early, 0.1);
+    EXPECT_LT(ay_on_early, ay_off_early) << "belt lags the LuGre early response";
+
+    const double ay_off_ss = step_steer_ay(false, 0.8, true);
+    const double ay_on_ss  = step_steer_ay(true,  0.8, true);
+    EXPECT_GT(ay_off_ss, 0.5);
+    EXPECT_NEAR(ay_on_ss, ay_off_ss, 0.20 * ay_off_ss);
 }
