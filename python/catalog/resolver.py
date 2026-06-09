@@ -95,8 +95,54 @@ class CatalogResolver:
             if bid in self._blueprint_index:
                 raise CatalogError(f"duplicate blueprint id in manifest: {bid}")
             self._blueprint_index[str(bid)] = path
+        self._merge_packages(doc)
         self._manifest = doc
         return doc
+
+    def clear_cache(self) -> None:
+        self._manifest = None
+        self._part_index.clear()
+        self._blueprint_index.clear()
+
+    def _merge_packages(self, doc: Mapping[str, Any]) -> None:
+        catalog_root = self.catalog_root
+        entries: List[dict] = list(doc.get("packages") or [])
+        auto_root = catalog_root / "catalog" / "packages"
+        if auto_root.is_dir():
+            for d in sorted(auto_root.iterdir()):
+                if not d.is_dir():
+                    continue
+                mf = d / "manifest.yaml"
+                if not mf.is_file():
+                    continue
+                rel = f"catalog/packages/{d.name}/manifest.yaml"
+                if not any(str(e.get("id")) == d.name for e in entries):
+                    entries.append({"id": d.name, "path": rel})
+        for entry in entries:
+            rel = str(entry.get("path", ""))
+            if not rel:
+                continue
+            pkg_manifest = (catalog_root / rel).resolve()
+            if not pkg_manifest.is_file():
+                continue
+            pkg_doc = self._read_yaml(pkg_manifest)
+            pkg_root = pkg_manifest.parent
+            for part in pkg_doc.get("parts") or []:
+                pid = str(part.get("id", ""))
+                prel = str(part.get("path", ""))
+                if not pid or not prel:
+                    raise CatalogError(f"package part entry needs id and path: {pkg_manifest}")
+                if pid in self._part_index:
+                    raise CatalogError(f"duplicate part id across catalog: {pid}")
+                self._part_index[pid] = (pkg_root / prel).resolve()
+            for bp in pkg_doc.get("blueprints") or []:
+                bid = str(bp.get("id", ""))
+                brel = str(bp.get("path", ""))
+                if not bid or not brel:
+                    raise CatalogError(f"package blueprint entry needs id and path: {pkg_manifest}")
+                if bid in self._blueprint_index:
+                    raise CatalogError(f"duplicate blueprint id across catalog: {bid}")
+                self._blueprint_index[bid] = (pkg_root / brel).resolve()
 
     def list_blueprints(self) -> List[dict]:
         self.load_manifest()

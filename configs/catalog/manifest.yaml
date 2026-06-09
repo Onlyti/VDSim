@@ -80,4 +80,6 @@ blueprints:
   path: blueprints/sedan_l3.yaml
 - id: vehicle.sports_aggressive
   path: blueprints/sports_aggressive.yaml
-packages: []
+packages:
+- id: gui_custom
+  path: catalog/packages/gui_custom/manifest.yaml

@@ -21,6 +21,10 @@ struct SuspensionTopology;
 // =============================================================================
 class IVehicleDynamics {
 public:
+    // Ladder IDs (YAML/GUI): K, L1–L5. Theory names (Ld0–Ld5):
+    //   K/Ld0 Kinematic bicycle | L1/Ld1 Single-track bicycle (5-DOF)
+    //   L2/Ld2 Planar seven-DOF per-wheel | L3/Ld3 Ride fourteen-DOF
+    //   L4/Ld4 Hardpoint kinematic multibody | L5/Ld5 Free 3D stunt
     enum class Level { L1_Bicycle, L2_SevenDOF, L3_FourteenDOF, L4_Kinematic,
                        L5_Stunt, Lk_Kinematic };
 
