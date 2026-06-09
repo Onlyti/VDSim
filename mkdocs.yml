@@ -110,6 +110,7 @@ nav:
       - "02 — Rigid-body dynamics": theory/02_rigid_body_dynamics.md
       - "03 — Tire (Pacejka MF96)": theory/03_tire_pacejka_mf96.md
       - "19 — Tire (LuGre / brush)": theory/19_lugre_dynamic_tire.md
+      - "21 — Tire (belt transient)": theory/21_belt_transient.md
       - "04 — Ld1-Bicycle": theory/04_ld1_bicycle.md
       - "05 — Ld2-SevenDOF": theory/05_ld2_seven_dof.md
       - "06 — Ld3-FourteenDOF": theory/06_ld3_fourteen_dof.md

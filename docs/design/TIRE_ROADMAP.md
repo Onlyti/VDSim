@@ -184,9 +184,10 @@ with a compatibility matrix in T2 design note.
 > velocity feeding v_r). T2.4 — free_3d (L5) MF + LuGre. Opt-in `BeltTireParams
 > {enabled, sigma_lat, sigma_long}` (default off -> no ISO/L2/L3 drift). **Validation:**
 > `test_belt_validation.cpp` — steady unchanged, early response suppressed at t=tau,
-> more lag at lower speed (the sigma/|Vx| scaling). 291 ctest.
-> **Remaining:** theory chapter (belt transient, ch.21); bicycle (L1) wiring (lowest
-> value). Then T2 can merge with T1 (T1 -> T2 ff order).
+> more lag at lower speed (the sigma/|Vx| scaling). 291 ctest. Theory:
+> [`theory/21_belt_transient.md`](../theory/21_belt_transient.md).
+> **Remaining:** bicycle (L1) wiring (lowest value). Then T2 can merge with T1
+> (T1 -> T2 ff order).
 
 | Item | Deliverable |
 |------|-------------|
