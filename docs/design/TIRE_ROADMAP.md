@@ -150,6 +150,14 @@ with a compatibility matrix in T2 design note.
 
 ### Phase T1 — Steady MF2002 in catalog (medium effort)
 
+> **Progress (2026-06-09, `feat/tire-t1-mf2002`):** T1.1 — MF2002/.tir evaluator
+> sanity tests on a runtime synthetic `.tir` (`Mf2002Catalog.*`; no `.tir` committed).
+> T1.2 — `TireParams.backend`/`tir_path` + `create_tire_from_params()` dispatch wired
+> into every dynamics `initialize()` (default `mf96` unchanged; `magic_formula` loads
+> MF2002 from `tir_path`; `linear` fallback). 277 ctest. **Remaining:** catalog tire
+> part selecting `backend` + GUI `.tir` import; combined-slip $G_{x\alpha},G_{y\kappa}$
+> on the measured path; parity gate vs Chrono Pac02 reference.
+
 | Item | Deliverable |
 |------|-------------|
 | Wire `create_*_from_tir()` | catalog tire parts + GUI import |
