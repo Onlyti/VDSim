@@ -81,3 +81,7 @@ configs/tires/measured/
 /results/
 runs/
 apps/validation/results/
+
+# Catalog: generated resolve cache + GUI-runtime-registered package stub
+configs/.resolve_cache/
+configs/catalog/packages/gui_custom/
