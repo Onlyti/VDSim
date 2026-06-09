@@ -57,7 +57,14 @@ build/bin/vdsim_realtime --scene=configs/scenes/two_vehicle_race.yaml \
 # LuGre tire (override YAML default): add --lugre or use scene lugre_grade_demo.yaml
 build/bin/vdsim_realtime --scene=configs/scenes/lugre_grade_demo.yaml
 python3 examples/lugre_demo.py
+# L5 terrain / stunt scenes (v0.5): heightmap hill, banked plane, banked turn, loop
+build/bin/vdsim_realtime --scene=configs/scenes/terrain_hill_demo.yaml
+build/bin/vdsim_realtime --scene=configs/scenes/banked_oval.yaml
+# bake your own analytic hill heightmap (.bin) for a terrain scene:
+python3 tools/bake_synthetic_hill.py --out assets/terrain/hill_demo.bin
 ```
+> v0.5 ships terrain + L5 for the headless / batch / cosim paths. GUI terrain load
+> and L5 Play (the in-browser viewer) are a v0.5.1 item — see `design/V0.5_TERRAIN_L5.md`.
 Python participants (wheel/pedal clients, viewer bridge, HIL harnesses) encode
 CMD / decode STATE through `cosim/protocol.py` — one definition of the wire
 format, byte-compatible with the server. (See `cosim/test_udp_client.py`.)

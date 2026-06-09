@@ -4,6 +4,28 @@ All notable changes to VDSim are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow
 [SemVer](https://semver.org/).
 
+## [0.5.0] — 2026-06-09 · terrain + L5 general driving (headless / batch / cosim)
+
+Generalizes the v0.4 Ld5 stunt body to driving on arbitrary ground. GUI terrain
+load + L5 Play and a stunt-scene authoring panel are deferred to v0.5.1.
+
+### Added
+- **L5 on terrain**: hub-consistent per-wheel contact unified across Flat / SplitMu /
+  Inclined / Rough / **Heightmap** (`wheel_world_positions` + `hub_penetration`).
+- **CurvedGround**: banked circular turn in x-y (radius about a centre, banked inward;
+  centripetal normal) — `create_curved_ground`, cosim `stunt.ground == banked`.
+- Terrain scenes: `terrain_hill_demo.yaml` (heightmap), `banked_grade_demo.yaml`
+  (inclined plane), `banked_oval.yaml` (curved banked turn).
+- `tools/bake_synthetic_hill.py` + `assets/terrain/hill_demo.bin` (61×41 Gaussian hill).
+- `materialize_scene_file` forwards `terrain` (resolved absolute) + `rough_amp/rough_wl/iso_class`.
+- Theory **ch.20** (Ld5 stunt EOM + loop entry speed).
+- Tests `tests/integration/test_terrain_l5.cpp`: no-sink, hill climb, settle on
+  flank, brief airborne over a cliff, uphill coast, bank-induced roll, banked turn
+  holds line. **273/273 ctest green.**
+
+### Deferred (v0.5.1)
+- M4 GUI terrain load + L5 Play; M5c GUI stunt authoring panel (render-only today).
+
 ## [0.4.0] — 2026-06-09 · stunt (Ld5) + multibody (Ld4); folds v0.3 catalog + drivetrain
 
 (v0.3 was never tagged; its catalog + drivetrain + LuGre work ships in this release

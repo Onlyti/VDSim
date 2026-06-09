@@ -1,6 +1,6 @@
 # VDSim 핸드오프
 
-작성: **2026-06-08** · 브랜치 `feat/v0.4-slope-jump-m5` · **266/266 ctest green**
+작성: **2026-06-08** · 브랜치 `feat/v0.5-terrain-m1` · **273/273 ctest green**
 
 ## 1. 문서 인덱스
 
@@ -56,17 +56,19 @@ python3 gui/server.py                   # http://127.0.0.1:8080
 
 ## 4. 다음 작업
 
-**v0.4 close-out (태그 전 1건):**
-- `docs/theory/20_ld5_stunt.md` 작성 (M6) — Ld5 EOM + loop 진입속도 `v_min≈√(5gR)`. 이미
-  shipped 된 거동의 문서화. validation 테스트는 완료(loop 4종 + jump).
-- **descoped → v0.5**: banked curve(`CurvedGround`+`banked_oval`, v0.4 M3) + GUI stunt
-  **저작** preset 패널(현재 render-only, 저작 UI 없음). 상세 `V0.5_TERRAIN_L5.md` M5b/M5c.
+**Shipped:** v0.4.0 (stunt Ld5 + Ld4 multibody + theory ch.20) and **v0.5.0**
+(terrain + L5, headless/batch/cosim) are tagged on `main`. v0.5.0 work landed on
+`feat/v0.5-terrain-m1`: M0 hub contact · M1 heightmap (no-sink/climb/flank) · M2 cliff
+airborne · M3 terrain scene+bake · M5 inclined/banked · M5b CurvedGround banked turn ·
+M6 docs. 273 ctest. Scenes: `terrain_hill_demo`, `banked_grade_demo`, `banked_oval`.
 
-**v0.5+:**
-1. **v0.5 terrain + L5** — M0 hub contact ✓; heightmap CI hill/cliff → scene/GUI → +M5b banked + M5c 저작 → tag v0.5.0
-2. **ISO re-baseline** — flat only (`run_validation.py`)
-3. Ld4 v0.6 — shared inertia helpers; full loop dynamics; Featherstone in step (optional)
-4. `main` ← PR after review (cleanup 브랜치 정리 완료, ctest 266)
+**v0.5.1 (deferred — needs browser, no headless path):**
+1. **M4 GUI terrain load + L5 Play** — chase cam uses `position.z`, spawn on mesh.
+2. **M5c GUI stunt authoring** — author ramp/loop/banked scenes (today render-only).
+
+**v0.6+:**
+1. **ISO re-baseline** — flat only (`run_validation.py`).
+2. Ld4 v0.6 — shared inertia helpers; full loop dynamics; Featherstone in step (optional).
 
 ## 5. 주의
 
