@@ -26,7 +26,7 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 | Brake / steer | Pluggable modules + deadtime | Booster/MDPS physics |
 | Catalog / runtime | `--scene=`, fleet, FMI | External part packs, VDS1 v4 |
 | GUI | 3-tab scene UI, catalog API, workshops | Tire `.tir` import UI |
-| Validation | ISO 7401/4138/3888, 266 ctest | Re-baseline flat; Adams x-check rtol |
+| Validation | ISO 7401/4138/3888, 273 ctest | Re-baseline flat; Adams x-check rtol |
 
 ```mermaid
 timeline
