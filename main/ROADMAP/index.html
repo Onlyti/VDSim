@@ -2903,7 +2903,7 @@
 
 
 <h1 id="vdsim-product-roadmap">VDSim product roadmap<a class="headerlink" href="#vdsim-product-roadmap" title="Permanent link">&para;</a></h1>
-<p><strong>Last updated:</strong> 2026-06-10 · <strong>Tests:</strong> 291/291 ctest green (<code>main</code>)</p>
+<p><strong>Last updated:</strong> 2026-06-10 · <strong>Tests:</strong> 292/292 ctest green (<code>main</code>)</p>
 <p>Living roadmap from early PoC through v0.3. Tracks what shipped in mainline vs what
 is planned. Detail specs link to <code>docs/design/*</code>; tire phases in
 <a href="../design/TIRE_ROADMAP/"><code>design/TIRE_ROADMAP.md</code></a>.</p>
@@ -2960,8 +2960,8 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 </tr>
 <tr>
 <td>Validation</td>
-<td>ISO 7401/4138/3888, 291 ctest</td>
-<td><strong>Re-baseline flat (debt)</strong>; Adams x-check rtol</td>
+<td>ISO 7401/4138/3888 <strong>re-baselined + CI-gated</strong> (<code>IsoBaseline</code>), 292 ctest</td>
+<td>Adams x-check rtol; commercial cross-val</td>
 </tr>
 </tbody>
 </table>
@@ -3737,14 +3737,14 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <td></td>
 </tr>
 <tr>
-<td>[x] <strong>209</strong> automated ctests</td>
+<td>[x] <strong>292</strong> automated ctests</td>
 <td>Shipped</td>
-<td>2026-06-06</td>
+<td>2026-06-10</td>
 </tr>
 <tr>
-<td>[ ] ISO matrix re-baseline (post engine inertia)</td>
-<td>Planned</td>
-<td></td>
+<td>[x] ISO matrix re-baseline (post engine inertia + LuGre) + CI gate</td>
+<td>Shipped</td>
+<td><code>IsoBaseline</code>; VALIDATION.md table 2026-06-10</td>
 </tr>
 <tr>
 <td>[ ] Stunt validation suite (<code>tests/stunt/*</code>)</td>
@@ -3845,12 +3845,12 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Tire T1 MF2002 <code>.tir</code> backend + combined-slip ellipse bypass</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Tire T2 belt transient (L2/L3/L5, MF+LuGre, validation, theory ch.21)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> ISO re-baseline (flat, sedan L2 LuGre) + CI gate <code>IsoBaseline</code></li>
 </ul>
 <h3 id="v052-planned">v0.5.2+ (planned)<a class="headerlink" href="#v052-planned" title="Permanent link">&para;</a></h3>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> GUI terrain Play (M4) + stunt authoring (M5c) + <code>.tir</code> import — browser-gated</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Tire: bicycle (L1) belt; Chrono Pac02 parity gate</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> ISO re-baseline (flat) — accrued debt</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Drivetrain torque–RPM + gearbox</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Brake/steer physics upgrade</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> CARLA full bridge · open benchmark  </li>
