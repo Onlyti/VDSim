@@ -419,6 +419,45 @@ private:
     double xc_, zc_, R_, mu_;
 };
 
+// Banked circular turn in the x-y plane: reference circle radius R about
+// (xc, yc), banked inward by `bank` (outer edge higher). Height rises with the
+// radial distance rho: z = z0 + (rho - R)*tan(bank); the surface normal tilts
+// toward the centre and up, n ~ (-tan(bank)*e_rho, 1), so the normal force has a
+// centripetal component (the physics of a velodrome / oval turn).
+class CurvedGround final : public IContactProvider {
+public:
+    CurvedGround(double xc, double yc, double radius, double bank,
+                 double z0, double mu)
+        : xc_(xc), yc_(yc), R_(std::max(2.0, radius)),
+          tb_(std::tan(bank)), z0_(z0), mu_(mu) {}
+
+    void query(const State& vehicle, const VehicleParams& vp,
+               ContactArray& out) override {
+        std::array<Vec3, NUM_WHEELS> pw{};
+        wheel_world_positions(vehicle, vp, pw);
+        const double r = vp.wheel_radius_nominal;
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            const double ex = pw[i].x() - xc_, ey = pw[i].y() - yc_;
+            const double rho = std::hypot(ex, ey);
+            const double inv = rho > 1e-6 ? 1.0 / rho : 0.0;
+            const double rx = ex * inv, ry = ey * inv;   // outward radial unit
+            const double z = z0_ + (rho - R_) * tb_;
+            const Vec3 n = Vec3(-tb_ * rx, -tb_ * ry, 1.0).normalized();
+            const Vec3 road_pt(pw[i].x(), pw[i].y(), z);
+            out[i].is_valid    = true;
+            out[i].normal      = n;
+            out[i].mu_long     = mu_;
+            out[i].mu_lat      = mu_;
+            out[i].surface_id  = 3;
+            out[i].position    = road_pt;
+            out[i].penetration = hub_penetration(pw[i], n, road_pt, r);
+        }
+    }
+
+private:
+    double xc_, yc_, R_, tb_, z0_, mu_;
+};
+
 class FlatRoughness final : public IRoughnessProvider {
 public:
     double sample_height(const Vec2& /*world_xy*/) const override { return 0.0; }
@@ -460,6 +499,11 @@ std::unique_ptr<IContactProvider> create_ramp_ground(
 std::unique_ptr<IContactProvider> create_loop_ground(
     double xc, double zc, double radius, double mu) {
     return std::make_unique<LoopGround>(xc, zc, radius, mu);
+}
+
+std::unique_ptr<IContactProvider> create_curved_ground(
+    double xc, double yc, double radius, double bank, double z0, double mu) {
+    return std::make_unique<CurvedGround>(xc, yc, radius, bank, z0, mu);
 }
 
 std::unique_ptr<IContactProvider> create_rough_ground(

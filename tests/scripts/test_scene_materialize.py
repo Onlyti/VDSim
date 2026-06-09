@@ -62,6 +62,14 @@ def main():
         assert bank_doc["vehicles"][0]["level"] == "L5"
         assert bank_doc.get("grade") and bank_doc.get("bank"), "grade/bank must reach world"
 
+        oval = REPO / "configs" / "scenes" / "banked_oval.yaml"
+        oval_out = Path(td) / "oval_world.yaml"
+        materialize_scene_file(oval, oval_out)
+        oval_doc = yaml.safe_load(oval_out.read_text()) or {}
+        assert oval_doc["vehicles"][0]["level"] == "L5"
+        assert oval_doc.get("stunt", {}).get("ground") == "banked"
+        assert oval_doc.get("bank"), "bank must reach world for the curved turn"
+
     r = CatalogResolver(REPO)
     assert r.load_blueprint("vehicle.sedan_comfort")
     print("test_scene_materialize: ok")

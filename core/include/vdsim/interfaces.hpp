@@ -163,6 +163,15 @@ std::unique_ptr<IContactProvider> create_ramp_ground(
 std::unique_ptr<IContactProvider> create_loop_ground(
     double xc, double zc, double radius, double mu = 1.0);
 
+// Banked circular turn (velodrome / oval turn) in the x-y plane: reference
+// circle radius R about (xc, yc), road cross-section banked inward by `bank`
+// (outer edge higher). Height z = z0 + (rho - R)*tan(bank); the surface normal
+// tilts toward the centre (centripetal) and up, so banking supplies part of the
+// cornering force. rho is the radial distance from (xc, yc).
+std::unique_ptr<IContactProvider> create_curved_ground(
+    double xc, double yc, double radius, double bank, double z0 = 0.0,
+    double mu = 1.0);
+
 // Rough flat plane: two-tone road profile -> road_dz (L3 ride excitation).
 std::unique_ptr<IContactProvider> create_rough_ground(
     double z, double mu, double amp, double wavelength = 4.0);

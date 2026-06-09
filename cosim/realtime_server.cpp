@@ -153,6 +153,9 @@ std::unique_ptr<vdsim::IContactProvider> make_ground(
         if (stunt.ground == "loop")
             return vdsim::create_loop_ground(
                 stunt.loop_center_x, stunt.loop_center_z, stunt.loop_radius, rd.mu);
+        if (stunt.ground == "banked")   // banked turn in x-y: center_z reused as yc, bank from road
+            return vdsim::create_curved_ground(
+                stunt.loop_center_x, stunt.loop_center_z, stunt.loop_radius, rd.bank, 0.0, rd.mu);
         std::fprintf(stderr, "[vdsim_realtime] unknown stunt.ground=%s (flat)\n",
                      stunt.ground.c_str());
     }

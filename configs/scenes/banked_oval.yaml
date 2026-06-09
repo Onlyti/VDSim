@@ -1,0 +1,25 @@
+id: scene.banked_oval
+version: 1
+label: Banked turn (L5, curved ground)
+rate: 200
+cmd_timeout: 0.1
+mu: 1.1
+# Banked circular turn: radius 40 m about (0,0), banked inward by 0.20 rad.
+# CurvedGround in the cosim runtime (stunt.ground == banked; center_z reused as
+# the y-centre). Neutral speed v_n = sqrt(g R tan(bank)) ~ 8.9 m/s; spawn on the
+# +x edge heading +y (CCW tangent) so banking supplies the cornering force.
+bank: 0.20
+stunt:
+  ground: banked
+  center_x: 0.0
+  center_z: 0.0
+  radius_m: 40.0
+fleet:
+- id: 0
+  blueprint: vehicle.sedan_comfort
+  level: L5
+  x0: 40.0
+  y0: 0.0
+  z0: 0.6
+  yaw0: 1.5708
+  vx0: 8.9

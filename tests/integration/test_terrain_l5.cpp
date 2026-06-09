@@ -250,3 +250,50 @@ TEST(Terrain, L5BriefAirOverCliff) {
     const auto fz_end = h.dyn->tire_Fz();
     EXPECT_GT(fz_end[0] + fz_end[1] + fz_end[2] + fz_end[3], 0.2 * mg);    // back in contact
 }
+
+// M5b — banked circular turn (CurvedGround). At the neutral speed
+// v_n = sqrt(g R tan(bank)) with Ackermann steer for radius R, the body corners
+// around the centre and holds the line (radius stays near R, no slide-off).
+TEST(Terrain, BankedTurnHoldsLine) {
+    const double R = 40.0, bank = 0.20;
+    const double v_n = std::sqrt(9.80665 * R * std::tan(bank));   // ~8.9 m/s
+    vdsim::VehicleParams vp;
+    vp.aero_drag_coeff = 0.0;
+    vdsim::TireParams tp;
+    tp.lugre.enabled = false;
+    vdsim::SolverParams sp;
+    sp.stunt_physics = true;
+    sp.max_substep_dt = 2e-4;
+    sp.max_substeps = 16;
+    auto dyn = vdsim::create_stunt_dof();
+    dyn->initialize(vp, tp, sp);
+    auto ground = vdsim::create_curved_ground(0.0, 0.0, R, bank, 0.0, 1.0);
+
+    vdsim::State s;                            // spawn at (R,0) heading +y (CCW tangent)
+    s.position = vdsim::Vec3(R, 0.0, vp.cg_height);
+    s.orientation = vdsim::quat_from_euler(vdsim::Euler{0.0, 0.0, M_PI / 2});
+    s.velocity.x() = v_n;
+    const double w = v_n / vp.wheel_radius_nominal;
+    s.wheel_spin = {{w, w, w, w}};
+    dyn->reset(s);
+
+    vdsim::CmdL4 cmd;
+    cmd.steer_angle_wheel = std::atan(vp.wheelbase / R);   // Ackermann for radius R (left)
+    const vdsim::ControlInput u = cmd;
+    const double yaw0 = dyn->state().yaw();
+    double rho_min = R, rho_max = R;
+    for (int i = 0; i < 2500; ++i) {
+        vdsim::ContactArray c;
+        ground->query(dyn->state(), vp, c);
+        dyn->step(u, c, 0.001);
+        const auto& p = dyn->state().position;
+        const double rho = std::hypot(p.x(), p.y());
+        rho_min = std::min(rho_min, rho);
+        rho_max = std::max(rho_max, rho);
+    }
+    const double dyaw = dyn->state().yaw() - yaw0;
+    EXPECT_TRUE(std::isfinite(dyn->state().position.z()));
+    EXPECT_GT(std::abs(dyaw), 0.3) << "should corner around the turn";
+    EXPECT_GT(rho_min, R - 8.0) << "rho_min=" << rho_min;     // didn't cut far inboard
+    EXPECT_LT(rho_max, R + 12.0) << "rho_max=" << rho_max;    // didn't slide off outboard
+}
