@@ -12,6 +12,7 @@ add_executable(vdsim_integration_tests
     test_terrain_l5.cpp
     test_belt_transient.cpp
     test_belt_validation.cpp
+    test_iso_baseline.cpp
 )
 
 target_compile_definitions(vdsim_integration_tests PRIVATE

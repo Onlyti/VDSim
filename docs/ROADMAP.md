@@ -1,6 +1,6 @@
 # VDSim product roadmap
 
-**Last updated:** 2026-06-10 · **Tests:** 291/291 ctest green (`main`)
+**Last updated:** 2026-06-10 · **Tests:** 292/292 ctest green (`main`)
 
 Living roadmap from early PoC through v0.3. Tracks what shipped in mainline vs what
 is planned. Detail specs link to `docs/design/*`; tire phases in
@@ -26,7 +26,7 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 | Brake / steer | Pluggable modules + deadtime | Booster/MDPS physics |
 | Catalog / runtime | `--scene=`, fleet, FMI | External part packs, VDS1 v4 |
 | GUI | 3-tab scene UI, catalog API, workshops | Tire `.tir` import UI |
-| Validation | ISO 7401/4138/3888, 291 ctest | **Re-baseline flat (debt)**; Adams x-check rtol |
+| Validation | ISO 7401/4138/3888 **re-baselined + CI-gated** (`IsoBaseline`), 292 ctest | Adams x-check rtol; commercial cross-val |
 
 ```mermaid
 timeline
@@ -261,8 +261,8 @@ LuGre (contact bristle, presliding). See [`TIRE_ROADMAP.md`](design/TIRE_ROADMAP
 | [x] ISO 4138 understeer gradient | Shipped | |
 | [x] ISO 3888-2 DLC metric | Shipped | |
 | [x] ISO 8608 road PSD classes | Shipped | |
-| [x] **209** automated ctests | Shipped | 2026-06-06 |
-| [ ] ISO matrix re-baseline (post engine inertia) | Planned | |
+| [x] **292** automated ctests | Shipped | 2026-06-10 |
+| [x] ISO matrix re-baseline (post engine inertia + LuGre) + CI gate | Shipped | `IsoBaseline`; VALIDATION.md table 2026-06-10 |
 | [ ] Stunt validation suite (`tests/stunt/*`) | Planned v0.4 | |
 | [ ] Published commercial cross-val (open data) | Planned | Honest gap today |
 
@@ -327,12 +327,12 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 
 - [x] Tire T1 MF2002 `.tir` backend + combined-slip ellipse bypass
 - [x] Tire T2 belt transient (L2/L3/L5, MF+LuGre, validation, theory ch.21)
+- [x] ISO re-baseline (flat, sedan L2 LuGre) + CI gate `IsoBaseline`
 
 ### v0.5.2+ (planned)
 
 - [ ] GUI terrain Play (M4) + stunt authoring (M5c) + `.tir` import — browser-gated
 - [ ] Tire: bicycle (L1) belt; Chrono Pac02 parity gate
-- [ ] ISO re-baseline (flat) — accrued debt
 - [ ] Drivetrain torque–RPM + gearbox
 - [ ] Brake/steer physics upgrade
 - [ ] CARLA full bridge · open benchmark  

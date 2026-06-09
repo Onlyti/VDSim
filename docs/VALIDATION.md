@@ -17,8 +17,9 @@ the last section.
 | ISO 7401 step-steer / 4138 understeer / 3888-2 DLC — run + measured | Tire thermal, wear, full transient beyond first-order relaxation |
 | L1↔L2↔L3 cross-model consistency where physics overlaps | Dependent axles (twist-beam / solid beam) — configs are stubs |
 | FMI round-trip Δ=0 (machine precision); ISO 8608 PSD RMS per class | L3 unsprung lateral-transfer term (small) |
-| Full suite: **266/266 ctest green** | — |
-| Drivetrain engine inertia (open-diff carrier coupling) | ISO throttle transients may shift — re-baseline after `run_validation.py` |
+| Full suite: **292/292 ctest green** | — |
+| Drivetrain engine inertia (open-diff carrier coupling) | — |
+| **ISO step-steer signature gated in CI** (`ctest -R IsoBaseline`, sedan L2 LuGre) | DLC moose gate is a preset property, not a defect (see note) |
 
 Note: ISO 3888-2 DLC@60 not meeting the 1.0 m gate is a default-preset
 vehicle/controller property, not a sim defect (see "Notes on specific results").
@@ -45,15 +46,15 @@ vehicle/controller property, not a sim defect (see "Notes on specific results").
 | 5 | Lateral weight transfer | m·a_y·h/T direction+sign | outer wheels gain | — | `ctest -R WeightTransfer` |
 | 6 | L3 ↔ L2 planar | identical grip at steady state | divergence ~3e-6 | 1e-3 | `ctest -R PlanarMotionMatchesL2` |
 | 7 | L3 attitude on slope | follows surface plane | 6° bank→5.98° roll | — | see ch06 §6.4 |
-| 8 | ISO 7401 step-steer | transient shape | see **LuGre baseline** below (sedan L2, 6°) | — | `python3 apps/validation/run_validation.py` |
-| 9 | ISO 4138 understeer | sign of K | K = +9.44 mrad/g (understeer), linear ≤5.66 m/s² | — | same runner |
-| 10 | ISO 3888-2 DLC | excursion/speed-loss metric | 1.69 m / 1.34 km/h (sedan: does not meet 1.0 m) | — | same runner |
+| 8 | ISO 7401 step-steer | transient shape | ψ̇_ss 30.3°/s, U 1.16 (+16% OS), a_y_ss 8.34 m/s² (0.85 g) | gated ±band | `ctest -R IsoBaseline` / `run_validation.py` |
+| 9 | ISO 4138 understeer | sign + magnitude of K | K = +24.8 mrad/g (understeer), linear ≤4.0 m/s² | — | `run_validation.py` |
+| 10 | ISO 3888-2 DLC | excursion/speed-loss metric | 1.18 m / 0.9 km/h (sedan: does not meet 1.0 m) | — | same runner |
 | 11 | FMI round-trip | native VDSim | max \|Δvx\| = 0 (machine precision) | 1e-9 | `python3 fmi_export/test_roundtrip.py` |
 | 12 | ISO 8608 roughness | PSD Gd(n)=Gd(n0)(n/n0)⁻² | RMS doubles/class: A 3.5, B 7.0, C 14.1, D 28 mm | 15% | `ctest -R Iso8608` |
 
-Full automated suite: `cd build && ctest` — 266 checks, 100% green (measured 2026-06-09).
+Full automated suite: `cd build && ctest` — 292 checks, 100% green (measured 2026-06-10).
 
-**LuGre baseline (2026-06, sedan L2, `default_pacejka` tire):**
+**LuGre baseline (re-baselined 2026-06-10, sedan L2, `default_pacejka` tire):**
 
 ```bash
 python3 apps/validation/run_validation.py \
@@ -64,23 +65,25 @@ python3 apps/validation/run_validation.py \
 
 | Maneuver | Key metrics |
 |----------|-------------|
-| ISO 7401 (6°, 80 km/h) | ψ̇_ss 17.5°/s, U 1.003 (+0.3% OS), a_y_ss 6.15 m/s² (0.63 g) |
-| ISO 4138 | K +0.071 mrad/g (neutral), linear a_y to 4 m/s² |
-| ISO 3888-2 DLC@60 | excursion 1.11 m (fail 1.0 m gate), speed loss −1.0 km/h |
+| ISO 7401 (6°, 80 km/h) | ψ̇_ss 30.3°/s, U 1.16 (+16% OS), a_y_ss 8.34 m/s² (0.85 g) |
+| ISO 4138 | K +24.8 mrad/g (understeer), linear a_y to 4 m/s² |
+| ISO 3888-2 DLC@60 | excursion 1.18 m (fail 1.0 m gate), speed loss −0.9 km/h |
 
-Legacy kinematic tire numbers (sports, pre-catalog): yaw SS 30.1°/s in matrix row #8
-above — use `tire.kinematic_fallback` to reproduce.
+This is the shipped default preset (LuGre brush on `default_pacejka`). The four
+force-sensitive 7401 metrics are locked in CI by `ctest -R IsoBaseline`
+(`tests/integration/test_iso_baseline.cpp`) so any future change that moves tire/
+dynamics forces fails the build; rebaseline that test together with this table.
+Legacy kinematic-tire numbers reproduce with `tire.kinematic_fallback`.
 
-**Drivetrain inertia (2026-06-06):** `engine_rotational_inertia` slows wheel
-spin-up on low-μ wheels (fixes power-on-turn overspeed). ISO 7401/4138 numbers
-in the matrix below were measured *before* this change — re-run
-`apps/validation/run_validation.py` and update the table when re-baselining.
+**Drivetrain inertia:** `engine_rotational_inertia` slows wheel spin-up on low-μ
+wheels (fixes power-on-turn overspeed). Its effect on the steady ISO numbers is
+folded into the re-baselined table above.
 
 ## Notes on specific results
 
 - **#10 moose test "does not pass"** is a vehicle/controller property, not a sim
   defect: the reference passive sedan with the default pure-pursuit driver runs a
-  1.69 m excursion at 60 km/h (criterion 1.0 m). The metric is computed per ISO
+  1.18 m excursion at 60 km/h (criterion 1.0 m). The metric is computed per ISO
   3888-2; passing requires a stiffer setup or a tracking controller — the point
   is the maneuver is exercised and measured correctly.
 - **#9 understeer sign** matters more than the absolute value: a front-heavy
@@ -108,8 +111,8 @@ in the matrix below were measured *before* this change — re-run
   stubs); only the four independent topologies are validated.
 - **Drivetrain (default off for legacy):** `engine_rotational_inertia` (default
   `0.25` kg·m² at crank) is reflected to the wheels and open diffs are
-  carrier-coupled. Set `0` to recover pre–v0.3 wheel-only spin-up. ISO/accel
-  numbers in the matrix below predate this change — re-baseline when updating.
+  carrier-coupled. Set `0` to recover pre–v0.3 wheel-only spin-up. The matrix and
+  baseline table above were re-baselined 2026-06-10 with this change active.
   See `docs/design/V0.2_DRIVETRAIN.md`.
 - **Tire default:** LuGre brush (`lugre.enabled: true` on `tire.default_pacejka`).
   **ISO runner default** uses `tire.kinematic_fallback` to preserve the published
@@ -128,7 +131,7 @@ in the matrix below were measured *before* this change — re-run
 ## Reproducing the whole report
 
 ```sh
-cmake --build build -j && (cd build && ctest --output-on-failure)   # 266 checks
+cmake --build build -j && (cd build && ctest --output-on-failure)   # 292 checks
 python3 apps/validation/run_validation.py    # ISO 7401/4138/3888 -> REPORT.md
 python3 fmi_export/test_roundtrip.py          # FMU vs native
 ```

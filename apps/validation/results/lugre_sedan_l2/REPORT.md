@@ -1,8 +1,8 @@
 # VDSim ISO maneuver validation report
 
-- Vehicle config : `configs/parts/chassis/sports.yaml`
+- Vehicle config : `configs/parts/chassis/sedan.yaml`
 - Tire config    : `configs/parts/tire/default_pacejka.yaml`
-- Dynamics level : `L3`
+- Dynamics level : `L2`
 - Mass           : `1500 kg`
 - Wheelbase      : `2.700 m`
 
@@ -12,13 +12,13 @@
       v_target           : 22.22 m/s  (80 km/h)
       steer input        : +6.0 deg (step)
     
-      psi_dot_ss         : +29.729  deg/s  (+0.5188 rad/s)
-      psi_dot_peak       : +35.962  deg/s
-      U  (peak / SS)     : 1.210    -> +21.0% overshoot
-      T_max  (to peak)   : 0.724  s
-      T_psi_dot (90% SS) : 0.362  s
-      Settling 5%        : 3.472  s
-      a_y_ss             : 7.752  m/s²  (0.79 g)
+      psi_dot_ss         : +30.253  deg/s  (+0.5280 rad/s)
+      psi_dot_peak       : +35.146  deg/s
+      U  (peak / SS)     : 1.162    -> +16.2% overshoot
+      T_max  (to peak)   : 0.742  s
+      T_psi_dot (90% SS) : 0.384  s
+      Settling 5%        : 2.786  s
+      a_y_ss             : 8.336  m/s²  (0.85 g)
 
 ![iso_7401](iso_7401_step.png)
 
@@ -27,10 +27,10 @@
     === ISO 4138 — steady-state circular (constant speed) ===
       v_target              : 22.22 m/s  (80 km/h)
       Handling tendency     : UNDERSTEER
-      K (per g)             : +31.470 mrad/g
-      K (per m/s²)          : +3.209 mrad·(s²/m)
+      K (per g)             : +24.792 mrad/g
+      K (per m/s²)          : +2.528 mrad·(s²/m)
       Linear range a_y      : up to 4.00 m/s²
-      a_y_max in test       : 8.90 m/s² (0.91 g)
+      a_y_max in test       : 9.08 m/s² (0.93 g)
 
 ![iso_4138](iso_4138_ramp.png)
 
@@ -40,9 +40,9 @@
       v_entry            : 60.0 km/h
       v_exit             : 60.9 km/h
       Speed loss         : -0.89 km/h
-      Max lateral excursion (vs target lane): 1.181 m
-      Peak yaw rate      : 26.1 °/s
-      Peak |a_y|         : 0.749 g
+      Max lateral excursion (vs target lane): 1.182 m
+      Peak yaw rate      : 26.0 °/s
+      Peak |a_y|         : 0.748 g
       Verdict            : FAIL
                            (criteria: speed loss < 2.0 km/h AND
                             excursion < 1.0 m vs target lane)

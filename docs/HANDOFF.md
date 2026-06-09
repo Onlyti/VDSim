@@ -1,6 +1,6 @@
 # VDSim 핸드오프
 
-작성: **2026-06-10** · `main` (= `v0.5.1`) · **291/291 ctest green**
+작성: **2026-06-10** · `main` (= `v0.5.1`) · **292/292 ctest green**
 
 ## 1. 문서 인덱스
 
@@ -59,7 +59,7 @@
 
 ```bash
 cmake --build build -j
-cd build && ctest --output-on-failure   # 291/291
+cd build && ctest --output-on-failure   # 292/292
 python3 gui/server.py                   # http://127.0.0.1:8080
 ```
 
@@ -91,9 +91,12 @@ M6 docs. 273 ctest. Scenes: `terrain_hill_demo`, `banked_grade_demo`, `banked_ov
 2. **M5c GUI stunt authoring** — author ramp/loop/banked scenes (today render-only).
 3. GUI `.tir` import (Tire T1 tail).
 
+**Done this session (post-tire):** ISO re-baseline (flat, sedan L2 LuGre) — VALIDATION.md
+table refreshed + CI gate `tests/integration/test_iso_baseline.cpp` (`ctest -R IsoBaseline`)
+locks the 7401 force signature. 292 ctest.
+
 **v0.6+:**
-1. **ISO re-baseline** — flat only (`run_validation.py`).
-2. Ld4 v0.6 — shared inertia helpers; full loop dynamics; Featherstone in step (optional).
+1. Ld4 v0.6 — shared inertia helpers; full loop dynamics; Featherstone in step (optional).
 3. Tire T2 belt: bicycle (L1) wiring; Chrono Pac02 parity gate; (later) higher belt eigenmodes are out of scope.
 
 ## 5. 주의

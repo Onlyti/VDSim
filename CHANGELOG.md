@@ -30,6 +30,14 @@ unchanged (no ISO/L2/L3 force drift). GUI `.tir` import is deferred to v0.5.2.
   `BeltValidation.*` (steady unchanged, early response suppressed at t=τ, more lag at
   lower speed). **291/291 ctest green.**
 
+### Validation
+- **ISO re-baseline (flat)**: refreshed the sedan L2 LuGre ISO 7401/4138/3888 numbers
+  in `VALIDATION.md` (stale neutral/0.63 g table → understeer 24.8 mrad/g, 0.85 g) after
+  the LuGre-default + drivetrain-inertia force changes.
+- **CI gate** `tests/integration/test_iso_baseline.cpp` (`ctest -R IsoBaseline`): locks
+  the four force-sensitive step-steer metrics (ψ̇_ss, peak, overshoot, a_y_ss) on the
+  shipped default preset so future force drift fails the build. **292/292 ctest.**
+
 ### Decision
 - Keep VDSim's own lean tire stack; Chrono Pac02 (BSD-3) is a cross-validation
   *reference*, not a dependency. No permissive OSS belt model exists → T2 is in-house
