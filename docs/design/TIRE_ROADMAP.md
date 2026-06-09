@@ -17,6 +17,31 @@ re-baselined.
 
 ---
 
+## 0. Build vs adopt — library survey (decided 2026-06-09)
+
+Surveyed reusable tire libraries before extending our own. **Decision: keep VDSim's
+own lean tire stack; do not take a third-party tire library as a dependency.**
+
+| Option | Lang / License | Has | Verdict |
+|--------|----------------|-----|---------|
+| **Project Chrono / Chrono::Vehicle** | C++ / **BSD-3** | Pac89, **Pac02 (MF2002)**, **TMeasy**, Fiala; `.tir`→JSON | **Reference only.** Permissive, but it's a large multibody engine — adopting it adds a heavy dependency against the open-core "light core" positioning. Use Chrono Pac02/TMeasy output as a **cross-validation reference** for our T1 parity gate; BSD-3 permits lifting specific equations with attribution if useful. |
+| teasit magic-formula-tyre-library/-tool | MATLAB / **GPL-3.0** | MF6.1 | **Excluded.** GPL is incompatible with open-core (permissive) linking; MATLAB; archived 2026-03. Fitting/coefficient reference at most. |
+| TNO MF-Tyre/MF-Swift, FTire, TMeasy (commercial), CarSim/Adams | closed | belt / rigid-ring / enveloping (SOTA) | **Cannot use code.** They define the belt/transient state of the art but are commercial. |
+
+Consequences:
+
+- **Steady MF (T1):** we already ship our own MF2002 evaluator + `.tir` parser
+  (`magic_formula_tire.cpp`). Keep it; gate it against Chrono Pac02 as an independent
+  reference rather than depending on Chrono.
+- **Belt transient (T2 — the "more dynamic" goal):** **no permissive open-source belt /
+  rigid-ring model exists.** So T2 is genuine in-house development from Pacejka's published
+  equations (3rd ed. Ch.7/9: relaxation length, belt deflection states) — the physics is
+  public, only the commercial *code* is not. This validates the "open layered tire" build.
+- **License red line:** GPL and commercial sources are reference-only, never linked or
+  copied. BSD/MIT/Apache (e.g. Chrono BSD-3) may be lifted with attribution.
+
+---
+
 ## 1. Current stack (v0.3+)
 
 | Layer | Implementation | Default | Role |
