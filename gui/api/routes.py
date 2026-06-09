@@ -160,7 +160,7 @@ GET_EXACT = {
 
 
 def handle_get(h, route, qs, ctx):
-    if route in ("/", "/index.html", "/app", "/app.html", "/legacy", "/classic", "/classic.html"):
+    if route in ("/", "/app", "/app.html"):
         html = (ctx.here / "app.html").read_bytes()
         bytes_response(h, html, "text/html; charset=utf-8",
                        extra_headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
