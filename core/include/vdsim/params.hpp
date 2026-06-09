@@ -104,6 +104,15 @@ struct LuGreTireParams {
     double m_eff   {40.0};     // contact mass for critical sigma1 [kg]
 };
 
+// Belt / carcass first-order slip relaxation (Phase T2). Opt-in; filters the
+// geometric slip (kappa, alpha) that feeds the MF tire model with tau = sigma/|Vx|
+// so step-steer / brake-release transients have carcass lag. See belt_tire.hpp.
+struct BeltTireParams {
+    bool   enabled   {false};
+    double sigma_lat  {0.5};   // lateral relaxation length sigma_y [m]
+    double sigma_long {0.5};   // longitudinal relaxation length sigma_x [m]
+};
+
 struct TireParams {
     // Pacejka MF96 simple form:
     //   F = D * sin(C * atan(B*s - E*(B*s - atan(B*s))))
@@ -160,6 +169,7 @@ struct TireParams {
     std::string tir_path {};
 
     LuGreTireParams lugre;
+    BeltTireParams  belt;
 
     // True when the tire model itself produces combined-slip forces (so the host
     // must NOT re-clip them with its circular friction ellipse): LuGre (combined)

@@ -10,6 +10,7 @@ add_executable(vdsim_integration_tests
     test_stunt.cpp
     test_l5_driving.cpp
     test_terrain_l5.cpp
+    test_belt_transient.cpp
 )
 
 target_compile_definitions(vdsim_integration_tests PRIVATE

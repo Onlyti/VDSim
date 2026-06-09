@@ -17,6 +17,7 @@
 #include "vdsim/coordinate.hpp"
 #include "vdsim/default_subsystems.hpp"
 #include "vdsim/drivetrain_inertia.hpp"
+#include "vdsim/belt_tire.hpp"
 #include "vdsim/interfaces.hpp"
 #include "vdsim/low_speed.hpp"
 #include "vdsim/lugre_tire.hpp"
@@ -114,6 +115,9 @@ public:
         ax_prev_ = 0.0;
         ay_prev_ = 0.0;
         alpha_dyn_.fill(0.0);
+        belt_kappa_.fill(0.0);
+        belt_alpha_.fill(0.0);
+        kappa_geom_last_.fill(0.0);
         alpha_geom_last_.fill(0.0);
         lugre_z_long_.fill(0.0);
         lugre_z_lat_.fill(0.0);
@@ -389,17 +393,23 @@ private:
 
             ITireModel::Input in;
             in.Fz = Fz[i];
-            in.kappa = k_slip;
+            // Belt transient (T2): feed the relaxed slip on the MF path; host
+            // substep() advances belt_*_ between substeps. Held frozen within RK4
+            // so all 4 stages see the same linearization. LuGre keeps its own
+            // contact state (belt+LuGre stacking is T2.3).
+            const bool belt_on = tp_.belt.enabled && !lugre_on;
+            in.kappa = belt_on ? belt_kappa_[i] : k_slip;
             // Use the transient α_dyn_ if relaxation length is enabled; the
             // host substep() advances α_dyn_ between substeps.  Within RK4 we
             // hold it frozen so all 4 stages see the same Pacejka linearization.
-            in.alpha = (lugre_on || tp_.relaxation_length_lat <= 1e-6)
-                ? a_slip : alpha_dyn_[i];
+            in.alpha = belt_on ? belt_alpha_[i]
+                : ((lugre_on || tp_.relaxation_length_lat <= 1e-6) ? a_slip : alpha_dyn_[i]);
             in.mu_long = mu_long_i; in.mu_lat = mu_lat_i; in.Vx_wheel = v_x_wheel;
             // Camber input: set by Ld3 (roll-driven) or by external caller via
             // set_camber_per_wheel().  Stand-alone Ld2 leaves it at zero.
             in.gamma = camber_ext_[i];
             alpha_geom_last_[i] = a_slip;
+            kappa_geom_last_[i] = k_slip;
             v_x_wheel_last_[i]  = v_x_wheel;
             v_y_wheel_last_[i]  = v_y_wheel;
             wheel_spin_last_[i] = s.wheel_spin[i];
@@ -623,6 +633,16 @@ private:
                               + (alpha_dyn_[i] - alpha_geom_last_[i]) * decay;
             }
         }
+        // Belt transient (T2): relax both slip components toward their geometric
+        // values with tau = sigma/|Vx| (MF path only; LuGre keeps its own state).
+        if (tp_.belt.enabled && !tp_.lugre.enabled) {
+            for (int i = 0; i < NUM_WHEELS; ++i) {
+                belt_kappa_[i] = belt_relax(belt_kappa_[i], kappa_geom_last_[i],
+                                            v_x_wheel_last_[i], tp_.belt.sigma_long, h);
+                belt_alpha_[i] = belt_relax(belt_alpha_[i], alpha_geom_last_[i],
+                                            v_x_wheel_last_[i], tp_.belt.sigma_lat, h);
+            }
+        }
     }
 
     VehicleParams vp_;
@@ -649,6 +669,10 @@ private:
     // Transient slip-angle state (relaxation length).  Updated between substeps.
     std::array<double, NUM_WHEELS> alpha_dyn_       {{0.0, 0.0, 0.0, 0.0}};
     std::array<double, NUM_WHEELS> alpha_geom_last_ {{0.0, 0.0, 0.0, 0.0}};
+    // Belt transient (T2): relaxed slip states + geometric kappa for the update.
+    std::array<double, NUM_WHEELS> belt_kappa_      {{0.0, 0.0, 0.0, 0.0}};
+    std::array<double, NUM_WHEELS> belt_alpha_      {{0.0, 0.0, 0.0, 0.0}};
+    std::array<double, NUM_WHEELS> kappa_geom_last_ {{0.0, 0.0, 0.0, 0.0}};
     std::array<double, NUM_WHEELS> v_x_wheel_last_  {{0.0, 0.0, 0.0, 0.0}};
     std::array<double, NUM_WHEELS> v_y_wheel_last_  {{0.0, 0.0, 0.0, 0.0}};
     std::array<double, NUM_WHEELS> wheel_spin_last_ {{0.0, 0.0, 0.0, 0.0}};

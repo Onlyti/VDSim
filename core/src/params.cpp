@@ -274,6 +274,11 @@ TireParams TireParams::from_yaml(const std::string& path) {
         pull(n, "sigma2",  p.lugre.sigma2);
         pull(n, "m_eff",   p.lugre.m_eff);
     }
+    if (const auto n = root["belt"]; n && n.IsMap()) {
+        pull(n, "enabled",    p.belt.enabled);
+        pull(n, "sigma_lat",  p.belt.sigma_lat);
+        pull(n, "sigma_long", p.belt.sigma_long);
+    }
     return p;
 }
 
