@@ -177,6 +177,17 @@ with a compatibility matrix in T2 design note.
 
 ### Phase T2 — Belt transient (high effort) ★ core “more dynamics”
 
+> **Progress (2026-06-09, `feat/tire-t2-belt`, on top of `feat/tire-t1-mf2002`):**
+> T2.1 — `belt_relax()` primitive in `vdsim/belt_tire.hpp` (first-order, exact
+> exponential, frozen at standstill) + unit tests. T2.2 — wired into seven_dof
+> (L2/L3-inner) MF path (relax kappa/alpha). T2.3 — LuGre stacking (relax the slip
+> velocity feeding v_r). T2.4 — free_3d (L5) MF + LuGre. Opt-in `BeltTireParams
+> {enabled, sigma_lat, sigma_long}` (default off -> no ISO/L2/L3 drift). **Validation:**
+> `test_belt_validation.cpp` — steady unchanged, early response suppressed at t=tau,
+> more lag at lower speed (the sigma/|Vx| scaling). 291 ctest.
+> **Remaining:** theory chapter (belt transient, ch.21); bicycle (L1) wiring (lowest
+> value). Then T2 can merge with T1 (T1 -> T2 ff order).
+
 | Item | Deliverable |
 |------|-------------|
 | States | `belt_qx`, `belt_qy` or $\kappa_{\mathrm{eff}}, \alpha_{\mathrm{eff}}$ per wheel in L2/L1 host |
