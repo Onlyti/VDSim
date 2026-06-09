@@ -1556,10 +1556,43 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#v04-planned" class="md-nav__link">
+  <a href="#v04-stunt-ld5-2026-06-tagged" class="md-nav__link">
     <span class="md-ellipsis">
       
-        v0.4+ (planned)
+        v0.4 — stunt / Ld5 (2026-06, tagged)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v050-terrain-l5-2026-06-tagged" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.5.0 — terrain + L5 (2026-06, tagged)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v051-tire-layers-2026-06-tagged" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.5.1 — tire layers (2026-06, tagged)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v052-planned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.5.2+ (planned)
       
     </span>
   </a>
@@ -2779,10 +2812,43 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#v04-planned" class="md-nav__link">
+  <a href="#v04-stunt-ld5-2026-06-tagged" class="md-nav__link">
     <span class="md-ellipsis">
       
-        v0.4+ (planned)
+        v0.4 — stunt / Ld5 (2026-06, tagged)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v050-terrain-l5-2026-06-tagged" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.5.0 — terrain + L5 (2026-06, tagged)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v051-tire-layers-2026-06-tagged" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.5.1 — tire layers (2026-06, tagged)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v052-planned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.5.2+ (planned)
       
     </span>
   </a>
@@ -2837,7 +2903,7 @@
 
 
 <h1 id="vdsim-product-roadmap">VDSim product roadmap<a class="headerlink" href="#vdsim-product-roadmap" title="Permanent link">&para;</a></h1>
-<p><strong>Last updated:</strong> 2026-06-08 · <strong>Tests:</strong> 273/273 ctest green (branch <code>feat/v0.5-terrain-m1</code>)</p>
+<p><strong>Last updated:</strong> 2026-06-10 · <strong>Tests:</strong> 291/291 ctest green (<code>main</code>)</p>
 <p>Living roadmap from early PoC through v0.3. Tracks what shipped in mainline vs what
 is planned. Detail specs link to <code>docs/design/*</code>; tire phases in
 <a href="../design/TIRE_ROADMAP/"><code>design/TIRE_ROADMAP.md</code></a>.</p>
@@ -2865,12 +2931,12 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 <tr>
 <td>Dynamics L1–L5</td>
 <td>L1–L3 planar/14-DOF; <strong>Ld4</strong> hard-joint; <strong>Ld5</strong> stunt + <strong>terrain (v0.5)</strong></td>
-<td>GUI terrain Play (v0.5.1); V2V</td>
+<td>GUI terrain Play (v0.5.2); V2V</td>
 </tr>
 <tr>
 <td>Tire</td>
-<td>MF96 + LuGre <strong>default</strong>; kinematic fallback part</td>
-<td>MF2002 catalog, belt transient</td>
+<td>MF96 + LuGre <strong>default</strong>; <strong>MF2002 <code>.tir</code> backend (T1)</strong>; <strong>belt transient (T2)</strong></td>
+<td>bicycle belt; Chrono Pac02 parity; GUI <code>.tir</code></td>
 </tr>
 <tr>
 <td>Drivetrain</td>
@@ -2894,8 +2960,8 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 </tr>
 <tr>
 <td>Validation</td>
-<td>ISO 7401/4138/3888, 273 ctest</td>
-<td>Re-baseline flat; Adams x-check rtol</td>
+<td>ISO 7401/4138/3888, 291 ctest</td>
+<td><strong>Re-baseline flat (debt)</strong>; Adams x-check rtol</td>
 </tr>
 </tbody>
 </table>
@@ -2915,9 +2981,13 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
     section v0.4
         Ld5 stunt jump loop : 2026-06
         Ld4 multibody M1-M7 : 2026-06
+    section v0.5
+        Terrain + L5 driving : 2026-06
+        Tire T1 MF2002 backend : 2026-06
+        Tire T2 belt transient : 2026-06
     section Next
-        v0.5 terrain L5 : planned
-        Tire belt transient : planned</code></pre>
+        GUI terrain Play (v0.5.2) : planned
+        ISO re-baseline + Ld4 (v0.6) : planned</code></pre>
 <hr />
 <h2 id="1-dynamics-ladder">1. Dynamics ladder<a class="headerlink" href="#1-dynamics-ladder" title="Permanent link">&para;</a></h2>
 <table>
@@ -2981,7 +3051,7 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 </tr>
 <tr>
 <td>[x] <strong>Terrain + L5 general driving</strong> (heightmap hub contact, hill/cliff, inclined)</td>
-<td>Shipped v0.5 (headless/batch/cosim; GUI → v0.5.1)</td>
+<td>Shipped v0.5 (headless/batch/cosim; GUI → v0.5.2)</td>
 <td><a href="../design/V0.5_TERRAIN_L5/"><code>V0.5_TERRAIN_L5.md</code></a></td>
 </tr>
 <tr>
@@ -3134,12 +3204,22 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 <tbody>
 <tr>
 <td>T1</td>
-<td><code>.tir</code> / MF2002 as <strong>catalog</strong> tire backend</td>
-<td>[ ]</td>
+<td><code>.tir</code> / MF2002 as <strong>catalog</strong> tire backend (<code>TireParams.backend</code>)</td>
+<td>[x] merged</td>
+</tr>
+<tr>
+<td>T1</td>
+<td>MF2002 combined slip bypasses host friction ellipse</td>
+<td>[x] merged</td>
 </tr>
 <tr>
 <td>T1</td>
 <td>GUI tire import + public sample <code>.tir</code></td>
+<td>[ ] (v0.5.2 GUI)</td>
+</tr>
+<tr>
+<td>T1</td>
+<td>Chrono Pac02 parity gate (reference, needs Chrono build)</td>
 <td>[ ]</td>
 </tr>
 <tr>
@@ -3149,12 +3229,17 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 </tr>
 <tr>
 <td>T2</td>
-<td><strong>Belt transient</strong> (carcass states per wheel)</td>
-<td>[ ]</td>
+<td><strong>Belt transient</strong> (<code>belt_relax</code>, σ/|Vx| first-order)</td>
+<td>[x] merged</td>
 </tr>
 <tr>
 <td>T2</td>
-<td>Filtered slip → <code>ITireModel</code> / LuGre</td>
+<td>Filtered slip → MF96/MF2002 + LuGre (L2/L3/L5)</td>
+<td>[x] merged</td>
+</tr>
+<tr>
+<td>T2</td>
+<td>bicycle (L1) belt wiring (lowest value)</td>
 <td>[ ]</td>
 </tr>
 <tr>
@@ -3713,12 +3798,13 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <tr>
 <td>M6</td>
 <td>Loop validation (✓) + theory <code>20_ld5_stunt</code></td>
-<td>[~] theory doc TODO</td>
+<td>[x]</td>
 </tr>
 </tbody>
 </table>
-<p>Close-out before tag <code>v0.4.0</code>: write <code>theory/20_ld5_stunt.md</code> (M6). Descoped to v0.5:
-banked curve (<code>CurvedGround</code>/<code>banked_oval</code>) + GUI stunt <em>authoring</em> panel (render-only today).</p>
+<p><strong>v0.4.0 tagged.</strong> Descoped to v0.5 (now shipped): banked curve
+(<code>CurvedGround</code>/<code>banked_oval</code>, M5b). Still deferred to v0.5.2 GUI: stunt
+<em>authoring</em> panel (render-only today).</p>
 <hr />
 <h2 id="12-version-history-checklist">12. Version history (checklist)<a class="headerlink" href="#12-version-history-checklist" title="Permanent link">&para;</a></h2>
 <h3 id="poc-v01-2025">PoC → v0.1 (2025)<a class="headerlink" href="#poc-v01-2025" title="Permanent link">&para;</a></h3>
@@ -3746,12 +3832,27 @@ banked curve (<code>CurvedGround</code>/<code>banked_oval</code>) + GUI stunt <e
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Drivetrain <code>engine_rotational_inertia</code>  </li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> LuGre tire default on + <code>kinematic_fallback</code> part + tests + docs  </li>
 </ul>
-<h3 id="v04-planned">v0.4+ (planned)<a class="headerlink" href="#v04-planned" title="Permanent link">&para;</a></h3>
+<h3 id="v04-stunt-ld5-2026-06-tagged">v0.4 — stunt / Ld5 (2026-06, tagged)<a class="headerlink" href="#v04-stunt-ld5-2026-06-tagged" title="Permanent link">&para;</a></h3>
 <ul class="task-list">
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Stunt / Ld5 / 3D contact (this doc §11)  </li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Tire T1–T2 belt + MF2002 catalog (this doc §2.2)  </li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Drivetrain torque–RPM + gearbox  </li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Brake/steer physics upgrade  </li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Stunt / Ld5 / 3D contact (this doc §11)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Ld4 multibody M1–M7</li>
+</ul>
+<h3 id="v050-terrain-l5-2026-06-tagged">v0.5.0 — terrain + L5 (2026-06, tagged)<a class="headerlink" href="#v050-terrain-l5-2026-06-tagged" title="Permanent link">&para;</a></h3>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Terrain + L5 general driving (heightmap hub contact, hill/cliff/inclined, banked)</li>
+</ul>
+<h3 id="v051-tire-layers-2026-06-tagged">v0.5.1 — tire layers (2026-06, tagged)<a class="headerlink" href="#v051-tire-layers-2026-06-tagged" title="Permanent link">&para;</a></h3>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Tire T1 MF2002 <code>.tir</code> backend + combined-slip ellipse bypass</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Tire T2 belt transient (L2/L3/L5, MF+LuGre, validation, theory ch.21)</li>
+</ul>
+<h3 id="v052-planned">v0.5.2+ (planned)<a class="headerlink" href="#v052-planned" title="Permanent link">&para;</a></h3>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> GUI terrain Play (M4) + stunt authoring (M5c) + <code>.tir</code> import — browser-gated</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Tire: bicycle (L1) belt; Chrono Pac02 parity gate</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> ISO re-baseline (flat) — accrued debt</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Drivetrain torque–RPM + gearbox</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Brake/steer physics upgrade</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> CARLA full bridge · open benchmark  </li>
 </ul>
 <hr />
