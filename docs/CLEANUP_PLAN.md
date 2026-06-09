@@ -48,13 +48,17 @@ part for the ISO baseline / stunt scenes), pacejka "legacy tests preserved").
 - **B2b #2 DONE** (`340c1ba`) field-row / plot builders -> static/fields.js (pure DOM/canvas,
   zero imports). esbuild bundle == original baseline (only B2b#1 resetMinimap differs).
 - Pure-leaf extractions now ~exhausted (util/minimap/fields). app.js 4873 -> 3997 L.
-- **B2b #3+ TODO (higher risk)** the remaining sections (three.js scene, on-screen track edit,
-  telemetry+SSE, scenario setup panel, vehicle tree, manual control, modal) all READ/WRITE
-  shared mutable `let` (simRunning, selectedVid, scene/camera/renderer, fleetSpec, modalVid/
-  modalLvl, ...) and have top-level side-effects. Splitting them cleanly needs a `state.js`
-  shared-state module (move those decls + update all assignment sites) to avoid circular
-  app.js<->module imports + TDZ. That is an architectural step, not a leaf move -> do with the
-  esbuild gate AND a user browser check per increment. Then trim server/routes/draft.
+- **B2b #3 DONE** (`a02b07b`) manual driving input -> static/manual.js via
+  initManualControl(deps). Read-only shared state (manualMode/simRunning/selectedVid) injected
+  as closures (DI) instead of moved, so no circular import / no state rewrite. esbuild diff =
+  DI indirection + buffer relocation + a cosmetic man/man2 rename. Pattern established: when a
+  section only READS shared state, use DI closures; only WRITE-shared state forces a state.js.
+- **B2b #4+ TODO (higher risk)** remaining: three.js scene (biggest, ~1000 L, owns scene/
+  camera/renderer + reassigned pathLine/terrainGrid... read by the animate loop + telemetry),
+  on-screen track edit, telemetry+SSE, scenario setup panel, vehicle tree, modal. These WRITE
+  shared state across sections -> need either DI with setters or a `state.js` holder object
+  (replace the reassigned `let`s with `S.x` everywhere). Architectural; do with the esbuild
+  gate AND a user browser check per increment. Then trim server/routes/draft.
 
 ## Phase E — Wrap
 - Merge `feat/v0.4-slope-jump-m5` -> main + tag. Refresh HANDOFF / doc index.
