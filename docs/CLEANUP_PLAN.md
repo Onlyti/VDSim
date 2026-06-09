@@ -10,11 +10,16 @@ Distinguish real compat code (delete) from descriptive "legacy" comments (keep, 
 part for the ISO baseline / stunt scenes), pacejka "legacy tests preserved").
 
 ## Phase A — Legacy purge
-1. GUI dead routes `/legacy` `/classic` `/index.html` (index.html deleted) -> `/app` only.
-2. `legacy_vehicle_row` / `fleet_spec_from_legacy_vehicle_row` (catalog_bridge) + the
-   draft.py caller -> migrate to native catalog, delete the bridge.
-3. `create_legacy_stunt_dof` (interfaces.hpp + fourteen_dof) — if 0 callers, delete
-   (+ `apply_loop_kinematics` rail if only reachable via it). Stunt = Free3D only.
+1. **DONE** (`da3b855`) GUI dead routes `/legacy` `/classic` `/index.html` -> `/` `/app` only.
+3. **DONE** (`42c82f3`) `create_legacy_stunt_dof` + entire fourteen_dof stunt_ mode +
+   kinematic loop rail + legacy test deleted; stunt = Free3D (Ld5) only. 266 green.
+2. **TODO (entangled — careful)** old "vehicles"-format scene loaders: `legacy_vehicle_row`
+   / `fleet_spec_from_legacy_vehicle_row` AND the separate `_import_run_config_doc`
+   path + the `elif data.get("vehicles")` dispatch in `import_run_config`
+   (gui/runner/draft.py). All current scenes are v3/fleet, so these are dead, but it
+   is a multi-loader GUI scene-load surgery (no visual verify here) — do via Cursor
+   with the scene ctests + a fleet-scene import smoke test as gate, or a focused
+   session. test_scene_materialize asserts the *output* "vehicles" key (keep that).
 4. Re-grep `from_legacy` / `*_compat` / compat `*_fallback` -> delete the dead ones.
 
 ## Phase D — Quick wins (interleave)
