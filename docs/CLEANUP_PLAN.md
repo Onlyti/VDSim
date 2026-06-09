@@ -43,12 +43,18 @@ part for the ISO baseline / stunt scenes), pacejka "legacy tests preserved").
   doc-help, f/fmtArr, post/postJson/getJson). Gate: esbuild bundle (node20 @ ~/.nvm,
   `npx esbuild@0.21.5 app.js --bundle --format=esm --external:three --external:three/addons/*`)
   -> bundle identical to pre-split except esbuild path-comments. Browser-confirmed by user.
-- **B2b TODO (high risk, browser-in-loop)** the rest of static/app.js (scene/stream/sidebar/
-  modal/minimap/telemetry) shares mutable `let` (pathLine, terrainGrid, ...) + has top-level
-  side-effects (scene.add, animate() kickoff, listener registration). esbuild catches static
-  errors (unresolved import, assign-to-import) but NOT runtime init ordering -> this is a
-  *restructure into a state module + init functions*, not a mechanical move. Do incrementally
-  with the esbuild gate AND a user browser check per increment. Then trim server/routes/draft.
+- **B2b #1 DONE** (`f7ced8c`) mini-map -> static/minimap.js (drawMinimap + resetMinimap,
+  encapsulated canvas/trail). Browser-confirmed.
+- **B2b #2 DONE** (`340c1ba`) field-row / plot builders -> static/fields.js (pure DOM/canvas,
+  zero imports). esbuild bundle == original baseline (only B2b#1 resetMinimap differs).
+- Pure-leaf extractions now ~exhausted (util/minimap/fields). app.js 4873 -> 3997 L.
+- **B2b #3+ TODO (higher risk)** the remaining sections (three.js scene, on-screen track edit,
+  telemetry+SSE, scenario setup panel, vehicle tree, manual control, modal) all READ/WRITE
+  shared mutable `let` (simRunning, selectedVid, scene/camera/renderer, fleetSpec, modalVid/
+  modalLvl, ...) and have top-level side-effects. Splitting them cleanly needs a `state.js`
+  shared-state module (move those decls + update all assignment sites) to avoid circular
+  app.js<->module imports + TDZ. That is an architectural step, not a leaf move -> do with the
+  esbuild gate AND a user browser check per increment. Then trim server/routes/draft.
 
 ## Phase E — Wrap
 - Merge `feat/v0.4-slope-jump-m5` -> main + tag. Refresh HANDOFF / doc index.
