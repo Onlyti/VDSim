@@ -158,9 +158,12 @@ with a compatibility matrix in T2 design note.
 > via `from_yaml` (`Mf2002Catalog.YamlSelectsBackend`); since cosim + batch load tires
 > through `from_yaml`, the **realtime/batch "`.tir` runs" exit is covered** (set
 > `backend: magic_formula` + `tir_path: <your .tir>` in the tire part; `.tir` stays
-> uncommitted). 278 ctest. **Remaining:** GUI `.tir` import (v0.5.1 GUI bundle);
-> combined-slip $G_{x\alpha},G_{y\kappa}$ on the measured path; parity gate vs Chrono
-> Pac02 reference.
+> uncommitted). T1.4 — the MF2002 evaluator already does combined slip
+> ($G_{x\alpha},G_{y\kappa}$+SVyk); added `TireParams::model_provides_combined_slip()`
+> and gated the host friction-ellipse clip on it so MF2002 (and LuGre) are not
+> re-clipped (MF2002's peak $F_x$ exceeds $\mu_{nom}F_z$). 279 ctest.
+> **Remaining:** GUI `.tir` import (v0.5.1 GUI bundle); parity gate vs Chrono Pac02
+> reference (needs a Chrono build — external env). Headless T1 core is complete.
 
 | Item | Deliverable |
 |------|-------------|
