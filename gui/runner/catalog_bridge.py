@@ -13,7 +13,7 @@ from catalog.ids import (
     tire_stem_from_id,
     vehicle_stem_from_blueprint,
 )
-from catalog.materialize import fleet_spec_from_legacy_vehicle_row, fleet_spec_from_scene
+from catalog.materialize import fleet_spec_from_scene
 
 from runner.config import REPO
 from runner.suspension import (
@@ -127,7 +127,3 @@ def fleet_entry_for_cosim(
 def scene_fleet_row(entry: Mapping[str, Any]) -> Dict[str, Any]:
     rows = fleet_spec_from_scene({"fleet": [entry]})
     return rows[0]
-
-
-def legacy_vehicle_row(v: Mapping[str, Any]) -> Dict[str, Any]:
-    return fleet_spec_from_legacy_vehicle_row(v, REPO)

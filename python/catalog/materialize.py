@@ -99,40 +99,6 @@ def fleet_spec_from_scene(doc: Mapping[str, Any]) -> List[dict]:
     return out
 
 
-def fleet_spec_from_legacy_vehicle_row(v: Mapping[str, Any], repo: Path) -> dict:
-    veh = Path(str(v["vehicle"]))
-    tire = Path(str(v["tire"]))
-    if not veh.is_absolute():
-        veh = Path(repo) / veh
-    if not tire.is_absolute():
-        tire = Path(repo) / tire
-    level = str(v.get("level", "L2"))
-    bid = blueprint_for_vehicle(veh.stem, level)
-    parts: Dict[str, str] = {}
-    tire_id = tire_id_from_stem(tire.stem)
-    if tire_id != "tire.default_pacejka":
-        parts["tire"] = tire_id
-    row = {
-        "id": int(v["id"]),
-        "blueprint": bid,
-        "parts": parts,
-        "level": level,
-        "x0": float(v.get("x0", 0.0)),
-        "y0": float(v.get("y0", 0.0)),
-        "yaw0": float(v.get("yaw0", 0.0)),
-        "vx0": float(v.get("vx0", 0.0)),
-        "vehicle": veh.stem,
-        "tire": tire.stem,
-    }
-    if level in ("L3", "L4"):
-        for key, slot in (("front_susp", "front_susp_kin"), ("rear_susp", "rear_susp_kin")):
-            if key in v:
-                stem = Path(str(v[key])).stem
-                row[key] = stem
-                parts[slot] = susp_id_from_stem(stem)
-    return row
-
-
 def resolve_fleet_entry(
     resolver: CatalogResolver,
     spec: Mapping[str, Any],

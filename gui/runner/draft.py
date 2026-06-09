@@ -10,7 +10,6 @@ from runner.catalog_bridge import (
     apply_fleet_field_update,
     catalog_resolver,
     fleet_entry_for_cosim,
-    legacy_vehicle_row,
     normalize_fleet_spec,
 )
 from runner.suspension import (
@@ -271,7 +270,7 @@ class DraftMixin:
         if int(data.get("version", 0)) == 2 or data.get("fleet_spec"):
             raise ValueError("simconfig v2 is no longer supported; use scene version 3")
         if not data.get("fleet"):
-            raise ValueError("scene document requires fleet[]")
+            raise ValueError("scene requires a 'fleet' (v3)")
         self._import_run_config_doc(data)
 
     def save_scenario(self, name, overwrite=False):
@@ -466,13 +465,7 @@ class DraftMixin:
                     self.path_preset = "custom"
             elif preset != "custom":
                 self.set_path_preset(preset)
-        self.fleet_spec = []
-        if data.get("fleet"):
-            self.fleet_spec = fleet_spec_from_scene(data)
-        else:
-            for v in data.get("vehicles", []):
-                row = legacy_vehicle_row(v)
-                self.fleet_spec.append(row)
+        self.fleet_spec = fleet_spec_from_scene(data)
         for row in self.fleet_spec:
             normalize_fleet_spec(row)
             strip_fleet_susp_if_not_l3(row)
@@ -525,10 +518,8 @@ class DraftMixin:
             ver = int(data.get("version", 0))
             if ver == 2 and data.get("fleet_spec"):
                 raise ValueError("simconfig v2 is no longer supported; use scene version 3")
-            if ver == 3 or (data.get("fleet") and not data.get("vehicles")):
+            if ver == 3 or data.get("fleet"):
                 self.import_scene_v3(data)
-            elif data.get("vehicles"):
-                self._import_run_config_doc(data)
             else:
                 raise ValueError("unrecognized run config")
             self._rebuild_if_running()
