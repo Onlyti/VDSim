@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/tasks/63_64_65_cycle11/">
+        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/theory/21_belt_transient/">
       
       
+        <link rel="prev" href="../19_lugre_dynamic_tire/">
+      
+      
+        <link rel="next" href="../04_ld1_bicycle/">
       
       
         
@@ -23,7 +27,7 @@
     
     
       
-        <title>Task 63-65 — Understeer + Brake distance + L2/L3 logging - VDSim</title>
+        <title>21 — Tire (belt transient) - VDSim</title>
       
     
     
@@ -74,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#task-63-65-understeer-brake-distance-l2l3-logging" class="md-skip">
+        <a href="#21-tire-belt-carcass-transient-first-order-relaxation" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Task 63-65 — Understeer + Brake distance + L2/L3 logging
+              21 — Tire (belt transient)
             
           </span>
         </div>
@@ -250,11 +254,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../theory/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
           
   
   
@@ -320,7 +326,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../T22_carla_bridge/REPORT/" class="md-tabs__link">
+        <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-tabs__link">
           
   
   
@@ -342,7 +348,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../" class="md-tabs__link">
+        <a href="../../tasks/" class="md-tabs__link">
           
   
   
@@ -498,6 +504,8 @@
       
   
   
+    
+  
   
   
     
@@ -553,22 +561,23 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../theory/" class="md-nav__link ">
+            <a href="../" class="md-nav__link ">
               
   
   
@@ -586,13 +595,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -612,7 +621,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/01_frames_and_conventions/" class="md-nav__link">
+      <a href="../01_frames_and_conventions/" class="md-nav__link">
         
   
   
@@ -640,7 +649,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/02_rigid_body_dynamics/" class="md-nav__link">
+      <a href="../02_rigid_body_dynamics/" class="md-nav__link">
         
   
   
@@ -668,7 +677,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/03_tire_pacejka_mf96/" class="md-nav__link">
+      <a href="../03_tire_pacejka_mf96/" class="md-nav__link">
         
   
   
@@ -696,7 +705,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/19_lugre_dynamic_tire/" class="md-nav__link">
+      <a href="../19_lugre_dynamic_tire/" class="md-nav__link">
         
   
   
@@ -721,10 +730,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../theory/21_belt_transient/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    21 — Tire (belt transient)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -740,6 +776,114 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#learning-objectives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Learning objectives
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#211-motivation-the-carcass-deflects-before-the-patch-slides" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        21.1 Motivation — the carcass deflects before the patch slides
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#212-three-transients-three-regimes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        21.2 Three transients, three regimes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#213-model-and-discrete-update" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        21.3 Model and discrete update
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#214-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        21.4 Validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#215-shipped-status-and-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        21.5 Shipped status and limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-references
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -752,7 +896,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/04_ld1_bicycle/" class="md-nav__link">
+      <a href="../04_ld1_bicycle/" class="md-nav__link">
         
   
   
@@ -780,7 +924,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/05_ld2_seven_dof/" class="md-nav__link">
+      <a href="../05_ld2_seven_dof/" class="md-nav__link">
         
   
   
@@ -808,7 +952,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/06_ld3_fourteen_dof/" class="md-nav__link">
+      <a href="../06_ld3_fourteen_dof/" class="md-nav__link">
         
   
   
@@ -836,7 +980,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/20_ld5_stunt/" class="md-nav__link">
+      <a href="../20_ld5_stunt/" class="md-nav__link">
         
   
   
@@ -864,7 +1008,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/07_control_ladder/" class="md-nav__link">
+      <a href="../07_control_ladder/" class="md-nav__link">
         
   
   
@@ -892,7 +1036,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/08_pid_controllers/" class="md-nav__link">
+      <a href="../08_pid_controllers/" class="md-nav__link">
         
   
   
@@ -920,7 +1064,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/09_pure_pursuit_path/" class="md-nav__link">
+      <a href="../09_pure_pursuit_path/" class="md-nav__link">
         
   
   
@@ -948,7 +1092,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/10_driver_model/" class="md-nav__link">
+      <a href="../10_driver_model/" class="md-nav__link">
         
   
   
@@ -976,7 +1120,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/11_numerical_integration/" class="md-nav__link">
+      <a href="../11_numerical_integration/" class="md-nav__link">
         
   
   
@@ -1004,7 +1148,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/12_software_architecture/" class="md-nav__link">
+      <a href="../12_software_architecture/" class="md-nav__link">
         
   
   
@@ -1032,7 +1176,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/13_multibody_outlook/" class="md-nav__link">
+      <a href="../13_multibody_outlook/" class="md-nav__link">
         
   
   
@@ -1060,7 +1204,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/14_hardpoint_kinematics/" class="md-nav__link">
+      <a href="../14_hardpoint_kinematics/" class="md-nav__link">
         
   
   
@@ -1088,7 +1232,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/15_validation_and_doe/" class="md-nav__link">
+      <a href="../15_validation_and_doe/" class="md-nav__link">
         
   
   
@@ -1116,7 +1260,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/16_fmi_integration/" class="md-nav__link">
+      <a href="../16_fmi_integration/" class="md-nav__link">
         
   
   
@@ -1144,7 +1288,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/17_actuator_and_sensing/" class="md-nav__link">
+      <a href="../17_actuator_and_sensing/" class="md-nav__link">
         
   
   
@@ -1172,7 +1316,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/18_runtime_and_cosim/" class="md-nav__link">
+      <a href="../18_runtime_and_cosim/" class="md-nav__link">
         
   
   
@@ -1641,7 +1785,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T22_carla_bridge/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-nav__link">
         
   
   
@@ -1669,7 +1813,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T23_jump_14dof/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T23_jump_14dof/REPORT/" class="md-nav__link">
         
   
   
@@ -1697,7 +1841,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T27_ld4_dw/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T27_ld4_dw/REPORT/" class="md-nav__link">
         
   
   
@@ -1725,7 +1869,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T28_ld4_mp/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T28_ld4_mp/REPORT/" class="md-nav__link">
         
   
   
@@ -1753,7 +1897,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T29_ld4_ta/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T29_ld4_ta/REPORT/" class="md-nav__link">
         
   
   
@@ -1781,7 +1925,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T30_ld4_5link/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T30_ld4_5link/REPORT/" class="md-nav__link">
         
   
   
@@ -1859,7 +2003,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../" class="md-nav__link ">
+            <a href="../../tasks/" class="md-nav__link ">
               
   
   
@@ -1903,7 +2047,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../68_poc_summary_v3/" class="md-nav__link">
+      <a href="../../tasks/68_poc_summary_v3/" class="md-nav__link">
         
   
   
@@ -1931,7 +2075,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../69_competitive_matrix/" class="md-nav__link">
+      <a href="../../tasks/69_competitive_matrix/" class="md-nav__link">
         
   
   
@@ -1959,7 +2103,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../62_cycles_overview/" class="md-nav__link">
+      <a href="../../tasks/62_cycles_overview/" class="md-nav__link">
         
   
   
@@ -1987,7 +2131,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../50_benchmark_matrix/" class="md-nav__link">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
         
   
   
@@ -2015,7 +2159,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../20_l1_l2_grid_sweep/" class="md-nav__link">
+      <a href="../../tasks/20_l1_l2_grid_sweep/" class="md-nav__link">
         
   
   
@@ -2043,7 +2187,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../30_l3_dynamic_suspension/" class="md-nav__link">
+      <a href="../../tasks/30_l3_dynamic_suspension/" class="md-nav__link">
         
   
   
@@ -2071,7 +2215,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../31_l6_l7_l8_control/" class="md-nav__link">
+      <a href="../../tasks/31_l6_l7_l8_control/" class="md-nav__link">
         
   
   
@@ -2099,7 +2243,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../57_58_59_driver_skidpad/" class="md-nav__link">
+      <a href="../../tasks/57_58_59_driver_skidpad/" class="md-nav__link">
         
   
   
@@ -2127,7 +2271,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../50_benchmark_matrix/" class="md-nav__link">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
         
   
   
@@ -2253,10 +2397,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-task-63-understeer-gradient" class="md-nav__link">
+  <a href="#learning-objectives" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Task 63 — Understeer gradient
+        Learning objectives
       
     </span>
   </a>
@@ -2264,10 +2408,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-task-64-brake-distance-benchmark" class="md-nav__link">
+  <a href="#prerequisites" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Task 64 — Brake distance benchmark
+        Prerequisites
       
     </span>
   </a>
@@ -2275,10 +2419,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-task-65-l2l3-spdlog-systematic" class="md-nav__link">
+  <a href="#211-motivation-the-carcass-deflects-before-the-patch-slides" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Task 65 — L2/L3 spdlog systematic
+        21.1 Motivation — the carcass deflects before the patch slides
       
     </span>
   </a>
@@ -2286,10 +2430,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4" class="md-nav__link">
+  <a href="#212-three-transients-three-regimes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. 종합
+        21.2 Three transients, three regimes
       
     </span>
   </a>
@@ -2297,10 +2441,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#5" class="md-nav__link">
+  <a href="#213-model-and-discrete-update" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. 판단
+        21.3 Model and discrete update
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#214-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        21.4 Validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#215-shipped-status-and-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        21.5 Shipped status and limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-references
       
     </span>
   </a>
@@ -2327,100 +2504,149 @@
   
 
 
-<h1 id="task-63-65-understeer-brake-distance-l2l3-logging">Task 63-65 — Understeer + Brake distance + L2/L3 logging<a class="headerlink" href="#task-63-65-understeer-brake-distance-l2l3-logging" title="Permanent link">&para;</a></h1>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Value</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Task ID</td>
-<td>RPT-Cycle11</td>
-</tr>
-<tr>
-<td>Type</td>
-<td>Validation + Logging</td>
-</tr>
-<tr>
-<td>Date</td>
-<td>2026-05-29</td>
-</tr>
-<tr>
-<td>Status</td>
-<td>completed</td>
-</tr>
-</tbody>
-</table>
-<h2 id="1-task-63-understeer-gradient">1. Task 63 — Understeer gradient<a class="headerlink" href="#1-task-63-understeer-gradient" title="Permanent link">&para;</a></h2>
-<p>vx0 = 10 m/s, δ ∈ {0.02, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30}. SS yaw rate → ay = vx · r.</p>
-<p><img alt="Understeer" src="../63_understeer/figures/understeer.png" /></p>
-<p>차종별 ay-δ 곡선의 traction-limit 영역 (포화) 위치 확인:
-- sedan / sports / race: linear region 까지 비슷, sport 가 약간 더 큰 ay 도달
-- <strong>FSK formula</strong>: 큰 angular range, 매우 빠른 saturation 진입 — 짧은 wheelbase + spool diff</p>
-<h2 id="2-task-64-brake-distance-benchmark">2. Task 64 — Brake distance benchmark<a class="headerlink" href="#2-task-64-brake-distance-benchmark" title="Permanent link">&para;</a></h2>
-<p>vx0 = 20 m/s, brake = 1.0, 4 s.</p>
-<table>
-<thead>
-<tr>
-<th>Vehicle</th>
-<th style="text-align: right;">max decel [m/s²]</th>
-<th style="text-align: right;">t to stop [s]</th>
-<th style="text-align: right;">stop distance [m]</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>sedan</td>
-<td style="text-align: right;">4.32</td>
-<td style="text-align: right;">— (4 s 내 미정지)</td>
-<td style="text-align: right;">—</td>
-</tr>
-<tr>
-<td>sports</td>
-<td style="text-align: right;">6.96</td>
-<td style="text-align: right;">2.77</td>
-<td style="text-align: right;">29.0</td>
-</tr>
-<tr>
-<td><strong>FSK formula</strong></td>
-<td style="text-align: right;"><strong>14.18</strong></td>
-<td style="text-align: right;"><strong>1.68</strong></td>
-<td style="text-align: right;"><strong>16.6</strong></td>
-</tr>
-<tr>
-<td>race_car</td>
-<td style="text-align: right;">12.36</td>
-<td style="text-align: right;">1.79</td>
-<td style="text-align: right;">18.1</td>
-</tr>
-</tbody>
-</table>
-<p><img alt="Brake distance" src="../64_brake_distance/figures/brake_distance.png" /></p>
-<p>해석:
-- sedan: brake_torque/(m·R) = 2000/(1500·0.32) = 4.17 m/s² 한계 → 4s 안에 16 m/s 만 감소.
-- FSK 가 가장 빠른 정지 — 매우 가벼움 (280 kg) + 강한 brake (1200 N·m / R=0.26).
-- race_car 가 sport 보다 더 빠른 brake — 큰 brake_torque (5000 N·m) + AWD load.</p>
-<h2 id="3-task-65-l2l3-spdlog-systematic">3. Task 65 — L2/L3 spdlog systematic<a class="headerlink" href="#3-task-65-l2l3-spdlog-systematic" title="Permanent link">&para;</a></h2>
-<p>L2 7-DOF + L3 14-DOF 의 initialize() 에 spdlog::debug 추가. 환경변수 <code>SPDLOG_LEVEL=debug</code> 으로 활성.</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>[L2 7-DOF] init: mass=1500 kg, L=2.70 m, Tw_f=1.55 m, diff=0, ackerman=60%, EBD=0
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>[L3 14-DOF] init: mass_sprung=1350 kg, K_phi_total=55000 N m/rad, k_tire=220000 N/m, anti_dive=0.00
-</span></code></pre></div>
-<h2 id="4">4. 종합<a class="headerlink" href="#4" title="Permanent link">&para;</a></h2>
+<h1 id="21-tire-belt-carcass-transient-first-order-relaxation">21. Tire — belt / carcass transient (first-order relaxation)<a class="headerlink" href="#21-tire-belt-carcass-transient-first-order-relaxation" title="Permanent link">&para;</a></h1>
+<h2 id="learning-objectives">Learning objectives<a class="headerlink" href="#learning-objectives" title="Permanent link">&para;</a></h2>
+<p>After this chapter you can:</p>
+<ol>
+<li>Explain why a steady Magic Formula (Chapter 03) cannot reproduce the lag in
+   measured <span class="arithmatex">\(F_y(t)\)</span> after a step steer, and which physical effect supplies it.</li>
+<li>Write the first-order belt relaxation ODE and its exact discrete update, and
+   identify the time constant <span class="arithmatex">\(\tau = \sigma/|V_x|\)</span>.</li>
+<li>Distinguish three different transient mechanisms — relaxation length, the LuGre
+   bristle state, and the belt — and say which regime each fixes.</li>
+<li>Describe VDSim's shipped adoption: a backend-agnostic slip filter that feeds
+   relaxed <span class="arithmatex">\(\kappa,\alpha\)</span> to the MF path and relaxed slip velocity to the LuGre
+   path, opt-in per wheel.</li>
+<li>State what is validated and the honest limit (first order only, no higher belt
+   eigenmodes).</li>
+</ol>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <ul>
-<li>140/140 tests 유지.</li>
-<li>4 차종 distinct brake / understeer 특성 정량.</li>
-<li>Logging 활성화로 디버깅 용이.</li>
+<li><strong>Chapter 03</strong> — Pacejka MF96 pure/combined slip; the steady <span class="arithmatex">\((\kappa,\alpha)\mapsto F\)</span> map.</li>
+<li><strong>Chapter 19</strong> — LuGre bristle <span class="arithmatex">\(z\)</span> (contact friction state).</li>
+<li><strong>Chapter 11</strong> — substep integration.</li>
+<li><strong>Design</strong> — <a href="../../design/TIRE_ROADMAP/"><code>design/TIRE_ROADMAP.md</code></a> §3 (belt phase T2).</li>
 </ul>
-<h2 id="5">5. 판단<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
+<p>Source: <code>core/include/vdsim/belt_tire.hpp</code> (<code>belt_relax</code>), wired in
+<code>seven_dof_dynamics.cpp</code> and <code>free_3d_dynamics.cpp</code>; params <code>TireParams::belt</code>.</p>
+<hr />
+<h2 id="211-motivation-the-carcass-deflects-before-the-patch-slides">21.1 Motivation — the carcass deflects before the patch slides<a class="headerlink" href="#211-motivation-the-carcass-deflects-before-the-patch-slides" title="Permanent link">&para;</a></h2>
+<p>A steady Magic Formula maps the <strong>instantaneous</strong> slip to force. In a step steer
+or a fast brake release, the <strong>measured</strong> lateral force lags the <strong>geometric</strong>
+slip angle by tens of milliseconds: the <strong>carcass / belt</strong> must first deflect
+before the contact patch reaches the steady deflection distribution that the
+empirical curve fits. An algebraic map produces this lateral force the same
+instant the slip appears — too early.</p>
+<p>The lag length is set by the <strong>relaxation length</strong> <span class="arithmatex">\(\sigma\)</span> [m] (a carcass
+compliance property): the tire travels roughly <span class="arithmatex">\(\sigma\)</span> before the force reaches
+<span class="arithmatex">\(1-1/e\)</span> of its steady value, so the time constant is</p>
+<div class="arithmatex">\[
+\tau = \frac{\sigma}{|V_x|}.
+\]</div>
+<p>It shrinks with speed — the same deflection is covered faster — which is the
+signature the validation checks (§21.4).</p>
+<hr />
+<h2 id="212-three-transients-three-regimes">21.2 Three transients, three regimes<a class="headerlink" href="#212-three-transients-three-regimes" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Mechanism</th>
+<th>Physics</th>
+<th>Fixes</th>
+<th>VDSim</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Relaxation length</td>
+<td>first-order <span class="arithmatex">\(\alpha_{\mathrm{dyn}}\to\alpha_{\mathrm{geom}}\)</span></td>
+<td>lateral transient (MF)</td>
+<td>legacy <code>relaxation_length_lat</code> (lateral, MF only)</td>
+</tr>
+<tr>
+<td>LuGre <span class="arithmatex">\(z\)</span></td>
+<td>bristle stick–slip at the contact</td>
+<td>rest / presliding / grade hold</td>
+<td>Chapter 19 (<code>lugre.enabled</code>)</td>
+</tr>
+<tr>
+<td><strong>Belt transient</strong></td>
+<td><strong>carcass compliance filters slip before the law</strong></td>
+<td><strong>step-steer / brake-in-turn transient shape</strong></td>
+<td><strong>this chapter (<code>belt.enabled</code>)</strong></td>
+</tr>
+</tbody>
+</table>
+<p>LuGre fixes the <strong>low-speed / presliding</strong> end; the belt fixes the <strong>high-speed
+transient shape</strong>. They are complementary, not alternatives — VDSim lets the belt
+filter the slip that feeds the LuGre bristle (§21.3).</p>
+<hr />
+<h2 id="213-model-and-discrete-update">21.3 Model and discrete update<a class="headerlink" href="#213-model-and-discrete-update" title="Permanent link">&para;</a></h2>
+<p>Each wheel carries a relaxed slip component <span class="arithmatex">\(s_{\mathrm{eff}}\)</span> (for <span class="arithmatex">\(\kappa\)</span> and
+<span class="arithmatex">\(\alpha\)</span>, or for the slip <em>velocity</em> on the LuGre path) obeying</p>
+<div class="arithmatex">\[
+\frac{\sigma}{|V_x|}\,\dot s_{\mathrm{eff}} = s_{\mathrm{geom}} - s_{\mathrm{eff}}.
+\]</div>
+<p>Integrated exactly over a substep <span class="arithmatex">\(h\)</span> at frozen <span class="arithmatex">\(V_x\)</span> (unconditionally stable, and
+correct at standstill where <span class="arithmatex">\(|V_x|\to 0\)</span> <strong>freezes</strong> the state instead of dividing):</p>
+<div class="arithmatex">\[
+\boxed{\,s_{\mathrm{eff}} \leftarrow s_{\mathrm{geom}}
+   + (s_{\mathrm{eff}} - s_{\mathrm{geom}})\,e^{-|V_x|\,h/\sigma}\,}
+\]</div>
+<p>This is <code>belt_relax(s_eff, s_geom, Vx, sigma, dt)</code>. In the dynamics host:</p>
 <ul>
-<li>결과: <strong>pass</strong></li>
-<li>Follow-up:</li>
-<li><strong>Understeer 의 nonlinear region</strong> — peak ay 추정.</li>
-<li><strong>Brake distance 의 ABS / EBD 효과</strong> — <code>brake_ebd_enabled=true</code> 와 비교.</li>
-<li><strong>Logging 의 file output</strong> — production 환경 logger.</li>
+<li><strong>MF path</strong> (<code>!lugre</code>): the relaxed <span class="arithmatex">\(\kappa,\alpha\)</span> feed <code>ITireModel::compute</code>.</li>
+<li><strong>LuGre path</strong>: the relaxed slip <strong>velocities</strong> <span class="arithmatex">\(v_{r,\text{long}}, v_{r,\text{lat}}\)</span>
+  feed the bristle (belt → LuGre, complementary).</li>
+</ul>
+<p>The belt state advances <strong>once per substep</strong> (between integrator steps) and is held
+frozen inside an RK4 step so all four stages see the same slip linearization — the
+same pattern as the LuGre <span class="arithmatex">\(z\)</span> sub-advance. It is opt-in via
+<code>TireParams::belt {enabled, sigma_lat, sigma_long}</code>; default off leaves the steady
+behaviour (and the published ISO baseline) unchanged.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>  step steer at t=0, fixed Vx
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  s_geom ──┐ (instant)
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>           │      s_eff(t) = s_geom (1 - e^{-t/tau}),  tau = sigma/|Vx|
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  ─────────┴───────────────────────────►  t
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>           0      tau            5·tau
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>                  63%            ~100%
+</span></code></pre></div>
+<hr />
+<h2 id="214-validation">21.4 Validation<a class="headerlink" href="#214-validation" title="Permanent link">&para;</a></h2>
+<p><code>tests/integration/test_belt_validation.cpp</code> checks the L2 step-steer response
+against the relaxation analytic (a fixed-time <span class="arithmatex">\(|a_y|\)</span> metric — time-to-fraction is
+corrupted by the underdamped yaw overshoot):</p>
+<ul>
+<li><strong>Steady state unchanged</strong> — the belt is transient-only; <span class="arithmatex">\(a_{y,\mathrm{ss}}\)</span> within 8%.</li>
+<li><strong>Early response suppressed</strong> — at <span class="arithmatex">\(t=\tau\)</span> the belt-on <span class="arithmatex">\(|a_y|\)</span> is below 95% of
+  belt-off (the slip lag), while still building.</li>
+<li><strong>More lag at lower speed</strong> — at a fixed early time the slower car (larger <span class="arithmatex">\(\tau\)</span>)
+  is more suppressed, i.e. the belt-on/off ratio is smaller: the <span class="arithmatex">\(\sigma/|V_x|\)</span>
+  scaling.</li>
+</ul>
+<p>The <code>belt_relax</code> primitive itself is unit-tested against the exact exponential
+(<code>BeltTire.*</code>): instant when <span class="arithmatex">\(\sigma=0\)</span>, frozen at standstill, <span class="arithmatex">\(63\%\)</span> at <span class="arithmatex">\(\tau\)</span> and
+steady by <span class="arithmatex">\(5\tau\)</span>, monotone with no overshoot.</p>
+<hr />
+<h2 id="215-shipped-status-and-limitations">21.5 Shipped status and limitations<a class="headerlink" href="#215-shipped-status-and-limitations" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Opt-in, default off</strong> — no ISO 7401/4138 drift on the default preset; the belt
+  is a layer on top of the steady law (MF96 / MF2002) or LuGre.</li>
+<li><strong>Wired on</strong> L2 (<code>seven_dof</code>, also the L3 inner) and L5 (<code>free_3d</code>), both the MF
+  and LuGre paths. <strong>L1 bicycle</strong> wiring is pending (lowest priority).</li>
+<li><strong>First order only.</strong> This is the carcass <em>relaxation</em> (one time constant), not
+  the higher belt eigenmodes / rigid-ring + enveloping behaviour of FTire / MF-Swift
+  (commercial, up to 100–150 Hz). Out of scope; see
+  <a href="../../design/TIRE_ROADMAP/"><code>design/TIRE_ROADMAP.md</code></a> §2.</li>
+<li><strong>Longitudinal</strong> relaxation uses the same primitive with <code>sigma_long</code>; combined
+  with the MF2002 backend (Chapter 03 / T1) it filters both <span class="arithmatex">\(\kappa\)</span> and <span class="arithmatex">\(\alpha\)</span>.</li>
+</ul>
+<hr />
+<h2 id="cross-references">Cross-references<a class="headerlink" href="#cross-references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../03_tire_pacejka_mf96/"><code>03_tire_pacejka_mf96.md</code></a> — steady force the belt feeds.</li>
+<li><a href="../19_lugre_dynamic_tire/"><code>19_lugre_dynamic_tire.md</code></a> — contact bristle state (complementary).</li>
+<li><a href="../../design/TIRE_ROADMAP/"><code>design/TIRE_ROADMAP.md</code></a> — tire phases T1–T6; build-vs-adopt decision.</li>
 </ul>
 
 

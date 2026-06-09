@@ -547,6 +547,8 @@
       
         
       
+        
+      
     
     
     
@@ -702,6 +704,34 @@
     
   
     19 — Tire (LuGre / brush)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/21_belt_transient/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    21 — Tire (belt transient)
   
 
     
@@ -2246,10 +2276,32 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#v04-stunt-m0m5-shipped" class="md-nav__link">
+  <a href="#v040-stunt-ld5-shipped-tagged" class="md-nav__link">
     <span class="md-ellipsis">
       
-        v0.4 stunt (M0–M5) — shipped
+        v0.4.0 stunt (Ld5) — shipped + tagged
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v050-terrain-l5-shipped-tagged-headlessbatchcosim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.5.0 terrain + L5 — shipped + tagged (headless/batch/cosim)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gui-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GUI cleanup (이번 세션)
       
     </span>
   </a>
@@ -2397,15 +2449,24 @@
 </tbody>
 </table>
 <h2 id="2">2. 브랜치 스냅샷<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
-<h3 id="v04-stunt-m0m5-shipped">v0.4 stunt (M0–M5) — shipped<a class="headerlink" href="#v04-stunt-m0m5-shipped" title="Permanent link">&para;</a></h3>
+<h3 id="v040-stunt-ld5-shipped-tagged">v0.4.0 stunt (Ld5) — shipped + tagged<a class="headerlink" href="#v040-stunt-ld5-shipped-tagged" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>create_stunt_dof()</code> → <code>Free3DDynamics</code> (<code>free_3d_dynamics.cpp</code>): pos+quat+ω, 4-wheel MF, no rail snap</li>
-<li><code>create_legacy_stunt_dof()</code> → L3+L2 rail / loop CG snap (<code>Stunt.VerticalLoopCompletesLap</code>)</li>
-<li>Scenes: <code>jump_ramp_demo.yaml</code>, <code>vertical_loop_demo.yaml</code>; cosim <code>stunt:</code> → <code>make_ground</code> (ramp/loop)</li>
-<li>GUI: stunt mesh, <strong>z</strong> / pitch / roll telemetry; <code>settle_spawn_on_ground</code></li>
-<li>LuGre default retune for L5 loop (<code>sigma0</code> 9e4, <code>sigma2</code> 75)</li>
-<li><strong>v0.5 M0 (partial):</strong> <code>FlatGround</code> / <code>InclinedGround</code> / <code>SplitMu</code> / <code>Rough</code> / <code>Heightmap</code> / <code>Psd</code> → hub <code>wheel_world_positions</code> + <code>hub_penetration</code> (Ramp/Loop와 동일)</li>
-<li><strong>L5 주행 회귀:</strong> <code>tests/integration/test_l5_driving.cpp</code> — 평지 침하·가속·제동·자세·조향·하중·LuGre·오르막</li>
+<li><code>create_stunt_dof()</code> → <code>Free3DDynamics</code> (<code>free_3d_dynamics.cpp</code>): pos+quat+ω, 4-wheel MF, no rail snap. <strong>유일한 stunt plant</strong> — <code>create_legacy_stunt_dof()</code>(L3+L2 rail loop)는 cleanup 에서 제거됨.</li>
+<li>Scenes <code>jump_ramp_demo.yaml</code> / <code>vertical_loop_demo.yaml</code>; cosim <code>stunt:</code> → <code>make_ground</code>; GUI stunt mesh + z/pitch/roll telemetry; <code>settle_spawn_on_ground</code>.</li>
+<li>LuGre default retune for L5 loop (<code>sigma0</code> 9e4, <code>sigma2</code> 75). Theory ch.20.</li>
+</ul>
+<h3 id="v050-terrain-l5-shipped-tagged-headlessbatchcosim">v0.5.0 terrain + L5 — shipped + tagged (headless/batch/cosim)<a class="headerlink" href="#v050-terrain-l5-shipped-tagged-headlessbatchcosim" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Hub contact 통일: Flat/SplitMu/Inclined/Rough/Heightmap → <code>wheel_world_positions</code> + <code>hub_penetration</code>.</li>
+<li><strong><code>CurvedGround</code></strong> banked turn (<code>create_curved_ground</code>, cosim <code>stunt.ground == banked</code>).</li>
+<li>Scenes <code>terrain_hill_demo</code> / <code>banked_grade_demo</code> / <code>banked_oval</code>; <code>tools/bake_synthetic_hill.py</code> + <code>assets/terrain/hill_demo.bin</code>; materialize <code>terrain:</code> forwarding.</li>
+<li>Tests <code>tests/integration/test_terrain_l5.cpp</code> (7) + <code>test_l5_driving.cpp</code>.</li>
+<li><strong>v0.5.1 deferred (browser):</strong> M4 GUI terrain Play, M5c GUI stunt 저작.</li>
+</ul>
+<h3 id="gui-cleanup">GUI cleanup (이번 세션)<a class="headerlink" href="#gui-cleanup" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>app.html</code> 4873→~250L shell; inline CSS/JS → <code>gui/static/{app.css, app.js, util.js, minimap.js, fields.js, manual.js}</code>; <code>/static/</code> route.</li>
+<li>legacy scene loaders 제거, low-speed 상수 → <code>vdsim/low_speed.hpp</code>. 검증: esbuild bundle 게이트(node20 @ ~/.nvm).</li>
 </ul>
 <h3 id="ld4-multibody-m1m7-shipped">Ld4 multibody (M1–M7) — shipped<a class="headerlink" href="#ld4-multibody-m1m7-shipped" title="Permanent link">&para;</a></h3>
 <p>상세: <a href="../design/LD4_MULTIBODY/"><code>design/LD4_MULTIBODY.md</code></a></p>
@@ -2463,7 +2524,7 @@
 </ul>
 <h2 id="3">3. 빌드·검증<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>cmake<span class="w"> </span>--build<span class="w"> </span>build<span class="w"> </span>-j
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ctest<span class="w"> </span>--output-on-failure<span class="w">   </span><span class="c1"># 263/263</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ctest<span class="w"> </span>--output-on-failure<span class="w">   </span><span class="c1"># 291/291</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>python3<span class="w"> </span>gui/server.py<span class="w">                   </span><span class="c1"># http://127.0.0.1:8080</span>
 </span></code></pre></div>
 <h2 id="4">4. 다음 작업<a class="headerlink" href="#4" title="Permanent link">&para;</a></h2>
@@ -2472,12 +2533,28 @@
 <code>feat/v0.5-terrain-m1</code>: M0 hub contact · M1 heightmap (no-sink/climb/flank) · M2 cliff
 airborne · M3 terrain scene+bake · M5 inclined/banked · M5b CurvedGround banked turn ·
 M6 docs. 273 ctest. Scenes: <code>terrain_hill_demo</code>, <code>banked_grade_demo</code>, <code>banked_oval</code>.</p>
+<p><strong>Tire stack (this session — T1 + T2, merged to <code>main</code>):</strong> see
+<a href="../design/TIRE_ROADMAP/"><code>design/TIRE_ROADMAP.md</code></a> §0/§4 + theory ch.21.
+- <strong>T1 MF2002</strong>: <code>TireParams.backend</code> ("mf96" default | "magic_formula" | "linear")
+  + <code>tir_path</code>; <code>create_tire_from_params</code> dispatch in every dynamics <code>initialize()</code>;
+  MF2002 combined slip bypasses the host friction ellipse. <code>.tir</code> stays uncommitted
+  (gitignore + confidential). Tests <code>Mf2002Catalog.*</code>.
+- <strong>T2 belt transient</strong>: <code>vdsim/belt_tire.hpp</code> <code>belt_relax()</code> (tau=sigma/|Vx|, exact
+  exp); opt-in <code>TireParams.belt {enabled, sigma_lat, sigma_long}</code>; wired in seven_dof
+  (L2/L3) + free_3d (L5), both MF (relax kappa/alpha) and LuGre (relax slip velocity).
+  Tests <code>BeltTire.*</code>, <code>BeltTransient.*</code>, <code>BeltValidation.*</code>. <strong>Default off -&gt; no drift.</strong>
+- <strong>Decision (locked):</strong> keep own lean tire stack; Chrono Pac02 (BSD-3) is a
+  cross-validation <em>reference</em>, not a dependency. Belt = own (no permissive OSS exists).
+- <strong>Remaining tire:</strong> bicycle (L1) belt wiring (lowest value); GUI <code>.tir</code> import
+  (v0.5.1 GUI); combined-slip parity gate vs Chrono Pac02 (needs Chrono build).</p>
 <p><strong>v0.5.1 (deferred — needs browser, no headless path):</strong>
 1. <strong>M4 GUI terrain load + L5 Play</strong> — chase cam uses <code>position.z</code>, spawn on mesh.
-2. <strong>M5c GUI stunt authoring</strong> — author ramp/loop/banked scenes (today render-only).</p>
+2. <strong>M5c GUI stunt authoring</strong> — author ramp/loop/banked scenes (today render-only).
+3. GUI <code>.tir</code> import (Tire T1 tail).</p>
 <p><strong>v0.6+:</strong>
 1. <strong>ISO re-baseline</strong> — flat only (<code>run_validation.py</code>).
-2. Ld4 v0.6 — shared inertia helpers; full loop dynamics; Featherstone in step (optional).</p>
+2. Ld4 v0.6 — shared inertia helpers; full loop dynamics; Featherstone in step (optional).
+3. Tire T2 belt: bicycle (L1) wiring; Chrono Pac02 parity gate; (later) higher belt eigenmodes are out of scope.</p>
 <h2 id="5">5. 주의<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Hyundai (TUR) <code>.tir</code> <strong>confidential</strong> — 커밋 금지</li>
@@ -2487,7 +2564,13 @@ M6 docs. 273 ctest. Scenes: <code>terrain_hill_demo</code>, <code>banked_grade_d
 <li><code>configs/.resolve_cache/</code> — 커밋하지 않음</li>
 </ul>
 <h2 id="6-git">6. Git<a class="headerlink" href="#6-git" title="Permanent link">&para;</a></h2>
-<p>브랜치 <code>feat/v0.4-slope-jump-m5</code> — <strong>main 미병합</strong>. push/merge는 명시 요청 시.</p>
+<ul>
+<li><code>main</code> = <code>v0.5.0</code> tag + tire T1/T2 (<code>feat/tire-t2-belt</code>, which is <code>feat/tire-t1-mf2002</code></li>
+<li>belt). Tags: v0.1.0 / v0.2.0 / v0.2.4 / v0.4.0 / v0.5.0. Tire merge is post-v0.5.0,
+  untagged (mid-T: bicycle + GUI .tir import pending) — tag a tire release when those land.</li>
+<li>All feature work ff-merged (no history rewrite). push/merge/tag는 명시 요청 시에만.</li>
+<li>Next: new feature branch off <code>main</code>.</li>
+</ul>
 
 
 

@@ -547,6 +547,8 @@
       
         
       
+        
+      
     
     
     
@@ -702,6 +704,34 @@
     
   
     19 — Tire (LuGre / brush)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/21_belt_transient/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    21 — Tire (belt transient)
   
 
     
@@ -2223,6 +2253,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#0-build-vs-adopt-library-survey-decided-2026-06-09" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0. Build vs adopt — library survey (decided 2026-06-09)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#1-current-stack-v03" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2454,6 +2495,52 @@ Pacejka-family steady forces, optional brush dynamics (LuGre), and future
 binaries. Default catalog behaviour stays frozen per phase until explicitly
 re-baselined.</p>
 <hr />
+<h2 id="0-build-vs-adopt-library-survey-decided-2026-06-09">0. Build vs adopt — library survey (decided 2026-06-09)<a class="headerlink" href="#0-build-vs-adopt-library-survey-decided-2026-06-09" title="Permanent link">&para;</a></h2>
+<p>Surveyed reusable tire libraries before extending our own. <strong>Decision: keep VDSim's
+own lean tire stack; do not take a third-party tire library as a dependency.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Lang / License</th>
+<th>Has</th>
+<th>Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Project Chrono / Chrono::Vehicle</strong></td>
+<td>C++ / <strong>BSD-3</strong></td>
+<td>Pac89, <strong>Pac02 (MF2002)</strong>, <strong>TMeasy</strong>, Fiala; <code>.tir</code>→JSON</td>
+<td><strong>Reference only.</strong> Permissive, but it's a large multibody engine — adopting it adds a heavy dependency against the open-core "light core" positioning. Use Chrono Pac02/TMeasy output as a <strong>cross-validation reference</strong> for our T1 parity gate; BSD-3 permits lifting specific equations with attribution if useful.</td>
+</tr>
+<tr>
+<td>teasit magic-formula-tyre-library/-tool</td>
+<td>MATLAB / <strong>GPL-3.0</strong></td>
+<td>MF6.1</td>
+<td><strong>Excluded.</strong> GPL is incompatible with open-core (permissive) linking; MATLAB; archived 2026-03. Fitting/coefficient reference at most.</td>
+</tr>
+<tr>
+<td>TNO MF-Tyre/MF-Swift, FTire, TMeasy (commercial), CarSim/Adams</td>
+<td>closed</td>
+<td>belt / rigid-ring / enveloping (SOTA)</td>
+<td><strong>Cannot use code.</strong> They define the belt/transient state of the art but are commercial.</td>
+</tr>
+</tbody>
+</table>
+<p>Consequences:</p>
+<ul>
+<li><strong>Steady MF (T1):</strong> we already ship our own MF2002 evaluator + <code>.tir</code> parser
+  (<code>magic_formula_tire.cpp</code>). Keep it; gate it against Chrono Pac02 as an independent
+  reference rather than depending on Chrono.</li>
+<li><strong>Belt transient (T2 — the "more dynamic" goal):</strong> <strong>no permissive open-source belt /
+  rigid-ring model exists.</strong> So T2 is genuine in-house development from Pacejka's published
+  equations (3<sup>rd</sup> ed. Ch.7/9: relaxation length, belt deflection states) — the physics is
+  public, only the commercial <em>code</em> is not. This validates the "open layered tire" build.</li>
+<li><strong>License red line:</strong> GPL and commercial sources are reference-only, never linked or
+  copied. BSD/MIT/Apache (e.g. Chrono BSD-3) may be lifted with attribution.</li>
+</ul>
+<hr />
 <h2 id="1-current-stack-v03">1. Current stack (v0.3+)<a class="headerlink" href="#1-current-stack-v03" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2594,6 +2681,22 @@ with a compatibility matrix in T2 design note.</p>
 <hr />
 <h2 id="4-phased-roadmap">4. Phased roadmap<a class="headerlink" href="#4-phased-roadmap" title="Permanent link">&para;</a></h2>
 <h3 id="phase-t1-steady-mf2002-in-catalog-medium-effort">Phase T1 — Steady MF2002 in catalog (medium effort)<a class="headerlink" href="#phase-t1-steady-mf2002-in-catalog-medium-effort" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p><strong>Progress (2026-06-09, <code>feat/tire-t1-mf2002</code>):</strong> T1.1 — MF2002/.tir evaluator
+sanity tests on a runtime synthetic <code>.tir</code> (<code>Mf2002Catalog.*</code>; no <code>.tir</code> committed).
+T1.2 — <code>TireParams.backend</code>/<code>tir_path</code> + <code>create_tire_from_params()</code> dispatch wired
+into every dynamics <code>initialize()</code> (default <code>mf96</code> unchanged; <code>magic_formula</code> loads
+MF2002 from <code>tir_path</code>; <code>linear</code> fallback). T1.3 — a tire YAML selects the backend
+via <code>from_yaml</code> (<code>Mf2002Catalog.YamlSelectsBackend</code>); since cosim + batch load tires
+through <code>from_yaml</code>, the <strong>realtime/batch "<code>.tir</code> runs" exit is covered</strong> (set
+<code>backend: magic_formula</code> + <code>tir_path: &lt;your .tir&gt;</code> in the tire part; <code>.tir</code> stays
+uncommitted). T1.4 — the MF2002 evaluator already does combined slip
+(<span class="arithmatex">\(G_{x\alpha},G_{y\kappa}\)</span>+SVyk); added <code>TireParams::model_provides_combined_slip()</code>
+and gated the host friction-ellipse clip on it so MF2002 (and LuGre) are not
+re-clipped (MF2002's peak <span class="arithmatex">\(F_x\)</span> exceeds <span class="arithmatex">\(\mu_{nom}F_z\)</span>). 279 ctest.
+<strong>Remaining:</strong> GUI <code>.tir</code> import (v0.5.1 GUI bundle); parity gate vs Chrono Pac02
+reference (needs a Chrono build — external env). Headless T1 core is complete.</p>
+</blockquote>
 <table>
 <thead>
 <tr>
@@ -2626,6 +2729,19 @@ with a compatibility matrix in T2 design note.</p>
 </table>
 <p><strong>Exit:</strong> one sample <code>.tir</code> (synthetic/public coefficients) runs in realtime + batch.</p>
 <h3 id="phase-t2-belt-transient-high-effort-core-more-dynamics">Phase T2 — Belt transient (high effort) ★ core “more dynamics”<a class="headerlink" href="#phase-t2-belt-transient-high-effort-core-more-dynamics" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p><strong>Progress (2026-06-09, <code>feat/tire-t2-belt</code>, on top of <code>feat/tire-t1-mf2002</code>):</strong>
+T2.1 — <code>belt_relax()</code> primitive in <code>vdsim/belt_tire.hpp</code> (first-order, exact
+exponential, frozen at standstill) + unit tests. T2.2 — wired into seven_dof
+(L2/L3-inner) MF path (relax kappa/alpha). T2.3 — LuGre stacking (relax the slip
+velocity feeding v_r). T2.4 — free_3d (L5) MF + LuGre. Opt-in <code>BeltTireParams
+{enabled, sigma_lat, sigma_long}</code> (default off -&gt; no ISO/L2/L3 drift). <strong>Validation:</strong>
+<code>test_belt_validation.cpp</code> — steady unchanged, early response suppressed at t=tau,
+more lag at lower speed (the sigma/|Vx| scaling). 291 ctest. Theory:
+<a href="../../theory/21_belt_transient/"><code>theory/21_belt_transient.md</code></a>.
+<strong>Remaining:</strong> bicycle (L1) wiring (lowest value). Then T2 can merge with T1
+(T1 -&gt; T2 ff order).</p>
+</blockquote>
 <table>
 <thead>
 <tr>
