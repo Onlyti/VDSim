@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <vector>
 
 namespace vdsim {
@@ -100,6 +101,120 @@ struct PowertrainParams {
     double    upshift_rpm  {5500.0};
     double    downshift_rpm{1800.0};
     int       start_gear   {1};
+};
+
+// Inputs a shift policy sees each step. A policy returns the desired gear
+// (1..num_gears forward, <0 reverse, 0 neutral); the gearbox enforces the shift
+// time-out and only acts on a change.
+struct ShiftContext {
+    double engine_rpm;
+    int    current_gear;
+    double vehicle_speed;   // [m/s]
+    double throttle;        // 0..1 (pedal opening)
+    double brake;           // 0..1
+    int    num_gears;
+};
+using ShiftPolicy = std::function<int(const ShiftContext&)>;
+
+// Stateful engine + gearbox: derives engine RPM from the driven-wheel speed (idle
+// floor + a slipping launch clutch at low speed), runs the shift policy with a
+// shift-time torque interrupt, and returns the axle drive torque. Unit responsibility
+// only — the IDrivetrain module owns wheel split and the dynamics own the EOM.
+class EngineGearbox {
+  public:
+    void configure(const PowertrainParams& p) {
+        p_ = p;
+        reset();
+    }
+    void set_shift_policy(ShiftPolicy fn) { policy_ = std::move(fn); }
+
+    void reset() {
+        const int N = num_gears();
+        gear_ = std::min(std::max(p_.start_gear, N ? 1 : 0), N ? N : 0);
+        shift_timer_ = 0.0;
+        rpm_ = p_.engine.idle_rpm;
+    }
+
+    // Advance one step. driven_omega: mean spin of the driven wheels [rad/s];
+    // v: vehicle longitudinal speed [m/s]; commanded_gear: driver request (manual).
+    // Returns the drive torque at the (combined) driven axle [N m].
+    double axle_torque(double throttle, double brake, double driven_omega,
+                       double v, int commanded_gear, double dt) {
+        const auto& gb = p_.gearbox;
+        const int N = num_gears();
+        throttle = std::min(std::max(throttle, 0.0), 1.0);
+
+        // --- engine RPM from wheel speed; idle floor + low-speed clutch slip ---
+        const double ratio_now = gear_ratio(gear_);
+        const double rpm_geom = std::abs(driven_omega) * std::abs(ratio_now)
+                              * gb.final_drive * 60.0 / (2.0 * M_PI);
+        const bool slipping = rpm_geom < p_.engine.idle_rpm;
+        const double stall_rpm = std::clamp(0.5 * p_.engine.redline_rpm,
+                                            p_.engine.idle_rpm, p_.engine.redline_rpm);
+        const double rpm_target = slipping
+            ? p_.engine.idle_rpm + throttle * (stall_rpm - p_.engine.idle_rpm)
+            : rpm_geom;
+        rpm_ = std::clamp(rpm_target, p_.engine.idle_rpm, p_.engine.redline_rpm);
+
+        // --- shift logic (locked out for shift_time after a change) ---
+        if (shift_timer_ > 0.0) {
+            shift_timer_ = std::max(0.0, shift_timer_ - dt);
+        } else {
+            const int target = decide_gear(commanded_gear, v, brake, throttle);
+            if (target != gear_ && std::abs(target) <= N && target != 0) {
+                gear_ = target;
+                shift_timer_ = gb.shift_time;
+            } else if (target == 0) {       // neutral allowed
+                gear_ = 0;
+            }
+        }
+
+        // --- torque ---
+        if (shift_timer_ > 0.0 || gear_ == 0) return 0.0;   // clutch open / neutral
+        double T_eng = p_.engine.map.eval(rpm_, throttle);
+        if (slipping) T_eng = std::max(0.0, T_eng);  // a slipping launch clutch does
+                                                     // not transmit engine braking
+        return T_eng * gear_ratio(gear_) * gb.final_drive * gb.efficiency;
+    }
+
+    double engine_rpm()   const { return rpm_; }
+    int    current_gear() const { return gear_; }
+    // Engine inertia reflected to the wheel through the current gear: I*(ratio*fd)^2.
+    double reflected_inertia() const {
+        if (gear_ == 0) return 0.0;
+        const double r = gear_ratio(gear_) * p_.gearbox.final_drive;
+        return p_.engine.inertia * r * r;
+    }
+
+  private:
+    int num_gears() const { return static_cast<int>(p_.gearbox.gear_ratios.size()); }
+    double gear_ratio(int g) const {
+        if (g < 0)  return p_.gearbox.reverse_ratio;
+        if (g == 0) return 0.0;
+        const int idx = std::min(g, num_gears());
+        return num_gears() ? p_.gearbox.gear_ratios[idx - 1] : 0.0;
+    }
+    int decide_gear(int commanded, double v, double brake, double throttle) {
+        if (policy_) {
+            return policy_(ShiftContext{rpm_, gear_, v, throttle, brake, num_gears()});
+        }
+        switch (p_.shift_mode) {
+            case PowertrainParams::ShiftMode::Manual:
+                return commanded;
+            case PowertrainParams::ShiftMode::AutoRpmThreshold:
+                if (gear_ <= 0) return commanded;     // out of auto range (R/N)
+                if (rpm_ > p_.upshift_rpm  && gear_ < num_gears()) return gear_ + 1;
+                if (rpm_ < p_.downshift_rpm && gear_ > 1)          return gear_ - 1;
+                return gear_;
+        }
+        return gear_;
+    }
+
+    PowertrainParams p_;
+    ShiftPolicy policy_;
+    int    gear_ {1};
+    double shift_timer_ {0.0};
+    double rpm_ {800.0};
 };
 
 }  // namespace vdsim

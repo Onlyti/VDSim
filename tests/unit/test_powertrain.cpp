@@ -116,3 +116,91 @@ TEST(PowertrainYaml, ParsesEngineGearboxShift) {
     EXPECT_EQ(vp.powertrain.shift_mode, vdsim::PowertrainParams::ShiftMode::AutoRpmThreshold);
     EXPECT_DOUBLE_EQ(vp.powertrain.upshift_rpm, 6000.0);
 }
+
+namespace {
+vdsim::PowertrainParams make_pt() {
+    vdsim::PowertrainParams p;
+    p.enabled = true;
+    p.engine.idle_rpm = 800; p.engine.redline_rpm = 6500; p.engine.inertia = 0.25;
+    p.engine.map.rpm_breaks = {1000, 3000, 6000};
+    p.engine.map.throttle_breaks = {0.0, 1.0};
+    p.engine.map.torque = {{-20, -30, -40}, {180, 320, 240}};
+    p.gearbox.gear_ratios = {3.5, 2.0, 1.3, 1.0, 0.8};
+    p.gearbox.final_drive = 4.0; p.gearbox.efficiency = 0.9; p.gearbox.shift_time = 0.3;
+    return p;
+}
+}  // namespace
+
+TEST(EngineGearbox, RpmCouplesToWheelSpeed) {
+    vdsim::EngineGearbox eg; eg.configure(make_pt());
+    const double omega = 10.0;       // rad/s driven wheel
+    eg.axle_torque(/*throttle=*/0.5, /*brake=*/0.0, omega, /*v=*/3.0, /*gear=*/1, 1e-3);
+    const double expect = omega * 3.5 * 4.0 * 60.0 / (2.0 * M_PI);  // ratio*fd
+    EXPECT_NEAR(eg.engine_rpm(), expect, 1.0);
+}
+
+TEST(EngineGearbox, AxleTorqueScalesByRatioFdEff) {
+    vdsim::EngineGearbox eg; eg.configure(make_pt());
+    const double omega = 30.0;       // -> rpm well above idle, locked
+    const double T = eg.axle_torque(1.0, 0.0, omega, 9.0, 1, 1e-3);
+    const double Te = make_pt().engine.map.eval(eg.engine_rpm(), 1.0);
+    EXPECT_NEAR(T, Te * 3.5 * 4.0 * 0.9, 1e-6);
+}
+
+TEST(EngineGearbox, ReflectedInertiaIsGearDependent) {
+    auto p = make_pt();
+    vdsim::EngineGearbox lo; p.start_gear = 1; lo.configure(p);
+    vdsim::EngineGearbox hi; p.start_gear = 5; hi.configure(p);
+    EXPECT_GT(lo.reflected_inertia(), hi.reflected_inertia());
+    EXPECT_NEAR(lo.reflected_inertia(), 0.25 * std::pow(3.5 * 4.0, 2), 1e-9);
+}
+
+TEST(EngineGearbox, AutoUpshiftAtThreshold) {
+    auto p = make_pt();
+    p.shift_mode = vdsim::PowertrainParams::ShiftMode::AutoRpmThreshold;
+    p.upshift_rpm = 5000; p.downshift_rpm = 1500;
+    vdsim::EngineGearbox eg; eg.configure(p);
+    // omega that puts gear-1 rpm above 5000: rpm = omega*3.5*4*9.549
+    const double omega = 5200.0 / (3.5 * 4.0 * 60.0 / (2.0 * M_PI));
+    eg.axle_torque(1.0, 0.0, omega, 12.0, /*manual gear ignored*/1, 1e-3);
+    EXPECT_EQ(eg.current_gear(), 2) << "should upshift above the threshold";
+}
+
+TEST(EngineGearbox, ShiftTimeInterruptsTorque) {
+    auto p = make_pt();
+    p.shift_mode = vdsim::PowertrainParams::ShiftMode::AutoRpmThreshold;
+    p.upshift_rpm = 5000; p.gearbox.shift_time = 0.3;
+    vdsim::EngineGearbox eg; eg.configure(p);
+    const double omega = 5200.0 / (3.5 * 4.0 * 60.0 / (2.0 * M_PI));
+    const double T_shift = eg.axle_torque(1.0, 0.0, omega, 12.0, 1, 1e-3);  // triggers shift
+    EXPECT_DOUBLE_EQ(T_shift, 0.0) << "clutch open during the shift";
+}
+
+TEST(EngineGearbox, CustomShiftPolicyIsUsed) {
+    vdsim::EngineGearbox eg; eg.configure(make_pt());
+    bool called = false;
+    eg.set_shift_policy([&](const vdsim::ShiftContext& c) {
+        called = true;
+        EXPECT_EQ(c.num_gears, 5);
+        return 4;                    // force 4th gear
+    });
+    eg.axle_torque(0.6, 0.0, 40.0, 12.0, 1, 1e-3);
+    EXPECT_TRUE(called);
+    EXPECT_EQ(eg.current_gear(), 4);
+}
+
+TEST(EngineGearbox, IdleFloorAndNoReverseCreepAtStandstill) {
+    vdsim::EngineGearbox eg; eg.configure(make_pt());
+    const double T_closed = eg.axle_torque(0.0, 0.0, 0.0, 0.0, 1, 1e-3);
+    EXPECT_GE(eg.engine_rpm(), 800.0) << "idle floor at standstill";
+    EXPECT_GE(T_closed, 0.0) << "slipping launch clutch does not push backward";
+    const double T_open = eg.axle_torque(1.0, 0.0, 0.0, 0.0, 1, 1e-3);
+    EXPECT_GT(T_open, 0.0) << "throttle launches forward";
+}
+
+TEST(EngineGearbox, EngineBrakingWhenCoastingLocked) {
+    vdsim::EngineGearbox eg; eg.configure(make_pt());
+    const double omega = 60.0;       // locked, high rpm
+    const double T = eg.axle_torque(0.0, 0.0, omega, 18.0, 1, 1e-3);
+    EXPECT_LT(T, 0.0) << "closed throttle while rolling -> engine braking (negative axle torque)";
+}
