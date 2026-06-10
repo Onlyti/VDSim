@@ -2903,7 +2903,7 @@
 
 
 <h1 id="vdsim-product-roadmap">VDSim product roadmap<a class="headerlink" href="#vdsim-product-roadmap" title="Permanent link">&para;</a></h1>
-<p><strong>Last updated:</strong> 2026-06-10 · <strong>Tests:</strong> 292/292 ctest green (<code>main</code>)</p>
+<p><strong>Last updated:</strong> 2026-06-10 · <strong>Tests:</strong> 295/295 ctest green (<code>main</code>)</p>
 <p>Living roadmap from early PoC through v0.3. Tracks what shipped in mainline vs what
 is planned. Detail specs link to <code>docs/design/*</code>; tire phases in
 <a href="../design/TIRE_ROADMAP/"><code>design/TIRE_ROADMAP.md</code></a>.</p>
@@ -2935,8 +2935,8 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 </tr>
 <tr>
 <td>Tire</td>
-<td>MF96 + LuGre <strong>default</strong>; <strong>MF2002 <code>.tir</code> backend (T1)</strong>; <strong>belt transient (T2)</strong></td>
-<td>bicycle belt; Chrono Pac02 parity; GUI <code>.tir</code></td>
+<td>MF96 + LuGre <strong>default</strong>; <strong>MF2002 <code>.tir</code> backend (T1, Chrono-cross-checked)</strong>; <strong>belt transient (T2)</strong></td>
+<td>bicycle belt; combined-slip vs Pac02; GUI <code>.tir</code></td>
 </tr>
 <tr>
 <td>Drivetrain</td>
@@ -2960,7 +2960,7 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 </tr>
 <tr>
 <td>Validation</td>
-<td>ISO 7401/4138/3888 <strong>re-baselined + CI-gated</strong> (<code>IsoBaseline</code>), 292 ctest</td>
+<td>ISO 7401/4138/3888 <strong>re-baselined + CI-gated</strong> (<code>IsoBaseline</code>), 295 ctest</td>
 <td>Adams x-check rtol; commercial cross-val</td>
 </tr>
 </tbody>
@@ -3219,8 +3219,8 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 </tr>
 <tr>
 <td>T1</td>
-<td>Chrono Pac02 parity gate (reference, needs Chrono build)</td>
-<td>[ ]</td>
+<td>Chrono Pac02 parity gate (<code>ctest -R ChronoPac02Parity</code>)</td>
+<td>[x] pure-long ~2%; combined differs</td>
 </tr>
 <tr>
 <td>T1</td>
@@ -3737,7 +3737,7 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <td></td>
 </tr>
 <tr>
-<td>[x] <strong>292</strong> automated ctests</td>
+<td>[x] <strong>295</strong> automated ctests</td>
 <td>Shipped</td>
 <td>2026-06-10</td>
 </tr>

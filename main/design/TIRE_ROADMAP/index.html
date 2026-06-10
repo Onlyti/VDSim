@@ -2695,7 +2695,20 @@ uncommitted). T1.4 — the MF2002 evaluator already does combined slip
 and gated the host friction-ellipse clip on it so MF2002 (and LuGre) are not
 re-clipped (MF2002's peak <span class="arithmatex">\(F_x\)</span> exceeds <span class="arithmatex">\(\mu_{nom}F_z\)</span>). 279 ctest.
 <strong>Remaining:</strong> GUI <code>.tir</code> import (v0.5.2 GUI bundle); parity gate vs Chrono Pac02
-reference (needs a Chrono build — external env). Headless T1 core is complete.</p>
+reference. Headless T1 core is complete.</p>
+<p><strong>Parity gate (2026-06-10, DONE — real Chrono reference):</strong> <code>external/chrono_parity/</code>
+(isolated — Chrono never enters our CMake/core). Chrono 8.0.0 was built from source
+(vehicle module only; the conda pychrono ≥ 8 binary needs GLIBC ≥ 2.32 which Ubuntu
+20.04 lacks). A standalone generator (<code>gen_reference.cpp</code>, links Chrono via
+<code>ChTireTestRig</code>) parses the shared <code>sample_pac02.tir</code>, emits the equivalent Pac02 JSON,
+sweeps (Fz, κ, α) and writes <code>reference/pac02_reference.csv</code> (committed). The VDSim-side
+<code>tests/parity/test_chrono_pac02_parity.cpp</code> (<code>ctest -R ChronoPac02Parity</code>, no Chrono link)
+evaluates our MF2002 at the slip/load Chrono actually reported. <strong>Result:</strong> pure
+longitudinal slip matches Pac02 <strong>within ~2%</strong> across Fz 2–6 kN (gated); near-pure
+lateral ~6%; <strong>strong combined slip diverges</strong> (mean |ΔFx|≈39%, |ΔFy|≈17% — different
+combined-slip weighting, reported not gated). So our MF long backbone + load sensitivity
+are independently validated; aligning <code>Gxa</code>/<code>Gyk</code> with Pac02 combined slip is a separate
+open task. 295 ctest. See <code>external/chrono_parity/README.md</code>.</p>
 </blockquote>
 <table>
 <thead>
