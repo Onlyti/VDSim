@@ -2709,7 +2709,7 @@ Fz 2–6 kN — both gated (backbone + load sensitivity + cornering stiffness in
 validated). Combined cross-terms differ, but that is largely a rig-frame artifact
 (<code>ChTireTestRig</code> reports global-frame force on a slip-yawed wheel, so the combined
 longitudinal component is frame-sensitive) mixed with weighting — report-only, not a
-model defect. 296 ctest. See <code>external/chrono_parity/README.md</code>.</p>
+model defect. 299 ctest. See <code>external/chrono_parity/README.md</code>.</p>
 </blockquote>
 <table>
 <thead>
@@ -2753,8 +2753,9 @@ velocity feeding v_r). T2.4 — free_3d (L5) MF + LuGre. Opt-in <code>BeltTirePa
 <code>test_belt_validation.cpp</code> — steady unchanged, early response suppressed at t=tau,
 more lag at lower speed (the sigma/|Vx| scaling). 291 ctest. Theory:
 <a href="../../theory/21_belt_transient/"><code>theory/21_belt_transient.md</code></a>.
-<strong>Remaining:</strong> bicycle (L1) wiring (lowest value). Then T2 can merge with T1
-(T1 -&gt; T2 ff order).</p>
+<strong>Done (2026-06-10):</strong> bicycle (L1) belt wiring — MF + LuGre paths, per-axle relaxed
+slip; tests <code>BeltTransient.L1PathLagsWithBelt</code> / <code>.L1LuGrePathLagsWithBelt</code>. Belt is now
+on every dynamics level (L1/L2/L3/L5), default off. <strong>T2 complete.</strong></p>
 </blockquote>
 <table>
 <thead>

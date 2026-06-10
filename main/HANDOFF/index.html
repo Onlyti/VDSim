@@ -2400,7 +2400,7 @@
 
 
 <h1 id="vdsim">VDSim 핸드오프<a class="headerlink" href="#vdsim" title="Permanent link">&para;</a></h1>
-<p>작성: <strong>2026-06-10</strong> · <code>main</code> (= <code>v0.5.1</code>) · <strong>296/296 ctest green</strong></p>
+<p>작성: <strong>2026-06-10</strong> · <code>main</code> (= <code>v0.5.1</code>) · <strong>299/299 ctest green</strong></p>
 <h2 id="1">1. 문서 인덱스<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2524,7 +2524,7 @@
 </ul>
 <h2 id="3">3. 빌드·검증<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>cmake<span class="w"> </span>--build<span class="w"> </span>build<span class="w"> </span>-j
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ctest<span class="w"> </span>--output-on-failure<span class="w">   </span><span class="c1"># 296/296</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ctest<span class="w"> </span>--output-on-failure<span class="w">   </span><span class="c1"># 299/299</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>python3<span class="w"> </span>gui/server.py<span class="w">                   </span><span class="c1"># http://127.0.0.1:8080</span>
 </span></code></pre></div>
 <h2 id="4">4. 다음 작업<a class="headerlink" href="#4" title="Permanent link">&para;</a></h2>
@@ -2553,9 +2553,10 @@ M6 docs. 273 ctest. Scenes: <code>terrain_hill_demo</code>, <code>banked_grade_d
   validated). Combined cross-terms differ but that is largely a rig-frame artifact
   (<code>ChTireTestRig</code> reports global-frame force on a yawed wheel) mixed with weighting —
   report-only. See <code>external/chrono_parity/README.md</code>.
-- <strong>Remaining tire:</strong> bicycle (L1) belt wiring (lowest value); GUI <code>.tir</code> import
-  (v0.5.2 GUI). (Combined-slip Pac02 alignment is low priority — pure axes already match;
-  the residual is mostly the rig-frame decomposition, not our model.)</p>
+- <strong>Tire T2 complete:</strong> bicycle (L1) belt wiring done (MF + LuGre) — belt now on
+  L1/L2/L3/L5, default off. Tests <code>BeltTransient.L1*</code>. <strong>Remaining tire:</strong> GUI <code>.tir</code>
+  import (v0.5.2 GUI). (Combined-slip Pac02 alignment is low priority — pure axes already
+  match; the residual is mostly the rig-frame decomposition, not our model.)</p>
 <p><strong>v0.5.2 (deferred — needs browser, no headless path):</strong>
 1. <strong>M4 GUI terrain load + L5 Play</strong> — chase cam uses <code>position.z</code>, spawn on mesh.
 2. <strong>M5c GUI stunt authoring</strong> — author ramp/loop/banked scenes (today render-only).
@@ -2567,10 +2568,11 @@ M6 docs. 273 ctest. Scenes: <code>terrain_hill_demo</code>, <code>banked_grade_d
    steered wheel mesh (<code>gui/static/app.js makeForceArrow</code> / update L793-794).</p>
 <p><strong>Done this session (post-tire):</strong> ISO re-baseline (flat, sedan L2 LuGre) — VALIDATION.md
 table refreshed + CI gate <code>tests/integration/test_iso_baseline.cpp</code> (<code>ctest -R IsoBaseline</code>)
-locks the 7401 force signature. 296 ctest.</p>
+locks the 7401 force signature. 299 ctest.</p>
 <p><strong>v0.6+:</strong>
 1. Ld4 v0.6 — shared inertia helpers; full loop dynamics; Featherstone in step (optional).
-3. Tire T2 belt: bicycle (L1) wiring; Chrono Pac02 parity gate; (later) higher belt eigenmodes are out of scope.</p>
+2. Drivetrain torque–RPM map + multi-ratio gearbox (next product item; ISO re-baseline follows).
+3. Tire: T2 belt is <strong>complete</strong> (L1–L5); higher belt eigenmodes (rigid-ring/FTire) out of scope.</p>
 <h2 id="5">5. 주의<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Hyundai (TUR) <code>.tir</code> <strong>confidential</strong> — 커밋 금지</li>

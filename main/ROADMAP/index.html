@@ -2903,7 +2903,7 @@
 
 
 <h1 id="vdsim-product-roadmap">VDSim product roadmap<a class="headerlink" href="#vdsim-product-roadmap" title="Permanent link">&para;</a></h1>
-<p><strong>Last updated:</strong> 2026-06-10 · <strong>Tests:</strong> 296/296 ctest green (<code>main</code>)</p>
+<p><strong>Last updated:</strong> 2026-06-10 · <strong>Tests:</strong> 299/299 ctest green (<code>main</code>)</p>
 <p>Living roadmap from early PoC through v0.3. Tracks what shipped in mainline vs what
 is planned. Detail specs link to <code>docs/design/*</code>; tire phases in
 <a href="../design/TIRE_ROADMAP/"><code>design/TIRE_ROADMAP.md</code></a>.</p>
@@ -2960,7 +2960,7 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 </tr>
 <tr>
 <td>Validation</td>
-<td>ISO 7401/4138/3888 <strong>re-baselined + CI-gated</strong> (<code>IsoBaseline</code>), 296 ctest</td>
+<td>ISO 7401/4138/3888 <strong>re-baselined + CI-gated</strong> (<code>IsoBaseline</code>), 299 ctest</td>
 <td>Adams x-check rtol; commercial cross-val</td>
 </tr>
 </tbody>
@@ -3239,8 +3239,8 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 </tr>
 <tr>
 <td>T2</td>
-<td>bicycle (L1) belt wiring (lowest value)</td>
-<td>[ ]</td>
+<td>bicycle (L1) belt wiring (MF + LuGre)</td>
+<td>[x] merged</td>
 </tr>
 <tr>
 <td>T3</td>
@@ -3737,7 +3737,7 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <td></td>
 </tr>
 <tr>
-<td>[x] <strong>296</strong> automated ctests</td>
+<td>[x] <strong>299</strong> automated ctests</td>
 <td>Shipped</td>
 <td>2026-06-10</td>
 </tr>
@@ -3850,7 +3850,7 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <h3 id="v052-planned">v0.5.2+ (planned)<a class="headerlink" href="#v052-planned" title="Permanent link">&para;</a></h3>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> GUI terrain Play (M4) + stunt authoring (M5c) + <code>.tir</code> import — browser-gated</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Tire: bicycle (L1) belt; Chrono Pac02 parity gate</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Tire: bicycle (L1) belt (MF+LuGre) + Chrono Pac02 parity gate — done</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Drivetrain torque–RPM + gearbox</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Brake/steer physics upgrade</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> CARLA full bridge · open benchmark  </li>
