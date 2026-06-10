@@ -99,6 +99,11 @@ M6 docs. 273 ctest. Scenes: `terrain_hill_demo`, `banked_grade_demo`, `banked_ov
 1. **M4 GUI terrain load + L5 Play** — chase cam uses `position.z`, spawn on mesh.
 2. **M5c GUI stunt authoring** — author ramp/loop/banked scenes (today render-only).
 3. GUI `.tir` import (Tire T1 tail).
+4. **Tire-force arrows in wheel frame** — model now exposes `tire_forces_wheel()`
+   (un-rotated, validated by `TireFrame.*`; also in pybind). The GUI still draws the
+   body-frame `tire_forces_body()` along body axes (arrows don't tilt with steer); to
+   show tire-frame, send the wheel-frame force over VDS1 and parent the arrows to the
+   steered wheel mesh (`gui/static/app.js makeForceArrow` / update L793-794).
 
 **Done this session (post-tire):** ISO re-baseline (flat, sedan L2 LuGre) — VALIDATION.md
 table refreshed + CI gate `tests/integration/test_iso_baseline.cpp` (`ctest -R IsoBaseline`)

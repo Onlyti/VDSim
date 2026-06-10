@@ -130,6 +130,7 @@ public:
         steering_   = make_default_steering(vp_, vp_.steer_deadtime_s);
         // Clear diagnostics so accessors don't return stale values before step().
         tire_F_.fill(Vec3::Zero());
+        tire_F_wheel_.fill(Vec3::Zero());
         tire_Fz_.fill(0.0);
         slip_ratio_.fill(0.0);
         slip_angle_.fill(0.0);
@@ -164,6 +165,7 @@ public:
     const State& state() const noexcept override { return state_; }
 
     std::array<Vec3, NUM_WHEELS>   tire_forces_body() const override { return tire_F_; }
+    std::array<Vec3, NUM_WHEELS>   tire_forces_wheel() const override { return tire_F_wheel_; }
     std::array<double, NUM_WHEELS> tire_Fz()           const override { return tire_Fz_; }
     std::array<double, NUM_WHEELS> wheel_slip_ratio()  const override { return slip_ratio_; }
     std::array<double, NUM_WHEELS> wheel_slip_angle()  const override { return slip_angle_; }
@@ -344,6 +346,7 @@ private:
         // ---- Per-tire velocity, slip, force ----
         std::array<Vec3,   NUM_WHEELS> F_body;
         std::array<Vec3,   NUM_WHEELS> tire_F_disp;   // reported force (lateral faded by lambda)
+        std::array<Vec3,   NUM_WHEELS> tire_F_wheel_disp;  // same, wheel frame (pre steer rotation)
         std::array<double, NUM_WHEELS> kappa, alpha;
         std::array<double, NUM_WHEELS> mz_wheel {{0.0, 0.0, 0.0, 0.0}};
 
@@ -372,6 +375,7 @@ private:
             if (!contacts[i].is_valid) {
                 F_body[i]      = Vec3::Zero();
                 tire_F_disp[i] = Vec3::Zero();
+                tire_F_wheel_disp[i] = Vec3::Zero();
                 kappa[i]       = 0.0;
                 alpha[i]       = 0.0;
                 mz_wheel[i]    = 0.0;
@@ -471,6 +475,7 @@ private:
                 Fyd *= c;
             }
             tire_F_disp[i] = Vec3(Fxd * cd_i - Fyd * sd_i, Fxd * sd_i + Fyd * cd_i, 0.0);
+            tire_F_wheel_disp[i] = Vec3(Fxd, Fyd, 0.0);
             kappa[i]  = k_slip;
             alpha[i]  = a_slip;
         }
@@ -550,7 +555,8 @@ private:
         }
 
         // ---- Diagnostics ----
-        tire_F_   = tire_F_disp;
+        tire_F_       = tire_F_disp;
+        tire_F_wheel_ = tire_F_wheel_disp;
         tire_Fz_  = Fz;
         slip_ratio_ = kappa;
         slip_angle_ = alpha;
@@ -682,6 +688,7 @@ private:
     double pitch_qs_ {0.0};
     double mz_front_sum_ {0.0};
     std::array<Vec3,   NUM_WHEELS> tire_F_     {};
+    std::array<Vec3,   NUM_WHEELS> tire_F_wheel_ {};
     std::array<double, NUM_WHEELS> tire_Fz_    {};
     std::array<double, NUM_WHEELS> slip_ratio_ {};
     std::array<double, NUM_WHEELS> slip_angle_ {};

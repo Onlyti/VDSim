@@ -387,6 +387,7 @@ PYBIND11_MODULE(vdsim, m) {
              py::return_value_policy::reference_internal)
         .def("tire_Fz",  &vdsim::IVehicleDynamics::tire_Fz)
         .def("tire_forces_body", &vdsim::IVehicleDynamics::tire_forces_body)
+        .def("tire_forces_wheel", &vdsim::IVehicleDynamics::tire_forces_wheel)
         .def("wheel_slip_ratio", &vdsim::IVehicleDynamics::wheel_slip_ratio)
         .def("wheel_slip_angle", &vdsim::IVehicleDynamics::wheel_slip_angle)
         .def("roll_angle_qs",  &vdsim::IVehicleDynamics::roll_angle_qs)

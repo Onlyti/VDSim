@@ -292,6 +292,8 @@ public:
 
     std::array<Vec3,   NUM_WHEELS> tire_forces_body() const override
         { return inner_->tire_forces_body(); }
+    std::array<Vec3,   NUM_WHEELS> tire_forces_wheel() const override
+        { return inner_->tire_forces_wheel(); }
     std::array<double, NUM_WHEELS> tire_Fz() const override
         { return inner_->tire_Fz(); }
     std::array<double, NUM_WHEELS> wheel_slip_ratio() const override

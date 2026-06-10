@@ -13,6 +13,7 @@ add_executable(vdsim_integration_tests
     test_belt_transient.cpp
     test_belt_validation.cpp
     test_iso_baseline.cpp
+    test_tire_frame.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../parity/test_chrono_pac02_parity.cpp
 )
 

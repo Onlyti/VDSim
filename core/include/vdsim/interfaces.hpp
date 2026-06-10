@@ -49,6 +49,11 @@ public:
 
     // Per-wheel diagnostics (for validation/debug)
     virtual std::array<Vec3,   NUM_WHEELS> tire_forces_body()  const = 0;  // [N], body frame
+    // Per-wheel tire force in the WHEEL (tire) frame: x = wheel heading
+    // (longitudinal), y = wheel lateral. The body-frame force is this rotated by
+    // the wheel's steer angle. Default returns the body-frame force (levels with no
+    // per-wheel steer separation); L2/L3 override with the un-rotated wheel force.
+    virtual std::array<Vec3,   NUM_WHEELS> tire_forces_wheel() const { return tire_forces_body(); }
     virtual std::array<double, NUM_WHEELS> tire_Fz()           const = 0;  // [N]
     virtual std::array<double, NUM_WHEELS> wheel_slip_ratio()  const = 0;  // [-]
     virtual std::array<double, NUM_WHEELS> wheel_slip_angle()  const = 0;  // [rad]
