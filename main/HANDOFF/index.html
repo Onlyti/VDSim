@@ -2409,6 +2409,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#7-next-pickups-fresh-session" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Next pickups (fresh session)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2622,13 +2633,27 @@ M6 docs. 273 ctest. Scenes: <code>terrain_hill_demo</code>, <code>banked_grade_d
 </ul>
 <h2 id="6-git">6. Git<a class="headerlink" href="#6-git" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>main</code> = <code>v0.5.1</code> (tire T1 MF2002 backend + T2 belt transient). Tags:
-  v0.1.0 / v0.2.0 / v0.2.4 / v0.4.0 / v0.5.0 / <strong>v0.5.1</strong>. Remaining tire tail
-  (bicycle L1 belt, Chrono parity, GUI <code>.tir</code> import) does NOT block the tag — it lands
-  in v0.5.2 (GUI bundle) / v0.6.</li>
-<li>All feature work ff-merged (no history rewrite). push/merge/tag는 명시 요청 시에만.</li>
+<li><code>main</code> @ <code>279977f</code>, <strong>all pushed</strong>, 317/317 ctest. Last tag <strong><code>v0.5.1</code></strong>; main is ahead
+  of it (post-0.5.1, <strong>untagged</strong>): tire tail (L1 belt, <code>tire_forces_wheel</code>, Chrono parity)</li>
+<li>ISO re-baseline/<code>IsoBaseline</code> + <strong>Drivetrain v2</strong> (D1–D5). Tag a release when the next
+  milestone closes (suggest <code>v0.6.0</code> once catalog <code>drivetrain_v2</code> or Ld4 v0.6 lands).</li>
+<li>Tags: v0.1.0 / v0.2.0 / v0.2.4 / v0.4.0 / v0.5.0 / <strong>v0.5.1</strong>.</li>
+<li>All feature work committed straight on <code>main</code> this session (no branches/rewrite).
+  push/merge/tag는 명시 요청 시에만.</li>
+<li><strong>External build (not in repo):</strong> Chrono 8.0.0 source at <code>~/build_ext/chrono_src</code>
+  (vehicle module only) — only needed to <em>regenerate</em> the parity CSV, not to run the gate.</li>
 <li>Next: new feature branch off <code>main</code>.</li>
 </ul>
+<h2 id="7-next-pickups-fresh-session">7. Next pickups (fresh session)<a class="headerlink" href="#7-next-pickups-fresh-session" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Catalog <code>drivetrain_v2</code> part</strong> — materialize a <code>powertrain:</code> block into the chassis
+   params via the catalog resolve pipeline (today the demo loads <code>powertrain_sedan_demo.yaml</code>
+   directly through <code>from_yaml</code>). Headless.</li>
+<li><strong>Ld4 v0.6</strong> — shared inertia helpers; full loop dynamics; Featherstone in step (optional).</li>
+<li><strong>v0.5.2 GUI (browser, user-verified):</strong> terrain Play (M4), stunt authoring (M5c),
+   <code>.tir</code> import, tire-force arrows in wheel frame (<code>tire_forces_wheel()</code> ready).</li>
+<li>Brake/steer physics (booster/MDPS/ABS); V2V collision + VDS1 multi-vehicle I/O.</li>
+</ol>
 
 
 
