@@ -5,6 +5,7 @@ add_executable(vdsim_unit_tests
     test_tire_models.cpp
     test_magic_formula_tire.cpp
     test_belt_tire.cpp
+    test_powertrain.cpp
     test_params_yaml.cpp
     test_scenario_yaml.cpp
     test_control_converter.cpp

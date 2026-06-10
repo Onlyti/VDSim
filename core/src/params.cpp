@@ -105,6 +105,53 @@ void write_seq_double(YAML::Emitter& out, const char* key,
     out << YAML::EndSeq;
 }
 
+void pull_seq(const YAML::Node& node, const char* key, std::vector<double>& dst) {
+    const auto sub = node[key];
+    if (!sub || !sub.IsSequence()) return;
+    dst.clear();
+    for (const auto& x : sub) dst.push_back(x.as<double>());
+}
+
+// Engine + gearbox (Drivetrain v2). Presence of a `powertrain:` map opts in.
+void parse_powertrain(const YAML::Node& root, PowertrainParams& pt) {
+    const auto n = root["powertrain"];
+    if (!n || !n.IsMap()) return;
+    pt.enabled = true;
+    if (const auto e = n["engine"]; e && e.IsMap()) {
+        pull(e, "idle_rpm",    pt.engine.idle_rpm);
+        pull(e, "redline_rpm", pt.engine.redline_rpm);
+        pull(e, "inertia",     pt.engine.inertia);
+        pull_seq(e, "rpm_breaks",      pt.engine.map.rpm_breaks);
+        pull_seq(e, "throttle_breaks", pt.engine.map.throttle_breaks);
+        if (const auto tm = e["torque_map"]; tm && tm.IsSequence()) {
+            pt.engine.map.torque.clear();
+            for (const auto& row : tm) {
+                std::vector<double> r;
+                for (const auto& x : row) r.push_back(x.as<double>());
+                pt.engine.map.torque.push_back(std::move(r));
+            }
+        }
+    }
+    if (const auto g = n["gearbox"]; g && g.IsMap()) {
+        pull_seq(g, "gear_ratios", pt.gearbox.gear_ratios);
+        pull(g, "reverse_ratio", pt.gearbox.reverse_ratio);
+        pull(g, "final_drive",   pt.gearbox.final_drive);
+        pull(g, "efficiency",    pt.gearbox.efficiency);
+        pull(g, "shift_time",    pt.gearbox.shift_time);
+    }
+    if (const auto s = n["shift"]; s && s.IsMap()) {
+        if (const auto m = s["mode"]; m && !m.IsNull()) {
+            const auto mode = m.as<std::string>();
+            pt.shift_mode = (mode == "auto_rpm" || mode == "auto")
+                ? PowertrainParams::ShiftMode::AutoRpmThreshold
+                : PowertrainParams::ShiftMode::Manual;
+        }
+        pull(s, "upshift_rpm",   pt.upshift_rpm);
+        pull(s, "downshift_rpm", pt.downshift_rpm);
+        pull(s, "start_gear",    pt.start_gear);
+    }
+}
+
 }  // namespace
 
 // =============================================================================
@@ -156,6 +203,8 @@ VehicleParams VehicleParams::from_yaml(const std::string& path) {
     pull(root, "brake_deadtime_s",  p.brake_deadtime_s);
     pull(root, "drive_deadtime_s",  p.drive_deadtime_s);
     pull(root, "steer_deadtime_s",  p.steer_deadtime_s);
+
+    parse_powertrain(root, p.powertrain);
 
     pull(root, "steering_ratio",        p.steering_ratio);
     pull(root, "max_steer_angle_wheel", p.max_steer_angle_wheel);

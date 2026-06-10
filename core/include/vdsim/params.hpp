@@ -3,6 +3,7 @@
 #include <array>
 #include <string>
 
+#include "vdsim/powertrain.hpp"
 #include "vdsim/types.hpp"
 
 namespace vdsim {
@@ -62,6 +63,11 @@ struct VehicleParams {
     double max_brake_torque      {2000.0};                             // [Nm]
     double brake_bias_front      {0.5};                                // front share [0, 1]
     bool   brake_ebd_enabled     {false};                              // dynamic Fz-based bias
+
+    // Engine + gearbox (Drivetrain v2). Opt-in: a YAML `powertrain:` block sets
+    // `powertrain.enabled`; otherwise the legacy flat torque above is used and the
+    // ISO baseline is unchanged. See powertrain.hpp.
+    PowertrainParams powertrain;
 
     // ---- Actuator transport deadtime (subsystem modules) ----
     double brake_deadtime_s      {0.0};                                // [s] pedal->brake lag
