@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/theory/21_belt_transient/">
+        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/theory/22_drivetrain_v2/">
       
       
-        <link rel="prev" href="../19_lugre_dynamic_tire/">
+        <link rel="prev" href="../18_runtime_and_cosim/">
       
       
-        <link rel="next" href="../04_ld1_bicycle/">
+        <link rel="next" href="../../ROADMAP/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>21 — Tire (belt transient) - VDSim</title>
+        <title>22 — Drivetrain v2 (engine/gearbox) - VDSim</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#21-tire-belt-carcass-transient-first-order-relaxation" class="md-skip">
+        <a href="#ch22-drivetrain-v2-engine-torque-map-gearbox-shift-policy" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              21 — Tire (belt transient)
+              22 — Drivetrain v2 (engine/gearbox)
             
           </span>
         </div>
@@ -732,37 +732,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    21 — Tire (belt transient)
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../21_belt_transient/" class="md-nav__link">
         
   
   
@@ -778,114 +751,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#learning-objectives" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Learning objectives
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Prerequisites
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#211-motivation-the-carcass-deflects-before-the-patch-slides" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        21.1 Motivation — the carcass deflects before the patch slides
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#212-three-transients-three-regimes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        21.2 Three transients, three regimes
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#213-model-and-discrete-update" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        21.3 Model and discrete update
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#214-validation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        21.4 Validation
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#215-shipped-status-and-limitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        21.5 Shipped status and limitations
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#cross-references" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Cross-references
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1343,10 +1208,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../22_drivetrain_v2/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    22 — Drivetrain v2 (engine/gearbox)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1362,6 +1254,98 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-engine-torque-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Engine torque map
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-gearbox-coupling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Gearbox coupling
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-shift-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Shift policy
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Shift policy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#user-defined-shift-function" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User-defined shift function
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Config
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -2427,10 +2411,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#learning-objectives" class="md-nav__link">
+  <a href="#1-engine-torque-map" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Learning objectives
+        1. Engine torque map
       
     </span>
   </a>
@@ -2438,10 +2422,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
+  <a href="#2-gearbox-coupling" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Prerequisites
+        2. Gearbox coupling
       
     </span>
   </a>
@@ -2449,10 +2433,38 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#211-motivation-the-carcass-deflects-before-the-patch-slides" class="md-nav__link">
+  <a href="#3-shift-policy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        21.1 Motivation — the carcass deflects before the patch slides
+        3. Shift policy
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Shift policy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#user-defined-shift-function" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User-defined shift function
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Config
       
     </span>
   </a>
@@ -2460,54 +2472,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#212-three-transients-three-regimes" class="md-nav__link">
+  <a href="#5-validation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        21.2 Three transients, three regimes
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#213-model-and-discrete-update" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        21.3 Model and discrete update
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#214-validation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        21.4 Validation
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#215-shipped-status-and-limitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        21.5 Shipped status and limitations
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#cross-references" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Cross-references
+        5. Validation
       
     </span>
   </a>
@@ -2534,150 +2502,91 @@
   
 
 
-<h1 id="21-tire-belt-carcass-transient-first-order-relaxation">21. Tire — belt / carcass transient (first-order relaxation)<a class="headerlink" href="#21-tire-belt-carcass-transient-first-order-relaxation" title="Permanent link">&para;</a></h1>
-<h2 id="learning-objectives">Learning objectives<a class="headerlink" href="#learning-objectives" title="Permanent link">&para;</a></h2>
-<p>After this chapter you can:</p>
-<ol>
-<li>Explain why a steady Magic Formula (Chapter 03) cannot reproduce the lag in
-   measured <span class="arithmatex">\(F_y(t)\)</span> after a step steer, and which physical effect supplies it.</li>
-<li>Write the first-order belt relaxation ODE and its exact discrete update, and
-   identify the time constant <span class="arithmatex">\(\tau = \sigma/|V_x|\)</span>.</li>
-<li>Distinguish three different transient mechanisms — relaxation length, the LuGre
-   bristle state, and the belt — and say which regime each fixes.</li>
-<li>Describe VDSim's shipped adoption: a backend-agnostic slip filter that feeds
-   relaxed <span class="arithmatex">\(\kappa,\alpha\)</span> to the MF path and relaxed slip velocity to the LuGre
-   path, opt-in per wheel.</li>
-<li>State what is validated and the honest limit (first order only, no higher belt
-   eigenmodes).</li>
-</ol>
-<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
+<h1 id="ch22-drivetrain-v2-engine-torque-map-gearbox-shift-policy">Ch.22 — Drivetrain v2: engine torque map + gearbox + shift policy<a class="headerlink" href="#ch22-drivetrain-v2-engine-torque-map-gearbox-shift-policy" title="Permanent link">&para;</a></h1>
+<p>VDSim's default drivetrain applies a flat motor torque (<code>throttle x max_motor_torque x
+final_drive_ratio</code>). Drivetrain v2 replaces that, <strong>opt-in</strong>, with a real engine + gearbox:
+a 2D engine torque map, an N-speed gearbox coupled to engine RPM, and a shift policy that
+can be a user-defined function. It is enabled by a <code>powertrain:</code> block in the vehicle
+config; absent that block the legacy flat torque is used and the ISO baseline is unchanged.</p>
+<p>Scope: L2 (seven-DOF) and L3 (fourteen-DOF, via its inner L2). L1 keeps the flat torque.</p>
+<h2 id="1-engine-torque-map">1. Engine torque map<a class="headerlink" href="#1-engine-torque-map" title="Permanent link">&para;</a></h2>
+<p>Peak torque is a 2D map <code>T_peak(rpm, throttle)</code>, bilinearly interpolated and clamped to
+the table domain. The actual torque is read directly from the map at the current
+(rpm, throttle); the <strong>closed-throttle row</strong> (<code>throttle = 0</code>) carries the engine-braking
+(motoring) torque, which is negative, so coasting produces a retarding axle torque.</p>
+<div class="arithmatex">\[
+T_\mathrm{eng} = \mathrm{bilinear}\bigl(\text{torque\_map};\ \mathrm{rpm},\ \theta\bigr)
+\]</div>
+<h2 id="2-gearbox-coupling">2. Gearbox coupling<a class="headerlink" href="#2-gearbox-coupling" title="Permanent link">&para;</a></h2>
+<p>Engine speed follows the driven-wheel speed through the selected gear and the final drive:</p>
+<div class="arithmatex">\[
+\omega_\mathrm{eng} = |\omega_\mathrm{wheel}|\, |i_g|\, i_\mathrm{fd},
+\qquad
+\mathrm{rpm} = \omega_\mathrm{eng}\,\frac{60}{2\pi}
+\]</div>
+<p>clamped to <code>[idle_rpm, redline_rpm]</code>. The axle drive torque is the engine torque amplified
+by the gear and final drive, less mechanical loss:</p>
+<div class="arithmatex">\[
+T_\mathrm{axle} = T_\mathrm{eng}\, i_g\, i_\mathrm{fd}\, \eta
+\]</div>
+<p>The engine inertia reflected to the wheel is <strong>gear-dependent</strong>,
+<span class="arithmatex">\(I_\mathrm{eng}\,(i_g\, i_\mathrm{fd})^2\)</span>, so a low gear has a larger effective rotating
+inertia (slower spin-up) than a high gear — replacing the v1 final-drive-only reflection.</p>
+<p><strong>Launch (idle floor + slipping clutch).</strong> When the wheel is too slow to keep the engine
+above idle (<code>rpm_geom &lt; idle_rpm</code>), the clutch slips: the engine revs to a throttle-scaled
+target between idle and a stall RPM, and the transmitted torque is the positive part of the
+map (a slipping launch clutch does not transmit engine braking, so there is no reverse
+creep at standstill).</p>
+<h2 id="3-shift-policy">3. Shift policy<a class="headerlink" href="#3-shift-policy" title="Permanent link">&para;</a></h2>
+<p>Every step the gearbox asks a <strong>shift policy</strong> for the desired gear, then enforces a
+<code>shift_time</code> torque interrupt (clutch open) on a change and locks out further shifts until
+it elapses. Two built-ins:</p>
 <ul>
-<li><strong>Chapter 03</strong> — Pacejka MF96 pure/combined slip; the steady <span class="arithmatex">\((\kappa,\alpha)\mapsto F\)</span> map.</li>
-<li><strong>Chapter 19</strong> — LuGre bristle <span class="arithmatex">\(z\)</span> (contact friction state).</li>
-<li><strong>Chapter 11</strong> — substep integration.</li>
-<li><strong>Design</strong> — <a href="../../design/TIRE_ROADMAP/"><code>design/TIRE_ROADMAP.md</code></a> §3 (belt phase T2).</li>
+<li><code>manual</code> — follow the driver's commanded gear.</li>
+<li><code>auto_rpm</code> — upshift above <code>upshift_rpm</code>, downshift below <code>downshift_rpm</code> (hysteresis).</li>
 </ul>
-<p>Source: <code>core/include/vdsim/belt_tire.hpp</code> (<code>belt_relax</code>), wired in
-<code>seven_dof_dynamics.cpp</code> and <code>free_3d_dynamics.cpp</code>; params <code>TireParams::belt</code>.</p>
-<hr />
-<h2 id="211-motivation-the-carcass-deflects-before-the-patch-slides">21.1 Motivation — the carcass deflects before the patch slides<a class="headerlink" href="#211-motivation-the-carcass-deflects-before-the-patch-slides" title="Permanent link">&para;</a></h2>
-<p>A steady Magic Formula maps the <strong>instantaneous</strong> slip to force. In a step steer
-or a fast brake release, the <strong>measured</strong> lateral force lags the <strong>geometric</strong>
-slip angle by tens of milliseconds: the <strong>carcass / belt</strong> must first deflect
-before the contact patch reaches the steady deflection distribution that the
-empirical curve fits. An algebraic map produces this lateral force the same
-instant the slip appears — too early.</p>
-<p>The lag length is set by the <strong>relaxation length</strong> <span class="arithmatex">\(\sigma\)</span> [m] (a carcass
-compliance property): the tire travels roughly <span class="arithmatex">\(\sigma\)</span> before the force reaches
-<span class="arithmatex">\(1-1/e\)</span> of its steady value, so the time constant is</p>
-<div class="arithmatex">\[
-\tau = \frac{\sigma}{|V_x|}.
-\]</div>
-<p>It shrinks with speed — the same deflection is covered faster — which is the
-signature the validation checks (§21.4).</p>
-<hr />
-<h2 id="212-three-transients-three-regimes">21.2 Three transients, three regimes<a class="headerlink" href="#212-three-transients-three-regimes" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Mechanism</th>
-<th>Physics</th>
-<th>Fixes</th>
-<th>VDSim</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Relaxation length</td>
-<td>first-order <span class="arithmatex">\(\alpha_{\mathrm{dyn}}\to\alpha_{\mathrm{geom}}\)</span></td>
-<td>lateral transient (MF)</td>
-<td>legacy <code>relaxation_length_lat</code> (lateral, MF only)</td>
-</tr>
-<tr>
-<td>LuGre <span class="arithmatex">\(z\)</span></td>
-<td>bristle stick–slip at the contact</td>
-<td>rest / presliding / grade hold</td>
-<td>Chapter 19 (<code>lugre.enabled</code>)</td>
-</tr>
-<tr>
-<td><strong>Belt transient</strong></td>
-<td><strong>carcass compliance filters slip before the law</strong></td>
-<td><strong>step-steer / brake-in-turn transient shape</strong></td>
-<td><strong>this chapter (<code>belt.enabled</code>)</strong></td>
-</tr>
-</tbody>
-</table>
-<p>LuGre fixes the <strong>low-speed / presliding</strong> end; the belt fixes the <strong>high-speed
-transient shape</strong>. They are complementary, not alternatives — VDSim lets the belt
-filter the slip that feeds the LuGre bristle (§21.3).</p>
-<hr />
-<h2 id="213-model-and-discrete-update">21.3 Model and discrete update<a class="headerlink" href="#213-model-and-discrete-update" title="Permanent link">&para;</a></h2>
-<p>Each wheel carries a relaxed slip component <span class="arithmatex">\(s_{\mathrm{eff}}\)</span> (for <span class="arithmatex">\(\kappa\)</span> and
-<span class="arithmatex">\(\alpha\)</span>, or for the slip <em>velocity</em> on the LuGre path) obeying</p>
-<div class="arithmatex">\[
-\frac{\sigma}{|V_x|}\,\dot s_{\mathrm{eff}} = s_{\mathrm{geom}} - s_{\mathrm{eff}}.
-\]</div>
-<p>Integrated exactly over a substep <span class="arithmatex">\(h\)</span> at frozen <span class="arithmatex">\(V_x\)</span> (unconditionally stable, and
-correct at standstill where <span class="arithmatex">\(|V_x|\to 0\)</span> <strong>freezes</strong> the state instead of dividing):</p>
-<div class="arithmatex">\[
-\boxed{\,s_{\mathrm{eff}} \leftarrow s_{\mathrm{geom}}
-   + (s_{\mathrm{eff}} - s_{\mathrm{geom}})\,e^{-|V_x|\,h/\sigma}\,}
-\]</div>
-<p>This is <code>belt_relax(s_eff, s_geom, Vx, sigma, dt)</code>. In the dynamics host:</p>
-<ul>
-<li><strong>MF path</strong> (<code>!lugre</code>): the relaxed <span class="arithmatex">\(\kappa,\alpha\)</span> feed <code>ITireModel::compute</code>.</li>
-<li><strong>LuGre path</strong>: the relaxed slip <strong>velocities</strong> <span class="arithmatex">\(v_{r,\text{long}}, v_{r,\text{lat}}\)</span>
-  feed the bristle (belt → LuGre, complementary).</li>
-</ul>
-<p>The belt state advances <strong>once per substep</strong> (between integrator steps) and is held
-frozen inside an RK4 step so all four stages see the same slip linearization — the
-same pattern as the LuGre <span class="arithmatex">\(z\)</span> sub-advance. It is opt-in via
-<code>TireParams::belt {enabled, sigma_lat, sigma_long}</code>; default off leaves the steady
-behaviour (and the published ISO baseline) unchanged.</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>  step steer at t=0, fixed Vx
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  s_geom ──┐ (instant)
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>           │      s_eff(t) = s_geom (1 - e^{-t/tau}),  tau = sigma/|Vx|
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  ─────────┴───────────────────────────►  t
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>           0      tau            5·tau
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>                  63%            ~100%
+<h3 id="user-defined-shift-function">User-defined shift function<a class="headerlink" href="#user-defined-shift-function" title="Permanent link">&para;</a></h3>
+<p>The policy can be <strong>any function</strong> <code>f(ShiftContext) -&gt; desired_gear</code>, installed on the model:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">dyn</span><span class="o">.</span><span class="n">set_shift_policy</span><span class="p">(</span><span class="k">lambda</span> <span class="n">ctx</span><span class="p">:</span> <span class="mi">2</span> <span class="k">if</span> <span class="n">ctx</span><span class="o">.</span><span class="n">engine_rpm</span> <span class="o">&gt;</span> <span class="mi">5800</span> <span class="ow">and</span> <span class="n">ctx</span><span class="o">.</span><span class="n">current_gear</span> <span class="o">&lt;</span> <span class="n">ctx</span><span class="o">.</span><span class="n">num_gears</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>                                   <span class="k">else</span> <span class="n">ctx</span><span class="o">.</span><span class="n">current_gear</span><span class="p">)</span>
 </span></code></pre></div>
-<hr />
-<h2 id="214-validation">21.4 Validation<a class="headerlink" href="#214-validation" title="Permanent link">&para;</a></h2>
-<p><code>tests/integration/test_belt_validation.cpp</code> checks the L2 step-steer response
-against the relaxation analytic (a fixed-time <span class="arithmatex">\(|a_y|\)</span> metric — time-to-fraction is
-corrupted by the underdamped yaw overshoot):</p>
-<ul>
-<li><strong>Steady state unchanged</strong> — the belt is transient-only; <span class="arithmatex">\(a_{y,\mathrm{ss}}\)</span> within 8%.</li>
-<li><strong>Early response suppressed</strong> — at <span class="arithmatex">\(t=\tau\)</span> the belt-on <span class="arithmatex">\(|a_y|\)</span> is below 95% of
-  belt-off (the slip lag), while still building.</li>
-<li><strong>More lag at lower speed</strong> — at a fixed early time the slower car (larger <span class="arithmatex">\(\tau\)</span>)
-  is more suppressed, i.e. the belt-on/off ratio is smaller: the <span class="arithmatex">\(\sigma/|V_x|\)</span>
-  scaling.</li>
-</ul>
-<p>The <code>belt_relax</code> primitive itself is unit-tested against the exact exponential
-(<code>BeltTire.*</code>): instant when <span class="arithmatex">\(\sigma=0\)</span>, frozen at standstill, <span class="arithmatex">\(63\%\)</span> at <span class="arithmatex">\(\tau\)</span> and
-steady by <span class="arithmatex">\(5\tau\)</span>, monotone with no overshoot.</p>
-<hr />
-<h2 id="215-shipped-status-and-limitations">21.5 Shipped status and limitations<a class="headerlink" href="#215-shipped-status-and-limitations" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>Opt-in, default off</strong> — no ISO 7401/4138 drift on the default preset; the belt
-  is a layer on top of the steady law (MF96 / MF2002) or LuGre.</li>
-<li><strong>Wired on</strong> L2 (<code>seven_dof</code>, also the L3 inner) and L5 (<code>free_3d</code>), both the MF
-  and LuGre paths. <strong>L1 bicycle</strong> wiring is pending (lowest priority).</li>
-<li><strong>First order only.</strong> This is the carcass <em>relaxation</em> (one time constant), not
-  the higher belt eigenmodes / rigid-ring + enveloping behaviour of FTire / MF-Swift
-  (commercial, up to 100–150 Hz). Out of scope; see
-  <a href="../../design/TIRE_ROADMAP/"><code>design/TIRE_ROADMAP.md</code></a> §2.</li>
-<li><strong>Longitudinal</strong> relaxation uses the same primitive with <code>sigma_long</code>; combined
-  with the MF2002 backend (Chapter 03 / T1) it filters both <span class="arithmatex">\(\kappa\)</span> and <span class="arithmatex">\(\alpha\)</span>.</li>
-</ul>
-<hr />
-<h2 id="cross-references">Cross-references<a class="headerlink" href="#cross-references" title="Permanent link">&para;</a></h2>
-<ul>
-<li><a href="../03_tire_pacejka_mf96/"><code>03_tire_pacejka_mf96.md</code></a> — steady force the belt feeds.</li>
-<li><a href="../19_lugre_dynamic_tire/"><code>19_lugre_dynamic_tire.md</code></a> — contact bristle state (complementary).</li>
-<li><a href="../../design/TIRE_ROADMAP/"><code>design/TIRE_ROADMAP.md</code></a> — tire phases T1–T6; build-vs-adopt decision.</li>
-</ul>
+<p><code>ShiftContext</code> carries <code>engine_rpm</code>, <code>current_gear</code>, <code>vehicle_speed</code>, <code>throttle</code>, <code>brake</code>,
+<code>num_gears</code>. It is called once per step (except during the shift lock-out). In C++ it is a
+<code>std::function&lt;int(const ShiftContext&amp;)&gt;</code> via <code>IVehicleDynamics::set_shift_policy</code>; the
+pybind layer accepts a Python callable directly. A custom policy overrides the declarative
+<code>mode</code>.</p>
+<h2 id="4-config">4. Config<a class="headerlink" href="#4-config" title="Permanent link">&para;</a></h2>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">powertrain</span><span class="p">:</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">engine</span><span class="p">:</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">idle_rpm</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">800</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">redline_rpm</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6500</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">inertia</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.20</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nt">rpm_breaks</span><span class="p">:</span><span class="w">      </span><span class="p p-Indicator">[</span><span class="nv">1000</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">2500</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">4000</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">5500</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">6500</span><span class="p p-Indicator">]</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nt">throttle_breaks</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.0</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.5</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">1.0</span><span class="p p-Indicator">]</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="nt">torque_map</span><span class="p">:</span><span class="w">                 </span><span class="c1"># rows = throttle_breaks, cols = rpm_breaks</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">-15</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">-20</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">-25</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">-30</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">-35</span><span class="p p-Indicator">]</span><span class="w">   </span><span class="c1"># closed throttle = engine braking</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="w"> </span><span class="nv">95</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">150</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">165</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">150</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">120</span><span class="p p-Indicator">]</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">180</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">300</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">330</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">300</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">250</span><span class="p p-Indicator">]</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">  </span><span class="nt">gearbox</span><span class="p">:</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">    </span><span class="nt">gear_ratios</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">3.40</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">2.05</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">1.40</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">1.00</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.82</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.68</span><span class="p p-Indicator">]</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">    </span><span class="nt">reverse_ratio</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3.20</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">    </span><span class="nt">final_drive</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4.10</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">    </span><span class="nt">efficiency</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.92</span>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="w">    </span><span class="nt">shift_time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.25</span>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="w">  </span><span class="nt">shift</span><span class="p">:</span>
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="w">    </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">auto_rpm</span><span class="w">              </span><span class="c1"># manual | auto_rpm</span>
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="w">    </span><span class="nt">upshift_rpm</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6000</span>
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="w">    </span><span class="nt">downshift_rpm</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2000</span>
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="w">    </span><span class="nt">start_gear</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+</span></code></pre></div>
+<p>Runnable sample: <code>configs/powertrain_sedan_demo.yaml</code>. Telemetry: <code>dyn.engine_rpm()</code>,
+<code>dyn.current_gear()</code>.</p>
+<h2 id="5-validation">5. Validation<a class="headerlink" href="#5-validation" title="Permanent link">&para;</a></h2>
+<p>Headless tests: <code>EngineMap.*</code> / <code>PowertrainYaml.*</code> (map interpolation + config),
+<code>EngineGearbox.*</code> (coupling, gear-dependent inertia, auto/custom shifting, launch, engine
+braking), <code>DrivetrainV2.*</code> (full-throttle accel upshifts with a bounded RPM sawtooth,
+programmatic policy override, launch from rest). The default preset (no <code>powertrain:</code>
+block) is unchanged, so the ISO <code>IsoBaseline</code> gate is unaffected.</p>
 
 
 

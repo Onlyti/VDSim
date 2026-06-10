@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://onlyti.github.io/VDSim/main/ROADMAP/">
       
       
-        <link rel="prev" href="../theory/18_runtime_and_cosim/">
+        <link rel="prev" href="../theory/22_drivetrain_v2/">
       
       
         <link rel="next" href="../CATALOG_AND_PHYSICS/">
@@ -511,6 +511,8 @@
       
         
           
+        
+      
         
       
         
@@ -1186,6 +1188,34 @@
     
   
     18 — Runtime kernel & co-simulation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/22_drivetrain_v2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    22 — Drivetrain v2 (engine/gearbox)
   
 
     
@@ -2903,7 +2933,7 @@
 
 
 <h1 id="vdsim-product-roadmap">VDSim product roadmap<a class="headerlink" href="#vdsim-product-roadmap" title="Permanent link">&para;</a></h1>
-<p><strong>Last updated:</strong> 2026-06-10 · <strong>Tests:</strong> 299/299 ctest green (<code>main</code>)</p>
+<p><strong>Last updated:</strong> 2026-06-10 · <strong>Tests:</strong> 317/317 ctest green (<code>main</code>)</p>
 <p>Living roadmap from early PoC through v0.3. Tracks what shipped in mainline vs what
 is planned. Detail specs link to <code>docs/design/*</code>; tire phases in
 <a href="../design/TIRE_ROADMAP/"><code>design/TIRE_ROADMAP.md</code></a>.</p>
@@ -2940,8 +2970,8 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 </tr>
 <tr>
 <td>Drivetrain</td>
-<td>Engine inertia + open-diff coupling</td>
-<td>Torque–RPM map, gearbox</td>
+<td>Engine inertia + open-diff; <strong>2D torque map + gearbox + shift policy (v2, opt-in)</strong></td>
+<td>Catalog <code>drivetrain_v2</code> part; engine-map workshop</td>
 </tr>
 <tr>
 <td>Brake / steer</td>
@@ -2960,7 +2990,7 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 </tr>
 <tr>
 <td>Validation</td>
-<td>ISO 7401/4138/3888 <strong>re-baselined + CI-gated</strong> (<code>IsoBaseline</code>), 299 ctest</td>
+<td>ISO 7401/4138/3888 <strong>re-baselined + CI-gated</strong> (<code>IsoBaseline</code>), 317 ctest</td>
 <td>Adams x-check rtol; commercial cross-val</td>
 </tr>
 </tbody>
@@ -3311,19 +3341,34 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <td></td>
 </tr>
 <tr>
-<td>[ ] Engine <strong>torque–RPM</strong> map (non-flat <span class="arithmatex">\(T(\omega)\)</span>)</td>
-<td>Planned</td>
-<td>Open in <code>V0.2_PLAN.md</code></td>
+<td>[x] <strong>Engine 2D torque map</strong> <span class="arithmatex">\(T(\mathrm{rpm},\theta)\)</span> (Drivetrain v2, opt-in)</td>
+<td>Shipped</td>
+<td>theory ch.22; <code>powertrain:</code> block</td>
 </tr>
 <tr>
-<td>[ ] Multi-ratio gearbox</td>
-<td>Planned</td>
-<td>Decision pending</td>
+<td>[x] <strong>Multi-ratio gearbox</strong> + RPM coupling + gear-dependent reflected inertia</td>
+<td>Shipped</td>
+<td><code>EngineGearbox</code></td>
 </tr>
 <tr>
-<td>[ ] Engine speed state <span class="arithmatex">\(\omega_{\mathrm{eng}}\)</span> in output</td>
-<td>Planned</td>
+<td>[x] <strong>Shift policy</strong> (manual / auto-RPM / <strong>user-defined function</strong>, pybind callback)</td>
+<td>Shipped</td>
+<td><code>set_shift_policy</code></td>
+</tr>
+<tr>
+<td>[x] Engine speed + gear in output (<code>engine_rpm()</code>, <code>current_gear()</code>)</td>
+<td>Shipped</td>
+<td>+ pybind</td>
+</tr>
+<tr>
+<td>[x] Idle-floor + slipping launch clutch</td>
+<td>Shipped</td>
 <td></td>
+</tr>
+<tr>
+<td>[ ] Catalog <code>drivetrain_v2</code> part (materialize powertrain into chassis)</td>
+<td>Planned</td>
+<td>follow-up</td>
 </tr>
 <tr>
 <td>[ ] Workshop engine map editor (WS2-6)</td>
@@ -3331,9 +3376,9 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <td>Stub in GUI</td>
 </tr>
 <tr>
-<td>[ ] ISO re-baseline after drivetrain</td>
-<td>Planned</td>
-<td><code>run_validation.py</code></td>
+<td>[x] ISO baseline unaffected (powertrain opt-in, default flat)</td>
+<td>Shipped</td>
+<td><code>IsoBaseline</code> green</td>
 </tr>
 </tbody>
 </table>
@@ -3737,7 +3782,7 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <td></td>
 </tr>
 <tr>
-<td>[x] <strong>299</strong> automated ctests</td>
+<td>[x] <strong>317</strong> automated ctests</td>
 <td>Shipped</td>
 <td>2026-06-10</td>
 </tr>
