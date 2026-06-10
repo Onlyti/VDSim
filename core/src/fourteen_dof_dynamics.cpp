@@ -298,6 +298,23 @@ public:
     int    current_gear() const override { return inner_->current_gear(); }
     bool   set_shift_policy(ShiftPolicy fn) override
         { return inner_->set_shift_policy(std::move(fn)); }
+    // Brake/steering/drivetrain live on the planar inner model.
+    bool   set_brake_module(std::shared_ptr<IBrakeSystem> m) override
+        { return inner_->set_brake_module(std::move(m)); }
+    bool   set_steering_module(std::shared_ptr<ISteeringSystem> m) override
+        { return inner_->set_steering_module(std::move(m)); }
+    bool   set_drivetrain_module(std::shared_ptr<IDrivetrain> m) override
+        { return inner_->set_drivetrain_module(std::move(m)); }
+    // Suspension/ARB are the L3 vertical/roll subsystems hosted here.
+    bool   set_suspension_module(std::shared_ptr<ISuspension> m) override
+        { if (!m) return false; suspension_ = std::move(m); return true; }
+    bool   set_antirollbar_module(int axle, std::shared_ptr<IAntiRollBar> m) override {
+        if (!m) return false;
+        if (axle == 0)      arb_front_ = std::move(m);
+        else if (axle == 1) arb_rear_  = std::move(m);
+        else return false;
+        return true;
+    }
     std::array<double, NUM_WHEELS> tire_Fz() const override
         { return inner_->tire_Fz(); }
     std::array<double, NUM_WHEELS> wheel_slip_ratio() const override
@@ -486,9 +503,9 @@ private:
     TireParams    tp_;
     SolverParams  sp_;
     std::unique_ptr<IVehicleDynamics> inner_;
-    std::unique_ptr<ISuspension> suspension_;
-    std::unique_ptr<IAntiRollBar> arb_front_;
-    std::unique_ptr<IAntiRollBar> arb_rear_;
+    std::shared_ptr<ISuspension> suspension_;
+    std::shared_ptr<IAntiRollBar> arb_front_;
+    std::shared_ptr<IAntiRollBar> arb_rear_;
     DriverCmd susp_ctx_cmd_ {};   // threaded into the suspension/ARB ctx (default modules ignore it)
     std::array<double, NUM_WHEELS> Fz_static_           {};
     std::array<double, NUM_WHEELS> static_compression_  {};

@@ -170,6 +170,12 @@ public:
     int    current_gear() const override { return drivetrain_->current_gear(); }
     bool   set_shift_policy(ShiftPolicy fn) override {
         return drivetrain_->set_shift_policy(std::move(fn)); }
+    bool   set_brake_module(std::shared_ptr<IBrakeSystem> m) override {
+        if (!m) return false; brake_ = std::move(m); return true; }
+    bool   set_steering_module(std::shared_ptr<ISteeringSystem> m) override {
+        if (!m) return false; steering_ = std::move(m); return true; }
+    bool   set_drivetrain_module(std::shared_ptr<IDrivetrain> m) override {
+        if (!m) return false; drivetrain_ = std::move(m); return true; }
     std::array<double, NUM_WHEELS> tire_Fz()           const override { return tire_Fz_; }
     std::array<double, NUM_WHEELS> wheel_slip_ratio()  const override { return slip_ratio_; }
     std::array<double, NUM_WHEELS> wheel_slip_angle()  const override { return slip_angle_; }
@@ -681,9 +687,9 @@ private:
     TireParams    tp_;
     SolverParams  sp_;
     std::unique_ptr<ITireModel> tire_;
-    std::unique_ptr<IDrivetrain>     drivetrain_;
-    std::unique_ptr<IBrakeSystem>    brake_;
-    std::unique_ptr<ISteeringSystem> steering_;
+    std::shared_ptr<IDrivetrain>     drivetrain_;
+    std::shared_ptr<IBrakeSystem>    brake_;
+    std::shared_ptr<ISteeringSystem> steering_;
     std::array<double, NUM_WHEELS> I_wheel_ {{1.0, 1.0, 1.0, 1.0}};
 
     State state_;

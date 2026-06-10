@@ -8,6 +8,7 @@
 #include "vdsim/control.hpp"
 #include "vdsim/params.hpp"
 #include "vdsim/state.hpp"
+#include "vdsim/subsystems.hpp"
 #include "vdsim/types.hpp"
 
 namespace vdsim {
@@ -93,6 +94,19 @@ public:
     // Install a programmatic shift policy (e.g. a Python callable). Returns false
     // if this model has no gearbox.
     virtual bool set_shift_policy(ShiftPolicy /*fn*/) { return false; }
+
+    // User-defined subsystem modules. Replace a built-in module with a custom one
+    // (a C++ subclass or a Python subclass via pybind). Each returns false if the
+    // model does not host that module (e.g. suspension/ARB live only on L3).
+    // The module's begin_step() runs once per step and apply()/force() per RK4 stage,
+    // so step-coherent state belongs in begin_step (brake/steering/drivetrain);
+    // suspension/ARB force laws are evaluated per stage and must be memoryless.
+    virtual bool set_brake_module(std::shared_ptr<IBrakeSystem> /*m*/)        { return false; }
+    virtual bool set_steering_module(std::shared_ptr<ISteeringSystem> /*m*/)  { return false; }
+    virtual bool set_drivetrain_module(std::shared_ptr<IDrivetrain> /*m*/)    { return false; }
+    virtual bool set_suspension_module(std::shared_ptr<ISuspension> /*m*/)    { return false; }
+    virtual bool set_antirollbar_module(int /*axle*/,
+                                        std::shared_ptr<IAntiRollBar> /*m*/)  { return false; }
 };
 
 std::unique_ptr<IVehicleDynamics> create_bicycle();

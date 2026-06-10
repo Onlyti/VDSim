@@ -15,6 +15,7 @@ add_executable(vdsim_integration_tests
     test_iso_baseline.cpp
     test_tire_frame.cpp
     test_drivetrain_v2.cpp
+    test_user_modules.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../parity/test_chrono_pac02_parity.cpp
 )
 

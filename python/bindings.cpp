@@ -20,6 +20,64 @@
 
 namespace py = pybind11;
 
+// ---- User-defined subsystem modules: trampolines so Python can subclass the
+// C++ interfaces (vdsim/subsystems.hpp) and the model can call back into them.
+namespace {
+using WheelArray = std::array<double, vdsim::NUM_WHEELS>;
+using PairDD     = std::pair<double, double>;
+
+struct PyBrakeSystem : vdsim::IBrakeSystem {
+    using vdsim::IBrakeSystem::IBrakeSystem;
+    WheelArray wheel_torque(const vdsim::SubsystemContext& ctx) override {
+        PYBIND11_OVERRIDE_PURE(WheelArray, vdsim::IBrakeSystem, wheel_torque, ctx);
+    }
+    void begin_step(const vdsim::SubsystemContext& ctx, double dt) override {
+        PYBIND11_OVERRIDE(void, vdsim::IBrakeSystem, begin_step, ctx, dt);
+    }
+    void reset() override { PYBIND11_OVERRIDE(void, vdsim::IBrakeSystem, reset, ); }
+};
+
+struct PySteeringSystem : vdsim::ISteeringSystem {
+    using vdsim::ISteeringSystem::ISteeringSystem;
+    vdsim::SteeringOutput apply(const vdsim::SubsystemContext& ctx) override {
+        PYBIND11_OVERRIDE_PURE(vdsim::SteeringOutput, vdsim::ISteeringSystem, apply, ctx);
+    }
+    void begin_step(const vdsim::SubsystemContext& ctx, double dt) override {
+        PYBIND11_OVERRIDE(void, vdsim::ISteeringSystem, begin_step, ctx, dt);
+    }
+    void reset() override { PYBIND11_OVERRIDE(void, vdsim::ISteeringSystem, reset, ); }
+};
+
+struct PyDrivetrain : vdsim::IDrivetrain {
+    using vdsim::IDrivetrain::IDrivetrain;
+    vdsim::DrivetrainOutput apply(const vdsim::SubsystemContext& ctx) override {
+        PYBIND11_OVERRIDE_PURE(vdsim::DrivetrainOutput, vdsim::IDrivetrain, apply, ctx);
+    }
+    void begin_step(const vdsim::SubsystemContext& ctx, double dt) override {
+        PYBIND11_OVERRIDE(void, vdsim::IDrivetrain, begin_step, ctx, dt);
+    }
+    void reset() override { PYBIND11_OVERRIDE(void, vdsim::IDrivetrain, reset, ); }
+    double engine_rpm()   const override { PYBIND11_OVERRIDE(double, vdsim::IDrivetrain, engine_rpm, ); }
+    int    current_gear() const override { PYBIND11_OVERRIDE(int,    vdsim::IDrivetrain, current_gear, ); }
+};
+
+struct PySuspension : vdsim::ISuspension {
+    using vdsim::ISuspension::ISuspension;
+    double force(const vdsim::SubsystemContext& ctx, const vdsim::CornerInput& c) override {
+        PYBIND11_OVERRIDE_PURE(double, vdsim::ISuspension, force, ctx, c);
+    }
+    void reset() override { PYBIND11_OVERRIDE(void, vdsim::ISuspension, reset, ); }
+};
+
+struct PyAntiRollBar : vdsim::IAntiRollBar {
+    using vdsim::IAntiRollBar::IAntiRollBar;
+    PairDD force(const vdsim::SubsystemContext& ctx, const vdsim::AxleDefl& d) override {
+        PYBIND11_OVERRIDE_PURE(PairDD, vdsim::IAntiRollBar, force, ctx, d);
+    }
+    void reset() override { PYBIND11_OVERRIDE(void, vdsim::IAntiRollBar, reset, ); }
+};
+}  // namespace
+
 PYBIND11_MODULE(vdsim, m) {
     m.doc() = "VDSim core Python bindings";
 
@@ -382,6 +440,86 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readonly("brake",         &vdsim::ShiftContext::brake)
         .def_readonly("num_gears",     &vdsim::ShiftContext::num_gears);
 
+    // -------- User-defined subsystem modules --------
+    // I/O structs passed to/from a user module's callbacks.
+    py::class_<vdsim::DriverCmd>(m, "DriverCmd")
+        .def(py::init<>())
+        .def_readwrite("handwheel_angle", &vdsim::DriverCmd::handwheel_angle)
+        .def_readwrite("throttle",        &vdsim::DriverCmd::throttle)
+        .def_readwrite("brake",           &vdsim::DriverCmd::brake)
+        .def_readwrite("gear",            &vdsim::DriverCmd::gear)
+        .def_readwrite("handbrake",       &vdsim::DriverCmd::handbrake);
+    py::class_<vdsim::SubsystemContext>(m, "SubsystemContext")
+        .def_property_readonly("state",
+            [](const vdsim::SubsystemContext& c) -> const vdsim::State& { return c.state; },
+            py::return_value_policy::reference_internal)
+        .def_property_readonly("cmd",
+            [](const vdsim::SubsystemContext& c) -> const vdsim::DriverCmd& { return c.cmd; },
+            py::return_value_policy::reference_internal)
+        .def_readonly("dt", &vdsim::SubsystemContext::dt)
+        .def_readonly("Fz", &vdsim::SubsystemContext::Fz);
+    py::class_<vdsim::SteeringOutput>(m, "SteeringOutput")
+        .def(py::init<>())
+        .def_readwrite("roadwheel_angle", &vdsim::SteeringOutput::roadwheel_angle)
+        .def_readwrite("rack_travel",     &vdsim::SteeringOutput::rack_travel);
+    py::class_<vdsim::DrivetrainOutput>(m, "DrivetrainOutput")
+        .def(py::init<>())
+        .def_readwrite("wheel_torque", &vdsim::DrivetrainOutput::wheel_torque);
+    py::class_<vdsim::CornerInput>(m, "CornerInput")
+        .def(py::init<>())
+        .def_readwrite("corner",        &vdsim::CornerInput::corner)
+        .def_readwrite("defl",          &vdsim::CornerInput::defl)
+        .def_readwrite("defl_rate",     &vdsim::CornerInput::defl_rate)
+        .def_readwrite("damping_scale", &vdsim::CornerInput::damping_scale);
+    py::class_<vdsim::AxleDefl>(m, "AxleDefl")
+        .def(py::init<>())
+        .def_readwrite("defl_left",  &vdsim::AxleDefl::defl_left)
+        .def_readwrite("defl_right", &vdsim::AxleDefl::defl_right)
+        .def_readwrite("rate_left",  &vdsim::AxleDefl::rate_left)
+        .def_readwrite("rate_right", &vdsim::AxleDefl::rate_right);
+
+    // Subclassable module bases. Override the listed method (begin_step/reset
+    // optional) in a Python subclass, then install with model.set_*_module(obj).
+    py::class_<vdsim::IBrakeSystem, PyBrakeSystem, std::shared_ptr<vdsim::IBrakeSystem>>(
+            m, "BrakeModule",
+            "Subclass and override wheel_torque(ctx)->[4] (per-wheel brake torque, N m). "
+            "begin_step(ctx, dt) runs once per step; wheel_torque() per RK4 stage.")
+        .def(py::init<>())
+        .def("wheel_torque", &vdsim::IBrakeSystem::wheel_torque)
+        .def("begin_step",   &vdsim::IBrakeSystem::begin_step)
+        .def("reset",        &vdsim::IBrakeSystem::reset);
+    py::class_<vdsim::ISteeringSystem, PySteeringSystem, std::shared_ptr<vdsim::ISteeringSystem>>(
+            m, "SteeringModule",
+            "Subclass and override apply(ctx)->SteeringOutput (roadwheel_angle, rack_travel).")
+        .def(py::init<>())
+        .def("apply",      &vdsim::ISteeringSystem::apply)
+        .def("begin_step", &vdsim::ISteeringSystem::begin_step)
+        .def("reset",      &vdsim::ISteeringSystem::reset);
+    py::class_<vdsim::IDrivetrain, PyDrivetrain, std::shared_ptr<vdsim::IDrivetrain>>(
+            m, "DrivetrainModule",
+            "Subclass and override apply(ctx)->DrivetrainOutput. Optionally override "
+            "engine_rpm()/current_gear() for telemetry.")
+        .def(py::init<>())
+        .def("apply",        &vdsim::IDrivetrain::apply)
+        .def("begin_step",   &vdsim::IDrivetrain::begin_step)
+        .def("reset",        &vdsim::IDrivetrain::reset)
+        .def("engine_rpm",   &vdsim::IDrivetrain::engine_rpm)
+        .def("current_gear", &vdsim::IDrivetrain::current_gear);
+    py::class_<vdsim::ISuspension, PySuspension, std::shared_ptr<vdsim::ISuspension>>(
+            m, "SuspensionModule",
+            "Subclass and override force(ctx, CornerInput)->double (corner force, N). "
+            "Evaluated per RK4 stage; must be memoryless (a function of the deflection).")
+        .def(py::init<>())
+        .def("force", &vdsim::ISuspension::force)
+        .def("reset", &vdsim::ISuspension::reset);
+    py::class_<vdsim::IAntiRollBar, PyAntiRollBar, std::shared_ptr<vdsim::IAntiRollBar>>(
+            m, "AntiRollBarModule",
+            "Subclass and override force(ctx, AxleDefl)->(left, right) wheel forces, N. "
+            "Evaluated per RK4 stage; must be memoryless.")
+        .def(py::init<>())
+        .def("force", &vdsim::IAntiRollBar::force)
+        .def("reset", &vdsim::IAntiRollBar::reset);
+
     py::class_<vdsim::IVehicleDynamics>(m, "IVehicleDynamics")
         .def("level", &vdsim::IVehicleDynamics::level)
         .def("initialize", &vdsim::IVehicleDynamics::initialize)
@@ -402,6 +540,17 @@ PYBIND11_MODULE(vdsim, m) {
         .def("set_shift_policy", &vdsim::IVehicleDynamics::set_shift_policy,
              "Install a Python shift policy: fn(ShiftContext) -> desired gear. "
              "Returns False if this model has no gearbox.")
+        .def("set_brake_module",       &vdsim::IVehicleDynamics::set_brake_module,
+             "Install a user BrakeModule (L2/L3). False if unsupported.")
+        .def("set_steering_module",    &vdsim::IVehicleDynamics::set_steering_module,
+             "Install a user SteeringModule (L2/L3). False if unsupported.")
+        .def("set_drivetrain_module",  &vdsim::IVehicleDynamics::set_drivetrain_module,
+             "Install a user DrivetrainModule (L2/L3). False if unsupported.")
+        .def("set_suspension_module",  &vdsim::IVehicleDynamics::set_suspension_module,
+             "Install a user SuspensionModule (L3 only). False if unsupported.")
+        .def("set_antirollbar_module", &vdsim::IVehicleDynamics::set_antirollbar_module,
+             py::arg("axle"), py::arg("module"),
+             "Install a user AntiRollBarModule on axle 0=front/1=rear (L3 only).")
         .def("wheel_slip_ratio", &vdsim::IVehicleDynamics::wheel_slip_ratio)
         .def("wheel_slip_angle", &vdsim::IVehicleDynamics::wheel_slip_angle)
         .def("roll_angle_qs",  &vdsim::IVehicleDynamics::roll_angle_qs)
