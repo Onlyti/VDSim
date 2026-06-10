@@ -1,6 +1,6 @@
 # VDSim product roadmap
 
-**Last updated:** 2026-06-10 · **Tests:** 317/317 ctest green (`main`)
+**Last updated:** 2026-06-10 · **Tests:** 321/321 ctest green (`main`)
 
 Living roadmap from early PoC through v0.3. Tracks what shipped in mainline vs what
 is planned. Detail specs link to `docs/design/*`; tire phases in
@@ -23,10 +23,10 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 | Dynamics L1–L5 | L1–L3 planar/14-DOF; **Ld4** hard-joint; **Ld5** stunt + **terrain (v0.5)** | GUI terrain Play (v0.5.2); V2V |
 | Tire | MF96 + LuGre **default**; **MF2002 `.tir` backend (T1, Chrono-cross-checked)**; **belt transient (T2)** | bicycle belt; combined-slip vs Pac02; GUI `.tir` |
 | Drivetrain | Engine inertia + open-diff; **2D torque map + gearbox + shift policy (v2, opt-in)** | Catalog `drivetrain_v2` part; engine-map workshop |
-| Brake / steer | Pluggable modules + deadtime | Booster/MDPS physics |
+| Brake / steer | Pluggable modules + deadtime; **user-defined modules (C++/Python subclass)** | Booster/MDPS physics |
 | Catalog / runtime | `--scene=`, fleet, FMI | External part packs, VDS1 v4 |
-| GUI | 3-tab scene UI, catalog API, workshops | Tire `.tir` import UI |
-| Validation | ISO 7401/4138/3888 **re-baselined + CI-gated** (`IsoBaseline`), 317 ctest | Adams x-check rtol; commercial cross-val |
+| GUI | 3-tab scene UI, catalog API, workshops | Tire `.tir` import UI; **expose user-defined modules (decide: C++ `.so` plugin / Python path / GUI authoring)** |
+| Validation | ISO 7401/4138/3888 **re-baselined + CI-gated** (`IsoBaseline`), 321 ctest | Adams x-check rtol; commercial cross-val |
 
 ```mermaid
 timeline
@@ -264,7 +264,7 @@ LuGre (contact bristle, presliding). See [`TIRE_ROADMAP.md`](design/TIRE_ROADMAP
 | [x] ISO 4138 understeer gradient | Shipped | |
 | [x] ISO 3888-2 DLC metric | Shipped | |
 | [x] ISO 8608 road PSD classes | Shipped | |
-| [x] **317** automated ctests | Shipped | 2026-06-10 |
+| [x] **321** automated ctests | Shipped | 2026-06-10 |
 | [x] ISO matrix re-baseline (post engine inertia + LuGre) + CI gate | Shipped | `IsoBaseline`; VALIDATION.md table 2026-06-10 |
 | [ ] Stunt validation suite (`tests/stunt/*`) | Planned v0.4 | |
 | [ ] Published commercial cross-val (open data) | Planned | Honest gap today |
@@ -348,7 +348,7 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 
 > Open-core L1–L5 vehicle dynamics with Pacejka MF tire, optional LuGre brush + belt
 > transient layers, opt-in MF2002 `.tir` backend and drivetrain v2 (engine map + gearbox),
-> parts catalog, real-time UDP/FMI, and ISO-standard validation (317 ctests).
+> parts catalog, real-time UDP/FMI, and ISO-standard validation (321 ctests).
 
 **In active development**
 

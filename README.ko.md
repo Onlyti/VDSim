@@ -34,7 +34,7 @@ python -c "import vdsim; print('ok')"
 ```bash
 cmake -B build -DVDSIM_BUILD_PYTHON=ON          # Linux 는 -G Ninja 추가
 cmake --build build --config Release            # Linux 는 -j
-ctest --test-dir build -C Release               # 317/317 ; 바이너리는 build/bin/
+ctest --test-dir build -C Release               # 321/321 ; 바이너리는 build/bin/
 ```
 
 Python 간단 실험:

@@ -1,6 +1,6 @@
 # VDSim 핸드오프
 
-작성: **2026-06-10** · `main` @ `f6b1d71` (ahead of `v0.5.1`) · **317/317 ctest green**
+작성: **2026-06-10** · `main` @ `f6b1d71` (ahead of `v0.5.1`) · **321/321 ctest green**
 
 ## 1. 문서 인덱스
 
@@ -59,7 +59,7 @@
 
 ```bash
 cmake --build build -j
-cd build && ctest --output-on-failure   # 317/317
+cd build && ctest --output-on-failure   # 321/321
 python3 gui/server.py                   # http://127.0.0.1:8080
 ```
 
@@ -119,6 +119,18 @@ M6 docs. 273 ctest. Scenes: `terrain_hill_demo`, `banked_grade_demo`, `banked_ov
   **Remaining:** catalog `drivetrain_v2` part (materialize powertrain into the chassis);
   L1 + engine-map GUI workshop.
 
+**User-defined subsystem modules (this session):** any built-in subsystem can be
+replaced by a C++ or Python subclass — `BrakeModule`/`SteeringModule`/`DrivetrainModule`
+(L2/L3/L4/L5), `SuspensionModule`/`AntiRollBarModule` (L3/L4). Install via
+`model.set_*_module()` (`IVehicleDynamics`, mirrors `set_shift_policy`; seven_dof + free_3d
+hold brake/steer/drivetrain, fourteen_dof holds suspension/ARB + delegates the rest to
+`inner_`, L4 inherits from it). L1 computes brake/drive inline -> hosts none. Subsystem members are
+`shared_ptr` so a pybind-trampoline Python subclass stays alive. Cadence: `begin_step` once
+per step, `apply/wheel_torque/force` per RK4 stage; brake/drivetrain torque is **signed**
+(opposes spin). Tests `UserModules.*` (transparency L2/L3 to 1e-9 + effect + scoping),
+sample `examples/user_brake_module.py`, theory **ch.23**. **321 ctest.** **Remaining:** GUI
+module workshop; L1 has no subsystem objects (out of scope).
+
 **v0.6+:**
 1. Ld4 v0.6 — shared inertia helpers; full loop dynamics; Featherstone in step (optional).
 2. Drivetrain: catalog `drivetrain_v2` part + engine-map workshop (UI). Core done.
@@ -134,7 +146,7 @@ M6 docs. 273 ctest. Scenes: `terrain_hill_demo`, `banked_grade_demo`, `banked_ov
 
 ## 6. Git
 
-- `main` @ `f6b1d71`, **all pushed**, 317/317 ctest. Last tag **`v0.5.1`**; main is ahead
+- `main` @ `f6b1d71`, **all pushed**, 321/321 ctest. Last tag **`v0.5.1`**; main is ahead
   of it (post-0.5.1, **untagged**): tire tail (L1 belt, `tire_forces_wheel`, Chrono parity)
   + ISO re-baseline/`IsoBaseline` + **Drivetrain v2** (D1–D5). Tag a release when the next
   milestone closes (suggest `v0.6.0` once catalog `drivetrain_v2` or Ld4 v0.6 lands).
@@ -154,3 +166,10 @@ M6 docs. 273 ctest. Scenes: `terrain_hill_demo`, `banked_grade_demo`, `banked_ov
 3. **v0.5.2 GUI (browser, user-verified):** terrain Play (M4), stunt authoring (M5c),
    `.tir` import, tire-force arrows in wheel frame (`tire_forces_wheel()` ready).
 4. Brake/steer physics (booster/MDPS/ABS); V2V collision + VDS1 multi-vehicle I/O.
+5. **DECIDE (near-term): user-defined modules in GUI / runtimes.** Core injection works
+   today via `set_*_module` (C++ subclass link, or Python subclass). Open question = how to
+   expose this flexibility *without* embedding the library: (a) C++ `.so` plugin loader
+   (`dlopen` + a registration entry point) consumed by `vdsim_realtime`/batch/GUI; (b) a
+   Python-module path the runtime imports; (c) GUI authoring (pick/parameterize a module, or
+   edit a snippet). Pick the mechanism, then scope. Today only Python-in-process injects at
+   runtime; the prebuilt runtimes have no C++ plugin hook.

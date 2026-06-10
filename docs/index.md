@@ -16,7 +16,7 @@ single C++17 + Python ABI.
 - **Physics**: LuGre tire default on (`lugre.enabled`); opt-in **MF2002 `.tir` backend**
   + **belt transient** (L1–L5); opt-in **drivetrain v2** (`powertrain:` — 2D engine map +
   gearbox + shift policy); kinematic fallback via `tire.kinematic_fallback` or `--no-lugre`.
-- **Tests**: **317 / 317 ctest** (2026-06-10, `main`).
+- **Tests**: **321 / 321 ctest** (2026-06-10, `main`).
 - **Roadmap**: [Product roadmap](ROADMAP.md) — shipped vs planned by subsystem.
 - **User guide**: [Catalog & physics options](CATALOG_AND_PHYSICS.md).
 - **10 CLI demo binaries**, **Python bindings**, **CARLA-ready raycast ABI**,

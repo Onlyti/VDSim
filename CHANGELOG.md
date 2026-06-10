@@ -6,6 +6,20 @@ All notable changes to VDSim are documented here. Format follows
 
 ## [Unreleased]
 
+### Added — User-defined subsystem modules
+- Replace any built-in subsystem with a custom one (C++ subclass or Python subclass):
+  `BrakeModule` / `SteeringModule` / `DrivetrainModule` (L2/L3/L4/L5), `SuspensionModule` /
+  `AntiRollBarModule` (L3/L4). Install via `model.set_*_module(obj)`; returns False where the
+  level does not host that module. The interfaces (`vdsim/subsystems.hpp`) are exposed to
+  Python via pybind trampolines; `SubsystemContext`/`DriverCmd`/`SteeringOutput`/
+  `CornerInput`/`AxleDefl` are bound.
+- Cadence: `begin_step(ctx, dt)` once per step (step-coherent state); `apply()`/
+  `wheel_torque()`/`force()` once per RK4 stage (pure). Brake/drivetrain `wheel_torque` is a
+  **signed** torque opposing wheel spin (FL,FR,RL,RR).
+- A delegating wrapper reproduces the baseline bit-for-bit (`UserModules.WrapperIsTransparent
+  {L2,L3}`); effect + cadence + level-scoping gated by `UserModules.*`. Sample
+  `examples/user_brake_module.py` (Python ABS-style brake). Theory **ch.23**. **321 ctest.**
+
 ### Added — Drivetrain v2 (engine + gearbox, opt-in)
 - `powertrain:` vehicle-config block enables a real powertrain on L2/L3 (absent -> legacy
   flat torque, ISO baseline unchanged). `powertrain.hpp`.
