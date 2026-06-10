@@ -1,0 +1,46 @@
+# Drivetrain v2 demo — sedan with a 2D engine torque map, a 6-speed gearbox, and an
+# automatic RPM-threshold shift policy. Opt-in: the `powertrain:` block enables the
+# engine+gearbox model; without it the vehicle uses the legacy flat torque.
+#
+# Use directly:  VehicleParams.from_yaml("configs/powertrain_sedan_demo.yaml")
+# Telemetry:     dyn.engine_rpm(), dyn.current_gear()
+# Custom shifts: dyn.set_shift_policy(fn)  where fn(ShiftContext) -> desired gear
+#                (overrides the built-in auto policy below; inputs: engine_rpm,
+#                 current_gear, vehicle_speed, throttle, brake, num_gears).
+
+mass: 1500
+mass_sprung: 1350
+wheelbase: 2.70
+cg_to_front: 1.20
+cg_to_rear: 1.50
+track_front: 1.55
+track_rear: 1.55
+cg_height: 0.55
+wheel_radius_nominal: 0.32
+drive_type: RWD
+differential: Open
+
+powertrain:
+  engine:
+    idle_rpm: 800
+    redline_rpm: 6500
+    inertia: 0.20            # crank + flywheel [kg m^2]
+    # 2D peak torque [N m]: rows = throttle_breaks, cols = rpm_breaks.
+    # The closed-throttle row (throttle 0) is the engine-braking / motoring torque.
+    rpm_breaks:      [1000, 2500, 4000, 5500, 6500]
+    throttle_breaks: [0.0, 0.5, 1.0]
+    torque_map:
+      - [-15,  -20,  -25,  -30,  -35]   # closed throttle  (engine braking)
+      - [ 95,  150,  165,  150,  120]   # 50 % throttle
+      - [180,  300,  330,  300,  250]   # wide-open throttle
+  gearbox:
+    gear_ratios: [3.40, 2.05, 1.40, 1.00, 0.82, 0.68]
+    reverse_ratio: 3.20
+    final_drive: 4.10
+    efficiency: 0.92
+    shift_time: 0.25         # [s] torque interrupt (clutch open) during a shift
+  shift:
+    mode: auto_rpm           # manual | auto_rpm
+    upshift_rpm: 6000
+    downshift_rpm: 2000
+    start_gear: 1

@@ -1,6 +1,6 @@
 # VDSim product roadmap
 
-**Last updated:** 2026-06-10 · **Tests:** 299/299 ctest green (`main`)
+**Last updated:** 2026-06-10 · **Tests:** 317/317 ctest green (`main`)
 
 Living roadmap from early PoC through v0.3. Tracks what shipped in mainline vs what
 is planned. Detail specs link to `docs/design/*`; tire phases in
@@ -22,11 +22,11 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 |------|----------------------|------|
 | Dynamics L1–L5 | L1–L3 planar/14-DOF; **Ld4** hard-joint; **Ld5** stunt + **terrain (v0.5)** | GUI terrain Play (v0.5.2); V2V |
 | Tire | MF96 + LuGre **default**; **MF2002 `.tir` backend (T1, Chrono-cross-checked)**; **belt transient (T2)** | bicycle belt; combined-slip vs Pac02; GUI `.tir` |
-| Drivetrain | Engine inertia + open-diff coupling | Torque–RPM map, gearbox |
+| Drivetrain | Engine inertia + open-diff; **2D torque map + gearbox + shift policy (v2, opt-in)** | Catalog `drivetrain_v2` part; engine-map workshop |
 | Brake / steer | Pluggable modules + deadtime | Booster/MDPS physics |
 | Catalog / runtime | `--scene=`, fleet, FMI | External part packs, VDS1 v4 |
 | GUI | 3-tab scene UI, catalog API, workshops | Tire `.tir` import UI |
-| Validation | ISO 7401/4138/3888 **re-baselined + CI-gated** (`IsoBaseline`), 299 ctest | Adams x-check rtol; commercial cross-val |
+| Validation | ISO 7401/4138/3888 **re-baselined + CI-gated** (`IsoBaseline`), 317 ctest | Adams x-check rtol; commercial cross-val |
 
 ```mermaid
 timeline
@@ -145,11 +145,14 @@ LuGre (contact bristle, presliding). See [`TIRE_ROADMAP.md`](design/TIRE_ROADMAP
 | [x] Open-diff carrier coupling (`drivetrain_inertia.hpp`) | Shipped | Fixes inner-wheel spin-up |
 | [x] Legacy mode (`I_engine = 0`) | Shipped | |
 | [x] Catalog `drivetrain_v1` part type | Shipped | |
-| [ ] Engine **torque–RPM** map (non-flat $T(\omega)$) | Planned | Open in `V0.2_PLAN.md` |
-| [ ] Multi-ratio gearbox | Planned | Decision pending |
-| [ ] Engine speed state $\omega_{\mathrm{eng}}$ in output | Planned | |
+| [x] **Engine 2D torque map** $T(\mathrm{rpm},\theta)$ (Drivetrain v2, opt-in) | Shipped | theory ch.22; `powertrain:` block |
+| [x] **Multi-ratio gearbox** + RPM coupling + gear-dependent reflected inertia | Shipped | `EngineGearbox` |
+| [x] **Shift policy** (manual / auto-RPM / **user-defined function**, pybind callback) | Shipped | `set_shift_policy` |
+| [x] Engine speed + gear in output (`engine_rpm()`, `current_gear()`) | Shipped | + pybind |
+| [x] Idle-floor + slipping launch clutch | Shipped | |
+| [ ] Catalog `drivetrain_v2` part (materialize powertrain into chassis) | Planned | follow-up |
 | [ ] Workshop engine map editor (WS2-6) | Planned | Stub in GUI |
-| [ ] ISO re-baseline after drivetrain | Planned | `run_validation.py` |
+| [x] ISO baseline unaffected (powertrain opt-in, default flat) | Shipped | `IsoBaseline` green |
 
 ---
 
@@ -261,7 +264,7 @@ LuGre (contact bristle, presliding). See [`TIRE_ROADMAP.md`](design/TIRE_ROADMAP
 | [x] ISO 4138 understeer gradient | Shipped | |
 | [x] ISO 3888-2 DLC metric | Shipped | |
 | [x] ISO 8608 road PSD classes | Shipped | |
-| [x] **299** automated ctests | Shipped | 2026-06-10 |
+| [x] **317** automated ctests | Shipped | 2026-06-10 |
 | [x] ISO matrix re-baseline (post engine inertia + LuGre) + CI gate | Shipped | `IsoBaseline`; VALIDATION.md table 2026-06-10 |
 | [ ] Stunt validation suite (`tests/stunt/*`) | Planned v0.4 | |
 | [ ] Published commercial cross-val (open data) | Planned | Honest gap today |

@@ -127,6 +127,7 @@ nav:
       - "16 — FMI 2.0 integration": theory/16_fmi_integration.md
       - "17 — Actuator dynamics & sensing": theory/17_actuator_and_sensing.md
       - "18 — Runtime kernel & co-simulation": theory/18_runtime_and_cosim.md
+      - "22 — Drivetrain v2 (engine/gearbox)": theory/22_drivetrain_v2.md
   - User guide:
       - "Product roadmap": ROADMAP.md
       - "Catalog, scenes & physics": CATALOG_AND_PHYSICS.md

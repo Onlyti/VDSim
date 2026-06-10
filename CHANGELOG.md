@@ -4,6 +4,29 @@ All notable changes to VDSim are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow
 [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added — Drivetrain v2 (engine + gearbox, opt-in)
+- `powertrain:` vehicle-config block enables a real powertrain on L2/L3 (absent -> legacy
+  flat torque, ISO baseline unchanged). `powertrain.hpp`.
+- **2D engine torque map** `T_peak(rpm, throttle)` (bilinear, domain-clamped; the
+  closed-throttle row is engine braking). **N-speed gearbox**: engine RPM coupled to the
+  driven-wheel speed, axle torque = `T_eng * gear * final_drive * efficiency`,
+  **gear-dependent** reflected inertia `I*(gear*fd)^2`, idle floor + slipping launch clutch.
+- **Shift policy**: built-in `manual` / `auto_rpm` (hysteresis) plus a **user-defined
+  function** `f(ShiftContext) -> gear` via `set_shift_policy` (C++ `std::function`; pybind
+  accepts a Python callable). Shift-time torque interrupt + lock-out.
+- Accessors `engine_rpm()` / `current_gear()` (+ pybind). Theory **ch.22**; sample
+  `configs/powertrain_sedan_demo.yaml`.
+- Tests `EngineMap.*`, `PowertrainYaml.*`, `EngineGearbox.*`, `DrivetrainV2.*`.
+
+### Added — tire / validation (post-0.5.1)
+- Bicycle (L1) belt transient (MF + LuGre) — belt now on L1–L5. `BeltTransient.L1*`.
+- `tire_forces_wheel()` accessor (tire-frame per-wheel force) + pybind; `TireFrame.*`.
+- Chrono Pac02 parity gate (`external/chrono_parity/`, isolated): pure-long Fx ~2% +
+  pure-lat Fy ~1% gated; `ctest -R ChronoPac02Parity`.
+- ISO re-baseline (flat) + CI gate `IsoBaseline`.
+
 ## [0.5.1] — 2026-06-10 · tire layers: MF2002 `.tir` backend (T1) + belt transient (T2)
 
 Adds a measured-coefficient steady-force backend and a carcass/belt transient layer

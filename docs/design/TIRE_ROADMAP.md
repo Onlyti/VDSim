@@ -178,7 +178,7 @@ with a compatibility matrix in T2 design note.
 > validated). Combined cross-terms differ, but that is largely a rig-frame artifact
 > (`ChTireTestRig` reports global-frame force on a slip-yawed wheel, so the combined
 > longitudinal component is frame-sensitive) mixed with weighting — report-only, not a
-> model defect. 299 ctest. See `external/chrono_parity/README.md`.
+> model defect. 317 ctest. See `external/chrono_parity/README.md`.
 
 | Item | Deliverable |
 |------|-------------|

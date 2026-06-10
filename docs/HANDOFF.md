@@ -1,6 +1,6 @@
 # VDSim 핸드오프
 
-작성: **2026-06-10** · `main` (= `v0.5.1`) · **299/299 ctest green**
+작성: **2026-06-10** · `main` (= `v0.5.1`) · **317/317 ctest green**
 
 ## 1. 문서 인덱스
 
@@ -59,7 +59,7 @@
 
 ```bash
 cmake --build build -j
-cd build && ctest --output-on-failure   # 299/299
+cd build && ctest --output-on-failure   # 317/317
 python3 gui/server.py                   # http://127.0.0.1:8080
 ```
 
@@ -106,13 +106,22 @@ M6 docs. 273 ctest. Scenes: `terrain_hill_demo`, `banked_grade_demo`, `banked_ov
    show tire-frame, send the wheel-frame force over VDS1 and parent the arrows to the
    steered wheel mesh (`gui/static/app.js makeForceArrow` / update L793-794).
 
-**Done this session (post-tire):** ISO re-baseline (flat, sedan L2 LuGre) — VALIDATION.md
-table refreshed + CI gate `tests/integration/test_iso_baseline.cpp` (`ctest -R IsoBaseline`)
-locks the 7401 force signature. 299 ctest.
+**Done this session (post-tire):**
+- ISO re-baseline (flat, sedan L2 LuGre) — VALIDATION.md table refreshed + CI gate
+  `tests/integration/test_iso_baseline.cpp` (`ctest -R IsoBaseline`) locks the 7401 signature.
+- **Drivetrain v2 (opt-in `powertrain:` block, L2/L3):** 2D engine torque map + N-speed
+  gearbox (RPM coupling, gear-dependent reflected inertia, idle-floor/launch clutch) +
+  shift policy (manual / auto-RPM / **user-defined function**, pybind callback). Accessors
+  `engine_rpm()`/`current_gear()`. `powertrain.hpp` `EngineGearbox`,
+  `EngineGearboxDrivetrain` in default_subsystems. Theory ch.22, sample
+  `configs/powertrain_sedan_demo.yaml`. Default flat torque unchanged -> ISO green.
+  Tests `EngineMap.*`/`PowertrainYaml.*`/`EngineGearbox.*`/`DrivetrainV2.*`. **317 ctest.**
+  **Remaining:** catalog `drivetrain_v2` part (materialize powertrain into the chassis);
+  L1 + engine-map GUI workshop.
 
 **v0.6+:**
 1. Ld4 v0.6 — shared inertia helpers; full loop dynamics; Featherstone in step (optional).
-2. Drivetrain torque–RPM map + multi-ratio gearbox (next product item; ISO re-baseline follows).
+2. Drivetrain: catalog `drivetrain_v2` part + engine-map workshop (UI). Core done.
 3. Tire: T2 belt is **complete** (L1–L5); higher belt eigenmodes (rigid-ring/FTire) out of scope.
 
 ## 5. 주의
