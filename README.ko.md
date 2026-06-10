@@ -7,11 +7,11 @@
 ![status](https://img.shields.io/badge/status-experimental%20pre--release-orange.svg)
 
 Open-core 차량동역학 시뮬레이터. VDSim 은 **차량 그 자체**를 담당합니다 — 검증된
-L1–L3 동역학 + 실제 Pacejka 타이어 + 설계검증 가능한 hardpoint 서스펜션 운동학 +
-양방향 FMI 2.0. 렌더링·센서는 CARLA 같은 도구에 위임합니다. perception 스택에
-없는 "섀시 정확도" 절반을 채웁니다.
+L1–L5 동역학 + 실제 Pacejka MF / LuGre / belt-transient 타이어 + 설계검증 가능한
+hardpoint 서스펜션 운동학 + 양방향 FMI 2.0. 렌더링·센서는 CARLA 같은 도구에
+위임합니다. perception 스택에 없는 "섀시 정확도" 절반을 채웁니다.
 
-> v0.1.0 — experimental / pre-release. analytic + ISO + cross-model
+> v0.5.1+ — experimental / pre-release. analytic + ISO + cross-model (Chrono Pac02)
 > self-consistency 로 검증 (자세히는 [VALIDATION](docs/VALIDATION.md)); 양산용 아님.
 
 문서(이론·리포트): **https://onlyti.github.io/VDSim/** · 모든 실행 모드
@@ -34,7 +34,7 @@ python -c "import vdsim; print('ok')"
 ```bash
 cmake -B build -DVDSIM_BUILD_PYTHON=ON          # Linux 는 -G Ninja 추가
 cmake --build build --config Release            # Linux 는 -j
-ctest --test-dir build -C Release               # 201/201 ; 바이너리는 build/bin/
+ctest --test-dir build -C Release               # 317/317 ; 바이너리는 build/bin/
 ```
 
 Python 간단 실험:

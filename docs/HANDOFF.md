@@ -1,6 +1,6 @@
 # VDSim 핸드오프
 
-작성: **2026-06-10** · `main` (= `v0.5.1`) · **317/317 ctest green**
+작성: **2026-06-10** · `main` @ `f6b1d71` (ahead of `v0.5.1`) · **317/317 ctest green**
 
 ## 1. 문서 인덱스
 
@@ -134,7 +134,7 @@ M6 docs. 273 ctest. Scenes: `terrain_hill_demo`, `banked_grade_demo`, `banked_ov
 
 ## 6. Git
 
-- `main` @ `279977f`, **all pushed**, 317/317 ctest. Last tag **`v0.5.1`**; main is ahead
+- `main` @ `f6b1d71`, **all pushed**, 317/317 ctest. Last tag **`v0.5.1`**; main is ahead
   of it (post-0.5.1, **untagged**): tire tail (L1 belt, `tire_forces_wheel`, Chrono parity)
   + ISO re-baseline/`IsoBaseline` + **Drivetrain v2** (D1–D5). Tag a release when the next
   milestone closes (suggest `v0.6.0` once catalog `drivetrain_v2` or Ld4 v0.6 lands).

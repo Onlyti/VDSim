@@ -346,8 +346,9 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 
 **Shipped today**
 
-> Open-core L1–L3 vehicle dynamics with Pacejka MF tire, optional LuGre brush layer,
-> parts catalog, real-time UDP/FMI, and ISO-standard validation (209 ctests).
+> Open-core L1–L5 vehicle dynamics with Pacejka MF tire, optional LuGre brush + belt
+> transient layers, opt-in MF2002 `.tir` backend and drivetrain v2 (engine map + gearbox),
+> parts catalog, real-time UDP/FMI, and ISO-standard validation (317 ctests).
 
 **In active development**
 

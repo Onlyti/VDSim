@@ -12,10 +12,11 @@ single C++17 + Python ABI.
 
 ## Status
 
-- **v0.3**: parts catalog + scene runtime (`--scene=`), GUI catalog API.
-- **Physics**: drivetrain `engine_rotational_inertia` (default on); LuGre tire
-  default on (`lugre.enabled`); kinematic fallback via `tire.kinematic_fallback` or `--no-lugre`.
-- **Tests**: **254 / 254 ctest** (2026-06-08, branch `feat/v0.4-slope-jump-m5`).
+- **v0.5**: terrain + Ld5 stunt driving; parts catalog + scene runtime (`--scene=`), GUI catalog API.
+- **Physics**: LuGre tire default on (`lugre.enabled`); opt-in **MF2002 `.tir` backend**
+  + **belt transient** (L1–L5); opt-in **drivetrain v2** (`powertrain:` — 2D engine map +
+  gearbox + shift policy); kinematic fallback via `tire.kinematic_fallback` or `--no-lugre`.
+- **Tests**: **317 / 317 ctest** (2026-06-10, `main`).
 - **Roadmap**: [Product roadmap](ROADMAP.md) — shipped vs planned by subsystem.
 - **User guide**: [Catalog & physics options](CATALOG_AND_PHYSICS.md).
 - **10 CLI demo binaries**, **Python bindings**, **CARLA-ready raycast ABI**,

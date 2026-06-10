@@ -7,12 +7,13 @@
 ![status](https://img.shields.io/badge/status-experimental%20pre--release-orange.svg)
 
 Open-core vehicle-dynamics simulator. VDSim owns the **vehicle** — validated
-L1–L3 dynamics with a real Pacejka tire, hardpoint suspension kinematics you can
-design against, and bidirectional FMI 2.0 — and delegates rendering/sensors to
-tools like CARLA. It is the chassis-accurate half that perception stacks lack.
+L1–L5 dynamics with real Pacejka MF / LuGre / belt-transient tires, hardpoint
+suspension kinematics you can design against, and bidirectional FMI 2.0 — and
+delegates rendering/sensors to tools like CARLA. It is the chassis-accurate half
+that perception stacks lack.
 
-> v0.1.0 — experimental / pre-release. Validated on analytic + ISO + cross-model
-> self-consistency (see [VALIDATION](docs/VALIDATION.md)); not for production use.
+> v0.5.1+ — experimental / pre-release. Validated on analytic + ISO + cross-model
+> (Chrono Pac02) self-consistency (see [VALIDATION](docs/VALIDATION.md)); not for production use.
 
 Docs (theory + reports): **https://onlyti.github.io/VDSim/** · all run modes
 (API / batch / FMI): [docs/RUNNING.md](docs/RUNNING.md) · catalog & physics options:
@@ -34,7 +35,7 @@ Full C++ tree (tests, real-time runtime, FMI, CARLA bridge):
 ```bash
 cmake -B build -DVDSIM_BUILD_PYTHON=ON          # add -G Ninja on Linux
 cmake --build build --config Release            # -j on Linux
-ctest --test-dir build -C Release               # 201/201 ; binaries in build/bin/
+ctest --test-dir build -C Release               # 317/317 ; binaries in build/bin/
 ```
 
 A quick experiment in Python:
