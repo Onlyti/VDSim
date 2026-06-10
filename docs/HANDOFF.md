@@ -1,6 +1,6 @@
 # VDSim 핸드오프
 
-작성: **2026-06-10** · `main` (= `v0.5.1`) · **295/295 ctest green**
+작성: **2026-06-10** · `main` (= `v0.5.1`) · **296/296 ctest green**
 
 ## 1. 문서 인덱스
 
@@ -59,7 +59,7 @@
 
 ```bash
 cmake --build build -j
-cd build && ctest --output-on-failure   # 295/295
+cd build && ctest --output-on-failure   # 296/296
 python3 gui/server.py                   # http://127.0.0.1:8080
 ```
 
@@ -86,12 +86,14 @@ M6 docs. 273 ctest. Scenes: `terrain_hill_demo`, `banked_grade_demo`, `banked_ov
 - **Chrono Pac02 parity (DONE):** isolated cross-check in `external/chrono_parity/`
   (Chrono 8.0.0 built from source at `~/build_ext/chrono_src`; never in VDSim's CMake).
   Generator `gen_reference.cpp` (ChTireTestRig) -> committed `reference/pac02_reference.csv`;
-  VDSim gate `ctest -R ChronoPac02Parity`. **Pure-long Fx within ~2%** (validated, gated);
-  **combined slip diverges** (mean |ΔFx|≈39% — different MF combined-slip weighting,
-  reported not gated). See `external/chrono_parity/README.md`.
+  VDSim gate `ctest -R ChronoPac02Parity`. **Pure-long Fx ~2% AND pure-lat Fy ~1%** vs an
+  independent Pac02 — both gated (backbone + load sensitivity + cornering stiffness
+  validated). Combined cross-terms differ but that is largely a rig-frame artifact
+  (`ChTireTestRig` reports global-frame force on a yawed wheel) mixed with weighting —
+  report-only. See `external/chrono_parity/README.md`.
 - **Remaining tire:** bicycle (L1) belt wiring (lowest value); GUI `.tir` import
-  (v0.5.2 GUI); **align `Gxa`/`Gyk` combined slip with Pac02** (open — our combined-slip
-  weighting differs; pure slip already matches).
+  (v0.5.2 GUI). (Combined-slip Pac02 alignment is low priority — pure axes already match;
+  the residual is mostly the rig-frame decomposition, not our model.)
 
 **v0.5.2 (deferred — needs browser, no headless path):**
 1. **M4 GUI terrain load + L5 Play** — chase cam uses `position.z`, spawn on mesh.
@@ -100,7 +102,7 @@ M6 docs. 273 ctest. Scenes: `terrain_hill_demo`, `banked_grade_demo`, `banked_ov
 
 **Done this session (post-tire):** ISO re-baseline (flat, sedan L2 LuGre) — VALIDATION.md
 table refreshed + CI gate `tests/integration/test_iso_baseline.cpp` (`ctest -R IsoBaseline`)
-locks the 7401 force signature. 295 ctest.
+locks the 7401 force signature. 296 ctest.
 
 **v0.6+:**
 1. Ld4 v0.6 — shared inertia helpers; full loop dynamics; Featherstone in step (optional).

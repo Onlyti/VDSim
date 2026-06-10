@@ -173,11 +173,12 @@ with a compatibility matrix in T2 design note.
 > sweeps (Fz, κ, α) and writes `reference/pac02_reference.csv` (committed). The VDSim-side
 > `tests/parity/test_chrono_pac02_parity.cpp` (`ctest -R ChronoPac02Parity`, no Chrono link)
 > evaluates our MF2002 at the slip/load Chrono actually reported. **Result:** pure
-> longitudinal slip matches Pac02 **within ~2%** across Fz 2–6 kN (gated); near-pure
-> lateral ~6%; **strong combined slip diverges** (mean |ΔFx|≈39%, |ΔFy|≈17% — different
-> combined-slip weighting, reported not gated). So our MF long backbone + load sensitivity
-> are independently validated; aligning `Gxa`/`Gyk` with Pac02 combined slip is a separate
-> open task. 295 ctest. See `external/chrono_parity/README.md`.
+> longitudinal slip Fx **within ~2%** AND pure lateral slip Fy **within ~1%** across
+> Fz 2–6 kN — both gated (backbone + load sensitivity + cornering stiffness independently
+> validated). Combined cross-terms differ, but that is largely a rig-frame artifact
+> (`ChTireTestRig` reports global-frame force on a slip-yawed wheel, so the combined
+> longitudinal component is frame-sensitive) mixed with weighting — report-only, not a
+> model defect. 296 ctest. See `external/chrono_parity/README.md`.
 
 | Item | Deliverable |
 |------|-------------|

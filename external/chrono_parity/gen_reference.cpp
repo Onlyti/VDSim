@@ -197,8 +197,11 @@ int main(int argc, char** argv) {
                     if (i >= 3500) {
                         const TerrainForce t = rig.ReportTireForce();
                         if (t.force.z() > 1.0) {  // in contact
-                            sFx +=  ca * t.force.x() + sa * t.force.y();
-                            sFy += -sa * t.force.x() + ca * t.force.y();
+                            // Global -> wheel frame. The rig yaws the wheel by the slip
+                            // angle about +Z (heading=(cos a, sin a), lateral=(-sin a,
+                            // cos a)), so invert to recover the tire-frame components.
+                            sFx += ca * t.force.x() - sa * t.force.y();
+                            sFy += sa * t.force.x() + ca * t.force.y();
                             sFz += t.force.z();
                             sMz += t.moment.z();
                             sK  += tire->GetLongitudinalSlip();
@@ -208,8 +211,9 @@ int main(int argc, char** argv) {
                     }
                 }
                 if (!nc) continue;
-                // Record ACTUAL Fz too: the rig's contact Fz ripples around the
-                // commanded load, so evaluate both models at the same actual Fz.
+                // Record ACTUAL slip + Fz: the rig's commanded slip differs from Pac02's
+                // internal slip (effective rolling radius) and the contact Fz ripples, so
+                // both models must be evaluated at the same point Chrono actually used.
                 const double Fx = sFx / nc, Fy = sFy / nc, Mz = sMz / nc;
                 const double Fz_act = sFz / nc, k_act = sK / nc, a_act = sA / nc;
 

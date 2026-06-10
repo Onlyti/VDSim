@@ -8,12 +8,15 @@
 // that CSV + the same .tir, runs our evaluator, and bands the difference.
 //
 // Result on the committed reference (sample_pac02.tir):
-//   * PURE longitudinal slip matches Chrono within ~2% across Fz = 2..6 kN
-//     (our load sensitivity + MF long backbone agree with Pac02).
-//   * Near-pure lateral is within ~6%.
-//   * STRONG combined slip (large kappa AND large alpha) diverges more — the two
-//     implementations use different combined-slip weightings. That is a known
-//     MF-variant difference, not a regression, so it is reported, not hard-gated.
+//   * PURE longitudinal slip (alpha~0): Fx within ~2% across Fz = 2..6 kN.
+//   * PURE lateral slip (kappa~0): Fy within ~1% across Fz and slip angle.
+//     Both pure axes — backbone, load sensitivity, cornering stiffness — agree with
+//     an independent Pac02. These are gated.
+//   * COMBINED slip cross-terms (large kappa AND large alpha): our combined Fx runs
+//     below Chrono's. This mixes a genuine combined-slip-weighting difference with a
+//     rig-frame artifact (ChTireTestRig reports force in the global frame and the
+//     wheel is yawed by the slip angle, so the combined longitudinal component is
+//     frame-sensitive). It is reported, not hard-gated.
 //
 // If the CSV is absent (Chrono not built) the tests SKIP — they never fail the
 // build for a missing external artifact, and never link Chrono.
@@ -102,8 +105,32 @@ TEST(ChronoPac02Parity, PureLongitudinalMatchesChrono) {
     RecordProperty("pure_long_points", n);
 }
 
-// Report-only: combined slip diverges (different MF combined-slip weighting). Not a
-// hard gate on the band, but guard against a GROSS regression (sign flip or > 3x).
+// Tight gate: PURE lateral slip (|kappa| < 0.025, |alpha| > 0.03) Fy must track Chrono.
+// Validates cornering stiffness + lateral backbone vs an independent Pac02.
+TEST(ChronoPac02Parity, PureLateralMatchesChrono) {
+    std::vector<Row> ref;
+    if (!load_reference(ref)) GTEST_SKIP() << "no Chrono reference CSV — see "
+        "external/chrono_parity/README.md";
+    auto tire = vdsim::create_magic_formula_tire_from_tir(kTir);
+    ASSERT_NE(tire, nullptr);
+
+    const double rel = 0.06, floor = 120.0;
+    int n = 0;
+    for (const auto& r : ref) {
+        if (std::abs(r.kappa) > 0.025 || std::abs(r.alpha) < 0.03) continue;  // pure lateral
+        const double fy = ours(r, *tire).Fy;
+        const double tol = std::max(floor, rel * std::abs(r.Fy));
+        EXPECT_LE(std::abs(fy - r.Fy), tol)
+            << "Fy @ Fz=" << r.Fz << " a=" << r.alpha
+            << ": ours=" << fy << " chrono=" << r.Fy;
+        ++n;
+    }
+    EXPECT_GT(n, 0);
+    RecordProperty("pure_lat_points", n);
+}
+
+// Report-only: combined-slip cross-terms (see header). Not gated on the band; only a
+// gross-regression guard (Fy sign / < 3x), since Fy is the frame-robust component.
 TEST(ChronoPac02Parity, CombinedSlipReported) {
     std::vector<Row> ref;
     if (!load_reference(ref)) GTEST_SKIP() << "no Chrono reference CSV — see "

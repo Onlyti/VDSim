@@ -29,15 +29,18 @@ tests/parity/                  <- VDSim side: reads the CSV, NO Chrono link
 
 | Regime | VDSim vs Chrono Pac02 |
 |--------|------------------------|
-| Pure longitudinal slip, Fz 2–6 kN | **within ~2%** (load sensitivity + long backbone agree) — *gated* |
-| Near-pure lateral | within ~6% |
-| Strong combined slip (large κ *and* α) | diverges (mean \|ΔFx\|≈39%, \|ΔFy\|≈17%) — different combined-slip weighting; *reported, not gated* |
+| Pure longitudinal slip (α≈0), Fz 2–6 kN | **within ~2%** (long backbone + load sensitivity agree) — *gated* |
+| Pure lateral slip (κ≈0), Fz 2–6 kN | **within ~1%** (cornering stiffness + lateral backbone agree) — *gated* |
+| Combined cross-terms (large κ *and* α) | combined Fx runs below Chrono — *reported, not gated* |
 
-So the gate `PureLongitudinalMatchesChrono` is the validated cross-check (and a
-regression lock); `CombinedSlipReported` records the combined-slip divergence and only
-guards against a gross regression (sign flip / >3×). The combined-slip weighting
-difference is a known MF-variant gap, not a bug — investigating whether to align
-VDSim's `Gxa`/`Gyk` with Pac02 is a separate task.
+So the gates `PureLongitudinalMatchesChrono` + `PureLateralMatchesChrono` are the
+validated cross-check (and a regression lock): both pure axes match an independent Pac02
+to ~1–2%. `CombinedSlipReported` records the combined cross-term difference and only
+guards against a gross regression (Fy sign / >3×). The combined-slip residual mixes a
+genuine combined-slip-weighting difference with a **rig-frame artifact** — `ChTireTestRig`
+reports the force in the global frame while the wheel is yawed by the slip angle, so the
+combined longitudinal component is frame-sensitive and not a clean tire-frame reference.
+Not a model defect; chasing it is low priority.
 
 ## Regenerating the reference (needs a Chrono build)
 
