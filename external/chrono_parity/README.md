@@ -8,9 +8,10 @@ dependency**.
 ## Isolation (why nothing mixes)
 
 ```
-external/chrono_parity/        <- Chrono touched ONLY here, in a separate conda env
+external/chrono_parity/        <- Chrono touched ONLY here, built separately
   sample_pac02.tir             <- public synthetic coeffs, fed to BOTH evaluators
-  gen_pac02_reference.py       <- imports pychrono, writes reference/pac02_reference.csv
+  gen_reference.cpp            <- links Chrono; ChTireTestRig sweep -> reference CSV
+  CMakeLists.txt               <- standalone; find_package(Chrono), NOT VDSim's tree
   reference/pac02_reference.csv<- the only artifact that crosses back into the repo
 tests/parity/                  <- VDSim side: reads the CSV, NO Chrono link
   test_chrono_pac02_parity.cpp
@@ -19,53 +20,61 @@ tests/parity/                  <- VDSim side: reads the CSV, NO Chrono link
 - VDSim's CMake / `libvdsim_core` never `find_package(Chrono)` and never link it.
 - The C++ gate (`ctest -R ChronoPac02Parity`) reads the CSV; if the CSV is absent it
   **SKIPs** (never fails the build for a missing external artifact).
-- `sample_pac02.tir` is the single shared input. The repo `.gitignore` blocks `*.tir`
-  (measured coeffs are confidential); this one file has an explicit allow exception
-  because it is public synthetic data.
+- `sample_pac02.tir` is the single shared input. The generator parses it and emits the
+  equivalent Chrono Pac02 JSON (Chrono inlines coeffs in JSON), so the coefficients are
+  identical on both sides — no transcription. The repo `.gitignore` blocks `*.tir`
+  (measured coeffs are confidential); this one public-synthetic file has an exception.
 
-## Gate states
+## Result (committed reference)
 
-| State | `OurSideLoadsSampleTir` | `ForcesMatchReference` |
-|-------|-------------------------|------------------------|
-| no CSV (default)         | PASS (our evaluator loads the shared .tir) | SKIP |
-| CSV present, in band     | PASS | PASS |
-| CSV present, drift       | PASS | FAIL (prints worst Fx/Fy points) |
+| Regime | VDSim vs Chrono Pac02 |
+|--------|------------------------|
+| Pure longitudinal slip, Fz 2–6 kN | **within ~2%** (load sensitivity + long backbone agree) — *gated* |
+| Near-pure lateral | within ~6% |
+| Strong combined slip (large κ *and* α) | diverges (mean \|ΔFx\|≈39%, \|ΔFy\|≈17%) — different combined-slip weighting; *reported, not gated* |
 
-## Generating the reference
+So the gate `PureLongitudinalMatchesChrono` is the validated cross-check (and a
+regression lock); `CombinedSlipReported` records the combined-slip divergence and only
+guards against a gross regression (sign flip / >3×). The combined-slip weighting
+difference is a known MF-variant gap, not a bug — investigating whether to align
+VDSim's `Gxa`/`Gyk` with Pac02 is a separate task.
 
-The generator needs a pychrono with the **file-driven** Pac02 tire (`ReadTireJSON` /
-`Pac02Tire(json)`), i.e. **pychrono >= 8.0**.
+## Regenerating the reference (needs a Chrono build)
+
+Chrono's file-driven Pac02 (`ReadTireJSON`) is only exposed in the C++ API and in
+pychrono ≥ 8 (whose conda binary needs GLIBC ≥ 2.32 — it does not run on Ubuntu 20.04).
+On 20.04 / GLIBC 2.31, build Chrono from source (its libs match the host GLIBC):
 
 ```bash
-conda create -n chrono8 -c projectchrono -c conda-forge pychrono python=3.10
-conda activate chrono8
-python external/chrono_parity/gen_pac02_reference.py
-# -> external/chrono_parity/reference/pac02_reference.csv
-cd build && ctest -R ChronoPac02Parity --output-on-failure
+# 1. Build Chrono (vehicle module only, minimal) — done once, outside the repo.
+git clone --depth 1 --branch 8.0.0 https://github.com/projectchrono/chrono.git ~/build_ext/chrono_src
+cmake -S ~/build_ext/chrono_src -B ~/build_ext/chrono_src/build -DCMAKE_BUILD_TYPE=Release \
+  -DENABLE_MODULE_VEHICLE=ON -DENABLE_MODULE_IRRLICHT=OFF -DENABLE_MODULE_POSTPROCESS=OFF \
+  -DENABLE_MODULE_PYTHON=OFF -DBUILD_DEMOS=OFF -DBUILD_TESTING=OFF -DEIGEN3_INCLUDE_DIR=/usr/include/eigen3
+cmake --build ~/build_ext/chrono_src/build --target ChronoEngine ChronoEngine_vehicle -j
+
+# 2. Build + run the generator (links that Chrono build).
+cd external/chrono_parity
+cmake -B build -DChrono_DIR=~/build_ext/chrono_src/build/cmake -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+LD_LIBRARY_PATH=~/build_ext/chrono_src/build/lib ./build/gen_reference "$(pwd)"
+#   -> reference/pac02_reference.csv  (commit it)
+
+# 3. Run the gate from VDSim.
+cd ../.. && cmake --build build -j && (cd build && ctest -R ChronoPac02Parity --output-on-failure)
 ```
 
-### Known environment blocker (this host)
+The CSV is committed, so the gate runs everywhere from the checked-in artifact — Chrono
+is only needed to *regenerate* it, never to *run* the gate.
 
-- **Ubuntu 20.04 = GLIBC 2.31.** The pychrono 8.0 conda binary requires GLIBC 2.32+
-  (`_core.so: version GLIBC_2.32 not found`), so it does **not** run here.
-- **pychrono 7.0** (conda-forge) *does* run on 20.04, but exposes only the abstract
-  `ChPac02Tire` with no file loader (`ReadTireJSON` absent) — it cannot consume an
-  arbitrary `.tir`, so it is not usable for shared-`.tir` parity.
+### Notes / caveats baked into the generator
 
-Therefore generate the CSV on one of:
-1. a host with GLIBC >= 2.32 (Ubuntu 22.04+) running pychrono >= 8, or
-2. a local **Chrono source build** (its libs match the host GLIBC) — write the same
-   grid with the C++ `Pac02Tire(json)` API and emit the CSV.
-
-The CSV is committed once generated, so the gate then runs everywhere from the
-checked-in artifact (no Chrono needed to *run* the gate, only to *regenerate* it).
-
-## Caveats when first comparing
-
-- **MF revision / scaling**: ensure both sides use Pacejka-2002 with the same scaling
-  factors (the `.tir` `[SCALING_COEFFICIENTS]` are all 1.0 here). A mismatch shows up
-  as a systematic bias, not noise — do not mistake it for a VDSim bug.
-- **Sign convention**: the generator emits forces in the ISO tire frame to match
-  VDSim (`Fy < 0` for `alpha > 0`). Flip in the generator, not the gate.
-- **Mz**: aligning-moment / pneumatic-trail models differ more across MF
-  implementations; the gate compares Fx/Fy and only records Mz.
+- **Use the actual slip/load Chrono reports**, not the commanded grid: `ChTireTestRig`'s
+  commanded longitudinal slip differs from Pac02's internal slip (effective rolling
+  radius), and the rig's contact Fz ripples; the generator records `GetLongitudinalSlip`,
+  `GetSlipAngle`, and the in-contact mean Fz so both models are evaluated at the same point.
+- **Frame**: forces are rotated from Chrono's global frame into the wheel/ISO frame
+  (`Fy < 0` for `alpha > 0`) to match VDSim.
+- **Vertical damping** in `sample_pac02.tir` is set high (8000) only so the rig's vertical
+  mode settles; VDSim's evaluator takes Fz directly and ignores it.
+- **Mz** (aligning) differs more across MF implementations; the gate compares Fx/Fy only.

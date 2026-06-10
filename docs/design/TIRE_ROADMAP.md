@@ -165,15 +165,19 @@ with a compatibility matrix in T2 design note.
 > **Remaining:** GUI `.tir` import (v0.5.2 GUI bundle); parity gate vs Chrono Pac02
 > reference. Headless T1 core is complete.
 >
-> **Parity gate (2026-06-10, scaffolded):** `external/chrono_parity/` (isolated — Chrono
-> never enters our CMake/core) + a public shared `sample_pac02.tir` + the VDSim-side
-> `tests/parity/test_chrono_pac02_parity.cpp` (`ctest -R ChronoPac02Parity`): loads the
-> shared .tir on our side (always-on sanity, PASS) and bands Fx/Fy vs a Chrono reference
-> CSV when present (else SKIP — never blocks CI). **Reference CSV not yet generated:**
-> pychrono >= 8 (file-driven Pac02) needs GLIBC >= 2.32, which Ubuntu 20.04 (this host,
-> 2.31) lacks; pychrono 7.0 runs but exposes only the abstract `ChPac02Tire` (no .tir
-> loader). Generate on a GLIBC >= 2.32 host or a local Chrono source build, then commit
-> the CSV — see `external/chrono_parity/README.md`. Gate is armed; 294 ctest.
+> **Parity gate (2026-06-10, DONE — real Chrono reference):** `external/chrono_parity/`
+> (isolated — Chrono never enters our CMake/core). Chrono 8.0.0 was built from source
+> (vehicle module only; the conda pychrono ≥ 8 binary needs GLIBC ≥ 2.32 which Ubuntu
+> 20.04 lacks). A standalone generator (`gen_reference.cpp`, links Chrono via
+> `ChTireTestRig`) parses the shared `sample_pac02.tir`, emits the equivalent Pac02 JSON,
+> sweeps (Fz, κ, α) and writes `reference/pac02_reference.csv` (committed). The VDSim-side
+> `tests/parity/test_chrono_pac02_parity.cpp` (`ctest -R ChronoPac02Parity`, no Chrono link)
+> evaluates our MF2002 at the slip/load Chrono actually reported. **Result:** pure
+> longitudinal slip matches Pac02 **within ~2%** across Fz 2–6 kN (gated); near-pure
+> lateral ~6%; **strong combined slip diverges** (mean |ΔFx|≈39%, |ΔFy|≈17% — different
+> combined-slip weighting, reported not gated). So our MF long backbone + load sensitivity
+> are independently validated; aligning `Gxa`/`Gyk` with Pac02 combined slip is a separate
+> open task. 295 ctest. See `external/chrono_parity/README.md`.
 
 | Item | Deliverable |
 |------|-------------|

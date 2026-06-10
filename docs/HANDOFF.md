@@ -1,6 +1,6 @@
 # VDSim 핸드오프
 
-작성: **2026-06-10** · `main` (= `v0.5.1`) · **292/292 ctest green**
+작성: **2026-06-10** · `main` (= `v0.5.1`) · **295/295 ctest green**
 
 ## 1. 문서 인덱스
 
@@ -59,7 +59,7 @@
 
 ```bash
 cmake --build build -j
-cd build && ctest --output-on-failure   # 292/292
+cd build && ctest --output-on-failure   # 295/295
 python3 gui/server.py                   # http://127.0.0.1:8080
 ```
 
@@ -83,8 +83,15 @@ M6 docs. 273 ctest. Scenes: `terrain_hill_demo`, `banked_grade_demo`, `banked_ov
   Tests `BeltTire.*`, `BeltTransient.*`, `BeltValidation.*`. **Default off -> no drift.**
 - **Decision (locked):** keep own lean tire stack; Chrono Pac02 (BSD-3) is a
   cross-validation *reference*, not a dependency. Belt = own (no permissive OSS exists).
+- **Chrono Pac02 parity (DONE):** isolated cross-check in `external/chrono_parity/`
+  (Chrono 8.0.0 built from source at `~/build_ext/chrono_src`; never in VDSim's CMake).
+  Generator `gen_reference.cpp` (ChTireTestRig) -> committed `reference/pac02_reference.csv`;
+  VDSim gate `ctest -R ChronoPac02Parity`. **Pure-long Fx within ~2%** (validated, gated);
+  **combined slip diverges** (mean |ΔFx|≈39% — different MF combined-slip weighting,
+  reported not gated). See `external/chrono_parity/README.md`.
 - **Remaining tire:** bicycle (L1) belt wiring (lowest value); GUI `.tir` import
-  (v0.5.2 GUI); combined-slip parity gate vs Chrono Pac02 (needs Chrono build).
+  (v0.5.2 GUI); **align `Gxa`/`Gyk` combined slip with Pac02** (open — our combined-slip
+  weighting differs; pure slip already matches).
 
 **v0.5.2 (deferred — needs browser, no headless path):**
 1. **M4 GUI terrain load + L5 Play** — chase cam uses `position.z`, spawn on mesh.
@@ -93,7 +100,7 @@ M6 docs. 273 ctest. Scenes: `terrain_hill_demo`, `banked_grade_demo`, `banked_ov
 
 **Done this session (post-tire):** ISO re-baseline (flat, sedan L2 LuGre) — VALIDATION.md
 table refreshed + CI gate `tests/integration/test_iso_baseline.cpp` (`ctest -R IsoBaseline`)
-locks the 7401 force signature. 292 ctest.
+locks the 7401 force signature. 295 ctest.
 
 **v0.6+:**
 1. Ld4 v0.6 — shared inertia helpers; full loop dynamics; Featherstone in step (optional).

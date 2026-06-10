@@ -32,7 +32,7 @@ RIM_WIDTH          = 0.16
 [VERTICAL]
 FNOMIN             = 4000
 VERTICAL_STIFFNESS = 220000
-VERTICAL_DAMPING   = 300
+VERTICAL_DAMPING   = 8000
 BREFF              = 8.4
 DREFF              = 0.27
 FREFF              = 0.07
