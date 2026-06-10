@@ -134,9 +134,23 @@ M6 docs. 273 ctest. Scenes: `terrain_hill_demo`, `banked_grade_demo`, `banked_ov
 
 ## 6. Git
 
-- `main` = `v0.5.1` (tire T1 MF2002 backend + T2 belt transient). Tags:
-  v0.1.0 / v0.2.0 / v0.2.4 / v0.4.0 / v0.5.0 / **v0.5.1**. Remaining tire tail
-  (bicycle L1 belt, Chrono parity, GUI `.tir` import) does NOT block the tag — it lands
-  in v0.5.2 (GUI bundle) / v0.6.
-- All feature work ff-merged (no history rewrite). push/merge/tag는 명시 요청 시에만.
+- `main` @ `279977f`, **all pushed**, 317/317 ctest. Last tag **`v0.5.1`**; main is ahead
+  of it (post-0.5.1, **untagged**): tire tail (L1 belt, `tire_forces_wheel`, Chrono parity)
+  + ISO re-baseline/`IsoBaseline` + **Drivetrain v2** (D1–D5). Tag a release when the next
+  milestone closes (suggest `v0.6.0` once catalog `drivetrain_v2` or Ld4 v0.6 lands).
+- Tags: v0.1.0 / v0.2.0 / v0.2.4 / v0.4.0 / v0.5.0 / **v0.5.1**.
+- All feature work committed straight on `main` this session (no branches/rewrite).
+  push/merge/tag는 명시 요청 시에만.
+- **External build (not in repo):** Chrono 8.0.0 source at `~/build_ext/chrono_src`
+  (vehicle module only) — only needed to *regenerate* the parity CSV, not to run the gate.
 - Next: new feature branch off `main`.
+
+## 7. Next pickups (fresh session)
+
+1. **Catalog `drivetrain_v2` part** — materialize a `powertrain:` block into the chassis
+   params via the catalog resolve pipeline (today the demo loads `powertrain_sedan_demo.yaml`
+   directly through `from_yaml`). Headless.
+2. **Ld4 v0.6** — shared inertia helpers; full loop dynamics; Featherstone in step (optional).
+3. **v0.5.2 GUI (browser, user-verified):** terrain Play (M4), stunt authoring (M5c),
+   `.tir` import, tire-force arrows in wheel frame (`tire_forces_wheel()` ready).
+4. Brake/steer physics (booster/MDPS/ABS); V2V collision + VDS1 multi-vehicle I/O.
