@@ -20,6 +20,11 @@ ENV REQUIREMENT (important):
 Usage:
   conda activate <env-with-pychrono>=8
   python gen_pac02_reference.py            # writes reference/pac02_reference.csv
+
+NOTE: the exact pychrono API for tire Initialize / Advance / ReportTireForce and the
+wheel attachment differs slightly across Chrono versions. This rig encodes the intended
+procedure; verify the calls against the installed pychrono (>= 8) on first run and adjust
+if a signature differs — it has not been executed in this repo's host (GLIBC-blocked).
 """
 import csv
 import json
@@ -62,8 +67,6 @@ def build_rig():
     spindle = chrono.ChBody()
     spindle.SetMass(20.0)
     sys.Add(spindle)
-    wheel = veh.ChWheel(chrono.GetChronoDataFile("vehicle/generic/wheel/WheelSimple.json")) \
-        if False else None
 
     tire = veh.ReadTireJSON(str(write_tire_json()))   # pychrono >= 8
     terrain = veh.RigidTerrain(sys)
