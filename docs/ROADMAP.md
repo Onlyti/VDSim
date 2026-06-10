@@ -1,6 +1,6 @@
 # VDSim product roadmap
 
-**Last updated:** 2026-06-10 · **Tests:** 296/296 ctest green (`main`)
+**Last updated:** 2026-06-10 · **Tests:** 299/299 ctest green (`main`)
 
 Living roadmap from early PoC through v0.3. Tracks what shipped in mainline vs what
 is planned. Detail specs link to `docs/design/*`; tire phases in
@@ -26,7 +26,7 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 | Brake / steer | Pluggable modules + deadtime | Booster/MDPS physics |
 | Catalog / runtime | `--scene=`, fleet, FMI | External part packs, VDS1 v4 |
 | GUI | 3-tab scene UI, catalog API, workshops | Tire `.tir` import UI |
-| Validation | ISO 7401/4138/3888 **re-baselined + CI-gated** (`IsoBaseline`), 296 ctest | Adams x-check rtol; commercial cross-val |
+| Validation | ISO 7401/4138/3888 **re-baselined + CI-gated** (`IsoBaseline`), 299 ctest | Adams x-check rtol; commercial cross-val |
 
 ```mermaid
 timeline
@@ -120,7 +120,7 @@ timeline
 | T1 | LuGre $g()$ from MF2002 $F_{x0},F_{y0}$ (optional) | [ ] |
 | T2 | **Belt transient** (`belt_relax`, σ/\|Vx\| first-order) | [x] merged |
 | T2 | Filtered slip → MF96/MF2002 + LuGre (L2/L3/L5) | [x] merged |
-| T2 | bicycle (L1) belt wiring (lowest value) | [ ] |
+| T2 | bicycle (L1) belt wiring (MF + LuGre) | [x] merged |
 | T3 | VLOW-class unified low speed (reduce blend reliance) | [ ] |
 | T4 | MF2002 $G_{x\alpha}, G_{y\kappa}$ on dynamic path | [ ] |
 | T5 | Turn-slip, inflation, temperature | [ ] |
@@ -261,7 +261,7 @@ LuGre (contact bristle, presliding). See [`TIRE_ROADMAP.md`](design/TIRE_ROADMAP
 | [x] ISO 4138 understeer gradient | Shipped | |
 | [x] ISO 3888-2 DLC metric | Shipped | |
 | [x] ISO 8608 road PSD classes | Shipped | |
-| [x] **296** automated ctests | Shipped | 2026-06-10 |
+| [x] **299** automated ctests | Shipped | 2026-06-10 |
 | [x] ISO matrix re-baseline (post engine inertia + LuGre) + CI gate | Shipped | `IsoBaseline`; VALIDATION.md table 2026-06-10 |
 | [ ] Stunt validation suite (`tests/stunt/*`) | Planned v0.4 | |
 | [ ] Published commercial cross-val (open data) | Planned | Honest gap today |
@@ -332,7 +332,7 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 ### v0.5.2+ (planned)
 
 - [ ] GUI terrain Play (M4) + stunt authoring (M5c) + `.tir` import — browser-gated
-- [ ] Tire: bicycle (L1) belt; Chrono Pac02 parity gate
+- [x] Tire: bicycle (L1) belt (MF+LuGre) + Chrono Pac02 parity gate — done
 - [ ] Drivetrain torque–RPM + gearbox
 - [ ] Brake/steer physics upgrade
 - [ ] CARLA full bridge · open benchmark  

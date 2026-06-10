@@ -178,7 +178,7 @@ with a compatibility matrix in T2 design note.
 > validated). Combined cross-terms differ, but that is largely a rig-frame artifact
 > (`ChTireTestRig` reports global-frame force on a slip-yawed wheel, so the combined
 > longitudinal component is frame-sensitive) mixed with weighting — report-only, not a
-> model defect. 296 ctest. See `external/chrono_parity/README.md`.
+> model defect. 299 ctest. See `external/chrono_parity/README.md`.
 
 | Item | Deliverable |
 |------|-------------|
@@ -201,8 +201,9 @@ with a compatibility matrix in T2 design note.
 > `test_belt_validation.cpp` — steady unchanged, early response suppressed at t=tau,
 > more lag at lower speed (the sigma/|Vx| scaling). 291 ctest. Theory:
 > [`theory/21_belt_transient.md`](../theory/21_belt_transient.md).
-> **Remaining:** bicycle (L1) wiring (lowest value). Then T2 can merge with T1
-> (T1 -> T2 ff order).
+> **Done (2026-06-10):** bicycle (L1) belt wiring — MF + LuGre paths, per-axle relaxed
+> slip; tests `BeltTransient.L1PathLagsWithBelt` / `.L1LuGrePathLagsWithBelt`. Belt is now
+> on every dynamics level (L1/L2/L3/L5), default off. **T2 complete.**
 
 | Item | Deliverable |
 |------|-------------|

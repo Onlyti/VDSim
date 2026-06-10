@@ -1,6 +1,6 @@
 # VDSim 핸드오프
 
-작성: **2026-06-10** · `main` (= `v0.5.1`) · **296/296 ctest green**
+작성: **2026-06-10** · `main` (= `v0.5.1`) · **299/299 ctest green**
 
 ## 1. 문서 인덱스
 
@@ -59,7 +59,7 @@
 
 ```bash
 cmake --build build -j
-cd build && ctest --output-on-failure   # 296/296
+cd build && ctest --output-on-failure   # 299/299
 python3 gui/server.py                   # http://127.0.0.1:8080
 ```
 
@@ -91,9 +91,10 @@ M6 docs. 273 ctest. Scenes: `terrain_hill_demo`, `banked_grade_demo`, `banked_ov
   validated). Combined cross-terms differ but that is largely a rig-frame artifact
   (`ChTireTestRig` reports global-frame force on a yawed wheel) mixed with weighting —
   report-only. See `external/chrono_parity/README.md`.
-- **Remaining tire:** bicycle (L1) belt wiring (lowest value); GUI `.tir` import
-  (v0.5.2 GUI). (Combined-slip Pac02 alignment is low priority — pure axes already match;
-  the residual is mostly the rig-frame decomposition, not our model.)
+- **Tire T2 complete:** bicycle (L1) belt wiring done (MF + LuGre) — belt now on
+  L1/L2/L3/L5, default off. Tests `BeltTransient.L1*`. **Remaining tire:** GUI `.tir`
+  import (v0.5.2 GUI). (Combined-slip Pac02 alignment is low priority — pure axes already
+  match; the residual is mostly the rig-frame decomposition, not our model.)
 
 **v0.5.2 (deferred — needs browser, no headless path):**
 1. **M4 GUI terrain load + L5 Play** — chase cam uses `position.z`, spawn on mesh.
@@ -107,11 +108,12 @@ M6 docs. 273 ctest. Scenes: `terrain_hill_demo`, `banked_grade_demo`, `banked_ov
 
 **Done this session (post-tire):** ISO re-baseline (flat, sedan L2 LuGre) — VALIDATION.md
 table refreshed + CI gate `tests/integration/test_iso_baseline.cpp` (`ctest -R IsoBaseline`)
-locks the 7401 force signature. 296 ctest.
+locks the 7401 force signature. 299 ctest.
 
 **v0.6+:**
 1. Ld4 v0.6 — shared inertia helpers; full loop dynamics; Featherstone in step (optional).
-3. Tire T2 belt: bicycle (L1) wiring; Chrono Pac02 parity gate; (later) higher belt eigenmodes are out of scope.
+2. Drivetrain torque–RPM map + multi-ratio gearbox (next product item; ISO re-baseline follows).
+3. Tire: T2 belt is **complete** (L1–L5); higher belt eigenmodes (rigid-ring/FTire) out of scope.
 
 ## 5. 주의
 

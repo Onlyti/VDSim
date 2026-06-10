@@ -70,6 +70,33 @@ double l5_step_steer_ay(bool belt, double t_s) {
     return std::abs(dyn->ay_body_est());
 }
 
+// L1 (bicycle) has no ay accessor; use the yaw rate as the belt-observable response.
+double l1_step_steer_yaw(bool belt, double t_s, bool lugre = false) {
+    vdsim::VehicleParams vp; vp.aero_drag_coeff = 0.0;
+    vdsim::TireParams tp;
+    tp.lugre.enabled = lugre;
+    tp.belt.enabled = belt;
+    tp.belt.sigma_lat = 0.6;
+    vdsim::SolverParams sp;
+    auto dyn = vdsim::create_bicycle();
+    dyn->initialize(vp, tp, sp);
+    vdsim::State s;
+    s.velocity.x() = 20.0;
+    const double w = 20.0 / vp.wheel_radius_nominal;
+    s.wheel_spin = {{w, w, w, w}};
+    dyn->reset(s);
+    auto ground = vdsim::create_flat_ground(0.0, 1.0);
+    vdsim::CmdL4 cmd; cmd.steer_angle_wheel = 0.04;
+    const vdsim::ControlInput u = cmd;
+    const int n = static_cast<int>(t_s / 0.001);
+    for (int i = 0; i < n; ++i) {
+        vdsim::ContactArray c;
+        ground->query(dyn->state(), vp, c);
+        dyn->step(u, c, 0.001);
+    }
+    return std::abs(dyn->state().yaw_rate());
+}
+
 }  // namespace
 
 TEST(BeltTransient, LateralResponseLagsThenConverges) {
@@ -106,4 +133,26 @@ TEST(BeltTransient, L5PathLagsWithBelt) {
     const double on  = l5_step_steer_ay(true,  0.020);
     EXPECT_GT(off, 0.1) << "L5 responds to the step steer";
     EXPECT_LT(on, off)  << "belt lags the L5 early response";
+}
+
+// T2 tail — belt wired into the L1 (bicycle) MF path; early yaw response lags,
+// steady state unchanged.
+TEST(BeltTransient, L1PathLagsWithBelt) {
+    const double off_early = l1_step_steer_yaw(false, 0.020);
+    const double on_early  = l1_step_steer_yaw(true,  0.020);
+    EXPECT_GT(off_early, 1e-3) << "L1 responds to the step steer";
+    EXPECT_LT(on_early, off_early) << "belt lags the L1 early yaw response";
+
+    const double off_ss = l1_step_steer_yaw(false, 0.8);
+    const double on_ss  = l1_step_steer_yaw(true,  0.8);
+    EXPECT_GT(off_ss, 1e-3);
+    EXPECT_NEAR(on_ss, off_ss, 0.20 * off_ss) << "belt is transient-only; steady yaw unchanged";
+}
+
+// L1 belt also stacks on the LuGre path (relaxed slip velocity).
+TEST(BeltTransient, L1LuGrePathLagsWithBelt) {
+    const double off = l1_step_steer_yaw(false, 0.020, /*lugre=*/true);
+    const double on  = l1_step_steer_yaw(true,  0.020, /*lugre=*/true);
+    EXPECT_GT(off, 1e-3) << "L1 LuGre responds to the step steer";
+    EXPECT_LT(on, off)   << "belt lags the L1 LuGre early response";
 }

@@ -17,7 +17,7 @@ the last section.
 | ISO 7401 step-steer / 4138 understeer / 3888-2 DLC — run + measured | Tire thermal, wear, full transient beyond first-order relaxation |
 | L1↔L2↔L3 cross-model consistency where physics overlaps | Dependent axles (twist-beam / solid beam) — configs are stubs |
 | FMI round-trip Δ=0 (machine precision); ISO 8608 PSD RMS per class | L3 unsprung lateral-transfer term (small) |
-| Full suite: **296/296 ctest green** | — |
+| Full suite: **299/299 ctest green** | — |
 | Drivetrain engine inertia (open-diff carrier coupling) | — |
 | **ISO step-steer signature gated in CI** (`ctest -R IsoBaseline`, sedan L2 LuGre) | DLC moose gate is a preset property, not a defect (see note) |
 
@@ -53,7 +53,7 @@ vehicle/controller property, not a sim defect (see "Notes on specific results").
 | 12 | ISO 8608 roughness | PSD Gd(n)=Gd(n0)(n/n0)⁻² | RMS doubles/class: A 3.5, B 7.0, C 14.1, D 28 mm | 15% | `ctest -R Iso8608` |
 | 13 | **MF2002 vs Chrono Pac02** (BSD-3, independent) | same public `.tir` | pure-long Fx ~2% + pure-lat Fy ~1% (Fz 2–6 kN); combined cross-terms differ (rig-frame, reported) | 6% | `ctest -R ChronoPac02Parity` |
 
-Full automated suite: `cd build && ctest` — 296 checks, 100% green (measured 2026-06-10).
+Full automated suite: `cd build && ctest` — 299 checks, 100% green (measured 2026-06-10).
 
 **LuGre baseline (re-baselined 2026-06-10, sedan L2, `default_pacejka` tire):**
 
@@ -132,7 +132,7 @@ folded into the re-baselined table above.
 ## Reproducing the whole report
 
 ```sh
-cmake --build build -j && (cd build && ctest --output-on-failure)   # 296 checks
+cmake --build build -j && (cd build && ctest --output-on-failure)   # 299 checks
 python3 apps/validation/run_validation.py    # ISO 7401/4138/3888 -> REPORT.md
 python3 fmi_export/test_roundtrip.py          # FMU vs native
 ```

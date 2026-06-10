@@ -14,6 +14,7 @@
 // Note: this differs from Rajamani's "delta - atan(...)" which assumes
 // SAE Y-right convention.
 
+#include "vdsim/belt_tire.hpp"
 #include "vdsim/coordinate.hpp"
 #include "vdsim/drivetrain_inertia.hpp"
 #include "vdsim/interfaces.hpp"
@@ -118,6 +119,11 @@ public:
         ax_prev_ = 0.0;
         alpha_dyn_f_ = alpha_dyn_r_ = 0.0;
         alpha_geom_f_last_ = alpha_geom_r_last_ = 0.0;
+        kappa_geom_f_last_ = kappa_geom_r_last_ = 0.0;
+        belt_kappa_f_ = belt_kappa_r_ = belt_alpha_f_ = belt_alpha_r_ = 0.0;
+        belt_vlong_f_ = belt_vlong_r_ = belt_vlat_f_ = belt_vlat_r_ = 0.0;
+        v_slip_long_f_last_ = v_slip_lat_f_last_ = 0.0;
+        v_slip_long_r_last_ = v_slip_lat_r_last_ = 0.0;
         lugre_z_long_f_ = lugre_z_lat_f_ = lugre_z_long_r_ = lugre_z_lat_r_ = 0.0;
         v_fx_wheel_last_ = v_rx_body_last_ = 0.0;
         // Clear diagnostics so accessors don't return stale values before step().
@@ -252,19 +258,29 @@ private:
         const double kappa_r = (R * or_ - v_rx_body)  / denom_r;
 
         const bool lugre_on = tp_.lugre.enabled;
-        const double alpha_in_f = (lugre_on || tp_.relaxation_length_lat <= 1e-6)
+        // Belt transient (T2): on the MF path feed the relaxed slip (substep()
+        // advances belt_*_); held frozen within RK4 so all stages see one
+        // linearization. Default off -> identical to the legacy slip.
+        const bool belt_on = tp_.belt.enabled && !lugre_on;
+        const double alpha_in_f = belt_on ? belt_alpha_f_
+                                : (lugre_on || tp_.relaxation_length_lat <= 1e-6)
                                   ? alpha_f : alpha_dyn_f_;
-        const double alpha_in_r = (lugre_on || tp_.relaxation_length_lat <= 1e-6)
+        const double alpha_in_r = belt_on ? belt_alpha_r_
+                                : (lugre_on || tp_.relaxation_length_lat <= 1e-6)
                                   ? alpha_r : alpha_dyn_r_;
+        const double kappa_in_f = belt_on ? belt_kappa_f_ : kappa_f;
+        const double kappa_in_r = belt_on ? belt_kappa_r_ : kappa_r;
         ITireModel::Input in_f;
-        in_f.Fz = Fz_f; in_f.kappa = kappa_f; in_f.alpha = alpha_in_f;
+        in_f.Fz = Fz_f; in_f.kappa = kappa_in_f; in_f.alpha = alpha_in_f;
         in_f.mu_long = mu_long_f; in_f.mu_lat = mu_lat_f; in_f.Vx_wheel = v_fx_wheel;
         ITireModel::Input in_r;
-        in_r.Fz = Fz_r; in_r.kappa = kappa_r; in_r.alpha = alpha_in_r;
+        in_r.Fz = Fz_r; in_r.kappa = kappa_in_r; in_r.alpha = alpha_in_r;
         in_r.mu_long = mu_long_r; in_r.mu_lat = mu_lat_r; in_r.Vx_wheel = v_rx_body;
 
         alpha_geom_f_last_ = alpha_f;
         alpha_geom_r_last_ = alpha_r;
+        kappa_geom_f_last_ = kappa_f;
+        kappa_geom_r_last_ = kappa_r;
         v_fx_wheel_last_   = v_fx_wheel;
         v_rx_body_last_    = v_rx_body;
         v_fy_wheel_last_   = v_fy_wheel;
@@ -282,6 +298,14 @@ private:
         const double v_slip_lat_f  = v_fy_wheel;
         const double v_slip_long_r = R * or_ - v_rx_body;
         const double v_slip_lat_r  = v_ry_body;
+        v_slip_long_f_last_ = v_slip_long_f; v_slip_lat_f_last_ = v_slip_lat_f;
+        v_slip_long_r_last_ = v_slip_long_r; v_slip_lat_r_last_ = v_slip_lat_r;
+        // Belt on the LuGre path relaxes the slip *velocity* feeding the bristle v_r.
+        const bool belt_lugre = tp_.belt.enabled && lugre_on;
+        const double vsl_long_f = belt_lugre ? belt_vlong_f_ : v_slip_long_f;
+        const double vsl_lat_f  = belt_lugre ? belt_vlat_f_  : v_slip_lat_f;
+        const double vsl_long_r = belt_lugre ? belt_vlong_r_ : v_slip_long_r;
+        const double vsl_lat_r  = belt_lugre ? belt_vlat_r_  : v_slip_lat_r;
 
         ITireModel::Output F_f{}, F_r{};
         double Fxh_f = 0.0, Fxh_r = 0.0;
@@ -291,10 +315,10 @@ private:
         if (lugre_on) {
             const auto lf = lugre_wheel_forces(
                 *tire_, tp_, lugre_z_long_f_, lugre_z_lat_f_,
-                v_slip_long_f, v_slip_lat_f, in_f);
+                vsl_long_f, vsl_lat_f, in_f);
             const auto lr = lugre_wheel_forces(
                 *tire_, tp_, lugre_z_long_r_, lugre_z_lat_r_,
-                v_slip_long_r, v_slip_lat_r, in_r);
+                vsl_long_r, vsl_lat_r, in_r);
             Fx_f_wheel = lf.Fx; Fy_f_wheel = lf.Fy; F_f.Mz = lf.Mz;
             Fx_r_axle  = lr.Fx; Fy_r_axle  = lr.Fy; F_r.Mz = lr.Mz;
         } else {
@@ -520,6 +544,19 @@ private:
             alpha_dyn_r_ = alpha_geom_r_last_
                          + (alpha_dyn_r_ - alpha_geom_r_last_) * dr;
         }
+        // Belt transient (T2): relax slip toward its geometric value with
+        // tau = sigma/|Vx| (MF path); on the LuGre path relax the slip velocity.
+        if (tp_.belt.enabled && !tp_.lugre.enabled) {
+            belt_kappa_f_ = belt_relax(belt_kappa_f_, kappa_geom_f_last_, v_fx_wheel_last_, tp_.belt.sigma_long, h);
+            belt_alpha_f_ = belt_relax(belt_alpha_f_, alpha_geom_f_last_, v_fx_wheel_last_, tp_.belt.sigma_lat,  h);
+            belt_kappa_r_ = belt_relax(belt_kappa_r_, kappa_geom_r_last_, v_rx_body_last_,  tp_.belt.sigma_long, h);
+            belt_alpha_r_ = belt_relax(belt_alpha_r_, alpha_geom_r_last_, v_rx_body_last_,  tp_.belt.sigma_lat,  h);
+        } else if (tp_.belt.enabled && tp_.lugre.enabled) {
+            belt_vlong_f_ = belt_relax(belt_vlong_f_, v_slip_long_f_last_, v_fx_wheel_last_, tp_.belt.sigma_long, h);
+            belt_vlat_f_  = belt_relax(belt_vlat_f_,  v_slip_lat_f_last_,  v_fx_wheel_last_, tp_.belt.sigma_lat,  h);
+            belt_vlong_r_ = belt_relax(belt_vlong_r_, v_slip_long_r_last_, v_rx_body_last_,  tp_.belt.sigma_long, h);
+            belt_vlat_r_  = belt_relax(belt_vlat_r_,  v_slip_lat_r_last_,  v_rx_body_last_,  tp_.belt.sigma_lat,  h);
+        }
     }
 
     VehicleParams vp_;
@@ -548,6 +585,15 @@ private:
     double v_ry_body_last_    {0.0};
     double wheel_spin_f_last_  {0.0};
     double wheel_spin_r_last_  {0.0};
+    double kappa_geom_f_last_ {0.0};
+    double kappa_geom_r_last_ {0.0};
+    // Belt transient (T2): per-axle relaxed slip (MF) / slip velocity (LuGre).
+    double belt_kappa_f_ {0.0}, belt_kappa_r_ {0.0};
+    double belt_alpha_f_ {0.0}, belt_alpha_r_ {0.0};
+    double belt_vlong_f_ {0.0}, belt_vlong_r_ {0.0};
+    double belt_vlat_f_  {0.0}, belt_vlat_r_  {0.0};
+    double v_slip_long_f_last_ {0.0}, v_slip_lat_f_last_ {0.0};
+    double v_slip_long_r_last_ {0.0}, v_slip_lat_r_last_ {0.0};
     double lugre_z_long_f_ {0.0}, lugre_z_lat_f_ {0.0};
     double lugre_z_long_r_ {0.0}, lugre_z_lat_r_ {0.0};
 };
