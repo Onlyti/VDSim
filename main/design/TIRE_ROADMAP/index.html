@@ -2704,11 +2704,12 @@ reference. Headless T1 core is complete.</p>
 sweeps (Fz, κ, α) and writes <code>reference/pac02_reference.csv</code> (committed). The VDSim-side
 <code>tests/parity/test_chrono_pac02_parity.cpp</code> (<code>ctest -R ChronoPac02Parity</code>, no Chrono link)
 evaluates our MF2002 at the slip/load Chrono actually reported. <strong>Result:</strong> pure
-longitudinal slip matches Pac02 <strong>within ~2%</strong> across Fz 2–6 kN (gated); near-pure
-lateral ~6%; <strong>strong combined slip diverges</strong> (mean |ΔFx|≈39%, |ΔFy|≈17% — different
-combined-slip weighting, reported not gated). So our MF long backbone + load sensitivity
-are independently validated; aligning <code>Gxa</code>/<code>Gyk</code> with Pac02 combined slip is a separate
-open task. 295 ctest. See <code>external/chrono_parity/README.md</code>.</p>
+longitudinal slip Fx <strong>within ~2%</strong> AND pure lateral slip Fy <strong>within ~1%</strong> across
+Fz 2–6 kN — both gated (backbone + load sensitivity + cornering stiffness independently
+validated). Combined cross-terms differ, but that is largely a rig-frame artifact
+(<code>ChTireTestRig</code> reports global-frame force on a slip-yawed wheel, so the combined
+longitudinal component is frame-sensitive) mixed with weighting — report-only, not a
+model defect. 296 ctest. See <code>external/chrono_parity/README.md</code>.</p>
 </blockquote>
 <table>
 <thead>
