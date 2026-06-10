@@ -74,6 +74,8 @@ apps/jump_demo/*/frames/
 
 # Confidential measured data — never commit to open-core repo
 *.tir
+# Exception: public synthetic coefficients for the Chrono Pac02 parity gate (no measured data)
+!external/chrono_parity/sample_pac02.tir
 configs/tires/measured/
 *_private/
 

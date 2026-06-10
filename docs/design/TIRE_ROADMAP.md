@@ -163,7 +163,17 @@ with a compatibility matrix in T2 design note.
 > and gated the host friction-ellipse clip on it so MF2002 (and LuGre) are not
 > re-clipped (MF2002's peak $F_x$ exceeds $\mu_{nom}F_z$). 279 ctest.
 > **Remaining:** GUI `.tir` import (v0.5.2 GUI bundle); parity gate vs Chrono Pac02
-> reference (needs a Chrono build — external env). Headless T1 core is complete.
+> reference. Headless T1 core is complete.
+>
+> **Parity gate (2026-06-10, scaffolded):** `external/chrono_parity/` (isolated — Chrono
+> never enters our CMake/core) + a public shared `sample_pac02.tir` + the VDSim-side
+> `tests/parity/test_chrono_pac02_parity.cpp` (`ctest -R ChronoPac02Parity`): loads the
+> shared .tir on our side (always-on sanity, PASS) and bands Fx/Fy vs a Chrono reference
+> CSV when present (else SKIP — never blocks CI). **Reference CSV not yet generated:**
+> pychrono >= 8 (file-driven Pac02) needs GLIBC >= 2.32, which Ubuntu 20.04 (this host,
+> 2.31) lacks; pychrono 7.0 runs but exposes only the abstract `ChPac02Tire` (no .tir
+> loader). Generate on a GLIBC >= 2.32 host or a local Chrono source build, then commit
+> the CSV — see `external/chrono_parity/README.md`. Gate is armed; 294 ctest.
 
 | Item | Deliverable |
 |------|-------------|
