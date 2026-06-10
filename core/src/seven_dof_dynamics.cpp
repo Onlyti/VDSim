@@ -166,6 +166,10 @@ public:
 
     std::array<Vec3, NUM_WHEELS>   tire_forces_body() const override { return tire_F_; }
     std::array<Vec3, NUM_WHEELS>   tire_forces_wheel() const override { return tire_F_wheel_; }
+    double engine_rpm()   const override { return drivetrain_->engine_rpm(); }
+    int    current_gear() const override { return drivetrain_->current_gear(); }
+    bool   set_shift_policy(ShiftPolicy fn) override {
+        return drivetrain_->set_shift_policy(std::move(fn)); }
     std::array<double, NUM_WHEELS> tire_Fz()           const override { return tire_Fz_; }
     std::array<double, NUM_WHEELS> wheel_slip_ratio()  const override { return slip_ratio_; }
     std::array<double, NUM_WHEELS> wheel_slip_angle()  const override { return slip_angle_; }
@@ -536,7 +540,10 @@ private:
         axle_reflected_shares(vp_, I_axle_f, I_axle_r);
         for (int i = 0; i < NUM_WHEELS; ++i) {
             const double T_net = Td[i] + Tb[i] - fx_kin[i] * R;
-            const double I_eng = wheel_engine_inertia_share(vp_, i);
+            // Gear-dependent reflected inertia from the powertrain when enabled;
+            // otherwise the legacy final-drive reflection.
+            double I_eng = drivetrain_->wheel_engine_inertia(i);
+            if (I_eng < 0.0) I_eng = wheel_engine_inertia_share(vp_, i);
             if (open_diff && I_eng > 0.0) {
                 d_out.domega[i] = T_net / I_wheel_[i];
             } else {

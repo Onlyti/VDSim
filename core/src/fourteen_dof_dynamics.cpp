@@ -294,6 +294,10 @@ public:
         { return inner_->tire_forces_body(); }
     std::array<Vec3,   NUM_WHEELS> tire_forces_wheel() const override
         { return inner_->tire_forces_wheel(); }
+    double engine_rpm()   const override { return inner_->engine_rpm(); }
+    int    current_gear() const override { return inner_->current_gear(); }
+    bool   set_shift_policy(ShiftPolicy fn) override
+        { return inner_->set_shift_policy(std::move(fn)); }
     std::array<double, NUM_WHEELS> tire_Fz() const override
         { return inner_->tire_Fz(); }
     std::array<double, NUM_WHEELS> wheel_slip_ratio() const override

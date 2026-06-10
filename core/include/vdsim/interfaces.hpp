@@ -86,6 +86,13 @@ public:
 
     // L4 multibody bushing compliance state [rad]; axle 0=front, 1=rear.
     virtual double compliance_toe_rad(int /*axle*/) const noexcept { return 0.0; }
+
+    // Engine + gearbox (Drivetrain v2). 0 / 0 unless a powertrain is enabled.
+    virtual double engine_rpm()   const { return 0.0; }   // [rpm]
+    virtual int    current_gear() const { return 0; }     // 1..N, 0=N, <0=R
+    // Install a programmatic shift policy (e.g. a Python callable). Returns false
+    // if this model has no gearbox.
+    virtual bool set_shift_policy(ShiftPolicy /*fn*/) { return false; }
 };
 
 std::unique_ptr<IVehicleDynamics> create_bicycle();

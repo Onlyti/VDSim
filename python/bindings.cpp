@@ -3,6 +3,7 @@
 #include <pybind11/stl.h>
 #include <pybind11/eigen.h>
 #include <pybind11/numpy.h>
+#include <pybind11/functional.h>
 
 #include "vdsim/contact.hpp"
 #include "vdsim/control.hpp"
@@ -373,6 +374,14 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("gear",              &vdsim::CmdL4::gear);
 
     // -------- IVehicleDynamics --------
+    py::class_<vdsim::ShiftContext>(m, "ShiftContext")
+        .def_readonly("engine_rpm",    &vdsim::ShiftContext::engine_rpm)
+        .def_readonly("current_gear",  &vdsim::ShiftContext::current_gear)
+        .def_readonly("vehicle_speed", &vdsim::ShiftContext::vehicle_speed)
+        .def_readonly("throttle",      &vdsim::ShiftContext::throttle)
+        .def_readonly("brake",         &vdsim::ShiftContext::brake)
+        .def_readonly("num_gears",     &vdsim::ShiftContext::num_gears);
+
     py::class_<vdsim::IVehicleDynamics>(m, "IVehicleDynamics")
         .def("level", &vdsim::IVehicleDynamics::level)
         .def("initialize", &vdsim::IVehicleDynamics::initialize)
@@ -388,6 +397,11 @@ PYBIND11_MODULE(vdsim, m) {
         .def("tire_Fz",  &vdsim::IVehicleDynamics::tire_Fz)
         .def("tire_forces_body", &vdsim::IVehicleDynamics::tire_forces_body)
         .def("tire_forces_wheel", &vdsim::IVehicleDynamics::tire_forces_wheel)
+        .def("engine_rpm",   &vdsim::IVehicleDynamics::engine_rpm)
+        .def("current_gear", &vdsim::IVehicleDynamics::current_gear)
+        .def("set_shift_policy", &vdsim::IVehicleDynamics::set_shift_policy,
+             "Install a Python shift policy: fn(ShiftContext) -> desired gear. "
+             "Returns False if this model has no gearbox.")
         .def("wheel_slip_ratio", &vdsim::IVehicleDynamics::wheel_slip_ratio)
         .def("wheel_slip_angle", &vdsim::IVehicleDynamics::wheel_slip_angle)
         .def("roll_angle_qs",  &vdsim::IVehicleDynamics::roll_angle_qs)

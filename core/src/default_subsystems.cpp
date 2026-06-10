@@ -197,7 +197,63 @@ std::unique_ptr<ISteeringSystem> make_default_steering(const VehicleParams& vp, 
     return std::make_unique<UnitySteering>(deadtime_s);
 }
 
+// --- Drivetrain v2: engine torque map + gearbox + shift policy -------------------
+EngineGearboxDrivetrain::EngineGearboxDrivetrain(const VehicleParams& vp, double deadtime_s)
+    : vp_(vp), throttle_delay_(deadtime_s) {
+    eg_.configure(vp.powertrain);
+}
+
+void EngineGearboxDrivetrain::begin_step(const SubsystemContext& ctx, double dt) {
+    throttle_eff_ = throttle_delay_.step(ctx.cmd.throttle, dt);
+    const auto& w = ctx.state.wheel_spin;
+    double driven_omega = 0.0;
+    switch (vp_.drive_type) {
+        case VehicleParams::Drive::FWD: driven_omega = 0.5 * (w[WHEEL_FL] + w[WHEEL_FR]); break;
+        case VehicleParams::Drive::RWD: driven_omega = 0.5 * (w[WHEEL_RL] + w[WHEEL_RR]); break;
+        case VehicleParams::Drive::AWD:
+            driven_omega = 0.25 * (w[WHEEL_FL] + w[WHEEL_FR] + w[WHEEL_RL] + w[WHEEL_RR]); break;
+    }
+    double T = eg_.axle_torque(throttle_eff_, ctx.cmd.brake, driven_omega,
+                               ctx.state.vx(), ctx.cmd.gear, dt);
+    if (eg_.current_gear() < 0) T = -T;   // reverse gear drives backward
+    switch (vp_.drive_type) {
+        case VehicleParams::Drive::FWD: T_front_ = T;       T_rear_ = 0.0;     break;
+        case VehicleParams::Drive::RWD: T_front_ = 0.0;     T_rear_ = T;       break;
+        case VehicleParams::Drive::AWD: T_front_ = 0.5 * T; T_rear_ = 0.5 * T; break;
+    }
+}
+
+DrivetrainOutput EngineGearboxDrivetrain::apply(const SubsystemContext& ctx) {
+    DrivetrainOutput out{};
+    split_axle(vp_, T_front_,
+               ctx.state.wheel_spin[WHEEL_FL], ctx.state.wheel_spin[WHEEL_FR],
+               out.wheel_torque[WHEEL_FL], out.wheel_torque[WHEEL_FR]);
+    split_axle(vp_, T_rear_,
+               ctx.state.wheel_spin[WHEEL_RL], ctx.state.wheel_spin[WHEEL_RR],
+               out.wheel_torque[WHEEL_RL], out.wheel_torque[WHEEL_RR]);
+    return out;
+}
+
+void EngineGearboxDrivetrain::reset() {
+    throttle_eff_ = 0.0;
+    throttle_delay_.reset();
+    eg_.reset();
+}
+
+double EngineGearboxDrivetrain::wheel_engine_inertia(int wheel) const {
+    const double I_axle = eg_.reflected_inertia();
+    const bool front = (wheel == WHEEL_FL || wheel == WHEEL_FR);
+    switch (vp_.drive_type) {
+        case VehicleParams::Drive::FWD: return front ? 0.5 * I_axle : 0.0;
+        case VehicleParams::Drive::RWD: return front ? 0.0 : 0.5 * I_axle;
+        case VehicleParams::Drive::AWD: return 0.25 * I_axle;
+    }
+    return 0.0;
+}
+
 std::unique_ptr<IDrivetrain> make_default_drivetrain(const VehicleParams& vp, double deadtime_s) {
+    if (vp.powertrain.enabled)
+        return std::make_unique<EngineGearboxDrivetrain>(vp, deadtime_s);
     return std::make_unique<BasicDrivetrain>(vp, deadtime_s);
 }
 

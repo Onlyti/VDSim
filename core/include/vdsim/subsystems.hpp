@@ -3,6 +3,7 @@
 #include <array>
 #include <utility>
 
+#include "vdsim/powertrain.hpp"
 #include "vdsim/state.hpp"
 #include "vdsim/types.hpp"
 
@@ -64,6 +65,15 @@ struct IDrivetrain {
     virtual DrivetrainOutput apply(const SubsystemContext&) = 0;
     virtual void begin_step(const SubsystemContext&, double /*dt*/) {}
     virtual void reset() {}
+    // Engine + gearbox introspection (0 / 0 for the legacy flat drivetrain).
+    virtual double engine_rpm()   const { return 0.0; }
+    virtual int    current_gear() const { return 0; }
+    // Per-wheel engine inertia reflected through the current gear [kg m^2];
+    // negative -> "no override, host uses its legacy final-drive reflection".
+    virtual double wheel_engine_inertia(int /*wheel*/) const { return -1.0; }
+    // Install a programmatic shift policy (e.g. a Python callable). Returns false
+    // if the drivetrain has no gearbox. Declared here to avoid a downcast.
+    virtual bool set_shift_policy(ShiftPolicy /*fn*/) { return false; }
     virtual ~IDrivetrain() = default;
 };
 

@@ -36,6 +36,30 @@ private:
     double        throttle_eff_ {0.0};
 };
 
+// Drivetrain v2: 2D engine torque map + gearbox + shift policy (opt-in). The stateful
+// EngineGearbox is advanced once per step in begin_step(); apply() splits the frozen
+// axle torque to the wheels (so it is safe to call inside the RK4 stages).
+class EngineGearboxDrivetrain final : public IDrivetrain {
+public:
+    explicit EngineGearboxDrivetrain(const VehicleParams& vp, double deadtime_s = 0.0);
+
+    DrivetrainOutput apply(const SubsystemContext& ctx) override;
+    void begin_step(const SubsystemContext& ctx, double dt) override;
+    void reset() override;
+    double engine_rpm()   const override { return eg_.engine_rpm(); }
+    int    current_gear() const override { return eg_.current_gear(); }
+    double wheel_engine_inertia(int wheel) const override;
+    bool   set_shift_policy(ShiftPolicy fn) override { eg_.set_shift_policy(std::move(fn)); return true; }
+
+private:
+    VehicleParams vp_;
+    DelayLine     throttle_delay_;
+    double        throttle_eff_ {0.0};
+    EngineGearbox eg_;
+    double        T_front_ {0.0};
+    double        T_rear_  {0.0};
+};
+
 class RatioSteering final : public ISteeringSystem {
 public:
     explicit RatioSteering(const VehicleParams& vp, double deadtime_s = 0.0);
