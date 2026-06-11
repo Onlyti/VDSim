@@ -14,8 +14,12 @@ All notable changes to VDSim are documented here. Format follows
   the cause), contract-check it with `vdsim_module_check` (ABI / kind / finite-shaped probe
   output → pass/fail + cause), and register the passed `.so` as a `module_plugin_v1` catalog
   part under the `gui_custom` package. Theory ch.24.
-- Tests: `ModulePlugin.*` (load + install + run), `module_workshop` (build/check/register +
-  fail-with-cause). Sample `examples/modules/custom_brake.cpp`. **327 ctest.**
+- Runtime consumption: a blueprint's `module_plugins:` list resolves into the vehicle config,
+  and `install_module_plugins_from_yaml()` loads + installs each plugin after
+  `initialize()` (wired into `vdsim_realtime`). So a registered module is usable in a scene
+  like any part — uniform for all five kinds (incl. suspension/ARB).
+- Tests: `ModulePlugin.*` (load + install + run + from-YAML), `module_workshop` (build/check/
+  register + fail-with-cause). Sample `examples/modules/custom_brake.cpp`. **328 ctest.**
 
 ### Added — catalog drivetrain_v2 part
 - Schema `drivetrain_v2`: a drivetrain catalog part can carry a `powertrain:` block, which

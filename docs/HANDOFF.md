@@ -1,6 +1,6 @@
 # VDSim 핸드오프
 
-작성: **2026-06-10** · `main` @ `f6b1d71` (ahead of `v0.5.1`) · **327/327 ctest green**
+작성: **2026-06-10** · `main` @ `f6b1d71` (ahead of `v0.5.1`) · **328/328 ctest green**
 
 ## 1. 문서 인덱스
 
@@ -59,7 +59,7 @@
 
 ```bash
 cmake --build build -j
-cd build && ctest --output-on-failure   # 327/327
+cd build && ctest --output-on-failure   # 328/328
 python3 gui/server.py                   # http://127.0.0.1:8080
 ```
 
@@ -146,7 +146,7 @@ module workshop; L1 has no subsystem objects (out of scope).
 
 ## 6. Git
 
-- `main` @ `f6b1d71`, **all pushed**, 327/327 ctest. Last tag **`v0.5.1`**; main is ahead
+- `main` @ `f6b1d71`, **all pushed**, 328/328 ctest. Last tag **`v0.5.1`**; main is ahead
   of it (post-0.5.1, **untagged**): tire tail (L1 belt, `tire_forces_wheel`, Chrono parity)
   + ISO re-baseline/`IsoBaseline` + **Drivetrain v2** (D1–D5). Tag a release when the next
   milestone closes (suggest `v0.6.0` once catalog `drivetrain_v2` or Ld4 v0.6 lands).
@@ -171,11 +171,11 @@ module workshop; L1 has no subsystem objects (out of scope).
    (`VDSIM_REGISTER_*_MODULE`), `dlopen` loader `load_module_plugin()`/`install_module()`,
    `templates/modules/*`, checker `vdsim_module_check`, `tools/module_workshop.py`
    (build/check/register → `module_plugin_v1` part under `gui_custom`). Tests `ModulePlugin.*`
-   + `module_workshop`. Theory ch.24. **Remaining:** (MW5) resolver emits a blueprint
-   `module_plugins:` list + the runtime auto-loads/installs after `initialize()` so a
-   registered part is *used* in a scene (today `install_module` is proven by ctest but not
-   wired into `realtime_server`/materialize); (MW7) GUI Module Workshop panel
-   (folder+name → Build&Check → 적격/문제+원인 → Register), browser-verified.
+   + `module_workshop`. Theory ch.24. **Consumption DONE:** a blueprint `module_plugins:`
+   list resolves into the vehicle config and `install_module_plugins_from_yaml()` loads +
+   installs after `initialize()` (wired into `vdsim_realtime`); `ModulePlugin.InstallFromYaml`
+   proves register→blueprint→resolve→install→effect. **Remaining:** (MW7) GUI Module Workshop
+   panel (folder+name → Build&Check → 적격/문제+원인 → Register), browser-verified.
 6. **(FIXED `c6b2476`) open-diff engine inertia under symmetric accel.** The old
    `couple_open_axle_spin` carrier blend was a no-op when both wheels turned equally, so
    straight-line accel felt no reflected engine inertia. Replaced with the coupled 2x2 axle
