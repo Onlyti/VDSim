@@ -35,7 +35,7 @@ Full C++ tree (tests, real-time runtime, FMI, CARLA bridge):
 ```bash
 cmake -B build -DVDSIM_BUILD_PYTHON=ON          # add -G Ninja on Linux
 cmake --build build --config Release            # -j on Linux
-ctest --test-dir build -C Release               # 321/321 ; binaries in build/bin/
+ctest --test-dir build -C Release               # 323/323 ; binaries in build/bin/
 ```
 
 A quick experiment in Python:

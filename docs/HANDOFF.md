@@ -1,6 +1,6 @@
 # VDSim 핸드오프
 
-작성: **2026-06-10** · `main` @ `f6b1d71` (ahead of `v0.5.1`) · **321/321 ctest green**
+작성: **2026-06-10** · `main` @ `f6b1d71` (ahead of `v0.5.1`) · **323/323 ctest green**
 
 ## 1. 문서 인덱스
 
@@ -59,7 +59,7 @@
 
 ```bash
 cmake --build build -j
-cd build && ctest --output-on-failure   # 321/321
+cd build && ctest --output-on-failure   # 323/323
 python3 gui/server.py                   # http://127.0.0.1:8080
 ```
 
@@ -146,7 +146,7 @@ module workshop; L1 has no subsystem objects (out of scope).
 
 ## 6. Git
 
-- `main` @ `f6b1d71`, **all pushed**, 321/321 ctest. Last tag **`v0.5.1`**; main is ahead
+- `main` @ `f6b1d71`, **all pushed**, 323/323 ctest. Last tag **`v0.5.1`**; main is ahead
   of it (post-0.5.1, **untagged**): tire tail (L1 belt, `tire_forces_wheel`, Chrono parity)
   + ISO re-baseline/`IsoBaseline` + **Drivetrain v2** (D1–D5). Tag a release when the next
   milestone closes (suggest `v0.6.0` once catalog `drivetrain_v2` or Ld4 v0.6 lands).
@@ -173,15 +173,12 @@ module workshop; L1 has no subsystem objects (out of scope).
    Python-module path the runtime imports; (c) GUI authoring (pick/parameterize a module, or
    edit a snippet). Pick the mechanism, then scope. Today only Python-in-process injects at
    runtime; the prebuilt runtimes have no C++ plugin hook.
-6. **DECIDE (physics): open-diff drops engine inertia under symmetric accel.** On an Open
-   differential the per-wheel spin divisor uses `I_wheel` only and the carrier coupling
-   (`couple_open_axle_spin`) is a no-op when both wheels turn equally (d_carrier = dL = dR),
-   so straight-line longitudinal accel feels **no** reflected engine/gearbox inertia. Locked/
-   LSD include it (divisor = I_wheel + I_eng). Most sedans are modeled Open, so 0-N launch
-   feel ignores powertrain inertia. Found while fixing the inertia-source bug (`ef7c68d`,
-   which only corrected the asymmetric/split-mu case). Fixing the symmetric case means adding
-   the carrier inertia to the open-diff symmetric mode and **re-baselining** accel — a
-   modeling decision, not a silent change. Suggest a `WeightTransfer`/accel test once decided.
+6. **(FIXED `c6b2476`) open-diff engine inertia under symmetric accel.** The old
+   `couple_open_axle_spin` carrier blend was a no-op when both wheels turned equally, so
+   straight-line accel felt no reflected engine inertia. Replaced with the coupled 2x2 axle
+   mass matrix (`open_axle_spin_accel`): symmetric accel now feels `I_e/2` per wheel,
+   differential motion still doesn't. The tight gates stayed green (traction-locked spin), so
+   no numeric re-baseline. Test `OpenDiffInertia.EngineInertiaSlowsSymmetricLaunch`.
 7. **Repo hygiene (low priority, needs a call):** the two `sweep_runner.py`
    (`python/` catalog-binary sweep vs `apps/doe/` config DoE) are different tools with
    different YAML schemas, not a dead duplicate — decide which is canonical before merging.

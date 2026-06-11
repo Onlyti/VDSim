@@ -1,6 +1,6 @@
 # VDSim product roadmap
 
-**Last updated:** 2026-06-10 · **Tests:** 321/321 ctest green (`main`)
+**Last updated:** 2026-06-10 · **Tests:** 323/323 ctest green (`main`)
 
 Living roadmap from early PoC through v0.3. Tracks what shipped in mainline vs what
 is planned. Detail specs link to `docs/design/*`; tire phases in
@@ -26,7 +26,7 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 | Brake / steer | Pluggable modules + deadtime; **user-defined modules (C++/Python subclass)** | Booster/MDPS physics |
 | Catalog / runtime | `--scene=`, fleet, FMI | External part packs, VDS1 v4 |
 | GUI | 3-tab scene UI, catalog API, workshops | Tire `.tir` import UI; **expose user-defined modules (decide: C++ `.so` plugin / Python path / GUI authoring)** |
-| Validation | ISO 7401/4138/3888 **re-baselined + CI-gated** (`IsoBaseline`), 321 ctest | Adams x-check rtol; commercial cross-val |
+| Validation | ISO 7401/4138/3888 **re-baselined + CI-gated** (`IsoBaseline`), 323 ctest | Adams x-check rtol; commercial cross-val |
 
 ```mermaid
 timeline
@@ -142,7 +142,7 @@ LuGre (contact bristle, presliding). See [`TIRE_ROADMAP.md`](design/TIRE_ROADMAP
 | [x] Pluggable `IDrivetrain` module | Shipped | WS1 #159–162 |
 | [x] Open / locked / LSD split | Shipped | |
 | [x] `engine_rotational_inertia` reflected ($I \cdot N_f^2$) | Shipped | [`V0.2_DRIVETRAIN.md`](design/V0.2_DRIVETRAIN.md) |
-| [x] Open-diff carrier coupling (`drivetrain_inertia.hpp`) | Shipped | Fixes inner-wheel spin-up |
+| [x] Open-diff coupled 2x2 axle inertia (`open_axle_spin_accel`) | Shipped | engine inertia felt under symmetric accel, free under wheel-diff |
 | [x] Legacy mode (`I_engine = 0`) | Shipped | |
 | [x] Catalog `drivetrain_v1` part type | Shipped | |
 | [x] **Engine 2D torque map** $T(\mathrm{rpm},\theta)$ (Drivetrain v2, opt-in) | Shipped | theory ch.22; `powertrain:` block |
@@ -264,7 +264,7 @@ LuGre (contact bristle, presliding). See [`TIRE_ROADMAP.md`](design/TIRE_ROADMAP
 | [x] ISO 4138 understeer gradient | Shipped | |
 | [x] ISO 3888-2 DLC metric | Shipped | |
 | [x] ISO 8608 road PSD classes | Shipped | |
-| [x] **321** automated ctests | Shipped | 2026-06-10 |
+| [x] **323** automated ctests | Shipped | 2026-06-10 |
 | [x] ISO matrix re-baseline (post engine inertia + LuGre) + CI gate | Shipped | `IsoBaseline`; VALIDATION.md table 2026-06-10 |
 | [ ] Stunt validation suite (`tests/stunt/*`) | Planned v0.4 | |
 | [ ] Published commercial cross-val (open data) | Planned | Honest gap today |
@@ -348,7 +348,7 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 
 > Open-core L1–L5 vehicle dynamics with Pacejka MF tire, optional LuGre brush + belt
 > transient layers, opt-in MF2002 `.tir` backend and drivetrain v2 (engine map + gearbox),
-> parts catalog, real-time UDP/FMI, and ISO-standard validation (321 ctests).
+> parts catalog, real-time UDP/FMI, and ISO-standard validation (323 ctests).
 
 **In active development**
 

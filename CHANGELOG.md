@@ -6,6 +6,18 @@ All notable changes to VDSim are documented here. Format follows
 
 ## [Unreleased]
 
+### Fixed — open-diff reflected engine inertia
+- The open differential now uses the correct coupled 2x2 axle mass matrix
+  (`open_axle_spin_accel`): the carrier inertia `I_e` is geared to the wheel mean, so
+  symmetric acceleration feels `I_e/2` per wheel while wheel-to-wheel differences stay
+  free. The old `couple_open_axle_spin` blend was a no-op under symmetric accel (engine
+  inertia invisible to straight-line launch) and pulled its inertia from the legacy
+  final-drive reflection while the per-wheel divisor used the gearbox value — so with a
+  powertrain enabled the reflected inertia could be dropped entirely. Both seven_dof (L2)
+  and free_3d (L5). Legacy/no-powertrain path is bit-identical (tight ISO/accel/weight
+  gates unchanged). Tests `DrivetrainV2.OpenDiffReflectsGearInertiaIntoSpin`,
+  `OpenDiffInertia.EngineInertiaSlowsSymmetricLaunch`. Theory ch.22. **323 ctest.**
+
 ### Added — User-defined subsystem modules
 - Replace any built-in subsystem with a custom one (C++ subclass or Python subclass):
   `BrakeModule` / `SteeringModule` / `DrivetrainModule` (L2/L3/L4/L5), `SuspensionModule` /

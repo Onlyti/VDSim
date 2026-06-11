@@ -40,6 +40,20 @@ The engine inertia reflected to the wheel is **gear-dependent**,
 $I_\mathrm{eng}\,(i_g\, i_\mathrm{fd})^2$, so a low gear has a larger effective rotating
 inertia (slower spin-up) than a high gear — replacing the v1 final-drive-only reflection.
 
+This reflected inertia $I_e$ enters the wheel-spin ODE through the differential. On an
+**open** diff it is geared to the carrier, whose speed is the wheel mean
+$\omega_c = (\omega_L + \omega_R)/2$, giving the coupled axle mass matrix
+
+$$
+\begin{bmatrix} I_L + I_e/4 & I_e/4 \\ I_e/4 & I_R + I_e/4 \end{bmatrix}
+\begin{bmatrix} \dot\omega_L \\ \dot\omega_R \end{bmatrix} =
+\begin{bmatrix} T_L \\ T_R \end{bmatrix}.
+$$
+
+Symmetric acceleration therefore feels the engine inertia ($\dot\omega = T/(I + I_e/2)$)
+while a wheel-to-wheel speed difference does not (the spinning wheel is free) — the
+defining open-diff behaviour. Locked/LSD axles carry $I_e/2$ rigidly on each wheel.
+
 **Launch (idle floor + slipping clutch).** When the wheel is too slow to keep the engine
 above idle (`rpm_geom < idle_rpm`), the clutch slips: the engine revs to a throttle-scaled
 target between idle and a stall RPM, and the transmitted torque is the positive part of the
