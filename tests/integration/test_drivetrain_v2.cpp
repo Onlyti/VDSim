@@ -124,3 +124,53 @@ TEST(DrivetrainV2, LaunchesFromRest) {
     EXPECT_GT(dyn->state().vx(), 2.0) << "idle-clutch launch should get the car moving";
     EXPECT_GE(dyn->engine_rpm(), 800.0);
 }
+
+// Regression: the gear-reflected engine inertia must reach the wheel-spin ODE on
+// the open-diff path. The per-wheel divisor used the gearbox inertia but the
+// open-diff carrier coupling used a SEPARATE legacy reflection, so with a powertrain
+// enabled and no legacy engine_rotational_inertia the carrier inertia was zero and
+// the coupling was skipped. The carrier only redistributes spin when the two wheels
+// DIFFER, so the effect shows up under split-mu: the low-grip wheel free-spins, and a
+// larger engine inertia (now correctly in the carrier) must hold its spin-up back.
+namespace {
+// Launch on split-mu (RR low grip), clutch locked, and return the runaway RR wheel
+// speed after the inertial transient. The default powertrain exercises the open-diff
+// carrier path; a custom drivetrain via set_drivetrain_module would hit the same code.
+double rr_spin_split_mu(vdsim::IVehicleDynamics& dyn, const vdsim::VehicleParams& vp) {
+    dyn.initialize(vp, vdsim::TireParams{}, vdsim::SolverParams{});
+    dyn.reset(rolling(8.0));
+    auto ground = vdsim::create_flat_ground(0.0, 1.0);
+    vdsim::CmdL4 cmd; cmd.throttle = 1.0; cmd.gear = 1;
+    const vdsim::ControlInput u = cmd;
+    for (int i = 0; i < 150; ++i) {                       // 150 ms — clutch locked, inertial transient
+        vdsim::ContactArray c; ground->query(dyn.state(), vp, c);
+        c[vdsim::WHEEL_RR].mu_long = 0.08;                // icy right rear -> it spins up
+        c[vdsim::WHEEL_RR].mu_lat  = 0.08;
+        dyn.step(u, c, 1e-3);
+    }
+    return dyn.state().wheel_spin[vdsim::WHEEL_RR];
+}
+}  // namespace
+
+TEST(DrivetrainV2, OpenDiffReflectsGearInertiaIntoSpin) {
+    auto vp = powertrain_vp();                  // RWD
+    vp.differential = vdsim::VehicleParams::Differential::Open;
+    vp.engine_rotational_inertia = 0.0;         // legacy reflection off -> isolate the gearbox path
+
+    auto low = vp;  low.powertrain.engine.inertia = 0.05;
+    auto high = vp; high.powertrain.engine.inertia = 3.0;
+
+    auto d_low  = vdsim::create_seven_dof();
+    auto d_high = vdsim::create_seven_dof();
+    const double s_low  = rr_spin_split_mu(*d_low,  low);
+    const double s_high = rr_spin_split_mu(*d_high, high);
+
+    EXPECT_GT(s_low, 0.0);
+    EXPECT_LT(s_high, s_low * 0.95)
+        << "a larger engine inertia (now in the open-diff carrier) must slow the "
+           "spinning wheel's runaway (s_low=" << s_low << " s_high=" << s_high << ")";
+}
+// free_3d (L5) gets the identical eff_wheel_I / I_axle fix (source consistency,
+// legacy bit-identical — covered by the stunt suite). Its launch + contact-grounded
+// dynamics barely exercise the open-diff carrier inertia, so there is no robust
+// behavioral signal to assert at L5; that fix is verified by inspection.

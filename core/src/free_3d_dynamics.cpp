@@ -431,8 +431,16 @@ private:
         d_out.ay_body  = a_body.y();
 
         const bool open_diff = vp_.differential == VehicleParams::Differential::Open;
-        double I_axle_f = 0.0, I_axle_r = 0.0;
-        axle_reflected_shares(vp_, I_axle_f, I_axle_r);
+        // Effective per-wheel reflected engine inertia: gear-dependent from the
+        // drivetrain when provided (sentinel <0 -> legacy reflection). The
+        // open-diff carrier inertia is the sum of the axle's pair, consistent
+        // with the per-wheel divisor (legacy path == axle_reflected_shares).
+        auto eff_wheel_I = [&](int i) {
+            const double e = drivetrain_->wheel_engine_inertia(i);
+            return (e < 0.0) ? wheel_engine_inertia_share(vp_, i) : e;
+        };
+        const double I_axle_f = eff_wheel_I(WHEEL_FL) + eff_wheel_I(WHEEL_FR);
+        const double I_axle_r = eff_wheel_I(WHEEL_RL) + eff_wheel_I(WHEEL_RR);
         for (int i = 0; i < NUM_WHEELS; ++i) {
             const bool grounded = contacts[i].is_valid && contacts[i].penetration > 0.0
                                   && Fz[i] >= 1.0;
@@ -441,7 +449,7 @@ private:
                 ? fx_kin[i] * Rwh
                 : kWheelSpinDrag * s.wheel_spin[i];
             const double T_net = T_drive + Tb[i] - T_react;
-            const double I_eng = grounded ? wheel_engine_inertia_share(vp_, i) : 0.0;
+            const double I_eng = grounded ? eff_wheel_I(i) : 0.0;
             if (open_diff && I_eng > 0.0) {
                 d_out.domega[i] = T_net / I_wheel_[i];
             } else {

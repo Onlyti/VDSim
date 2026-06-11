@@ -542,14 +542,22 @@ private:
         d_out.ax_body  = Fx_total / m;
         d_out.ay_body  = Fy_total / m;
         const bool open_diff = vp_.differential == VehicleParams::Differential::Open;
-        double I_axle_f = 0.0, I_axle_r = 0.0;
-        axle_reflected_shares(vp_, I_axle_f, I_axle_r);
+        // Effective per-wheel reflected engine inertia: gear-dependent from the
+        // powertrain when it provides one (sentinel <0 -> legacy final-drive
+        // reflection). The open-diff carrier inertia is derived from the SAME
+        // per-wheel shares (axle = sum of its pair) so the divisor and the
+        // coupling never disagree. For the legacy path this reproduces
+        // axle_reflected_shares exactly (per-wheel share = 0.5 * axle).
+        std::array<double, NUM_WHEELS> I_eng_w{};
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            double ie = drivetrain_->wheel_engine_inertia(i);
+            I_eng_w[i] = (ie < 0.0) ? wheel_engine_inertia_share(vp_, i) : ie;
+        }
+        const double I_axle_f = I_eng_w[WHEEL_FL] + I_eng_w[WHEEL_FR];
+        const double I_axle_r = I_eng_w[WHEEL_RL] + I_eng_w[WHEEL_RR];
         for (int i = 0; i < NUM_WHEELS; ++i) {
             const double T_net = Td[i] + Tb[i] - fx_kin[i] * R;
-            // Gear-dependent reflected inertia from the powertrain when enabled;
-            // otherwise the legacy final-drive reflection.
-            double I_eng = drivetrain_->wheel_engine_inertia(i);
-            if (I_eng < 0.0) I_eng = wheel_engine_inertia_share(vp_, i);
+            const double I_eng = I_eng_w[i];
             if (open_diff && I_eng > 0.0) {
                 d_out.domega[i] = T_net / I_wheel_[i];
             } else {
