@@ -48,16 +48,35 @@ inline double wheel_engine_inertia_share(const VehicleParams& vp, int wheel) {
     return (wheel == WHEEL_FL || wheel == WHEEL_FR) ? 0.5 * I_f : 0.5 * I_r;
 }
 
-inline void couple_open_axle_spin(double& d_omega_L,
-                                  double& d_omega_R,
-                                  double I_wheel_L,
-                                  double I_wheel_R,
-                                  double I_axle_refl) {
-    if (I_axle_refl <= 0.0) return;
-    const double d_carrier = 0.5 * (d_omega_L + d_omega_R);
-    const double I_half    = 0.5 * I_axle_refl;
-    d_omega_L = (I_wheel_L * d_omega_L + I_half * d_carrier) / (I_wheel_L + I_half);
-    d_omega_R = (I_wheel_R * d_omega_R + I_half * d_carrier) / (I_wheel_R + I_half);
+// NOTE: the older couple_open_axle_spin() post-hoc carrier blend was removed — it was a
+// no-op under symmetric wheel speeds (so straight-line accel felt no engine inertia).
+// Open-differential wheel-spin accelerations for one axle.
+//
+// The reflected engine+carrier inertia I_e is geared to the differential carrier,
+// whose speed is the mean of the two wheels, omega_c = (omega_L + omega_R)/2. With
+// the open diff's equal-torque split this yields the coupled mass matrix
+//
+//   [ I_L + I_e/4   I_e/4       ] [domega_L]   [T_L]
+//   [ I_e/4         I_R + I_e/4 ] [domega_R] = [T_R]
+//
+// so SYMMETRIC acceleration feels the engine inertia (domega = T/(I + I_e/2)) while
+// DIFFERENTIAL motion does not (the spinning wheel is free) — the defining open-diff
+// behaviour. T_L/T_R are the net wheel torques (drive + brake - road reaction).
+inline void open_axle_spin_accel(double& d_omega_L, double& d_omega_R,
+                                 double T_L, double T_R,
+                                 double I_wheel_L, double I_wheel_R,
+                                 double I_axle_refl) {
+    if (I_axle_refl <= 0.0) {
+        d_omega_L = T_L / I_wheel_L;
+        d_omega_R = T_R / I_wheel_R;
+        return;
+    }
+    const double q   = 0.25 * I_axle_refl;
+    const double a   = I_wheel_L + q;
+    const double b   = I_wheel_R + q;
+    const double det = a * b - q * q;            // = I_L*I_R + q*(I_L+I_R) > 0
+    d_omega_L = (b * T_L - q * T_R) / det;
+    d_omega_R = (a * T_R - q * T_L) / det;
 }
 
 }  // namespace vdsim

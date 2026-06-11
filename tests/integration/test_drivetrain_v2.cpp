@@ -174,3 +174,31 @@ TEST(DrivetrainV2, OpenDiffReflectsGearInertiaIntoSpin) {
 // legacy bit-identical — covered by the stunt suite). Its launch + contact-grounded
 // dynamics barely exercise the open-diff carrier inertia, so there is no robust
 // behavioral signal to assert at L5; that fix is verified by inspection.
+
+// Regression: reflected engine inertia must resist SYMMETRIC straight-line accel on an
+// open diff. The old carrier blend was a no-op when the wheels turned equally, so the
+// engine inertia was invisible to longitudinal launch (the common case). Now a larger
+// engine inertia must measurably slow a grippy, straight, full-throttle launch.
+TEST(OpenDiffInertia, EngineInertiaSlowsSymmetricLaunch) {
+    auto run = [](double Ie) {
+        vdsim::VehicleParams vp;                       // default: RWD, Open diff
+        vp.engine_rotational_inertia = Ie;
+        auto dyn = vdsim::create_seven_dof();
+        dyn->initialize(vp, vdsim::TireParams{}, vdsim::SolverParams{});
+        dyn->reset(rolling(2.0));
+        auto ground = vdsim::create_flat_ground(0.0, 1.0);
+        vdsim::CmdL4 cmd; cmd.throttle = 1.0;
+        const vdsim::ControlInput u = cmd;
+        for (int i = 0; i < 600; ++i) {
+            vdsim::ContactArray c; ground->query(dyn->state(), vp, c);
+            dyn->step(u, c, 1e-3);
+        }
+        return dyn->state().vx();
+    };
+    const double v_lowI  = run(0.0);
+    const double v_highI = run(6.0);
+    EXPECT_GT(v_lowI, 2.0) << "full throttle should accelerate the car";
+    EXPECT_LT(v_highI, v_lowI * 0.97)
+        << "engine inertia must slow symmetric open-diff accel "
+           "(v_lowI=" << v_lowI << " v_highI=" << v_highI << ")";
+}

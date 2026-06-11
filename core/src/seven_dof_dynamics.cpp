@@ -171,11 +171,20 @@ public:
     bool   set_shift_policy(ShiftPolicy fn) override {
         return drivetrain_->set_shift_policy(std::move(fn)); }
     bool   set_brake_module(std::shared_ptr<IBrakeSystem> m) override {
-        if (!m) return false; brake_ = std::move(m); return true; }
+        if (!m) return false;
+        brake_ = std::move(m);
+        return true;
+    }
     bool   set_steering_module(std::shared_ptr<ISteeringSystem> m) override {
-        if (!m) return false; steering_ = std::move(m); return true; }
+        if (!m) return false;
+        steering_ = std::move(m);
+        return true;
+    }
     bool   set_drivetrain_module(std::shared_ptr<IDrivetrain> m) override {
-        if (!m) return false; drivetrain_ = std::move(m); return true; }
+        if (!m) return false;
+        drivetrain_ = std::move(m);
+        return true;
+    }
     std::array<double, NUM_WHEELS> tire_Fz()           const override { return tire_Fz_; }
     std::array<double, NUM_WHEELS> wheel_slip_ratio()  const override { return slip_ratio_; }
     std::array<double, NUM_WHEELS> wheel_slip_angle()  const override { return slip_angle_; }
@@ -555,24 +564,21 @@ private:
         }
         const double I_axle_f = I_eng_w[WHEEL_FL] + I_eng_w[WHEEL_FR];
         const double I_axle_r = I_eng_w[WHEEL_RL] + I_eng_w[WHEEL_RR];
-        for (int i = 0; i < NUM_WHEELS; ++i) {
-            const double T_net = Td[i] + Tb[i] - fx_kin[i] * R;
-            const double I_eng = I_eng_w[i];
-            if (open_diff && I_eng > 0.0) {
-                d_out.domega[i] = T_net / I_wheel_[i];
-            } else {
-                d_out.domega[i] = T_net / (I_wheel_[i] + I_eng);
-            }
-        }
+        std::array<double, NUM_WHEELS> T_net{};
+        for (int i = 0; i < NUM_WHEELS; ++i) T_net[i] = Td[i] + Tb[i] - fx_kin[i] * R;
         if (open_diff) {
-            if (I_axle_f > 0.0) {
-                couple_open_axle_spin(d_out.domega[WHEEL_FL], d_out.domega[WHEEL_FR],
-                                      I_wheel_[WHEEL_FL], I_wheel_[WHEEL_FR], I_axle_f);
-            }
-            if (I_axle_r > 0.0) {
-                couple_open_axle_spin(d_out.domega[WHEEL_RL], d_out.domega[WHEEL_RR],
-                                      I_wheel_[WHEEL_RL], I_wheel_[WHEEL_RR], I_axle_r);
-            }
+            // Open diff: each axle's engine/carrier inertia couples its wheel pair
+            // (felt under symmetric accel, transparent to wheel-to-wheel differences).
+            open_axle_spin_accel(d_out.domega[WHEEL_FL], d_out.domega[WHEEL_FR],
+                                 T_net[WHEEL_FL], T_net[WHEEL_FR],
+                                 I_wheel_[WHEEL_FL], I_wheel_[WHEEL_FR], I_axle_f);
+            open_axle_spin_accel(d_out.domega[WHEEL_RL], d_out.domega[WHEEL_RR],
+                                 T_net[WHEEL_RL], T_net[WHEEL_RR],
+                                 I_wheel_[WHEEL_RL], I_wheel_[WHEEL_RR], I_axle_r);
+        } else {
+            // Locked / LSD: each wheel rigidly carries its half of the axle inertia.
+            for (int i = 0; i < NUM_WHEELS; ++i)
+                d_out.domega[i] = T_net[i] / (I_wheel_[i] + I_eng_w[i]);
         }
 
         // ---- Diagnostics ----

@@ -151,11 +151,20 @@ public:
     // User-defined modules. L5 carries the planar actuator subsystems (no vertical
     // suspension/ARB objects), so brake/steering/drivetrain can be replaced.
     bool set_brake_module(std::shared_ptr<IBrakeSystem> m) override {
-        if (!m) return false; brake_ = std::move(m); return true; }
+        if (!m) return false;
+        brake_ = std::move(m);
+        return true;
+    }
     bool set_steering_module(std::shared_ptr<ISteeringSystem> m) override {
-        if (!m) return false; steering_ = std::move(m); return true; }
+        if (!m) return false;
+        steering_ = std::move(m);
+        return true;
+    }
     bool set_drivetrain_module(std::shared_ptr<IDrivetrain> m) override {
-        if (!m) return false; drivetrain_ = std::move(m); return true; }
+        if (!m) return false;
+        drivetrain_ = std::move(m);
+        return true;
+    }
 
     std::array<Vec3, NUM_WHEELS>   tire_forces_body() const override { return tire_F_; }
     std::array<double, NUM_WHEELS> tire_Fz()           const override { return tire_Fz_; }
@@ -439,8 +448,10 @@ private:
             const double e = drivetrain_->wheel_engine_inertia(i);
             return (e < 0.0) ? wheel_engine_inertia_share(vp_, i) : e;
         };
-        const double I_axle_f = eff_wheel_I(WHEEL_FL) + eff_wheel_I(WHEEL_FR);
-        const double I_axle_r = eff_wheel_I(WHEEL_RL) + eff_wheel_I(WHEEL_RR);
+        // Net wheel torque + per-wheel reflected inertia, gated by ground contact
+        // (an airborne wheel gets no drive and no engine coupling — clutch/diff open).
+        std::array<double, NUM_WHEELS> T_net{};
+        std::array<double, NUM_WHEELS> I_eng_w{};
         for (int i = 0; i < NUM_WHEELS; ++i) {
             const bool grounded = contacts[i].is_valid && contacts[i].penetration > 0.0
                                   && Fz[i] >= 1.0;
@@ -448,23 +459,21 @@ private:
             const double T_react = grounded
                 ? fx_kin[i] * Rwh
                 : kWheelSpinDrag * s.wheel_spin[i];
-            const double T_net = T_drive + Tb[i] - T_react;
-            const double I_eng = grounded ? eff_wheel_I(i) : 0.0;
-            if (open_diff && I_eng > 0.0) {
-                d_out.domega[i] = T_net / I_wheel_[i];
-            } else {
-                d_out.domega[i] = T_net / (I_wheel_[i] + I_eng);
-            }
+            T_net[i]   = T_drive + Tb[i] - T_react;
+            I_eng_w[i] = grounded ? eff_wheel_I(i) : 0.0;
         }
         if (open_diff) {
-            if (I_axle_f > 0.0) {
-                couple_open_axle_spin(d_out.domega[WHEEL_FL], d_out.domega[WHEEL_FR],
-                                      I_wheel_[WHEEL_FL], I_wheel_[WHEEL_FR], I_axle_f);
-            }
-            if (I_axle_r > 0.0) {
-                couple_open_axle_spin(d_out.domega[WHEEL_RL], d_out.domega[WHEEL_RR],
-                                      I_wheel_[WHEEL_RL], I_wheel_[WHEEL_RR], I_axle_r);
-            }
+            open_axle_spin_accel(d_out.domega[WHEEL_FL], d_out.domega[WHEEL_FR],
+                                 T_net[WHEEL_FL], T_net[WHEEL_FR],
+                                 I_wheel_[WHEEL_FL], I_wheel_[WHEEL_FR],
+                                 I_eng_w[WHEEL_FL] + I_eng_w[WHEEL_FR]);
+            open_axle_spin_accel(d_out.domega[WHEEL_RL], d_out.domega[WHEEL_RR],
+                                 T_net[WHEEL_RL], T_net[WHEEL_RR],
+                                 I_wheel_[WHEEL_RL], I_wheel_[WHEEL_RR],
+                                 I_eng_w[WHEEL_RL] + I_eng_w[WHEEL_RR]);
+        } else {
+            for (int i = 0; i < NUM_WHEELS; ++i)
+                d_out.domega[i] = T_net[i] / (I_wheel_[i] + I_eng_w[i]);
         }
 
         tire_F_   = F_body;
