@@ -76,6 +76,9 @@ public:
 
     const VehicleParams& vehicle_params() const { return vp_; }
 
+    // Access the (initialized) plant — e.g. to install user module plugins post-construct.
+    IVehicleDynamics& dynamics() { return *dyn_; }
+
 private:
     std::unique_ptr<IVehicleDynamics> dyn_;
     std::unique_ptr<IContactProvider> ground_;

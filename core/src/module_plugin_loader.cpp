@@ -4,6 +4,9 @@
 
 #include <string>
 
+#include <spdlog/spdlog.h>
+#include <yaml-cpp/yaml.h>
+
 #include "vdsim/interfaces.hpp"
 
 namespace vdsim {
@@ -100,6 +103,40 @@ bool install_module(IVehicleDynamics& dyn, const LoadedModule& m, int arb_axle) 
         case ModuleKind::AntiRollBar: return dyn.set_antirollbar_module(arb_axle, m.antirollbar);
         default:                      return false;
     }
+}
+
+int install_module_plugins_from_yaml(IVehicleDynamics& dyn, const std::string& vehicle_yaml_path) {
+    YAML::Node root;
+    try {
+        root = YAML::LoadFile(vehicle_yaml_path);
+    } catch (const std::exception& e) {
+        spdlog::warn("module plugins: cannot read {}: {}", vehicle_yaml_path, e.what());
+        return 0;
+    }
+    const auto list = root["module_plugins"];
+    if (!list || !list.IsSequence()) return 0;
+
+    int installed = 0;
+    for (const auto& e : list) {
+        const std::string so = e["plugin_so"] ? e["plugin_so"].as<std::string>() : "";
+        const int axle = e["axle"] ? e["axle"].as<int>() : 0;
+        if (so.empty()) {
+            spdlog::warn("module plugins: entry without plugin_so, skipped");
+            continue;
+        }
+        LoadedModule m = load_module_plugin(so);
+        if (!m.ok) {
+            spdlog::warn("module plugins: load failed for {}: {}", so, m.error);
+            continue;
+        }
+        if (!install_module(dyn, m, axle)) {
+            spdlog::warn("module plugins: {} ({}) not accepted by this model level",
+                         so, to_string(m.kind));
+            continue;
+        }
+        ++installed;
+    }
+    return installed;
 }
 
 }  // namespace vdsim

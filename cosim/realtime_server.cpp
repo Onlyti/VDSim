@@ -6,6 +6,7 @@
 
 #include "vdsim/coordinate.hpp"
 #include "vdsim/interfaces.hpp"
+#include "vdsim/module_plugin.hpp"
 #include "vdsim/params.hpp"
 #include "vdsim/sensors.hpp"
 #include "vdsim/sim_session.hpp"
@@ -360,6 +361,8 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
         settle_spawn_on_ground(*gnd, wv.vp, s0);
         wv.sim = std::make_unique<vdsim::SimSession>(
             std::move(dyn), std::move(gnd), wv.vp, tp, sp_v, cfg);
+        // Install any user C++ subsystem-module plugins the resolved vehicle declares.
+        vdsim::install_module_plugins_from_yaml(wv.sim->dynamics(), spn.vehicle_yaml);
         wv.sim->reset(s0);
         fleet.push_back(std::move(wv));
     }

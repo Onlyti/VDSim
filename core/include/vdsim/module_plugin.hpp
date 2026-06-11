@@ -53,6 +53,12 @@ LoadedModule load_module_plugin(const std::string& so_path);
 // 1 rear) is used only for anti-roll-bar modules.
 bool install_module(IVehicleDynamics& dyn, const LoadedModule& m, int arb_axle = 0);
 
+// Read a resolved vehicle YAML's `module_plugins:` list (a sequence of
+// {kind, plugin_so, [axle]}), load each .so, and install it on the model. Call AFTER
+// dyn.initialize(). Returns the number successfully installed; bad entries are skipped
+// (and logged). A vehicle without the key installs nothing and returns 0.
+int install_module_plugins_from_yaml(IVehicleDynamics& dyn, const std::string& vehicle_yaml_path);
+
 }  // namespace vdsim
 
 // ---------------------------------------------------------------------------

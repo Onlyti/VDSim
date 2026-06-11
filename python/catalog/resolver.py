@@ -262,6 +262,19 @@ class CatalogResolver:
             for slot, dotted in overrides.items():
                 _apply_dotted(vehicle_body, str(slot), dotted)
 
+        # User C++ subsystem-module plugins (module_plugin_v1 parts). Emitted as a
+        # `module_plugins:` list the runtime loads + installs after initialize(). This is
+        # the uniform path for all five kinds (incl. suspension/ARB, which have no slot).
+        module_plugins = []
+        for mp_id in (bp.get("module_plugins") or []):
+            mpart = self.load_part(str(mp_id))
+            if mpart.get("schema") != "module_plugin_v1":
+                raise CatalogError(
+                    f"module_plugins entry {mp_id} is not a module_plugin_v1 part")
+            module_plugins.append(dict(mpart["body"]))
+        if module_plugins:
+            vehicle_body["module_plugins"] = module_plugins
+
         root = Path(out_dir) if out_dir else Path(tempfile.mkdtemp(prefix="vdsim_resolve_"))
         root.mkdir(parents=True, exist_ok=True)
         vehicle_yaml = root / "vehicle.yaml"

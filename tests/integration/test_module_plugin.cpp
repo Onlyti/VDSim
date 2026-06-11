@@ -3,6 +3,7 @@
 // The sample plugin examples/modules/custom_brake.cpp is built into
 // ${VDSIM_TEST_MODULES_DIR}/custom_brake.so by the examples CMake.
 
+#include <fstream>
 #include <string>
 
 #include "vdsim/control.hpp"
@@ -62,4 +63,35 @@ TEST(ModulePlugin, InstalledModuleBrakes) {
         dyn->step(u, c, 1e-3);
     }
     EXPECT_LT(dyn->state().vx(), 24.0) << "the installed brake module should decelerate the car";
+}
+
+// The runtime consumes a resolved vehicle's `module_plugins:` list (resolver emits it;
+// realtime_server installs it after initialize). This exercises that load+install path.
+TEST(ModulePlugin, InstallFromYaml) {
+    const std::string dir = VDSIM_TEST_MODULES_DIR;
+    const std::string yaml = dir + "/_modplug_vehicle.yaml";
+    {
+        std::ofstream f(yaml);
+        f << "mass: 1500\n"
+          << "module_plugins:\n"
+          << "  - kind: brake\n"
+          << "    plugin_so: " << dir << "/custom_brake.so\n";
+    }
+
+    const vdsim::VehicleParams vp;
+    auto dyn = vdsim::create_seven_dof();
+    dyn->initialize(vp, vdsim::TireParams{}, vdsim::SolverParams{});
+    EXPECT_EQ(vdsim::install_module_plugins_from_yaml(*dyn, yaml), 1);
+    dyn->reset(rolling(25.0));
+
+    auto ground = vdsim::create_flat_ground(0.0, 1.0);
+    vdsim::CmdL4 cmd;
+    cmd.brake = 1.0;
+    const vdsim::ControlInput u = cmd;
+    for (int i = 0; i < 800; ++i) {
+        vdsim::ContactArray c;
+        ground->query(dyn->state(), vp, c);
+        dyn->step(u, c, 1e-3);
+    }
+    EXPECT_LT(dyn->state().vx(), 24.0) << "module_plugins from YAML should brake the car";
 }
