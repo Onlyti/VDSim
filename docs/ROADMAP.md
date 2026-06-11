@@ -22,7 +22,7 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 |------|----------------------|------|
 | Dynamics L1–L5 | L1–L3 planar/14-DOF; **Ld4** hard-joint; **Ld5** stunt + **terrain (v0.5)** | GUI terrain Play (v0.5.2); V2V |
 | Tire | MF96 + LuGre **default**; **MF2002 `.tir` backend (T1, Chrono-cross-checked)**; **belt transient (T2)** | bicycle belt; combined-slip vs Pac02; GUI `.tir` |
-| Drivetrain | Engine inertia + open-diff; **2D torque map + gearbox + shift policy (v2, opt-in)** | Catalog `drivetrain_v2` part; engine-map workshop |
+| Drivetrain | Engine inertia + open-diff; **2D torque map + gearbox + shift policy (v2, opt-in)**; **catalog `drivetrain_v2` part** | Engine-map workshop (UI); L1 powertrain |
 | Brake / steer | Pluggable modules + deadtime; **user-defined modules (C++/Python subclass)** | Booster/MDPS physics |
 | Catalog / runtime | `--scene=`, fleet, FMI | External part packs, VDS1 v4 |
 | GUI | 3-tab scene UI, catalog API, workshops | Tire `.tir` import UI; **expose user-defined modules (decide: C++ `.so` plugin / Python path / GUI authoring)** |
@@ -150,7 +150,7 @@ LuGre (contact bristle, presliding). See [`TIRE_ROADMAP.md`](design/TIRE_ROADMAP
 | [x] **Shift policy** (manual / auto-RPM / **user-defined function**, pybind callback) | Shipped | `set_shift_policy` |
 | [x] Engine speed + gear in output (`engine_rpm()`, `current_gear()`) | Shipped | + pybind |
 | [x] Idle-floor + slipping launch clutch | Shipped | |
-| [ ] Catalog `drivetrain_v2` part (materialize powertrain into chassis) | Planned | follow-up |
+| [x] Catalog `drivetrain_v2` part (materialize powertrain into chassis) | Shipped | `drivetrain.sedan_v2` part + `vehicle.sedan_powertrain` blueprint |
 | [ ] Workshop engine map editor (WS2-6) | Planned | Stub in GUI |
 | [x] ISO baseline unaffected (powertrain opt-in, default flat) | Shipped | `IsoBaseline` green |
 

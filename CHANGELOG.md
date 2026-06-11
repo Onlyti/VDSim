@@ -6,6 +6,13 @@ All notable changes to VDSim are documented here. Format follows
 
 ## [Unreleased]
 
+### Added — catalog drivetrain_v2 part
+- Schema `drivetrain_v2`: a drivetrain catalog part can carry a `powertrain:` block, which
+  the resolver merges into the vehicle config (lands at the root for `parse_powertrain`).
+  Part `drivetrain.sedan_v2` + blueprint `vehicle.sedan_powertrain`; previously the
+  powertrain demo had to be loaded standalone via `from_yaml`. Covered by
+  `test_catalog_resolver` (resolved L2 model runs a real engine).
+
 ### Fixed — open-diff reflected engine inertia
 - The open differential now uses the correct coupled 2x2 axle mass matrix
   (`open_axle_spin_accel`): the carrier inertia `I_e` is geared to the wheel mean, so

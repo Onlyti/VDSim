@@ -159,9 +159,9 @@ module workshop; L1 has no subsystem objects (out of scope).
 
 ## 7. Next pickups (fresh session)
 
-1. **Catalog `drivetrain_v2` part** — materialize a `powertrain:` block into the chassis
-   params via the catalog resolve pipeline (today the demo loads `powertrain_sedan_demo.yaml`
-   directly through `from_yaml`). Headless.
+1. **(DONE)** Catalog `drivetrain_v2` part — `drivetrain.sedan_v2` carries a `powertrain:`
+   block through the resolver into the vehicle config; blueprint `vehicle.sedan_powertrain`.
+   Remaining drivetrain: engine-map workshop (GUI), L1 powertrain.
 2. **Ld4 v0.6** — shared inertia helpers; full loop dynamics; Featherstone in step (optional).
 3. **v0.5.2 GUI (browser, user-verified):** terrain Play (M4), stunt authoring (M5c),
    `.tir` import, tire-force arrows in wheel frame (`tire_forces_wheel()` ready).
