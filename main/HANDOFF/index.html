@@ -551,6 +551,8 @@
       
         
       
+        
+      
     
     
     
@@ -1210,6 +1212,34 @@
     
   
     22 — Drivetrain v2 (engine/gearbox)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/23_user_modules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    23 — User-defined subsystem modules
   
 
     
@@ -2441,7 +2471,7 @@
 
 
 <h1 id="vdsim">VDSim 핸드오프<a class="headerlink" href="#vdsim" title="Permanent link">&para;</a></h1>
-<p>작성: <strong>2026-06-10</strong> · <code>main</code> (= <code>v0.5.1</code>) · <strong>317/317 ctest green</strong></p>
+<p>작성: <strong>2026-06-10</strong> · <code>main</code> @ <code>f6b1d71</code> (ahead of <code>v0.5.1</code>) · <strong>323/323 ctest green</strong></p>
 <h2 id="1">1. 문서 인덱스<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2565,7 +2595,7 @@
 </ul>
 <h2 id="3">3. 빌드·검증<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>cmake<span class="w"> </span>--build<span class="w"> </span>build<span class="w"> </span>-j
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ctest<span class="w"> </span>--output-on-failure<span class="w">   </span><span class="c1"># 317/317</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ctest<span class="w"> </span>--output-on-failure<span class="w">   </span><span class="c1"># 323/323</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>python3<span class="w"> </span>gui/server.py<span class="w">                   </span><span class="c1"># http://127.0.0.1:8080</span>
 </span></code></pre></div>
 <h2 id="4">4. 다음 작업<a class="headerlink" href="#4" title="Permanent link">&para;</a></h2>
@@ -2619,6 +2649,17 @@ M6 docs. 273 ctest. Scenes: <code>terrain_hill_demo</code>, <code>banked_grade_d
   Tests <code>EngineMap.*</code>/<code>PowertrainYaml.*</code>/<code>EngineGearbox.*</code>/<code>DrivetrainV2.*</code>. <strong>317 ctest.</strong>
   <strong>Remaining:</strong> catalog <code>drivetrain_v2</code> part (materialize powertrain into the chassis);
   L1 + engine-map GUI workshop.</p>
+<p><strong>User-defined subsystem modules (this session):</strong> any built-in subsystem can be
+replaced by a C++ or Python subclass — <code>BrakeModule</code>/<code>SteeringModule</code>/<code>DrivetrainModule</code>
+(L2/L3/L4/L5), <code>SuspensionModule</code>/<code>AntiRollBarModule</code> (L3/L4). Install via
+<code>model.set_*_module()</code> (<code>IVehicleDynamics</code>, mirrors <code>set_shift_policy</code>; seven_dof + free_3d
+hold brake/steer/drivetrain, fourteen_dof holds suspension/ARB + delegates the rest to
+<code>inner_</code>, L4 inherits from it). L1 computes brake/drive inline -&gt; hosts none. Subsystem members are
+<code>shared_ptr</code> so a pybind-trampoline Python subclass stays alive. Cadence: <code>begin_step</code> once
+per step, <code>apply/wheel_torque/force</code> per RK4 stage; brake/drivetrain torque is <strong>signed</strong>
+(opposes spin). Tests <code>UserModules.*</code> (transparency L2/L3 to 1e-9 + effect + scoping),
+sample <code>examples/user_brake_module.py</code>, theory <strong>ch.23</strong>. <strong>321 ctest.</strong> <strong>Remaining:</strong> GUI
+module workshop; L1 has no subsystem objects (out of scope).</p>
 <p><strong>v0.6+:</strong>
 1. Ld4 v0.6 — shared inertia helpers; full loop dynamics; Featherstone in step (optional).
 2. Drivetrain: catalog <code>drivetrain_v2</code> part + engine-map workshop (UI). Core done.
@@ -2633,7 +2674,7 @@ M6 docs. 273 ctest. Scenes: <code>terrain_hill_demo</code>, <code>banked_grade_d
 </ul>
 <h2 id="6-git">6. Git<a class="headerlink" href="#6-git" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>main</code> @ <code>279977f</code>, <strong>all pushed</strong>, 317/317 ctest. Last tag <strong><code>v0.5.1</code></strong>; main is ahead
+<li><code>main</code> @ <code>f6b1d71</code>, <strong>all pushed</strong>, 323/323 ctest. Last tag <strong><code>v0.5.1</code></strong>; main is ahead
   of it (post-0.5.1, <strong>untagged</strong>): tire tail (L1 belt, <code>tire_forces_wheel</code>, Chrono parity)</li>
 <li>ISO re-baseline/<code>IsoBaseline</code> + <strong>Drivetrain v2</strong> (D1–D5). Tag a release when the next
   milestone closes (suggest <code>v0.6.0</code> once catalog <code>drivetrain_v2</code> or Ld4 v0.6 lands).</li>
@@ -2653,6 +2694,25 @@ M6 docs. 273 ctest. Scenes: <code>terrain_hill_demo</code>, <code>banked_grade_d
 <li><strong>v0.5.2 GUI (browser, user-verified):</strong> terrain Play (M4), stunt authoring (M5c),
    <code>.tir</code> import, tire-force arrows in wheel frame (<code>tire_forces_wheel()</code> ready).</li>
 <li>Brake/steer physics (booster/MDPS/ABS); V2V collision + VDS1 multi-vehicle I/O.</li>
+<li><strong>DECIDE (near-term): user-defined modules in GUI / runtimes.</strong> Core injection works
+   today via <code>set_*_module</code> (C++ subclass link, or Python subclass). Open question = how to
+   expose this flexibility <em>without</em> embedding the library: (a) C++ <code>.so</code> plugin loader
+   (<code>dlopen</code> + a registration entry point) consumed by <code>vdsim_realtime</code>/batch/GUI; (b) a
+   Python-module path the runtime imports; &copy; GUI authoring (pick/parameterize a module, or
+   edit a snippet). Pick the mechanism, then scope. Today only Python-in-process injects at
+   runtime; the prebuilt runtimes have no C++ plugin hook.</li>
+<li><strong>(FIXED <code>c6b2476</code>) open-diff engine inertia under symmetric accel.</strong> The old
+   <code>couple_open_axle_spin</code> carrier blend was a no-op when both wheels turned equally, so
+   straight-line accel felt no reflected engine inertia. Replaced with the coupled 2x2 axle
+   mass matrix (<code>open_axle_spin_accel</code>): symmetric accel now feels <code>I_e/2</code> per wheel,
+   differential motion still doesn't. The tight gates stayed green (traction-locked spin), so
+   no numeric re-baseline. Test <code>OpenDiffInertia.EngineInertiaSlowsSymmetricLaunch</code>.</li>
+<li><strong>Repo hygiene (low priority, needs a call):</strong> the two <code>sweep_runner.py</code>
+   (<code>python/</code> catalog-binary sweep vs <code>apps/doe/</code> config DoE) are different tools with
+   different YAML schemas, not a dead duplicate — decide which is canonical before merging.
+   Demo <code>*.mp4</code> (~5.4M) are linked from <code>docs/tasks/T22/T23</code> reports; move to LFS/releases
+   only with the report links updated. Cosmetic: rename <code>gui/runner/draft.py</code> (live code,
+   misleading name); merge the two <code>builder/</code> servers.</li>
 </ol>
 
 

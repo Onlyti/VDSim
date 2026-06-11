@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://onlyti.github.io/VDSim/main/ROADMAP/">
       
       
-        <link rel="prev" href="../theory/22_drivetrain_v2/">
+        <link rel="prev" href="../theory/23_user_modules/">
       
       
         <link rel="next" href="../CATALOG_AND_PHYSICS/">
@@ -511,6 +511,8 @@
       
         
           
+        
+      
         
       
         
@@ -1216,6 +1218,34 @@
     
   
     22 — Drivetrain v2 (engine/gearbox)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/23_user_modules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    23 — User-defined subsystem modules
   
 
     
@@ -2933,7 +2963,7 @@
 
 
 <h1 id="vdsim-product-roadmap">VDSim product roadmap<a class="headerlink" href="#vdsim-product-roadmap" title="Permanent link">&para;</a></h1>
-<p><strong>Last updated:</strong> 2026-06-10 · <strong>Tests:</strong> 317/317 ctest green (<code>main</code>)</p>
+<p><strong>Last updated:</strong> 2026-06-10 · <strong>Tests:</strong> 323/323 ctest green (<code>main</code>)</p>
 <p>Living roadmap from early PoC through v0.3. Tracks what shipped in mainline vs what
 is planned. Detail specs link to <code>docs/design/*</code>; tire phases in
 <a href="../design/TIRE_ROADMAP/"><code>design/TIRE_ROADMAP.md</code></a>.</p>
@@ -2975,7 +3005,7 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 </tr>
 <tr>
 <td>Brake / steer</td>
-<td>Pluggable modules + deadtime</td>
+<td>Pluggable modules + deadtime; <strong>user-defined modules (C++/Python subclass)</strong></td>
 <td>Booster/MDPS physics</td>
 </tr>
 <tr>
@@ -2986,11 +3016,11 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 <tr>
 <td>GUI</td>
 <td>3-tab scene UI, catalog API, workshops</td>
-<td>Tire <code>.tir</code> import UI</td>
+<td>Tire <code>.tir</code> import UI; <strong>expose user-defined modules (decide: C++ <code>.so</code> plugin / Python path / GUI authoring)</strong></td>
 </tr>
 <tr>
 <td>Validation</td>
-<td>ISO 7401/4138/3888 <strong>re-baselined + CI-gated</strong> (<code>IsoBaseline</code>), 317 ctest</td>
+<td>ISO 7401/4138/3888 <strong>re-baselined + CI-gated</strong> (<code>IsoBaseline</code>), 323 ctest</td>
 <td>Adams x-check rtol; commercial cross-val</td>
 </tr>
 </tbody>
@@ -3326,9 +3356,9 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <td><a href="../design/V0.2_DRIVETRAIN/"><code>V0.2_DRIVETRAIN.md</code></a></td>
 </tr>
 <tr>
-<td>[x] Open-diff carrier coupling (<code>drivetrain_inertia.hpp</code>)</td>
+<td>[x] Open-diff coupled 2x2 axle inertia (<code>open_axle_spin_accel</code>)</td>
 <td>Shipped</td>
-<td>Fixes inner-wheel spin-up</td>
+<td>engine inertia felt under symmetric accel, free under wheel-diff</td>
 </tr>
 <tr>
 <td>[x] Legacy mode (<code>I_engine = 0</code>)</td>
@@ -3782,7 +3812,7 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <td></td>
 </tr>
 <tr>
-<td>[x] <strong>317</strong> automated ctests</td>
+<td>[x] <strong>323</strong> automated ctests</td>
 <td>Shipped</td>
 <td>2026-06-10</td>
 </tr>
@@ -3904,8 +3934,9 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <h2 id="13-external-messaging-approved">13. External messaging (approved)<a class="headerlink" href="#13-external-messaging-approved" title="Permanent link">&para;</a></h2>
 <p><strong>Shipped today</strong></p>
 <blockquote>
-<p>Open-core L1–L3 vehicle dynamics with Pacejka MF tire, optional LuGre brush layer,
-parts catalog, real-time UDP/FMI, and ISO-standard validation (209 ctests).</p>
+<p>Open-core L1–L5 vehicle dynamics with Pacejka MF tire, optional LuGre brush + belt
+transient layers, opt-in MF2002 <code>.tir</code> backend and drivetrain v2 (engine map + gearbox),
+parts catalog, real-time UDP/FMI, and ISO-standard validation (323 ctests).</p>
 </blockquote>
 <p><strong>In active development</strong></p>
 <blockquote>

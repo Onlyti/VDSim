@@ -16,7 +16,7 @@
         <link rel="prev" href="../18_runtime_and_cosim/">
       
       
-        <link rel="next" href="../../ROADMAP/">
+        <link rel="next" href="../23_user_modules/">
       
       
         
@@ -513,6 +513,8 @@
       
         
           
+        
+      
         
       
         
@@ -1346,6 +1348,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../23_user_modules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    23 — User-defined subsystem modules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -2532,6 +2562,17 @@ T_\mathrm{axle} = T_\mathrm{eng}\, i_g\, i_\mathrm{fd}\, \eta
 <p>The engine inertia reflected to the wheel is <strong>gear-dependent</strong>,
 <span class="arithmatex">\(I_\mathrm{eng}\,(i_g\, i_\mathrm{fd})^2\)</span>, so a low gear has a larger effective rotating
 inertia (slower spin-up) than a high gear — replacing the v1 final-drive-only reflection.</p>
+<p>This reflected inertia <span class="arithmatex">\(I_e\)</span> enters the wheel-spin ODE through the differential. On an
+<strong>open</strong> diff it is geared to the carrier, whose speed is the wheel mean
+<span class="arithmatex">\(\omega_c = (\omega_L + \omega_R)/2\)</span>, giving the coupled axle mass matrix</p>
+<div class="arithmatex">\[
+\begin{bmatrix} I_L + I_e/4 &amp; I_e/4 \\ I_e/4 &amp; I_R + I_e/4 \end{bmatrix}
+\begin{bmatrix} \dot\omega_L \\ \dot\omega_R \end{bmatrix} =
+\begin{bmatrix} T_L \\ T_R \end{bmatrix}.
+\]</div>
+<p>Symmetric acceleration therefore feels the engine inertia (<span class="arithmatex">\(\dot\omega = T/(I + I_e/2)\)</span>)
+while a wheel-to-wheel speed difference does not (the spinning wheel is free) — the
+defining open-diff behaviour. Locked/LSD axles carry <span class="arithmatex">\(I_e/2\)</span> rigidly on each wheel.</p>
 <p><strong>Launch (idle floor + slipping clutch).</strong> When the wheel is too slow to keep the engine
 above idle (<code>rpm_geom &lt; idle_rpm</code>), the clutch slips: the engine revs to a throttle-scaled
 target between idle and a stall RPM, and the transmitted torque is the positive part of the
