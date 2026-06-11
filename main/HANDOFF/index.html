@@ -2687,9 +2687,9 @@ module workshop; L1 has no subsystem objects (out of scope).</p>
 </ul>
 <h2 id="7-next-pickups-fresh-session">7. Next pickups (fresh session)<a class="headerlink" href="#7-next-pickups-fresh-session" title="Permanent link">&para;</a></h2>
 <ol>
-<li><strong>Catalog <code>drivetrain_v2</code> part</strong> — materialize a <code>powertrain:</code> block into the chassis
-   params via the catalog resolve pipeline (today the demo loads <code>powertrain_sedan_demo.yaml</code>
-   directly through <code>from_yaml</code>). Headless.</li>
+<li><strong>(DONE)</strong> Catalog <code>drivetrain_v2</code> part — <code>drivetrain.sedan_v2</code> carries a <code>powertrain:</code>
+   block through the resolver into the vehicle config; blueprint <code>vehicle.sedan_powertrain</code>.
+   Remaining drivetrain: engine-map workshop (GUI), L1 powertrain.</li>
 <li><strong>Ld4 v0.6</strong> — shared inertia helpers; full loop dynamics; Featherstone in step (optional).</li>
 <li><strong>v0.5.2 GUI (browser, user-verified):</strong> terrain Play (M4), stunt authoring (M5c),
    <code>.tir</code> import, tire-force arrows in wheel frame (<code>tire_forces_wheel()</code> ready).</li>
