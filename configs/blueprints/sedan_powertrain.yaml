@@ -1,0 +1,11 @@
+id: vehicle.sedan_powertrain
+version: 1
+label: Sedan + Drivetrain v2 (engine/gearbox)
+level: L2
+parts:
+  chassis: chassis.sedan
+  tire: tire.default_pacejka
+  brake: brake.sedan
+  steering: steering.sedan
+  drivetrain: drivetrain.sedan_v2
+overrides: {}

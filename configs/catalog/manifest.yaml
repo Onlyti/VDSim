@@ -25,6 +25,8 @@ parts:
   path: parts/drivetrain/race_car.yaml
 - id: drivetrain.sedan
   path: parts/drivetrain/sedan.yaml
+- id: drivetrain.sedan_v2
+  path: parts/drivetrain/sedan_v2.yaml
 - id: drivetrain.sedan_rwd
   path: parts/drivetrain/sedan_rwd.yaml
 - id: drivetrain.sports
@@ -76,6 +78,8 @@ blueprints:
   path: blueprints/race_gt.yaml
 - id: vehicle.sedan_comfort
   path: blueprints/sedan_comfort.yaml
+- id: vehicle.sedan_powertrain
+  path: blueprints/sedan_powertrain.yaml
 - id: vehicle.sedan_l3
   path: blueprints/sedan_l3.yaml
 - id: vehicle.sports_aggressive

@@ -48,6 +48,28 @@ def main():
         assert l3.susp_front and l3.susp_front.is_file()
         assert l3.susp_rear and l3.susp_rear.is_file()
 
+        # drivetrain_v2 part carries a powertrain block through the resolver into
+        # the vehicle config; the resulting L2 model runs a real engine/gearbox.
+        pw = r.resolve_blueprint("vehicle.sedan_powertrain", out_dir=Path(td) / "pw")
+        vp_pw = vdsim.VehicleParams.from_yaml(str(pw.vehicle_yaml))
+        tp_pw = vdsim.TireParams.from_yaml(str(pw.tire_yaml))
+        dyn = vdsim.create_seven_dof()
+        dyn.initialize(vp_pw, tp_pw, vdsim.SolverParams())
+        dyn.reset(vdsim.State())
+        contacts = [vdsim.ContactPoint() for _ in range(4)]
+        for c in contacts:
+            c.is_valid = True
+            c.normal = [0.0, 0.0, 1.0]
+            c.mu_long = 1.0
+            c.mu_lat = 1.0
+        cmd = vdsim.CmdL4()
+        cmd.throttle = 0.3
+        cmd.gear = 1
+        for _ in range(50):
+            dyn.step(cmd, contacts, 0.002)
+        assert dyn.engine_rpm() >= 800.0, "drivetrain_v2 should enable a powertrain (rpm >= idle)"
+        assert dyn.current_gear() >= 1
+
     try:
         r.resolve_blueprint("vehicle.no_such")
         raise AssertionError("expected CatalogError for unknown blueprint")

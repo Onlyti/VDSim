@@ -20,6 +20,7 @@ SCHEMAS = frozenset({
     "brake_subsystem_v1",
     "steering_subsystem_v1",
     "drivetrain_v1",
+    "drivetrain_v2",
     "actuator_v1",
     "sensor_suite_v1",
     "topology_preview_v1",
