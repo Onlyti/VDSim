@@ -2742,6 +2742,14 @@ module workshop; L1 has no subsystem objects (out of scope).</p>
    mass matrix (<code>open_axle_spin_accel</code>): symmetric accel now feels <code>I_e/2</code> per wheel,
    differential motion still doesn't. The tight gates stayed green (traction-locked spin), so
    no numeric re-baseline. Test <code>OpenDiffInertia.EngineInertiaSlowsSymmetricLaunch</code>.</li>
+<li><strong>Part re-taxonomy (agreed; step 1 DONE).</strong> Target: vehicle = body (mass/inertia) +
+   chassis (suspension links/hardpoints/knuckle, = today's susp_kinematics) + powertrain
+   (engine) + drivetrain (transmission+diff) + tire/brake/steering. <strong>Step 1 shipped:</strong>
+   powertrain/drivetrain split — <code>powertrain</code> part type (<code>powertrain_v1</code>) + <code>drivetrain_v3</code>
+   (gearbox+diff); resolver deep-merges the <code>powertrain:</code> block; <code>vehicle.sedan_split_powertrain</code>.
+   <strong>Remaining:</strong> split <code>body</code> (mass/inertia) out of the <code>chassis</code> part; rename/reframe
+   <code>susp_kinematics</code> → <code>chassis</code> (links + hardpoints + knuckle/knuckle-arm points); migrate
+   existing blueprints. These are breaking renames — do with the user (slot names + migration).</li>
 <li><strong>Repo hygiene (low priority, needs a call):</strong> the two <code>sweep_runner.py</code>
    (<code>python/</code> catalog-binary sweep vs <code>apps/doe/</code> config DoE) are different tools with
    different YAML schemas, not a dead duplicate — decide which is canonical before merging.
