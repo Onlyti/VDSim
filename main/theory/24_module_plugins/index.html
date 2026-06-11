@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/tasks/30_l3_dynamic_suspension/">
+        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/theory/24_module_plugins/">
       
       
-        <link rel="prev" href="../20_l1_l2_grid_sweep/">
+        <link rel="prev" href="../23_user_modules/">
       
       
-        <link rel="next" href="../31_l6_l7_l8_control/">
+        <link rel="next" href="../../ROADMAP/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>L3 dynamic suspension - VDSim</title>
+        <title>24 — User module plugins (build/check/register) - VDSim</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#task-30-l3-dynamic-suspension-heave-roll-pitch-ode" class="md-skip">
+        <a href="#ch24-user-module-plugins-build-check-register" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              L3 dynamic suspension
+              24 — User module plugins (build/check/register)
             
           </span>
         </div>
@@ -254,11 +254,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../theory/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
           
   
   
@@ -324,7 +326,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../T22_carla_bridge/REPORT/" class="md-tabs__link">
+        <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-tabs__link">
           
   
   
@@ -342,13 +344,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../tasks/" class="md-tabs__link">
           
   
   
@@ -504,6 +504,8 @@
       
   
   
+    
+  
   
   
     
@@ -565,22 +567,23 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../theory/" class="md-nav__link ">
+            <a href="../" class="md-nav__link ">
               
   
   
@@ -598,13 +601,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -624,7 +627,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/01_frames_and_conventions/" class="md-nav__link">
+      <a href="../01_frames_and_conventions/" class="md-nav__link">
         
   
   
@@ -652,7 +655,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/02_rigid_body_dynamics/" class="md-nav__link">
+      <a href="../02_rigid_body_dynamics/" class="md-nav__link">
         
   
   
@@ -680,7 +683,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/03_tire_pacejka_mf96/" class="md-nav__link">
+      <a href="../03_tire_pacejka_mf96/" class="md-nav__link">
         
   
   
@@ -708,7 +711,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/19_lugre_dynamic_tire/" class="md-nav__link">
+      <a href="../19_lugre_dynamic_tire/" class="md-nav__link">
         
   
   
@@ -736,7 +739,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/21_belt_transient/" class="md-nav__link">
+      <a href="../21_belt_transient/" class="md-nav__link">
         
   
   
@@ -764,7 +767,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/04_ld1_bicycle/" class="md-nav__link">
+      <a href="../04_ld1_bicycle/" class="md-nav__link">
         
   
   
@@ -792,7 +795,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/05_ld2_seven_dof/" class="md-nav__link">
+      <a href="../05_ld2_seven_dof/" class="md-nav__link">
         
   
   
@@ -820,7 +823,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/06_ld3_fourteen_dof/" class="md-nav__link">
+      <a href="../06_ld3_fourteen_dof/" class="md-nav__link">
         
   
   
@@ -848,7 +851,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/20_ld5_stunt/" class="md-nav__link">
+      <a href="../20_ld5_stunt/" class="md-nav__link">
         
   
   
@@ -876,7 +879,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/07_control_ladder/" class="md-nav__link">
+      <a href="../07_control_ladder/" class="md-nav__link">
         
   
   
@@ -904,7 +907,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/08_pid_controllers/" class="md-nav__link">
+      <a href="../08_pid_controllers/" class="md-nav__link">
         
   
   
@@ -932,7 +935,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/09_pure_pursuit_path/" class="md-nav__link">
+      <a href="../09_pure_pursuit_path/" class="md-nav__link">
         
   
   
@@ -960,7 +963,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/10_driver_model/" class="md-nav__link">
+      <a href="../10_driver_model/" class="md-nav__link">
         
   
   
@@ -988,7 +991,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/11_numerical_integration/" class="md-nav__link">
+      <a href="../11_numerical_integration/" class="md-nav__link">
         
   
   
@@ -1016,7 +1019,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/12_software_architecture/" class="md-nav__link">
+      <a href="../12_software_architecture/" class="md-nav__link">
         
   
   
@@ -1044,7 +1047,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/13_multibody_outlook/" class="md-nav__link">
+      <a href="../13_multibody_outlook/" class="md-nav__link">
         
   
   
@@ -1072,7 +1075,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/14_hardpoint_kinematics/" class="md-nav__link">
+      <a href="../14_hardpoint_kinematics/" class="md-nav__link">
         
   
   
@@ -1100,7 +1103,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/15_validation_and_doe/" class="md-nav__link">
+      <a href="../15_validation_and_doe/" class="md-nav__link">
         
   
   
@@ -1128,7 +1131,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/16_fmi_integration/" class="md-nav__link">
+      <a href="../16_fmi_integration/" class="md-nav__link">
         
   
   
@@ -1156,7 +1159,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/17_actuator_and_sensing/" class="md-nav__link">
+      <a href="../17_actuator_and_sensing/" class="md-nav__link">
         
   
   
@@ -1184,7 +1187,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/18_runtime_and_cosim/" class="md-nav__link">
+      <a href="../18_runtime_and_cosim/" class="md-nav__link">
         
   
   
@@ -1212,7 +1215,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/22_drivetrain_v2/" class="md-nav__link">
+      <a href="../22_drivetrain_v2/" class="md-nav__link">
         
   
   
@@ -1240,7 +1243,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../theory/23_user_modules/" class="md-nav__link">
+      <a href="../23_user_modules/" class="md-nav__link">
         
   
   
@@ -1265,10 +1268,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../theory/24_module_plugins/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    24 — User module plugins (build/check/register)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1284,6 +1314,81 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-the-plugin-abi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. The plugin ABI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-loader" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Loader
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-build-check-register" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Build / check / register
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-contract-recap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Contract (recap)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1737,7 +1842,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T22_carla_bridge/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-nav__link">
         
   
   
@@ -1765,7 +1870,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T23_jump_14dof/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T23_jump_14dof/REPORT/" class="md-nav__link">
         
   
   
@@ -1793,7 +1898,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T27_ld4_dw/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T27_ld4_dw/REPORT/" class="md-nav__link">
         
   
   
@@ -1821,7 +1926,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T28_ld4_mp/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T28_ld4_mp/REPORT/" class="md-nav__link">
         
   
   
@@ -1849,7 +1954,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T29_ld4_ta/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T29_ld4_ta/REPORT/" class="md-nav__link">
         
   
   
@@ -1877,7 +1982,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../T30_ld4_5link/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T30_ld4_5link/REPORT/" class="md-nav__link">
         
   
   
@@ -1909,8 +2014,6 @@
       
   
   
-    
-  
   
   
     
@@ -1942,23 +2045,22 @@
     
     
       
-        
-        
-      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../" class="md-nav__link ">
+            <a href="../../tasks/" class="md-nav__link ">
               
   
   
@@ -1976,13 +2078,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="">
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
@@ -2002,7 +2104,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../68_poc_summary_v3/" class="md-nav__link">
+      <a href="../../tasks/68_poc_summary_v3/" class="md-nav__link">
         
   
   
@@ -2030,7 +2132,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../69_competitive_matrix/" class="md-nav__link">
+      <a href="../../tasks/69_competitive_matrix/" class="md-nav__link">
         
   
   
@@ -2058,7 +2160,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../62_cycles_overview/" class="md-nav__link">
+      <a href="../../tasks/62_cycles_overview/" class="md-nav__link">
         
   
   
@@ -2086,7 +2188,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../50_benchmark_matrix/" class="md-nav__link">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
         
   
   
@@ -2114,7 +2216,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../20_l1_l2_grid_sweep/" class="md-nav__link">
+      <a href="../../tasks/20_l1_l2_grid_sweep/" class="md-nav__link">
         
   
   
@@ -2139,37 +2241,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    L3 dynamic suspension
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../tasks/30_l3_dynamic_suspension/" class="md-nav__link">
         
   
   
@@ -2185,198 +2260,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. 목적
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. 구현 방법
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="2. 구현 방법">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#21" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2.1 코드 변경
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#22-eom-linearized-small-angle" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2.2 EoM (linearized, small angle)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#23" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2.3 설계 결정
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#24" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2.4 한계
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. 검증 방법 (근거)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="3. 검증 방법 (근거)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#31-3-integration-test" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3.1 3 새 integration test
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#32-ss-task-22-quasi-static" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3.2 SS 값 비교 (Task 22 quasi-static 과)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#4" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. 검증 결과
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="4. 검증 결과">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#41-test-suite" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4.1 Test suite
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#42" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4.2 시나리오별 최대 자세 변화
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#43-transient-figures" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4.3 Transient figures
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#5" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        5. 판단
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2389,7 +2272,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../31_l6_l7_l8_control/" class="md-nav__link">
+      <a href="../../tasks/31_l6_l7_l8_control/" class="md-nav__link">
         
   
   
@@ -2417,7 +2300,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../57_58_59_driver_skidpad/" class="md-nav__link">
+      <a href="../../tasks/57_58_59_driver_skidpad/" class="md-nav__link">
         
   
   
@@ -2445,7 +2328,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../50_benchmark_matrix/" class="md-nav__link">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
         
   
   
@@ -2571,10 +2454,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1" class="md-nav__link">
+  <a href="#1-the-plugin-abi" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. 목적
+        1. The plugin ABI
       
     </span>
   </a>
@@ -2582,160 +2465,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2" class="md-nav__link">
+  <a href="#2-loader" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. 구현 방법
+        2. Loader
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="2. 구현 방법">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#21" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2.1 코드 변경
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#22-eom-linearized-small-angle" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2.2 EoM (linearized, small angle)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#23" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2.3 설계 결정
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#24" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2.4 한계
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#3" class="md-nav__link">
+  <a href="#3-build-check-register" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. 검증 방법 (근거)
+        3. Build / check / register
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="3. 검증 방법 (근거)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#31-3-integration-test" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3.1 3 새 integration test
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#32-ss-task-22-quasi-static" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3.2 SS 값 비교 (Task 22 quasi-static 과)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#4" class="md-nav__link">
+  <a href="#4-contract-recap" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. 검증 결과
+        4. Contract (recap)
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="4. 검증 결과">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#41-test-suite" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4.1 Test suite
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#42" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4.2 시나리오별 최대 자세 변화
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#43-transient-figures" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4.3 Transient figures
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#5" class="md-nav__link">
+  <a href="#5-notes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. 판단
+        5. Notes
       
     </span>
   </a>
@@ -2762,218 +2528,57 @@
   
 
 
-<h1 id="task-30-l3-dynamic-suspension-heave-roll-pitch-ode">Task 30 — L3 dynamic suspension (heave / roll / pitch ODE)<a class="headerlink" href="#task-30-l3-dynamic-suspension-heave-roll-pitch-ode" title="Permanent link">&para;</a></h1>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Value</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Task ID</td>
-<td>IM-W11-1</td>
-</tr>
-<tr>
-<td>Type</td>
-<td>Impl</td>
-</tr>
-<tr>
-<td>Date</td>
-<td>2026-05-29</td>
-</tr>
-<tr>
-<td>Commit</td>
-<td>TBD</td>
-</tr>
-<tr>
-<td>Status</td>
-<td>completed (3 vertical DOF — 본격 14-DOF 의 70% 진척)</td>
-</tr>
-</tbody>
-</table>
-<h2 id="1">1. 목적<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
-<p>Task 24 의 L3 skeleton 을 <strong>동적 suspension</strong> 으로 확장. 3 sprung vertical DOF (heave z_s, roll φ, pitch θ) 의 ODE 를 RK4 로 적분. quasi-static (Task 22) 의 동등화 거동 → SS 동작, 추가로 transient (overshoot, settling, ride velocity) 측정 가능.</p>
-<p>이게 빠지면:
-- 차체 자세 변화의 시간 응답 (덤프 통과 시 ride 진동) 미모델.
-- D17 의 ride/handling RMSE 기준 충족 불가.
-- L3 의 정량적 PoC 시연이 "skeleton 만 동작" 으로 후퇴.</p>
-<h2 id="2">2. 구현 방법<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
-<h3 id="21">2.1 코드 변경<a class="headerlink" href="#21" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>위치</th>
-<th>변경</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>core/src/fourteen_dof_dynamics.cpp</code></td>
-<td>skeleton → 3 DOF ODE 추가. RK4 substepping. <code>roll_angle_qs</code>, <code>pitch_angle_qs</code> 가 동적 값 반환</td>
-</tr>
-<tr>
-<td><code>examples/l3_suspension_demo.cpp</code></td>
-<td>L3 trace CSV dump 용 새 CLI</td>
-</tr>
-<tr>
-<td><code>tests/integration/test_fourteen_dof.cpp</code></td>
-<td>3 새 test (roll/pitch transient + ride velocity)</td>
-</tr>
-</tbody>
-</table>
-<h3 id="22-eom-linearized-small-angle">2.2 EoM (linearized, small angle)<a class="headerlink" href="#22-eom-linearized-small-angle" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>per corner i:
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>   δ_i  = z_s − rx_i · θ                  (heave + pitch only; roll handled separately)
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>   v_i  = ż_s − rx_i · θ̇
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>   F_i  = − k_i · δ_i − c_i · v_i
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>m_s · z̈_s   = Σ F_i
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>I_yy · θ̈   = − Σ rx_i · F_i + m_s · ax · h_cg
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>I_xx · φ̈   = − K_phi · φ − C_phi · φ̇ + m_s · ay · h_cg
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>   K_phi = roll_stiffness_front + roll_stiffness_rear
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>   C_phi = Σ (damper · arm²)
+<h1 id="ch24-user-module-plugins-build-check-register">Ch.24 — User module plugins (build / check / register)<a class="headerlink" href="#ch24-user-module-plugins-build-check-register" title="Permanent link">&para;</a></h1>
+<p><a href="../23_user_modules/">Ch.23</a> showed how to install a C++ subclass of a subsystem interface
+in-process. This chapter is how a user ships such a module <strong>without forking the build</strong>: a
+plugin <code>.so</code> with a tiny C ABI, a loader, and a build/contract-check/register workflow. The
+authoring is C++ only — the user writes the <code>.cpp</code> in their own editor; the toolchain (CLI
+or GUI Module Workshop) detects the file, builds it, checks the contract, and on success
+registers it as a catalog part.</p>
+<h2 id="1-the-plugin-abi">1. The plugin ABI<a class="headerlink" href="#1-the-plugin-abi" title="Permanent link">&para;</a></h2>
+<p>A module source subclasses one interface and emits four <code>extern "C"</code> symbols via a macro
+(<code>vdsim/module_plugin.hpp</code>):</p>
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;vdsim/module_plugin.hpp&quot;</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyBrake</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">vdsim</span><span class="o">::</span><span class="n">IBrakeSystem</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="cm">/* ... */</span><span class="w"> </span><span class="p">};</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">VDSIM_REGISTER_BRAKE_MODULE</span><span class="p">(</span><span class="n">MyBrake</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;my_brake&quot;</span><span class="p">)</span>
 </span></code></pre></div>
-<h3 id="23">2.3 설계 결정<a class="headerlink" href="#23" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>결정</th>
-<th>채택</th>
-<th>근거</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Rigid tire 가정 (z_unsprung = 0)</td>
-<td>yes</td>
-<td>14-DOF 의 unsprung mass z̈ 는 ride dynamics 의 high-freq 영역. PoC 우선 sprung body 만</td>
-</tr>
-<tr>
-<td>Heave + pitch 는 per-corner spring</td>
-<td>yes</td>
-<td>spring_stiffness 그대로</td>
-</tr>
-<tr>
-<td>Roll 은 axle-level roll_stiffness</td>
-<td>yes</td>
-<td>ARB 효과 통합 — Task 22 quasi-static SS 와 정확 매치</td>
-</tr>
-<tr>
-<td>Damping: 코너 댐퍼만 (ARB damper 없음)</td>
-<td>yes</td>
-<td>일반적 단순화</td>
-</tr>
-<tr>
-<td>RK4 substepping</td>
-<td>yes</td>
-<td>spring + 큰 stiffness ratio 에 안정</td>
-</tr>
-<tr>
-<td>Heave inertial coupling 무시</td>
-<td>yes</td>
-<td>g_z_effective ≈ 0 가정 (수직 가속 무시)</td>
-</tr>
-</tbody>
-</table>
-<h3 id="24">2.4 한계<a class="headerlink" href="#24" title="Permanent link">&para;</a></h3>
+<p>The macro defines <code>vdsim_module_abi_version()</code>, <code>vdsim_module_kind()</code> (<code>"brake"</code> …),
+<code>vdsim_module_name()</code>, and <code>vdsim_module_create()</code> (which upcasts to the interface pointer
+before returning it as <code>void*</code>). One module per <code>.so</code>. Templates for all five kinds are in
+<code>templates/modules/</code>.</p>
+<h2 id="2-loader">2. Loader<a class="headerlink" href="#2-loader" title="Permanent link">&para;</a></h2>
+<p><code>load_module_plugin(so_path)</code> (<code>module_plugin_loader.cpp</code>) <code>dlopen</code>s the <code>.so</code>, checks the
+ABI version, dispatches on the kind, instantiates, and returns a <code>shared_ptr</code> to the right
+interface (or <code>ok=false</code> with an <code>error</code>). <code>install_module(dyn, loaded)</code> attaches it via the
+existing <code>IVehicleDynamics::set_*_module()</code> (ch.23). The handle stays mapped for the
+instance's lifetime.</p>
+<h2 id="3-build-check-register">3. Build / check / register<a class="headerlink" href="#3-build-check-register" title="Permanent link">&para;</a></h2>
+<p><code>tools/module_workshop.py</code> (and the GUI Module Workshop) drive three steps:</p>
+<ol>
+<li><strong>build</strong> — <code>g++ -std=c++17 -shared -fPIC -I core/include -I &lt;eigen&gt; &lt;name&gt;.cpp
+   -L build/lib -lvdsim_core -o &lt;name&gt;.so</code>. A compile failure returns the compiler
+   diagnostics as the <strong>cause</strong>.</li>
+<li><strong>check</strong> — <code>vdsim_module_check &lt;so&gt; &lt;kind&gt;</code> loads the <code>.so</code> and probes it with a
+   synthetic <code>SubsystemContext</code>, verifying: ABI matches, kind equals the requested category,
+   the instance is non-null, and the output is finite and correctly shaped (4 torques for
+   brake/drivetrain, a finite scalar for suspension, a finite pair for ARB). Reports <strong>적격
+   (pass)</strong> or <strong>문제 (fail)</strong> with the specific cause.</li>
+<li><strong>register</strong> — on pass, writes a <code>module_plugin_v1</code> catalog part under the <code>gui_custom</code>
+   user package (<code>body: {kind, plugin_so, abi}</code>), so the module is selectable like any part.</li>
+</ol>
+<h2 id="4-contract-recap">4. Contract (recap)<a class="headerlink" href="#4-contract-recap" title="Permanent link">&para;</a></h2>
+<p>Same as ch.23: <code>begin_step</code> runs once per step (step-coherent state), <code>apply</code>/<code>wheel_torque</code>
+/<code>force</code> per RK4 stage (pure); brake/drivetrain <code>wheel_torque</code> is a <strong>signed</strong> torque that
+opposes wheel spin. A module that violates the <em>shape</em> contract (non-finite, wrong size) is
+rejected by the checker; physical correctness (signs, magnitudes) is the author's
+responsibility.</p>
+<h2 id="5-notes">5. Notes<a class="headerlink" href="#5-notes" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Unsprung mass dynamics</strong> (4 z̈_unsprung) — 14-DOF 의 나머지 4 DOF 미반영. high-freq (1-15 Hz) ride 정확도 부족.</li>
-<li><strong>Roll/pitch center kinematics</strong> — 고정 h_cg. 실차의 동적 roll center 미반영.</li>
-<li><strong>Anti-dive / anti-squat geometry</strong> — pitch 의 squat 감소 효과 무시.</li>
-<li><strong>Camber from roll</strong> — wheel camber change 무시.</li>
-<li><strong>Lateral load transfer 의 transient</strong> — L2 의 quasi-static ay 사용 (Task 19 의 1-step lag), L3 의 동적 roll 과 self-consistent 가 아님.</li>
-</ul>
-<h2 id="3">3. 검증 방법 (근거)<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
-<h3 id="31-3-integration-test">3.1 3 새 integration test<a class="headerlink" href="#31-3-integration-test" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Test</th>
-<th>항목</th>
-<th>Pass 기준</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>FourteenDOF.RollOscillatesAndSettles</td>
-<td>step δ=0.05, 4 s</td>
-<td>roll &gt; 0 at 4 s, peak ≥ 0.99 × final, |peak| &lt; 6°</td>
-</tr>
-<tr>
-<td>FourteenDOF.PitchTransientUnderBrake</td>
-<td>brake=0.8, vx=20, 1 s</td>
-<td>pitch &lt; 0 (nose dive) and &lt; -0.001 rad</td>
-</tr>
-<tr>
-<td>FourteenDOF.SuspensionVelocityNonZeroDuringTransient</td>
-<td>step δ, 0.5 s</td>
-<td>max |susp_vel| &gt; 1 cm/s</td>
-</tr>
-</tbody>
-</table>
-<h3 id="32-ss-task-22-quasi-static">3.2 SS 값 비교 (Task 22 quasi-static 과)<a class="headerlink" href="#32-ss-task-22-quasi-static" title="Permanent link">&para;</a></h3>
-<p><code>step_steer</code> (sports, vx=10, δ=0.05):
-- ay ≈ 1.96 m/s²
-- φ_qs (Task 22) = m_s · ay · h_cg / K_phi = 1180 · 1.96 · 0.42 / 86000 ≈ 0.0113 rad ≈ 0.65°
-- L3 dynamic peak: <strong>0.619°</strong> (overshoot 후 settle).
-- 일치 → SS 동등화 확인.</p>
-<h2 id="4">4. 검증 결과<a class="headerlink" href="#4" title="Permanent link">&para;</a></h2>
-<h3 id="41-test-suite">4.1 Test suite<a class="headerlink" href="#41-test-suite" title="Permanent link">&para;</a></h3>
-<p>117/117 통과 (이전 114 + 본 task 3 새 test).</p>
-<h3 id="42">4.2 시나리오별 최대 자세 변화<a class="headerlink" href="#42" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Scenario</th>
-<th style="text-align: right;">max |roll| [°]</th>
-<th style="text-align: right;">max |pitch| [°]</th>
-<th style="text-align: right;">max |susp_vel| [mm/s]</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>step_steer</td>
-<td style="text-align: right;">0.62</td>
-<td style="text-align: right;">0.01</td>
-<td style="text-align: right;">51.8</td>
-</tr>
-<tr>
-<td>double_lane_change</td>
-<td style="text-align: right;"><strong>1.53</strong></td>
-<td style="text-align: right;">0.02</td>
-<td style="text-align: right;">73.1</td>
-</tr>
-<tr>
-<td>throttle_brake_sequence</td>
-<td style="text-align: right;">0.03</td>
-<td style="text-align: right;"><strong>0.57</strong></td>
-<td style="text-align: right;">77.8</td>
-</tr>
-</tbody>
-</table>
-<h3 id="43-transient-figures">4.3 Transient figures<a class="headerlink" href="#43-transient-figures" title="Permanent link">&para;</a></h3>
-<p><img alt="Step steer dynamic" src="figures/step_steer_dyn.png" /></p>
-<p>상: roll 의 시간 응답 (settle ~1.5 s). 하: per-wheel ride velocity (압축 속도) — 초기 transient ~50 mm/s, ground 통과 후 0.</p>
-<p><img alt="DLC roll" src="figures/dlc_roll.png" /></p>
-<p>DLC 의 좌-우 swing 이 roll 의 oscillation 으로 직접 mapping. ay/g (gray dotted) 와 phase aligned.</p>
-<p><img alt="Brake pitch" src="figures/brake_pitch.png" /></p>
-<p>3 s end-throttle → 4 s start-brake 의 분리된 transient. pitch peaks ~ -0.57°.</p>
-<h2 id="5">5. 판단<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
-<ul>
-<li>결과: <strong>pass</strong> (3 of 14 DOF 가 dynamic — 본격 14-DOF 의 약 70% 진척)</li>
-<li>근거:</li>
-<li>3/3 새 test 통과, 누적 117/117.</li>
-<li>quasi-static SS 와 정량 일치 (Task 22).</li>
-<li>DLC 의 oscillation / brake 의 nose dive 가 실차 거동과 정성 일치.</li>
-<li>미해결 / Follow-up (W11-W12 잔여):</li>
-<li><strong>Unsprung mass dynamics</strong> — 4 z̈_unsprung 의 본격 적분. high-freq ride.</li>
-<li><strong>Anti-dive / anti-squat</strong> — squat 감소 geometry.</li>
-<li><strong>Dynamic roll center</strong> — h_roll(t) variable.</li>
-<li><strong>Camber from roll</strong> — wheel kinematics.</li>
-<li><strong>Aero pitch moment</strong> — 고속 nose-up.</li>
-<li><strong>CarMaker ERG 비교</strong> — ride RMSE 검증.</li>
+<li>The <code>.so</code> is a per-machine build artifact (it links the exact core); the registered part's
+  <code>plugin_so</code> is a local absolute path. Rebuild the module if core changes (the ABI version
+  guards the C contract, not the C++ vtable).</li>
+<li>For real-time / HIL the runtime loads the registered plugin after <code>initialize()</code> and
+  installs it via <code>set_*_module()</code>. Python authoring is intentionally out of scope.</li>
 </ul>
 
 
