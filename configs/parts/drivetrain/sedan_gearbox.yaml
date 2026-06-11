@@ -1,0 +1,25 @@
+id: drivetrain.sedan_gearbox
+type: drivetrain
+version: 1
+schema: drivetrain_v3
+label: sedan 6-speed gearbox + open diff (engine separate)
+tags:
+- drivetrain
+- gearbox
+# Transmission part: drive type + differential + the `powertrain.gearbox`/`shift` blocks.
+# Pair with a `powertrain` part (engine) in a blueprint; the engine block comes from there.
+body:
+  drive_type: RWD
+  differential: Open
+  powertrain:
+    gearbox:
+      gear_ratios: [3.40, 2.05, 1.40, 1.00, 0.82, 0.68]
+      reverse_ratio: 3.20
+      final_drive: 4.10
+      efficiency: 0.92
+      shift_time: 0.25
+    shift:
+      mode: auto_rpm
+      upshift_rpm: 6000
+      downshift_rpm: 2000
+      start_gear: 1

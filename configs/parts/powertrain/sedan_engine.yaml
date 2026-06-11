@@ -1,0 +1,23 @@
+id: powertrain.sedan_engine
+type: powertrain
+version: 1
+schema: powertrain_v1
+label: sedan engine (2D torque map)
+tags:
+- powertrain
+- engine
+# Engine-only part: contributes the `powertrain.engine` block. Combine with a
+# `drivetrain` part (gearbox + shift + diff) in a blueprint — the resolver shallow-merges
+# the powertrain block by top key (engine / gearbox / shift).
+body:
+  powertrain:
+    engine:
+      idle_rpm: 800
+      redline_rpm: 6500
+      inertia: 0.20
+      rpm_breaks:      [1000, 2500, 4000, 5500, 6500]
+      throttle_breaks: [0.0, 0.5, 1.0]
+      torque_map:
+        - [-15,  -20,  -25,  -30,  -35]
+        - [ 95,  150,  165,  150,  120]
+        - [180,  300,  330,  300,  250]

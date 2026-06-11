@@ -9,7 +9,7 @@ import yaml
 
 PART_TYPES = frozenset({
     "chassis", "tire", "susp_kinematics", "susp_topology", "susp_ride", "brake",
-    "steering", "drivetrain", "actuator", "sensor_suite", "module",
+    "steering", "drivetrain", "powertrain", "actuator", "sensor_suite", "module",
 })
 
 SCHEMAS = frozenset({
@@ -21,6 +21,8 @@ SCHEMAS = frozenset({
     "steering_subsystem_v1",
     "drivetrain_v1",
     "drivetrain_v2",
+    "drivetrain_v3",
+    "powertrain_v1",
     "module_plugin_v1",
     "actuator_v1",
     "sensor_suite_v1",
@@ -241,17 +243,17 @@ class CatalogResolver:
             part_ids[slot] = str(part_id)
             body = dict(part["body"])
             if slot == "chassis":
-                vehicle_body.update(body)
+                _merge_part_body(vehicle_body, body)
             elif slot == "tire":
                 tire_body = body
-            elif slot in ("brake", "steering", "drivetrain"):
-                vehicle_body.update(body)
+            elif slot in ("brake", "steering", "drivetrain", "powertrain"):
+                _merge_part_body(vehicle_body, body)
             elif slot == "front_susp_kin":
                 susp_front = self._kinematics_path(body, part["schema"], slot)
             elif slot == "rear_susp_kin":
                 susp_rear = self._kinematics_path(body, part["schema"], slot)
             elif slot in ("front_susp_ride", "rear_susp_ride"):
-                vehicle_body.update(body)
+                _merge_part_body(vehicle_body, body)
 
         if tire_body is None:
             raise CatalogError(f"blueprint {blueprint_id} has no tire part")
@@ -325,6 +327,19 @@ class CatalogResolver:
         if not isinstance(doc, dict):
             raise CatalogError(f"yaml root must be a mapping: {path}")
         return doc
+
+
+def _merge_part_body(vehicle_body: Dict[str, Any], body: Mapping[str, Any]) -> None:
+    """Merge a part body into the vehicle config. The `powertrain:` block is shallow-merged
+    by its top keys (engine / gearbox / shift) so a `powertrain` part (engine) and a
+    `drivetrain` part (gearbox + shift + diff) can each contribute their piece; everything
+    else is a flat overwrite (last writer wins)."""
+    for k, v in body.items():
+        if k == "powertrain" and isinstance(v, Mapping):
+            cur = vehicle_body.get("powertrain")
+            vehicle_body["powertrain"] = {**cur, **v} if isinstance(cur, dict) else dict(v)
+        else:
+            vehicle_body[k] = v
 
 
 def _apply_dotted(root: Dict[str, Any], key: str, value: Any) -> None:

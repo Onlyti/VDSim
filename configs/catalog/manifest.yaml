@@ -27,6 +27,10 @@ parts:
   path: parts/drivetrain/sedan.yaml
 - id: drivetrain.sedan_v2
   path: parts/drivetrain/sedan_v2.yaml
+- id: drivetrain.sedan_gearbox
+  path: parts/drivetrain/sedan_gearbox.yaml
+- id: powertrain.sedan_engine
+  path: parts/powertrain/sedan_engine.yaml
 - id: drivetrain.sedan_rwd
   path: parts/drivetrain/sedan_rwd.yaml
 - id: drivetrain.sports
@@ -80,6 +84,8 @@ blueprints:
   path: blueprints/sedan_comfort.yaml
 - id: vehicle.sedan_powertrain
   path: blueprints/sedan_powertrain.yaml
+- id: vehicle.sedan_split_powertrain
+  path: blueprints/sedan_split_powertrain.yaml
 - id: vehicle.sedan_l3
   path: blueprints/sedan_l3.yaml
 - id: vehicle.sports_aggressive

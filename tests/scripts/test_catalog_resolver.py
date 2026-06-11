@@ -70,6 +70,21 @@ def main():
         assert dyn.engine_rpm() >= 800.0, "drivetrain_v2 should enable a powertrain (rpm >= idle)"
         assert dyn.current_gear() >= 1
 
+        # Split taxonomy: a powertrain part (engine) + a drivetrain part (gearbox+diff)
+        # deep-merge into one powertrain block; the L2 model runs the composed engine.
+        sp = r.resolve_blueprint("vehicle.sedan_split_powertrain", out_dir=Path(td) / "split")
+        import yaml as _yaml
+        vy = _yaml.safe_load(sp.vehicle_yaml.read_text())
+        pt = vy.get("powertrain") or {}
+        assert {"engine", "gearbox", "shift"} <= set(pt), f"split powertrain not merged: {list(pt)}"
+        dyn2 = vdsim.create_seven_dof()
+        dyn2.initialize(vdsim.VehicleParams.from_yaml(str(sp.vehicle_yaml)),
+                        vdsim.TireParams.from_yaml(str(sp.tire_yaml)), vdsim.SolverParams())
+        dyn2.reset(vdsim.State())
+        for _ in range(50):
+            dyn2.step(cmd, contacts, 0.002)
+        assert dyn2.engine_rpm() >= 800.0 and dyn2.current_gear() >= 1
+
     try:
         r.resolve_blueprint("vehicle.no_such")
         raise AssertionError("expected CatalogError for unknown blueprint")
