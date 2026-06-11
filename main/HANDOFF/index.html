@@ -2501,7 +2501,7 @@
 
 
 <h1 id="vdsim">VDSim 핸드오프<a class="headerlink" href="#vdsim" title="Permanent link">&para;</a></h1>
-<p>작성: <strong>2026-06-10</strong> · <code>main</code> @ <code>f6b1d71</code> (ahead of <code>v0.5.1</code>) · <strong>327/327 ctest green</strong></p>
+<p>작성: <strong>2026-06-10</strong> · <code>main</code> @ <code>f6b1d71</code> (ahead of <code>v0.5.1</code>) · <strong>328/328 ctest green</strong></p>
 <h2 id="1">1. 문서 인덱스<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2625,7 +2625,7 @@
 </ul>
 <h2 id="3">3. 빌드·검증<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>cmake<span class="w"> </span>--build<span class="w"> </span>build<span class="w"> </span>-j
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ctest<span class="w"> </span>--output-on-failure<span class="w">   </span><span class="c1"># 327/327</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ctest<span class="w"> </span>--output-on-failure<span class="w">   </span><span class="c1"># 328/328</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>python3<span class="w"> </span>gui/server.py<span class="w">                   </span><span class="c1"># http://127.0.0.1:8080</span>
 </span></code></pre></div>
 <h2 id="4">4. 다음 작업<a class="headerlink" href="#4" title="Permanent link">&para;</a></h2>
@@ -2704,7 +2704,7 @@ module workshop; L1 has no subsystem objects (out of scope).</p>
 </ul>
 <h2 id="6-git">6. Git<a class="headerlink" href="#6-git" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>main</code> @ <code>f6b1d71</code>, <strong>all pushed</strong>, 327/327 ctest. Last tag <strong><code>v0.5.1</code></strong>; main is ahead
+<li><code>main</code> @ <code>f6b1d71</code>, <strong>all pushed</strong>, 328/328 ctest. Last tag <strong><code>v0.5.1</code></strong>; main is ahead
   of it (post-0.5.1, <strong>untagged</strong>): tire tail (L1 belt, <code>tire_forces_wheel</code>, Chrono parity)</li>
 <li>ISO re-baseline/<code>IsoBaseline</code> + <strong>Drivetrain v2</strong> (D1–D5). Tag a release when the next
   milestone closes (suggest <code>v0.6.0</code> once catalog <code>drivetrain_v2</code> or Ld4 v0.6 lands).</li>
@@ -2729,11 +2729,11 @@ module workshop; L1 has no subsystem objects (out of scope).</p>
    (<code>VDSIM_REGISTER_*_MODULE</code>), <code>dlopen</code> loader <code>load_module_plugin()</code>/<code>install_module()</code>,
    <code>templates/modules/*</code>, checker <code>vdsim_module_check</code>, <code>tools/module_workshop.py</code>
    (build/check/register → <code>module_plugin_v1</code> part under <code>gui_custom</code>). Tests <code>ModulePlugin.*</code></li>
-<li><code>module_workshop</code>. Theory ch.24. <strong>Remaining:</strong> (MW5) resolver emits a blueprint
-   <code>module_plugins:</code> list + the runtime auto-loads/installs after <code>initialize()</code> so a
-   registered part is <em>used</em> in a scene (today <code>install_module</code> is proven by ctest but not
-   wired into <code>realtime_server</code>/materialize); (MW7) GUI Module Workshop panel
-   (folder+name → Build&amp;Check → 적격/문제+원인 → Register), browser-verified.</li>
+<li><code>module_workshop</code>. Theory ch.24. <strong>Consumption DONE:</strong> a blueprint <code>module_plugins:</code>
+   list resolves into the vehicle config and <code>install_module_plugins_from_yaml()</code> loads +
+   installs after <code>initialize()</code> (wired into <code>vdsim_realtime</code>); <code>ModulePlugin.InstallFromYaml</code>
+   proves register→blueprint→resolve→install→effect. <strong>Remaining:</strong> (MW7) GUI Module Workshop
+   panel (folder+name → Build&amp;Check → 적격/문제+원인 → Register), browser-verified.</li>
 <li><strong>(FIXED <code>c6b2476</code>) open-diff engine inertia under symmetric accel.</strong> The old
    <code>couple_open_axle_spin</code> carrier blend was a no-op when both wheels turned equally, so
    straight-line accel felt no reflected engine inertia. Replaced with the coupled 2x2 axle
