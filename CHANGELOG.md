@@ -20,6 +20,9 @@ All notable changes to VDSim are documented here. Format follows
   like any part — uniform for all five kinds (incl. suspension/ARB).
 - Tests: `ModulePlugin.*` (load + install + run + from-YAML), `module_workshop` (build/check/
   register + fail-with-cause). Sample `examples/modules/custom_brake.cpp`. **328 ctest.**
+- GUI **Module Workshop** (setup "Modules" tab): pick a kind, download the template, point at a
+  folder + module name, **Build & Check** (적격/문제 + cause), and **Register**. Endpoints
+  `/api/module/{template,build_check,register}` wrap `tools/module_workshop.py`.
 
 ### Added — catalog drivetrain_v2 part
 - Schema `drivetrain_v2`: a drivetrain catalog part can carry a `powertrain:` block, which

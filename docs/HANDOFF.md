@@ -174,8 +174,10 @@ module workshop; L1 has no subsystem objects (out of scope).
    + `module_workshop`. Theory ch.24. **Consumption DONE:** a blueprint `module_plugins:`
    list resolves into the vehicle config and `install_module_plugins_from_yaml()` loads +
    installs after `initialize()` (wired into `vdsim_realtime`); `ModulePlugin.InstallFromYaml`
-   proves register→blueprint→resolve→install→effect. **Remaining:** (MW7) GUI Module Workshop
-   panel (folder+name → Build&Check → 적격/문제+원인 → Register), browser-verified.
+   proves register→blueprint→resolve→install→effect. **GUI (MW7) DONE** (server-verified;
+   browser pass pending): setup "Modules" tab + `/api/module/{template,build_check,register}`
+   wrapping `tools/module_workshop.py` (`gui/app.html` + `gui/static/app.js`). Module-plugin
+   feature complete end-to-end.
 6. **(FIXED `c6b2476`) open-diff engine inertia under symmetric accel.** The old
    `couple_open_axle_spin` carrier blend was a no-op when both wheels turned equally, so
    straight-line accel felt no reflected engine inertia. Replaced with the coupled 2x2 axle
