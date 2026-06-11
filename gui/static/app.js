@@ -3945,5 +3945,63 @@ function closeModal() {
 }
 $('modal_x').onclick = closeModal;
 $('modal_bg').addEventListener('click', e => { if (e.target === $('modal_bg')) closeModal(); });
+
+// ---- Module workshop (build / check / register user C++ subsystem modules) ----
+(() => {
+  let builtSo = null;
+  const result = (txt, ok) => {
+    const el = $('mw_result');
+    if (!el) return;
+    el.textContent = txt;
+    el.style.color = ok === true ? '#2a8a4a' : ok === false ? '#d04545' : 'var(--sub)';
+  };
+  const postJ = async (url, body) =>
+    (await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body) })).json();
+
+  $('mw_template')?.addEventListener('click', async () => {
+    const kind = $('mw_kind').value;
+    try {
+      const r = await (await fetch('/api/module/template?kind=' + encodeURIComponent(kind))).json();
+      if (!r.ok) throw new Error(r.error || 'template failed');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([r.text], { type: 'text/plain' }));
+      a.download = r.filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      result('template ' + r.filename + ' downloaded -- edit it, save as <name>.cpp, then Build & Check.', null);
+    } catch (e) { result('template error: ' + e.message, false); }
+  });
+
+  $('mw_check')?.addEventListener('click', async () => {
+    builtSo = null;
+    $('mw_register').disabled = true;
+    const body = { kind: $('mw_kind').value, folder: $('mw_folder').value.trim(), name: $('mw_name').value.trim() };
+    if (!body.folder || !body.name) { result('folder 와 module name 을 입력하세요.', false); return; }
+    result('building...', null);
+    try {
+      const r = await postJ('/api/module/build_check', body);
+      if (r.status === 'pass') {
+        builtSo = r.so;
+        $('mw_register').disabled = false;
+        result('[적격] kind=' + r.kind + '  name=' + r.name + '\n.so: ' + r.so, true);
+      } else {
+        result('[문제]\n' + (r.cause || r.error || 'unknown'), false);
+      }
+    } catch (e) { result('[문제]\n' + e.message, false); }
+  });
+
+  $('mw_register')?.addEventListener('click', async () => {
+    if (!builtSo) return;
+    const body = { kind: $('mw_kind').value, name: $('mw_name').value.trim(), so: builtSo };
+    result('registering...', null);
+    try {
+      const r = await postJ('/api/module/register', body);
+      if (r.ok) result('[등록 완료] part: ' + r.part_id + '\nblueprint 의 module_plugins 로 참조하세요.', true);
+      else result('등록 실패: ' + (r.cause || r.error), false);
+    } catch (e) { result('등록 실패: ' + e.message, false); }
+  });
+})();
+
 window.__vdsimModuleReady = true;
 void boot();

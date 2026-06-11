@@ -6,6 +6,19 @@ from urllib.parse import urlparse
 
 from api.responses import bytes_response, json_response
 
+_REPO = Path(__file__).resolve().parents[2]
+_MODULE_KINDS = ("brake", "steering", "drivetrain", "suspension", "antirollbar")
+
+
+def _module_workshop():
+    """Lazy import of tools/module_workshop.py (its own REPO is path-derived)."""
+    import sys
+    tools = str(_REPO / "tools")
+    if tools not in sys.path:
+        sys.path.insert(0, tools)
+    import module_workshop  # noqa: E402
+    return module_workshop
+
 
 class ApiContext:
     __slots__ = (
@@ -216,6 +229,18 @@ def handle_get(h, route, qs, ctx):
         from runner.catalog_api import catalog_part_types
         json_response(h, {"ok": True, **catalog_part_types()})
         return True
+    if route == "/api/module/template":
+        kind = (qs.get("kind") or ["brake"])[0]
+        if kind not in _MODULE_KINDS:
+            json_response(h, {"ok": False, "error": f"unknown kind: {kind}"}, 400)
+            return True
+        tpl = _REPO / "templates" / "modules" / f"{kind}_module.cpp"
+        if not tpl.is_file():
+            json_response(h, {"ok": False, "error": f"template missing: {tpl.name}"}, 404)
+            return True
+        json_response(h, {"ok": True, "kind": kind, "filename": f"{kind}_module.cpp",
+                          "text": tpl.read_text(encoding="utf-8")})
+        return True
     if route == "/api/catalog/parts/editor":
         from runner.catalog_api import catalog_part_editor
         type_name = (qs.get("type") or ["chassis"])[0]
@@ -404,6 +429,25 @@ def handle_post(h, path, body, ctx):
             info = r.import_tir(body.get("text", ""), vehicle_id=body.get("vehicle_id"))
             json_response(h, {"ok": True, **info})
         except ValueError as e:
+            json_response(h, {"ok": False, "error": str(e)}, 400)
+        return True
+    if path == "/api/module/build_check":
+        try:
+            mw = _module_workshop()
+            res = mw.build_and_check(body.get("kind", ""), body.get("folder", ""),
+                                     body.get("name", ""))
+            json_response(h, {"ok": True, **res})
+        except Exception as e:  # noqa: BLE001 — surface any tool error as the cause
+            json_response(h, {"ok": False, "error": str(e)}, 400)
+        return True
+    if path == "/api/module/register":
+        try:
+            mw = _module_workshop()
+            res = mw.register(body.get("kind", ""), body.get("name", ""),
+                              body.get("so", ""), axle=int(body.get("axle", 0)))
+            code = 200 if res.get("status") == "pass" else 400
+            json_response(h, {"ok": res.get("status") == "pass", **res}, code)
+        except Exception as e:  # noqa: BLE001
             json_response(h, {"ok": False, "error": str(e)}, 400)
         return True
     if path == "/api/catalog/parts/save-fields":

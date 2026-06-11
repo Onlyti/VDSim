@@ -100,6 +100,7 @@
         <button type="button" class="setup-tab on" data-setup-tab="map">Map</button>
         <button type="button" class="setup-tab" data-setup-tab="vehicle">Vehicle</button>
         <button type="button" class="setup-tab" data-setup-tab="options">Options</button>
+        <button type="button" class="setup-tab" data-setup-tab="modules">Modules</button>
       </div>
       <div class="setup-bar-body">
         <div class="setup-tab-panes">
@@ -161,6 +162,30 @@
             <section class="setup-section comms">
               <div class="grp" data-help="cosim">Data &amp; comms</div>
               <div id="io_body"></div>
+            </section>
+          </div>
+          <div class="setup-tab-pane" id="setup_pane_modules">
+            <section class="setup-section" style="min-width:320px;max-width:480px">
+              <div class="grp" data-help="run">C++ module workshop</div>
+              <div class="setup-hint-line">Write a C++ subsystem module from the template in your editor, save it as <code>&lt;name&gt;.cpp</code>, then build &amp; check here. On 적격 it registers as a library part you can reference from a blueprint.</div>
+              <div class="setup-row">
+                <label>kind</label>
+                <select id="mw_kind" class="setup-inp">
+                  <option value="brake">brake</option>
+                  <option value="steering">steering</option>
+                  <option value="drivetrain">drivetrain</option>
+                  <option value="suspension">suspension</option>
+                  <option value="antirollbar">antirollbar</option>
+                </select>
+                <button id="mw_template" type="button" style="flex:none;padding:4px 8px;font-size:10px">Download template</button>
+              </div>
+              <input id="mw_folder" class="setup-inp wide" type="text" placeholder="folder containing &lt;name&gt;.cpp" style="margin-top:4px">
+              <input id="mw_name" class="setup-inp wide" type="text" placeholder="module name (file &lt;name&gt;.cpp)" style="margin-top:4px">
+              <div class="row" style="margin-top:4px">
+                <button id="mw_check" type="button" style="flex:1;padding:5px;font-size:11px">Build &amp; Check</button>
+                <button id="mw_register" type="button" style="flex:1;padding:5px;font-size:11px" disabled>Register</button>
+              </div>
+              <div id="mw_result" class="sub" style="margin-top:6px;white-space:pre-wrap;line-height:1.4"></div>
             </section>
           </div>
         </div>
