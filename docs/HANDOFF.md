@@ -184,7 +184,15 @@ module workshop; L1 has no subsystem objects (out of scope).
    mass matrix (`open_axle_spin_accel`): symmetric accel now feels `I_e/2` per wheel,
    differential motion still doesn't. The tight gates stayed green (traction-locked spin), so
    no numeric re-baseline. Test `OpenDiffInertia.EngineInertiaSlowsSymmetricLaunch`.
-7. **Repo hygiene (low priority, needs a call):** the two `sweep_runner.py`
+8. **Part re-taxonomy (agreed; step 1 DONE).** Target: vehicle = body (mass/inertia) +
+   chassis (suspension links/hardpoints/knuckle, = today's susp_kinematics) + powertrain
+   (engine) + drivetrain (transmission+diff) + tire/brake/steering. **Step 1 shipped:**
+   powertrain/drivetrain split — `powertrain` part type (`powertrain_v1`) + `drivetrain_v3`
+   (gearbox+diff); resolver deep-merges the `powertrain:` block; `vehicle.sedan_split_powertrain`.
+   **Remaining:** split `body` (mass/inertia) out of the `chassis` part; rename/reframe
+   `susp_kinematics` → `chassis` (links + hardpoints + knuckle/knuckle-arm points); migrate
+   existing blueprints. These are breaking renames — do with the user (slot names + migration).
+9. **Repo hygiene (low priority, needs a call):** the two `sweep_runner.py`
    (`python/` catalog-binary sweep vs `apps/doe/` config DoE) are different tools with
    different YAML schemas, not a dead duplicate — decide which is canonical before merging.
    Demo `*.mp4` (~5.4M) are linked from `docs/tasks/T22/T23` reports; move to LFS/releases

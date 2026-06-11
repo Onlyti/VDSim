@@ -24,6 +24,15 @@ All notable changes to VDSim are documented here. Format follows
   folder + module name, **Build & Check** (적격/문제 + cause), and **Register**. Endpoints
   `/api/module/{template,build_check,register}` wrap `tools/module_workshop.py`.
 
+### Added — split powertrain / drivetrain parts (re-taxonomy step 1)
+- Engine and transmission are now separable catalog parts: a `powertrain` part type
+  (`powertrain_v1`, the engine block) and a `drivetrain` part (`drivetrain_v3`, gearbox +
+  shift + diff). The resolver shallow-merges the `powertrain:` block by top key
+  (engine/gearbox/shift) so the two parts compose into one powertrain. Additive — the
+  combined `drivetrain_v2` part still works. Parts `powertrain.sedan_engine` +
+  `drivetrain.sedan_gearbox`, blueprint `vehicle.sedan_split_powertrain`; covered by
+  `test_catalog_resolver`.
+
 ### Added — catalog drivetrain_v2 part
 - Schema `drivetrain_v2`: a drivetrain catalog part can carry a `powertrain:` block, which
   the resolver merges into the vehicle config (lands at the root for `parse_powertrain`).
