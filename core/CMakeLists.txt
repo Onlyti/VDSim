@@ -17,6 +17,7 @@ add_library(vdsim_core
     src/sensor_model.cpp
     src/sim_session.cpp
     src/default_subsystems.cpp
+    src/module_plugin_loader.cpp
     src/suspension_lookup.cpp
     src/dw_native_kinematics.cpp
     src/ta_native_kinematics.cpp
@@ -44,6 +45,7 @@ target_link_libraries(vdsim_core PUBLIC
     yaml-cpp::yaml-cpp
     spdlog::spdlog
     Threads::Threads
+    ${CMAKE_DL_LIBS}
 )
 
 target_compile_features(vdsim_core PUBLIC cxx_std_17)

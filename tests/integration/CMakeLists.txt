@@ -16,11 +16,16 @@ add_executable(vdsim_integration_tests
     test_tire_frame.cpp
     test_drivetrain_v2.cpp
     test_user_modules.cpp
+    test_module_plugin.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../parity/test_chrono_pac02_parity.cpp
 )
 
 target_compile_definitions(vdsim_integration_tests PRIVATE
-    VDSIM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    VDSIM_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+    VDSIM_TEST_MODULES_DIR="${CMAKE_BINARY_DIR}/test_modules")
+
+# The module-plugin test dlopens the sample plugin .so built by the examples CMake.
+add_dependencies(vdsim_integration_tests custom_brake_module)
 
 target_link_libraries(vdsim_integration_tests PRIVATE
     vdsim::core

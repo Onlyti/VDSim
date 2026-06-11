@@ -47,3 +47,16 @@ add_executable(vdsim_headless_run headless_run.cpp)
 target_link_libraries(vdsim_headless_run PRIVATE vdsim::core)
 set_target_properties(vdsim_headless_run PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+add_executable(vdsim_module_check module_check.cpp)
+target_link_libraries(vdsim_module_check PRIVATE vdsim::core)
+set_target_properties(vdsim_module_check PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+# Sample user subsystem-module built as a runtime-loadable plugin (.so) — used by the
+# module-plugin tests and as a worked example of the VDSIM_REGISTER_*_MODULE ABI.
+add_library(custom_brake_module MODULE modules/custom_brake.cpp)
+target_link_libraries(custom_brake_module PRIVATE vdsim::core)
+set_target_properties(custom_brake_module PROPERTIES
+    OUTPUT_NAME custom_brake PREFIX ""
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test_modules)

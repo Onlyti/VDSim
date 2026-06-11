@@ -9,7 +9,7 @@ import yaml
 
 PART_TYPES = frozenset({
     "chassis", "tire", "susp_kinematics", "susp_topology", "susp_ride", "brake",
-    "steering", "drivetrain", "actuator", "sensor_suite",
+    "steering", "drivetrain", "actuator", "sensor_suite", "module",
 })
 
 SCHEMAS = frozenset({
@@ -21,6 +21,7 @@ SCHEMAS = frozenset({
     "steering_subsystem_v1",
     "drivetrain_v1",
     "drivetrain_v2",
+    "module_plugin_v1",
     "actuator_v1",
     "sensor_suite_v1",
     "topology_preview_v1",

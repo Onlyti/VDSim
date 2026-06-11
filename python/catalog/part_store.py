@@ -427,6 +427,69 @@ def save_user_part(repo_root: Path, doc: Mapping[str, Any], *, allow_overwrite: 
     return {"part_id": pid, "path": str(path), "package": USER_PACKAGE_ID}
 
 
+MODULE_KINDS = frozenset({"brake", "steering", "drivetrain", "suspension", "antirollbar"})
+
+
+def save_module_plugin_part(
+    repo_root: Path,
+    kind: str,
+    stem: str,
+    label: str,
+    so_path: str,
+    *,
+    axle: int = 0,
+    allow_overwrite: bool = True,
+) -> dict:
+    """Register a built+checked C++ subsystem-module .so as a `module_plugin_v1` part.
+
+    The part is filed under the user package as type `module`; `body.kind` carries the
+    subsystem category. Module plugins are referenced by a blueprint's `module_plugins:`
+    list (not the per-slot mechanism), so all five kinds register uniformly.
+    """
+    k = str(kind)
+    if k not in MODULE_KINDS:
+        raise CatalogError(f"unknown module kind: {k} (expected one of {sorted(MODULE_KINDS)})")
+    ensure_user_package(repo_root)
+    s = normalize_stem(stem)
+    pid = f"module.{s}"
+    body: Dict[str, Any] = {"kind": k, "plugin_so": str(so_path), "abi": 1}
+    if k == "antirollbar":
+        body["axle"] = int(axle)
+    doc = {
+        "id": pid,
+        "type": "module",
+        "version": 1,
+        "schema": "module_plugin_v1",
+        "label": str(label),
+        "tags": ["module", k],
+        "body": body,
+    }
+    CatalogResolver.validate_part_envelope(doc)
+
+    resolver = CatalogResolver(repo_root)
+    resolver.load_manifest()
+    exists = pid in resolver._part_index
+    if exists and not _is_user_part(repo_root, pid):
+        raise CatalogError(f"builtin part id collision: {pid}")
+    if exists and not allow_overwrite:
+        raise CatalogError(f"part already exists: {pid}")
+
+    path = _part_path_in_package(repo_root, "module", s)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    rel = f"parts/module/{path.name}"
+    path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+
+    pkg = _load_pkg_manifest(repo_root)
+    entries = [e for e in (pkg.get("parts") or []) if str(e.get("id")) != pid]
+    entries.append({"id": pid, "path": rel})
+    entries.sort(key=lambda e: str(e.get("id")))
+    pkg["parts"] = entries
+    _write_pkg_manifest(repo_root, pkg)
+
+    resolver.clear_cache()
+    return {"part_id": pid, "path": str(path), "package": USER_PACKAGE_ID, "kind": k}
+
+
 def delete_user_part(repo_root: Path, part_id: str) -> dict:
     pid = str(part_id)
     if not _is_user_part(repo_root, pid):
