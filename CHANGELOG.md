@@ -6,6 +6,17 @@ All notable changes to VDSim are documented here. Format follows
 
 ## [Unreleased]
 
+### Added — user module plugins (build / check / register)
+- Ship a C++ subsystem module as a runtime-loadable `.so` without forking the build. Plugin
+  ABI `vdsim/module_plugin.hpp` (`VDSIM_REGISTER_*_MODULE` macros) + dlopen loader
+  `load_module_plugin()` / `install_module()`. Templates in `templates/modules/`.
+- Workshop tool `tools/module_workshop.py`: build a user `.cpp` (compiler errors surfaced as
+  the cause), contract-check it with `vdsim_module_check` (ABI / kind / finite-shaped probe
+  output → pass/fail + cause), and register the passed `.so` as a `module_plugin_v1` catalog
+  part under the `gui_custom` package. Theory ch.24.
+- Tests: `ModulePlugin.*` (load + install + run), `module_workshop` (build/check/register +
+  fail-with-cause). Sample `examples/modules/custom_brake.cpp`. **327 ctest.**
+
 ### Added — catalog drivetrain_v2 part
 - Schema `drivetrain_v2`: a drivetrain catalog part can carry a `powertrain:` block, which
   the resolver merges into the vehicle config (lands at the root for `parse_powertrain`).

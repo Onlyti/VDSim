@@ -129,6 +129,7 @@ nav:
       - "18 — Runtime kernel & co-simulation": theory/18_runtime_and_cosim.md
       - "22 — Drivetrain v2 (engine/gearbox)": theory/22_drivetrain_v2.md
       - "23 — User-defined subsystem modules": theory/23_user_modules.md
+      - "24 — User module plugins (build/check/register)": theory/24_module_plugins.md
   - User guide:
       - "Product roadmap": ROADMAP.md
       - "Catalog, scenes & physics": CATALOG_AND_PHYSICS.md
