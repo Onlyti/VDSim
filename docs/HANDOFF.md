@@ -173,3 +173,18 @@ module workshop; L1 has no subsystem objects (out of scope).
    Python-module path the runtime imports; (c) GUI authoring (pick/parameterize a module, or
    edit a snippet). Pick the mechanism, then scope. Today only Python-in-process injects at
    runtime; the prebuilt runtimes have no C++ plugin hook.
+6. **DECIDE (physics): open-diff drops engine inertia under symmetric accel.** On an Open
+   differential the per-wheel spin divisor uses `I_wheel` only and the carrier coupling
+   (`couple_open_axle_spin`) is a no-op when both wheels turn equally (d_carrier = dL = dR),
+   so straight-line longitudinal accel feels **no** reflected engine/gearbox inertia. Locked/
+   LSD include it (divisor = I_wheel + I_eng). Most sedans are modeled Open, so 0-N launch
+   feel ignores powertrain inertia. Found while fixing the inertia-source bug (`ef7c68d`,
+   which only corrected the asymmetric/split-mu case). Fixing the symmetric case means adding
+   the carrier inertia to the open-diff symmetric mode and **re-baselining** accel — a
+   modeling decision, not a silent change. Suggest a `WeightTransfer`/accel test once decided.
+7. **Repo hygiene (low priority, needs a call):** the two `sweep_runner.py`
+   (`python/` catalog-binary sweep vs `apps/doe/` config DoE) are different tools with
+   different YAML schemas, not a dead duplicate — decide which is canonical before merging.
+   Demo `*.mp4` (~5.4M) are linked from `docs/tasks/T22/T23` reports; move to LFS/releases
+   only with the report links updated. Cosmetic: rename `gui/runner/draft.py` (live code,
+   misleading name); merge the two `builder/` servers.
