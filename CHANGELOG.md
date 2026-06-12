@@ -6,6 +6,12 @@ All notable changes to VDSim are documented here. Format follows
 
 ## [Unreleased]
 
+### Changed — shared multibody math (Ld4 v0.6 M1)
+- Extracted the rotation + corner-inertia math duplicated between the hard-joint corner DAE
+  and the Featherstone revolute tree into `vdsim/multibody_math.{hpp,cpp}` (`rodrigues`,
+  `axis_angle_to_R`, `corner_inertia_about_axis`, `lump_corner_about_axis`). Single source
+  for the inertia model; behavior bit-identical (332 ctest).
+
 ### Added — user module plugins (build / check / register)
 - Ship a C++ subsystem module as a runtime-loadable `.so` without forking the build. Plugin
   ABI `vdsim/module_plugin.hpp` (`VDSIM_REGISTER_*_MODULE` macros) + dlopen loader

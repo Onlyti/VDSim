@@ -1,5 +1,7 @@
 #include "vdsim/multibody.hpp"
 
+#include "vdsim/multibody_math.hpp"
+
 #include <yaml-cpp/yaml.h>
 
 #include <Eigen/Dense>
@@ -17,33 +19,6 @@ constexpr double kBaumgarteBeta  = 12.0;
 
 Vec3 yaml_vec3(const YAML::Node& n) {
     return Vec3(n[0].as<double>(), n[1].as<double>(), n[2].as<double>());
-}
-
-Mat3 rodrigues(const Vec3& axis_unit, double theta) {
-    Mat3 K;
-    K << 0, -axis_unit.z(), axis_unit.y(),
-         axis_unit.z(), 0, -axis_unit.x(),
-         -axis_unit.y(), axis_unit.x(), 0;
-    return Mat3::Identity() + std::sin(theta) * K
-                              + (1.0 - std::cos(theta)) * (K * K);
-}
-
-Mat3 axis_angle_to_R(const Vec3& v) {
-    const double a = v.norm();
-    if (a < 1e-12) return Mat3::Identity();
-    return rodrigues(v / a, a);
-}
-
-double corner_inertia_about_axis(const SuspensionTopology& topo, const Vec3& axis,
-                                 const Vec3& pivot) {
-    double I = 0.0;
-    for (const auto& b : topo.bodies) {
-        if (b.id == "chassis" || b.mass <= 0.0) continue;
-        const Vec3 r = b.cg_local - pivot;
-        const Vec3 r_perp = r - axis * axis.dot(r);
-        I += b.mass * r_perp.squaredNorm();
-    }
-    return std::max(0.2, I);
 }
 
 struct ConstrainedStepResult {
@@ -162,7 +137,7 @@ public:
         const Vec3 pivot_out = yaml_vec3(root["arm_pivot"]["chassis_outboard"]);
         axis_ = (pivot_out - pivot_).normalized();
         wheel_off_ = wheel_static_ - pivot_;
-        I_theta_ = corner_inertia_about_axis(topo, axis_, pivot_);
+        I_theta_ = corner_inertia_about_axis(topo.bodies, axis_, pivot_);
     }
 
     void initialize(HardJointCornerState& st,
@@ -249,7 +224,7 @@ public:
         off_sk_ = strut_bottom_ - lca_knuckle_static_;
         off_tk_ = tr_knuckle_static_ - lca_knuckle_static_;
         off_wheel_ = wheel_static_ - lca_knuckle_static_;
-        I_theta_ = corner_inertia_about_axis(topo, lca_axis_, lca_pivot_);
+        I_theta_ = corner_inertia_about_axis(topo.bodies, lca_axis_, lca_pivot_);
     }
 
     void initialize(HardJointCornerState& st,
@@ -401,7 +376,7 @@ public:
         R0_.col(1) = ay0;
         R0_.col(2) = az0;
         wheel_off_local_ = R0_.transpose() * (wheel_static_ - lca_knuckle_static_);
-        I_theta_ = corner_inertia_about_axis(topo, lca_axis_, lca_pivot_);
+        I_theta_ = corner_inertia_about_axis(topo.bodies, lca_axis_, lca_pivot_);
     }
 
     void initialize(HardJointCornerState& st,
@@ -554,7 +529,7 @@ public:
         la_chassis_ = chassis_pts_[3];
         la_off_chassis_ = knuckle_pts_static_[3] - la_chassis_;
         la_axis_ = Vec3::UnitY();
-        I_theta_ = corner_inertia_about_axis(topo, la_axis_, la_chassis_);
+        I_theta_ = corner_inertia_about_axis(topo.bodies, la_axis_, la_chassis_);
     }
 
     void initialize(HardJointCornerState& st,
