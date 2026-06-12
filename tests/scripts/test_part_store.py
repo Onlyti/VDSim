@@ -21,12 +21,12 @@ from catalog.part_store import (
 from catalog.resolver import CatalogResolver
 
 TEST_STEM = "pytest_gui_part"
-TEST_ID = f"chassis.{TEST_STEM}"
+TEST_ID = f"body.{TEST_STEM}"
 
 
 def _cleanup(repo: Path) -> None:
     pkg = user_package_root(repo)
-    part_path = pkg / "parts" / "chassis" / f"{TEST_STEM}.yaml"
+    part_path = pkg / "parts" / "body" / f"{TEST_STEM}.yaml"
     if part_path.is_file():
         part_path.unlink()
     manifest = pkg / "manifest.yaml"
@@ -40,9 +40,9 @@ def _cleanup(repo: Path) -> None:
     r.clear_cache()
 
 
-def test_save_and_reload_chassis():
+def test_save_and_reload_body():
     _cleanup(ROOT)
-    doc = new_part_doc("chassis", TEST_STEM, "Pytest chassis")
+    doc = new_part_doc("body", TEST_STEM, "Pytest body")
     doc["body"]["mass"] = 1420.0
     out = save_user_part(ROOT, doc)
     assert out["part_id"] == TEST_ID
@@ -51,7 +51,7 @@ def test_save_and_reload_chassis():
     r.clear_cache()
     loaded = r.load_part(TEST_ID)
     assert float(loaded["body"]["mass"]) == 1420.0
-    assert any(p["id"] == TEST_ID for p in r.list_parts("chassis"))
+    assert any(p["id"] == TEST_ID for p in r.list_parts("body"))
     _cleanup(ROOT)
 
 
@@ -85,16 +85,18 @@ def test_import_kin_and_blueprint():
     kin_text = kin_path.read_text(encoding="utf-8")
     doc, kin = kin_yaml_to_susp_part(kin_text, "pytest_kin", "Pytest kin")
     out = save_user_kin_part(ROOT, doc, kin)
-    assert out["part_id"] == "susp.pytest_kin"
+    assert out["part_id"] == "chassis.pytest_kin"
     r = CatalogResolver(ROOT)
     r.clear_cache()
-    loaded = r.load_part("susp.pytest_kin")
+    loaded = r.load_part("chassis.pytest_kin")
     assert "path" in loaded.get("body", {})
 
     spec = {
         "level": "L2",
         "parts": {
-            "chassis": "chassis.sedan",
+            "body": "body.sedan",
+            "aero": "aero.sedan",
+            "ride": "ride.sedan",
             "tire": "tire.default_pacejka",
             "brake": "brake.sedan",
             "steering": "steering.sedan",
@@ -107,14 +109,14 @@ def test_import_kin_and_blueprint():
     r.clear_cache()
     assert r.load_blueprint("vehicle.pytest_build")["parts"]["tire"] == "tire.default_pacejka"
 
-    delete_user_part(ROOT, "susp.pytest_kin")
+    delete_user_part(ROOT, "chassis.pytest_kin")
     bp_path = user_package_root(ROOT) / "blueprints" / "pytest_build.yaml"
     if bp_path.is_file():
         bp_path.unlink()
     import yaml
     manifest = user_package_root(ROOT) / "manifest.yaml"
     mdoc = yaml.safe_load(manifest.read_text(encoding="utf-8")) or {}
-    mdoc["parts"] = [e for e in (mdoc.get("parts") or []) if str(e.get("id")) != "susp.pytest_kin"]
+    mdoc["parts"] = [e for e in (mdoc.get("parts") or []) if str(e.get("id")) != "chassis.pytest_kin"]
     mdoc["blueprints"] = [e for e in (mdoc.get("blueprints") or [])
                           if str(e.get("id")) != "vehicle.pytest_build"]
     manifest.write_text(yaml.safe_dump(mdoc, sort_keys=False), encoding="utf-8")
@@ -145,7 +147,7 @@ def test_import_yaml_roundtrip():
 
 
 if __name__ == "__main__":
-    test_save_and_reload_chassis()
+    test_save_and_reload_body()
     test_save_brake_with_meta()
     test_import_kin_and_blueprint()
     test_import_yaml_roundtrip()

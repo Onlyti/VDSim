@@ -1948,11 +1948,11 @@ async function fetchModalAssembly(opts = {}) {
   return modalAssembly;
 }
 function installSlotForPartType(typeName, partId) {
-  if (typeName === 'susp_kinematics') {
+  if (typeName === 'chassis') {     // suspension linkage -> per-axle slot
     const s = (partId || '').toLowerCase();
-    if (s.includes('rear')) return 'rear_susp_kin';
-    if (s.includes('front')) return 'front_susp_kin';
-    return 'front_susp_kin';
+    if (s.includes('rear')) return 'rear_chassis';
+    if (s.includes('front')) return 'front_chassis';
+    return 'front_chassis';
   }
   return PART_TYPE_INSTALL_SLOT[typeName] || null;
 }
@@ -2046,7 +2046,7 @@ function buildGarageDiagram(parent, asm, activeSlot, onSelect) {
     b.onclick = () => onSelect(slotKey);
     parent.appendChild(b);
   };
-  mk('dg-chassis', 'chassis', 'Chassis');
+  mk('dg-chassis', 'body', 'Body');
   if (slotMap.tire) {
     const s = slotMap.tire;
     for (const [cls, lab] of [['fl', 'FL'], ['fr', 'FR'], ['rl', 'RL'], ['rr', 'RR']]) {
@@ -2074,7 +2074,7 @@ function buildGarageDiagram(parent, asm, activeSlot, onSelect) {
     b.onclick = () => onSelect(ctrl[0]);
     parent.appendChild(b);
   }
-  ['front_susp_kin', 'rear_susp_kin'].forEach((k, i) => {
+  ['front_chassis', 'rear_chassis'].forEach((k, i) => {
     if (!slotMap[k]) return;
     const b = document.createElement('button');
     b.type = 'button';
@@ -3010,16 +3010,19 @@ const SUSP_PRESETS = {
 const WS_CORNERS = ['FL', 'FR', 'RL', 'RR'];
 let modalTab = 'assembly', modalLvl = 'L2', modalCorner = 0, modalVid = 0;
 let modalAssembly = null;
-let modalAsmSlot = 'chassis', modalAsmPreview = null, modalAsmPreviewTimer = null;
+let modalAsmSlot = 'body', modalAsmPreview = null, modalAsmPreviewTimer = null;
 let modalAsmPinnedCandidate = null;
-let partsLibType = 'chassis', partsLibSelId = '', partsLibEditor = null;
+let partsLibType = 'body', partsLibSelId = '', partsLibEditor = null;
 let partsLibQuery = '', partsLibTag = '', partsLibSort = 'label';
+// Re-taxonomy step 2: the vehicle = body + aero + ride + chassis (suspension
+// linkage) + tire/brake/steering/drivetrain. "chassis" is now the linkage part.
 const PART_LIB_TYPES = [
-  ['chassis', 'Chassis'], ['tire', 'Tire'], ['brake', 'Brake'],
-  ['steering', 'Steering'], ['drivetrain', 'Drivetrain'], ['susp_kinematics', 'Susp kin'],
+  ['body', 'Body'], ['aero', 'Aero'], ['ride', 'Ride'],
+  ['chassis', 'Chassis (links)'], ['tire', 'Tire'], ['brake', 'Brake'],
+  ['steering', 'Steering'], ['drivetrain', 'Drivetrain'],
 ];
 const PART_TYPE_INSTALL_SLOT = {
-  chassis: 'chassis', tire: 'tire', brake: 'brake',
+  body: 'body', aero: 'aero', ride: 'ride', tire: 'tire', brake: 'brake',
   steering: 'steering', drivetrain: 'drivetrain',
 };
 let vehFields = [], tireFields = [], sensFields = [], actFields = [], tireSamples = [];
