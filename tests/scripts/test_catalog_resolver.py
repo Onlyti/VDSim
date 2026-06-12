@@ -17,9 +17,9 @@ def main():
     r.load_manifest()
     parts = r.list_parts()
     ids = {p["id"] for p in parts}
-    assert "chassis.sedan" in ids
+    assert "body.sedan" in ids
     assert "tire.default_pacejka" in ids
-    assert "susp.mp_front_sedan" in ids
+    assert "chassis.mp_front_sedan" in ids
 
     try:
         CatalogResolver.validate_part_envelope({

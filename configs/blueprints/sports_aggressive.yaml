@@ -3,7 +3,9 @@ version: 1
 label: Sports Aggressive
 level: L2
 parts:
-  chassis: chassis.sports
+  body: body.sports
+  aero: aero.sports
+  ride: ride.sports
   tire: tire.sport_grip
   brake: brake.sports
   steering: steering.sports

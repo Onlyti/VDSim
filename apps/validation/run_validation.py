@@ -4,7 +4,7 @@ config and writes a markdown + figures report.
 
 Usage:
     python3 apps/validation/run_validation.py \\
-        --vehicle configs/parts/chassis/sedan.yaml \\
+        --vehicle configs/parts/body/sedan.yaml \\
         --tire    configs/parts/tire/kinematic_fallback.yaml \\
         --level   L3 \\
         --out     apps/validation/results/sedan
@@ -118,7 +118,7 @@ def plot_4138(r, out_png, vehicle_params):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--vehicle", default="configs/parts/chassis/sedan.yaml")
+    ap.add_argument("--vehicle", default="configs/parts/body/sedan.yaml")
     ap.add_argument("--tire",    default="configs/parts/tire/kinematic_fallback.yaml")
     ap.add_argument("--level",   default="L2")
     ap.add_argument("--out",     default="apps/validation/results/run01")

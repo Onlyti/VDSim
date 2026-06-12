@@ -1,0 +1,26 @@
+id: body.fsk_formula
+type: body
+version: 1
+schema: body_v1
+label: Fsk Formula chassis body
+tags:
+- body
+body:
+  wheelbase: 1.55
+  inertia_diag:
+  - 60.0
+  - 110.0
+  - 145.0
+  unsprung_mass:
+  - 10
+  - 10
+  - 10
+  - 10
+  cg_to_front: 0.75
+  mass_sprung: 240.0
+  track_front: 1.2
+  track_rear: 1.15
+  mass: 280.0
+  wheel_radius_nominal: 0.26
+  cg_height: 0.3
+  cg_to_rear: 0.8

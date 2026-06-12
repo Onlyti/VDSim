@@ -1,0 +1,25 @@
+id: ride.fsk_formula
+type: ride
+version: 1
+schema: ride_v1
+label: Fsk Formula chassis ride
+tags:
+- ride
+body:
+  roll_center_height_rear: 0.0
+  anti_squat_rear: 0.2
+  camber_per_roll: 0.0
+  arb_stiffness_front: 0.0
+  arb_stiffness_rear: 0.0
+  spring_stiffness:
+  - 60000
+  - 60000
+  - 70000
+  - 70000
+  roll_center_height_front: 0.0
+  damper_coefficient:
+  - 3500
+  - 3500
+  - 4000
+  - 4000
+  anti_dive_front: 0.3

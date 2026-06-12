@@ -1,9 +1,9 @@
-id: susp.5link_rear_sports
-type: susp_kinematics
+id: chassis.5link_rear_sports
+type: chassis
 version: 1
 schema: kinematics_l3_native_v1
 label: 5link_rear_sports kinematics
 tags:
-- susp_kinematics
+- chassis
 body:
   path: parts/susp_kinematics/kin/5link_rear_sports.yaml

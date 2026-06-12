@@ -1,0 +1,12 @@
+id: aero.sports
+type: aero
+version: 1
+schema: aero_v1
+label: Sports chassis aero
+tags:
+- aero
+body:
+  aero_lift_front: 0.4
+  frontal_area: 2.05
+  aero_lift_rear: 0.6
+  aero_drag_coeff: 0.34

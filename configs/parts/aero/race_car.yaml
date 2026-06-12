@@ -1,0 +1,12 @@
+id: aero.race_car
+type: aero
+version: 1
+schema: aero_v1
+label: Race Car chassis aero
+tags:
+- aero
+body:
+  aero_lift_front: 1.8
+  frontal_area: 1.9
+  aero_lift_rear: 2.5
+  aero_drag_coeff: 0.5

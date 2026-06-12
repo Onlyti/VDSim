@@ -4,8 +4,14 @@ from __future__ import annotations
 from typing import List, Tuple
 
 # (slot_key, GUI label, catalog part type)
+# Re-taxonomy step 2: the vehicle is body (mass/inertia/layout) + aero + ride
+# (spring/damper/ARB) + chassis (suspension links/hardpoints/knuckle, was the
+# susp_kinematics part) + tire/brake/steering/drivetrain. "chassis" now denotes
+# the suspension linkage, not the mass bundle.
 BASE_SLOTS: List[Tuple[str, str, str]] = [
-    ("chassis", "Chassis", "chassis"),
+    ("body", "Body", "body"),
+    ("aero", "Aero", "aero"),
+    ("ride", "Ride", "ride"),
     ("tire", "Tire", "tire"),
     ("brake", "Brake", "brake"),
     ("steering", "Steering", "steering"),
@@ -13,8 +19,8 @@ BASE_SLOTS: List[Tuple[str, str, str]] = [
 ]
 
 L3_SLOTS: List[Tuple[str, str, str]] = [
-    ("front_susp_kin", "Front suspension", "susp_kinematics"),
-    ("rear_susp_kin", "Rear suspension", "susp_kinematics"),
+    ("front_chassis", "Front chassis", "chassis"),
+    ("rear_chassis", "Rear chassis", "chassis"),
 ]
 
 

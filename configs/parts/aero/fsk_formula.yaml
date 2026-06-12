@@ -1,0 +1,12 @@
+id: aero.fsk_formula
+type: aero
+version: 1
+schema: aero_v1
+label: Fsk Formula chassis aero
+tags:
+- aero
+body:
+  aero_lift_front: 1.2
+  frontal_area: 1.4
+  aero_lift_rear: 1.8
+  aero_drag_coeff: 0.85

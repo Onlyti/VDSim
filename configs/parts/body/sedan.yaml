@@ -1,0 +1,26 @@
+id: body.sedan
+type: body
+version: 1
+schema: body_v1
+label: Sedan chassis body
+tags:
+- body
+body:
+  wheelbase: 2.7
+  inertia_diag:
+  - 500.0
+  - 2000.0
+  - 2500.0
+  unsprung_mass:
+  - 40
+  - 40
+  - 40
+  - 40
+  cg_to_front: 1.2
+  mass_sprung: 1350.0
+  track_front: 1.55
+  track_rear: 1.55
+  mass: 1500.0
+  wheel_radius_nominal: 0.32
+  cg_height: 0.55
+  cg_to_rear: 1.5

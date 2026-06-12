@@ -1,0 +1,22 @@
+id: ride.sedan
+type: ride
+version: 1
+schema: ride_v1
+label: Sedan chassis ride
+tags:
+- ride
+body:
+  roll_center_height_rear: 0.0
+  arb_stiffness_front: 0.0
+  arb_stiffness_rear: 0.0
+  spring_stiffness:
+  - 30000
+  - 30000
+  - 30000
+  - 30000
+  roll_center_height_front: 0.0
+  damper_coefficient:
+  - 3000
+  - 3000
+  - 3000
+  - 3000

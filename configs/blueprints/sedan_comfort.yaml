@@ -3,7 +3,9 @@ version: 1
 label: Sedan Comfort
 level: L2
 parts:
-  chassis: chassis.sedan
+  body: body.sedan
+  aero: aero.sedan
+  ride: ride.sedan
   tire: tire.default_pacejka
   brake: brake.sedan
   steering: steering.sedan

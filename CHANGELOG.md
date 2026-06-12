@@ -6,6 +6,21 @@ All notable changes to VDSim are documented here. Format follows
 
 ## [Unreleased]
 
+### Changed — part re-taxonomy step 2: body / aero / ride / chassis (BREAKING catalog)
+- The monolithic `chassis` part (`vehicle_params_v1`) is split into **body** (mass /
+  inertia / cg / layout), **aero** (drag / lift / frontal area), and **ride** (springs /
+  dampers / ARB / roll-centre). The `chassis` part type now denotes the **suspension
+  linkage** (the former `susp_kinematics` role: links + hardpoints + knuckle).
+- Blueprint slots: `chassis` → `body` + `aero` + `ride`; `front_susp_kin` / `rear_susp_kin`
+  → `front_chassis` / `rear_chassis`. Central definition in `python/catalog/slots.py`;
+  resolver still merges everything into one `vehicle.yaml` so the C++/physics layer and the
+  emitted config are unchanged (catalog-authoring refactor only). Schemas `body_v1` /
+  `aero_v1` / `ride_v1`.
+- All built-in parts + blueprints + manifest migrated; old `chassis.*` bundle and `susp.*`
+  ids removed (clean break — old configs are incompatible). 328 ctest green.
+- **Pending (GUI session, browser-verify):** `part_store.py` part-authoring templates +
+  `gui/static/app.js` vehicle-edit "Chassis" tab still use the old taxonomy.
+
 ### Added — user module plugins (build / check / register)
 - Ship a C++ subsystem module as a runtime-loadable `.so` without forking the build. Plugin
   ABI `vdsim/module_plugin.hpp` (`VDSIM_REGISTER_*_MODULE` macros) + dlopen loader
