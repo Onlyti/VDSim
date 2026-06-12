@@ -83,9 +83,11 @@ Rules:
 
 | `type` | `schema` (initial) | Resolves to (runtime) |
 |--------|-------------------|------------------------|
-| `chassis` | `vehicle_params_v1` | `VehicleParams` mass/geom/aero/drive meta |
+| `body` | `body_v1` | `VehicleParams` mass / inertia / cg / wheelbase / track |
+| `aero` | `aero_v1` | `VehicleParams` drag / lift / frontal area |
+| `ride` | `ride_v1` | `VehicleParams` springs / dampers / ARB / roll-centre |
+| `chassis` | `kinematics_l3_native_v1` | suspension linkage (links / hardpoints / knuckle); L3 `attach_*_kinematics` path |
 | `tire` | `pacejka_mf96_v1` | `TireParams` (+ optional `lugre:` block, `V0.2_TIRE_LUGRE.md`) |
-| `susp_kinematics` | `kinematics_l3_native_v1` | L3 `attach_*_kinematics` YAML path |
 | `susp_ride` | `spring_damper_v1` | per-corner k/c on `VehicleParams` (L2/L3) |
 | `brake` | `brake_subsystem_v1` | WS1 brake module config (v0.3 wires L3) |
 | `steering` | `steering_subsystem_v1` | ratio, deadtime |
@@ -108,12 +110,12 @@ label: "Sedan comfort package"
 level: L2                    # L1 | L2 | L3 — dynamics ladder for this assembly
 
 parts:
-  chassis:           chassis.sedan
+  body:              body.sedan
+  aero:              aero.sedan
+  ride:              ride.sedan
   tire:              tire.default_pacejka
-  front_susp_kin:    susp.mp_front_sedan      # required when level: L3
-  rear_susp_kin:     susp.ta_rear_sedan
-  front_susp_ride:   ride.sedan_comfort
-  rear_susp_ride:    ride.sedan_comfort
+  front_chassis:     chassis.mp_front_sedan   # suspension linkage, required when level: L3
+  rear_chassis:      chassis.ta_rear_sedan
   brake:             brake.sedan_default
   steering:          steering.sedan_rack
   drivetrain:        drivetrain.generic_ev
@@ -126,8 +128,8 @@ overrides: {}                # optional dotted keys → last-wins on resolved pa
 Rules:
 
 - **Required keys by level**
-  - L1/L2: `chassis`, `tire`, `brake`, `steering`, `drivetrain`
-  - L3: above + `front_susp_kin`, `rear_susp_kin` (ride parts optional but recommended)
+  - L1/L2: `body`, `aero`, `ride`, `tire`, `brake`, `steering`, `drivetrain`
+  - L3: above + `front_chassis`, `rear_chassis` (suspension linkage parts)
 - **No inline physics** in blueprints — only `parts` + `overrides`.
 - Fleet **instances** in a scene may override individual part refs (see §6).
 
