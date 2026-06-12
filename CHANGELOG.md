@@ -6,6 +6,15 @@ All notable changes to VDSim are documented here. Format follows
 
 ## [Unreleased]
 
+### Added — L1 powertrain (drivetrain v2 on the bicycle)
+- The drivetrain v2 engine map + N-speed gearbox + shift policy now runs on the L1 bicycle
+  (previously L2/L3 only). Opt-in via the `powertrain:` block; the engine is advanced once
+  per RK4 substep and its gear-dependent reflected inertia is added to the front/rear axle
+  spin inertia. `engine_rpm()` / `current_gear()` / `set_shift_policy()` are live on L1.
+  Default-off keeps the legacy flat torque, so the ISO baseline is unchanged.
+- Tests `DrivetrainV2.L1*` (accel/upshift/sawtooth, idle-clutch launch, programmatic shift
+  policy, flat-path-has-no-engine-state). Theory ch.22 scope updated.
+
 ### Added — user module plugins (build / check / register)
 - Ship a C++ subsystem module as a runtime-loadable `.so` without forking the build. Plugin
   ABI `vdsim/module_plugin.hpp` (`VDSIM_REGISTER_*_MODULE` macros) + dlopen loader

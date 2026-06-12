@@ -20,6 +20,7 @@
 #include "vdsim/interfaces.hpp"
 #include "vdsim/low_speed.hpp"
 #include "vdsim/lugre_tire.hpp"
+#include "vdsim/powertrain.hpp"
 
 #include <spdlog/spdlog.h>
 
@@ -108,15 +109,30 @@ public:
         };
         I_wheel_f_ = I_axle(WHEEL_FL);
         I_wheel_r_ = I_axle(WHEEL_RL);
-        double I_axle_f = 0.0, I_axle_r = 0.0;
-        axle_reflected_shares(vp, I_axle_f, I_axle_r);
-        I_spin_f_ = I_wheel_f_ + I_axle_f;
-        I_spin_r_ = I_wheel_r_ + I_axle_r;
+        // Opt-in powertrain (drivetrain v2): a 2D engine map + N-speed gearbox
+        // replaces the flat (max_motor_torque x final_drive) torque. The engine
+        // is advanced once per substep and its reflected inertia is gear-dependent,
+        // so the spin-inertia base here is wheel-only; the gear-dependent share is
+        // added per substep. Default off -> legacy flat path, ISO baseline unchanged.
+        has_powertrain_ = vp.powertrain.enabled;
+        if (has_powertrain_) {
+            engine_gb_.configure(vp.powertrain);
+            I_spin_f_ = I_wheel_f_;
+            I_spin_r_ = I_wheel_r_;
+        } else {
+            double I_axle_f = 0.0, I_axle_r = 0.0;
+            axle_reflected_shares(vp, I_axle_f, I_axle_r);
+            I_spin_f_ = I_wheel_f_ + I_axle_f;
+            I_spin_r_ = I_wheel_r_ + I_axle_r;
+        }
     }
 
     void reset(const State& s) noexcept override {
         state_   = s;
         ax_prev_ = 0.0;
+        if (has_powertrain_) engine_gb_.reset();
+        pt_T_front_ = pt_T_rear_ = 0.0;
+        pt_I_axle_f_ = pt_I_axle_r_ = 0.0;
         alpha_dyn_f_ = alpha_dyn_r_ = 0.0;
         alpha_geom_f_last_ = alpha_geom_r_last_ = 0.0;
         kappa_geom_f_last_ = kappa_geom_r_last_ = 0.0;
@@ -165,6 +181,14 @@ public:
     std::array<double, NUM_WHEELS> tire_Fz()           const override { return tire_Fz_; }
     std::array<double, NUM_WHEELS> wheel_slip_ratio()  const override { return slip_ratio_; }
     std::array<double, NUM_WHEELS> wheel_slip_angle()  const override { return slip_angle_; }
+
+    double engine_rpm()   const override { return has_powertrain_ ? engine_gb_.engine_rpm() : 0.0; }
+    int    current_gear() const override { return has_powertrain_ ? engine_gb_.current_gear() : 0; }
+    bool   set_shift_policy(ShiftPolicy fn) override {
+        if (!has_powertrain_) return false;
+        engine_gb_.set_shift_policy(std::move(fn));
+        return true;
+    }
 
 private:
     struct Deriv {
@@ -359,21 +383,28 @@ private:
 
         // ---- Drive / brake torques ----
         double Td_f = 0.0, Td_r = 0.0;
-        const double Tmot = cmd.throttle * vp_.max_motor_torque * vp_.final_drive_ratio;
-        switch (vp_.drive_type) {
-            case VehicleParams::Drive::FWD:
-                Td_f = Tmot;
-                break;
-            case VehicleParams::Drive::RWD:
-                Td_r = Tmot;
-                break;
-            case VehicleParams::Drive::AWD:
-                Td_f = 0.5 * Tmot;
-                Td_r = 0.5 * Tmot;
-                break;
-        }
-        if (cmd.gear < 0) {                   // reverse
-            Td_f = -Td_f; Td_r = -Td_r;
+        if (has_powertrain_) {
+            // Engine map + gearbox torque, advanced once per substep (held across
+            // RK4 stages). Reverse sign and reflected inertia are baked in upstream.
+            Td_f = pt_T_front_;
+            Td_r = pt_T_rear_;
+        } else {
+            const double Tmot = cmd.throttle * vp_.max_motor_torque * vp_.final_drive_ratio;
+            switch (vp_.drive_type) {
+                case VehicleParams::Drive::FWD:
+                    Td_f = Tmot;
+                    break;
+                case VehicleParams::Drive::RWD:
+                    Td_r = Tmot;
+                    break;
+                case VehicleParams::Drive::AWD:
+                    Td_f = 0.5 * Tmot;
+                    Td_r = 0.5 * Tmot;
+                    break;
+            }
+            if (cmd.gear < 0) {                   // reverse
+                Td_f = -Td_f; Td_r = -Td_r;
+            }
         }
         double bias = std::clamp(vp_.brake_bias_front, 0.0, 1.0);
         if (vp_.brake_ebd_enabled) {
@@ -416,8 +447,10 @@ private:
             d_out.dvy = dvy_dyn + (1.0 - lambda) * (vy_kin - vy) / kKinTau;
             d_out.dr  = dr_dyn  + (1.0 - lambda) * (r_kin  - r ) / kKinTau;
         }
-        d_out.domega_f = (Td_f + Tb_f - fx_kin_f * R) / I_spin_f_;
-        d_out.domega_r = (Td_r + Tb_r - fx_kin_r * R) / I_spin_r_;
+        // Gear-dependent reflected engine inertia (powertrain) is added to the
+        // wheel-only base; zero when the flat-torque path is active.
+        d_out.domega_f = (Td_f + Tb_f - fx_kin_f * R) / (I_spin_f_ + pt_I_axle_f_);
+        d_out.domega_r = (Td_r + Tb_r - fx_kin_r * R) / (I_spin_r_ + pt_I_axle_r_);
 
         // ---- Diagnostics ----
         // Reported force: fade the raw slip force by lambda and let the smooth
@@ -501,6 +534,36 @@ private:
 
     void substep(const CmdL4& cmd, const ContactArray& contacts, double h) {
         const State s0 = state_;
+        // Powertrain (opt-in) is stateful (rpm / gear / shift timer): advance it
+        // once per substep with dt=h and hold the axle drive torque + gear-dependent
+        // reflected inertia across the RK4 stages (the spin EOM in derivatives()
+        // reads the cached pt_* values). Mirrors the once-per-step begin_step in
+        // the 7-DOF EngineGearboxDrivetrain.
+        if (has_powertrain_) {
+            const double of  = s0.wheel_spin[WHEEL_FL];
+            const double or_ = s0.wheel_spin[WHEEL_RL];
+            double driven_omega = 0.0;
+            switch (vp_.drive_type) {
+                case VehicleParams::Drive::FWD: driven_omega = of; break;
+                case VehicleParams::Drive::RWD: driven_omega = or_; break;
+                case VehicleParams::Drive::AWD: driven_omega = 0.5 * (of + or_); break;
+            }
+            double T = engine_gb_.axle_torque(cmd.throttle, cmd.brake, driven_omega,
+                                              s0.velocity.x(), cmd.gear, h);
+            if (engine_gb_.current_gear() < 0) T = -T;   // reverse drives backward
+            const double Iax = engine_gb_.reflected_inertia();
+            switch (vp_.drive_type) {
+                case VehicleParams::Drive::FWD:
+                    pt_T_front_ = T;       pt_T_rear_ = 0.0;
+                    pt_I_axle_f_ = Iax;    pt_I_axle_r_ = 0.0;       break;
+                case VehicleParams::Drive::RWD:
+                    pt_T_front_ = 0.0;     pt_T_rear_ = T;
+                    pt_I_axle_f_ = 0.0;    pt_I_axle_r_ = Iax;       break;
+                case VehicleParams::Drive::AWD:
+                    pt_T_front_ = 0.5 * T; pt_T_rear_ = 0.5 * T;
+                    pt_I_axle_f_ = 0.5 * Iax; pt_I_axle_r_ = 0.5 * Iax; break;
+            }
+        }
         const bool lugre_on = tp_.lugre.enabled;
         const double hz = 0.25 * h;
         if (sp_.integrator == SolverParams::Integrator::Euler) {
@@ -567,6 +630,16 @@ private:
     double I_wheel_r_ {1.0};
     double I_spin_f_  {1.0};
     double I_spin_r_  {1.0};
+
+    // Opt-in powertrain (drivetrain v2). Engine state is advanced once per substep;
+    // the axle drive torque + gear-dependent reflected inertia are cached and held
+    // across the RK4 stages.
+    bool          has_powertrain_ {false};
+    EngineGearbox engine_gb_;
+    double pt_T_front_  {0.0};
+    double pt_T_rear_   {0.0};
+    double pt_I_axle_f_ {0.0};
+    double pt_I_axle_r_ {0.0};
 
     State state_;
     double ax_prev_ {0.0};

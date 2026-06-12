@@ -6,7 +6,12 @@ a 2D engine torque map, an N-speed gearbox coupled to engine RPM, and a shift po
 can be a user-defined function. It is enabled by a `powertrain:` block in the vehicle
 config; absent that block the legacy flat torque is used and the ISO baseline is unchanged.
 
-Scope: L2 (seven-DOF) and L3 (fourteen-DOF, via its inner L2). L1 keeps the flat torque.
+Scope: L1 (bicycle), L2 (seven-DOF), L3 (fourteen-DOF, via its inner L2), L4/L5 (via the
+same plants). On L1 the engine is advanced once per RK4 substep and its gear-dependent
+reflected inertia is added to the (single) front/rear axle spin inertia; the axle drive
+torque is split by `drive_type` (FWD->front, RWD->rear, AWD 50/50) exactly as on L2. With
+no `powertrain:` block every level keeps the legacy flat torque, so the ISO baseline is
+unchanged.
 
 ## 1. Engine torque map
 

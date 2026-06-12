@@ -133,7 +133,8 @@ module workshop; L1 has no subsystem objects (out of scope).
 
 **v0.6+:**
 1. Ld4 v0.6 — shared inertia helpers; full loop dynamics; Featherstone in step (optional).
-2. Drivetrain: catalog `drivetrain_v2` part + engine-map workshop (UI). Core done.
+2. Drivetrain: catalog `drivetrain_v2` part **(done)** + L1 powertrain **(done)**;
+   engine-map workshop (UI) remaining.
 3. Tire: T2 belt is **complete** (L1–L5); higher belt eigenmodes (rigid-ring/FTire) out of scope.
 
 ## 5. 주의
@@ -161,7 +162,10 @@ module workshop; L1 has no subsystem objects (out of scope).
 
 1. **(DONE)** Catalog `drivetrain_v2` part — `drivetrain.sedan_v2` carries a `powertrain:`
    block through the resolver into the vehicle config; blueprint `vehicle.sedan_powertrain`.
-   Remaining drivetrain: engine-map workshop (GUI), L1 powertrain.
+   **(DONE)** L1 powertrain — the engine map + gearbox + shift policy now runs on the
+   bicycle (opt-in, advanced once per substep, gear-dependent reflected inertia; flat path
+   default-off keeps ISO green). Tests `DrivetrainV2.L1*`. Remaining drivetrain: engine-map
+   workshop (GUI).
 2. **Ld4 v0.6** — shared inertia helpers; full loop dynamics; Featherstone in step (optional).
 3. **v0.5.2 GUI (browser, user-verified):** terrain Play (M4), stunt authoring (M5c),
    `.tir` import, tire-force arrows in wheel frame (`tire_forces_wheel()` ready).
