@@ -44,6 +44,55 @@ TEST(MultibodyTopology, MacPhersonGraph) {
     EXPECT_DOUBLE_EQ(topo.hardpoints.at("wheel.center").position.y(), 0.775);
 }
 
+// Re-taxonomy step 2: an optional top-level `knuckle:` block defines knuckle
+// attachment points and the steering knuckle-arm point relative to the wheel
+// centre; the parser resolves each to an absolute body-frame hardpoint
+// (wheel.center + offset). Legacy kin files omit it, so the topology is unchanged
+// (the MacPhersonGraph test above still passes bit-identically).
+TEST(MultibodyTopology, KnuckleBlockWheelCenterRelative) {
+    const auto out = std::filesystem::temp_directory_path() / "vdsim_knuckle_kin.yaml";
+    {
+        std::ofstream f(out);
+        f << "type: macpherson\n"
+             "side: left\n"
+             "wheel:\n"
+             "  center: [0.0, 0.8, 0.3]\n"
+             "  spin_axis: [0.0, 1.0, 0.0]\n"
+             "lca:\n"
+             "  chassis_front: [0.1, 0.32, 0.18]\n"
+             "  chassis_rear: [-0.2, 0.32, 0.18]\n"
+             "  knuckle: [-0.02, 0.74, 0.2]\n"
+             "strut:\n"
+             "  top: [-0.04, 0.6, 0.65]\n"
+             "  bottom: [-0.04, 0.72, 0.31]\n"
+             "tie_rod:\n"
+             "  rack: [-0.3, 0.4, 0.22]\n"
+             "  knuckle: [-0.3, 0.73, 0.25]\n"
+             "knuckle:\n"
+             "  ref: wheel_center\n"
+             "  points:\n"
+             "    lca: [-0.02, -0.06, -0.10]\n"
+             "    tie_rod: [-0.30, -0.07, -0.05]\n"
+             "  arm: [-0.12, -0.05, 0.02]\n";
+    }
+    auto topo = vdsim::mb::SuspensionTopology::from_yaml(out.string());
+    ASSERT_TRUE(topo.hardpoints.count("knuckle.lca"));
+    ASSERT_TRUE(topo.hardpoints.count("knuckle.arm"));
+    // Resolved = wheel.center + offset.
+    const auto& kl = topo.hardpoints.at("knuckle.lca").position;
+    EXPECT_DOUBLE_EQ(kl.x(), 0.0 + (-0.02));
+    EXPECT_DOUBLE_EQ(kl.y(), 0.8 + (-0.06));
+    EXPECT_DOUBLE_EQ(kl.z(), 0.3 + (-0.10));
+    const auto& ka = topo.hardpoints.at("knuckle.arm").position;
+    EXPECT_DOUBLE_EQ(ka.x(), 0.0 + (-0.12));
+    EXPECT_DOUBLE_EQ(ka.y(), 0.8 + (-0.05));
+    EXPECT_DOUBLE_EQ(ka.z(), 0.3 + 0.02);
+    EXPECT_EQ(topo.hardpoints.at("knuckle.arm").body_id, "knuckle");
+    // The legacy absolute knuckle fields are still parsed (dynamics unchanged).
+    EXPECT_TRUE(topo.hardpoints.count("lca.knuckle"));
+    std::filesystem::remove(out);
+}
+
 TEST(MultibodyTopology, FiveLinkKindAlias) {
     const std::string path = std::string(VDSIM_SOURCE_DIR)
         + "/configs/parts/susp_kinematics/kin/5link_rear_sports.yaml";

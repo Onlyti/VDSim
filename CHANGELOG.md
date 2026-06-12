@@ -21,6 +21,13 @@ All notable changes to VDSim are documented here. Format follows
 - **Pending (GUI session, browser-verify):** `part_store.py` part-authoring templates +
   `gui/static/app.js` vehicle-edit "Chassis" tab still use the old taxonomy.
 
+### Added — wheel-centre-relative knuckle schema (chassis kin)
+- A chassis kin file may carry an optional top-level `knuckle:` block defining knuckle
+  attachment points and the steering knuckle-arm point as offsets from the wheel centre;
+  the topology parser resolves each to an absolute hardpoint `knuckle.<name>` / `knuckle.arm`.
+  Additive — legacy kin files omit it, so the topology and the L4 hard-DAE dynamics are
+  unchanged. Test `MultibodyTopology.KnuckleBlockWheelCenterRelative`; doc LD4_MULTIBODY §4.
+
 ### Added — user module plugins (build / check / register)
 - Ship a C++ subsystem module as a runtime-loadable `.so` without forking the build. Plugin
   ABI `vdsim/module_plugin.hpp` (`VDSIM_REGISTER_*_MODULE` macros) + dlopen loader
