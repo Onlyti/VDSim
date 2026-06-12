@@ -22,10 +22,10 @@ TIRE_STEM_TO_ID = {
 TIRE_ID_TO_STEM = {v: k for k, v in TIRE_STEM_TO_ID.items()}
 
 SUSP_STEM_TO_ID = {
-    "mp_front_sedan": "susp.mp_front_sedan",
-    "ta_rear_sedan": "susp.ta_rear_sedan",
-    "dw_front_sports": "susp.dw_front_sports",
-    "5link_rear_sports": "susp.5link_rear_sports",
+    "mp_front_sedan": "chassis.mp_front_sedan",
+    "ta_rear_sedan": "chassis.ta_rear_sedan",
+    "dw_front_sports": "chassis.dw_front_sports",
+    "5link_rear_sports": "chassis.5link_rear_sports",
 }
 
 SUSP_ID_TO_STEM = {v: k for k, v in SUSP_STEM_TO_ID.items()}
@@ -62,9 +62,11 @@ def tire_stem_from_id(part_id: str) -> str:
 
 def susp_id_from_stem(stem: str) -> str:
     s = str(stem)
-    if s.startswith("susp."):
+    if s.startswith("chassis."):
         return s
-    return SUSP_STEM_TO_ID.get(s, f"susp.{s}")
+    if s.startswith("susp."):           # legacy stem -> new chassis id
+        s = s.split(".", 1)[1]
+    return SUSP_STEM_TO_ID.get(s, f"chassis.{s}")
 
 
 def susp_stem_from_id(part_id: str) -> str:

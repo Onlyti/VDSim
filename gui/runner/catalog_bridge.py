@@ -43,13 +43,13 @@ def normalize_fleet_spec(spec: Dict[str, Any]) -> None:
             defaults = suspension_default_for_vehicle(spec["vehicle"])
         spec.setdefault("front_susp", defaults.get("front", "mp_front_sedan"))
         spec.setdefault("rear_susp", defaults.get("rear", "ta_rear_sedan"))
-        parts.setdefault("front_susp_kin", susp_id_from_stem(str(spec["front_susp"])))
-        parts.setdefault("rear_susp_kin", susp_id_from_stem(str(spec["rear_susp"])))
+        parts.setdefault("front_chassis", susp_id_from_stem(str(spec["front_susp"])))
+        parts.setdefault("rear_chassis", susp_id_from_stem(str(spec["rear_susp"])))
     else:
         spec.pop("front_susp", None)
         spec.pop("rear_susp", None)
-        parts.pop("front_susp_kin", None)
-        parts.pop("rear_susp_kin", None)
+        parts.pop("front_chassis", None)
+        parts.pop("rear_chassis", None)
 
 
 def apply_fleet_field_update(spec: Dict[str, Any], upd: Mapping[str, Any]) -> None:
@@ -83,9 +83,9 @@ def apply_fleet_field_update(spec: Dict[str, Any], upd: Mapping[str, Any]) -> No
             spec["front_susp"] = d["front"]
             spec["rear_susp"] = d["rear"]
     if "front_susp" in upd:
-        spec.setdefault("parts", {})["front_susp_kin"] = susp_id_from_stem(str(upd["front_susp"]))
+        spec.setdefault("parts", {})["front_chassis"] = susp_id_from_stem(str(upd["front_susp"]))
     if "rear_susp" in upd:
-        spec.setdefault("parts", {})["rear_susp_kin"] = susp_id_from_stem(str(upd["rear_susp"]))
+        spec.setdefault("parts", {})["rear_chassis"] = susp_id_from_stem(str(upd["rear_susp"]))
     normalize_fleet_spec(spec)
     strip_fleet_susp_if_not_l3(spec)
 

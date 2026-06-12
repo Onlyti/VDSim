@@ -89,8 +89,8 @@ def fleet_spec_from_scene(doc: Mapping[str, Any]) -> List[dict]:
             bp_name = bid.replace("vehicle.", "") + ".yaml"
             bp = yaml.safe_load((bp_path / bp_name).read_text()) or {}
             bp_parts = bp.get("parts") or {}
-            f_id = parts.get("front_susp_kin", bp_parts.get("front_susp_kin", ""))
-            r_id = parts.get("rear_susp_kin", bp_parts.get("rear_susp_kin", ""))
+            f_id = parts.get("front_chassis", bp_parts.get("front_chassis", ""))
+            r_id = parts.get("rear_chassis", bp_parts.get("rear_chassis", ""))
             if f_id:
                 row["front_susp"] = susp_stem_from_id(str(f_id))
             if r_id:
@@ -116,10 +116,10 @@ def resolve_fleet_entry(
     if level in ("L3", "L4"):
         if spec.get("front_susp"):
             instance_parts.setdefault(
-                "front_susp_kin", susp_id_from_stem(str(spec["front_susp"])))
+                "front_chassis", susp_id_from_stem(str(spec["front_susp"])))
         if spec.get("rear_susp"):
             instance_parts.setdefault(
-                "rear_susp_kin", susp_id_from_stem(str(spec["rear_susp"])))
+                "rear_chassis", susp_id_from_stem(str(spec["rear_susp"])))
     sub = out_dir / f"veh_{vid}"
     sub.mkdir(parents=True, exist_ok=True)
     ov = dict(overrides or {})
