@@ -89,4 +89,10 @@ if(Python3_FOUND)
     set_tests_properties(blueprint_roundtrip PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/build/python:${CMAKE_SOURCE_DIR}/python")
+    add_test(NAME multi_vehicle_compare
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_compare.py)
+    set_tests_properties(multi_vehicle_compare PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/build/python:${CMAKE_SOURCE_DIR}/python")
 endif()

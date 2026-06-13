@@ -39,9 +39,9 @@ def _throttle_to(vx, v_target):
     return c
 
 
-def step_steer(v=20.0, steer=0.03, dt=0.005, settle=3.0, hold=4.0, level="L2"):
+def step_steer(v=20.0, steer=0.03, dt=0.005, settle=3.0, hold=4.0, level="L2", veh=None):
     """ISO 7401: hold speed, step the steer, measure the yaw-rate response."""
-    vp, tp = _veh(level)
+    vp, tp = veh if veh is not None else _veh(level)
     sess = vdsim.make_sim_session(vp, tp, level, nominal_dt=dt)
     sess.reset(vdsim.make_init_state(0, 0, 0, v, vp.wheel_radius_nominal))
     t, r = [], []
@@ -62,10 +62,10 @@ def step_steer(v=20.0, steer=0.03, dt=0.005, settle=3.0, hold=4.0, level="L2"):
             "rise90[s]": round(rise, 3), "overshoot[%]": round(overshoot, 1)}
 
 
-def skidpad_understeer(R=40.0, speeds=(8, 12, 16, 19), dt=0.005, level="L2"):
+def skidpad_understeer(R=40.0, speeds=(8, 12, 16, 19), dt=0.005, level="L2", veh=None):
     """ISO 4138: hold a constant-radius circle at several speeds, fit the
     understeer gradient K_us = d(delta - delta_ack)/d(ay)."""
-    vp, tp = _veh(level)
+    vp, tp = veh if veh is not None else _veh(level)
     L = vp.wheelbase
     ay_list, dsw_list = [], []
     for v in speeds:
@@ -97,9 +97,9 @@ def skidpad_understeer(R=40.0, speeds=(8, 12, 16, 19), dt=0.005, level="L2"):
             "balance": sign, "delta_ack[deg]": round(d_ack, 2)}
 
 
-def double_lane_change(v=14.0, dt=0.005, level="L2"):
+def double_lane_change(v=14.0, dt=0.005, level="L2", veh=None):
     """ISO 3888-2 (moose): pure-pursuit through an offset-then-return path."""
-    vp, tp = _veh(level)
+    vp, tp = veh if veh is not None else _veh(level)
     L = vp.wheelbase
     # piecewise lateral target: out by 3.5 m between 30..45 m, back by 60 m
     def y_ref(x):
