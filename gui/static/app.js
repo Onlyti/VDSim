@@ -1948,11 +1948,11 @@ async function fetchModalAssembly(opts = {}) {
   return modalAssembly;
 }
 function installSlotForPartType(typeName, partId) {
-  if (typeName === 'susp_kinematics') {
+  if (typeName === 'chassis') {     // suspension linkage -> per-axle slot
     const s = (partId || '').toLowerCase();
-    if (s.includes('rear')) return 'rear_susp_kin';
-    if (s.includes('front')) return 'front_susp_kin';
-    return 'front_susp_kin';
+    if (s.includes('rear')) return 'rear_chassis';
+    if (s.includes('front')) return 'front_chassis';
+    return 'front_chassis';
   }
   return PART_TYPE_INSTALL_SLOT[typeName] || null;
 }
@@ -2046,7 +2046,7 @@ function buildGarageDiagram(parent, asm, activeSlot, onSelect) {
     b.onclick = () => onSelect(slotKey);
     parent.appendChild(b);
   };
-  mk('dg-chassis', 'chassis', 'Chassis');
+  mk('dg-chassis', 'body', 'Body');
   if (slotMap.tire) {
     const s = slotMap.tire;
     for (const [cls, lab] of [['fl', 'FL'], ['fr', 'FR'], ['rl', 'RL'], ['rr', 'RR']]) {
@@ -2074,7 +2074,7 @@ function buildGarageDiagram(parent, asm, activeSlot, onSelect) {
     b.onclick = () => onSelect(ctrl[0]);
     parent.appendChild(b);
   }
-  ['front_susp_kin', 'rear_susp_kin'].forEach((k, i) => {
+  ['front_chassis', 'rear_chassis'].forEach((k, i) => {
     if (!slotMap[k]) return;
     const b = document.createElement('button');
     b.type = 'button';
@@ -2503,7 +2503,7 @@ window.__vdsimOnStop = async () => {
 window.__vdsimPlay = () => window.__vdsimCore?.playSim();
 window.__vdsimStop = () => window.__vdsimCore?.stopSim();
 window.__vdsimReset = () => window.__vdsimCore?.resetSim();
-$('setup_fleet_add').onclick = () => fleetAddVehicle();
+$('setup_fleet_add').onclick = () => openPresetPicker();
 $('setup_scenario_load').onclick = async () => {
   const name = $('setup_scenario').value;
   if (!name) return;
@@ -2810,7 +2810,7 @@ async function buildVehicleTree(fleetSpec, liveVid) {
   refreshFleetEditControls();
   refreshDriverUI();
 }
-$('add_veh').onclick = () => fleetAddVehicle();
+$('add_veh').onclick = () => openPresetPicker();
 let infraSensors = [];
 function buildInfraTree(list) {
   infraSensors = list || [];
@@ -3010,16 +3010,19 @@ const SUSP_PRESETS = {
 const WS_CORNERS = ['FL', 'FR', 'RL', 'RR'];
 let modalTab = 'assembly', modalLvl = 'L2', modalCorner = 0, modalVid = 0;
 let modalAssembly = null;
-let modalAsmSlot = 'chassis', modalAsmPreview = null, modalAsmPreviewTimer = null;
+let modalAsmSlot = 'body', modalAsmPreview = null, modalAsmPreviewTimer = null;
 let modalAsmPinnedCandidate = null;
-let partsLibType = 'chassis', partsLibSelId = '', partsLibEditor = null;
+let partsLibType = 'body', partsLibSelId = '', partsLibEditor = null;
 let partsLibQuery = '', partsLibTag = '', partsLibSort = 'label';
+// Re-taxonomy step 2: the vehicle = body + aero + ride + chassis (suspension
+// linkage) + tire/brake/steering/drivetrain. "chassis" is now the linkage part.
 const PART_LIB_TYPES = [
-  ['chassis', 'Chassis'], ['tire', 'Tire'], ['brake', 'Brake'],
-  ['steering', 'Steering'], ['drivetrain', 'Drivetrain'], ['susp_kinematics', 'Susp kin'],
+  ['body', 'Body'], ['aero', 'Aero'], ['ride', 'Ride'],
+  ['chassis', 'Chassis (links)'], ['tire', 'Tire'], ['brake', 'Brake'],
+  ['steering', 'Steering'], ['drivetrain', 'Drivetrain'],
 ];
 const PART_TYPE_INSTALL_SLOT = {
-  chassis: 'chassis', tire: 'tire', brake: 'brake',
+  body: 'body', aero: 'aero', ride: 'ride', tire: 'tire', brake: 'brake',
   steering: 'steering', drivetrain: 'drivetrain',
 };
 let vehFields = [], tireFields = [], sensFields = [], actFields = [], tireSamples = [];
@@ -3943,6 +3946,77 @@ function closeModal() {
   disposeModalPreview();
   $('modal_bg').classList.remove('open');
 }
+
+// Add a vehicle and (optionally) set its blueprint preset; returns the new vid.
+async function fleetAddVehicleSpec(blueprintId) {
+  const r = await (await fetch('/api/setup', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fleet_add: true }),
+  })).json();
+  const fleet = r.setup?.fleet || [];
+  const nf = fleet[fleet.length - 1];
+  if (!nf) return null;
+  const newVid = +nf.id;
+  window._fleetSpec = mergeSetupFleet(fleet);
+  if (blueprintId) {
+    const r2 = await postSetup({ fleet: [{ id: newVid, blueprint: blueprintId }] });
+    if (r2.setup?.fleet) window._fleetSpec = mergeSetupFleet(r2.setup.fleet);
+  }
+  selectedVid = newVid;
+  await syncFleetPanels(window._fleetSpec, selectedVid);
+  return newVid;
+}
+
+// '+' add-vehicle -> pick a blueprint preset, then drop into its assembly config.
+async function openPresetPicker() {
+  if (simRunning) return;
+  let blueprints = [];
+  try {
+    const r = await getJson(`/api/catalog/assembly?vehicle_id=${selectedVid}`);
+    blueprints = r.assembly?.blueprints || [];
+  } catch (e) { alert(e.message); return; }
+  let bg = document.getElementById('preset_bg');
+  if (!bg) {
+    bg = document.createElement('div');
+    bg.id = 'preset_bg';
+    bg.className = 'modal-bg';
+    bg.innerHTML = `<div class="modal" style="max-width:660px">
+      <div class="modal-h"><b>Add vehicle — pick a preset</b>`
+      + `<button id="preset_x" class="modal-x" type="button">×</button></div>`
+      + `<div style="padding:6px 14px 0;color:#667;font-size:11px">`
+      + `Start the new vehicle from a catalog preset; you can customise it next.</div>`
+      + `<div id="preset_grid" style="padding:12px 14px;display:grid;`
+      + `grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px"></div></div>`;
+    document.body.appendChild(bg);
+    bg.querySelector('#preset_x').onclick = closePresetPicker;
+    bg.addEventListener('click', e => { if (e.target === bg) closePresetPicker(); });
+  }
+  const grid = bg.querySelector('#preset_grid');
+  grid.innerHTML = '';
+  for (const b of blueprints) {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.style.cssText = 'display:flex;flex-direction:column;gap:4px;padding:12px;'
+      + 'text-align:left;cursor:pointer;border:1px solid #ccd;border-radius:6px;background:#fff';
+    card.innerHTML = `<b style="font-size:12px">${b.label || b.id}</b>`
+      + `<span class="sub" style="font-size:10px;color:#789">${b.level || ''} · ${b.id}</span>`;
+    card.onclick = () => addVehicleFromPreset(b.id);
+    grid.appendChild(card);
+  }
+  if (!blueprints.length) grid.innerHTML = '<span class="sub">No blueprint presets found.</span>';
+  bg.classList.add('open');
+}
+function closePresetPicker() {
+  document.getElementById('preset_bg')?.classList.remove('open');
+}
+async function addVehicleFromPreset(blueprintId) {
+  closePresetPicker();
+  try {
+    const vid = await fleetAddVehicleSpec(blueprintId);
+    if (vid != null) { markDraftDirty(); await openModal(vid); }
+  } catch (e) { alert(e.message); }
+}
+
 $('modal_x').onclick = closeModal;
 $('modal_bg').addEventListener('click', e => { if (e.target === $('modal_bg')) closeModal(); });
 

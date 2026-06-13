@@ -12,13 +12,6 @@ from catalog.resolver import CatalogError, CatalogResolver, PartEnvelopeError
 USER_PACKAGE_ID = "gui_custom"
 _STEM_RE = re.compile(r"^[a-z][a-z0-9_]{0,47}$")
 
-CHASSIS_BODY_KEYS = (
-    "mass", "mass_sprung", "cg_height", "cg_to_front", "cg_to_rear",
-    "wheelbase", "track_front", "track_rear", "wheel_radius_nominal",
-    "inertia_diag", "spring_stiffness", "damper_coefficient", "unsprung_mass",
-    "aero_drag_coeff", "frontal_area", "aero_lift_front", "aero_lift_rear",
-)
-
 TIRE_BODY_KEYS = (
     "mu_nominal", "Fz_nominal", "B_long", "C_long", "D_long", "E_long",
     "B_lat", "C_lat", "D_lat", "E_lat", "rolling_resistance",
@@ -27,16 +20,18 @@ TIRE_BODY_KEYS = (
 )
 
 EDITABLE_TYPES = frozenset({
-    "chassis", "tire", "brake", "steering", "drivetrain", "susp_kinematics",
+    "body", "aero", "ride", "chassis", "tire", "brake", "steering", "drivetrain",
 })
 
 _DEFAULT_CLONE: Dict[str, str] = {
-    "chassis": "chassis.sedan",
+    "body": "body.sedan",
+    "aero": "aero.sedan",
+    "ride": "ride.sedan",
+    "chassis": "chassis.mp_front_sedan",   # suspension linkage
     "tire": "tire.default_pacejka",
     "brake": "brake.sedan",
     "steering": "steering.sedan",
     "drivetrain": "drivetrain.sedan",
-    "susp_kinematics": "susp.mp_front_sedan",
 }
 
 META_FIELDS: List[Tuple[str, str, str]] = [
@@ -46,23 +41,42 @@ META_FIELDS: List[Tuple[str, str, str]] = [
 ]
 
 EDITOR_SCHEMAS: Dict[str, Dict[str, Any]] = {
-    "chassis": {
-        "schema": "vehicle_params_v1",
+    "body": {
+        "schema": "body_v1",
         "fields": [
             ("mass", "Mass [kg]", "num"),
+            ("mass_sprung", "Sprung mass [kg]", "num"),
             ("cg_height", "CG height [m]", "num"),
             ("cg_to_front", "CG to front [m]", "num"),
             ("cg_to_rear", "CG to rear [m]", "num"),
+            ("wheelbase", "Wheelbase [m]", "num"),
             ("track_front", "Track front [m]", "num"),
             ("track_rear", "Track rear [m]", "num"),
             ("wheel_radius_nominal", "Wheel radius [m]", "num"),
+        ],
+        "array_fields": [
+            ("inertia_diag", "Inertia Ixx,Iyy,Izz [kg·m²]", 3),
+            ("unsprung_mass", "Unsprung mass [kg] FL,FR,RL,RR", 4),
+        ],
+    },
+    "aero": {
+        "schema": "aero_v1",
+        "fields": [
             ("aero_drag_coeff", "Drag coeff", "num"),
             ("frontal_area", "Frontal area [m²]", "num"),
+            ("aero_lift_front", "Lift front", "num"),
+            ("aero_lift_rear", "Lift rear", "num"),
+        ],
+    },
+    "ride": {
+        "schema": "ride_v1",
+        "fields": [
+            ("arb_stiffness_front", "ARB front [N·m/rad]", "num"),
+            ("arb_stiffness_rear", "ARB rear [N·m/rad]", "num"),
         ],
         "array_fields": [
             ("spring_stiffness", "Spring k [N/m] FL,FR,RL,RR", 4),
             ("damper_coefficient", "Damper c [N·s/m] FL,FR,RL,RR", 4),
-            ("inertia_diag", "Inertia Ixx,Iyy,Izz [kg·m²]", 3),
         ],
     },
     "tire": {
@@ -111,7 +125,7 @@ EDITOR_SCHEMAS: Dict[str, Dict[str, Any]] = {
             ("lsd_ramp", "LSD ramp", "num"),
         ],
     },
-    "susp_kinematics": {
+    "chassis": {
         "schema": "kinematics_l3_native_v1",
         "fields": [
             ("path", "Kinematics YAML path (repo-relative)", "text"),
@@ -149,8 +163,6 @@ def part_id_for(type_name: str, stem: str) -> str:
     t = str(type_name).strip()
     if t not in EDITABLE_TYPES:
         raise CatalogError(f"part editor unsupported type: {t}")
-    if t == "susp_kinematics":
-        return f"susp.{normalize_stem(stem)}"
     return f"{t}.{normalize_stem(stem)}"
 
 
@@ -223,21 +235,7 @@ def new_part_doc(
         doc["body"] = copy.deepcopy(dict(clone_from.get("body") or {}))
         return doc
     body: Dict[str, Any] = {}
-    if t == "chassis":
-        resolver = CatalogResolver(Path(__file__).resolve().parents[2])
-        try:
-            ref = resolver.load_part("chassis.sedan")
-            body = copy.deepcopy(dict(ref.get("body") or {}))
-        except CatalogError:
-            body = {k: 0.0 for k in CHASSIS_BODY_KEYS if k not in (
-                "spring_stiffness", "damper_coefficient", "unsprung_mass", "inertia_diag")}
-            body["spring_stiffness"] = [30000.0] * 4
-            body["damper_coefficient"] = [3000.0] * 4
-            body["unsprung_mass"] = [40.0] * 4
-            body["inertia_diag"] = [500.0, 2000.0, 2500.0]
-            body["mass"] = 1500.0
-            body["cg_height"] = 0.55
-    elif t == "tire":
+    if t == "tire":
         resolver = CatalogResolver(Path(__file__).resolve().parents[2])
         try:
             ref = resolver.load_part("tire.default_pacejka")
@@ -343,8 +341,8 @@ def kin_yaml_to_susp_part(
         raise CatalogError("kinematics YAML root must be a mapping")
     if not kin.get("type"):
         raise CatalogError("kinematics YAML needs top-level type (e.g. macpherson)")
-    base = clone_from or new_part_doc("susp_kinematics", stem, label)
-    base["id"] = part_id_for("susp_kinematics", stem)
+    base = clone_from or new_part_doc("chassis", stem, label)
+    base["id"] = part_id_for("chassis", stem)
     base["label"] = str(label)
     return base, kin
 
@@ -357,11 +355,11 @@ def save_user_kin_part(
     ensure_user_package(repo_root)
     part = copy.deepcopy(dict(doc))
     stem = part["id"].split(".", 1)[1]
-    kin_dir = user_package_root(repo_root) / "parts" / "susp_kinematics" / "kin"
+    kin_dir = user_package_root(repo_root) / "parts" / "chassis" / "kin"
     kin_dir.mkdir(parents=True, exist_ok=True)
     kin_path = kin_dir / f"{normalize_stem(stem)}.yaml"
     kin_path.write_text(yaml.safe_dump(dict(kin_body), sort_keys=False), encoding="utf-8")
-    rel = f"catalog/packages/{USER_PACKAGE_ID}/parts/susp_kinematics/kin/{kin_path.name}"
+    rel = f"catalog/packages/{USER_PACKAGE_ID}/parts/chassis/kin/{kin_path.name}"
     body = dict(part.get("body") or {})
     body["path"] = rel
     part["body"] = body
@@ -396,10 +394,7 @@ def save_user_part(repo_root: Path, doc: Mapping[str, Any], *, allow_overwrite: 
         raise CatalogError(f"save unsupported type: {part['type']}")
     pid = str(part["id"])
     ptype = part["type"]
-    if ptype == "susp_kinematics":
-        if not pid.startswith("susp."):
-            raise CatalogError("susp_kinematics id must start with susp.")
-    elif not pid.startswith(ptype + "."):
+    if not pid.startswith(ptype + "."):
         raise CatalogError(f"part id must start with {ptype}.")
 
     resolver = CatalogResolver(repo_root)
@@ -502,7 +497,7 @@ def delete_user_part(repo_root: Path, part_id: str) -> dict:
     if part_path.is_file():
         try:
             doc = yaml.safe_load(part_path.read_text(encoding="utf-8")) or {}
-            if doc.get("type") == "susp_kinematics":
+            if doc.get("type") == "chassis":
                 kin_rel = str((doc.get("body") or {}).get("path", ""))
                 if kin_rel.startswith(f"catalog/packages/{USER_PACKAGE_ID}/"):
                     kin_fp = Path(repo_root) / "configs" / kin_rel
@@ -577,7 +572,7 @@ def editable_part_types() -> List[Dict[str, Any]]:
             "type": t,
             "label": t.replace("_", " ").title(),
             "schema": schema,
-            "import_kin": t == "susp_kinematics",
+            "import_kin": t == "chassis",
             "import_tir": t == "tire",
         })
     return out
