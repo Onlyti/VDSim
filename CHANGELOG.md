@@ -6,6 +6,15 @@ All notable changes to VDSim are documented here. Format follows
 
 ## [Unreleased]
 
+### Added — L1 powertrain (drivetrain v2 on the bicycle)
+- The drivetrain v2 engine map + N-speed gearbox + shift policy now runs on the L1 bicycle
+  (previously L2/L3 only). Opt-in via the `powertrain:` block; the engine is advanced once
+  per RK4 substep and its gear-dependent reflected inertia is added to the front/rear axle
+  spin inertia. `engine_rpm()` / `current_gear()` / `set_shift_policy()` are live on L1.
+  Default-off keeps the legacy flat torque, so the ISO baseline is unchanged.
+- Tests `DrivetrainV2.L1*` (accel/upshift/sawtooth, idle-clutch launch, programmatic shift
+  policy, flat-path-has-no-engine-state). Theory ch.22 scope updated.
+
 ### Changed — shared multibody math (Ld4 v0.6 M1)
 - Extracted the rotation + corner-inertia math duplicated between the hard-joint corner DAE
   and the Featherstone revolute tree into `vdsim/multibody_math.{hpp,cpp}` (`rodrigues`,

@@ -202,3 +202,91 @@ TEST(OpenDiffInertia, EngineInertiaSlowsSymmetricLaunch) {
         << "engine inertia must slow symmetric open-diff accel "
            "(v_lowI=" << v_lowI << " v_highI=" << v_highI << ")";
 }
+
+// ---------------------------------------------------------------------------
+// L1 bicycle powertrain: the same engine map + gearbox + shift policy runs on
+// the single-track plant (opt-in via vp.powertrain.enabled). The engine is
+// advanced once per substep; with the flag off, the flat torque path is used.
+// ---------------------------------------------------------------------------
+TEST(DrivetrainV2, L1AccelUpshiftsAndRpmStaysBounded) {
+    const auto vp = powertrain_vp();
+    auto dyn = vdsim::create_bicycle();
+    dyn->initialize(vp, vdsim::TireParams{}, vdsim::SolverParams{});
+    dyn->reset(rolling(4.0));
+    auto ground = vdsim::create_flat_ground(0.0, 1.0);
+    vdsim::CmdL4 cmd; cmd.throttle = 1.0; cmd.gear = 1;
+    const vdsim::ControlInput u = cmd;
+
+    int max_gear = dyn->current_gear();
+    int upshifts = 0;
+    double rpm_before_shift = 0.0;
+    bool saw_rpm_drop = false;
+    const double v0 = dyn->state().vx();
+    for (int i = 0; i < 10000; ++i) {
+        vdsim::ContactArray c; ground->query(dyn->state(), vp, c);
+        const double rpm_pre = dyn->engine_rpm();
+        const int gear_pre = dyn->current_gear();
+        dyn->step(u, c, 1e-3);
+        const double rpm = dyn->engine_rpm();
+        const int gear = dyn->current_gear();
+        EXPECT_GE(rpm, 800.0 - 1.0) << "rpm below idle";
+        EXPECT_LE(rpm, 6500.0 + 1.0) << "rpm above redline";
+        if (gear > gear_pre) { ++upshifts; rpm_before_shift = rpm_pre; }
+        if (rpm_before_shift > 0.0 && rpm < rpm_before_shift - 200.0) saw_rpm_drop = true;
+        max_gear = std::max(max_gear, gear);
+    }
+    EXPECT_GT(dyn->state().vx(), v0 + 5.0) << "full throttle should accelerate L1";
+    EXPECT_GE(upshifts, 1) << "auto gearbox should upshift at least once on L1";
+    EXPECT_GE(max_gear, 2);
+    EXPECT_TRUE(saw_rpm_drop) << "rpm should drop after an upshift (sawtooth)";
+}
+
+TEST(DrivetrainV2, L1LaunchesFromRest) {
+    const auto vp = powertrain_vp();
+    auto dyn = vdsim::create_bicycle();
+    dyn->initialize(vp, vdsim::TireParams{}, vdsim::SolverParams{});
+    dyn->reset(rolling(0.0));
+    auto ground = vdsim::create_flat_ground(0.0, 1.0);
+    vdsim::CmdL4 cmd; cmd.throttle = 1.0; cmd.gear = 1;
+    const vdsim::ControlInput u = cmd;
+    for (int i = 0; i < 3000; ++i) {
+        vdsim::ContactArray c; ground->query(dyn->state(), vp, c);
+        dyn->step(u, c, 1e-3);
+    }
+    EXPECT_GT(dyn->state().vx(), 2.0) << "idle-clutch launch should get L1 moving";
+    EXPECT_GE(dyn->engine_rpm(), 800.0);
+}
+
+TEST(DrivetrainV2, L1ShiftPolicyOverrides) {
+    const auto vp = powertrain_vp();
+    auto dyn = vdsim::create_bicycle();
+    dyn->initialize(vp, vdsim::TireParams{}, vdsim::SolverParams{});
+    dyn->reset(rolling(20.0));
+    bool called = false;
+    const bool ok = dyn->set_shift_policy([&](const vdsim::ShiftContext& c) {
+        called = true;
+        EXPECT_GT(c.engine_rpm, 0.0);
+        return 3;
+    });
+    ASSERT_TRUE(ok) << "L1 with powertrain must accept a shift policy";
+    auto ground = vdsim::create_flat_ground(0.0, 1.0);
+    vdsim::CmdL4 cmd; cmd.throttle = 0.5; cmd.gear = 1;
+    const vdsim::ControlInput u = cmd;
+    for (int i = 0; i < 500; ++i) {
+        vdsim::ContactArray c; ground->query(dyn->state(), vp, c);
+        dyn->step(u, c, 1e-3);
+    }
+    EXPECT_TRUE(called);
+    EXPECT_EQ(dyn->current_gear(), 3) << "L1 gear should follow the custom policy";
+}
+
+// With the powertrain disabled, the L1 plant must expose no engine state (the
+// flat-torque path is bit-identical to the legacy model — locked by IsoBaseline).
+TEST(DrivetrainV2, L1FlatPathHasNoEngineState) {
+    vdsim::VehicleParams vp;                       // powertrain.enabled == false
+    auto dyn = vdsim::create_bicycle();
+    dyn->initialize(vp, vdsim::TireParams{}, vdsim::SolverParams{});
+    EXPECT_EQ(dyn->engine_rpm(), 0.0);
+    EXPECT_EQ(dyn->current_gear(), 0);
+    EXPECT_FALSE(dyn->set_shift_policy([](const vdsim::ShiftContext&) { return 1; }));
+}
