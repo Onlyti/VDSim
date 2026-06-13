@@ -17,8 +17,14 @@ add_executable(vdsim_integration_tests
     test_drivetrain_v2.cpp
     test_user_modules.cpp
     test_module_plugin.cpp
+    test_multi_vehicle.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../cosim/scene_loader.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../cosim/world_scenario.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../parity/test_chrono_pac02_parity.cpp
 )
+
+target_include_directories(vdsim_integration_tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../cosim)
 
 target_compile_definitions(vdsim_integration_tests PRIVATE
     VDSIM_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
