@@ -6,6 +6,15 @@ All notable changes to VDSim are documented here. Format follows
 
 ## [Unreleased]
 
+### Added — multi-vehicle world runtime regression lock (#157)
+- The realtime world already spawns N independent `SimSession`s, routes commands by
+  `vehicle_id`, steps them in parallel, and broadcasts per-vehicle VDS1 state; verified
+  end-to-end (`vdsim_realtime --scene=<materialized 2-vehicle>` → "world 2 vehicles @ 200 Hz").
+- New regression test `MultiVehicle.*` (`tests/integration/test_multi_vehicle.cpp`, links the
+  cosim `scene_loader`/`world_scenario`): `load_scene` parses an N-vehicle resolved world
+  (ids/poses preserved); two side-by-side sessions stay isolated — a throttle/steer command to
+  one vehicle does not perturb the other (the invariant the command demux relies on). **330 ctest.**
+
 ### Added — user module plugins (build / check / register)
 - Ship a C++ subsystem module as a runtime-loadable `.so` without forking the build. Plugin
   ABI `vdsim/module_plugin.hpp` (`VDSIM_REGISTER_*_MODULE` macros) + dlopen loader
