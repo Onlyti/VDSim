@@ -23,6 +23,7 @@ add_library(vdsim_core
     src/ta_native_kinematics.cpp
     src/mp_native_kinematics.cpp
     src/fivelink_native_kinematics.cpp
+    src/multibody_math.cpp
     src/multibody_kinematics.cpp
     src/multibody_topology.cpp
     src/multibody_compliance.cpp

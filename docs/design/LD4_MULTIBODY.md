@@ -154,13 +154,15 @@ build/bin/vdsim_realtime --scene=configs/scenes/l4_sedan_kinematics.yaml
 
 - Hard-joint lateral load at fixed travel: Baumgarte z-constraint → **q̈≈0** (by design).
 - M7 open-chain q̈ under lateral Fy **≠** hard DAE (unconstrained lump).
-- `corner_inertia_about_axis` / lumped `I` duplicated in `multibody_hard_dae.cpp` and
-  `multibody_featherstone.cpp` — keep in sync when changing inertia model.
+- Inertia lump + rotation math now live in **`multibody_math.{hpp,cpp}`**
+  (`rodrigues`, `axis_angle_to_R`, `corner_inertia_about_axis`,
+  `lump_corner_about_axis`); both the hard DAE and Featherstone trees call it, so the
+  inertia model has a single definition (v0.6 M1 — was the "keep in sync" hazard).
 - Beam axle / twist beam: kinematic FK fallback only.
 
 ## 8. Next (post-M7)
 
-1. v0.5 terrain + L5 hub contact — [`V0.5_TERRAIN_L5.md`](V0.5_TERRAIN_L5.md)
-2. Shared `multibody_math` helpers (rodrigues, inertia lump)
+1. v0.5 terrain + L5 hub contact — [`V0.5_TERRAIN_L5.md`](V0.5_TERRAIN_L5.md) — **done**
+2. Shared `multibody_math` helpers (rodrigues, inertia lump) — **done (v0.6 M1)**
 3. Full loop Featherstone or augmented Lagrangian (v0.6+)
-4. ISO re-baseline on flat (`run_validation.py`)
+4. ISO re-baseline on flat (`run_validation.py`) — **done**

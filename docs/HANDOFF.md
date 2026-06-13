@@ -132,7 +132,8 @@ sample `examples/user_brake_module.py`, theory **ch.23**. **321 ctest.** **Remai
 module workshop; L1 has no subsystem objects (out of scope).
 
 **v0.6+:**
-1. Ld4 v0.6 — shared inertia helpers; full loop dynamics; Featherstone in step (optional).
+1. Ld4 v0.6 — shared inertia helpers **(done)**; full loop dynamics / Featherstone in step
+   deemed not needed (hard DAE already solves loop kinematics — see LD4_MULTIBODY.md §7).
 2. Drivetrain: catalog `drivetrain_v2` part + engine-map workshop (UI). Core done.
 3. Tire: T2 belt is **complete** (L1–L5); higher belt eigenmodes (rigid-ring/FTire) out of scope.
 

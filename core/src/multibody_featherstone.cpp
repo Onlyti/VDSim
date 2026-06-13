@@ -1,5 +1,7 @@
 #include "vdsim/multibody.hpp"
 
+#include "vdsim/multibody_math.hpp"
+
 #include <yaml-cpp/yaml.h>
 
 #include <Eigen/Dense>
@@ -10,15 +12,6 @@
 namespace vdsim::mb {
 
 namespace {
-
-Mat3 rodrigues(const Vec3& axis_unit, double theta) {
-    Mat3 K;
-    K << 0, -axis_unit.z(), axis_unit.y(),
-         axis_unit.z(), 0, -axis_unit.x(),
-         -axis_unit.y(), axis_unit.x(), 0;
-    return Mat3::Identity() + std::sin(theta) * K
-                              + (1.0 - std::cos(theta)) * (K * K);
-}
 
 Vec3 yaml_vec3(const YAML::Node& n) {
     return Vec3(n[0].as<double>(), n[1].as<double>(), n[2].as<double>());
@@ -150,34 +143,14 @@ AxisPivot revolute_axis_pivot(TopologyKind kind, const YAML::Node& root) {
 RevoluteLink lumped_revolute_link(const SuspensionTopology& topo, const Vec3& axis,
                                   const Vec3& pivot) {
     const Vec3 axis_u = axis.normalized();
-    double mass = 0.0;
-    Vec3 mass_pos = Vec3::Zero();
-    for (const auto& b : topo.bodies) {
-        if (b.id == "chassis" || b.mass <= 0.0) continue;
-        mass += b.mass;
-        mass_pos += b.mass * b.cg_local;
-    }
-    if (mass < 1e-6) mass = 9.0;
-    const Vec3 com = mass_pos / mass;
-    double I_pivot = 0.0;
-    for (const auto& b : topo.bodies) {
-        if (b.id == "chassis" || b.mass <= 0.0) continue;
-        const Vec3 r = b.cg_local - pivot;
-        const Vec3 r_perp = r - axis_u * axis_u.dot(r);
-        I_pivot += b.mass * r_perp.squaredNorm();
-    }
-    I_pivot = std::max(0.2, I_pivot);
-    const Vec3 com_rel = com - pivot;
-    const Vec3 com_perp = com_rel - axis_u * axis_u.dot(com_rel);
-    double I_com = I_pivot - mass * com_perp.squaredNorm();
-    I_com = std::max(0.05, I_com);
+    const LumpedCorner lump = lump_corner_about_axis(topo.bodies, axis_u, pivot);
     RevoluteLink link;
     link.parent = -1;
     link.axis_in_parent = axis_u;
     link.r_joint_in_parent = pivot;
-    link.mass = mass;
-    link.com_in_child = com_rel;
-    link.inertia_com = Mat3::Identity() * I_com;
+    link.mass = lump.mass;
+    link.com_in_child = lump.com - pivot;
+    link.inertia_com = Mat3::Identity() * lump.i_com;
     return link;
 }
 
