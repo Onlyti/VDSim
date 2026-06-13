@@ -42,7 +42,7 @@ std::unique_ptr<vdsim::SimSession> make_world_vehicle(double vx0) {
 
 TEST(MultiVehicle, LoadSceneParsesFleet) {
     const std::string veh = std::string(VDSIM_SOURCE_DIR)
-        + "/configs/parts/chassis/sedan.yaml";
+        + "/configs/parts/body/sedan.yaml";
     const std::string tire = std::string(VDSIM_SOURCE_DIR)
         + "/configs/parts/tire/default_pacejka.yaml";
     const auto path = std::filesystem::temp_directory_path() / "vdsim_world_2veh.yaml";
