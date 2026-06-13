@@ -1,6 +1,34 @@
 # VDSim 핸드오프
 
-작성: **2026-06-10** · `main` @ `f6b1d71` (ahead of `v0.5.1`) · **328/328 ctest green**
+작성: **2026-06-13** · `main` @ `079f545` (pushed, ahead of `v0.5.1`) · **335/335 ctest green**
+
+## 0. 2026-06-13 세션 인수인계 (fresh 세션은 여기부터)
+
+**목표였던 것:** 누적된 헤드리스 백로그 처리 + 브랜치 정리. 전부 완료.
+
+**현재 상태:** `main` 에 5개 feature 머지+push 완료, 335/335 green, 작업 트리 clean, 이번 세션 브랜치 전부 삭제(로컬+원격). **미완 작업 없음 — 깨끗한 중단점.**
+
+**이번 세션 main 에 들어간 것:**
+- **Ld4 v0.6 M1** — `vdsim/multibody_math.{hpp,cpp}` 로 rodrigues/corner-inertia 공유(hard_dae·featherstone 중복 제거, bit-identical). full-loop Featherstone 은 불필요 결론(hard DAE 가 이미 loop 구속 품).
+- **L1 powertrain** — drivetrain v2(engine map+gearbox+shift)를 L1 bicycle 에. opt-in, substep 당 1회 advance, default-off → ISO 불변. `DrivetrainV2.L1*`.
+- **re-taxonomy step 2 (BREAKING catalog)** — chassis 통짜 → **body / aero / ride** 분리, `chassis` type = **서스펜션 링크**(옛 susp_kinematics). 슬롯 body/aero/ride + front_chassis/rear_chassis. resolver 는 여전히 단일 vehicle.yaml 로 merge → C++/물리 불변. slots.py 중앙정의. **구버전 config 비호환.**
+- **너클 schema** — kin yaml optional `knuckle:` 블록(wheel-center 상대 점 + arm) → `knuckle.*` hardpoint. additive, dynamics 불변.
+- **retax2 GUI** — Parts library 탭 body/aero/ride/chassis(links), part_store 에디터/clone, **add-vehicle preset picker**(+클릭 → blueprint 카드 → 선택 시 차량추가+assembly 진입), fleet-path id 수정(susp.*→chassis.*). headless Chromium 스크린샷 검증 완료.
+- **#157 multi-vehicle 런타임** — 이미 구현돼 있던 걸(독립 N-session spawn + per-vehicle command demux + 병렬 tick + per-vehicle VDS1) **회귀 테스트로 잠금**(`MultiVehicle.*`). V2V 충돌은 **scope 밖 확정**(멀티차량 = 비교용).
+
+**다음 할 일 후보 (우선순위 순):**
+1. **#158 GUI 멀티차량 render** — preset picker 로 N대 spawn 은 되니, 3D 뷰에서 N대 동시 표시(VDS1 vehicle_id demux render). "동시 비교" UX 직결.
+2. **헤드리스 멀티차량 비교 로깅/리포트** — 같은 maneuver 를 여러 차량에 돌려 지표(NRMSE 등) 나란히. batch runner 연계.
+3. **이전 세션 잔여 브랜치 점검** — `feat/{poc-w5,tire-t1,tire-t2,v0.4-slope,v0.5-terrain ×2}` 가 머지됐는지 확인 후 정리.
+4. GUI cosmetic — part 라벨 "Fsk Formula chassis body" 잔재 정리, Session tune 탭 Chassis/Suspension 라벨.
+
+**주의·함정:**
+- retax2 는 **breaking** — 옛 `chassis.*`/`susp.*` part id, `front_susp_kin` 슬롯 전부 제거됨. 외부 config/스크립트가 이걸 참조하면 깨짐.
+- `from_yaml` 은 envelope(`body:`)를 unwrap 안 함 — IsoBaseline 은 그래서 `body/sedan.yaml`(envelope→struct defaults) 로 로드(latent: 실제론 defaults 사용). 건드리지 말 것.
+- ISO/Default subsystem **숫자 리베이스 금지**. 영상 git 커밋 금지. 현대 `.tir` 대외비.
+- GUI 서버는 `(... &)` 백그라운드로 띄우면 tool 호출 끝날 때 죽음 → `run_in_background` 사용.
+
+**관련 경로:** `cosim/realtime_server.cpp`·`scene_loader.cpp`·`world_scenario.cpp` (멀티차량) / `python/catalog/{slots,resolver,ids,materialize,part_store}.py` (taxonomy) / `gui/static/app.js`·`gui/runner/catalog_api.py` (GUI) / `tests/integration/test_multi_vehicle.cpp`.
 
 ## 1. 문서 인덱스
 
