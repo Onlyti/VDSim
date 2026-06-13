@@ -1,0 +1,12 @@
+id: aero.sedan
+type: aero
+version: 1
+schema: aero_v1
+label: Sedan chassis aero
+tags:
+- aero
+body:
+  aero_lift_front: 0.05
+  frontal_area: 2.2
+  aero_lift_rear: 0.05
+  aero_drag_coeff: 0.3

@@ -1,0 +1,26 @@
+id: body.sports
+type: body
+version: 1
+schema: body_v1
+label: Sports chassis body
+tags:
+- body
+body:
+  wheelbase: 2.55
+  inertia_diag:
+  - 420.0
+  - 1700.0
+  - 2050.0
+  unsprung_mass:
+  - 42
+  - 42
+  - 38
+  - 38
+  cg_to_front: 1.2
+  mass_sprung: 1180.0
+  track_front: 1.58
+  track_rear: 1.56
+  mass: 1320.0
+  wheel_radius_nominal: 0.33
+  cg_height: 0.42
+  cg_to_rear: 1.35

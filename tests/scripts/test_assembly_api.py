@@ -22,8 +22,8 @@ def test_sedan_assembly_slots():
     asm = fleet_assembly_view(spec, out_dir=ROOT / "build" / "_asm_test")
     assert asm["blueprint"]["id"] == DEFAULT_BLUEPRINT
     slots = {s["slot"] for s in asm["slots"]}
-    assert "chassis" in slots and "tire" in slots
-    assert "front_susp_kin" not in slots
+    assert "body" in slots and "tire" in slots
+    assert "front_chassis" not in slots
     assert asm["summary"]["mass_kg"] > 500
 
 
@@ -36,7 +36,7 @@ def test_l3_has_susp_slots():
     }
     asm = fleet_assembly_view(spec, out_dir=ROOT / "build" / "_asm_test")
     slots = {s["slot"] for s in asm["slots"]}
-    assert "front_susp_kin" in slots and "rear_susp_kin" in slots
+    assert "front_chassis" in slots and "rear_chassis" in slots
 
 
 def test_assembly_garage_meta():

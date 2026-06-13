@@ -23,7 +23,7 @@ from server import RUNNER  # noqa: E402
 def main():
     idx = catalog_index()
     assert idx.get("catalog_id") == "vdsim.builtin"
-    assert any(p["id"] == "chassis.sedan" for p in idx["parts"])
+    assert any(p["id"] == "body.sedan" for p in idx["parts"])
     assert any(b["id"] == "vehicle.sedan_comfort" for b in idx["blueprints"])
 
     tires = catalog_index(type_filter="tire")
@@ -32,7 +32,7 @@ def main():
     part = catalog_part_get("tire.default_pacejka")
     assert part["schema"] == "pacejka_mf96_v1"
     bp = catalog_blueprint_get("vehicle.sedan_comfort")
-    assert bp["parts"]["chassis"] == "chassis.sedan"
+    assert bp["parts"]["body"] == "body.sedan"
 
     reg = catalog_legacy_registry()
     assert "sedan" in reg["vehicles"]

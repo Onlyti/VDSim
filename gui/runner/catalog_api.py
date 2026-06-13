@@ -195,7 +195,7 @@ def catalog_blueprint_save_fleet(vehicle_id: int, stem: str, label: str, runner)
 
 def catalog_suspension_samples(preview_all: bool = False) -> dict:
     r = catalog_resolver()
-    l3 = [part_suffix(p["id"]) for p in r.list_parts("susp_kinematics")]
+    l3 = [part_suffix(p["id"]) for p in r.list_parts("chassis")]
     out = {"samples": sorted(l3), "l3_count": len(l3)}
     if preview_all:
         topo = [part_suffix(p["id"]) for p in r.list_parts("susp_topology")]

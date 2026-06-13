@@ -1,9 +1,9 @@
-id: susp.ta_rear_sedan
-type: susp_kinematics
+id: chassis.ta_rear_sedan
+type: chassis
 version: 1
 schema: kinematics_l3_native_v1
 label: ta_rear_sedan kinematics
 tags:
-- susp_kinematics
+- chassis
 body:
   path: parts/susp_kinematics/kin/ta_rear_sedan.yaml

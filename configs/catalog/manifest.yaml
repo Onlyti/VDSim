@@ -1,6 +1,22 @@
 catalog_id: vdsim.builtin
 catalog_version: 1
 parts:
+- id: aero.fsk_formula
+  path: parts/aero/fsk_formula.yaml
+- id: aero.race_car
+  path: parts/aero/race_car.yaml
+- id: aero.sedan
+  path: parts/aero/sedan.yaml
+- id: aero.sports
+  path: parts/aero/sports.yaml
+- id: body.fsk_formula
+  path: parts/body/fsk_formula.yaml
+- id: body.race_car
+  path: parts/body/race_car.yaml
+- id: body.sedan
+  path: parts/body/sedan.yaml
+- id: body.sports
+  path: parts/body/sports.yaml
 - id: brake.fsk_formula
   path: parts/brake/fsk_formula.yaml
 - id: brake.race_car
@@ -11,30 +27,38 @@ parts:
   path: parts/brake/sedan_default.yaml
 - id: brake.sports
   path: parts/brake/sports.yaml
-- id: chassis.fsk_formula
-  path: parts/chassis/fsk_formula.yaml
-- id: chassis.race_car
-  path: parts/chassis/race_car.yaml
-- id: chassis.sedan
-  path: parts/chassis/sedan.yaml
-- id: chassis.sports
-  path: parts/chassis/sports.yaml
+- id: chassis.5link_rear_sports
+  path: parts/chassis/5link_rear_sports.yaml
+- id: chassis.dw_front_sports
+  path: parts/chassis/dw_front_sports.yaml
+- id: chassis.mp_front_sedan
+  path: parts/chassis/mp_front_sedan.yaml
+- id: chassis.ta_rear_sedan
+  path: parts/chassis/ta_rear_sedan.yaml
 - id: drivetrain.fsk_formula
   path: parts/drivetrain/fsk_formula.yaml
 - id: drivetrain.race_car
   path: parts/drivetrain/race_car.yaml
 - id: drivetrain.sedan
   path: parts/drivetrain/sedan.yaml
-- id: drivetrain.sedan_v2
-  path: parts/drivetrain/sedan_v2.yaml
 - id: drivetrain.sedan_gearbox
   path: parts/drivetrain/sedan_gearbox.yaml
-- id: powertrain.sedan_engine
-  path: parts/powertrain/sedan_engine.yaml
 - id: drivetrain.sedan_rwd
   path: parts/drivetrain/sedan_rwd.yaml
+- id: drivetrain.sedan_v2
+  path: parts/drivetrain/sedan_v2.yaml
 - id: drivetrain.sports
   path: parts/drivetrain/sports.yaml
+- id: powertrain.sedan_engine
+  path: parts/powertrain/sedan_engine.yaml
+- id: ride.fsk_formula
+  path: parts/ride/fsk_formula.yaml
+- id: ride.race_car
+  path: parts/ride/race_car.yaml
+- id: ride.sedan
+  path: parts/ride/sedan.yaml
+- id: ride.sports
+  path: parts/ride/sports.yaml
 - id: steering.fsk_formula
   path: parts/steering/fsk_formula.yaml
 - id: steering.race_car
@@ -45,14 +69,6 @@ parts:
   path: parts/steering/sedan_rack.yaml
 - id: steering.sports
   path: parts/steering/sports.yaml
-- id: susp.5link_rear_sports
-  path: parts/susp_kinematics/5link_rear_sports.yaml
-- id: susp.dw_front_sports
-  path: parts/susp_kinematics/dw_front_sports.yaml
-- id: susp.mp_front_sedan
-  path: parts/susp_kinematics/mp_front_sedan.yaml
-- id: susp.ta_rear_sedan
-  path: parts/susp_kinematics/ta_rear_sedan.yaml
 - id: susp_topo.beam_axle
   path: parts/susp_topology/beam_axle.yaml
 - id: susp_topo.double_wishbone
@@ -67,14 +83,14 @@ parts:
   path: parts/susp_topology/twist_beam.yaml
 - id: tire.default_pacejka
   path: parts/tire/default_pacejka.yaml
-- id: tire.low_mu
-  path: parts/tire/low_mu.yaml
-- id: tire.sport_grip
-  path: parts/tire/sport_grip.yaml
-- id: tire.lugre_on
-  path: parts/tire/lugre_on.yaml
 - id: tire.kinematic_fallback
   path: parts/tire/kinematic_fallback.yaml
+- id: tire.low_mu
+  path: parts/tire/low_mu.yaml
+- id: tire.lugre_on
+  path: parts/tire/lugre_on.yaml
+- id: tire.sport_grip
+  path: parts/tire/sport_grip.yaml
 blueprints:
 - id: vehicle.fsk_formula
   path: blueprints/fsk_formula.yaml

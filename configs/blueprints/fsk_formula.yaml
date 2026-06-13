@@ -3,11 +3,13 @@ version: 1
 label: Fsk Formula
 level: L3
 parts:
-  chassis: chassis.fsk_formula
+  body: body.fsk_formula
+  aero: aero.fsk_formula
+  ride: ride.fsk_formula
   tire: tire.default_pacejka
   brake: brake.fsk_formula
   steering: steering.fsk_formula
   drivetrain: drivetrain.fsk_formula
-  front_susp_kin: susp.dw_front_sports
-  rear_susp_kin: susp.5link_rear_sports
+  front_chassis: chassis.dw_front_sports
+  rear_chassis: chassis.5link_rear_sports
 overrides: {}

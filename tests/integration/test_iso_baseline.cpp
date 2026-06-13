@@ -47,7 +47,7 @@ struct StepMetrics {
 // Coast step-steer on the catalog default preset, mirroring apps/doe scenarios.
 StepMetrics step_steer_default(double v_target, double steer_rad) {
     vdsim::VehicleParams vp = vdsim::VehicleParams::from_yaml(
-        kRepo + "/configs/parts/chassis/sedan.yaml");
+        kRepo + "/configs/parts/body/sedan.yaml");
     vdsim::TireParams tp = vdsim::TireParams::from_yaml(
         kRepo + "/configs/parts/tire/default_pacejka.yaml");
     vdsim::SolverParams sp;

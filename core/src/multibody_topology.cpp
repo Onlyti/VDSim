@@ -51,6 +51,10 @@ void walk_kin_hardpoints(const YAML::Node& node, const std::string& prefix,
     for (auto it = node.begin(); it != node.end(); ++it) {
         const std::string key = it->first.as<std::string>();
         if (kSkip.count(key)) continue;
+        // The top-level `knuckle:` block carries wheel-center-relative offsets, not
+        // absolute hardpoints; it is resolved separately (resolve_knuckle_block).
+        // Only skip it at the root so nested keys like lca.knuckle still parse.
+        if (prefix.empty() && key == "knuckle") continue;
         const std::string path = prefix.empty() ? key : prefix + "." + key;
         const YAML::Node& child = it->second;
         if (is_coord_leaf(child)) {
@@ -249,6 +253,35 @@ void infer_graph(SuspensionTopology& topo) {
 
 }  // namespace
 
+// Optional `knuckle:` block (re-taxonomy step 2): knuckle attachment points and the
+// steering knuckle-arm point expressed relative to the wheel centre, which is the
+// natural design frame for the hub carrier. Each offset is resolved to an absolute
+// body-frame hardpoint (wheel.center + offset) named `knuckle.<name>` / `knuckle.arm`,
+// body "knuckle". Additive: absent in the legacy kin files, so the topology (and the
+// hard-DAE dynamics, which read the absolute lca.knuckle / tie_rod.knuckle fields) are
+// unchanged when it is not present.
+void resolve_knuckle_block(const YAML::Node& root,
+                           std::map<std::string, Hardpoint>& out) {
+    const YAML::Node blk = root["knuckle"];
+    if (!blk || !blk.IsMap()) return;
+    const YAML::Node wheel = root["wheel"];
+    if (!wheel || !wheel["center"]) return;
+    const Vec3 wc = vec3_from_node(wheel["center"]);
+    auto add = [&](const std::string& name, const YAML::Node& off) {
+        if (!is_coord_leaf(off)) return;
+        Hardpoint hp;
+        hp.name = name;
+        hp.position = wc + vec3_from_node(off);
+        hp.body_id = "knuckle";
+        out[name] = hp;
+    };
+    if (const YAML::Node pts = blk["points"]; pts && pts.IsMap()) {
+        for (auto it = pts.begin(); it != pts.end(); ++it)
+            add("knuckle." + it->first.as<std::string>(), it->second);
+    }
+    if (blk["arm"]) add("knuckle.arm", blk["arm"]);
+}
+
 void populate_topology_from_yaml(SuspensionTopology& topo, const YAML::Node& root) {
     topo.hardpoints.clear();
     topo.bodies.clear();
@@ -258,6 +291,7 @@ void populate_topology_from_yaml(SuspensionTopology& topo, const YAML::Node& roo
     parse_explicit_hardpoints(root, topo.hardpoints);
     if (topo.hardpoints.empty())
         walk_kin_hardpoints(root, "", topo.hardpoints);
+    resolve_knuckle_block(root, topo.hardpoints);
 
     parse_explicit_bodies(root, topo.bodies);
     parse_explicit_joints(root, topo.joints);

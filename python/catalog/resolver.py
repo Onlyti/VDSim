@@ -8,12 +8,20 @@ from typing import Any, Dict, List, Mapping, Optional
 import yaml
 
 PART_TYPES = frozenset({
-    "chassis", "tire", "susp_kinematics", "susp_topology", "susp_ride", "brake",
+    # Re-taxonomy step 2: the old monolithic "chassis" (vehicle_params_v1) split
+    # into body / aero / ride; "chassis" now denotes the suspension linkage (the
+    # former susp_kinematics role). susp_kinematics kept in the allowed set for
+    # any external package, but the built-in parts use "chassis".
+    "body", "aero", "ride", "chassis",
+    "tire", "susp_kinematics", "susp_topology", "susp_ride", "brake",
     "steering", "drivetrain", "powertrain", "actuator", "sensor_suite", "module",
 })
 
 SCHEMAS = frozenset({
     "vehicle_params_v1",
+    "body_v1",
+    "aero_v1",
+    "ride_v1",
     "pacejka_mf96_v1",
     "kinematics_l3_native_v1",
     "spring_damper_v1",
@@ -29,8 +37,8 @@ SCHEMAS = frozenset({
     "topology_preview_v1",
 })
 
-L1L2_PART_SLOTS = ("chassis", "tire", "brake", "steering", "drivetrain")
-L3_EXTRA_SLOTS = ("front_susp_kin", "rear_susp_kin")
+L1L2_PART_SLOTS = ("body", "aero", "ride", "tire", "brake", "steering", "drivetrain")
+L3_EXTRA_SLOTS = ("front_chassis", "rear_chassis")
 
 ENVELOPE_KEYS = ("id", "type", "version", "schema", "label", "body")
 
@@ -242,15 +250,15 @@ class CatalogResolver:
             part = self.load_part(str(part_id))
             part_ids[slot] = str(part_id)
             body = dict(part["body"])
-            if slot == "chassis":
+            if slot in ("body", "aero", "ride"):
                 _merge_part_body(vehicle_body, body)
             elif slot == "tire":
                 tire_body = body
             elif slot in ("brake", "steering", "drivetrain", "powertrain"):
                 _merge_part_body(vehicle_body, body)
-            elif slot == "front_susp_kin":
+            elif slot == "front_chassis":
                 susp_front = self._kinematics_path(body, part["schema"], slot)
-            elif slot == "rear_susp_kin":
+            elif slot == "rear_chassis":
                 susp_rear = self._kinematics_path(body, part["schema"], slot)
             elif slot in ("front_susp_ride", "rear_susp_ride"):
                 _merge_part_body(vehicle_body, body)

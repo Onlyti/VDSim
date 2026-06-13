@@ -1,0 +1,25 @@
+id: ride.race_car
+type: ride
+version: 1
+schema: ride_v1
+label: Race Car chassis ride
+tags:
+- ride
+body:
+  roll_center_height_rear: 0.0
+  anti_squat_rear: 0.3
+  camber_per_roll: 0.0
+  arb_stiffness_front: 0.0
+  arb_stiffness_rear: 0.0
+  spring_stiffness:
+  - 120000
+  - 120000
+  - 110000
+  - 110000
+  roll_center_height_front: 0.0
+  damper_coefficient:
+  - 9000
+  - 9000
+  - 8500
+  - 8500
+  anti_dive_front: 0.45

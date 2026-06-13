@@ -117,6 +117,29 @@ configs/parts/susp_kinematics/
 
 Wheel order everywhere: **FL=0, FR=1, RL=2, RR=3**. Frame: ISO 8855 RH (+x fwd, +y left, +z up).
 
+### Optional `knuckle:` block (wheel-centre-relative)
+
+Hardpoints are body-frame absolute, but the knuckle (hub carrier) is naturally
+designed relative to the **wheel centre**. An optional top-level `knuckle:` block lets
+the kin file express the knuckle attachment points and the steering knuckle-arm point as
+offsets from `wheel.center`; the parser resolves each to an absolute hardpoint
+`knuckle.<name>` / `knuckle.arm` (body `knuckle`):
+
+```yaml
+knuckle:
+  ref: wheel_center          # offsets are relative to wheel.center
+  points:
+    lca:     [-0.02, -0.06, -0.10]   # LCA->knuckle joint, rel. to wheel centre
+    tie_rod: [-0.30, -0.07, -0.05]
+  arm:       [-0.12, -0.05,  0.02]   # steering knuckle-arm point
+```
+
+Additive: the legacy kin files omit it, so the topology — and the hard-DAE dynamics,
+which read the absolute `lca.knuckle` / `tie_rod.knuckle` fields — are unchanged. The
+resolved `knuckle.*` points are added to the topology for design / K&C / future steering
+geometry; they are not yet consumed by the L4 DAE. Test
+`MultibodyTopology.KnuckleBlockWheelCenterRelative`.
+
 ## 5. Python / GUI entry points
 
 ```python

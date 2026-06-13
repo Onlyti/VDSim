@@ -30,6 +30,28 @@ All notable changes to VDSim are documented here. Format follows
   (ids/poses preserved); two side-by-side sessions stay isolated — a throttle/steer command to
   one vehicle does not perturb the other (the invariant the command demux relies on).
 
+### Changed — part re-taxonomy step 2: body / aero / ride / chassis (BREAKING catalog)
+- The monolithic `chassis` part (`vehicle_params_v1`) is split into **body** (mass /
+  inertia / cg / layout), **aero** (drag / lift / frontal area), and **ride** (springs /
+  dampers / ARB / roll-centre). The `chassis` part type now denotes the **suspension
+  linkage** (the former `susp_kinematics` role: links + hardpoints + knuckle).
+- Blueprint slots: `chassis` → `body` + `aero` + `ride`; `front_susp_kin` / `rear_susp_kin`
+  → `front_chassis` / `rear_chassis`. Central definition in `python/catalog/slots.py`;
+  resolver still merges everything into one `vehicle.yaml` so the C++/physics layer and the
+  emitted config are unchanged (catalog-authoring refactor only). Schemas `body_v1` /
+  `aero_v1` / `ride_v1`.
+- All built-in parts + blueprints + manifest migrated; old `chassis.*` bundle and `susp.*`
+  ids removed (clean break — old configs are incompatible). 328 ctest green.
+- **Pending (GUI session, browser-verify):** `part_store.py` part-authoring templates +
+  `gui/static/app.js` vehicle-edit "Chassis" tab still use the old taxonomy.
+
+### Added — wheel-centre-relative knuckle schema (chassis kin)
+- A chassis kin file may carry an optional top-level `knuckle:` block defining knuckle
+  attachment points and the steering knuckle-arm point as offsets from the wheel centre;
+  the topology parser resolves each to an absolute hardpoint `knuckle.<name>` / `knuckle.arm`.
+  Additive — legacy kin files omit it, so the topology and the L4 hard-DAE dynamics are
+  unchanged. Test `MultibodyTopology.KnuckleBlockWheelCenterRelative`; doc LD4_MULTIBODY §4.
+
 ### Added — user module plugins (build / check / register)
 - Ship a C++ subsystem module as a runtime-loadable `.so` without forking the build. Plugin
   ABI `vdsim/module_plugin.hpp` (`VDSIM_REGISTER_*_MODULE` macros) + dlopen loader
