@@ -2568,7 +2568,12 @@ final_drive_ratio</code>). Drivetrain v2 replaces that, <strong>opt-in</strong>,
 a 2D engine torque map, an N-speed gearbox coupled to engine RPM, and a shift policy that
 can be a user-defined function. It is enabled by a <code>powertrain:</code> block in the vehicle
 config; absent that block the legacy flat torque is used and the ISO baseline is unchanged.</p>
-<p>Scope: L2 (seven-DOF) and L3 (fourteen-DOF, via its inner L2). L1 keeps the flat torque.</p>
+<p>Scope: L1 (bicycle), L2 (seven-DOF), L3 (fourteen-DOF, via its inner L2), L4/L5 (via the
+same plants). On L1 the engine is advanced once per RK4 substep and its gear-dependent
+reflected inertia is added to the (single) front/rear axle spin inertia; the axle drive
+torque is split by <code>drive_type</code> (FWD-&gt;front, RWD-&gt;rear, AWD 50/50) exactly as on L2. With
+no <code>powertrain:</code> block every level keeps the legacy flat torque, so the ISO baseline is
+unchanged.</p>
 <h2 id="1-engine-torque-map">1. Engine torque map<a class="headerlink" href="#1-engine-torque-map" title="Permanent link">&para;</a></h2>
 <p>Peak torque is a 2D map <code>T_peak(rpm, throttle)</code>, bilinearly interpolated and clamped to
 the table domain. The actual torque is read directly from the map at the current

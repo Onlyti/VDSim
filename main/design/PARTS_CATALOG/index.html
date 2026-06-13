@@ -2649,19 +2649,29 @@ parts into <code>VehicleParams</code>, tire models, kinematics attach paths, etc
 </thead>
 <tbody>
 <tr>
+<td><code>body</code></td>
+<td><code>body_v1</code></td>
+<td><code>VehicleParams</code> mass / inertia / cg / wheelbase / track</td>
+</tr>
+<tr>
+<td><code>aero</code></td>
+<td><code>aero_v1</code></td>
+<td><code>VehicleParams</code> drag / lift / frontal area</td>
+</tr>
+<tr>
+<td><code>ride</code></td>
+<td><code>ride_v1</code></td>
+<td><code>VehicleParams</code> springs / dampers / ARB / roll-centre</td>
+</tr>
+<tr>
 <td><code>chassis</code></td>
-<td><code>vehicle_params_v1</code></td>
-<td><code>VehicleParams</code> mass/geom/aero/drive meta</td>
+<td><code>kinematics_l3_native_v1</code></td>
+<td>suspension linkage (links / hardpoints / knuckle); L3 <code>attach_*_kinematics</code> path</td>
 </tr>
 <tr>
 <td><code>tire</code></td>
 <td><code>pacejka_mf96_v1</code></td>
 <td><code>TireParams</code> (+ optional <code>lugre:</code> block, <code>V0.2_TIRE_LUGRE.md</code>)</td>
-</tr>
-<tr>
-<td><code>susp_kinematics</code></td>
-<td><code>kinematics_l3_native_v1</code></td>
-<td>L3 <code>attach_*_kinematics</code> YAML path</td>
 </tr>
 <tr>
 <td><code>susp_ride</code></td>
@@ -2705,12 +2715,12 @@ parts into <code>VehicleParams</code>, tire models, kinematics attach paths, etc
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nt">level</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">L2</span><span class="w">                    </span><span class="c1"># L1 | L2 | L3 — dynamics ladder for this assembly</span>
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
 </span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="nt">parts</span><span class="p">:</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="nt">chassis</span><span class="p">:</span><span class="w">           </span><span class="l l-Scalar l-Scalar-Plain">chassis.sedan</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span><span class="nt">tire</span><span class="p">:</span><span class="w">              </span><span class="l l-Scalar l-Scalar-Plain">tire.default_pacejka</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span><span class="nt">front_susp_kin</span><span class="p">:</span><span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">susp.mp_front_sedan</span><span class="w">      </span><span class="c1"># required when level: L3</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">  </span><span class="nt">rear_susp_kin</span><span class="p">:</span><span class="w">     </span><span class="l l-Scalar l-Scalar-Plain">susp.ta_rear_sedan</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">  </span><span class="nt">front_susp_ride</span><span class="p">:</span><span class="w">   </span><span class="l l-Scalar l-Scalar-Plain">ride.sedan_comfort</span>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">  </span><span class="nt">rear_susp_ride</span><span class="p">:</span><span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">ride.sedan_comfort</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="nt">body</span><span class="p">:</span><span class="w">              </span><span class="l l-Scalar l-Scalar-Plain">body.sedan</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span><span class="nt">aero</span><span class="p">:</span><span class="w">              </span><span class="l l-Scalar l-Scalar-Plain">aero.sedan</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span><span class="nt">ride</span><span class="p">:</span><span class="w">              </span><span class="l l-Scalar l-Scalar-Plain">ride.sedan</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">  </span><span class="nt">tire</span><span class="p">:</span><span class="w">              </span><span class="l l-Scalar l-Scalar-Plain">tire.default_pacejka</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">  </span><span class="nt">front_chassis</span><span class="p">:</span><span class="w">     </span><span class="l l-Scalar l-Scalar-Plain">chassis.mp_front_sedan</span><span class="w">   </span><span class="c1"># suspension linkage, required when level: L3</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">  </span><span class="nt">rear_chassis</span><span class="p">:</span><span class="w">      </span><span class="l l-Scalar l-Scalar-Plain">chassis.ta_rear_sedan</span>
 </span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">  </span><span class="nt">brake</span><span class="p">:</span><span class="w">             </span><span class="l l-Scalar l-Scalar-Plain">brake.sedan_default</span>
 </span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">  </span><span class="nt">steering</span><span class="p">:</span><span class="w">          </span><span class="l l-Scalar l-Scalar-Plain">steering.sedan_rack</span>
 </span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">  </span><span class="nt">drivetrain</span><span class="p">:</span><span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">drivetrain.generic_ev</span>
@@ -2722,8 +2732,8 @@ parts into <code>VehicleParams</code>, tire models, kinematics attach paths, etc
 <p>Rules:</p>
 <ul>
 <li><strong>Required keys by level</strong></li>
-<li>L1/L2: <code>chassis</code>, <code>tire</code>, <code>brake</code>, <code>steering</code>, <code>drivetrain</code></li>
-<li>L3: above + <code>front_susp_kin</code>, <code>rear_susp_kin</code> (ride parts optional but recommended)</li>
+<li>L1/L2: <code>body</code>, <code>aero</code>, <code>ride</code>, <code>tire</code>, <code>brake</code>, <code>steering</code>, <code>drivetrain</code></li>
+<li>L3: above + <code>front_chassis</code>, <code>rear_chassis</code> (suspension linkage parts)</li>
 <li><strong>No inline physics</strong> in blueprints — only <code>parts</code> + <code>overrides</code>.</li>
 <li>Fleet <strong>instances</strong> in a scene may override individual part refs (see §6).</li>
 </ul>

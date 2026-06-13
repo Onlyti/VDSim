@@ -2484,6 +2484,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="4. Config layout">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#optional-knuckle-block-wheel-centre-relative" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional knuckle: block (wheel-centre-relative)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2746,19 +2763,37 @@ bushing compliance (off in L4 step)</strong>.</p>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>  kin/5link_rear_sports.yaml
 </span></code></pre></div>
 <p>Wheel order everywhere: <strong>FL=0, FR=1, RL=2, RR=3</strong>. Frame: ISO 8855 RH (+x fwd, +y left, +z up).</p>
+<h3 id="optional-knuckle-block-wheel-centre-relative">Optional <code>knuckle:</code> block (wheel-centre-relative)<a class="headerlink" href="#optional-knuckle-block-wheel-centre-relative" title="Permanent link">&para;</a></h3>
+<p>Hardpoints are body-frame absolute, but the knuckle (hub carrier) is naturally
+designed relative to the <strong>wheel centre</strong>. An optional top-level <code>knuckle:</code> block lets
+the kin file express the knuckle attachment points and the steering knuckle-arm point as
+offsets from <code>wheel.center</code>; the parser resolves each to an absolute hardpoint
+<code>knuckle.&lt;name&gt;</code> / <code>knuckle.arm</code> (body <code>knuckle</code>):</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">knuckle</span><span class="p">:</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">ref</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">wheel_center</span><span class="w">          </span><span class="c1"># offsets are relative to wheel.center</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">points</span><span class="p">:</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nt">lca</span><span class="p">:</span><span class="w">     </span><span class="p p-Indicator">[</span><span class="nv">-0.02</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">-0.06</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">-0.10</span><span class="p p-Indicator">]</span><span class="w">   </span><span class="c1"># LCA-&gt;knuckle joint, rel. to wheel centre</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nt">tie_rod</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">-0.30</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">-0.07</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">-0.05</span><span class="p p-Indicator">]</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="nt">arm</span><span class="p">:</span><span class="w">       </span><span class="p p-Indicator">[</span><span class="nv">-0.12</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">-0.05</span><span class="p p-Indicator">,</span><span class="w">  </span><span class="nv">0.02</span><span class="p p-Indicator">]</span><span class="w">   </span><span class="c1"># steering knuckle-arm point</span>
+</span></code></pre></div>
+<p>Additive: the legacy kin files omit it, so the topology — and the hard-DAE dynamics,
+which read the absolute <code>lca.knuckle</code> / <code>tie_rod.knuckle</code> fields — are unchanged. The
+resolved <code>knuckle.*</code> points are added to the topology for design / K&amp;C / future steering
+geometry; they are not yet consumed by the L4 DAE. Test
+<code>MultibodyTopology.KnuckleBlockWheelCenterRelative</code>.</p>
 <h2 id="5-python-gui-entry-points">5. Python / GUI entry points<a class="headerlink" href="#5-python-gui-entry-points" title="Permanent link">&para;</a></h2>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">vdsim</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">topo</span> <span class="o">=</span> <span class="n">vdsim</span><span class="o">.</span><span class="n">mb</span><span class="o">.</span><span class="n">SuspensionTopology</span><span class="o">.</span><span class="n">from_yaml</span><span class="p">(</span><span class="s2">&quot;configs/parts/susp_kinematics/kin/mp_front_sedan.yaml&quot;</span><span class="p">)</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">sweep</span> <span class="o">=</span> <span class="n">vdsim</span><span class="o">.</span><span class="n">run_kc_sweep</span><span class="p">(</span><span class="s2">&quot;configs/parts/susp_kinematics/kin/mp_front_sedan.yaml&quot;</span><span class="p">)</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">report</span> <span class="o">=</span> <span class="n">vdsim</span><span class="o">.</span><span class="n">run_kc_xcheck</span><span class="p">(</span><span class="s2">&quot;ref.yaml&quot;</span><span class="p">,</span> <span class="s2">&quot;cand.yaml&quot;</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">vdsim</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">topo</span> <span class="o">=</span> <span class="n">vdsim</span><span class="o">.</span><span class="n">mb</span><span class="o">.</span><span class="n">SuspensionTopology</span><span class="o">.</span><span class="n">from_yaml</span><span class="p">(</span><span class="s2">&quot;configs/parts/susp_kinematics/kin/mp_front_sedan.yaml&quot;</span><span class="p">)</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">sweep</span> <span class="o">=</span> <span class="n">vdsim</span><span class="o">.</span><span class="n">run_kc_sweep</span><span class="p">(</span><span class="s2">&quot;configs/parts/susp_kinematics/kin/mp_front_sedan.yaml&quot;</span><span class="p">)</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">report</span> <span class="o">=</span> <span class="n">vdsim</span><span class="o">.</span><span class="n">run_kc_xcheck</span><span class="p">(</span><span class="s2">&quot;ref.yaml&quot;</span><span class="p">,</span> <span class="s2">&quot;cand.yaml&quot;</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
 </span></code></pre></div>
 <p>CLI:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>python3<span class="w"> </span>tools/kinematics/adams_xcheck.py<span class="w"> </span>--csv<span class="w"> </span>export.csv<span class="w"> </span>--reference<span class="w"> </span>ref.yaml
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>python3<span class="w"> </span>gui/server.py<span class="w">   </span><span class="c1"># Suspension modal → K&amp;C charts (L3/L4)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python3<span class="w"> </span>tools/kinematics/adams_xcheck.py<span class="w"> </span>--csv<span class="w"> </span>export.csv<span class="w"> </span>--reference<span class="w"> </span>ref.yaml
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>python3<span class="w"> </span>gui/server.py<span class="w">   </span><span class="c1"># Suspension modal → K&amp;C charts (L3/L4)</span>
 </span></code></pre></div>
 <p>Cosim / realtime:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>build/bin/vdsim_realtime<span class="w"> </span>--scene<span class="o">=</span>configs/scenes/l4_sedan_kinematics.yaml
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># vehicle level L4 in scene / catalog</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>build/bin/vdsim_realtime<span class="w"> </span>--scene<span class="o">=</span>configs/scenes/l4_sedan_kinematics.yaml
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># vehicle level L4 in scene / catalog</span>
 </span></code></pre></div>
 <h2 id="6-tests-representative">6. Tests (representative)<a class="headerlink" href="#6-tests-representative" title="Permanent link">&para;</a></h2>
 <table>
@@ -2795,16 +2830,18 @@ bushing compliance (off in L4 step)</strong>.</p>
 <ul>
 <li>Hard-joint lateral load at fixed travel: Baumgarte z-constraint → <strong>q̈≈0</strong> (by design).</li>
 <li>M7 open-chain q̈ under lateral Fy <strong>≠</strong> hard DAE (unconstrained lump).</li>
-<li><code>corner_inertia_about_axis</code> / lumped <code>I</code> duplicated in <code>multibody_hard_dae.cpp</code> and
-  <code>multibody_featherstone.cpp</code> — keep in sync when changing inertia model.</li>
+<li>Inertia lump + rotation math now live in <strong><code>multibody_math.{hpp,cpp}</code></strong>
+  (<code>rodrigues</code>, <code>axis_angle_to_R</code>, <code>corner_inertia_about_axis</code>,
+  <code>lump_corner_about_axis</code>); both the hard DAE and Featherstone trees call it, so the
+  inertia model has a single definition (v0.6 M1 — was the "keep in sync" hazard).</li>
 <li>Beam axle / twist beam: kinematic FK fallback only.</li>
 </ul>
 <h2 id="8-next-post-m7">8. Next (post-M7)<a class="headerlink" href="#8-next-post-m7" title="Permanent link">&para;</a></h2>
 <ol>
-<li>v0.5 terrain + L5 hub contact — <a href="../V0.5_TERRAIN_L5/"><code>V0.5_TERRAIN_L5.md</code></a></li>
-<li>Shared <code>multibody_math</code> helpers (rodrigues, inertia lump)</li>
+<li>v0.5 terrain + L5 hub contact — <a href="../V0.5_TERRAIN_L5/"><code>V0.5_TERRAIN_L5.md</code></a> — <strong>done</strong></li>
+<li>Shared <code>multibody_math</code> helpers (rodrigues, inertia lump) — <strong>done (v0.6 M1)</strong></li>
 <li>Full loop Featherstone or augmented Lagrangian (v0.6+)</li>
-<li>ISO re-baseline on flat (<code>run_validation.py</code>)</li>
+<li>ISO re-baseline on flat (<code>run_validation.py</code>) — <strong>done</strong></li>
 </ol>
 
 
