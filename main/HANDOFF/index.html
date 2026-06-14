@@ -2343,10 +2343,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#0-2026-06-13-fresh" class="md-nav__link">
+  <a href="#0-2026-06-14-fresh" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0. 2026-06-13 세션 인수인계 (fresh 세션은 여기부터)
+        0. 2026-06-14 세션 인수인계 (fresh 세션은 여기부터)
       
     </span>
   </a>
@@ -2512,28 +2512,27 @@
 
 
 <h1 id="vdsim">VDSim 핸드오프<a class="headerlink" href="#vdsim" title="Permanent link">&para;</a></h1>
-<p>작성: <strong>2026-06-13</strong> · <code>main</code> @ <code>079f545</code> (pushed, ahead of <code>v0.5.1</code>) · <strong>335/335 ctest green</strong></p>
-<h2 id="0-2026-06-13-fresh">0. 2026-06-13 세션 인수인계 (fresh 세션은 여기부터)<a class="headerlink" href="#0-2026-06-13-fresh" title="Permanent link">&para;</a></h2>
-<p><strong>목표였던 것:</strong> 누적된 헤드리스 백로그 처리 + 브랜치 정리. 전부 완료.</p>
-<p><strong>현재 상태:</strong> <code>main</code> 에 5개 feature 머지+push 완료, 335/335 green, 작업 트리 clean, 이번 세션 브랜치 전부 삭제(로컬+원격). <strong>미완 작업 없음 — 깨끗한 중단점.</strong></p>
+<p>작성: <strong>2026-06-14</strong> · <code>main</code> @ <code>b9064c4</code> (pushed, ahead of <code>v0.5.1</code>) · <strong>336/336 ctest green</strong></p>
+<h2 id="0-2026-06-14-fresh">0. 2026-06-14 세션 인수인계 (fresh 세션은 여기부터)<a class="headerlink" href="#0-2026-06-14-fresh" title="Permanent link">&para;</a></h2>
+<p><strong>목표였던 것:</strong> 멀티차량 비교(헤드리스+GUI) + 다나와식 차량조립 UI + 외부 AI 디자인 리뷰 반영. 완료.</p>
+<p><strong>현재 상태:</strong> <code>main</code> 에 feature 머지+push 완료(<code>b9064c4</code>), 336/336 green, 작업 트리 clean, 이번 세션 브랜치 삭제(로컬+원격). <strong>미완 작업 없음 — 깨끗한 중단점.</strong></p>
 <p><strong>이번 세션 main 에 들어간 것:</strong>
-- <strong>Ld4 v0.6 M1</strong> — <code>vdsim/multibody_math.{hpp,cpp}</code> 로 rodrigues/corner-inertia 공유(hard_dae·featherstone 중복 제거, bit-identical). full-loop Featherstone 은 불필요 결론(hard DAE 가 이미 loop 구속 품).
-- <strong>L1 powertrain</strong> — drivetrain v2(engine map+gearbox+shift)를 L1 bicycle 에. opt-in, substep 당 1회 advance, default-off → ISO 불변. <code>DrivetrainV2.L1*</code>.
-- <strong>re-taxonomy step 2 (BREAKING catalog)</strong> — chassis 통짜 → <strong>body / aero / ride</strong> 분리, <code>chassis</code> type = <strong>서스펜션 링크</strong>(옛 susp_kinematics). 슬롯 body/aero/ride + front_chassis/rear_chassis. resolver 는 여전히 단일 vehicle.yaml 로 merge → C++/물리 불변. slots.py 중앙정의. <strong>구버전 config 비호환.</strong>
-- <strong>너클 schema</strong> — kin yaml optional <code>knuckle:</code> 블록(wheel-center 상대 점 + arm) → <code>knuckle.*</code> hardpoint. additive, dynamics 불변.
-- <strong>retax2 GUI</strong> — Parts library 탭 body/aero/ride/chassis(links), part_store 에디터/clone, <strong>add-vehicle preset picker</strong>(+클릭 → blueprint 카드 → 선택 시 차량추가+assembly 진입), fleet-path id 수정(susp.<em>→chassis.</em>). headless Chromium 스크린샷 검증 완료.
-- <strong>#157 multi-vehicle 런타임</strong> — 이미 구현돼 있던 걸(독립 N-session spawn + per-vehicle command demux + 병렬 tick + per-vehicle VDS1) <strong>회귀 테스트로 잠금</strong>(<code>MultiVehicle.*</code>). V2V 충돌은 <strong>scope 밖 확정</strong>(멀티차량 = 비교용).</p>
+- <strong>헤드리스 멀티차량 비교</strong> <code>tools/vdsim_compare.py</code> — preset N대에 같은 ISO maneuver(step-steer/skidpad/DLC) 돌려 지표 나란히 표 + bar-chart(compare.csv/png). <code>examples/maneuvers.py</code> 함수에 optional <code>veh=(vp,tp)</code> + <code>trace=True</code>(step_steer yaw-rate 시계열).
+- <strong>다나와식 build-sheet</strong> (assembly 모달 재설계) — 좌측 슬롯 리스트(Body&amp;chassis/Powertrain/Grip/Control 그룹, 각 행=부품+change) → 클릭 시 우측 그 슬롯 라이브러리 + RESOLVED STATS. <code>assembly.py</code> 카테고리 새 taxonomy 로 재그룹.
+- <strong>GUI Compare 대시보드</strong> — VEHICLES 패널 ⊟ → blueprint 체크박스 → <code>/api/compare</code>(routes.py, <code>vdsim_compare</code> 래핑) → <strong>step-steer yaw-rate overlay SVG 차트</strong> + <strong>Δ%(baseline 대비) 표</strong>(유효숫자 통일, 정성/정량 분리). <code>tests/scripts/test_compare.py</code>(ctest <code>multi_vehicle_compare</code>).
+- <strong>GUI 폴리싱</strong>(디자인 리뷰 반영) — RESOLVED STATS 단위, active 행 회색+좌측 accent, 3D 프리뷰 우측, Sync-draft 표준 크기.</p>
 <p><strong>다음 할 일 후보 (우선순위 순):</strong>
-1. <strong>#158 GUI 멀티차량 render</strong> — preset picker 로 N대 spawn 은 되니, 3D 뷰에서 N대 동시 표시(VDS1 vehicle_id demux render). "동시 비교" UX 직결.
-2. <strong>헤드리스 멀티차량 비교 로깅/리포트</strong> — 같은 maneuver 를 여러 차량에 돌려 지표(NRMSE 등) 나란히. batch runner 연계.
-3. <strong>이전 세션 잔여 브랜치 점검</strong> — <code>feat/{poc-w5,tire-t1,tire-t2,v0.4-slope,v0.5-terrain ×2}</code> 가 머지됐는지 확인 후 정리.
-4. GUI cosmetic — part 라벨 "Fsk Formula chassis body" 잔재 정리, Session tune 탭 Chassis/Suspension 라벨.</p>
+1. <strong>per-axle tire (코어)</strong> — 현재 단일 TireParams. 앞/뒤 다른 타이어 = L1/L2/L3/L5 force loop + LuGre/belt + resolver + tire_front/rear 슬롯. 사용자 요청 보류분.
+2. <strong>GUI 재아키텍처 (전략 결정 후)</strong> — 외부 AI 리뷰 4/10 "프로토타입" 판정. 큰 항목: dockable/resizable 패널 + 모달 제거(분할화면), 글로벌 모드 nav(Setup-Sim-Analyze), 전사 디자인 시스템. <strong>stdlib http.server + 손코딩 app.js 의 한계 — React/Svelte + 디자인 패스(Figma) 결정이 선행.</strong> 지금 찔끔 하지 말 것.
+3. <strong>#158 GUI 멀티차량 3D render</strong> — preset picker 로 spawn 은 됨, 3D 뷰 N대 동시 표시(VDS1 vehicle_id demux) 남음.
+4. cosmetic — part 라벨 "Fsk Formula chassis body" 잔재, Session tune 탭 라벨.</p>
 <p><strong>주의·함정:</strong>
-- retax2 는 <strong>breaking</strong> — 옛 <code>chassis.*</code>/<code>susp.*</code> part id, <code>front_susp_kin</code> 슬롯 전부 제거됨. 외부 config/스크립트가 이걸 참조하면 깨짐.
-- <code>from_yaml</code> 은 envelope(<code>body:</code>)를 unwrap 안 함 — IsoBaseline 은 그래서 <code>body/sedan.yaml</code>(envelope→struct defaults) 로 로드(latent: 실제론 defaults 사용). 건드리지 말 것.
+- retax2 <strong>breaking</strong> — 옛 <code>chassis.*</code>/<code>susp.*</code> part id, <code>front_susp_kin</code> 슬롯 제거됨.
+- <code>from_yaml</code> 은 envelope(<code>body:</code>)를 unwrap 안 함 — IsoBaseline 은 <code>body/sedan.yaml</code>(→struct defaults) 로딩. 건드리지 말 것.
 - ISO/Default subsystem <strong>숫자 리베이스 금지</strong>. 영상 git 커밋 금지. 현대 <code>.tir</code> 대외비.
-- GUI 서버는 <code>(... &amp;)</code> 백그라운드로 띄우면 tool 호출 끝날 때 죽음 → <code>run_in_background</code> 사용.</p>
-<p><strong>관련 경로:</strong> <code>cosim/realtime_server.cpp</code>·<code>scene_loader.cpp</code>·<code>world_scenario.cpp</code> (멀티차량) / <code>python/catalog/{slots,resolver,ids,materialize,part_store}.py</code> (taxonomy) / <code>gui/static/app.js</code>·<code>gui/runner/catalog_api.py</code> (GUI) / <code>tests/integration/test_multi_vehicle.cpp</code>.</p>
+- GUI 서버 띄울 때 <strong><code>run_in_background</code> 사용</strong>. <code>pkill -f "gui/server.py"</code> 는 자기 명령줄 self-match 로 죽으니 <code>pkill -f "server.py --port"</code> 처럼 좁혀서.
+- 멀티차량 = <strong>비교용</strong>, V2V 충돌 scope 밖 (메모리에 기록됨).</p>
+<p><strong>관련 경로:</strong> <code>tools/vdsim_compare.py</code>·<code>examples/maneuvers.py</code> (비교) / <code>gui/static/app.js</code>(openCompareModal/renderCompareChart/renderAssemblyPane)·<code>gui/api/routes.py</code>(/api/compare)·<code>python/catalog/assembly.py</code> (GUI) / <code>cosim/realtime_server.cpp</code> (멀티차량 런타임).</p>
 <h2 id="1">1. 문서 인덱스<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
