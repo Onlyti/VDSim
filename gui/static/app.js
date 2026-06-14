@@ -4093,32 +4093,43 @@ async function runCompare() {
     renderCompareTable(out, r.rows, r.columns);
   } catch (e) { out.innerHTML = `<div class="sub" style="color:var(--warn)">${e.message}</div>`; }
 }
+function cmpFmt(v) {                          // consistent display precision (4 sig figs)
+  const n = +v;
+  return isFinite(n) ? String(parseFloat(n.toPrecision(4))) : String(v);
+}
 function renderCompareTable(out, rows, cols) {
   out.innerHTML = '';
   const tbl = document.createElement('table');
   tbl.className = 'cmp-table';
+  // First selected vehicle is the baseline; other columns show Δ% against it.
   const thead = document.createElement('tr');
-  thead.innerHTML = '<th>metric</th>' + rows.map(r =>
-    `<th>${(r.vehicle || '').replace(/^vehicle\./, '')}</th>`).join('');
+  thead.innerHTML = '<th>metric</th>' + rows.map((r, i) =>
+    `<th>${(r.vehicle || '').replace(/^vehicle\./, '')}`
+    + `${i === 0 ? ' <span class="cmp-base">base</span>' : ''}</th>`).join('');
   tbl.appendChild(thead);
   for (const c of cols) {
-    const vals = rows.map(r => r[c]);
-    const nums = vals.filter(v => typeof v === 'number');
-    const max = nums.length ? Math.max(...nums.map(Math.abs)) : 0;
+    const base = rows[0] ? rows[0][c] : undefined;
     const tr = document.createElement('tr');
     const th = document.createElement('th'); th.className = 'cmp-metric'; th.textContent = c;
     tr.appendChild(th);
-    for (const v of vals) {
+    rows.forEach((r, i) => {
+      const v = r[c];
       const td = document.createElement('td');
       if (typeof v === 'number') {
-        const pct = max > 1e-9 ? Math.abs(v) / max * 100 : 0;
-        td.innerHTML = `<span class="cmp-bar" style="width:${pct.toFixed(0)}%"></span>`
-          + `<span class="cmp-num">${v}</span>`;
-      } else {
-        td.textContent = v == null ? '' : String(v);
+        let html = `<span class="cmp-num">${cmpFmt(v)}</span>`;
+        if (i > 0 && typeof base === 'number' && Math.abs(base) > 1e-9) {
+          const d = (v - base) / Math.abs(base) * 100;
+          if (Math.abs(d) >= 0.05) {
+            html += ` <span class="cmp-delta${d < 0 ? ' neg' : ''}">`
+              + `${d > 0 ? '+' : ''}${d.toFixed(1)}%</span>`;
+          }
+        }
+        td.innerHTML = html;
+      } else {                                // qualitative metric — no Δ, distinct style
+        td.innerHTML = `<span class="cmp-qual">${v == null ? '' : v}</span>`;
       }
       tr.appendChild(td);
-    }
+    });
     tbl.appendChild(tr);
   }
   out.appendChild(tbl);

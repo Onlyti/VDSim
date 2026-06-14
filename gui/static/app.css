@@ -56,7 +56,7 @@
   .setup-section label { margin:2px 0 1px; font-size:11px; }
   .setup-section .setup-table { max-height:88px; display:block; overflow:auto; }
   .setup-bar-actions { display:flex; flex-direction:column; justify-content:flex-end; gap:6px; min-width:96px; }
-  #setup_apply { margin:0; width:100%; }
+  #setup_apply { margin:0; width:100%; max-height:40px; padding:9px 12px; }
   .card { background:#f8fafc; border:1px solid var(--border); border-radius:8px; padding:10px 12px; }
   .card-h { font:600 11px Tahoma; margin:0 0 8px; color:#16202b; letter-spacing:.4px;
             text-transform:uppercase; display:flex; align-items:center; justify-content:space-between; }
@@ -233,9 +233,11 @@
     white-space:nowrap; }
   .cmp-table tr:first-child th { text-align:right; color:var(--ink); font-weight:600;
     border-bottom:2px solid var(--border); }
-  .cmp-table td { position:relative; }
-  .cmp-table .cmp-bar { position:absolute; left:0; bottom:0; height:2px; background:var(--acc); opacity:.5; }
-  .cmp-table .cmp-num { position:relative; }
+  .cmp-table .cmp-num { font-variant-numeric:tabular-nums; }
+  .cmp-table .cmp-delta { font-size:9px; color:#2a8a4a; }
+  .cmp-table .cmp-delta.neg { color:#c55; }
+  .cmp-table .cmp-qual { color:var(--dim); font-style:italic; }
+  .cmp-table .cmp-base { font-size:8px; color:var(--dim); font-weight:400; text-transform:uppercase; }
   .garage-stats .gs-delta { color:var(--acc); font-size:9px; }
   .garage-stats .gs-delta.neg { color:#c55; }
   .garage-stats .gs-warn { color:#a66; margin-top:6px; font-size:9px; }
