@@ -39,7 +39,8 @@ def _throttle_to(vx, v_target):
     return c
 
 
-def step_steer(v=20.0, steer=0.03, dt=0.005, settle=3.0, hold=4.0, level="L2", veh=None):
+def step_steer(v=20.0, steer=0.03, dt=0.005, settle=3.0, hold=4.0, level="L2", veh=None,
+               trace=False):
     """ISO 7401: hold speed, step the steer, measure the yaw-rate response."""
     vp, tp = veh if veh is not None else _veh(level)
     sess = vdsim.make_sim_session(vp, tp, level, nominal_dt=dt)
@@ -58,8 +59,13 @@ def step_steer(v=20.0, steer=0.03, dt=0.005, settle=3.0, hold=4.0, level="L2", v
     r_pk = float(np.max(np.abs(r))) * np.sign(r_ss)
     overshoot = (abs(r_pk) - abs(r_ss)) / abs(r_ss) * 100.0 if abs(r_ss) > 1e-6 else 0.0
     rise = next((tt for tt, rr in zip(t, r) if abs(rr) >= 0.9 * abs(r_ss)), float("nan"))
-    return {"maneuver": "ISO7401 step-steer", "r_ss[rad/s]": round(r_ss, 4),
-            "rise90[s]": round(rise, 3), "overshoot[%]": round(overshoot, 1)}
+    out = {"maneuver": "ISO7401 step-steer", "r_ss[rad/s]": round(r_ss, 4),
+           "rise90[s]": round(rise, 3), "overshoot[%]": round(overshoot, 1)}
+    if trace:                                    # yaw-rate(t) for overlay charts
+        k = max(1, len(t) // 200)                # downsample to ~200 points
+        out["trace"] = {"t": [round(float(x), 4) for x in t[::k]],
+                        "r": [round(float(x), 5) for x in r[::k]]}
+    return out
 
 
 def skidpad_understeer(R=40.0, speeds=(8, 12, 16, 19), dt=0.005, level="L2", veh=None):

@@ -42,6 +42,13 @@ def main():
     json.dumps(dlc)  # raises TypeError on a stray numpy scalar
     assert isinstance(dlc[0]["dlc.completed"], bool)
 
+    # Overlay traces: per-vehicle step-steer yaw-rate(t), JSON-serializable, aligned.
+    traces = C.run_traces(["sedan", "race_car"], tire=None, level="L2")
+    json.dumps(traces)
+    assert set(traces) == {"sedan", "race_car"}
+    for tr in traces.values():
+        assert len(tr["t"]) == len(tr["r"]) and len(tr["t"]) > 10
+
     print("test_compare: ok")
 
 

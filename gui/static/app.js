@@ -4090,8 +4090,44 @@ async function runCompare() {
       body: JSON.stringify({ vehicles: ids }),
     })).json();
     if (!r.ok) throw new Error(r.error || 'compare failed');
-    renderCompareTable(out, r.rows, r.columns);
+    out.innerHTML = '';
+    const chartBox = document.createElement('div'); out.appendChild(chartBox);
+    const tableBox = document.createElement('div'); out.appendChild(tableBox);
+    renderCompareChart(chartBox, r.traces || {});
+    renderCompareTable(tableBox, r.rows, r.columns);
   } catch (e) { out.innerHTML = `<div class="sub" style="color:var(--warn)">${e.message}</div>`; }
+}
+function renderCompareChart(out, traces) {
+  const names = Object.keys(traces);
+  if (!names.length) return;
+  const W = 720, H = 220, pad = { l: 50, r: 12, t: 22, b: 26 };
+  let tmin = Infinity, tmax = -Infinity, rmin = Infinity, rmax = -Infinity;
+  for (const n of names) {
+    const tr = traces[n];
+    for (const x of tr.t) { tmin = Math.min(tmin, x); tmax = Math.max(tmax, x); }
+    for (const y of tr.r) { rmin = Math.min(rmin, y); rmax = Math.max(rmax, y); }
+  }
+  rmin = Math.min(rmin, 0); rmax = Math.max(rmax, 0);
+  const pal = ['#01A0E9', '#DC291E', '#2a8a4a', '#9b59b6', '#e6a817', '#333'];
+  const X = t => pad.l + (t - tmin) / ((tmax - tmin) || 1) * (W - pad.l - pad.r);
+  const Y = r => H - pad.b - (r - rmin) / ((rmax - rmin) || 1) * (H - pad.t - pad.b);
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px">`;
+  svg += `<line x1="${pad.l}" y1="${Y(0).toFixed(1)}" x2="${W - pad.r}" y2="${Y(0).toFixed(1)}" stroke="#dde2e8"/>`;
+  svg += `<line x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${H - pad.b}" stroke="#dde2e8"/>`;
+  svg += `<text x="${pad.l}" y="13" font-size="10" fill="#6b7480">yaw rate r [rad/s]</text>`;
+  svg += `<text x="${W - pad.r}" y="${H - 8}" font-size="9" fill="#6b7480" text-anchor="end">t [s]</text>`;
+  names.forEach((n, i) => {
+    const tr = traces[n], c = pal[i % pal.length];
+    const pts = tr.t.map((x, j) => `${X(x).toFixed(1)},${Y(tr.r[j]).toFixed(1)}`).join(' ');
+    svg += `<polyline points="${pts}" fill="none" stroke="${c}" stroke-width="1.6"/>`;
+    svg += `<text x="${pad.l + 8}" y="${pad.t + 11 + i * 13}" font-size="10" fill="${c}">`
+      + `${n.replace(/^vehicle\./, '')}</text>`;
+  });
+  svg += `</svg>`;
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'margin:6px 0 12px';
+  wrap.innerHTML = '<div class="subgrp">Step-steer yaw-rate response (overlay)</div>' + svg;
+  out.appendChild(wrap);
 }
 function cmpFmt(v) {                          // consistent display precision (4 sig figs)
   const n = +v;

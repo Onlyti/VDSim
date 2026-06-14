@@ -69,6 +69,18 @@ def run_compare(presets, maneuvers, tire=None, level="L2"):
     return rows
 
 
+def run_traces(presets, tire=None, level="L2"):
+    """Per-vehicle step-steer yaw-rate(t) trace for overlay charts:
+    {vehicle: {"t": [...], "r": [...]}}."""
+    out = {}
+    for p in presets:
+        vp, tp, lvl = resolve_vehicle(p, tire, level)
+        res = M.step_steer(level=lvl, veh=(vp, tp), trace=True)
+        if res.get("trace"):
+            out[str(p)] = res["trace"]
+    return out
+
+
 def _columns(rows):
     cols = []
     for rec in rows:

@@ -473,7 +473,8 @@ def handle_post(h, path, body, ctx):
                 json_response(h, {"ok": False, "error": "pick at least 2 vehicles"}, 400)
                 return True
             rows = vc.run_compare(vehicles, maneuvers, tire, level)
-            json_response(h, {"ok": True, "rows": rows,
+            traces = vc.run_traces(vehicles, tire, level) if "step_steer" in maneuvers else {}
+            json_response(h, {"ok": True, "rows": rows, "traces": traces,
                               "columns": vc._columns(rows), "maneuvers": maneuvers})
         except Exception as e:  # noqa: BLE001
             json_response(h, {"ok": False, "error": str(e)}, 400)
