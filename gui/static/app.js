@@ -1985,11 +1985,11 @@ function renderGarageStats(el, asm, preview) {
   const s = (preview?.summary && !preview.summary.error) ? preview.summary : (asm.summary || {});
   const delta = preview?.delta || {};
   const rows = [
-    ['Mass', s.mass_kg, 'mass_kg', 0],
-    ['Wheelbase', s.wheelbase_m, 'wheelbase_m', 2],
-    ['CG height', s.cg_height_m, 'cg_height_m', 2],
-    ['Tire μ', s.tire_mu, 'tire_mu', 2],
-    ['Drive', s.drive_type, null, 0],
+    ['Mass', s.mass_kg, 'mass_kg', 0, 'kg'],
+    ['Wheelbase', s.wheelbase_m, 'wheelbase_m', 2, 'm'],
+    ['CG height', s.cg_height_m, 'cg_height_m', 2, 'm'],
+    ['Tire μ', s.tire_mu, 'tire_mu', 2, ''],
+    ['Drive', s.drive_type, null, 0, ''],
   ];
   el.innerHTML = '';
   const title = document.createElement('div');
@@ -2003,14 +2003,15 @@ function renderGarageStats(el, asm, preview) {
     el.appendChild(err);
     return;
   }
-  for (const [lab, val, dkey, prec] of rows) {
+  for (const [lab, val, dkey, prec, unit] of rows) {
     const row = document.createElement('div');
     row.className = 'gs-row';
     const l = document.createElement('span');
     l.textContent = lab;
     const r = document.createElement('span');
+    const u = unit ? ` <span class="gs-unit">${unit}</span>` : '';
     if (dkey) {
-      r.innerHTML = `<b>${(+val).toFixed(prec)}</b>`;
+      r.innerHTML = `<b>${(+val).toFixed(prec)}</b>${u}`;
       const d = delta[dkey];
       if (d != null && Math.abs(d) > 1e-9) {
         const sp = document.createElement('span');
@@ -3163,8 +3164,8 @@ function wrapModalPreview(inner) {
   const cv = document.createElement('canvas'); cv.id = 'modal_preview_cv';
   const hint = document.createElement('div'); hint.className = 'sub'; hint.id = 'modal_preview_hint';
   preview.appendChild(plab); preview.appendChild(cv); preview.appendChild(hint);
-  split.appendChild(preview);
-  split.appendChild(inner);
+  split.appendChild(inner);                 // work area first (slot list is the entry point)
+  split.appendChild(preview);               // 3D preview parked on the right
   requestAnimationFrame(() => { initModalPreview(cv); refreshModalPreview(); });
   return split;
 }
