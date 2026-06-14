@@ -3678,35 +3678,53 @@ async function renderAssemblyPane(body) {
   shell.appendChild(top);
   const main = document.createElement('div');
   main.className = 'garage-main';
-  const catNav = document.createElement('nav');
-  catNav.className = 'garage-cat';
-  for (const cat of (asm.categories || [])) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.textContent = cat.label;
-    const first = cat.slots[0];
-    b.classList.toggle('on', cat.slots.includes(modalAsmSlot));
-    b.onclick = () => {
-      modalAsmSlot = first;
+  // Build sheet (Danawa-style): every slot is a row showing the installed part;
+  // clicking a row opens that slot's part library on the right.
+  const sheet = document.createElement('div');
+  sheet.className = 'garage-sheet';
+  const placed = new Set();
+  const addRow = s => {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'garage-srow' + (s.slot === modalAsmSlot ? ' on' : '') + slotCompatClass(s);
+    const col = document.createElement('div');
+    col.className = 'garage-srow-main';
+    const lab = document.createElement('span');
+    lab.className = 'garage-srow-cat';
+    lab.textContent = s.label;
+    const part = document.createElement('span');
+    part.className = 'garage-srow-part' + (s.part_id ? '' : ' empty');
+    part.textContent = s.part_stem || s.part_label || '(none)';
+    col.append(lab, part);
+    const act = document.createElement('span');
+    act.className = 'garage-srow-act';
+    act.textContent = s.part_id ? 'change ▸' : 'add ▸';
+    row.append(col, act);
+    row.onclick = () => {
+      modalAsmSlot = s.slot;
       modalAsmPinnedCandidate = null;
       renderAssemblyPane(body);
     };
-    catNav.appendChild(b);
+    sheet.appendChild(row);
+    placed.add(s.slot);
+  };
+  for (const cat of (asm.categories || [])) {
+    const h = document.createElement('div');
+    h.className = 'grp';
+    h.textContent = cat.label;
+    sheet.appendChild(h);
+    for (const sk of cat.slots) {
+      const s = asm.slots.find(x => x.slot === sk);
+      if (s) addRow(s);
+    }
   }
-  main.appendChild(catNav);
+  for (const s of asm.slots) if (!placed.has(s.slot)) addRow(s);
+  main.appendChild(sheet);
   const center = document.createElement('div');
   center.className = 'garage-center';
-  const diagram = document.createElement('div');
-  diagram.className = 'garage-diagram';
-  buildGarageDiagram(diagram, asm, modalAsmSlot, sk => {
-    modalAsmSlot = sk;
-    modalAsmPinnedCandidate = null;
-    renderAssemblyPane(body);
-  });
-  center.appendChild(diagram);
   const slotHead = document.createElement('div');
   slotHead.className = 'subgrp';
-  slotHead.textContent = activeSlot ? `${activeSlot.label} — install part` : 'Parts';
+  slotHead.textContent = activeSlot ? `${activeSlot.label} — choose part` : 'Parts';
   center.appendChild(slotHead);
   const cards = document.createElement('div');
   cards.className = 'garage-cards';
