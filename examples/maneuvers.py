@@ -125,7 +125,7 @@ def double_lane_change(v=14.0, dt=0.005, level="L2", veh=None):
         o = sess.output()
         peak_r = max(peak_r, abs(o.state.yaw_rate()))
         peak_ay = max(peak_ay, abs(o.ay))
-    completed = sess.state().position[0] > 75.0
+    completed = bool(sess.state().position[0] > 75.0)
     return {"maneuver": "ISO3888-2 DLC", "v[m/s]": v, "peak_r[rad/s]": round(peak_r, 3),
             "peak_ay[g]": round(peak_ay / G, 2), "completed": completed}
 

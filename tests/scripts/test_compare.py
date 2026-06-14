@@ -35,6 +35,13 @@ def main():
         assert "vehicle" in text and "step_steer.r_ss[rad/s]" in text
         assert "sedan" in text and "race_car" in text
 
+    # The GUI /api/compare returns rows as JSON, so every metric must be a native
+    # type — the DLC `completed` flag was a numpy bool_ (not serializable). Lock it.
+    import json
+    dlc = C.run_compare(["sedan", "race_car"], ["dlc"], tire=None, level="L2")
+    json.dumps(dlc)  # raises TypeError on a stray numpy scalar
+    assert isinstance(dlc[0]["dlc.completed"], bool)
+
     print("test_compare: ok")
 
 

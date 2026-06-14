@@ -2812,6 +2812,7 @@ async function buildVehicleTree(fleetSpec, liveVid) {
   refreshDriverUI();
 }
 $('add_veh').onclick = () => openPresetPicker();
+$('cmp_veh').onclick = () => openCompareModal();
 let infraSensors = [];
 function buildInfraTree(list) {
   infraSensors = list || [];
@@ -4034,6 +4035,93 @@ async function addVehicleFromPreset(blueprintId) {
     const vid = await fleetAddVehicleSpec(blueprintId);
     if (vid != null) { markDraftDirty(); await openModal(vid); }
   } catch (e) { alert(e.message); }
+}
+
+// ---- Compare vehicles: run the ISO maneuver set across picked presets and
+//      lay the objective metrics side by side (the multi-vehicle = comparison goal).
+function closeCompareModal() {
+  document.getElementById('cmp_bg')?.classList.remove('open');
+}
+async function openCompareModal() {
+  let blueprints = [];
+  try {
+    const r = await getJson(`/api/catalog/assembly?vehicle_id=${selectedVid}`);
+    blueprints = r.assembly?.blueprints || [];
+  } catch (e) { alert(e.message); return; }
+  let bg = document.getElementById('cmp_bg');
+  if (!bg) {
+    bg = document.createElement('div');
+    bg.id = 'cmp_bg';
+    bg.className = 'modal-bg';
+    bg.innerHTML = `<div class="modal" style="max-width:860px">
+      <div class="modal-h"><b>Compare vehicles — ISO maneuver metrics</b>`
+      + `<button id="cmp_x" class="modal-x" type="button">×</button></div>`
+      + `<div style="padding:8px 14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">`
+      + `<span id="cmp_picks" style="display:flex;flex-wrap:wrap;gap:8px"></span>`
+      + `<button id="cmp_run" type="button" style="width:auto;padding:5px 14px;margin-left:auto">Run comparison</button></div>`
+      + `<div id="cmp_out" style="padding:0 14px 14px;overflow:auto;max-height:60vh"></div></div>`;
+    document.body.appendChild(bg);
+    bg.querySelector('#cmp_x').onclick = closeCompareModal;
+    bg.addEventListener('click', e => { if (e.target === bg) closeCompareModal(); });
+    bg.querySelector('#cmp_run').onclick = runCompare;
+  }
+  const picks = bg.querySelector('#cmp_picks');
+  picks.innerHTML = '';
+  blueprints.forEach((b, i) => {
+    const lab = document.createElement('label');
+    lab.style.cssText = 'display:inline-flex;align-items:center;gap:4px;font-size:11px';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = b.id; cb.checked = i < 3;   // preselect first 3
+    lab.append(cb, document.createTextNode(`${b.label} (${b.level})`));
+    picks.appendChild(lab);
+  });
+  bg.querySelector('#cmp_out').innerHTML = '';
+  bg.classList.add('open');
+}
+async function runCompare() {
+  const bg = document.getElementById('cmp_bg');
+  const ids = [...bg.querySelectorAll('#cmp_picks input:checked')].map(c => c.value);
+  const out = bg.querySelector('#cmp_out');
+  if (ids.length < 2) { out.innerHTML = '<div class="sub">Pick at least 2 vehicles.</div>'; return; }
+  out.innerHTML = '<div class="sub">Running maneuvers…</div>';
+  try {
+    const r = await (await fetch('/api/compare', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vehicles: ids }),
+    })).json();
+    if (!r.ok) throw new Error(r.error || 'compare failed');
+    renderCompareTable(out, r.rows, r.columns);
+  } catch (e) { out.innerHTML = `<div class="sub" style="color:var(--warn)">${e.message}</div>`; }
+}
+function renderCompareTable(out, rows, cols) {
+  out.innerHTML = '';
+  const tbl = document.createElement('table');
+  tbl.className = 'cmp-table';
+  const thead = document.createElement('tr');
+  thead.innerHTML = '<th>metric</th>' + rows.map(r =>
+    `<th>${(r.vehicle || '').replace(/^vehicle\./, '')}</th>`).join('');
+  tbl.appendChild(thead);
+  for (const c of cols) {
+    const vals = rows.map(r => r[c]);
+    const nums = vals.filter(v => typeof v === 'number');
+    const max = nums.length ? Math.max(...nums.map(Math.abs)) : 0;
+    const tr = document.createElement('tr');
+    const th = document.createElement('th'); th.className = 'cmp-metric'; th.textContent = c;
+    tr.appendChild(th);
+    for (const v of vals) {
+      const td = document.createElement('td');
+      if (typeof v === 'number') {
+        const pct = max > 1e-9 ? Math.abs(v) / max * 100 : 0;
+        td.innerHTML = `<span class="cmp-bar" style="width:${pct.toFixed(0)}%"></span>`
+          + `<span class="cmp-num">${v}</span>`;
+      } else {
+        td.textContent = v == null ? '' : String(v);
+      }
+      tr.appendChild(td);
+    }
+    tbl.appendChild(tr);
+  }
+  out.appendChild(tbl);
 }
 
 $('modal_x').onclick = closeModal;
