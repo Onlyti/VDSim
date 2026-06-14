@@ -1985,11 +1985,11 @@ function renderGarageStats(el, asm, preview) {
   const s = (preview?.summary && !preview.summary.error) ? preview.summary : (asm.summary || {});
   const delta = preview?.delta || {};
   const rows = [
-    ['Mass', s.mass_kg, 'mass_kg', 0],
-    ['Wheelbase', s.wheelbase_m, 'wheelbase_m', 2],
-    ['CG height', s.cg_height_m, 'cg_height_m', 2],
-    ['Tire μ', s.tire_mu, 'tire_mu', 2],
-    ['Drive', s.drive_type, null, 0],
+    ['Mass', s.mass_kg, 'mass_kg', 0, 'kg'],
+    ['Wheelbase', s.wheelbase_m, 'wheelbase_m', 2, 'm'],
+    ['CG height', s.cg_height_m, 'cg_height_m', 2, 'm'],
+    ['Tire μ', s.tire_mu, 'tire_mu', 2, ''],
+    ['Drive', s.drive_type, null, 0, ''],
   ];
   el.innerHTML = '';
   const title = document.createElement('div');
@@ -2003,14 +2003,15 @@ function renderGarageStats(el, asm, preview) {
     el.appendChild(err);
     return;
   }
-  for (const [lab, val, dkey, prec] of rows) {
+  for (const [lab, val, dkey, prec, unit] of rows) {
     const row = document.createElement('div');
     row.className = 'gs-row';
     const l = document.createElement('span');
     l.textContent = lab;
     const r = document.createElement('span');
+    const u = unit ? ` <span class="gs-unit">${unit}</span>` : '';
     if (dkey) {
-      r.innerHTML = `<b>${(+val).toFixed(prec)}</b>`;
+      r.innerHTML = `<b>${(+val).toFixed(prec)}</b>${u}`;
       const d = delta[dkey];
       if (d != null && Math.abs(d) > 1e-9) {
         const sp = document.createElement('span');
@@ -2811,6 +2812,7 @@ async function buildVehicleTree(fleetSpec, liveVid) {
   refreshDriverUI();
 }
 $('add_veh').onclick = () => openPresetPicker();
+$('cmp_veh').onclick = () => openCompareModal();
 let infraSensors = [];
 function buildInfraTree(list) {
   infraSensors = list || [];
@@ -3163,8 +3165,8 @@ function wrapModalPreview(inner) {
   const cv = document.createElement('canvas'); cv.id = 'modal_preview_cv';
   const hint = document.createElement('div'); hint.className = 'sub'; hint.id = 'modal_preview_hint';
   preview.appendChild(plab); preview.appendChild(cv); preview.appendChild(hint);
-  split.appendChild(preview);
-  split.appendChild(inner);
+  split.appendChild(inner);                 // work area first (slot list is the entry point)
+  split.appendChild(preview);               // 3D preview parked on the right
   requestAnimationFrame(() => { initModalPreview(cv); refreshModalPreview(); });
   return split;
 }
@@ -3678,35 +3680,53 @@ async function renderAssemblyPane(body) {
   shell.appendChild(top);
   const main = document.createElement('div');
   main.className = 'garage-main';
-  const catNav = document.createElement('nav');
-  catNav.className = 'garage-cat';
-  for (const cat of (asm.categories || [])) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.textContent = cat.label;
-    const first = cat.slots[0];
-    b.classList.toggle('on', cat.slots.includes(modalAsmSlot));
-    b.onclick = () => {
-      modalAsmSlot = first;
+  // Build sheet (Danawa-style): every slot is a row showing the installed part;
+  // clicking a row opens that slot's part library on the right.
+  const sheet = document.createElement('div');
+  sheet.className = 'garage-sheet';
+  const placed = new Set();
+  const addRow = s => {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'garage-srow' + (s.slot === modalAsmSlot ? ' on' : '') + slotCompatClass(s);
+    const col = document.createElement('div');
+    col.className = 'garage-srow-main';
+    const lab = document.createElement('span');
+    lab.className = 'garage-srow-cat';
+    lab.textContent = s.label;
+    const part = document.createElement('span');
+    part.className = 'garage-srow-part' + (s.part_id ? '' : ' empty');
+    part.textContent = s.part_stem || s.part_label || '(none)';
+    col.append(lab, part);
+    const act = document.createElement('span');
+    act.className = 'garage-srow-act';
+    act.textContent = s.part_id ? 'change ▸' : 'add ▸';
+    row.append(col, act);
+    row.onclick = () => {
+      modalAsmSlot = s.slot;
       modalAsmPinnedCandidate = null;
       renderAssemblyPane(body);
     };
-    catNav.appendChild(b);
+    sheet.appendChild(row);
+    placed.add(s.slot);
+  };
+  for (const cat of (asm.categories || [])) {
+    const h = document.createElement('div');
+    h.className = 'grp';
+    h.textContent = cat.label;
+    sheet.appendChild(h);
+    for (const sk of cat.slots) {
+      const s = asm.slots.find(x => x.slot === sk);
+      if (s) addRow(s);
+    }
   }
-  main.appendChild(catNav);
+  for (const s of asm.slots) if (!placed.has(s.slot)) addRow(s);
+  main.appendChild(sheet);
   const center = document.createElement('div');
   center.className = 'garage-center';
-  const diagram = document.createElement('div');
-  diagram.className = 'garage-diagram';
-  buildGarageDiagram(diagram, asm, modalAsmSlot, sk => {
-    modalAsmSlot = sk;
-    modalAsmPinnedCandidate = null;
-    renderAssemblyPane(body);
-  });
-  center.appendChild(diagram);
   const slotHead = document.createElement('div');
   slotHead.className = 'subgrp';
-  slotHead.textContent = activeSlot ? `${activeSlot.label} — install part` : 'Parts';
+  slotHead.textContent = activeSlot ? `${activeSlot.label} — choose part` : 'Parts';
   center.appendChild(slotHead);
   const cards = document.createElement('div');
   cards.className = 'garage-cards';
@@ -4015,6 +4035,140 @@ async function addVehicleFromPreset(blueprintId) {
     const vid = await fleetAddVehicleSpec(blueprintId);
     if (vid != null) { markDraftDirty(); await openModal(vid); }
   } catch (e) { alert(e.message); }
+}
+
+// ---- Compare vehicles: run the ISO maneuver set across picked presets and
+//      lay the objective metrics side by side (the multi-vehicle = comparison goal).
+function closeCompareModal() {
+  document.getElementById('cmp_bg')?.classList.remove('open');
+}
+async function openCompareModal() {
+  let blueprints = [];
+  try {
+    const r = await getJson(`/api/catalog/assembly?vehicle_id=${selectedVid}`);
+    blueprints = r.assembly?.blueprints || [];
+  } catch (e) { alert(e.message); return; }
+  let bg = document.getElementById('cmp_bg');
+  if (!bg) {
+    bg = document.createElement('div');
+    bg.id = 'cmp_bg';
+    bg.className = 'modal-bg';
+    bg.innerHTML = `<div class="modal" style="max-width:860px">
+      <div class="modal-h"><b>Compare vehicles — ISO maneuver metrics</b>`
+      + `<button id="cmp_x" class="modal-x" type="button">×</button></div>`
+      + `<div style="padding:8px 14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">`
+      + `<span id="cmp_picks" style="display:flex;flex-wrap:wrap;gap:8px"></span>`
+      + `<button id="cmp_run" type="button" style="width:auto;padding:5px 14px;margin-left:auto">Run comparison</button></div>`
+      + `<div id="cmp_out" style="padding:0 14px 14px;overflow:auto;max-height:60vh"></div></div>`;
+    document.body.appendChild(bg);
+    bg.querySelector('#cmp_x').onclick = closeCompareModal;
+    bg.addEventListener('click', e => { if (e.target === bg) closeCompareModal(); });
+    bg.querySelector('#cmp_run').onclick = runCompare;
+  }
+  const picks = bg.querySelector('#cmp_picks');
+  picks.innerHTML = '';
+  blueprints.forEach((b, i) => {
+    const lab = document.createElement('label');
+    lab.style.cssText = 'display:inline-flex;align-items:center;gap:4px;font-size:11px';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = b.id; cb.checked = i < 3;   // preselect first 3
+    lab.append(cb, document.createTextNode(`${b.label} (${b.level})`));
+    picks.appendChild(lab);
+  });
+  bg.querySelector('#cmp_out').innerHTML = '';
+  bg.classList.add('open');
+}
+async function runCompare() {
+  const bg = document.getElementById('cmp_bg');
+  const ids = [...bg.querySelectorAll('#cmp_picks input:checked')].map(c => c.value);
+  const out = bg.querySelector('#cmp_out');
+  if (ids.length < 2) { out.innerHTML = '<div class="sub">Pick at least 2 vehicles.</div>'; return; }
+  out.innerHTML = '<div class="sub">Running maneuvers…</div>';
+  try {
+    const r = await (await fetch('/api/compare', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vehicles: ids }),
+    })).json();
+    if (!r.ok) throw new Error(r.error || 'compare failed');
+    out.innerHTML = '';
+    const chartBox = document.createElement('div'); out.appendChild(chartBox);
+    const tableBox = document.createElement('div'); out.appendChild(tableBox);
+    renderCompareChart(chartBox, r.traces || {});
+    renderCompareTable(tableBox, r.rows, r.columns);
+  } catch (e) { out.innerHTML = `<div class="sub" style="color:var(--warn)">${e.message}</div>`; }
+}
+function renderCompareChart(out, traces) {
+  const names = Object.keys(traces);
+  if (!names.length) return;
+  const W = 720, H = 220, pad = { l: 50, r: 12, t: 22, b: 26 };
+  let tmin = Infinity, tmax = -Infinity, rmin = Infinity, rmax = -Infinity;
+  for (const n of names) {
+    const tr = traces[n];
+    for (const x of tr.t) { tmin = Math.min(tmin, x); tmax = Math.max(tmax, x); }
+    for (const y of tr.r) { rmin = Math.min(rmin, y); rmax = Math.max(rmax, y); }
+  }
+  rmin = Math.min(rmin, 0); rmax = Math.max(rmax, 0);
+  const pal = ['#01A0E9', '#DC291E', '#2a8a4a', '#9b59b6', '#e6a817', '#333'];
+  const X = t => pad.l + (t - tmin) / ((tmax - tmin) || 1) * (W - pad.l - pad.r);
+  const Y = r => H - pad.b - (r - rmin) / ((rmax - rmin) || 1) * (H - pad.t - pad.b);
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px">`;
+  svg += `<line x1="${pad.l}" y1="${Y(0).toFixed(1)}" x2="${W - pad.r}" y2="${Y(0).toFixed(1)}" stroke="#dde2e8"/>`;
+  svg += `<line x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${H - pad.b}" stroke="#dde2e8"/>`;
+  svg += `<text x="${pad.l}" y="13" font-size="10" fill="#6b7480">yaw rate r [rad/s]</text>`;
+  svg += `<text x="${W - pad.r}" y="${H - 8}" font-size="9" fill="#6b7480" text-anchor="end">t [s]</text>`;
+  names.forEach((n, i) => {
+    const tr = traces[n], c = pal[i % pal.length];
+    const pts = tr.t.map((x, j) => `${X(x).toFixed(1)},${Y(tr.r[j]).toFixed(1)}`).join(' ');
+    svg += `<polyline points="${pts}" fill="none" stroke="${c}" stroke-width="1.6"/>`;
+    svg += `<text x="${pad.l + 8}" y="${pad.t + 11 + i * 13}" font-size="10" fill="${c}">`
+      + `${n.replace(/^vehicle\./, '')}</text>`;
+  });
+  svg += `</svg>`;
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'margin:6px 0 12px';
+  wrap.innerHTML = '<div class="subgrp">Step-steer yaw-rate response (overlay)</div>' + svg;
+  out.appendChild(wrap);
+}
+function cmpFmt(v) {                          // consistent display precision (4 sig figs)
+  const n = +v;
+  return isFinite(n) ? String(parseFloat(n.toPrecision(4))) : String(v);
+}
+function renderCompareTable(out, rows, cols) {
+  out.innerHTML = '';
+  const tbl = document.createElement('table');
+  tbl.className = 'cmp-table';
+  // First selected vehicle is the baseline; other columns show Δ% against it.
+  const thead = document.createElement('tr');
+  thead.innerHTML = '<th>metric</th>' + rows.map((r, i) =>
+    `<th>${(r.vehicle || '').replace(/^vehicle\./, '')}`
+    + `${i === 0 ? ' <span class="cmp-base">base</span>' : ''}</th>`).join('');
+  tbl.appendChild(thead);
+  for (const c of cols) {
+    const base = rows[0] ? rows[0][c] : undefined;
+    const tr = document.createElement('tr');
+    const th = document.createElement('th'); th.className = 'cmp-metric'; th.textContent = c;
+    tr.appendChild(th);
+    rows.forEach((r, i) => {
+      const v = r[c];
+      const td = document.createElement('td');
+      if (typeof v === 'number') {
+        let html = `<span class="cmp-num">${cmpFmt(v)}</span>`;
+        if (i > 0 && typeof base === 'number' && Math.abs(base) > 1e-9) {
+          const d = (v - base) / Math.abs(base) * 100;
+          if (Math.abs(d) >= 0.05) {
+            html += ` <span class="cmp-delta${d < 0 ? ' neg' : ''}">`
+              + `${d > 0 ? '+' : ''}${d.toFixed(1)}%</span>`;
+          }
+        }
+        td.innerHTML = html;
+      } else {                                // qualitative metric — no Δ, distinct style
+        td.innerHTML = `<span class="cmp-qual">${v == null ? '' : v}</span>`;
+      }
+      tr.appendChild(td);
+    });
+    tbl.appendChild(tr);
+  }
+  out.appendChild(tbl);
 }
 
 $('modal_x').onclick = closeModal;

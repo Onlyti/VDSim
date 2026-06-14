@@ -6,6 +6,17 @@ All notable changes to VDSim are documented here. Format follows
 
 ## [Unreleased]
 
+### Added — multi-vehicle comparison tool (headless evaluation)
+- `tools/vdsim_compare.py`: run the ISO maneuver set (step-steer / skidpad / DLC) across
+  several vehicle presets and tabulate the objective metrics side by side — the comparison
+  use case for multi-vehicle (vehicles run independently, metrics placed next to each other;
+  no V2V interaction). Presets are catalog stems or `vehicle.<id>`; each uses its own
+  blueprint tire by default, `--tire <stem>` forces a common tire. Writes `compare.csv` +
+  a per-maneuver bar-chart `compare.png` (matplotlib, lab palette).
+- `examples/maneuvers.py` maneuver functions now take an optional `veh=(vp,tp)` so any
+  resolved vehicle can be driven (default unchanged). Test `multi_vehicle_compare`
+  (`tests/scripts/test_compare.py`): two presets give distinct, finite step-steer responses.
+
 ### Added — L1 powertrain (drivetrain v2 on the bicycle)
 - The drivetrain v2 engine map + N-speed gearbox + shift policy now runs on the L1 bicycle
   (previously L2/L3 only). Opt-in via the `powertrain:` block; the engine is advanced once

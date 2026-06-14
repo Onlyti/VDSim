@@ -20,6 +20,17 @@ def _module_workshop():
     return module_workshop
 
 
+def _vdsim_compare():
+    """Lazy import of tools/vdsim_compare.py (multi-vehicle comparison)."""
+    import sys
+    for p in (str(_REPO / "tools"), str(_REPO / "python"),
+              str(_REPO / "build" / "python"), str(_REPO / "examples")):
+        if p not in sys.path:
+            sys.path.insert(0, p)
+    import vdsim_compare  # noqa: E402
+    return vdsim_compare
+
+
 class ApiContext:
     __slots__ = (
         "runner", "here", "vehicles", "levels", "level_ladder", "cosim_cmd_port",
@@ -447,6 +458,24 @@ def handle_post(h, path, body, ctx):
                               body.get("so", ""), axle=int(body.get("axle", 0)))
             code = 200 if res.get("status") == "pass" else 400
             json_response(h, {"ok": res.get("status") == "pass", **res}, code)
+        except Exception as e:  # noqa: BLE001
+            json_response(h, {"ok": False, "error": str(e)}, 400)
+        return True
+    if path == "/api/compare":
+        try:
+            vc = _vdsim_compare()
+            vehicles = [str(v) for v in (body.get("vehicles") or [])]
+            maneuvers = [m for m in (body.get("maneuvers") or list(vc.MANEUVERS))
+                         if m in vc.MANEUVERS]
+            tire = body.get("tire") or None
+            level = str(body.get("level") or "L2")
+            if len(vehicles) < 2:
+                json_response(h, {"ok": False, "error": "pick at least 2 vehicles"}, 400)
+                return True
+            rows = vc.run_compare(vehicles, maneuvers, tire, level)
+            traces = vc.run_traces(vehicles, tire, level) if "step_steer" in maneuvers else {}
+            json_response(h, {"ok": True, "rows": rows, "traces": traces,
+                              "columns": vc._columns(rows), "maneuvers": maneuvers})
         except Exception as e:  # noqa: BLE001
             json_response(h, {"ok": False, "error": str(e)}, 400)
         return True

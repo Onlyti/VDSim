@@ -17,11 +17,11 @@ _RECOMMENDED_BLUEPRINTS = (
 )
 
 _CATEGORIES: List[Dict[str, Any]] = [
-    {"id": "platform", "label": "Platform", "slots": ["chassis"]},
+    {"id": "body", "label": "Body & chassis",
+     "slots": ["body", "aero", "ride", "front_chassis", "rear_chassis"]},
+    {"id": "power", "label": "Powertrain", "slots": ["powertrain", "drivetrain"]},
     {"id": "grip", "label": "Grip", "slots": ["tire"]},
     {"id": "control", "label": "Control", "slots": ["brake", "steering"]},
-    {"id": "power", "label": "Powertrain", "slots": ["drivetrain"]},
-    {"id": "suspension", "label": "Suspension", "slots": ["front_susp_kin", "rear_susp_kin"]},
 ]
 
 _DELTA_KEYS = (
