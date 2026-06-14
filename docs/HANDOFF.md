@@ -1,34 +1,33 @@
 # VDSim 핸드오프
 
-작성: **2026-06-13** · `main` @ `079f545` (pushed, ahead of `v0.5.1`) · **335/335 ctest green**
+작성: **2026-06-14** · `main` @ `b9064c4` (pushed, ahead of `v0.5.1`) · **336/336 ctest green**
 
-## 0. 2026-06-13 세션 인수인계 (fresh 세션은 여기부터)
+## 0. 2026-06-14 세션 인수인계 (fresh 세션은 여기부터)
 
-**목표였던 것:** 누적된 헤드리스 백로그 처리 + 브랜치 정리. 전부 완료.
+**목표였던 것:** 멀티차량 비교(헤드리스+GUI) + 다나와식 차량조립 UI + 외부 AI 디자인 리뷰 반영. 완료.
 
-**현재 상태:** `main` 에 5개 feature 머지+push 완료, 335/335 green, 작업 트리 clean, 이번 세션 브랜치 전부 삭제(로컬+원격). **미완 작업 없음 — 깨끗한 중단점.**
+**현재 상태:** `main` 에 feature 머지+push 완료(`b9064c4`), 336/336 green, 작업 트리 clean, 이번 세션 브랜치 삭제(로컬+원격). **미완 작업 없음 — 깨끗한 중단점.**
 
 **이번 세션 main 에 들어간 것:**
-- **Ld4 v0.6 M1** — `vdsim/multibody_math.{hpp,cpp}` 로 rodrigues/corner-inertia 공유(hard_dae·featherstone 중복 제거, bit-identical). full-loop Featherstone 은 불필요 결론(hard DAE 가 이미 loop 구속 품).
-- **L1 powertrain** — drivetrain v2(engine map+gearbox+shift)를 L1 bicycle 에. opt-in, substep 당 1회 advance, default-off → ISO 불변. `DrivetrainV2.L1*`.
-- **re-taxonomy step 2 (BREAKING catalog)** — chassis 통짜 → **body / aero / ride** 분리, `chassis` type = **서스펜션 링크**(옛 susp_kinematics). 슬롯 body/aero/ride + front_chassis/rear_chassis. resolver 는 여전히 단일 vehicle.yaml 로 merge → C++/물리 불변. slots.py 중앙정의. **구버전 config 비호환.**
-- **너클 schema** — kin yaml optional `knuckle:` 블록(wheel-center 상대 점 + arm) → `knuckle.*` hardpoint. additive, dynamics 불변.
-- **retax2 GUI** — Parts library 탭 body/aero/ride/chassis(links), part_store 에디터/clone, **add-vehicle preset picker**(+클릭 → blueprint 카드 → 선택 시 차량추가+assembly 진입), fleet-path id 수정(susp.*→chassis.*). headless Chromium 스크린샷 검증 완료.
-- **#157 multi-vehicle 런타임** — 이미 구현돼 있던 걸(독립 N-session spawn + per-vehicle command demux + 병렬 tick + per-vehicle VDS1) **회귀 테스트로 잠금**(`MultiVehicle.*`). V2V 충돌은 **scope 밖 확정**(멀티차량 = 비교용).
+- **헤드리스 멀티차량 비교** `tools/vdsim_compare.py` — preset N대에 같은 ISO maneuver(step-steer/skidpad/DLC) 돌려 지표 나란히 표 + bar-chart(compare.csv/png). `examples/maneuvers.py` 함수에 optional `veh=(vp,tp)` + `trace=True`(step_steer yaw-rate 시계열).
+- **다나와식 build-sheet** (assembly 모달 재설계) — 좌측 슬롯 리스트(Body&chassis/Powertrain/Grip/Control 그룹, 각 행=부품+change) → 클릭 시 우측 그 슬롯 라이브러리 + RESOLVED STATS. `assembly.py` 카테고리 새 taxonomy 로 재그룹.
+- **GUI Compare 대시보드** — VEHICLES 패널 ⊟ → blueprint 체크박스 → `/api/compare`(routes.py, `vdsim_compare` 래핑) → **step-steer yaw-rate overlay SVG 차트** + **Δ%(baseline 대비) 표**(유효숫자 통일, 정성/정량 분리). `tests/scripts/test_compare.py`(ctest `multi_vehicle_compare`).
+- **GUI 폴리싱**(디자인 리뷰 반영) — RESOLVED STATS 단위, active 행 회색+좌측 accent, 3D 프리뷰 우측, Sync-draft 표준 크기.
 
 **다음 할 일 후보 (우선순위 순):**
-1. **#158 GUI 멀티차량 render** — preset picker 로 N대 spawn 은 되니, 3D 뷰에서 N대 동시 표시(VDS1 vehicle_id demux render). "동시 비교" UX 직결.
-2. **헤드리스 멀티차량 비교 로깅/리포트** — 같은 maneuver 를 여러 차량에 돌려 지표(NRMSE 등) 나란히. batch runner 연계.
-3. **이전 세션 잔여 브랜치 점검** — `feat/{poc-w5,tire-t1,tire-t2,v0.4-slope,v0.5-terrain ×2}` 가 머지됐는지 확인 후 정리.
-4. GUI cosmetic — part 라벨 "Fsk Formula chassis body" 잔재 정리, Session tune 탭 Chassis/Suspension 라벨.
+1. **per-axle tire (코어)** — 현재 단일 TireParams. 앞/뒤 다른 타이어 = L1/L2/L3/L5 force loop + LuGre/belt + resolver + tire_front/rear 슬롯. 사용자 요청 보류분.
+2. **GUI 재아키텍처 (전략 결정 후)** — 외부 AI 리뷰 4/10 "프로토타입" 판정. 큰 항목: dockable/resizable 패널 + 모달 제거(분할화면), 글로벌 모드 nav(Setup-Sim-Analyze), 전사 디자인 시스템. **stdlib http.server + 손코딩 app.js 의 한계 — React/Svelte + 디자인 패스(Figma) 결정이 선행.** 지금 찔끔 하지 말 것.
+3. **#158 GUI 멀티차량 3D render** — preset picker 로 spawn 은 됨, 3D 뷰 N대 동시 표시(VDS1 vehicle_id demux) 남음.
+4. cosmetic — part 라벨 "Fsk Formula chassis body" 잔재, Session tune 탭 라벨.
 
 **주의·함정:**
-- retax2 는 **breaking** — 옛 `chassis.*`/`susp.*` part id, `front_susp_kin` 슬롯 전부 제거됨. 외부 config/스크립트가 이걸 참조하면 깨짐.
-- `from_yaml` 은 envelope(`body:`)를 unwrap 안 함 — IsoBaseline 은 그래서 `body/sedan.yaml`(envelope→struct defaults) 로 로드(latent: 실제론 defaults 사용). 건드리지 말 것.
+- retax2 **breaking** — 옛 `chassis.*`/`susp.*` part id, `front_susp_kin` 슬롯 제거됨.
+- `from_yaml` 은 envelope(`body:`)를 unwrap 안 함 — IsoBaseline 은 `body/sedan.yaml`(→struct defaults) 로딩. 건드리지 말 것.
 - ISO/Default subsystem **숫자 리베이스 금지**. 영상 git 커밋 금지. 현대 `.tir` 대외비.
-- GUI 서버는 `(... &)` 백그라운드로 띄우면 tool 호출 끝날 때 죽음 → `run_in_background` 사용.
+- GUI 서버 띄울 때 **`run_in_background` 사용**. `pkill -f "gui/server.py"` 는 자기 명령줄 self-match 로 죽으니 `pkill -f "server.py --port"` 처럼 좁혀서.
+- 멀티차량 = **비교용**, V2V 충돌 scope 밖 (메모리에 기록됨).
 
-**관련 경로:** `cosim/realtime_server.cpp`·`scene_loader.cpp`·`world_scenario.cpp` (멀티차량) / `python/catalog/{slots,resolver,ids,materialize,part_store}.py` (taxonomy) / `gui/static/app.js`·`gui/runner/catalog_api.py` (GUI) / `tests/integration/test_multi_vehicle.cpp`.
+**관련 경로:** `tools/vdsim_compare.py`·`examples/maneuvers.py` (비교) / `gui/static/app.js`(openCompareModal/renderCompareChart/renderAssemblyPane)·`gui/api/routes.py`(/api/compare)·`python/catalog/assembly.py` (GUI) / `cosim/realtime_server.cpp` (멀티차량 런타임).
 
 ## 1. 문서 인덱스
 
