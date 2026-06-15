@@ -6,6 +6,9 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <cstdio>
+#include <cstring>
+
 #include "vdsim/coordinate.hpp"
 #include "vdsim/interfaces.hpp"
 #include "vdsim/module_plugin.hpp"
@@ -264,6 +267,28 @@ void fill_state(vdsim::cosim::StateFields& s, const vdsim::SimOutput& o,
     s.m_steer = o.sensors.steer; s.m_gnss_x = o.sensors.gnss_x; s.m_gnss_y = o.sensors.gnss_y;
 }
 
+// Encode state to JSON. Compact one-line format for HTTP/MQTT forwarding.
+// {"id":0,"t":1.23,"x":45.6,"y":-3.2,"yaw":0.04,"vx":15.1,"vy":0.2,"r":0.01,"ax":0.3,"ay":1.2,"Fz":[4500,4500,3000,3000],"alpha":[...]}
+static int encode_state_json(uint8_t* buf, size_t buflen, const vdsim::cosim::StateFields& s) {
+    char* p = reinterpret_cast<char*>(buf);
+    int n = std::snprintf(p, buflen,
+        "{\"id\":%u,\"t\":%.3f,"
+        "\"x\":%.2f,\"y\":%.2f,\"yaw\":%.4f,"
+        "\"vx\":%.2f,\"vy\":%.2f,\"r\":%.4f,"
+        "\"ax\":%.2f,\"ay\":%.2f,"
+        "\"Fz\":[%.0f,%.0f,%.0f,%.0f],"
+        "\"alpha\":[%.4f,%.4f,%.4f,%.4f],"
+        "\"kappa\":[%.4f,%.4f,%.4f,%.4f]}",
+        s.vehicle_id, s.timestamp,
+        s.x, s.y, s.yaw,
+        s.vx, s.vy, s.yaw_rate,
+        s.ax, s.ay,
+        s.Fz[0], s.Fz[1], s.Fz[2], s.Fz[3],
+        s.slip_angle[0], s.slip_angle[1], s.slip_angle[2], s.slip_angle[3],
+        s.slip_ratio[0], s.slip_ratio[1], s.slip_ratio[2], s.slip_ratio[3]);
+    return n > 0 && n < (int)buflen ? n : 0;
+}
+
 void touch_sub(std::vector<Subscriber>& subs, const sockaddr_in& addr, double t) {
     for (auto& s : subs) {
         if (addr_same(s.addr, addr)) { s.last_seen = t; return; }
@@ -364,6 +389,7 @@ struct WorldVehicle {
 // One TX channel resolved to a concrete vehicle + destination sockets (fan-out).
 struct TxChannel {
     uint32_t id;
+    std::string templ {"vds1"};   // vds1 | json (default vds1)
     std::vector<sockaddr_in> dests;
 };
 
@@ -545,7 +571,7 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
                     " skipping\n", ch.source.c_str(), vid);
                 continue;
             }
-            TxChannel tc; tc.id = vid;
+            TxChannel tc; tc.id = vid; tc.templ = ch.templ;
             for (const auto& d : ch.to) tc.dests.push_back(make_addr(d.ip, d.port));
             if (!tc.dests.empty()) tx_channels.push_back(std::move(tc));
         }
@@ -687,10 +713,20 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
                 vdsim::cosim::StateFields s;
                 s.seq = seq++; s.timestamp = t;
                 fill_state(s, o, wv->vp.wheel_radius_nominal, wv->id);
-                const int len = vdsim::cosim::encode_state(out, s);
-                for (const auto& d : tc.dests)
-                    ::sendto(tx_sock, reinterpret_cast<const char*>(out), len, 0,
-                             reinterpret_cast<const sockaddr*>(&d), sizeof(d));
+                int len = 0;
+                if (tc.templ == "json")
+                    len = encode_state_json(out, sizeof(out), s);
+                else if (tc.templ == "vds1")
+                    len = vdsim::cosim::encode_state(out, s);
+                else {
+                    std::fprintf(stderr, "[vdsim_realtime] skip unknown template %s\n", tc.templ.c_str());
+                    continue;
+                }
+                if (len > 0) {
+                    for (const auto& d : tc.dests)
+                        ::sendto(tx_sock, reinterpret_cast<const char*>(out), len, 0,
+                                 reinterpret_cast<const sockaddr*>(&d), sizeof(d));
+                }
             }
         } else {
             for (const auto& wv : fleet) {
