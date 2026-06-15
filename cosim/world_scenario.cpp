@@ -71,9 +71,23 @@ static CommsConfig parse_comms_node(const YAML::Node& c) {
 WorldScenario load_world_scenario(const std::string& path) {
     YAML::Node root = YAML::LoadFile(path);
     WorldScenario w;
-    w.rate        = node_d(root, "rate", 200.0);
     w.cmd_timeout = node_d(root, "cmd_timeout", 0.1);
-    w.time_scale  = node_d(root, "time_scale", 1.0);
+    // Parse sim: {dt, rate, t_end, time_scale, max_substep_dt, max_substeps, stunt_physics}
+    // Fallback to top-level rate/time_scale for backward compat.
+    if (root["sim"]) {
+        const auto& sim_node = root["sim"];
+        w.sim.dt            = node_d(sim_node, "dt", 0.005);
+        w.sim.rate          = node_d(sim_node, "rate", 200.0);
+        w.sim.t_end         = node_d(sim_node, "t_end", 0.0);
+        w.sim.time_scale    = node_d(sim_node, "time_scale", 1.0);
+        w.sim.max_substep_dt = node_d(sim_node, "max_substep_dt", 1e-4);
+        if (sim_node["max_substeps"]) w.sim.max_substeps = sim_node["max_substeps"].as<int>();
+        if (sim_node["stunt_physics"]) w.sim.stunt_physics = sim_node["stunt_physics"].as<bool>();
+    } else {
+        // fallback: top-level rate / time_scale (deprecated)
+        w.sim.rate = node_d(root, "rate", 200.0);
+        w.sim.time_scale = node_d(root, "time_scale", 1.0);
+    }
     if (root["mu"]) w.road.mu = root["mu"].as<double>();
     if (root["mu_right"]) w.road.mu_right = root["mu_right"].as<double>();
     if (root["mu_boundary"]) w.road.mu_boundary = root["mu_boundary"].as<double>();

@@ -9,6 +9,20 @@
 
 namespace vdsim::cosim {
 
+// Simulation timing + solver configuration (scenario-level, applies to all vehicles).
+// dt = core timestep [s]; rate = real-time target [Hz] (informational for sync/display).
+// t_end = batch max time [s] (0 = unbounded, for interactive/cosim).
+// time_scale: 1.0=realtime, <1=slower, >1=faster.
+struct SimConfig {
+    double dt           {0.005};     // core timestep [s]
+    double rate         {200.0};     // real-time target rate [Hz]; typically ~1/dt
+    double t_end        {0.0};       // batch max simulation time [s] (0 = unlimited)
+    double time_scale   {1.0};       // playback rate: 1.0=realtime, <1=slower, >1=faster
+    double max_substep_dt  {1e-4};   // RK4 substep size [s]
+    int    max_substeps    {24};     // max RK4 substeps per core step
+    bool   stunt_physics   {false};  // enable stunt-specific physics (grade, L5)
+};
+
 struct RoadConfig {
     double mu          {1.0};
     double mu_right    {-1.0};
@@ -80,9 +94,8 @@ struct CommsConfig {
 };
 
 struct WorldScenario {
-    double rate        {200.0};
-    double cmd_timeout {0.1};
-    double time_scale  {1.0};
+    SimConfig sim;                  // timing + solver config (dt, rate, t_end, time_scale, ...)
+    double cmd_timeout {0.1};       // UDP command timeout before failsafe [s]
     RoadConfig road;
     StuntConfig stunt;
     std::vector<VehicleSpawn> vehicles;
