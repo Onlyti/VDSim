@@ -125,6 +125,8 @@ WorldScenario load_world_scenario(const std::string& path) {
         if (v["control"]) s.control = v["control"].as<std::string>();
         if (v["front_susp"]) s.front_susp = v["front_susp"].as<std::string>();
         if (v["rear_susp"]) s.rear_susp = v["rear_susp"].as<std::string>();
+        if (v["path"])           s.path_yaml      = v["path"].as<std::string>();
+        if (v["path_lookahead"]) s.path_lookahead = v["path_lookahead"].as<double>();
         // per-vehicle sensors: inline list OR a sensors.yaml file path
         if (v["sensors"]) {
             const auto& sn = v["sensors"];

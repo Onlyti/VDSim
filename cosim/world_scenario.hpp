@@ -50,6 +50,11 @@ struct VehicleSpawn {
     // Per-vehicle sensor noise spec (from agents.vehicle.sensors[] in the scene).
     // When set, overrides the scenario-level RoadConfig.sensors file path.
     std::optional<vdsim::SensorParams> sensors;
+    // Per-vehicle reference path for internal path-follow controller.
+    // path_yaml: trajectory file ({points:[[x,y,vx],...]} — pure path data, no controller params)
+    // path_lookahead: pure-pursuit lookahead distance [m] (controller param, not part of trajectory)
+    std::string path_yaml;
+    double path_lookahead {8.0};
 };
 
 // Scenario-level comms routing (realtime). A scene owns one comms spec; each

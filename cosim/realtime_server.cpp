@@ -4,6 +4,8 @@
 #include "cosim_protocol.hpp"
 #include "scene_loader.hpp"
 
+#include <yaml-cpp/yaml.h>
+
 #include "vdsim/coordinate.hpp"
 #include "vdsim/interfaces.hpp"
 #include "vdsim/module_plugin.hpp"
@@ -288,6 +290,63 @@ void broadcast_state(socket_t sock, const std::vector<Subscriber>& subs,
 using socklen_t = int;
 #endif
 
+// Each waypoint carries position + target speed (per-point speed profile).
+// vx = -1 means "use global default speed".
+struct Waypoint { double x, y, vx {-1.0}; };
+
+// Load [[x,y],...] from a trajectory yaml.
+// Format:
+//   v: 14.0          # target speed
+//   lookahead: 8.0
+//   points: [[x,y], ...]           # explicit list
+//   shape: {type: oval, R:25, L:80, n:240}  # procedural
+static std::vector<Waypoint> load_waypoints(const std::string& path) {
+    YAML::Node root = YAML::LoadFile(path);
+    std::vector<Waypoint> pts;
+    if (root["points"] && root["points"].IsSequence()) {
+        for (const auto& p : root["points"]) {
+            Waypoint wp;
+            if (p.IsSequence()) {
+                wp.x = p[0].as<double>();
+                wp.y = p[1].as<double>();
+                if (p.size() >= 3) wp.vx = p[2].as<double>();   // [x, y, vx]
+            } else if (p.IsMap()) {
+                wp.x  = p["x"].as<double>();
+                wp.y  = p["y"].as<double>();
+                if (p["vx"]) wp.vx = p["vx"].as<double>();       // {x, y, vx}
+            }
+            pts.push_back(wp);
+        }
+        return pts;
+    }
+    if (root["shape"]) {
+        const auto sh = root["shape"];
+        const std::string type = sh["type"] ? sh["type"].as<std::string>() : "oval";
+        const int n = sh["n"] ? sh["n"].as<int>() : 160;
+        const double R = sh["R"] ? sh["R"].as<double>() : 50.0;
+        if (type == "circle") {
+            for (int i = 0; i < n; ++i) {
+                const double a = 2.0 * M_PI * i / n;
+                pts.push_back({R * std::cos(a), R * std::sin(a)});
+            }
+        } else {   // oval
+            const double L = sh["L"] ? sh["L"].as<double>() : 150.0;
+            const int q = std::max(1, n / 4);
+            for (int i = 0; i < q; ++i) pts.push_back({L * i / q - L / 2.0, -R});
+            for (int i = 0; i < q; ++i) {
+                const double a = -M_PI / 2.0 + M_PI * i / q;
+                pts.push_back({L / 2.0 + R * std::cos(a), R * std::sin(a)});
+            }
+            for (int i = 0; i < q; ++i) pts.push_back({L / 2.0 - L * i / q, R});
+            for (int i = 0; i < q; ++i) {
+                const double a = M_PI / 2.0 + M_PI * i / q;
+                pts.push_back({-L / 2.0 + R * std::cos(a), R * std::sin(a)});
+            }
+        }
+    }
+    return pts;
+}
+
 struct WorldVehicle {
     uint32_t id;
     vdsim::VehicleParams vp;
@@ -296,6 +355,10 @@ struct WorldVehicle {
     std::chrono::steady_clock::time_point last_cmd {std::chrono::steady_clock::now()};
     bool internal {false};      // control: internal -> built-in speed-hold cruise
     double cruise_vx {0.0};     // target speed for the internal controller [m/s]
+    // path-follow (internal v2): non-empty -> pure-pursuit overrides speed-hold
+    std::vector<Waypoint> path;
+    double path_v        {15.0};  // target speed [m/s]
+    double path_lookahead {8.0};  // [m]
 };
 
 // One TX channel resolved to a concrete vehicle + destination sockets (fan-out).
@@ -396,6 +459,8 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
         wv.id = spn.id;
         wv.internal = (spn.control == "internal");
         wv.cruise_vx = spn.vx0;
+        wv.path_v = spn.vx0;                    // default speed = spawn speed
+        wv.path_lookahead = spn.path_lookahead;
         wv.vp = vdsim::VehicleParams::from_yaml(spn.vehicle_yaml);
         auto tp = vdsim::TireParams::from_yaml(spn.tire_yaml);
         apply_lugre_cli(tp, argc, argv);
@@ -415,6 +480,17 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
             ? spn.vx0 / wv.vp.wheel_radius_nominal : 0.0;
         s0.wheel_spin = {{w0, w0, w0, w0}};
         settle_spawn_on_ground(*gnd, wv.vp, s0);
+        // Load path waypoints for internal path-follow controller.
+        if (!spn.path_yaml.empty()) {
+            try {
+                wv.path = load_waypoints(spn.path_yaml);
+                std::fprintf(stderr, "[vdsim_realtime] vehicle %u: path %zu pts default_v=%.1f la=%.1f\n",
+                             spn.id, wv.path.size(), wv.path_v, wv.path_lookahead);
+            } catch (const std::exception& e) {
+                std::fprintf(stderr, "[vdsim_realtime] vehicle %u: path load failed: %s\n",
+                             spn.id, e.what());
+            }
+        }
         // Per-vehicle sensors override the scenario-level sensors file, if present.
         vdsim::SimConfig cfg_v = cfg;
         if (spn.sensors) cfg_v.sensors = *spn.sensors;
@@ -550,13 +626,53 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
         const auto now_tp = std::chrono::steady_clock::now();
         for (auto& wv : fleet) {
             if (wv.internal) {
-                // Built-in controller (v1): hold the spawn speed, straight ahead.
-                // No external cmd / failsafe applies to an internal agent.
-                const double vx = wv.sim->output().state.vx();
-                const double ax = std::clamp(0.8 * (wv.cruise_vx - vx), -3.0, 3.0);
+                const auto& st = wv.sim->output().state;
+                const double vx_cur = st.vx();
                 vdsim::CmdL4 c;
-                if (ax >= 0.0) c.throttle = std::min(1.0, ax / 3.0);
-                else           c.brake    = std::min(1.0, -ax / 3.0);
+
+                if (!wv.path.empty()) {
+                    // Built-in controller (v2): pure-pursuit path tracking.
+                    // Per-point speed profile: waypoint.vx > 0 overrides default.
+                    const double px = st.position.x(), py = st.position.y();
+                    const double yaw = vdsim::yaw_from_quat(st.orientation);
+                    // nearest waypoint index
+                    const auto& pts = wv.path;
+                    size_t i0 = 0;
+                    double d_min = 1e18;
+                    for (size_t i = 0; i < pts.size(); ++i) {
+                        const double d = (pts[i].x - px) * (pts[i].x - px)
+                                       + (pts[i].y - py) * (pts[i].y - py);
+                        if (d < d_min) { d_min = d; i0 = i; }
+                    }
+                    // lookahead
+                    size_t j = i0;
+                    double acc = 0.0;
+                    while (acc < wv.path_lookahead) {
+                        const size_t nj = (j + 1) % pts.size();
+                        acc += std::hypot(pts[nj].x - pts[j].x, pts[nj].y - pts[j].y);
+                        j = nj;
+                        if (j == i0) break;
+                    }
+                    const double tx = pts[j].x, ty = pts[j].y;
+                    const double dx = std::cos(-yaw) * (tx - px) - std::sin(-yaw) * (ty - py);
+                    const double dy = std::sin(-yaw) * (tx - px) + std::cos(-yaw) * (ty - py);
+                    const double ld = std::max(1.0, std::hypot(dx, dy));
+                    const double max_steer = wv.vp.max_steer_angle_wheel > 0.0
+                                            ? wv.vp.max_steer_angle_wheel : 0.5;
+                    c.steer_angle_wheel = std::clamp(
+                        std::atan2(2.0 * wv.vp.wheelbase * dy, ld * ld),
+                        -max_steer, max_steer);
+                    // per-point speed: use waypoint vx if set, else default
+                    const double v_tgt = (pts[j].vx > 0.0) ? pts[j].vx : wv.path_v;
+                    const double ax_cmd = std::clamp(0.8 * (v_tgt - vx_cur), -3.0, 3.0);
+                    if (ax_cmd >= 0.0) c.throttle = std::min(1.0, ax_cmd / 3.0);
+                    else               c.brake    = std::min(1.0, -ax_cmd / 3.0);
+                } else {
+                    // Built-in controller (v1): hold spawn speed, straight ahead.
+                    const double ax = std::clamp(0.8 * (wv.cruise_vx - vx_cur), -3.0, 3.0);
+                    if (ax >= 0.0) c.throttle = std::min(1.0, ax / 3.0);
+                    else           c.brake    = std::min(1.0, -ax / 3.0);
+                }
                 wv.sim->set_input(c);
             } else if (cmd_to > 0.0 &&
                        std::chrono::duration<double>(now_tp - wv.last_cmd) > failsafe_dur) {
