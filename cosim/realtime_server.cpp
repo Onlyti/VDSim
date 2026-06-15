@@ -451,11 +451,14 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
     const int cmd_port = static_cast<int>(optd(argc, argv, "--cmd-port=", 7001));
     const std::string st_ip = opts(argc, argv, "--state-ip=", "127.0.0.1");
     const int st_port = static_cast<int>(optd(argc, argv, "--state-port=", 7002));
-    const double rate = world.rate > 1.0 ? world.rate : optd(argc, argv, "--rate=", 200.0);
+    // Resolve rate / dt from sim: block, then CLI overrides.
+    const double rate = world.sim.rate > 1.0 ? world.sim.rate : optd(argc, argv, "--rate=", 200.0);
     const double cmd_to = world.cmd_timeout > 0.0 ? world.cmd_timeout
                                                   : optd(argc, argv, "--cmd-timeout=", 0.1);
-    const double dt = 1.0 / rate;
-    double time_scale = world.time_scale > 0.0 ? world.time_scale : 1.0;
+    // dt: prefer explicit sim.dt; else derive from rate (1/rate).
+    const double dt = (world.sim.dt > 0.0 && world.sim.dt < 1.0)
+                      ? world.sim.dt : 1.0 / rate;
+    double time_scale = world.sim.time_scale > 0.0 ? world.sim.time_scale : 1.0;
     const double cli_ts = optd(argc, argv, "--time-scale=", 0.0);
     if (cli_ts > 0.0) time_scale = cli_ts;
     time_scale = clamp_time_scale(time_scale);
@@ -465,11 +468,12 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
     vdsim::SimConfig cfg; cfg.nominal_dt = dt;
     if (!rd.sensors.empty()) cfg.sensors = vdsim::SensorParams::from_yaml(rd.sensors);
     cfg.sensor_delay_s = rd.sensor_delay;
-    const bool stunt_world = !world.stunt.ground.empty();
+    const bool stunt_world = !world.stunt.ground.empty()
+                           || world.sim.stunt_physics;
     if (stunt_world) {
         sp.stunt_physics = true;
-        sp.max_substep_dt = 1e-4;
-        sp.max_substeps = 24;
+        sp.max_substep_dt = world.sim.max_substep_dt > 0.0 ? world.sim.max_substep_dt : 1e-4;
+        sp.max_substeps   = world.sim.max_substeps > 0 ? world.sim.max_substeps : 24;
         if (world.stunt.ground == "loop") {
             sp.loop_radius = world.stunt.loop_radius;
             sp.loop_center_x = world.stunt.loop_center_x;
@@ -638,6 +642,7 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
     uint32_t seq = 0;
     auto next = std::chrono::steady_clock::now();
     const auto failsafe_dur = std::chrono::duration<double>(cmd_to);
+    const double t_end = world.sim.t_end;   // 0 = unlimited
     uint8_t out[vdsim::cosim::kStateBytes];
     while (g_run.load()) {
         time_scale = read_live_time_scale(scene_path, time_scale);
@@ -705,6 +710,10 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
                 wv.sim->set_input(failsafe);
             }
             wv.sim->tick(dt);
+        }
+        // Stop when t_end reached (batch mode; 0 = run indefinitely)
+        if (t_end > 0.0 && !fleet.empty() && fleet[0].sim->output().sim_time >= t_end) {
+            g_run.store(false);
         }
         if (comms_mode) {
             for (const auto& tc : tx_channels) {
