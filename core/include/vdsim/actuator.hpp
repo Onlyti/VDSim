@@ -14,7 +14,6 @@
 // backward-compatible.  See docs/references/actuator_nonlinearity.md.
 #pragma once
 
-#include <deque>
 #include <vector>
 
 #include "vdsim/control.hpp"
@@ -88,9 +87,22 @@ private:
     ActuatorParams p_{};
     double nominal_dt_ {0.005};
 
-    // Per-channel transport-delay buffers.
-    // std::deque: push_back + pop_front are both O(1) — unlike vector::erase(begin,...).
-    std::deque<double> steer_buf_, throttle_buf_, brake_buf_;
+    // Fractional transport-delay ring buffer: fixed-size pre-allocated vector,
+    // O(1) push + read, contiguous memory, no dynamic allocation at runtime.
+    struct FracDelay {
+        std::vector<double> buf;
+        int w {0};   // write index (next slot to write)
+        void resize(int cap) { buf.assign(cap, 0.0); w = 0; }
+        void clear()         { std::fill(buf.begin(), buf.end(), 0.0); w = 0; }
+        void push(double v)  { buf[w] = v; w = (w + 1) % static_cast<int>(buf.size()); }
+        // n samples ago (n >= 0); returns 0 before buffer is populated.
+        double ago(int n) const {
+            const int sz = static_cast<int>(buf.size());
+            if (sz == 0 || n >= sz) return 0.0;
+            return buf[((w - 1 - n) % sz + sz) % sz];
+        }
+    };
+    FracDelay steer_buf_, throttle_buf_, brake_buf_;
     // First-order lag states.
     double steer_lag_ {0.0}, throttle_lag_ {0.0}, brake_lag_ {0.0};
     // Previous outputs (for rate limit) and steering servo states.
@@ -99,7 +111,7 @@ private:
     double brake_T_ {40.0};
     bool   initialized_ {false};
 
-    double push_delay(std::deque<double>& buf, double v, double L, double dt) const;
+    double push_delay(FracDelay& buf, double v, double L, double dt) const;
 };
 
 // Feedback-path transport delay: returns the state as seen by the controller

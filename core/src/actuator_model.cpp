@@ -3,7 +3,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <deque>
 
 namespace vdsim {
 namespace {
@@ -48,24 +47,22 @@ double lerp_table(const std::vector<double>& xs, const std::vector<double>& ys,
 }  // namespace
 
 // ---- transport delay with fractional interpolation -----------------------
-// O(1) deque-based implementation. push_back + pop_front are both O(1).
+// Ring-buffer implementation: O(1) push + read, contiguous memory, pre-allocated.
 // Returns value L seconds ago (linearly interpolated between samples).
-double ActuatorModel::push_delay(std::deque<double>& buf, double v,
+double ActuatorModel::push_delay(FracDelay& buf, double v,
                                  double L, double dt) const {
     if (L <= 0.0) return v;
     const double fidx = L / dt;
     const int N = static_cast<int>(std::floor(fidx));
     const double f = fidx - N;                   // fractional part [0,1)
-    buf.push_back(v);
-    const int maxlen = N + 3;                    // N+2 needed, +1 guard
-    while (static_cast<int>(buf.size()) > maxlen)
-        buf.pop_front();                          // O(1) unlike erase(begin,...)
-    // u[j] = 0 before buffer filled (warmup: step doesn't appear early).
-    auto val = [&](int idx) -> double {
-        return (idx >= 0 && idx < static_cast<int>(buf.size())) ? buf[idx] : 0.0;
-    };
-    const int last = static_cast<int>(buf.size()) - 1;
-    return (1.0 - f) * val(last - N) + f * val(last - N - 1);
+    // Grow buffer on first use or if delay increased (rare; no runtime cost otherwise).
+    const int need = N + 3;
+    if (static_cast<int>(buf.buf.size()) < need) buf.resize(need);
+    buf.push(v);
+    // Linear interpolation: out = (1-f)*x[n] + f*x[n+1] where x[n] = N samples ago.
+    // buf.ago(0) = newest, buf.ago(N) = N samples ago.
+    // u[j] = 0 before buffer is populated (warmup correctness).
+    return (1.0 - f) * buf.ago(N) + f * buf.ago(N + 1);
 }
 
 void ActuatorModel::initialize(const ActuatorParams& p, double nominal_dt) {
