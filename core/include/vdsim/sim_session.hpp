@@ -24,14 +24,16 @@
 #include "vdsim/params.hpp"
 #include "vdsim/sensors.hpp"
 #include "vdsim/state.hpp"
+#include "vdsim/veh_network.hpp"
 
 namespace vdsim {
 
 struct SimConfig {
-    ActuatorParams actuator     {};      // default: all effects off (identity)
-    SensorParams   sensors      {};      // default: disabled -> measured == truth
-    double         sensor_delay_s {0.0}; // feedback transport delay (0 = none)
-    double         nominal_dt   {0.005}; // for delay-buffer sizing
+    ActuatorParams    actuator      {};      // physical actuator (lag, rate, sat)
+    SensorParams      sensors       {};      // sensor noise model
+    VehNetworkParams  veh_network   {};      // ECU/CAN deadtime + drop (default: identity)
+    double            sensor_delay_s {0.0}; // feedback transport delay (0 = none)
+    double            nominal_dt    {0.005}; // for delay-buffer sizing
 };
 
 // Thread-safe snapshot of one tick's result (true + measured state plus the
@@ -82,6 +84,7 @@ public:
 private:
     std::unique_ptr<IVehicleDynamics> dyn_;
     std::unique_ptr<IContactProvider> ground_;
+    std::unique_ptr<IVehNetwork>      network_;   // ECU/CAN network (deadtime + drop)
     ActuatorModel actuator_;
     SensorDelay   sensor_;
     SensorModel   sensors_;

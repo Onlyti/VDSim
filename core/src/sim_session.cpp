@@ -9,6 +9,7 @@ SimSession::SimSession(std::unique_ptr<IVehicleDynamics> dyn,
                        const SolverParams& sp, const SimConfig& cfg)
     : dyn_(std::move(dyn)), ground_(std::move(ground)), vp_(vp) {
     dyn_->initialize(vp, tp, sp);
+    network_ = make_default_veh_network(cfg.veh_network);
     actuator_.initialize(cfg.actuator, cfg.nominal_dt);
     sensor_.initialize(cfg.sensor_delay_s, cfg.nominal_dt);
     sensors_.initialize(cfg.sensors);
@@ -17,6 +18,7 @@ SimSession::SimSession(std::unique_ptr<IVehicleDynamics> dyn,
 void SimSession::reset(const State& s0) {
     std::lock_guard<std::mutex> lk(mtx_);
     dyn_->reset(s0);
+    network_->reset();
     actuator_.reset();
     sensor_.reset(s0);
     sensors_.reset();
@@ -47,8 +49,18 @@ void SimSession::tick(double dt) {
     ContactArray contacts;
     ground_->query(s, vp_, contacts);
 
+    // 1. VehNetwork: stochastic deadtime + packet drop (ECU/CAN layer)
+    const ControlInput net_cmd = network_->apply(ControlInput{cmd}, dt);
+    // VehNetwork preserves the Lc level; SimSession operates on CmdL4 (Lc4 is the
+    // SimSession native boundary). Higher-level Lc variants are lowered by the
+    // dynamics' own lower_to_l4 inside dyn_->step(). Here we extract CmdL4 directly
+    // since set_input currently accepts only CmdL4 (set_input(const CmdL4&)).
+    const CmdL4 net_l4 = std::holds_alternative<CmdL4>(net_cmd)
+                         ? std::get<CmdL4>(net_cmd) : cmd;
+
+    // 2. Actuator: physical lag, rate-limit, saturation
     const double speed = s.speed_xy();
-    const CmdL4 realized = actuator_.apply(cmd, speed, dt);
+    const CmdL4 realized = actuator_.apply(net_l4, speed, dt);
 
     dyn_->step(ControlInput{realized}, contacts, dt);
     const State next = dyn_->state();

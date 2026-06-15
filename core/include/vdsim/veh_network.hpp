@@ -25,7 +25,7 @@ namespace vdsim {
 
 // ─── Parameters ────────────────────────────────────────────────────────────
 struct VehNetworkParams {
-    double deadtime_mean {0.005};    // [s] mean ECU + CAN latency
+    double deadtime_mean {0.0};      // [s] mean ECU + CAN latency (0 = identity/off)
     double deadtime_std  {0.0};      // [s] std-dev; 0 = deterministic
     double drop_rate     {0.0};      // [0,1] packet loss probability
     enum class OnDrop { HoldLast, Zero, Failsafe } on_drop {OnDrop::HoldLast};

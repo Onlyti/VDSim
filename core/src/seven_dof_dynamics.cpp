@@ -18,6 +18,7 @@
 #include "vdsim/default_subsystems.hpp"
 #include "vdsim/drivetrain_inertia.hpp"
 #include "vdsim/belt_tire.hpp"
+#include "vdsim/steering_kinematics.hpp"
 #include "vdsim/interfaces.hpp"
 #include "vdsim/low_speed.hpp"
 #include "vdsim/lugre_tire.hpp"
@@ -103,6 +104,8 @@ public:
         drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
         brake_      = make_default_brake(vp_, vp_.brake_deadtime_s);
         steering_   = make_default_steering(vp_, vp_.steer_deadtime_s);
+        steer_kin_  = make_ratio_steering_kinematics(
+                          std::max(1e-6, vp_.steering_ratio));
         spdlog::debug("[L2 7-DOF] init: mass={:.0f} kg, L={:.2f} m, Tw_f={:.2f} m, "
                       "diff={}, ackerman={:.0f}%, EBD={}",
                       vp.mass, vp.wheelbase, vp.track_front,
@@ -128,6 +131,8 @@ public:
         drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
         brake_      = make_default_brake(vp_, vp_.brake_deadtime_s);
         steering_   = make_default_steering(vp_, vp_.steer_deadtime_s);
+        steer_kin_  = make_ratio_steering_kinematics(
+                          std::max(1e-6, vp_.steering_ratio));
         // Clear diagnostics so accessors don't return stale values before step().
         tire_F_.fill(Vec3::Zero());
         tire_F_wheel_.fill(Vec3::Zero());
@@ -342,7 +347,16 @@ private:
         };
         SubsystemContext ctx{s, driver_cmd, 0.0};
         ctx.Fz = Fz;
-        const double d = steering_->apply(ctx).roadwheel_angle;
+        const SteeringOutput steer_out = steering_->apply(ctx);
+        // ISteeringKinematics converts rack_travel → average wheel angle.
+        // Only used when subsystem explicitly sets mode=Kinematic AND rack_travel is non-zero.
+        // Legacy subsystems (UnitySteering, RatioSteering) set only roadwheel_angle (rack_travel=0)
+        // so they fall through to the backward-compatible roadwheel_angle path.
+        const double d = (steer_out.mode == SteeringOutput::Mode::Kinematic
+                          && steer_kin_
+                          && std::abs(steer_out.rack_travel) > 1e-9)
+            ? steer_kin_->compute(steer_out.rack_travel).angle_avg()
+            : steer_out.roadwheel_angle;
 
         // ---- Per-wheel steer angle with Ackerman correction ----
         // Average steer d -> per-axle inner/outer split.  Ackerman 0% = parallel,
@@ -710,9 +724,10 @@ private:
     TireParams    tp_;
     SolverParams  sp_;
     std::unique_ptr<ITireModel> tire_;
-    std::shared_ptr<IDrivetrain>     drivetrain_;
-    std::shared_ptr<IBrakeSystem>    brake_;
-    std::shared_ptr<ISteeringSystem> steering_;
+    std::shared_ptr<IDrivetrain>         drivetrain_;
+    std::shared_ptr<IBrakeSystem>        brake_;
+    std::shared_ptr<ISteeringSystem>     steering_;
+    std::unique_ptr<ISteeringKinematics> steer_kin_;  // rack_travel → FL/FR angles
     std::array<double, NUM_WHEELS> I_wheel_ {{1.0, 1.0, 1.0, 1.0}};
 
     State state_;
