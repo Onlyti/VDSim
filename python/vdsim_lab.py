@@ -648,6 +648,22 @@ class Simulation:
 #   set_input(action) -> run_core_dt() -> read state()/measurements().
 # Build straight from the core (vehicle/tire/level/road), no scenario file needed.
 # --------------------------------------------------------------------------- #
+def _resolve_ref_point(ref, vp):
+    """Resolve ref_point to [rx, ry] in body frame [m] (ISO 8855: X fwd, Y left).
+    None / "cg" / [0,0] -> no transform. "rear_axle" -> [-b, 0]. "front_axle" -> [a, 0].
+    """
+    if ref is None or ref == "cg":
+        return None
+    if ref == "rear_axle":
+        return [-vp.cg_to_rear, 0.0]
+    if ref == "front_axle":
+        return [vp.cg_to_front, 0.0]
+    r = list(ref)
+    if len(r) == 2 and r[0] == 0.0 and r[1] == 0.0:
+        return None
+    return [float(r[0]), float(r[1])]
+
+
 def _as_vehicle(v):
     if isinstance(v, Vehicle):
         return v
@@ -687,7 +703,8 @@ class Sim:
 
     def __init__(self, vehicle="sedan", tire="default_pacejka", level="L2",
                  road=None, sensors=None, dt=0.005,
-                 x0=0.0, y0=0.0, yaw0=0.0, v0=0.0, sensor_mounts=None):
+                 x0=0.0, y0=0.0, yaw0=0.0, v0=0.0, sensor_mounts=None,
+                 ref_point=None):
         self._veh = _as_vehicle(vehicle)
         self._tire = _as_tire(tire)
         self._road = road or Road.flat()
@@ -710,6 +727,7 @@ class Sim:
         self.rows = []
         self._extras = []                          # per-step controller side-state (log_extra)
         self._x0 = x0; self._y0 = y0; self._yaw0 = yaw0; self._v0 = v0
+        self._ref = _resolve_ref_point(ref_point, vp)   # [rx, ry] body frame or None (=CG)
         mounts = sensor_mounts or {}
         self._types = {sid: m.get("type", sid) for sid, m in mounts.items()}
         self._mounts = {sid: {"pos": m.get("pos", [0, 0, 0]),
@@ -765,10 +783,29 @@ class Sim:
     def state(self):
         o = self.sess.output(); s = o.state
         vx, vy = s.vx(), s.vy()
+        r_yaw = s.yaw_rate()
+        yaw = s.yaw()
+        x, y = s.position[0], s.position[1]
+        ax, ay = o.ax, o.ay
+
+        if self._ref is not None:
+            rx, ry = self._ref[0], self._ref[1]
+            # position: p_ref = p_cg + R_yaw * [rx, ry]
+            c, sn = math.cos(yaw), math.sin(yaw)
+            x  = x  + c * rx - sn * ry
+            y  = y  + sn * rx + c * ry
+            # velocity (body frame): v_ref = v_cg + omega_z x r
+            vx = vx - r_yaw * ry
+            vy = vy + r_yaw * rx
+            # acceleration (body frame): a_ref = a_cg + alpha x r - omega^2 * r
+            alpha = self._alpha                    # yaw acceleration [rad/s²]
+            ax = ax - alpha * ry - r_yaw * r_yaw * rx
+            ay = ay + alpha * rx - r_yaw * r_yaw * ry
+
         beta = math.atan2(vy, vx) if abs(vx) > 1e-3 else 0.0
-        return {"t": o.sim_time, "x": s.position[0], "y": s.position[1], "yaw": s.yaw(),
-                "vx": vx, "vy": vy, "r": s.yaw_rate(), "ax": o.ax, "ay": o.ay,
-                "beta": beta,                      # vehicle sideslip [rad]
+        return {"t": o.sim_time, "x": x, "y": y, "yaw": yaw,
+                "vx": vx, "vy": vy, "r": r_yaw, "ax": ax, "ay": ay,
+                "beta": beta,                      # sideslip at the reference point [rad]
                 "Fz": list(o.Fz), "slip_angle": list(o.slip_angle),
                 "slip_ratio": list(o.slip_ratio)}
 

@@ -127,6 +127,26 @@ def test_plot_comparison():
         pass   # matplotlib not installed — not a failure
 
 
+def test_ref_point_position():
+    sim_cg = Sim(level="L2", road=Road.flat(), v0=15.0)
+    sim_ra = Sim(level="L2", road=Road.flat(), v0=15.0, ref_point="rear_axle")
+    sim_fa = Sim(level="L2", road=Road.flat(), v0=15.0, ref_point="front_axle")
+    for _ in range(int(3.0 / sim_cg.dt)):
+        for sim in (sim_cg, sim_ra, sim_fa):
+            sim.set_input(steer=0.04, throttle=0.1)
+            sim.run_core_dt()
+    cg = sim_cg.state(); ra = sim_ra.state(); fa = sim_fa.state()
+    b = sim_ra._vp.cg_to_rear; a = sim_fa._vp.cg_to_front
+    yaw = cg["yaw"]
+    c, s = math.cos(yaw), math.sin(yaw)
+    assert abs(ra["x"] - (cg["x"] - c * b)) < 1e-9, "rear_axle x"
+    assert abs(ra["y"] - (cg["y"] - s * b)) < 1e-9, "rear_axle y"
+    assert abs(fa["x"] - (cg["x"] + c * a)) < 1e-9, "front_axle x"
+    # user-defined ref_point
+    sim_u = Sim(level="L2", road=Road.flat(), v0=15.0, ref_point=[1.0, 0.5])
+    assert sim_u._ref == [1.0, 0.5]
+
+
 if __name__ == "__main__":
     test_throttle_then_brake()
     test_step_steer_yaws()
@@ -138,4 +158,5 @@ if __name__ == "__main__":
     test_reset_reuses_plant()
     test_register_metric()
     test_plot_comparison()
+    test_ref_point_position()
     print("OK test_experiment_api")
