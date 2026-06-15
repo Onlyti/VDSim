@@ -135,6 +135,7 @@ def resolve_fleet_entry(
         "z0": float(spec.get("z0", 0.0)),
         "yaw0": float(spec.get("yaw0", 0.0)),
         "vx0": float(spec.get("vx0", 0.0)),
+        "control": str(spec.get("control", "external")),
     }
     if level in ("L3", "L4"):
         if resolved.susp_front:

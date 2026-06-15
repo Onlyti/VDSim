@@ -41,6 +41,9 @@ struct VehicleSpawn {
     std::string front_susp;
     std::string rear_susp;
     double x0 {0.0}, y0 {0.0}, z0 {0.0}, yaw0 {0.0}, vx0 {0.0};
+    // "external" (default): driven over UDP comms, failsafe on timeout.
+    // "internal": built-in controller (v1 = speed-hold cruise at vx0).
+    std::string control {"external"};
 };
 
 struct WorldScenario {

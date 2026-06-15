@@ -294,6 +294,8 @@ struct WorldVehicle {
     std::unique_ptr<vdsim::SimSession> sim;
     uint32_t last_seq {0};
     std::chrono::steady_clock::time_point last_cmd {std::chrono::steady_clock::now()};
+    bool internal {false};      // control: internal -> built-in speed-hold cruise
+    double cruise_vx {0.0};     // target speed for the internal controller [m/s]
 };
 
 int run_scene(const std::string& scene_path, int argc, char** argv) {
@@ -340,6 +342,8 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
     for (const auto& spn : world.vehicles) {
         WorldVehicle wv;
         wv.id = spn.id;
+        wv.internal = (spn.control == "internal");
+        wv.cruise_vx = spn.vx0;
         wv.vp = vdsim::VehicleParams::from_yaml(spn.vehicle_yaml);
         auto tp = vdsim::TireParams::from_yaml(spn.tire_yaml);
         apply_lugre_cli(tp, argc, argv);
@@ -438,8 +442,17 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
         prune_subs(subscribers, t, 2.0);
         const auto now_tp = std::chrono::steady_clock::now();
         for (auto& wv : fleet) {
-            if (cmd_to > 0.0 &&
-                std::chrono::duration<double>(now_tp - wv.last_cmd) > failsafe_dur) {
+            if (wv.internal) {
+                // Built-in controller (v1): hold the spawn speed, straight ahead.
+                // No external cmd / failsafe applies to an internal agent.
+                const double vx = wv.sim->output().state.vx();
+                const double ax = std::clamp(0.8 * (wv.cruise_vx - vx), -3.0, 3.0);
+                vdsim::CmdL4 c;
+                if (ax >= 0.0) c.throttle = std::min(1.0, ax / 3.0);
+                else           c.brake    = std::min(1.0, -ax / 3.0);
+                wv.sim->set_input(c);
+            } else if (cmd_to > 0.0 &&
+                       std::chrono::duration<double>(now_tp - wv.last_cmd) > failsafe_dur) {
                 wv.sim->set_input(failsafe);
             }
             wv.sim->tick(dt);

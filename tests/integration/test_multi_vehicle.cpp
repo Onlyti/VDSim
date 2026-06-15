@@ -50,7 +50,7 @@ TEST(MultiVehicle, LoadSceneParsesFleet) {
         std::ofstream f(path);
         f << "mu: 1.0\nrate: 200\nvehicles:\n"
              "- id: 0\n  vehicle: " << veh << "\n  tire: " << tire << "\n"
-             "  level: L2\n  x0: -15\n  y0: -1.5\n  vx0: 12\n"
+             "  level: L2\n  x0: -15\n  y0: -1.5\n  vx0: 12\n  control: internal\n"
              "- id: 7\n  vehicle: " << veh << "\n  tire: " << tire << "\n"
              "  level: L2\n  x0: -15\n  y0: 1.5\n  vx0: 9\n";
     }
@@ -61,6 +61,8 @@ TEST(MultiVehicle, LoadSceneParsesFleet) {
     EXPECT_DOUBLE_EQ(w.vehicles[0].y0, -1.5);
     EXPECT_DOUBLE_EQ(w.vehicles[1].y0, 1.5);
     EXPECT_DOUBLE_EQ(w.vehicles[1].vx0, 9.0);
+    EXPECT_EQ(w.vehicles[0].control, "internal");    // per-agent control parsed
+    EXPECT_EQ(w.vehicles[1].control, "external");    // default when omitted
     std::filesystem::remove(path);
 }
 
