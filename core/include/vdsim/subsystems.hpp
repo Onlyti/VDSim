@@ -1,8 +1,11 @@
 #pragma once
 
 #include <array>
+#include <stdexcept>
+#include <string>
 #include <utility>
 
+#include "vdsim/control.hpp"
 #include "vdsim/powertrain.hpp"
 #include "vdsim/state.hpp"
 #include "vdsim/types.hpp"
@@ -56,7 +59,24 @@ struct DrivetrainOutput {
     double brake_absorbed {0.0};  // [0, 1]
 };
 
+// Helper: throw LcLevel mismatch error with a clear message.
+inline void check_lc_level(LcLevel input, LcLevel lo, LcLevel hi,
+                            const char* subsystem) {
+    if (input < lo || input > hi) {
+        throw std::runtime_error(
+            std::string("LcLevel mismatch in ") + subsystem
+            + ": input L" + std::to_string(static_cast<int>(input))
+            + " outside supported range [L" + std::to_string(static_cast<int>(lo))
+            + ", L" + std::to_string(static_cast<int>(hi)) + "]"
+            + " — implement a subsystem that handles this level, or raise/lower the input.");
+    }
+}
+
 struct IBrakeSystem {
+    // LcLon range this subsystem natively accepts. Default: L4 (pedal only).
+    virtual LcLevel min_lon_level() const { return LcLevel::L4; }
+    virtual LcLevel max_lon_level() const { return LcLevel::L4; }
+
     virtual std::array<double, NUM_WHEELS> wheel_torque(const SubsystemContext&) = 0;
     virtual void begin_step(const SubsystemContext&, double /*dt*/) {}
     virtual void reset() {}
@@ -64,6 +84,10 @@ struct IBrakeSystem {
 };
 
 struct ISteeringSystem {
+    // LcLat range this subsystem natively accepts. Default: L4 (wheel angle only).
+    virtual LcLevel min_lat_level() const { return LcLevel::L4; }
+    virtual LcLevel max_lat_level() const { return LcLevel::L4; }
+
     virtual SteeringOutput apply(const SubsystemContext&) = 0;
     virtual void begin_step(const SubsystemContext&, double /*dt*/) {}
     virtual void reset() {}
@@ -71,6 +95,10 @@ struct ISteeringSystem {
 };
 
 struct IDrivetrain {
+    // LcLon range this subsystem natively accepts. Default: L4 (pedal only).
+    virtual LcLevel min_lon_level() const { return LcLevel::L4; }
+    virtual LcLevel max_lon_level() const { return LcLevel::L4; }
+
     virtual DrivetrainOutput apply(const SubsystemContext&) = 0;
     virtual void begin_step(const SubsystemContext&, double /*dt*/) {}
     virtual void reset() {}

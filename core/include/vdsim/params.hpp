@@ -78,6 +78,11 @@ struct VehicleParams {
     double steering_ratio        {15.0};                               // wheel/driver
     double max_steer_angle_wheel {0.5};                                // [rad]
     double ackerman_percent      {0.0};                                // 0 = parallel, 100 = perfect Ackerman
+    // Dynamic-steering Rack EOM params (used only when ISteeringSystem outputs mode=Dynamic).
+    double rack_mass     {30.0};    // [kg] effective rack + reflected column/motor inertia
+    double rack_damping  {800.0};   // [N/(m/s)] rack viscous damping
+    double pinion_radius {0.0075};  // [m] pinion pitch radius (rack travel per pinion rad)
+    double caster_trail  {0.03};    // [m] mechanical + pneumatic trail (Fy → rack force)
 
     // ---- Aero ----
     double aero_drag_coeff       {0.30};                               // Cd

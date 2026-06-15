@@ -25,6 +25,12 @@ struct State {
     std::array<double, NUM_WHEELS> susp_compression {{0.0, 0.0, 0.0, 0.0}};  // [m] +: compressed
     std::array<double, NUM_WHEELS> susp_velocity    {{0.0, 0.0, 0.0, 0.0}};  // [m/s]
 
+    // Steering rack (Dynamic steering mode, Ld3+).
+    // rack_travel = rack displacement [m] from neutral; rack_velocity = dxr/dt [m/s].
+    // Both are zero when ISteeringSystem uses Kinematic mode (rack position is a constraint).
+    double rack_travel   {0.0};   // [m]
+    double rack_velocity {0.0};   // [m/s]
+
     // ---- Convenience accessors ----
     double yaw() const        { return yaw_from_quat(orientation); }
     double yaw_rate() const   { return angular_velocity.z(); }

@@ -233,6 +233,10 @@ private:
         double ax_body  {0.0};   // Fx_total / m  (kinematic body-x accel)
         double ay_body  {0.0};   // Fy_total / m  (kinematic body-y accel)
         std::array<double, NUM_WHEELS> domega {{0.0, 0.0, 0.0, 0.0}};
+        // Rack EOM (Dynamic steering mode): drack_travel = rack_velocity,
+        // drack_velocity = (F_motor - F_tire_fb - c_rack * rack_vel) / m_rack
+        double drack_travel   {0.0};
+        double drack_velocity {0.0};
     };
 
     static int axle_of(int i) { return (i < 2) ? 0 : 1; }   // 0 = front, 1 = rear
@@ -348,14 +352,15 @@ private:
         SubsystemContext ctx{s, driver_cmd, 0.0};
         ctx.Fz = Fz;
         const SteeringOutput steer_out = steering_->apply(ctx);
-        // ISteeringKinematics converts rack_travel → average wheel angle.
-        // Only used when subsystem explicitly sets mode=Kinematic AND rack_travel is non-zero.
-        // Legacy subsystems (UnitySteering, RatioSteering) set only roadwheel_angle (rack_travel=0)
-        // so they fall through to the backward-compatible roadwheel_angle path.
-        const double d = (steer_out.mode == SteeringOutput::Mode::Kinematic
-                          && steer_kin_
-                          && std::abs(steer_out.rack_travel) > 1e-9)
-            ? steer_kin_->compute(steer_out.rack_travel).angle_avg()
+
+        // Steer angle from rack_travel.
+        // Dynamic mode: rack_travel from State (RK4-integrated via Rack EOM below).
+        // Kinematic mode: rack_travel from steer_out (subsystem sets it directly).
+        // Legacy subsystems set roadwheel_angle only (rack_travel=0) → fall through.
+        const double rack_for_kin = (steer_out.mode == SteeringOutput::Mode::Dynamic)
+            ? s.rack_travel : steer_out.rack_travel;
+        const double d = (steer_kin_ && std::abs(rack_for_kin) > 1e-9)
+            ? steer_kin_->compute(rack_for_kin).angle_avg()
             : steer_out.roadwheel_angle;
 
         // ---- Per-wheel steer angle with Ackerman correction ----
@@ -604,6 +609,23 @@ private:
                 d_out.domega[i] = T_net[i] / (I_wheel_[i] + I_eng_w[i]);
         }
 
+        // ---- Rack EOM (Dynamic steering mode only) ----
+        // m_rack * xr'' = F_motor - F_tire_fb - c_rack * xr'
+        //   F_tire_fb = sum(Mz_front)/R_pinion + sum(Fy_front)*caster_trail
+        // Kinematic mode leaves drack_* = 0 (rack position is a constraint, not a state).
+        if (steer_out.mode == SteeringOutput::Mode::Dynamic) {
+            const double m_rack   = std::max(1e-3, vp_.rack_mass);
+            const double c_rack   = vp_.rack_damping;
+            const double R_pinion = std::max(1e-4, vp_.pinion_radius);
+            const double trail    = vp_.caster_trail;
+            const double Mz_front = mz_wheel[WHEEL_FL] + mz_wheel[WHEEL_FR];
+            const double Fy_front = F_body[WHEEL_FL].y() + F_body[WHEEL_FR].y();
+            const double F_tire_fb = Mz_front / R_pinion + Fy_front * trail;
+            d_out.drack_travel   = s.rack_velocity;
+            d_out.drack_velocity = (steer_out.motor_force - F_tire_fb
+                                    - c_rack * s.rack_velocity) / m_rack;
+        }
+
         // ---- Diagnostics ----
         tire_F_       = tire_F_disp;
         tire_F_wheel_ = tire_F_wheel_disp;
@@ -626,6 +648,9 @@ private:
         for (int i = 0; i < NUM_WHEELS; ++i) {
             s.wheel_spin[i] = s0.wheel_spin[i] + d.domega[i] * h;
         }
+        // Rack EOM (Dynamic steering mode only; zero when Kinematic).
+        s.rack_travel   = s0.rack_travel   + d.drack_travel   * h;
+        s.rack_velocity = s0.rack_velocity + d.drack_velocity * h;
         return s;
     }
 
@@ -686,6 +711,8 @@ private:
         for (int i = 0; i < NUM_WHEELS; ++i) {
             k.domega[i] = (k1.domega[i] + 2*k2.domega[i] + 2*k3.domega[i] + k4.domega[i]) / 6.0;
         }
+        k.drack_travel   = (k1.drack_travel   + 2*k2.drack_travel   + 2*k3.drack_travel   + k4.drack_travel)   / 6.0;
+        k.drack_velocity = (k1.drack_velocity + 2*k2.drack_velocity + 2*k3.drack_velocity + k4.drack_velocity) / 6.0;
         state_   = apply(s0, k, h);
         ax_prev_ = k.ax_body;
         ay_prev_ = k.ay_body;
