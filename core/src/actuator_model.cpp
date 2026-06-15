@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <deque>
 
 namespace vdsim {
 namespace {
@@ -47,21 +48,23 @@ double lerp_table(const std::vector<double>& xs, const std::vector<double>& ys,
 }  // namespace
 
 // ---- transport delay with fractional interpolation -----------------------
-// buf holds the value history (oldest at front). Returns value L seconds ago.
-double ActuatorModel::push_delay(std::vector<double>& buf, double v,
+// O(1) deque-based implementation. push_back + pop_front are both O(1).
+// Returns value L seconds ago (linearly interpolated between samples).
+double ActuatorModel::push_delay(std::deque<double>& buf, double v,
                                  double L, double dt) const {
-    if (L <= 0.0) return v;                      // no delay
-    const double fidx = L / dt;                  // delay in samples
+    if (L <= 0.0) return v;
+    const double fidx = L / dt;
     const int N = static_cast<int>(std::floor(fidx));
-    const double f = fidx - N;                   // fractional part
+    const double f = fidx - N;                   // fractional part [0,1)
     buf.push_back(v);
-    const int maxlen = N + 3;
-    if (static_cast<int>(buf.size()) > maxlen)
-        buf.erase(buf.begin(), buf.end() - maxlen);
+    const int maxlen = N + 3;                    // N+2 needed, +1 guard
+    while (static_cast<int>(buf.size()) > maxlen)
+        buf.pop_front();                          // O(1) unlike erase(begin,...)
+    // u[j] = 0 before buffer filled (warmup: step doesn't appear early).
+    auto val = [&](int idx) -> double {
+        return (idx >= 0 && idx < static_cast<int>(buf.size())) ? buf[idx] : 0.0;
+    };
     const int last = static_cast<int>(buf.size()) - 1;
-    // u[j] = 0 for j before the buffer existed (pre-command steady state), so a
-    // step does not appear before the delay has elapsed (warmup correctness).
-    auto val = [&](int idx) -> double { return (idx >= 0) ? buf[idx] : 0.0; };
     return (1.0 - f) * val(last - N) + f * val(last - N - 1);
 }
 

@@ -14,6 +14,7 @@
 // backward-compatible.  See docs/references/actuator_nonlinearity.md.
 #pragma once
 
+#include <deque>
 #include <vector>
 
 #include "vdsim/control.hpp"
@@ -87,8 +88,9 @@ private:
     ActuatorParams p_{};
     double nominal_dt_ {0.005};
 
-    // Per-channel transport-delay ring buffers (value history).
-    std::vector<double> steer_buf_, throttle_buf_, brake_buf_;
+    // Per-channel transport-delay buffers.
+    // std::deque: push_back + pop_front are both O(1) — unlike vector::erase(begin,...).
+    std::deque<double> steer_buf_, throttle_buf_, brake_buf_;
     // First-order lag states.
     double steer_lag_ {0.0}, throttle_lag_ {0.0}, brake_lag_ {0.0};
     // Previous outputs (for rate limit) and steering servo states.
@@ -97,7 +99,7 @@ private:
     double brake_T_ {40.0};
     bool   initialized_ {false};
 
-    double push_delay(std::vector<double>& buf, double v, double L, double dt) const;
+    double push_delay(std::deque<double>& buf, double v, double L, double dt) const;
 };
 
 // Feedback-path transport delay: returns the state as seen by the controller
