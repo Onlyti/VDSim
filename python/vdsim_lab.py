@@ -430,6 +430,19 @@ METRICS = {"cte_rms": m_cte_rms, "cte_max": m_cte_max, "peak_ay": m_peak_ay,
            "lap_time": m_lap_time, "rms_slip": m_rms_slip}
 
 
+def register_metric(name, fn):
+    """Register a custom scalar metric: fn(res, **kw) -> float.
+    After registration it is available by name in sim.metrics([...]) /
+    compute_metrics(). fn receives a Result and keyword args (line=, ...).
+
+        from vdsim_lab import register_metric
+        def viol_count(res, threshold=0.4, **_):
+            return sum(1 for v in res.col("ay") if abs(v) > threshold)
+        register_metric("viol_count", viol_count)
+    """
+    METRICS[name] = fn
+
+
 def compute_metrics(res, names, line=None):
     out = {}
     for n in names:
@@ -695,6 +708,8 @@ class Sim:
         self._prev_r = 0.0
         self._alpha = 0.0                          # yaw accel (IMU lever arm)
         self.rows = []
+        self._extras = []                          # per-step controller side-state (log_extra)
+        self._x0 = x0; self._y0 = y0; self._yaw0 = yaw0; self._v0 = v0
         mounts = sensor_mounts or {}
         self._types = {sid: m.get("type", sid) for sid, m in mounts.items()}
         self._mounts = {sid: {"pos": m.get("pos", [0, 0, 0]),
@@ -725,6 +740,7 @@ class Sim:
         self._alpha = (r - self._prev_r) / dt if dt > 0 else 0.0
         self._prev_r = r
         self._record(o)
+        self._extras.append({})                    # placeholder; log_extra() fills this
         return o
 
     step = run_core_dt                             # alias
@@ -748,8 +764,11 @@ class Sim:
 
     def state(self):
         o = self.sess.output(); s = o.state
+        vx, vy = s.vx(), s.vy()
+        beta = math.atan2(vy, vx) if abs(vx) > 1e-3 else 0.0
         return {"t": o.sim_time, "x": s.position[0], "y": s.position[1], "yaw": s.yaw(),
-                "vx": s.vx(), "vy": s.vy(), "r": s.yaw_rate(), "ax": o.ax, "ay": o.ay,
+                "vx": vx, "vy": vy, "r": s.yaw_rate(), "ax": o.ax, "ay": o.ay,
+                "beta": beta,                      # vehicle sideslip [rad]
                 "Fz": list(o.Fz), "slip_angle": list(o.slip_angle),
                 "slip_ratio": list(o.slip_ratio)}
 
@@ -783,12 +802,57 @@ class Sim:
             return {"ax": cm * ax + sm * ay, "ay": -sm * ax + cm * ay, "wz": m.wz}
         return cg.get(t, {})
 
+    def log_extra(self, d):
+        """Attach controller side-state to the most recent step so it lands in
+        to_csv() alongside the ground-truth columns.
+
+            sim.set_input(steer=steer, throttle=thr)
+            sim.run_core_dt()
+            sim.log_extra({"ax_cmd": ax_cmd, "w_norm": w_norm})
+        """
+        if self._extras:
+            self._extras[-1].update(d)
+        return self
+
+    def reset(self, v0=None, x0=None, y0=None, yaw0=None):
+        """Reset the plant in-place (same vehicle/tire/road/dt) so the same Sim
+        object can be reused with a different controller without rebuilding.
+
+            for ctrl in [ctrl_A, ctrl_B, ctrl_C]:
+                sim.reset()
+                while not sim.done(T): ...
+        """
+        x  = x0  if x0  is not None else self._x0
+        y  = y0  if y0  is not None else self._y0
+        yaw = yaw0 if yaw0 is not None else self._yaw0
+        v  = v0  if v0  is not None else self._v0
+        self.sess.reset(vdsim.make_init_state(
+            x=x, y=y, yaw=yaw, v=v, wheel_radius=self._vp.wheel_radius_nominal))
+        self._cmd = vdsim.CmdL4()
+        self._k = 0; self._prev_r = 0.0; self._alpha = 0.0
+        self.rows = []; self._extras = []
+        return self
+
     # ---- results / evidence ----
     def result(self):
         return Result(self.rows)
 
     def to_csv(self, path):
-        return Result(self.rows).to_csv(path)
+        """Write ground-truth + per-wheel log. If log_extra() was called during
+        the run, the extra columns are appended after the standard ones (NaN for
+        steps where log_extra was not called)."""
+        extra_keys = list(dict.fromkeys(k for d in self._extras for k in d))
+        if not extra_keys:
+            return Result(self.rows).to_csv(path)
+        import csv as _csv
+        nan = float("nan")
+        with open(path, "w", newline="") as f:
+            w = _csv.writer(f)
+            w.writerow(_COLS + extra_keys)
+            for row, ex in zip(self.rows, self._extras):
+                w.writerow([f"{v:.6g}" for v in row] +
+                           [f"{ex.get(k, nan):.6g}" for k in extra_keys])
+        return path
 
     def metrics(self, names, line=None):
         return compute_metrics(Result(self.rows), names, line)
@@ -819,6 +883,50 @@ def plot_result(res, path=None, signals=("vx", "ay", "r"), title=None):
         else:
             ax.plot(t, res.col(sig)); ax.set_ylabel(sig); ax.set_xlabel("time [s]")
         ax.grid(True, alpha=0.3)
+    if title:
+        fig.suptitle(title)
+    fig.tight_layout()
+    if path:
+        fig.savefig(path, dpi=120)
+        plt.close(fig)
+        return path
+    return fig
+
+
+def plot_comparison(runs, path=None, signals=("vx", "ay", "r"), title=None):
+    """Overlay multiple runs on the same axes for A/B/C ablation figures.
+
+        runs: dict  {"A": sim_or_result, "B": ..., "C": ...}
+              or list [sim_or_result, ...]   (labels = 0, 1, 2, ...)
+
+        from vdsim_lab import plot_comparison
+        plot_comparison({"baseline": sim_A, "ours": sim_B},
+                        path="ablation.png", signals=("ay", "r", "xy"))
+    """
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except Exception as e:                          # pragma: no cover
+        raise RuntimeError("matplotlib required for plotting") from e
+    if isinstance(runs, (list, tuple)):
+        runs = {str(i): r for i, r in enumerate(runs)}
+    sigs = list(signals)
+    fig, axes = plt.subplots(len(sigs), 1, figsize=(8, 2.3 * len(sigs)))
+    if len(sigs) == 1:
+        axes = [axes]
+    colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
+    for ax, sig in zip(axes, sigs):
+        for ci, (label, run) in enumerate(runs.items()):
+            res = run.result() if isinstance(run, Sim) else run
+            c = colors[ci % len(colors)]
+            if sig == "xy":
+                ax.plot(res.col("x"), res.col("y"), label=label, color=c)
+                ax.set_xlabel("x [m]"); ax.set_ylabel("y [m]"); ax.set_aspect("equal", "datalim")
+            else:
+                ax.plot(res.col("t"), res.col(sig), label=label, color=c)
+                ax.set_ylabel(sig); ax.set_xlabel("time [s]")
+        ax.legend(fontsize=8); ax.grid(True, alpha=0.3)
     if title:
         fig.suptitle(title)
     fig.tight_layout()

@@ -64,10 +64,78 @@ def test_log_metrics_csv():
     p.unlink()
 
 
+def test_state_beta():
+    sim = Sim(level="L2", road=Road.flat(), v0=15.0)
+    for _ in range(int(2.0 / sim.dt)):
+        sim.set_input(steer=0.05, throttle=0.1); sim.run_core_dt()
+    st = sim.state()
+    assert "beta" in st
+    import math
+    expected = math.atan2(st["vy"], st["vx"])
+    assert abs(st["beta"] - expected) < 1e-9
+
+
+def test_log_extra_in_csv():
+    import csv as _csv
+    sim = Sim(level="L2", road=Road.flat(), v0=10.0)
+    for k in range(10):
+        sim.set_input(throttle=0.3); sim.run_core_dt()
+        sim.log_extra({"ax_cmd": 0.3, "step_idx": float(k)})
+    p = Path(tempfile.gettempdir()) / "vdsim_extra.csv"
+    sim.to_csv(p)
+    with open(p) as f:
+        rows = list(_csv.DictReader(f))
+    assert "ax_cmd" in rows[0] and "step_idx" in rows[0]
+    assert float(rows[-1]["step_idx"]) == 9.0
+    p.unlink()
+
+
+def test_reset_reuses_plant():
+    sim = Sim(level="L2", road=Road.flat(), v0=12.0)
+    for _ in range(100): sim.set_input(throttle=1.0); sim.run_core_dt()
+    assert len(sim.rows) == 100
+    sim.reset()
+    assert len(sim.rows) == 0
+    assert abs(sim.state()["vx"] - 12.0) < 0.1
+    sim.reset(v0=20.0)
+    assert abs(sim.state()["vx"] - 20.0) < 0.1
+
+
+def test_register_metric():
+    from vdsim_lab import register_metric, compute_metrics
+    register_metric("always_one", lambda res, **_: 1.0)
+    sim = Sim(level="L1", road=Road.flat(), v0=10.0)
+    for _ in range(50): sim.set_input(throttle=0.2); sim.run_core_dt()
+    m = sim.metrics(["always_one", "vmax"])
+    assert m["always_one"] == 1.0
+    assert math.isfinite(m["vmax"])
+
+
+def test_plot_comparison():
+    sim_a = Sim(level="L2", road=Road.flat(), v0=10.0)
+    sim_b = Sim(level="L2", road=Road.flat(), v0=15.0)
+    for _ in range(100):
+        sim_a.set_input(throttle=0.3); sim_a.run_core_dt()
+        sim_b.set_input(throttle=0.3); sim_b.run_core_dt()
+    try:
+        from vdsim_lab import plot_comparison
+        p = Path(tempfile.gettempdir()) / "vdsim_cmp.png"
+        plot_comparison({"A": sim_a, "B": sim_b}, path=p, signals=("vx", "ay"))
+        assert p.stat().st_size > 0
+        p.unlink()
+    except RuntimeError:
+        pass   # matplotlib not installed — not a failure
+
+
 if __name__ == "__main__":
     test_throttle_then_brake()
     test_step_steer_yaws()
     test_cmd_object_accepted()
     test_mount_pose_shifts_gnss()
     test_log_metrics_csv()
+    test_state_beta()
+    test_log_extra_in_csv()
+    test_reset_reuses_plant()
+    test_register_metric()
+    test_plot_comparison()
     print("OK test_experiment_api")
