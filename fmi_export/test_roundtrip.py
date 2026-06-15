@@ -1,16 +1,22 @@
 """
-Round-trip equivalence: VDSim → FMU export → FMU import → same trajectory.
+Round-trip equivalence: VDSim native SimSession vs FMU co-simulation.
 
-This proves the FMU export is byte-for-byte equivalent to running the
-same dynamics inside VDSim natively.  If a future change breaks one of
-the two paths, this test catches it.
+Both paths use the same vehicle (sedan) + tire (default_pacejka) + L2 dynamics
+with identical step size (dt=0.02 s) and control inputs.  Maximum state deviation
+must be < 1e-3 (sub-mm/ms² numerical noise only).
+
+Run:
+    # 1. build the FMU first
+    bash fmi_export/build_fmu.sh
+    # 2. run the test
+    PYTHONPATH=build/python python3 fmi_export/test_roundtrip.py
 """
-import os, sys
+import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(REPO / "build" / "python"))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path[:0] = [str(REPO / "build" / "python"), str(REPO / "python"),
+                str(Path(__file__).resolve().parent)]
 
 import vdsim
 from fmu_master import FMUMaster
@@ -22,30 +28,26 @@ def main():
         print(f"Missing {fmu_path} — run fmi_export/build_fmu.sh first")
         sys.exit(1)
 
-    # ---- Path 1: VDSim native L2 ----
-    sys.path.insert(0, str(REPO / "examples"))
-    from _catalog_load import load_vehicle_tire
-    vp, tp = load_vehicle_tire("sports")
-    sp = vdsim.SolverParams()
-    dyn = vdsim.create_seven_dof()
-    dyn.initialize(vp, tp, sp)
+    veh_yaml  = str(REPO / "configs/parts/body/sedan.yaml")
+    tire_yaml = str(REPO / "configs/parts/tire/default_pacejka.yaml")
 
-    cp = lambda: [(_set(c) or c) for c in [
-        vdsim.ContactPoint() for _ in range(4)]]
-    def _set(c):
-        c.is_valid = True; c.normal = [0, 0, 1]; c.mu_long = 1.0; c.mu_lat = 1.0
-        return None
-    contacts = cp()
+    # ---- Path 1: VDSim native SimSession (L2) ----
+    vp = vdsim.VehicleParams.from_yaml(veh_yaml)
+    tp = vdsim.TireParams.from_yaml(tire_yaml)
+    sp = vdsim.SolverParams()
+    sess = vdsim.make_sim_session(vp, tp, "L2", nominal_dt=0.02)
+    s0 = vdsim.make_init_state(v=0.0, wheel_radius=vp.wheel_radius_nominal)
+    sess.reset(s0)
 
     cmd = vdsim.CmdL4()
     cmd.steer_angle_wheel = 0.05
     cmd.throttle = 0.30
     dt = 0.02; N = 100
     native_traj = []
-    for k in range(N):
-        dyn.step(cmd, contacts, dt)
-        s = dyn.state()
-        native_traj.append((s.vx(), s.vy(), s.yaw_rate(), dyn.ay_body_est()))
+    for _ in range(N):
+        sess.set_input(cmd); sess.tick(dt)
+        o = sess.output(); s = o.state
+        native_traj.append((s.vx(), s.vy(), s.yaw_rate(), o.ay))
 
     # ---- Path 2: FMU via ctypes ----
     fmu = FMUMaster.load(fmu_path)
@@ -60,23 +62,21 @@ def main():
     fmu.free()
 
     # ---- Compare ----
-    max_err = [0.0, 0.0, 0.0, 0.0]
-    for nat, fmu_v in zip(native_traj, fmu_traj):
-        for i in range(4):
-            max_err[i] = max(max_err[i], abs(nat[i] - fmu_v[i]))
-
     labels = ("vx", "vy", "yaw_rate", "ay")
-    print("Round-trip equivalence check (native vs FMU):")
+    max_err = [0.0] * 4
+    for nat, fv in zip(native_traj, fmu_traj):
+        for i in range(4):
+            max_err[i] = max(max_err[i], abs(nat[i] - fv[i]))
+
+    print("Round-trip equivalence check (native SimSession vs FMU):")
     for lab, e in zip(labels, max_err):
         print(f"  max |Δ {lab}| = {e:.3e}")
-    if all(e < 1e-6 for e in max_err):
-        print("PASS — outputs identical to numerical precision")
-        sys.exit(0)
-    elif all(e < 1e-3 for e in max_err):
-        print("PASS — small numerical noise (sub-mm/ms² scale)")
+
+    if all(e < 1e-3 for e in max_err):
+        print("PASS")
         sys.exit(0)
     else:
-        print("FAIL — non-trivial divergence between native and FMU")
+        print("FAIL — non-trivial divergence")
         sys.exit(1)
 
 

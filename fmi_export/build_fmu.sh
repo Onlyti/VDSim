@@ -46,9 +46,9 @@ cp "$REPO/fmi_export/modelDescription.xml" "$STAGING/"
 
 # 3. Resources — vehicle / tire / solver YAML.  The FMU expects these under
 #    resources/configs/{vehicle,tire,solver}.yaml regardless of source name.
-#    Default: sports.yaml + default_pacejka.yaml.
-VEH="${VEH_YAML:-configs/vehicles/sports.yaml}"
-TIRE="${TIRE_YAML:-configs/tires/default_pacejka.yaml}"
+#    Default: catalog parts (sedan + default_pacejka).
+VEH="${VEH_YAML:-configs/parts/body/sedan.yaml}"
+TIRE="${TIRE_YAML:-configs/parts/tire/default_pacejka.yaml}"
 cp "$REPO/$VEH"  "$STAGING/resources/configs/vehicle.yaml"
 cp "$REPO/$TIRE" "$STAGING/resources/configs/tire.yaml"
 echo "[build] resources: $VEH + $TIRE"
