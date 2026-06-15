@@ -215,6 +215,10 @@ PYBIND11_MODULE(vdsim, m) {
         .def("compute",    &vdsim::ITireModel::compute);
     m.def("create_pacejka_mf96", &vdsim::create_pacejka_mf96);
     m.def("create_linear_tire",  &vdsim::create_linear_tire);
+    m.def("create_magic_formula_tire_from_tir",
+          &vdsim::create_magic_formula_tire_from_tir,
+          py::arg("tir_path"),
+          "Load MF2002 tire evaluator from a .tir file. Returns ITireModel.");
 
     // -------- ISuspensionKinematics (Ld4) --------
     py::class_<vdsim::ISuspensionKinematics::Output>(m, "KinematicsOutput")
