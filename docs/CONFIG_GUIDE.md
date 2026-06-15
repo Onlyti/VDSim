@@ -148,45 +148,68 @@ fleet:
 - `internal`: 빌트인 제어기. v1 = 스폰 속도 유지(speed-hold) 크루즈. **경로추종(pure-pursuit) 내부제어는 scene `path` 필드(🔴)와 함께 후속.**
 - 용례: SUT 한 대는 external(외부 컨트롤러 평가), 나머지 reference/traffic 차량은 internal 로 알아서 굴림.
 
-### 2.3 계획 스키마 🔴 (SIM_CONFIG_ARCH 제안, 아직 scene 에 없음)
+### 2.3 계층 (확정) + 계획 필드 🔴
+
+시나리오가 최상위. **map · comms · sim 은 시나리오 단위(공유)**, **센서는 차량(에이전트)
+안**, **path(주행경로)는 에이전트 단위(map 위)**:
 
 ```yaml
-run: { mode: rt_comms, comms: hil_setup }   # api | rt_comms + comms 참조
-fleet:
+sim: { dt: 0.005, t_end: 40, time_scale: 1.0 }   # 🔴 시나리오 단위
+map: map.figure8                                 # 🔴 시나리오 단위 (공유 환경/노면)
+comms: hil_setup                                 # 🔴 시나리오 단위 (configs/comms/<name>.yaml 참조; §3)
+run: { mode: rt_comms }                           # 🔴 api | rt_comms
+agents:                                           # (= 현재 fleet)
   - id: 0
-    path: map.figure8.centerline            # 경로(Trajectory) 참조 → CTE/lap 평가 + 내부 경로추종
-    sensors: sensors.sedan_default          # 센서 suite (host=ego/infra)
-maneuver: { ref: maneuvers.step_steer, params: {...} }
+    vehicle:                                      # 차량 = 부품(blueprint+parts) + 센서
+      blueprint: vehicle.sedan_comfort            # 🟢 완성 레시피(모든 슬롯 채움)
+      parts: { tire: tire.sport_grip }            # 🟢 그 위 슬롯 override(diff). 없으면 blueprint 원본
+      sensors:                                    # 🔴 차량 안 (mount = 위치+자세 pose)
+        - { id: gnss, type: gnss, mount: { pos: [1.4,0,1.0], rpy: [0,0,0] }, rate: 10 }
+        - { id: cam,  type: camera, mount: { pos: [1.6,0,1.2], rpy: [0,-0.05,0] }, rate: 30 }
+    spawn: { x: -15, y: -1.5, yaw: 0, vx: 12 }    # 🟢 (현재 x0/y0/z0/yaw0/vx0)
+    path: paths/figure8_centerline.yaml           # 🔴 trajectory 파일(waypoints/속도) → CTE/lap + path-follow
+    control: external | internal                  # 🟢
 ```
+
+control 의미(런타임 무관): action 을 sim core 의 `SimSession::set_input(CmdL4)` 로 주입하는 seam.
+- `external` — 코어 밖에서 계산한 action 을 주입. 소스는 `run.mode` 가 결정:
+  `rt_comms` → UDP(comms) → set_input · `api` → 알고리즘/driver → set_input (vdsim_lab).
+- `internal` — 내장 제어기가 루프 안에서 직접 set_input (v1 = speed-hold; path-follow 는 `path` 와 함께 🔴).
+
+blueprint vs parts: blueprint = base 레시피, parts = 그 위 슬롯 patch. materialize 가
+`blueprint + parts → resolved vehicle.yaml/tire.yaml` 로 합친다.
+
+> 현재 구현은 평평한 `fleet:` (agent=blueprint+pose+control)이고, 위 `agents.vehicle.sensors`
+> / `path`(trajectory 파일) / `map` / scenario-level `sim`·`comms` 는 단계적으로 추가(🔴).
+> 계층 자체는 위가 확정.
 
 ---
 
-## 3. 실시간 통신 설정 — comms/*.yaml 🟡
+## 3. 실시간 통신 설정 — comms/*.yaml 🟢(vds1) / 🔴(json·nmea·sensor)
 
-realtime 모드에서 **데이터가 어디로 흐르는지** 선언. scene `run:{mode: rt_comms, comms: <name>}` 로 참조(🔴).
+realtime 모드에서 **데이터가 어디로 흐르는지** 선언. comms 는 **시나리오 단위** — scene 의
+`comms: <name>` 키가 `configs/comms/<name>.yaml` 를 가리킨다(에이전트별이 아니라 시나리오가 소유).
 
 ```yaml
-name: hil_setup
+name: vds1_loopback              # 동작 샘플: configs/comms/vds1_loopback.yaml
 channels:
   # 송신 TX: source → 규약(template) → 목적지(들) (fan-out)
-  - source: ego.state            # 차량 동역학 상태
-    template: vds1_state         # source 타입이 packet 규약을 고정
-    transport: udp
-    to: [ {ip: 10.0.0.5, port: 7002}, {ip: 127.0.0.1, port: 7100} ]
-  - source: ego.sensor.gnss      # 한 센서 → 두 소비자
+  - source: 0.state              # <id>.state | ego.state(=첫 차)
+    template: vds1               # 🟢 VDS1 바이너리 (cosim/cosim_protocol.hpp)
+    to: [ {ip: 127.0.0.1, port: 7100}, {ip: 127.0.0.1, port: 7101} ]
+  - source: 0.sensor.gnss        # 어느 센서 → 소비자 (🔴 미구현, 경고 후 skip)
     template: nmea_gga
     to: [ {ip: 10.0.0.5, port: 9001} ]
-  # 수신 RX: 포트에서 listen → 규약 → 어느 제어로 (fan-in)
+  # 수신 RX: 포트에서 listen → 규약 → (vehicle_id 헤더로) 어느 제어 (fan-in)
   - direction: in
-    template: vds1_cmd
+    template: vds1_cmd           # 🟢 패킷 헤더 vehicle_id 로 대상 에이전트 선택
     listen: { port: 7001 }       # 누구나 이 포트로 cmd 전송 (last-writer/ZOH)
 ```
 
-- **TX(송신)** = `source`(차량 상태/센서) → `template`(규약) → `to`(ip:port, fan-out).
-- **RX(수신)** = `direction: in` + `listen.port` → `template` → 제어 입력 (fan-in, 여러 컨트롤러 가능).
-- template 은 source 타입이 고정: `vds1_state`/`vds1_cmd`(`cosim/cosim_protocol.hpp` VDS1 바이너리) + 센서별(NMEA 등). 바이트 레이아웃 직접 안 짬.
+- **TX(송신)** = `source`(`<id>.state`) → `template`(규약) → `to`(ip:port, fan-out).
+- **RX(수신)** = `direction: in` + `listen.port` → `template` → 제어 입력 (fan-in). 어느 에이전트인지는 VDS1 cmd 헤더의 `vehicle_id` 로 결정.
 
-**구현 상태**: comms.yaml 은 스펙·예시(🟡)만 있고 **이를 실행하는 라우터는 미구현(🔴)**. 현재 `vdsim_realtime` 는 CLI 플래그로 cmd-in 1포트 / state-out 1목적지만. 다중 fan-out/in·template 라우팅은 후속(RUNTIME_ARCH.md).
+**구현 상태**: `vdsim_realtime` 가 comms.yaml 을 실행하는 라우터(🟢) — TX `<id>.state`+`vds1` fan-out, RX `vds1_cmd` listen-port fan-in 동작. comms 키가 없으면 레거시(단일 cmd-in/state-out CLI 플래그)로 fallback. `json`/`nmea_gga` template 및 `sensor.*` source 는 아직 미구현(🔴) — 경고 찍고 skip.
 
 ---
 
@@ -200,6 +223,7 @@ channels:
 | realtime 단일 cmd-in/state-out (VDS1) | 🟢 | `vdsim_realtime`, external 제어 |
 | 시뮬 세팅(rate/dt·time_scale·integrator·duration) | 🟡 | §1.5, 현재 분산 / 통합 `sim:` 블록은 🔴 |
 | per-agent `control{internal|external}` | 🟡 | §2.2 (이번 추가; internal=speed-hold v1) |
-| scene `path`/`maneuver`/`run{mode}` | 🔴 | §2.3, SIM_CONFIG_ARCH |
-| comms.yaml 라우터(fan-out/in, template) | 🔴 | §3, RUNTIME_ARCH |
-| sensor host / map-path CTE / vdsim.Simulation facade | 🔴/🟡 | SIM_CONFIG_ARCH §7 |
+| comms.yaml 라우터 — vds1 TX fan-out / RX fan-in | 🟢 | §3, `vdsim_realtime` (scene `comms:` 참조) |
+| comms json·nmea_gga template / sensor.* source | 🔴 | §3, 경고 후 skip |
+| scene `path`(trajectory 파일)/`maneuver`/`run{mode}` | 🔴 | §2.3, SIM_CONFIG_ARCH |
+| agent `vehicle.sensors`(mount pose) / map-path CTE | 🔴 | §2.3, SIM_CONFIG_ARCH §7 |

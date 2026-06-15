@@ -1,0 +1,15 @@
+# VDS1 loopback routing — works today in vdsim_realtime (the C++ comms router).
+# Scenario-level: a scene references this via `comms: vds1_loopback`.
+#   TX: vehicle 0 STATE fans out to a controller + a logger (canonical VDS1 binary).
+#   RX: any controller sends a VDS1 CMD here; the packet's vehicle_id header
+#       selects which agent's control it drives (fan-in).
+# (json / nmea_gga templates and sensor.* sources are specced but not yet
+#  realized by the C++ router; see docs/CONFIG_GUIDE.md §3.)
+name: vds1_loopback
+channels:
+  - source: 0.state
+    template: vds1
+    to: [ {ip: 127.0.0.1, port: 7100}, {ip: 127.0.0.1, port: 7101} ]
+  - direction: in
+    template: vds1_cmd
+    listen: { port: 7001 }

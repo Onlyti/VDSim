@@ -183,6 +183,20 @@ def materialize_scene_file(
         for key in ("mu", "grade", "bank"):
             if key in env:
                 world[key] = env[key]
+    # comms is scenario-level: inline the referenced routing spec into the world
+    # so the C++ realtime server sees concrete channels (no repo-root lookup).
+    comms = doc.get("comms")
+    if isinstance(comms, str):
+        cpath = root / "configs" / "comms" / f"{comms}.yaml"
+        if not cpath.is_file():
+            alt = Path(comms)
+            cpath = alt if alt.is_file() else (root / comms)
+        if cpath.is_file():
+            world["comms"] = yaml.safe_load(cpath.read_text()) or {}
+        else:
+            raise ValueError(f"unknown comms spec: {comms}")
+    elif isinstance(comms, dict):
+        world["comms"] = dict(comms)
     tmp = out_path.parent / "_resolve"
     tmp.mkdir(parents=True, exist_ok=True)
     for entry in fleet_spec_from_scene(doc):
