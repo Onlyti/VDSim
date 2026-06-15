@@ -37,14 +37,41 @@ cmake --build build --config Release            # Linux 는 -j
 ctest --test-dir build -C Release               # 328/328 ; 바이너리는 build/bin/
 ```
 
-Python 간단 실험:
+## Python 으로 실험하기 (제어기는 직접 작성)
+
+VDSim 은 **시뮬레이션 seam** 만 제공하고, 루프와 알고리즘은 당신이 소유합니다.
+시나리오 파일·네트워크 없이 core 에서 바로 plant 를 만들고(vehicle / tire / level /
+road), `set_input(action) → run_core_dt()` 로 구동하며 `state()` / `measurements(id)`
+를 읽습니다.
+
 ```python
-from vdsim_lab import Experiment, Vehicle, Road, Maneuver, Sensors
-res = (Experiment(level="L3").vehicle(Vehicle.preset("sedan"))
-       .road(Road.preset("belgian_pave")).maneuver(Maneuver.step_steer(v=20, steer=0.03))
-       .sensors(Sensors().gnss().imu()).run(8.0))
-res.to_csv("run.csv"); print(res.summary())
+from vdsim_lab import Sim, Road, Sensors
+
+sim = Sim(vehicle="sedan", level="L2", road=Road.iso8608("C"),
+          sensors=Sensors().gnss(pos_std=0.3).imu(), v0=12.0,
+          sensor_mounts={"gnss": {"type": "gnss", "pos": [1.4, 0, 1.0]}})
+
+while not sim.done(12.0):
+    st = sim.state()                                  # ground truth
+    gnss = sim.measurements("gnss")                   # noisy, mount pose 기준
+    steer, throttle, brake = my_controller(st, gnss)  # <-- 당신의 알고리즘
+    sim.set_input(steer=steer, throttle=throttle, brake=brake)
+    sim.run_core_dt()                                 # core 한 스텝 전진
+
+sim.to_csv("run.csv")                                 # ground-truth + per-wheel 로그
+sim.metrics(["peak_ay", "cte_rms", "lap_time"])       # 스칼라 지표
+sim.plot("run.png", signals=("vx", "ay", "r", "xy"))  # 옵션 (matplotlib 필요)
 ```
+
+`templates/experiment_template.py` 를 복사해 `controller(...)` 만 채우고 실행:
+```bash
+PYTHONPATH=build/python:python python3 templates/experiment_template.py
+```
+예제: `examples/experiment_quickstart.py`, `examples/experiment_path_follow.py`
+(pure-pursuit + CTE). 전체 레퍼런스(seam, `Sim(...)` 옵션, evidence):
+**[docs/EXPERIMENT_API.md](docs/EXPERIMENT_API.md)**. real-time 서버·batch 러너가
+쓰는 `set_input → tick` 과 동일한 seam — real-time 은 action 이 UDP 로, 여기선
+당신 함수에서 들어옵니다.
 
 ## 시각화 — Web GUI
 

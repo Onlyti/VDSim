@@ -50,7 +50,7 @@ TEST(MultiVehicle, LoadSceneParsesFleet) {
         std::ofstream f(path);
         f << "mu: 1.0\nrate: 200\nvehicles:\n"
              "- id: 0\n  vehicle: " << veh << "\n  tire: " << tire << "\n"
-             "  level: L2\n  x0: -15\n  y0: -1.5\n  vx0: 12\n"
+             "  level: L2\n  x0: -15\n  y0: -1.5\n  vx0: 12\n  control: internal\n"
              "- id: 7\n  vehicle: " << veh << "\n  tire: " << tire << "\n"
              "  level: L2\n  x0: -15\n  y0: 1.5\n  vx0: 9\n";
     }
@@ -61,6 +61,41 @@ TEST(MultiVehicle, LoadSceneParsesFleet) {
     EXPECT_DOUBLE_EQ(w.vehicles[0].y0, -1.5);
     EXPECT_DOUBLE_EQ(w.vehicles[1].y0, 1.5);
     EXPECT_DOUBLE_EQ(w.vehicles[1].vx0, 9.0);
+    EXPECT_EQ(w.vehicles[0].control, "internal");    // per-agent control parsed
+    EXPECT_EQ(w.vehicles[1].control, "external");    // default when omitted
+    std::filesystem::remove(path);
+}
+
+// Scenario-level comms spec parses into TX (source/template/to) and RX
+// (direction:in -> listen.port) channels. The realtime server routes by these.
+TEST(MultiVehicle, CommsSpecParsed) {
+    const std::string veh = std::string(VDSIM_SOURCE_DIR)
+        + "/configs/parts/body/sedan.yaml";
+    const std::string tire = std::string(VDSIM_SOURCE_DIR)
+        + "/configs/parts/tire/default_pacejka.yaml";
+    const auto path = std::filesystem::temp_directory_path() / "vdsim_world_comms.yaml";
+    {
+        std::ofstream f(path);
+        f << "mu: 1.0\nrate: 200\n"
+             "comms:\n  name: hil\n  channels:\n"
+             "  - source: 0.state\n    template: vds1\n"
+             "    to: [ {ip: 127.0.0.1, port: 7100}, {ip: 127.0.0.1, port: 7101} ]\n"
+             "  - direction: in\n    template: vds1_cmd\n    listen: { port: 7001 }\n"
+             "vehicles:\n- id: 0\n  vehicle: " << veh << "\n  tire: " << tire << "\n"
+             "  level: L2\n  vx0: 10\n";
+    }
+    const auto w = vdsim::cosim::load_scene(path.string());
+    ASSERT_EQ(w.comms.channels.size(), 2u);
+    EXPECT_EQ(w.comms.name, "hil");
+    // channel 0 = TX fan-out
+    EXPECT_FALSE(w.comms.channels[0].rx);
+    EXPECT_EQ(w.comms.channels[0].source, "0.state");
+    EXPECT_EQ(w.comms.channels[0].templ, "vds1");
+    ASSERT_EQ(w.comms.channels[0].to.size(), 2u);
+    EXPECT_EQ(w.comms.channels[0].to[1].port, 7101);
+    // channel 1 = RX fan-in
+    EXPECT_TRUE(w.comms.channels[1].rx);
+    EXPECT_EQ(w.comms.channels[1].listen_port, 7001);
     std::filesystem::remove(path);
 }
 

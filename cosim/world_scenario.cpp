@@ -10,6 +10,34 @@ static double node_d(const YAML::Node& n, const char* k, double d) {
     return n[k] ? n[k].as<double>() : d;
 }
 
+// Parse a comms document node ({name, channels: [...]}) into CommsConfig.
+static CommsConfig parse_comms_node(const YAML::Node& c) {
+    CommsConfig cc;
+    if (c["name"]) cc.name = c["name"].as<std::string>();
+    const auto chans = c["channels"];
+    if (!chans || !chans.IsSequence()) return cc;
+    for (const auto& ch : chans) {
+        CommsChannel cm;
+        const bool is_in = ch["direction"] &&
+            ch["direction"].as<std::string>() == "in";
+        cm.rx = is_in || ch["listen"];
+        if (ch["source"])   cm.source = ch["source"].as<std::string>();
+        if (ch["template"]) cm.templ  = ch["template"].as<std::string>();
+        if (ch["listen"] && ch["listen"]["port"])
+            cm.listen_port = ch["listen"]["port"].as<int>();
+        if (ch["to"] && ch["to"].IsSequence()) {
+            for (const auto& d : ch["to"]) {
+                CommsDest dst;
+                if (d["ip"])   dst.ip   = d["ip"].as<std::string>();
+                if (d["port"]) dst.port = d["port"].as<int>();
+                cm.to.push_back(dst);
+            }
+        }
+        cc.channels.push_back(cm);
+    }
+    return cc;
+}
+
 WorldScenario load_world_scenario(const std::string& path) {
     YAML::Node root = YAML::LoadFile(path);
     WorldScenario w;
@@ -39,6 +67,20 @@ WorldScenario load_world_scenario(const std::string& path) {
         w.stunt.loop_radius   = node_d(st, "radius_m", w.stunt.loop_radius);
         if (st["rail_guide"]) w.stunt.rail_guide = st["rail_guide"].as<bool>();
     }
+    if (root["comms"]) {
+        const auto cnode = root["comms"];
+        if (cnode.IsMap()) {
+            w.comms = parse_comms_node(cnode);          // inlined by materialize
+        } else if (cnode.IsScalar()) {                  // direct world.yaml: a file path
+            try {
+                w.comms = parse_comms_node(YAML::LoadFile(cnode.as<std::string>()));
+            } catch (const std::exception&) {
+                throw std::runtime_error(
+                    "world scenario: comms file not loadable: " + cnode.as<std::string>());
+            }
+        }
+    }
+
     const auto veh = root["vehicles"];
     if (!veh || !veh.IsSequence() || veh.size() == 0)
         throw std::runtime_error("world scenario: missing vehicles[]");
@@ -50,6 +92,7 @@ WorldScenario load_world_scenario(const std::string& path) {
         s.vehicle_yaml = v["vehicle"].as<std::string>();
         s.tire_yaml    = v["tire"].as<std::string>();
         if (v["level"]) s.level = v["level"].as<std::string>();
+        if (v["control"]) s.control = v["control"].as<std::string>();
         if (v["front_susp"]) s.front_susp = v["front_susp"].as<std::string>();
         if (v["rear_susp"]) s.rear_susp = v["rear_susp"].as<std::string>();
         s.x0   = node_d(v, "x0", 0.0);

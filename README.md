@@ -38,14 +38,41 @@ cmake --build build --config Release            # -j on Linux
 ctest --test-dir build -C Release               # 328/328 ; binaries in build/bin/
 ```
 
-A quick experiment in Python:
+## Run an experiment in Python (write your own controller)
+
+VDSim gives you the **simulation seam**; you own the loop and the algorithm. Build
+the plant straight from the core (vehicle / tire / level / road) — no scenario file,
+no network — then drive it: `set_input(action) → run_core_dt()`, read
+`state()` / `measurements(id)`.
+
 ```python
-from vdsim_lab import Experiment, Vehicle, Road, Maneuver, Sensors
-res = (Experiment(level="L3").vehicle(Vehicle.preset("sedan"))
-       .road(Road.preset("belgian_pave")).maneuver(Maneuver.step_steer(v=20, steer=0.03))
-       .sensors(Sensors().gnss().imu()).run(8.0))
-res.to_csv("run.csv"); print(res.summary())
+from vdsim_lab import Sim, Road, Sensors
+
+sim = Sim(vehicle="sedan", level="L2", road=Road.iso8608("C"),
+          sensors=Sensors().gnss(pos_std=0.3).imu(), v0=12.0,
+          sensor_mounts={"gnss": {"type": "gnss", "pos": [1.4, 0, 1.0]}})
+
+while not sim.done(12.0):
+    st = sim.state()                                  # ground truth
+    gnss = sim.measurements("gnss")                   # noisy, at the mount
+    steer, throttle, brake = my_controller(st, gnss)  # <-- YOUR algorithm
+    sim.set_input(steer=steer, throttle=throttle, brake=brake)
+    sim.run_core_dt()                                 # advance one core step
+
+sim.to_csv("run.csv")                                 # ground-truth + per-wheel log
+sim.metrics(["peak_ay", "cte_rms", "lap_time"])       # scalar reductions
+sim.plot("run.png", signals=("vx", "ay", "r", "xy"))  # optional (needs matplotlib)
 ```
+
+Copy `templates/experiment_template.py`, replace `controller(...)`, and run:
+```bash
+PYTHONPATH=build/python:python python3 templates/experiment_template.py
+```
+Runnable examples: `examples/experiment_quickstart.py`,
+`examples/experiment_path_follow.py` (pure-pursuit + CTE). Full reference (the
+seam, `Sim(...)` options, evidence): **[docs/EXPERIMENT_API.md](docs/EXPERIMENT_API.md)**.
+This is the same `set_input → tick` seam the real-time server and batch runner use —
+in real-time mode the action arrives over UDP, here it comes from your function.
 
 ## Visualization — Web GUI
 

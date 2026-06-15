@@ -294,7 +294,61 @@ struct WorldVehicle {
     std::unique_ptr<vdsim::SimSession> sim;
     uint32_t last_seq {0};
     std::chrono::steady_clock::time_point last_cmd {std::chrono::steady_clock::now()};
+    bool internal {false};      // control: internal -> built-in speed-hold cruise
+    double cruise_vx {0.0};     // target speed for the internal controller [m/s]
 };
+
+// One TX channel resolved to a concrete vehicle + destination sockets (fan-out).
+struct TxChannel {
+    uint32_t id;
+    std::vector<sockaddr_in> dests;
+};
+
+sockaddr_in make_addr(const std::string& ip, int port) {
+    sockaddr_in a{}; a.sin_family = AF_INET;
+    a.sin_port = htons(static_cast<uint16_t>(port));
+    ::inet_pton(AF_INET, ip.c_str(), &a.sin_addr);
+    return a;
+}
+
+socket_t make_rx_socket(int port) {
+    socket_t s = ::socket(AF_INET, SOCK_DGRAM, 0);
+    if (s == INVALID_SOCKET) return INVALID_SOCKET;
+    sockaddr_in ba{}; ba.sin_family = AF_INET; ba.sin_addr.s_addr = INADDR_ANY;
+    ba.sin_port = htons(static_cast<uint16_t>(port));
+    if (::bind(s, reinterpret_cast<sockaddr*>(&ba), sizeof(ba)) < 0) {
+        close_socket(s); return INVALID_SOCKET;
+    }
+#ifdef _WIN32
+    DWORD rcvto = 100;
+    ::setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&rcvto), sizeof(rcvto));
+#else
+    timeval rcvto{}; rcvto.tv_sec = 0; rcvto.tv_usec = 100000;
+    ::setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &rcvto, sizeof(rcvto));
+#endif
+    return s;
+}
+
+// Decode + route one VDS1 cmd datagram to its target vehicle. Returns the
+// sender address via *from when a command was actually applied (for legacy
+// subscriber discovery); returns false otherwise.
+bool route_cmd(std::unordered_map<uint32_t, WorldVehicle*>& by_id,
+               const uint8_t* buf, int n, std::atomic<uint64_t>& cmd_count) {
+    vdsim::cosim::CmdFields f;
+    if (!vdsim::cosim::decode_cmd(buf, static_cast<size_t>(n), f)) return false;
+    auto it = by_id.find(f.vehicle_id);
+    if (it == by_id.end()) return false;
+    WorldVehicle& wv = *it->second;
+    if (f.seq != 0 && f.seq <= wv.last_seq) return false;
+    wv.last_seq = f.seq;
+    vdsim::CmdL4 u; u.throttle = f.throttle; u.brake = f.brake;
+    u.steer_angle_wheel = f.steer_tire; u.gear = f.gear;
+    u.handbrake = (f.handbrake != 0);
+    wv.sim->set_input(u);
+    wv.last_cmd = std::chrono::steady_clock::now();
+    cmd_count.fetch_add(1);
+    return true;
+}
 
 int run_scene(const std::string& scene_path, int argc, char** argv) {
     vdsim::cosim::WorldScenario world;
@@ -340,6 +394,8 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
     for (const auto& spn : world.vehicles) {
         WorldVehicle wv;
         wv.id = spn.id;
+        wv.internal = (spn.control == "internal");
+        wv.cruise_vx = spn.vx0;
         wv.vp = vdsim::VehicleParams::from_yaml(spn.vehicle_yaml);
         auto tp = vdsim::TireParams::from_yaml(spn.tire_yaml);
         apply_lugre_cli(tp, argc, argv);
@@ -369,60 +425,110 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
     for (auto& wv : fleet)
         by_id[wv.id] = &wv;
 
-    socket_t sock = ::socket(AF_INET, SOCK_DGRAM, 0);
-    if (sock == INVALID_SOCKET) { std::perror("socket"); return 1; }
-    sockaddr_in bind_addr{}; bind_addr.sin_family = AF_INET;
-    bind_addr.sin_addr.s_addr = INADDR_ANY;
-    bind_addr.sin_port = htons(static_cast<uint16_t>(cmd_port));
-    if (::bind(sock, reinterpret_cast<sockaddr*>(&bind_addr), sizeof(bind_addr)) < 0) {
-        std::perror("bind"); close_socket(sock); return 1;
-    }
-#ifdef _WIN32
-    DWORD rcvto = 100;
-    ::setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&rcvto), sizeof(rcvto));
-#else
-    timeval rcvto{}; rcvto.tv_sec = 0; rcvto.tv_usec = 100000;
-    ::setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &rcvto, sizeof(rcvto));
-#endif
-
-    std::vector<Subscriber> subscribers;
-    sockaddr_in seed{}; seed.sin_family = AF_INET;
-    seed.sin_port = htons(static_cast<uint16_t>(st_port));
-    ::inet_pton(AF_INET, st_ip.c_str(), &seed.sin_addr);
-    touch_sub(subscribers, seed, now_s());
-
     std::signal(SIGINT, on_sigint);
     const vdsim::CmdL4 failsafe{0.0, 0.3, 0.0, 1, false};
     std::atomic<uint64_t> cmd_count {0};
 
-    std::thread recv_thread([&] {
-        uint8_t buf[256];
-        while (g_run.load()) {
-            sockaddr_in from {}; socklen_t flen = sizeof(from);
-            const int n = ::recvfrom(sock, reinterpret_cast<char*>(buf),
-                                     static_cast<int>(sizeof(buf)), 0,
-                                     reinterpret_cast<sockaddr*>(&from), &flen);
-            if (n <= 0) continue;
-            vdsim::cosim::CmdFields f;
-            if (!vdsim::cosim::decode_cmd(buf, static_cast<size_t>(n), f)) continue;
-            auto it = by_id.find(f.vehicle_id);
-            if (it == by_id.end()) continue;
-            WorldVehicle& wv = *it->second;
-            if (f.seq != 0 && f.seq <= wv.last_seq) continue;
-            wv.last_seq = f.seq;
-            vdsim::CmdL4 u; u.throttle = f.throttle; u.brake = f.brake;
-            u.steer_angle_wheel = f.steer_tire; u.gear = f.gear;
-            u.handbrake = (f.handbrake != 0);
-            wv.sim->set_input(u);
-            wv.last_cmd = std::chrono::steady_clock::now();
-            cmd_count.fetch_add(1);
-            touch_sub(subscribers, from, now_s());
-        }
-    });
+    // Scenario-level comms spec routes RX/TX explicitly; without it, fall back to
+    // the legacy single cmd-port + auto-discovered state subscriber behaviour.
+    const bool comms_mode = !world.comms.empty();
 
-    std::fprintf(stderr,
-        "[vdsim_realtime] world %zu vehicles @ %.0f Hz | cmd :%d | %s\n",
-        fleet.size(), rate, cmd_port, scene_path.c_str());
+    socket_t sock = INVALID_SOCKET;          // legacy cmd socket
+    std::vector<Subscriber> subscribers;     // legacy auto-discovered state subs
+    sockaddr_in seed{};
+    std::thread recv_thread;
+
+    std::vector<socket_t> rx_socks;          // comms listen sockets (fan-in)
+    std::vector<std::thread> rx_threads;
+    socket_t tx_sock = INVALID_SOCKET;       // comms sender (fan-out)
+    std::vector<TxChannel> tx_channels;
+
+    if (comms_mode) {
+        for (const auto& ch : world.comms.channels) {        // resolve TX
+            if (ch.rx) continue;
+            const auto dot = ch.source.find('.');
+            const std::string sel  = dot == std::string::npos ? ch.source : ch.source.substr(0, dot);
+            const std::string what = dot == std::string::npos ? std::string() : ch.source.substr(dot + 1);
+            if (what != "state") {
+                std::fprintf(stderr, "[vdsim_realtime] comms: source '%s' unsupported"
+                    " (v1: <id>.state only), skipping\n", ch.source.c_str());
+                continue;
+            }
+            if (ch.templ != "vds1" && ch.templ != "vds1_state") {
+                std::fprintf(stderr, "[vdsim_realtime] comms: template '%s' unsupported"
+                    " (v1: vds1 only), skipping '%s'\n", ch.templ.c_str(), ch.source.c_str());
+                continue;
+            }
+            uint32_t vid = fleet.empty() ? 0u : fleet.front().id;
+            if (sel != "ego") vid = static_cast<uint32_t>(std::strtoul(sel.c_str(), nullptr, 10));
+            if (by_id.find(vid) == by_id.end()) {
+                std::fprintf(stderr, "[vdsim_realtime] comms: source '%s' -> unknown vehicle %u,"
+                    " skipping\n", ch.source.c_str(), vid);
+                continue;
+            }
+            TxChannel tc; tc.id = vid;
+            for (const auto& d : ch.to) tc.dests.push_back(make_addr(d.ip, d.port));
+            if (!tc.dests.empty()) tx_channels.push_back(std::move(tc));
+        }
+        std::vector<int> ports;                              // resolve RX listen ports
+        for (const auto& ch : world.comms.channels) {
+            if (!ch.rx || ch.listen_port <= 0) continue;
+            if (ch.templ != "vds1" && ch.templ != "vds1_cmd")
+                std::fprintf(stderr, "[vdsim_realtime] comms: rx template '%s' decoded as"
+                    " vds1_cmd\n", ch.templ.c_str());
+            if (std::find(ports.begin(), ports.end(), ch.listen_port) == ports.end())
+                ports.push_back(ch.listen_port);
+        }
+        for (int port : ports) {
+            socket_t s = make_rx_socket(port);
+            if (s == INVALID_SOCKET) {
+                std::fprintf(stderr, "[vdsim_realtime] comms: cannot bind rx port %d\n", port);
+                continue;
+            }
+            rx_socks.push_back(s);
+        }
+        for (socket_t s : rx_socks) {
+            rx_threads.emplace_back([&, s] {
+                uint8_t buf[256];
+                while (g_run.load()) {
+                    sockaddr_in from{}; socklen_t flen = sizeof(from);
+                    const int n = ::recvfrom(s, reinterpret_cast<char*>(buf),
+                        static_cast<int>(sizeof(buf)), 0,
+                        reinterpret_cast<sockaddr*>(&from), &flen);
+                    if (n <= 0) continue;
+                    route_cmd(by_id, buf, n, cmd_count);
+                }
+            });
+        }
+        tx_sock = ::socket(AF_INET, SOCK_DGRAM, 0);
+        if (tx_sock == INVALID_SOCKET) { std::perror("socket"); return 1; }
+        std::fprintf(stderr,
+            "[vdsim_realtime] world %zu vehicles @ %.0f Hz | comms '%s': %zu tx, %zu rx | %s\n",
+            fleet.size(), rate, world.comms.name.c_str(),
+            tx_channels.size(), rx_socks.size(), scene_path.c_str());
+    } else {
+        sock = make_rx_socket(cmd_port);
+        if (sock == INVALID_SOCKET) { std::perror("bind"); return 1; }
+        seed.sin_family = AF_INET;
+        seed.sin_port = htons(static_cast<uint16_t>(st_port));
+        ::inet_pton(AF_INET, st_ip.c_str(), &seed.sin_addr);
+        touch_sub(subscribers, seed, now_s());
+        recv_thread = std::thread([&] {
+            uint8_t buf[256];
+            while (g_run.load()) {
+                sockaddr_in from{}; socklen_t flen = sizeof(from);
+                const int n = ::recvfrom(sock, reinterpret_cast<char*>(buf),
+                    static_cast<int>(sizeof(buf)), 0,
+                    reinterpret_cast<sockaddr*>(&from), &flen);
+                if (n <= 0) continue;
+                if (route_cmd(by_id, buf, n, cmd_count))
+                    touch_sub(subscribers, from, now_s());
+            }
+        });
+        std::fprintf(stderr,
+            "[vdsim_realtime] world %zu vehicles @ %.0f Hz | cmd :%d | %s\n",
+            fleet.size(), rate, cmd_port, scene_path.c_str());
+    }
 
     uint32_t seq = 0;
     auto next = std::chrono::steady_clock::now();
@@ -434,30 +540,58 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
         const auto period = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
             std::chrono::duration<double>(period_s));
         const double t = now_s();
-        touch_sub(subscribers, seed, t);   // keep --state-port subscriber alive
-        prune_subs(subscribers, t, 2.0);
+        if (!comms_mode) {
+            touch_sub(subscribers, seed, t);   // keep --state-port subscriber alive
+            prune_subs(subscribers, t, 2.0);
+        }
         const auto now_tp = std::chrono::steady_clock::now();
         for (auto& wv : fleet) {
-            if (cmd_to > 0.0 &&
-                std::chrono::duration<double>(now_tp - wv.last_cmd) > failsafe_dur) {
+            if (wv.internal) {
+                // Built-in controller (v1): hold the spawn speed, straight ahead.
+                // No external cmd / failsafe applies to an internal agent.
+                const double vx = wv.sim->output().state.vx();
+                const double ax = std::clamp(0.8 * (wv.cruise_vx - vx), -3.0, 3.0);
+                vdsim::CmdL4 c;
+                if (ax >= 0.0) c.throttle = std::min(1.0, ax / 3.0);
+                else           c.brake    = std::min(1.0, -ax / 3.0);
+                wv.sim->set_input(c);
+            } else if (cmd_to > 0.0 &&
+                       std::chrono::duration<double>(now_tp - wv.last_cmd) > failsafe_dur) {
                 wv.sim->set_input(failsafe);
             }
             wv.sim->tick(dt);
         }
-        for (const auto& wv : fleet) {
-            const auto o = wv.sim->output();
-            vdsim::cosim::StateFields s;
-            s.seq = seq++; s.timestamp = t;
-            fill_state(s, o, wv.vp.wheel_radius_nominal, wv.id);
-            const int len = vdsim::cosim::encode_state(out, s);
-            broadcast_state(sock, subscribers, out, len);
+        if (comms_mode) {
+            for (const auto& tc : tx_channels) {
+                const auto* wv = by_id[tc.id];
+                const auto o = wv->sim->output();
+                vdsim::cosim::StateFields s;
+                s.seq = seq++; s.timestamp = t;
+                fill_state(s, o, wv->vp.wheel_radius_nominal, wv->id);
+                const int len = vdsim::cosim::encode_state(out, s);
+                for (const auto& d : tc.dests)
+                    ::sendto(tx_sock, reinterpret_cast<const char*>(out), len, 0,
+                             reinterpret_cast<const sockaddr*>(&d), sizeof(d));
+            }
+        } else {
+            for (const auto& wv : fleet) {
+                const auto o = wv.sim->output();
+                vdsim::cosim::StateFields s;
+                s.seq = seq++; s.timestamp = t;
+                fill_state(s, o, wv.vp.wheel_radius_nominal, wv.id);
+                const int len = vdsim::cosim::encode_state(out, s);
+                broadcast_state(sock, subscribers, out, len);
+            }
         }
         next += period;
         std::this_thread::sleep_until(next);
     }
 
-    recv_thread.join();
-    close_socket(sock);
+    if (recv_thread.joinable()) recv_thread.join();
+    for (auto& th : rx_threads) if (th.joinable()) th.join();
+    if (sock != INVALID_SOCKET) close_socket(sock);
+    for (socket_t s : rx_socks) close_socket(s);
+    if (tx_sock != INVALID_SOCKET) close_socket(tx_sock);
     std::fprintf(stderr, "[vdsim_realtime] stopped. cmds=%llu\n",
                  static_cast<unsigned long long>(cmd_count.load()));
     return 0;

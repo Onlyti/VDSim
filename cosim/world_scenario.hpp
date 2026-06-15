@@ -41,6 +41,31 @@ struct VehicleSpawn {
     std::string front_susp;
     std::string rear_susp;
     double x0 {0.0}, y0 {0.0}, z0 {0.0}, yaw0 {0.0}, vx0 {0.0};
+    // "external" (default): driven over UDP comms, failsafe on timeout.
+    // "internal": built-in controller (v1 = speed-hold cruise at vx0).
+    std::string control {"external"};
+};
+
+// Scenario-level comms routing (realtime). A scene owns one comms spec; each
+// channel is either TX (a source fans out to one or more ip:port destinations)
+// or RX (direction:in, a listen port feeds control into the sim).
+struct CommsDest {
+    std::string ip {"127.0.0.1"};
+    int         port {0};
+};
+
+struct CommsChannel {
+    bool        rx {false};         // true = direction:in (listen for cmd)
+    std::string source;             // tx: "<id>.state" | "ego.state" | "<id>.sensor.<x>"
+    std::string templ {"vds1"};     // template/규약: vds1 | vds1_cmd | json | nmea_gga
+    int         listen_port {0};    // rx: udp port to bind
+    std::vector<CommsDest> to;      // tx: fan-out destinations
+};
+
+struct CommsConfig {
+    std::string name;
+    std::vector<CommsChannel> channels;
+    bool empty() const { return channels.empty(); }
 };
 
 struct WorldScenario {
@@ -50,6 +75,7 @@ struct WorldScenario {
     RoadConfig road;
     StuntConfig stunt;
     std::vector<VehicleSpawn> vehicles;
+    CommsConfig comms;
 };
 
 WorldScenario load_world_scenario(const std::string& path);
