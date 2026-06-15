@@ -501,7 +501,16 @@ private:
 
         const auto dt_out = drivetrain_->apply(ctx);
         const std::array<double, NUM_WHEELS> Td = dt_out.wheel_torque;
-        const std::array<double, NUM_WHEELS> Tb = brake_->wheel_torque(ctx);
+        // Sequential drive/brake: IDrivetrain absorbs regen first, IBrakeSystem gets residual.
+        // brake_absorbed [0,1]: fraction of brake demand handled by drivetrain (EV regen etc.).
+        // Default ICE = 0.0 → IBrakeSystem receives full brake demand unchanged.
+        const double effective_brake = driver_cmd.brake
+                                       * (1.0 - std::clamp(dt_out.brake_absorbed, 0.0, 1.0));
+        const DriverCmd cmd_residual{driver_cmd.handwheel_angle,
+                                     driver_cmd.throttle, effective_brake,
+                                     driver_cmd.gear, driver_cmd.handbrake};
+        const SubsystemContext ctx_brake{s, cmd_residual, ctx.dt, ctx.Fz};
+        const std::array<double, NUM_WHEELS> Tb = brake_->wheel_torque(ctx_brake);
 
         // ---- Body equations ----
         double Fx_total = 0.0, Fy_total = 0.0, Mz_total = 0.0;

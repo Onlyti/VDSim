@@ -420,7 +420,13 @@ private:
 
         const auto dt_out = drivetrain_->apply(ctx);
         const std::array<double, NUM_WHEELS> Td = dt_out.wheel_torque;
-        const std::array<double, NUM_WHEELS> Tb = brake_->wheel_torque(ctx);
+        const double effective_brake = driver_cmd.brake
+                                       * (1.0 - std::clamp(dt_out.brake_absorbed, 0.0, 1.0));
+        const DriverCmd cmd_residual{driver_cmd.handwheel_angle,
+                                     driver_cmd.throttle, effective_brake,
+                                     driver_cmd.gear, driver_cmd.handbrake};
+        const SubsystemContext ctx_brake{s, cmd_residual, ctx.dt, ctx.Fz};
+        const std::array<double, NUM_WHEELS> Tb = brake_->wheel_torque(ctx_brake);
 
         const Vec3 a_body = R.transpose() * (F_total_world / m) - omega.cross(v_body);
         const Vec3 Iw(

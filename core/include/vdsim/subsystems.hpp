@@ -25,8 +25,13 @@ struct SubsystemContext {
 };
 
 struct SteeringOutput {
-    double roadwheel_angle {0.0};
-    double rack_travel     {0.0};
+    enum class Mode { Kinematic, Dynamic } mode {Mode::Kinematic};
+    // Kinematic: ISteeringSystem directly sets rack position (no tire feedback)
+    double rack_travel   {0.0};   // [m]  — used when mode == Kinematic
+    // Dynamic: ISteeringSystem outputs motor force; Rack EOM integrated in IVehicleDynamics
+    double motor_force   {0.0};   // [N at rack] — used when mode == Dynamic
+    // Backward-compat alias: roadwheel_angle derived from rack_travel by ISteeringKinematics
+    double roadwheel_angle {0.0}; // [rad] filled by ISteeringKinematics after apply()
 };
 
 struct CornerInput {
@@ -45,6 +50,10 @@ struct AxleDefl {
 
 struct DrivetrainOutput {
     std::array<double, NUM_WHEELS> wheel_torque {{0.0, 0.0, 0.0, 0.0}};
+    // Fraction of brake demand this drivetrain handled (e.g. EV regen).
+    // IBrakeSystem receives: effective_brake = cmd.brake * (1 - brake_absorbed).
+    // ICE = 0.0, full regen EV = up to 1.0, hybrid = intermediate.
+    double brake_absorbed {0.0};  // [0, 1]
 };
 
 struct IBrakeSystem {
