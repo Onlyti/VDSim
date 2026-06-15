@@ -562,6 +562,17 @@ class Simulation:
         c = vdsim.CmdL4(); c.steer_angle_wheel = steer; c.throttle = throttle; c.brake = brake
         self._ext = c
 
+    # seam aliases (consistent with Sim): inject an action / advance one core step
+    def set_input(self, cmd=None, *, steer=0.0, throttle=0.0, brake=0.0):
+        if cmd is not None:
+            self._ext = cmd                       # a vdsim.CmdL4
+        else:
+            self.set_control(steer=steer, throttle=throttle, brake=brake)
+        return self
+
+    def run_core_dt(self, dt=None):
+        return self.step(dt)
+
     def step(self, dt=None):
         dt = dt or self.dt
         cmd = self._ext if self._ext is not None else self.exp._man.driver(self._k, self.sess.output(), self._vp)
@@ -615,6 +626,207 @@ class Simulation:
 
     def time(self):
         return self.sess.output().sim_time
+
+
+# --------------------------------------------------------------------------- #
+# Sim — direct core-driven harness for algorithm evaluation.
+#
+# The evaluator owns the loop and the controller; VDSim provides the seam:
+#   set_input(action) -> run_core_dt() -> read state()/measurements().
+# Build straight from the core (vehicle/tire/level/road), no scenario file needed.
+# --------------------------------------------------------------------------- #
+def _as_vehicle(v):
+    if isinstance(v, Vehicle):
+        return v
+    if isinstance(v, str) and v.endswith((".yaml", ".yml")):
+        return Vehicle.from_yaml(v)
+    return Vehicle.preset(v or "sedan")
+
+
+def _as_tire(t):
+    if isinstance(t, Tire):
+        return t
+    if isinstance(t, str) and t.endswith((".yaml", ".yml")):
+        return Tire.from_yaml(t)
+    return Tire.preset(t or "default_pacejka")
+
+
+class Sim:
+    """Core-driven simulation for algorithm evaluation. You write the controller
+    and own the loop; the sim exposes the action seam set_input() and the step
+    seam run_core_dt().
+
+        from vdsim_lab import Sim, Road, Sensors
+        sim = Sim(vehicle="sedan", level="L2", road=Road.iso8608("C"),
+                  sensors=Sensors().gnss().imu(), v0=15.0,
+                  sensor_mounts={"gnss": {"type": "gnss", "pos": [1.4, 0, 1.0]}})
+        while not sim.done(20.0):
+            st = sim.state()                       # ground truth (dict)
+            gn = sim.measurements("gnss")          # noisy measurement at the mount
+            steer, throttle, brake = my_controller(st, gn)
+            sim.set_input(steer=steer, throttle=throttle, brake=brake)
+            sim.run_core_dt()                      # advance one core step (dt)
+        sim.to_csv("run.csv")                      # ground-truth + per-wheel log
+        sim.plot("run.png", signals=("vx", "ay", "r"))   # optional (matplotlib)
+
+    set_input also accepts a vdsim.CmdL4 directly: sim.set_input(cmd).
+    """
+
+    def __init__(self, vehicle="sedan", tire="default_pacejka", level="L2",
+                 road=None, sensors=None, dt=0.005,
+                 x0=0.0, y0=0.0, yaw0=0.0, v0=0.0, sensor_mounts=None):
+        self._veh = _as_vehicle(vehicle)
+        self._tire = _as_tire(tire)
+        self._road = road or Road.flat()
+        self.level, self.dt = level, dt
+        vp, tp = self._veh.vp, self._tire.tp
+        if isinstance(sensors, Sensors):
+            sp = sensors.sp
+        elif sensors is None:
+            sp = vdsim.SensorParams()
+        else:
+            sp = sensors                           # raw vdsim.SensorParams
+        self.sess = self._road._session(vp, tp, level, dt, sp)
+        self.sess.reset(vdsim.make_init_state(
+            x=x0, y=y0, yaw=yaw0, v=v0, wheel_radius=vp.wheel_radius_nominal))
+        self._vp = vp
+        self._cmd = vdsim.CmdL4()
+        self._k = 0
+        self._prev_r = 0.0
+        self._alpha = 0.0                          # yaw accel (IMU lever arm)
+        self.rows = []
+        mounts = sensor_mounts or {}
+        self._types = {sid: m.get("type", sid) for sid, m in mounts.items()}
+        self._mounts = {sid: {"pos": m.get("pos", [0, 0, 0]),
+                              "yaw": math.radians(m.get("yaw", 0.0))}
+                        for sid, m in mounts.items()}
+
+    # ---- action injection seam ----
+    def set_input(self, cmd=None, *, steer=0.0, throttle=0.0, brake=0.0, gear=1):
+        if cmd is not None:                        # a vdsim.CmdL4
+            self._cmd = cmd
+            return self
+        c = vdsim.CmdL4()
+        c.steer_angle_wheel = steer
+        c.throttle = throttle
+        c.brake = brake
+        c.gear = gear
+        self._cmd = c
+        return self
+
+    # ---- core stepping seam ----
+    def run_core_dt(self, dt=None):
+        dt = dt or self.dt
+        self.sess.set_input(self._cmd)
+        self.sess.tick(dt)
+        self._k += 1
+        o = self.sess.output()
+        r = o.state.yaw_rate()
+        self._alpha = (r - self._prev_r) / dt if dt > 0 else 0.0
+        self._prev_r = r
+        self._record(o)
+        return o
+
+    step = run_core_dt                             # alias
+
+    def _record(self, o):
+        st, Ft = o.state, o.tire_forces
+        self.rows.append([o.sim_time, st.position[0], st.position[1], st.yaw(),
+                          st.vx(), st.vy(), st.yaw_rate(), o.ax, o.ay, o.steer_applied,
+                          *o.Fz, *[Ft[i][0] for i in range(4)], *[Ft[i][1] for i in range(4)],
+                          *o.slip_angle, *o.slip_ratio])
+
+    # ---- readouts ----
+    def output(self):
+        return self.sess.output()
+
+    def time(self):
+        return self.sess.output().sim_time
+
+    def done(self, duration):
+        return self.sess.output().sim_time >= duration
+
+    def state(self):
+        o = self.sess.output(); s = o.state
+        return {"t": o.sim_time, "x": s.position[0], "y": s.position[1], "yaw": s.yaw(),
+                "vx": s.vx(), "vy": s.vy(), "r": s.yaw_rate(), "ax": o.ax, "ay": o.ay,
+                "Fz": list(o.Fz), "slip_angle": list(o.slip_angle),
+                "slip_ratio": list(o.slip_ratio)}
+
+    def measurements(self, sensor_id=None):
+        """Noisy sensor readout. With a sensor_id that has a registered mount
+        pose, the CG measurement is transported to the mount (GNSS world lever
+        arm; GNSS vel + IMU accel body lever arm; IMU rotated into sensor frame).
+        Without a mount, returns the CG measurement bundle."""
+        o = self.sess.output(); m = o.sensors; s = o.state
+        cg = {"gnss": {"x": m.gnss_x, "y": m.gnss_y, "vx": m.gnss_vx, "vy": m.gnss_vy},
+              "imu": {"ax": m.ax, "ay": m.ay, "wz": m.wz},
+              "wheel_speed": {"w": list(m.wheel_speed)},
+              "steer": {"angle": m.steer}}
+        if sensor_id is None:
+            return cg
+        t = self._types.get(sensor_id, sensor_id)
+        mnt = self._mounts.get(sensor_id)
+        if mnt is None:
+            return cg.get(t, {})
+        mx, my = float(mnt["pos"][0]), float(mnt["pos"][1])
+        r, a = s.yaw_rate(), self._alpha
+        if t == "gnss":
+            yaw = s.yaw(); c, sn = math.cos(yaw), math.sin(yaw)
+            rwx, rwy = c * mx - sn * my, sn * mx + c * my
+            return {"x": m.gnss_x + rwx, "y": m.gnss_y + rwy,
+                    "vx": m.gnss_vx - r * my, "vy": m.gnss_vy + r * mx}
+        if t == "imu":
+            ax = m.ax - r * r * mx - a * my
+            ay = m.ay - r * r * my + a * mx
+            cm, sm = math.cos(mnt["yaw"]), math.sin(mnt["yaw"])
+            return {"ax": cm * ax + sm * ay, "ay": -sm * ax + cm * ay, "wz": m.wz}
+        return cg.get(t, {})
+
+    # ---- results / evidence ----
+    def result(self):
+        return Result(self.rows)
+
+    def to_csv(self, path):
+        return Result(self.rows).to_csv(path)
+
+    def metrics(self, names, line=None):
+        return compute_metrics(Result(self.rows), names, line)
+
+    def plot(self, path=None, signals=("vx", "ay", "r"), title=None):
+        return plot_result(Result(self.rows), path=path, signals=signals, title=title)
+
+
+def plot_result(res, path=None, signals=("vx", "ay", "r"), title=None):
+    """Basic evidence figure (optional; needs matplotlib). signals are _COLS
+    names; the special signal "xy" draws the x-y trajectory. Saves to `path`
+    (PNG) or returns the Figure. Labels are English (Korean fonts break)."""
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except Exception as e:                          # pragma: no cover - optional dep
+        raise RuntimeError("matplotlib is required for plotting (pip install matplotlib)") from e
+    sigs = list(signals)
+    t = res.col("t")
+    fig, axes = plt.subplots(len(sigs), 1, figsize=(8, 2.3 * len(sigs)))
+    if len(sigs) == 1:
+        axes = [axes]
+    for ax, sig in zip(axes, sigs):
+        if sig == "xy":
+            ax.plot(res.col("x"), res.col("y"))
+            ax.set_xlabel("x [m]"); ax.set_ylabel("y [m]"); ax.set_aspect("equal", "datalim")
+        else:
+            ax.plot(t, res.col(sig)); ax.set_ylabel(sig); ax.set_xlabel("time [s]")
+        ax.grid(True, alpha=0.3)
+    if title:
+        fig.suptitle(title)
+    fig.tight_layout()
+    if path:
+        fig.savefig(path, dpi=120)
+        plt.close(fig)
+        return path
+    return fig
 
 
 def main():
