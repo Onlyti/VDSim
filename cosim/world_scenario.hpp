@@ -1,6 +1,9 @@
 #pragma once
 
+#include "vdsim/sensors.hpp"
+
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -44,6 +47,9 @@ struct VehicleSpawn {
     // "external" (default): driven over UDP comms, failsafe on timeout.
     // "internal": built-in controller (v1 = speed-hold cruise at vx0).
     std::string control {"external"};
+    // Per-vehicle sensor noise spec (from agents.vehicle.sensors[] in the scene).
+    // When set, overrides the scenario-level RoadConfig.sensors file path.
+    std::optional<vdsim::SensorParams> sensors;
 };
 
 // Scenario-level comms routing (realtime). A scene owns one comms spec; each

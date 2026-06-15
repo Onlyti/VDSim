@@ -415,8 +415,11 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
             ? spn.vx0 / wv.vp.wheel_radius_nominal : 0.0;
         s0.wheel_spin = {{w0, w0, w0, w0}};
         settle_spawn_on_ground(*gnd, wv.vp, s0);
+        // Per-vehicle sensors override the scenario-level sensors file, if present.
+        vdsim::SimConfig cfg_v = cfg;
+        if (spn.sensors) cfg_v.sensors = *spn.sensors;
         wv.sim = std::make_unique<vdsim::SimSession>(
-            std::move(dyn), std::move(gnd), wv.vp, tp, sp_v, cfg);
+            std::move(dyn), std::move(gnd), wv.vp, tp, sp_v, cfg_v);
         // Install any user C++ subsystem-module plugins the resolved vehicle declares.
         vdsim::install_module_plugins_from_yaml(wv.sim->dynamics(), spn.vehicle_yaml);
         wv.sim->reset(s0);

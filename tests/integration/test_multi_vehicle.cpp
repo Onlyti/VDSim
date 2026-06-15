@@ -99,6 +99,39 @@ TEST(MultiVehicle, CommsSpecParsed) {
     std::filesystem::remove(path);
 }
 
+// Per-vehicle sensors[] list is parsed into VehicleSpawn.sensors (SensorParams).
+// Vehicle 0 has inline sensors; vehicle 1 has none (identity / truth pass-through).
+TEST(MultiVehicle, SensorsListParsed) {
+    const std::string veh = std::string(VDSIM_SOURCE_DIR)
+        + "/configs/parts/body/sedan.yaml";
+    const std::string tire = std::string(VDSIM_SOURCE_DIR)
+        + "/configs/parts/tire/default_pacejka.yaml";
+    const auto path = std::filesystem::temp_directory_path() / "vdsim_world_sensors.yaml";
+    {
+        std::ofstream f(path);
+        f << "mu: 1.0\nrate: 200\nvehicles:\n"
+             "- id: 0\n  vehicle: " << veh << "\n  tire: " << tire << "\n"
+             "  level: L2\n  vx0: 10\n"
+             "  sensors:\n"
+             "  - { type: gnss,  noise_std: 0.3 }\n"
+             "  - { type: imu,   noise_std: 0.05 }\n"
+             "  - { type: steer, noise_std: 0.002 }\n"
+             "- id: 1\n  vehicle: " << veh << "\n  tire: " << tire << "\n"
+             "  level: L2\n  vx0: 10\n";
+    }
+    const auto w = vdsim::cosim::load_scene(path.string());
+    ASSERT_EQ(w.vehicles.size(), 2u);
+    // vehicle 0: sensors parsed -> optional has value, enabled=true
+    ASSERT_TRUE(w.vehicles[0].sensors.has_value());
+    EXPECT_TRUE(w.vehicles[0].sensors->enabled);
+    EXPECT_GT(w.vehicles[0].sensors->gnss_pos.noise_std, 0.0);
+    EXPECT_GT(w.vehicles[0].sensors->imu_accel.noise_std, 0.0);
+    EXPECT_GT(w.vehicles[0].sensors->steer.noise_std, 0.0);
+    // vehicle 1: no sensors key -> optional empty
+    EXPECT_FALSE(w.vehicles[1].sensors.has_value());
+    std::filesystem::remove(path);
+}
+
 // Two SimSessions stepped side by side (as the realtime world does): a throttle
 // command to vehicle 0 must accelerate only vehicle 0; vehicle 1 (coasting) must
 // be unaffected. This is the per-vehicle isolation the command demux depends on.

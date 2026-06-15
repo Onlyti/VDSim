@@ -10,6 +10,36 @@ static double node_d(const YAML::Node& n, const char* k, double d) {
     return n[k] ? n[k].as<double>() : d;
 }
 
+// Build a SensorParams from a sensors[] list:
+//   - { type: gnss,        noise_std: 0.3  }
+//   - { type: imu,         noise_std: 0.05 }
+//   - { type: wheel_speed, noise_std: 0.05 }
+//   - { type: steer,       noise_std: 0.002 }
+// type maps to the matching SensorNoise field. noise_std, bias, bias_rw per entry.
+static vdsim::SensorParams parse_sensors_list(const YAML::Node& list) {
+    vdsim::SensorParams sp;
+    sp.enabled = true;
+    for (const auto& item : list) {
+        const std::string type = item["type"] ? item["type"].as<std::string>() : "";
+        double std  = item["noise_std"] ? item["noise_std"].as<double>() : 0.0;
+        double bias = item["bias"]      ? item["bias"].as<double>()      : 0.0;
+        double rw   = item["bias_rw"]   ? item["bias_rw"].as<double>()   : 0.0;
+        auto fill = [&](vdsim::SensorNoise& n) {
+            n.noise_std = std; n.bias = bias; n.bias_rw = rw;
+        };
+        if      (type == "gnss")        { fill(sp.gnss_pos); fill(sp.gnss_vel); }
+        else if (type == "gnss_pos")    { fill(sp.gnss_pos); }
+        else if (type == "gnss_vel")    { fill(sp.gnss_vel); }
+        else if (type == "imu")         { fill(sp.imu_accel); fill(sp.imu_gyro); }
+        else if (type == "imu_accel")   { fill(sp.imu_accel); }
+        else if (type == "imu_gyro")    { fill(sp.imu_gyro); }
+        else if (type == "wheel_speed") { fill(sp.wheel_speed); }
+        else if (type == "steer")       { fill(sp.steer); }
+        // mount/rate are for future rendering coupling — parsed but not applied here
+    }
+    return sp;
+}
+
 // Parse a comms document node ({name, channels: [...]}) into CommsConfig.
 static CommsConfig parse_comms_node(const YAML::Node& c) {
     CommsConfig cc;
@@ -95,6 +125,14 @@ WorldScenario load_world_scenario(const std::string& path) {
         if (v["control"]) s.control = v["control"].as<std::string>();
         if (v["front_susp"]) s.front_susp = v["front_susp"].as<std::string>();
         if (v["rear_susp"]) s.rear_susp = v["rear_susp"].as<std::string>();
+        // per-vehicle sensors: inline list OR a sensors.yaml file path
+        if (v["sensors"]) {
+            const auto& sn = v["sensors"];
+            if (sn.IsSequence())
+                s.sensors = parse_sensors_list(sn);
+            else if (sn.IsScalar())
+                s.sensors = vdsim::SensorParams::from_yaml(sn.as<std::string>());
+        }
         s.x0   = node_d(v, "x0", 0.0);
         s.y0   = node_d(v, "y0", 0.0);
         s.z0   = node_d(v, "z0", 0.0);
