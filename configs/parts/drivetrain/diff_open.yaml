@@ -1,0 +1,13 @@
+id: drivetrain.diff_open
+type: drivetrain
+version: 1
+schema: drivetrain_v1
+label: "Open differential (RWD)"
+tags: [rwd, open_diff, default]
+
+body:
+  drive_type: RWD
+  differential: Open
+  max_motor_torque: 300.0
+  engine_rotational_inertia: 0.25
+  final_drive_ratio: 5.0

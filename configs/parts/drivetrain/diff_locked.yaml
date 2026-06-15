@@ -1,0 +1,16 @@
+id: drivetrain.diff_locked
+type: drivetrain
+version: 1
+schema: drivetrain_v1
+label: "Locked (fixed) differential (RWD)"
+tags: [rwd, locked_diff, motorsport]
+
+# Locked diff: both driven wheels receive equal torque regardless of speed difference.
+# Left/right torque bias = tanh(2*dOmega)*0.45 — provides smooth lockup without singularity.
+# Use case: circuit/formula (FSK), off-road, drift.
+body:
+  drive_type: RWD
+  differential: Locked
+  max_motor_torque: 300.0
+  engine_rotational_inertia: 0.25
+  final_drive_ratio: 5.0

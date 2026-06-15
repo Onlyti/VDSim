@@ -35,6 +35,12 @@ parts:
   path: parts/chassis/mp_front_sedan.yaml
 - id: chassis.ta_rear_sedan
   path: parts/chassis/ta_rear_sedan.yaml
+- id: drivetrain.diff_open
+  path: parts/drivetrain/diff_open.yaml
+- id: drivetrain.diff_locked
+  path: parts/drivetrain/diff_locked.yaml
+- id: drivetrain.diff_lsd
+  path: parts/drivetrain/diff_lsd.yaml
 - id: drivetrain.fsk_formula
   path: parts/drivetrain/fsk_formula.yaml
 - id: drivetrain.race_car

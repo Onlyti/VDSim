@@ -1,0 +1,25 @@
+id: drivetrain.diff_lsd
+type: drivetrain
+version: 1
+schema: drivetrain_v1
+label: "Viscous LSD (RWD)"
+tags: [rwd, lsd, motorsport, performance]
+
+# Viscous LSD: torque bias proportional to left-right wheel speed difference.
+#   bias(t) = clamp(lsd_preload + lsd_ramp * |dOmega|, 0, 0.45) * tanh(2*dOmega)
+#
+# lsd_preload: minimum bias at rest [0..0.45] — preload friction, always active
+# lsd_ramp:    additional bias per (rad/s) speed difference — speed-sensitive locking
+#
+# Tuning guide:
+#   Street viscous:   preload=0.05, ramp=0.10
+#   Performance road: preload=0.15, ramp=0.30  (this default)
+#   Aggressive track: preload=0.25, ramp=0.60  (see configs/parts/drivetrain/race_car.yaml)
+body:
+  drive_type: RWD
+  differential: LSD
+  lsd_preload: 0.15
+  lsd_ramp: 0.30
+  max_motor_torque: 300.0
+  engine_rotational_inertia: 0.25
+  final_drive_ratio: 5.0
