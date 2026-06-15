@@ -2,38 +2,35 @@
 
 #include <memory>
 
-#include "vdsim/delay_line.hpp"
 #include "vdsim/params.hpp"
 #include "vdsim/subsystems.hpp"
 
 namespace vdsim {
 
+// Delay lives exclusively in ActuatorModel (SimSession level) so subsystem modules
+// receive already-realized commands via ctx.cmd. The deadtime_s constructor parameter
+// is kept for API compatibility but is no longer used inside these classes.
+
 class ProportionalBrake final : public IBrakeSystem {
 public:
-    explicit ProportionalBrake(const VehicleParams& vp, double deadtime_s = 0.0);
+    explicit ProportionalBrake(const VehicleParams& vp, double /*deadtime_s*/ = 0.0);
 
     std::array<double, NUM_WHEELS> wheel_torque(const SubsystemContext& ctx) override;
-    void begin_step(const SubsystemContext& ctx, double dt) override;
-    void reset() override;
+    void reset() override {}   // no state to reset
 
 private:
     VehicleParams vp_;
-    DelayLine     brake_delay_;
-    double        brake_eff_ {0.0};
 };
 
 class BasicDrivetrain final : public IDrivetrain {
 public:
-    explicit BasicDrivetrain(const VehicleParams& vp, double deadtime_s = 0.0);
+    explicit BasicDrivetrain(const VehicleParams& vp, double /*deadtime_s*/ = 0.0);
 
     DrivetrainOutput apply(const SubsystemContext& ctx) override;
-    void begin_step(const SubsystemContext& ctx, double dt) override;
-    void reset() override;
+    void reset() override {}
 
 private:
     VehicleParams vp_;
-    DelayLine     throttle_delay_;
-    double        throttle_eff_ {0.0};
 };
 
 // Drivetrain v2: 2D engine torque map + gearbox + shift policy (opt-in). The stateful
@@ -41,7 +38,7 @@ private:
 // axle torque to the wheels (so it is safe to call inside the RK4 stages).
 class EngineGearboxDrivetrain final : public IDrivetrain {
 public:
-    explicit EngineGearboxDrivetrain(const VehicleParams& vp, double deadtime_s = 0.0);
+    explicit EngineGearboxDrivetrain(const VehicleParams& vp, double /*deadtime_s*/ = 0.0);
 
     DrivetrainOutput apply(const SubsystemContext& ctx) override;
     void begin_step(const SubsystemContext& ctx, double dt) override;
@@ -53,8 +50,6 @@ public:
 
 private:
     VehicleParams vp_;
-    DelayLine     throttle_delay_;
-    double        throttle_eff_ {0.0};
     EngineGearbox eg_;
     double        T_front_ {0.0};
     double        T_rear_  {0.0};
@@ -62,30 +57,22 @@ private:
 
 class RatioSteering final : public ISteeringSystem {
 public:
-    explicit RatioSteering(const VehicleParams& vp, double deadtime_s = 0.0);
-    RatioSteering(double steering_ratio, double deadtime_s = 0.0);
+    explicit RatioSteering(const VehicleParams& vp, double /*deadtime_s*/ = 0.0);
+    RatioSteering(double steering_ratio, double /*deadtime_s*/ = 0.0);
 
     SteeringOutput apply(const SubsystemContext& ctx) override;
-    void begin_step(const SubsystemContext& ctx, double dt) override;
-    void reset() override;
+    void reset() override {}
 
 private:
-    double    steering_ratio_;
-    DelayLine handwheel_delay_;
-    double    handwheel_eff_ {0.0};
+    double steering_ratio_;
 };
 
 class UnitySteering final : public ISteeringSystem {
 public:
-    explicit UnitySteering(double deadtime_s = 0.0);
+    explicit UnitySteering(double /*deadtime_s*/ = 0.0);
 
     SteeringOutput apply(const SubsystemContext& ctx) override;
-    void begin_step(const SubsystemContext& ctx, double dt) override;
-    void reset() override;
-
-private:
-    DelayLine handwheel_delay_;
-    double    handwheel_eff_ {0.0};
+    void reset() override {}
 };
 
 class LinearSuspension final : public ISuspension {

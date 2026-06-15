@@ -60,15 +60,11 @@ double ebd_front_bias(const VehicleParams& vp,
 
 }  // namespace
 
-ProportionalBrake::ProportionalBrake(const VehicleParams& vp, double deadtime_s)
-    : vp_(vp), brake_delay_(deadtime_s) {}
-
-void ProportionalBrake::begin_step(const SubsystemContext& ctx, double dt) {
-    brake_eff_ = brake_delay_.step(ctx.cmd.brake, dt);
-}
+ProportionalBrake::ProportionalBrake(const VehicleParams& vp, double /*deadtime_s*/)
+    : vp_(vp) {}
 
 std::array<double, NUM_WHEELS> ProportionalBrake::wheel_torque(const SubsystemContext& ctx) {
-    const double brake = brake_eff_;
+    const double brake = ctx.cmd.brake;   // already realized by ActuatorModel
     const double bias = ebd_front_bias(vp_, ctx.Fz);
     const double Tbrk_front_axle =       bias  * brake * vp_.max_brake_torque;
     const double Tbrk_rear_axle  = (1.0 - bias) * brake * vp_.max_brake_torque;
@@ -82,20 +78,11 @@ std::array<double, NUM_WHEELS> ProportionalBrake::wheel_torque(const SubsystemCo
     return Tb;
 }
 
-void ProportionalBrake::reset() {
-    brake_eff_ = 0.0;
-    brake_delay_.reset();
-}
-
-BasicDrivetrain::BasicDrivetrain(const VehicleParams& vp, double deadtime_s)
-    : vp_(vp), throttle_delay_(deadtime_s) {}
-
-void BasicDrivetrain::begin_step(const SubsystemContext& ctx, double dt) {
-    throttle_eff_ = throttle_delay_.step(ctx.cmd.throttle, dt);
-}
+BasicDrivetrain::BasicDrivetrain(const VehicleParams& vp, double /*deadtime_s*/)
+    : vp_(vp) {}
 
 DrivetrainOutput BasicDrivetrain::apply(const SubsystemContext& ctx) {
-    const double throttle = throttle_eff_;
+    const double throttle = ctx.cmd.throttle;   // already realized by ActuatorModel
     const double Tmot = throttle * vp_.max_motor_torque * vp_.final_drive_ratio;
 
     double T_front_axle = 0.0, T_rear_axle = 0.0;
@@ -121,50 +108,27 @@ DrivetrainOutput BasicDrivetrain::apply(const SubsystemContext& ctx) {
     return out;
 }
 
-void BasicDrivetrain::reset() {
-    throttle_eff_ = 0.0;
-    throttle_delay_.reset();
-}
+RatioSteering::RatioSteering(const VehicleParams& vp, double /*deadtime_s*/)
+    : steering_ratio_(std::max(1e-6, vp.steering_ratio)) {}
 
-RatioSteering::RatioSteering(const VehicleParams& vp, double deadtime_s)
-    : steering_ratio_(std::max(1e-6, vp.steering_ratio)), handwheel_delay_(deadtime_s) {}
-
-RatioSteering::RatioSteering(double steering_ratio, double deadtime_s)
-    : steering_ratio_(std::max(1e-6, steering_ratio)), handwheel_delay_(deadtime_s) {}
-
-void RatioSteering::begin_step(const SubsystemContext& ctx, double dt) {
-    handwheel_eff_ = handwheel_delay_.step(ctx.cmd.handwheel_angle, dt);
-}
+RatioSteering::RatioSteering(double steering_ratio, double /*deadtime_s*/)
+    : steering_ratio_(std::max(1e-6, steering_ratio)) {}
 
 SteeringOutput RatioSteering::apply(const SubsystemContext& ctx) {
-    const double handwheel = handwheel_eff_;
+    const double handwheel = ctx.cmd.handwheel_angle;   // already realized by ActuatorModel
     SteeringOutput out;
     out.roadwheel_angle = handwheel / steering_ratio_;
     out.rack_travel     = out.roadwheel_angle;
     return out;
 }
 
-void RatioSteering::reset() {
-    handwheel_eff_ = 0.0;
-    handwheel_delay_.reset();
-}
-
-UnitySteering::UnitySteering(double deadtime_s) : handwheel_delay_(deadtime_s) {}
-
-void UnitySteering::begin_step(const SubsystemContext& ctx, double dt) {
-    handwheel_eff_ = handwheel_delay_.step(ctx.cmd.handwheel_angle, dt);
-}
+UnitySteering::UnitySteering(double /*deadtime_s*/) {}
 
 SteeringOutput UnitySteering::apply(const SubsystemContext& ctx) {
     SteeringOutput out;
-    out.roadwheel_angle = handwheel_eff_;
+    out.roadwheel_angle = ctx.cmd.handwheel_angle;   // already realized by ActuatorModel
     out.rack_travel     = out.roadwheel_angle;
     return out;
-}
-
-void UnitySteering::reset() {
-    handwheel_eff_ = 0.0;
-    handwheel_delay_.reset();
 }
 
 LinearSuspension::LinearSuspension(const VehicleParams& vp) : vp_(vp) {}
@@ -198,13 +162,13 @@ std::unique_ptr<ISteeringSystem> make_default_steering(const VehicleParams& vp, 
 }
 
 // --- Drivetrain v2: engine torque map + gearbox + shift policy -------------------
-EngineGearboxDrivetrain::EngineGearboxDrivetrain(const VehicleParams& vp, double deadtime_s)
-    : vp_(vp), throttle_delay_(deadtime_s) {
+EngineGearboxDrivetrain::EngineGearboxDrivetrain(const VehicleParams& vp, double /*deadtime_s*/)
+    : vp_(vp) {
     eg_.configure(vp.powertrain);
 }
 
 void EngineGearboxDrivetrain::begin_step(const SubsystemContext& ctx, double dt) {
-    throttle_eff_ = throttle_delay_.step(ctx.cmd.throttle, dt);
+    const double throttle_eff_ = ctx.cmd.throttle;   // already realized by ActuatorModel
     const auto& w = ctx.state.wheel_spin;
     double driven_omega = 0.0;
     switch (vp_.drive_type) {
@@ -235,9 +199,9 @@ DrivetrainOutput EngineGearboxDrivetrain::apply(const SubsystemContext& ctx) {
 }
 
 void EngineGearboxDrivetrain::reset() {
-    throttle_eff_ = 0.0;
-    throttle_delay_.reset();
     eg_.reset();
+    T_front_ = 0.0;
+    T_rear_  = 0.0;
 }
 
 double EngineGearboxDrivetrain::wheel_engine_inertia(int wheel) const {
