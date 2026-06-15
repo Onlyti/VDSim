@@ -1,0 +1,13 @@
+# oval_lap — pure-pursuit lap on the oval track at 14 m/s (straight) / 12 m/s (corners).
+# Metrics: lap_time, cte_rms, cte_max, peak_ay.
+vehicle: sedan
+tire: default_pacejka
+level: L2
+map: oval_track
+maneuver:
+  type: path
+  v: 14.0
+duration: 30.0
+sensors: standard
+run:
+  mode: api

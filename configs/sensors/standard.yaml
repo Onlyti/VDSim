@@ -1,0 +1,10 @@
+# standard — typical production-grade sensor suite.
+# Mounts: GNSS antenna +1.4 m fore, IMU at CoG.
+enabled: true
+seed: 42
+imu_accel:    { noise_std: 0.05,  bias: 0.0,  bias_rw: 0.002 }
+imu_gyro:     { noise_std: 0.003, bias: 0.0,  bias_rw: 0.0005 }
+wheel_speed:  { noise_std: 0.05,  bias: 0.0,  bias_rw: 0.0 }
+steer:        { noise_std: 0.002, bias: 0.0,  bias_rw: 0.0 }
+gnss_pos:     { noise_std: 0.3,   bias: 0.0,  bias_rw: 0.01 }
+gnss_vel:     { noise_std: 0.05,  bias: 0.0,  bias_rw: 0.002 }

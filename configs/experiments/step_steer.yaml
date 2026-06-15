@@ -1,0 +1,14 @@
+# step_steer — ISO 7401 step-steer at 80 km/h (v=22.2 m/s), steer=0.03 rad.
+# Metrics: peak_ay, lat_accel_gain, yaw_rate_gain, understeer gradient.
+vehicle: sedan
+tire: default_pacejka
+level: L2
+map: flat_open
+maneuver:
+  type: step_steer
+  v: 22.2
+  steer: 0.03
+duration: 8.0
+sensors: standard
+run:
+  mode: api

@@ -1,0 +1,8 @@
+# oval_track — banked oval (R=25 m corners, L=80 m straights). Lap-time / CTE testing.
+road:
+  surface:
+    ref: flat
+    mu: 1.0
+driving_line:
+  type: waypoints
+  source: configs/paths/oval.yaml   # [[x, y, vx], ...]

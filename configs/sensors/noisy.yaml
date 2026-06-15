@@ -1,0 +1,10 @@
+# noisy — degraded sensor quality (entry-level hardware, urban multipath).
+# Use to stress-test observers / estimators.
+enabled: true
+seed: 7
+imu_accel:    { noise_std: 0.2,   bias: 0.05, bias_rw: 0.01 }
+imu_gyro:     { noise_std: 0.01,  bias: 0.002, bias_rw: 0.002 }
+wheel_speed:  { noise_std: 0.2,   bias: 0.0,  bias_rw: 0.0 }
+steer:        { noise_std: 0.005, bias: 0.001, bias_rw: 0.0 }
+gnss_pos:     { noise_std: 1.5,   bias: 0.0,  bias_rw: 0.05 }
+gnss_vel:     { noise_std: 0.2,   bias: 0.0,  bias_rw: 0.01 }

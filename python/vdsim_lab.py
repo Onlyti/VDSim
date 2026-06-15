@@ -341,6 +341,14 @@ _COLS = ["t", "x", "y", "yaw", "vx", "vy", "r", "ax", "ay", "steer",
          "k0", "k1", "k2", "k3"]
 
 
+def _make_row(o):
+    st, Ft = o.state, o.tire_forces
+    return [o.sim_time, st.position[0], st.position[1], st.yaw(),
+            st.vx(), st.vy(), st.yaw_rate(), o.ax, o.ay, o.steer_applied,
+            *o.Fz, *[Ft[i][0] for i in range(4)], *[Ft[i][1] for i in range(4)],
+            *o.slip_angle, *o.slip_ratio]
+
+
 class Result:
     def __init__(self, rows):
         self.rows = rows
@@ -486,7 +494,14 @@ class Experiment:
             m = yaml.safe_load(open(_MAP / f"{cfg['map']}.yaml"))
             line = resolve_line(m.get("driving_line", {}))
             surf = (m.get("road") or {}).get("surface")
-            exp.road(Road.preset(surf["ref"]) if surf and surf.get("ref") else Road.flat())
+            _ref = surf.get("ref") if surf else None
+            if not _ref or _ref == "flat":
+                exp.road(Road.flat(mu=surf.get("mu", 1.0) if surf else 1.0))
+            elif _ref.startswith("iso8608"):
+                _cls = surf.get("class", "C")
+                exp.road(Road.iso8608(_cls, mu=surf.get("mu", 1.0)))
+            else:
+                exp.road(Road.preset(_ref))
         mc = cfg.get("maneuver", {})
         t, v = mc.get("type", "constant_speed"), float(mc.get("v", 20.0))
         if t == "path" and line:
@@ -566,6 +581,7 @@ class Simulation:
         self._ext = None
         self._prev_r = 0.0
         self._alpha = 0.0                      # yaw acceleration (for IMU lever arm)
+        self._rows = []                        # time-series log for metrics/csv/plot
         suite = getattr(exp, "_suite", {}).get("sensors", [])
         self._types = {s["id"]: s.get("type") for s in suite}
         self._mounts = {s["id"]: {"pos": s.get("mount", [0, 0, 0]),
@@ -591,13 +607,29 @@ class Simulation:
         cmd = self._ext if self._ext is not None else self.exp._man.driver(self._k, self.sess.output(), self._vp)
         self._ext = None
         self.sess.set_input(cmd); self.sess.tick(dt); self._k += 1
-        r = self.sess.output().state.yaw_rate()
+        o = self.sess.output(); s = o.state
+        r = s.yaw_rate()
         self._alpha = (r - self._prev_r) / dt if dt > 0 else 0.0
         self._prev_r = r
-        return self.output()
+        self._rows.append(_make_row(o))        # log for metrics/csv/plot
+        return o
 
     def output(self):
         return self.sess.output()
+
+    def result(self):
+        return Result(self._rows)
+
+    def metrics(self, names=None, line=None):
+        names = names or ["peak_ay", "vmax", "dist"]
+        _line = line or getattr(self.exp, "_line", None)
+        return compute_metrics(Result(self._rows), names, _line)
+
+    def to_csv(self, path):
+        Result(self._rows).to_csv(path)
+
+    def plot(self, path=None, signals=("vx", "ay", "r"), title=None):
+        plot_result(Result(self._rows), path, signals, title)
 
     def state(self):
         o = self.sess.output(); s = o.state
@@ -764,11 +796,7 @@ class Sim:
     step = run_core_dt                             # alias
 
     def _record(self, o):
-        st, Ft = o.state, o.tire_forces
-        self.rows.append([o.sim_time, st.position[0], st.position[1], st.yaw(),
-                          st.vx(), st.vy(), st.yaw_rate(), o.ax, o.ay, o.steer_applied,
-                          *o.Fz, *[Ft[i][0] for i in range(4)], *[Ft[i][1] for i in range(4)],
-                          *o.slip_angle, *o.slip_ratio])
+        self.rows.append(_make_row(o))
 
     # ---- readouts ----
     def output(self):

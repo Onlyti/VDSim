@@ -1,0 +1,8 @@
+# flat_open — infinite flat tarmac. Use for acceleration, brake, step-steer tests.
+road:
+  surface:
+    ref: flat
+    mu: 1.0
+driving_line:
+  type: straight
+  length: 500.0   # [m]

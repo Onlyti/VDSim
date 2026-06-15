@@ -1,0 +1,12 @@
+# accel_brake — 0→100 km/h acceleration then full ABS brake.
+# Metrics: dist, vmax, peak_ay (should be ~0).
+vehicle: sedan
+tire: default_pacejka
+level: L2
+map: flat_open
+maneuver:
+  type: accel
+duration: 10.0
+sensors: truth
+run:
+  mode: api

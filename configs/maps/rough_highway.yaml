@@ -1,0 +1,9 @@
+# rough_highway — ISO 8608 class C road roughness, straight. For ride / NVH testing.
+road:
+  surface:
+    ref: iso8608
+    class: C
+    mu: 0.9
+driving_line:
+  type: straight
+  length: 500.0

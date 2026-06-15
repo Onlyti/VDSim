@@ -1,0 +1,9 @@
+# truth — no noise (identity passthrough). Use for algorithm debugging / ground-truth comparison.
+enabled: false
+seed: 1
+imu_accel:    { noise_std: 0.0, bias: 0.0, bias_rw: 0.0 }
+imu_gyro:     { noise_std: 0.0, bias: 0.0, bias_rw: 0.0 }
+wheel_speed:  { noise_std: 0.0, bias: 0.0, bias_rw: 0.0 }
+steer:        { noise_std: 0.0, bias: 0.0, bias_rw: 0.0 }
+gnss_pos:     { noise_std: 0.0, bias: 0.0, bias_rw: 0.0 }
+gnss_vel:     { noise_std: 0.0, bias: 0.0, bias_rw: 0.0 }

@@ -1,0 +1,13 @@
+# rough_road — ISO 8608 class C road at 80 km/h. Tests ride, vertical load variation.
+# Metrics: peak_ay, Fz variation (log_extra), vmax.
+vehicle: sedan
+tire: default_pacejka
+level: L3
+map: rough_highway
+maneuver:
+  type: constant_speed
+  v: 22.2
+duration: 10.0
+sensors: standard
+run:
+  mode: api
