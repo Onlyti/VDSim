@@ -55,6 +55,39 @@ Run the template directly:
 PYTHONPATH=build/python:python python3 templates/experiment_template.py
 ```
 
+## Control ladder — command at any abstraction level
+
+`set_input` accepts more than pedals. The CascadeController converts any ladder
+level to the realized pedal/steer each tick, using measured-state feedback. So
+you can hand the sim a high-level intent and let it close the inner loops.
+
+| level | command | longitudinal | lateral |
+|---|---|---|---|
+| L4 | `CmdL4` | throttle/brake | steer angle [rad] |
+| L5 | `CmdL5` | `ax_target` [m/s²] | (steer angle) |
+| L6 | `CmdL6` | `v_target` [m/s] (cruise) | (steer angle) |
+| L7 | `CmdL7` | `v_target` | `kappa` [1/m] curvature |
+| split | `CmdSplit` | any `LcLon*` | any `LcLat*` (independent) |
+
+```python
+import vdsim
+sim.set_input(vdsim.CmdL6(v_target=20.0))           # cruise control (lon L6)
+
+c = vdsim.CmdSplit()                                  # independent axes
+c.lon = vdsim.LcLonL6(); c.lon.vx_target = 18.0       # speed control
+c.lat = vdsim.LcLatL6(); c.lat.r_target  = 0.15       # yaw-rate control
+sim.set_input(c)
+```
+
+Lateral levels: `LcLatL4` angle · `LcLatL5` `ay_target` · `LcLatL6` `r_target`
+(yaw rate) · `LcLatL7` `kappa`. Levels below L4 (steer torque / rate) are the
+steering subsystem's territory (Dynamic mode), not the cascade.
+
+Verify all levels end-to-end:
+```sh
+PYTHONPATH=build/python:python python3 examples/control_ladder_demo.py
+```
+
 ## Building the plant — `Sim(...)`
 
 | arg | values |
