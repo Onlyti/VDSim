@@ -146,13 +146,13 @@ folded into the re-baselined table above.
   Kinematic blend path: `LOW_SPEED_HANDLING.md`.
 - **L3 grip Fz** couples ride/road dynamically but omits the unsprung lateral-
   transfer term (small); see ch06 §6.4.
-- **Stunt / vertical loop (v0.4) — default penalty path:** the dynamic Free3D (Ld5)
-  plant holds the car on the track by the contact normal force (penalty from
-  penetration); the centripetal condition is *emergent* and it loses the track if too
-  slow. The default path (`l5_spatial_suspension = false`) is robust-tuned for stunts,
-  not validated road contact: the loop surface uses stiffened/capped contact (higher Fz
-  cap, capped penetration, track-tangent longitudinal), so it is a plausible-but-not-
-  quantitatively-validated demo. See `docs/design/V0.4_SLOPE_JUMP_DYNAMICS.md`.
+- **Stunt / vertical loop (v0.4):** the vertical loop is now a plain driven surface
+  (`LoopGround` physical penalty contact, inward normal); the car holds the track by the
+  real tire normal force and the centripetal condition is *emergent* (it loses the track
+  if too slow). There is no loop-specific rail/reach, slip fallback, or Fz cap — the loop
+  is driven by the generalized model and is loop-capable only on the spatial-strut path.
+  The default penalty path (`l5_spatial_suspension = false`) remains the rigid-glued
+  stunt plant for grades/jumps. See `docs/design/V0.4_SLOPE_JUMP_DYNAMICS.md`.
 - **L5 spatial-strut path (opt-in, `l5_spatial_suspension = true`) — validated.** The
   6-DOF body carries per-corner sprung/unsprung strut dynamics with the inverted tire
   and (optionally) the L4 corner DAE for toe/camber. Phase-C evidence
