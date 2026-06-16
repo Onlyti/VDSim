@@ -55,8 +55,24 @@ vehicle/controller property, not a sim defect (see "Notes on specific results").
 | 13 | **MF2002 vs Chrono Pac02** (BSD-3, independent) | same public `.tir` | pure-long Fx ~0.8% + pure-lat Fy ~0.7% (Fz 2–6 kN, mean); combined cross-terms differ (rig-frame, reported) | 6% | `ctest -R ChronoPac02Parity` · `tools/tire_validation.py` |
 | 14 | Control ladder (Lc1–Lc8 + split) | each level reaches target band | cruise/ax/yaw-rate/curvature + EPS torque verified | gated | `examples/control_ladder_demo.py` (ctest `control_ladder`) |
 | 15 | **MF vs CarMaker MF-Tyre/MF-Swift** (commercial, independent) | same MF6.2 `.tir`, same Re-based slip | pure-long Fx **0.00%**, pure-lat Fy **0.09%** (machine precision, steady-state pure slip) | — | `external/carmaker_parity/compare_vdsim_carmaker.py` (needs a CarMaker license) |
+| 16 | **Effective rolling radius (Re) consistency** | reff-enabled tire, free-roll init via `free_roll_wheel_spin` | first-step \|κ\|<5e-4, no phantom Fx (L1/L2/L3) | gated | `ctest -R "EffectiveRollingRadius\|NoPhantom"` |
+| 17 | **Camber contact migration -> overturning** | crown_radius-enabled tire, camber input | Mx = Fz·crown_radius·sin γ per wheel; feeds L3 roll DOF; crown=0 -> Mx=0 | gated | `ctest -R CamberMigration` |
 
-Full automated suite: `cd build && ctest` — 345 checks, 100% green (measured 2026-06-16).
+Slip kinematics, Re and camber contact-point migration now live in one shared module
+(`tire_contact.hpp::tire_contact_kinematics`) that all four dynamics models call, instead of
+being inlined per model. A cambered tire contacts on the leaning side
+(`contact_dy = crown_radius·sin γ`), shifting the vertical-load line and producing an
+overturning moment `Mx = Fz·contact_dy` that feeds the roll DOF (L3 14-DOF). Both Re and
+camber migration are opt-in (reff_*=0 / crown_radius=0 -> legacy behaviour), so all baselines
+are unchanged.
+
+Slip now uses the load-dependent effective rolling radius Re(Fz) (Pacejka BREFF/DREFF/FREFF)
+across L1/L2/L3/L5 — slip = (ω·Re − vx)/vx, so a free-rolling loaded tire reports κ=0,
+matching MF-Tyre/CarMaker. Initial wheel spin is set per-wheel via `free_roll_wheel_spin`
+(vx/Re at static load) so no phantom longitudinal force appears at t=0. Re is opt-in: tires
+without BREFF/DREFF/FREFF (reff_*=0) fall back to the unloaded radius R0 unchanged.
+
+Full automated suite: `cd build && ctest` — 354 checks, 100% green (measured 2026-06-16).
 One-command evidence bundle (ctests + tire parity table + ISO figures + summary.md):
 `python3 tools/validation_report.py`.
 
