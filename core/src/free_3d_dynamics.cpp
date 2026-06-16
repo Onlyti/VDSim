@@ -58,6 +58,7 @@ constexpr double kStickC       = 6.0e4;
 constexpr double kWheelSpinDrag = 2.5;
 constexpr double kTireDampRatio = 0.08;   // tire-spring damping ratio (strut path)
 constexpr double kRackPerRad    = 0.08;   // tie-rod rack travel per roadwheel rad (mirrors L4)
+constexpr double kStopStiffness = 2.0e6;  // bump/rebound stop rate [N/m] (strut path)
 
 class Free3DDynamics final : public IVehicleDynamics {
 public:
@@ -104,8 +105,8 @@ public:
         F_preload_ = {{Fs_f, Fs_f, Fs_r, Fs_r}};
         for (int i = 0; i < NUM_WHEELS; ++i) {
             const double ks = std::max(1.0, vp.spring_stiffness[i]);
-            comp_min_[i] = -F_preload_[i] / ks;   // spring free length (no tension)
-            comp_max_[i] =  0.12;                  // bump room above static [m]
+            comp_min_[i] = -F_preload_[i] / ks;   // rebound stop engages (spring free length)
+            comp_max_[i] =  0.10;                 // bump stop engages [m] above static
         }
         drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
         brake_      = make_default_brake(vp_, vp_.brake_deadtime_s);
@@ -323,7 +324,9 @@ private:
                 const double vn = -v_wc.dot(n);
                 const double m_u = std::max(1.0, vp_.unsprung_mass[i]);
                 const double c_t = kTireDampRatio * 2.0 * std::sqrt(k_tire_strut * m_u);
-                Fz[i] = std::clamp(k_tire_strut * pen + c_t * vn, 0.0, Fz_cap);
+                // No artificial cap: the tire deforms, so Fz keeps rising with the
+                // (penetration) deformation. The stunt Fz_cap is a penalty-path-only hack.
+                Fz[i] = std::max(0.0, k_tire_strut * pen + c_t * vn);
                 continue;
             }
             if (contacts[i].penetration <= 0.0) { Fz[i] = 0.0; continue; }
@@ -366,6 +369,9 @@ private:
         std::array<double, NUM_WHEELS> fx_kin {{0.0, 0.0, 0.0, 0.0}};
         std::array<double, NUM_WHEELS> dcomp {{0.0, 0.0, 0.0, 0.0}};
         std::array<double, NUM_WHEELS> dcomp_dot {{0.0, 0.0, 0.0, 0.0}};
+        // Per-corner strut bookkeeping for the deferred unsprung accel (computed after
+        // the body acceleration is known — the relative travel needs the frame coupling).
+        std::array<double, NUM_WHEELS> fez_arr {}, fsusp_arr {}, mu_arr {{1, 1, 1, 1}};
 
         for (int i = 0; i < NUM_WHEELS; ++i) {
             if (strut) {
@@ -375,10 +381,18 @@ private:
                 const double ks  = std::max(1.0, vp_.spring_stiffness[i]);
                 const double cs  = std::max(0.0, vp_.damper_coefficient[i]);
                 const double m_u = std::max(1.0, vp_.unsprung_mass[i]);
-                // Strut spring+damper carries the sprung corner (preload so comp=0 is the
-                // static ride position); a coilover cannot pull, so it tops out at F_susp=0.
-                double F_susp = F_preload_[i] + ks * comp + cs * comp_dot;
-                if (F_susp < 0.0) F_susp = 0.0;
+                // Strut force = coilover spring (preload so comp=0 is static; no tension)
+                // + damper + bump/rebound stops. The stops are stiff FORCE elements (not a
+                // position clamp), so when the suspension bottoms the large load transmits
+                // to the body instead of being swallowed by a kinematic wall.
+                double F_spring = F_preload_[i] + ks * comp;
+                if (F_spring < 0.0) F_spring = 0.0;          // coilover cannot pull
+                double F_stop = 0.0;
+                if (comp > comp_max_[i])                     // bump stop (compression)
+                    F_stop = kStopStiffness * (comp - comp_max_[i]);
+                else if (comp < comp_min_[i])                // rebound stop (droop)
+                    F_stop = kStopStiffness * (comp - comp_min_[i]);
+                const double F_susp = F_spring + cs * comp_dot + F_stop;
 
                 Vec3 tire_total = Vec3::Zero();
                 if (Fz[i] > 1.0) {
@@ -444,10 +458,10 @@ private:
                 F_body[i] = R.transpose() * F_w_body;
                 tau_body += rb.cross(F_body[i]);
                 tau_body.z() += mz_wheel[i];
-                // Unsprung travel DOF (m_u·comp̈ along the body-up axis): the tire pushes the
-                // wheel up (+comp), the strut pushes it down, gravity acts along world-down.
-                dcomp[i]     = comp_dot;
-                dcomp_dot[i] = (f_ez - F_susp - m_u * kGravity * ez_world.z()) / m_u;
+                // Unsprung travel DOF: store the strut-axis forces; the relative accel is
+                // finished after the body acceleration is known (frame coupling, below).
+                dcomp[i]  = comp_dot;
+                fez_arr[i] = f_ez; fsusp_arr[i] = F_susp; mu_arr[i] = m_u;
                 continue;
             }
             if (!contacts[i].is_valid || contacts[i].penetration <= 0.0) {
@@ -584,6 +598,15 @@ private:
             const double F_ez = F_total_world.dot(ez_world);
             const Vec3 F_perp = F_total_world - F_ez * ez_world;
             a_world = (F_ez / m_body) * ez_world + F_perp / m;
+            // Finish the per-corner unsprung travel accel now that the body accel is known.
+            // comp̈ = (Fz_tire - F_susp)/m_u - g·êz - a_body·êz : the last term is the frame
+            // coupling (the unsprung rides the accelerating body). Gravity then cancels in
+            // free flight (a_body·êz = -g·êz) so the body stays ballistic, and on the ground
+            // (a_body·êz ~ 0) it reduces to the static-correct balance.
+            const double az_body = a_world.dot(ez_world);
+            const double g_ez = kGravity * ez_world.z();
+            for (int i = 0; i < NUM_WHEELS; ++i)
+                dcomp_dot[i] = (fez_arr[i] - fsusp_arr[i]) / mu_arr[i] - g_ez - az_body;
         } else {
             a_world = F_total_world / m_body;
         }
@@ -669,16 +692,19 @@ private:
         }
         for (int i = 0; i < NUM_WHEELS; ++i)
             s.wheel_spin[i] = s0.wheel_spin[i] + d.domega[i] * h;
-        // Strut travel DOF (zero derivatives on the penalty path -> comp stays put).
+        // Strut travel DOF (zero derivatives on the penalty path -> comp stays put). The
+        // bump/rebound stops are stiff force elements in the dynamics, so travel is limited
+        // there; this is only a wide last-resort guard against numerical runaway.
         for (int i = 0; i < NUM_WHEELS; ++i) {
             s.susp_compression[i] = s0.susp_compression[i] + d.d_comp[i] * h;
             s.susp_velocity[i]    = s0.susp_velocity[i]    + d.d_comp_dot[i] * h;
-            if (s.susp_compression[i] > comp_max_[i]) {
-                s.susp_compression[i] = comp_max_[i];
-                if (s.susp_velocity[i] > 0.0) s.susp_velocity[i] = 0.0;   // bump stop
-            } else if (s.susp_compression[i] < comp_min_[i]) {
-                s.susp_compression[i] = comp_min_[i];
-                if (s.susp_velocity[i] < 0.0) s.susp_velocity[i] = 0.0;   // droop stop
+            const double hi = comp_max_[i] + 0.10, lo = comp_min_[i] - 0.10;
+            if (s.susp_compression[i] > hi) {
+                s.susp_compression[i] = hi;
+                if (s.susp_velocity[i] > 0.0) s.susp_velocity[i] = 0.0;
+            } else if (s.susp_compression[i] < lo) {
+                s.susp_compression[i] = lo;
+                if (s.susp_velocity[i] < 0.0) s.susp_velocity[i] = 0.0;
             }
         }
         return s;

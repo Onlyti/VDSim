@@ -101,7 +101,11 @@ TEST(L5StrutValidation, BallisticJumpFollowsProjectile) {
     vdsim::CmdL4 cmd;
     cmd.throttle = 0.1;
 
+    // Record the whole run with an airborne flag, then fit only over the LONGEST
+    // contiguous airborne segment (the real flight) — landing bounces and the first
+    // pre-settle instant also dip Fz briefly, so a naive "all Fz<30" set is polluted.
     std::vector<double> ts, zs, vxs;
+    std::vector<char> air;
     double t = 0.0;
     const double dt = 0.001;
     for (int i = 0; i < 5000; ++i) {
@@ -113,16 +117,18 @@ TEST(L5StrutValidation, BallisticJumpFollowsProjectile) {
         const double sum = fz[0] + fz[1] + fz[2] + fz[3];
         const auto& st = dyn->state();
         const vdsim::Vec3 v_world = st.orientation.toRotationMatrix() * st.velocity;
-        if (sum < 30.0) {                       // airborne
-            ts.push_back(t);
-            zs.push_back(st.position.z());
-            vxs.push_back(v_world.x());
-        }
+        ts.push_back(t); zs.push_back(st.position.z()); vxs.push_back(v_world.x());
+        air.push_back(sum < 30.0 ? 1 : 0);
     }
-    ASSERT_GT(ts.size(), 200u) << "no sustained airborne phase";
+    std::size_t best_lo = 0, best_len = 0, run_lo = 0, run = 0;
+    for (std::size_t i = 0; i < air.size(); ++i) {
+        if (air[i]) { if (run == 0) run_lo = i; ++run; if (run > best_len) { best_len = run; best_lo = run_lo; } }
+        else run = 0;
+    }
+    ASSERT_GT(best_len, 200u) << "no sustained airborne phase";
 
-    // Mid-flight window (drop the launch/land transients).
-    const std::size_t lo = ts.size() / 5, hi = 4 * ts.size() / 5;
+    // Mid-flight window of the longest airborne segment (drop launch/land transients).
+    const std::size_t lo = best_lo + best_len / 5, hi = best_lo + 4 * best_len / 5;
     // Least-squares quadratic z(t) = a t^2 + b t + c -> vertical accel 2a = -g.
     double Sx=0,Sx2=0,Sx3=0,Sx4=0,Sz=0,Sxz=0,Sx2z=0; int m=0;
     double vx_min=1e9, vx_max=-1e9;
