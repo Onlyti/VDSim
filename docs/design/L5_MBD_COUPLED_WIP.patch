@@ -1,0 +1,194 @@
+diff --git a/core/src/free_3d_dynamics.cpp b/core/src/free_3d_dynamics.cpp
+index 99dbf6f..015f547 100644
+--- a/core/src/free_3d_dynamics.cpp
++++ b/core/src/free_3d_dynamics.cpp
+@@ -7,6 +7,8 @@
+ 
+ #include <spdlog/spdlog.h>
+ 
++#include <Eigen/Dense>
++
+ #include <algorithm>
+ #include <array>
+ #include <cmath>
+@@ -294,6 +296,7 @@ private:
+         const double Fz_cap = 6.0 * m * kGravity / static_cast<double>(NUM_WHEELS);
+         const double c_vert = 2.0 * std::sqrt(k_tire * m / static_cast<double>(NUM_WHEELS));
+         const Vec3 ez_world = R.col(2);   // body up axis in world (strut travel axis)
++        const Vec3 omega_w  = R * omega;  // body angular velocity in world
+         std::array<double, NUM_WHEELS> Fz {};
+         for (int i = 0; i < NUM_WHEELS; ++i) {
+             if (!contacts[i].is_valid) { Fz[i] = 0.0; continue; }
+@@ -355,9 +358,13 @@ private:
+         std::array<double, NUM_WHEELS> fx_kin {{0.0, 0.0, 0.0, 0.0}};
+         std::array<double, NUM_WHEELS> dcomp {{0.0, 0.0, 0.0, 0.0}};
+         std::array<double, NUM_WHEELS> dcomp_dot {{0.0, 0.0, 0.0, 0.0}};
+-        // Per-corner strut bookkeeping for the deferred unsprung accel (computed after
+-        // the body acceleration is known — the relative travel needs the frame coupling).
+-        std::array<double, NUM_WHEELS> fez_arr {}, fsusp_arr {}, mu_arr {{1, 1, 1, 1}};
++        // Per-corner ingredients for the coupled MBD solve (strut path). World-frame.
++        // r_wc = CG->wheel lever, s = travel direction, abias = centrifugal/Coriolis,
++        // Ftire at the contact patch (lever r_cp), n = contact normal, Fsusp = spring+
++        // damper+stop on the travel DOF, mu = unsprung mass. See L5_MBD_DYNAMIC_COUPLING.md.
++        std::array<Vec3, NUM_WHEELS> sg_rwc {}, sg_s {}, sg_abias {},
++                                     sg_Ftire {}, sg_rcp {}, sg_n {};
++        std::array<double, NUM_WHEELS> sg_Fsusp {}, sg_mu {{1, 1, 1, 1}};
+ 
+         for (int i = 0; i < NUM_WHEELS; ++i) {
+             if (strut) {
+@@ -423,22 +430,24 @@ private:
+                         const double c = muFz / Fmag; Fx_w *= c; Fy_w *= c;
+                     }
+                     tire_total = Fx_w * t_long + Fy_w * t_lat + Fz[i] * n;
++                    sg_n[i]   = n;
++                    sg_rcp[i] = contacts[i].position - s.position;  // CG->patch (world)
++                    F_body[i] = R.transpose() * tire_total;         // reporting only
+                 } else {
+                     ci_[i] = ITireModel::ContactInput{};   // neutral: no transient evolution
+                 }
+-                // The vertical coupling between body and wheel goes through the strut (along
+-                // the body-up axis); the in-plane tire force is reacted rigidly by the body.
+-                // So replace the strut-axis component of the tire force with the strut force.
+-                const double f_ez = tire_total.dot(ez_world);
+-                const Vec3 F_w_body = tire_total - (f_ez - F_susp) * ez_world;
+-                F_total_world += F_w_body;
+-                F_body[i] = R.transpose() * F_w_body;
+-                tau_body += rb.cross(F_body[i]);
+-                tau_body.z() += mz_wheel[i];
+-                // Unsprung travel DOF: store the strut-axis forces; the relative accel is
+-                // finished after the body acceleration is known (frame coupling, below).
+-                dcomp[i]  = comp_dot;
+-                fez_arr[i] = f_ez; fsusp_arr[i] = F_susp; mu_arr[i] = m_u;
++                // Store the coupled-MBD ingredients (assembled + solved after the loop). The
++                // travel is vertical (s = body-up) in this phase; the DAE travel-path geometry
++                // (anti-dive/toe/camber) layers on later. No decomposition / pseudo-force here.
++                const Vec3 r_wc = R * (rb + comp * Vec3::UnitZ());   // CG->wheel lever (world)
++                sg_rwc[i]   = r_wc;
++                sg_s[i]     = ez_world;
++                sg_abias[i] = omega_w.cross(omega_w.cross(r_wc))
++                            + 2.0 * omega_w.cross(ez_world * comp_dot);
++                sg_Ftire[i] = tire_total;       // zero when airborne
++                sg_Fsusp[i] = F_susp;
++                sg_mu[i]    = m_u;
++                dcomp[i]    = comp_dot;
+                 continue;
+             }
+             if (!contacts[i].is_valid || contacts[i].penetration <= 0.0) {
+@@ -523,42 +532,84 @@ private:
+         const SubsystemContext ctx_brake{s, cmd_residual, ctx.dt, ctx.Fz};
+         const std::array<double, NUM_WHEELS> Tb = brake_->wheel_torque(ctx_brake);
+ 
+-        // Strut path: the sprung body responds along the strut axis with m_sprung
+-        // (the unsprung decouples there via the travel DOF), but in-plane the unsprung
+-        // is rigidly carried, so the perpendicular response sees the total mass — this
+-        // keeps flat-ground handling matched to the planar L2/L3 models. Penalty path
+-        // divides by the single total mass (byte-identical to before).
+-        Vec3 a_world;
++        Vec3 a_body, alpha_body, accel_sf_body;
+         if (strut) {
+-            const double F_ez = F_total_world.dot(ez_world);
+-            const Vec3 F_perp = F_total_world - F_ez * ez_world;
+-            a_world = (F_ez / m_body) * ez_world + F_perp / m;
+-            // Finish the per-corner unsprung travel accel now that the body accel is known.
+-            // comp̈ = (Fz_tire - F_susp)/m_u - g·êz - a_body·êz : the last term is the frame
+-            // coupling (the unsprung rides the accelerating body). Gravity then cancels in
+-            // free flight (a_body·êz = -g·êz) so the body stays ballistic, and on the ground
+-            // (a_body·êz ~ 0) it reduces to the static-correct balance.
+-            const double az_body = a_world.dot(ez_world);
+-            const double g_ez = kGravity * ez_world.z();
+-            for (int i = 0; i < NUM_WHEELS; ++i)
+-                dcomp_dot[i] = (fez_arr[i] - fsusp_arr[i]) / mu_arr[i] - g_ez - az_body;
++            // Exact coupled rigid-body dynamics: sprung body (6) + per-corner travel (4).
++            // Solve M u_dot = Q - b in the world frame, then convert to the body-frame
++            // derivatives the integrator expects. Energy-conserving by construction —
++            // no pseudo-force / anisotropic-mass leak. See L5_MBD_DYNAMIC_COUPLING.md.
++            auto skew = [](const Vec3& a) {
++                Mat3 S;
++                S <<     0, -a.z(),  a.y(),
++                     a.z(),      0, -a.x(),
++                    -a.y(),  a.x(),      0;
++                return S;
++            };
++            const Mat3 Iw = R * vp_.inertia_diag.asDiagonal() * R.transpose();
++            const Vec3 g_world(0.0, 0.0, -kGravity);
++            Eigen::Matrix<double, 10, 10> M = Eigen::Matrix<double, 10, 10>::Zero();
++            Eigen::Matrix<double, 10, 1> rhs = Eigen::Matrix<double, 10, 1>::Zero();
++            Vec3 Fw = F_total_world;            // body gravity + aero + rolling resistance
++            Vec3 tauw = Vec3::Zero();
++            Vec3 bt = Vec3::Zero();
++            Vec3 br = omega_w.cross(Iw * omega_w);   // gyroscopic
++            Mat3 Mtr = Mat3::Zero();
++            Mat3 Mr = Iw;
++            double m_sum = m_body;
++            for (int i = 0; i < NUM_WHEELS; ++i) {
++                const double m_u = sg_mu[i];
++                const Vec3 r = sg_rwc[i], si = sg_s[i], mab = m_u * sg_abias[i];
++                m_sum += m_u;
++                Mtr -= m_u * skew(r);
++                Mr  -= m_u * skew(r) * skew(r);
++                M.block<3, 1>(0, 6 + i) = m_u * si;
++                M.block<3, 1>(3, 6 + i) = m_u * r.cross(si);
++                M(6 + i, 6 + i) = m_u * si.dot(si);          // (+ J_lnk later)
++                // generalized forces on this travel DOF + body force/torque contributions
++                Fw   += m_u * g_world;
++                tauw += r.cross(m_u * g_world);
++                double Gi = si.dot(m_u * g_world) - sg_Fsusp[i];
++                if (Fz[i] > 1.0) {
++                    Fw   += sg_Ftire[i];
++                    tauw += sg_rcp[i].cross(sg_Ftire[i]) + mz_wheel[i] * sg_n[i];
++                    Gi   += si.dot(sg_Ftire[i]);
++                }
++                bt += mab;
++                br += r.cross(mab);
++                rhs(6 + i) = Gi - si.dot(mab);
++            }
++            M.block<3, 3>(0, 0) = m_sum * Mat3::Identity();
++            M.block<3, 3>(0, 3) = Mtr;
++            M.block<3, 3>(3, 0) = Mtr.transpose();
++            M.block<3, 3>(3, 3) = Mr;
++            for (int i = 0; i < NUM_WHEELS; ++i) {
++                M.block<1, 3>(6 + i, 0) = M.block<3, 1>(0, 6 + i).transpose();
++                M.block<1, 3>(6 + i, 3) = M.block<3, 1>(3, 6 + i).transpose();
++            }
++            rhs.segment<3>(0) = Fw - bt;
++            rhs.segment<3>(3) = tauw - br;
++            const Eigen::Matrix<double, 10, 1> udot = M.ldlt().solve(rhs);
++            const Vec3 vdot_w(udot(0), udot(1), udot(2));
++            const Vec3 omegadot_w(udot(3), udot(4), udot(5));
++            a_body = R.transpose() * vdot_w - omega.cross(v_body);
++            alpha_body = R.transpose() * omegadot_w;
++            accel_sf_body = R.transpose() * (vdot_w + Vec3(0.0, 0.0, kGravity));
++            for (int i = 0; i < NUM_WHEELS; ++i) dcomp_dot[i] = udot(6 + i);
+         } else {
+-            a_world = F_total_world / m_body;
++            const Vec3 a_world = F_total_world / m_body;
++            a_body = R.transpose() * a_world - omega.cross(v_body);
++            // Reported ax/ay = body-frame specific force (gravity removed), the L2/L3 Fy/m
++            // convention (not the body-velocity derivative, ~0 in a steady turn).
++            accel_sf_body = R.transpose() * (a_world + Vec3(0.0, 0.0, kGravity));
++            const Vec3 Iw(
++                vp_.inertia_diag.x() * omega.x(),
++                vp_.inertia_diag.y() * omega.y(),
++                vp_.inertia_diag.z() * omega.z());
++            alpha_body = Vec3(
++                I_body_inv_.x() * (tau_body.x() - omega.y() * Iw.z() + omega.z() * Iw.y()),
++                I_body_inv_.y() * (tau_body.y() - omega.z() * Iw.x() + omega.x() * Iw.z()),
++                I_body_inv_.z() * (tau_body.z() - omega.x() * Iw.y() + omega.y() * Iw.x()));
+         }
+-        const Vec3 a_body = R.transpose() * a_world - omega.cross(v_body);
+-        // Reported ax/ay are the body-frame specific force (gravity removed), matching
+-        // the planar L2/L3 convention (Fy/m) — the accelerometer/load-transfer signal,
+-        // not the body-velocity derivative (which is ~0 in a steady turn).
+-        const Vec3 accel_sf_body =
+-            R.transpose() * (a_world + Vec3(0.0, 0.0, kGravity));
+-        const Vec3 Iw(
+-            vp_.inertia_diag.x() * omega.x(),
+-            vp_.inertia_diag.y() * omega.y(),
+-            vp_.inertia_diag.z() * omega.z());
+-        const Vec3 alpha_body = Vec3(
+-            I_body_inv_.x() * (tau_body.x() - omega.y() * Iw.z() + omega.z() * Iw.y()),
+-            I_body_inv_.y() * (tau_body.y() - omega.z() * Iw.x() + omega.x() * Iw.z()),
+-            I_body_inv_.z() * (tau_body.z() - omega.x() * Iw.y() + omega.y() * Iw.x()));
+ 
+         Deriv d_out;
+         d_out.dp_world = R * v_body;
