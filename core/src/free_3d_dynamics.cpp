@@ -52,7 +52,6 @@ inline CmdL4 lower_to_l4(const ControlInput& u) {
 
 constexpr double kAirDensity = 1.225;
 constexpr double kGravity    = 9.80665;
-constexpr double kSpeedEps     = 0.15;
 constexpr double kStickBlend   = 3.0;
 constexpr double kStickC       = 6.0e4;
 constexpr double kWheelSpinDrag = 2.5;
@@ -267,15 +266,6 @@ private:
         return t_long;
     }
 
-    static Vec3 loop_track_tangent(const Vec3& hub_world, const Vec3& v_hub_world,
-                                   double xc, double zc) {
-        const double dx = hub_world.x() - xc;
-        const double dz = hub_world.z() - zc;
-        const double th = std::atan2(dx, -dz);
-        Vec3 t(std::cos(th), 0.0, std::sin(th));
-        if (v_hub_world.dot(t) < 0.0) t = -t;
-        return t;
-    }
 
     Deriv derivatives(const State& s,
                     const CmdL4& cmd,
@@ -285,12 +275,10 @@ private:
         const Vec3 omega  = s.angular_velocity;
         const double m    = vp_.mass;
         const double Rwh  = vp_.wheel_radius_nominal;
-        const bool stunt_loop = sp_.stunt_physics && sp_.loop_radius > 1.0;
-        double k_tire = std::min(80000.0, std::max(1.0, tp_.tire_vertical_stiffness));
-        if (stunt_loop) k_tire *= 0.5;
+        const double k_tire = std::min(80000.0, std::max(1.0, tp_.tire_vertical_stiffness));
         // Spatial-strut path: the 6-DOF body is the sprung mass; the (unclamped) tire
-        // stiffness acts on the per-corner unsprung mass. Penalty path leaves m_body==m
-        // and k_tire untouched, so its arithmetic is byte-identical to before.
+        // stiffness acts on the per-corner unsprung mass. Penalty path leaves m_body==m,
+        // so its arithmetic is byte-identical to before.
         const bool strut = sp_.l5_spatial_suspension;
         const double m_body = strut ? (vp_.mass_sprung > 1.0 ? vp_.mass_sprung : vp_.mass) : m;
         const double k_tire_strut = std::max(1.0, tp_.tire_vertical_stiffness);
@@ -301,11 +289,10 @@ private:
             cmd.steer_angle_wheel, cmd.throttle, cmd.brake, cmd.gear, cmd.handbrake};
         SubsystemContext ctx{s, driver_cmd, 0.0};
 
-        const double Fz_cap = (stunt_loop ? 18.0 : 6.0) * m * kGravity
-                              / static_cast<double>(NUM_WHEELS);
-        constexpr double kLoopPenCap = 0.016;
-        double c_vert = 2.0 * std::sqrt(k_tire * m / static_cast<double>(NUM_WHEELS));
-        if (stunt_loop) c_vert *= 1.4;
+        // Penalty-path contact cap (stability of the rigid-glued contact). The loop is now
+        // a general surface (LoopGround penalty contact), so there is no loop-specific cap.
+        const double Fz_cap = 6.0 * m * kGravity / static_cast<double>(NUM_WHEELS);
+        const double c_vert = 2.0 * std::sqrt(k_tire * m / static_cast<double>(NUM_WHEELS));
         const Vec3 ez_world = R.col(2);   // body up axis in world (strut travel axis)
         std::array<double, NUM_WHEELS> Fz {};
         for (int i = 0; i < NUM_WHEELS; ++i) {
@@ -331,8 +318,7 @@ private:
             }
             if (contacts[i].penetration <= 0.0) { Fz[i] = 0.0; continue; }
             const Vec3 v_hub = R * (v_body + omega.cross(rb));
-            const double pen_raw = contacts[i].penetration;
-            const double pen = stunt_loop ? std::min(pen_raw, kLoopPenCap) : pen_raw;
+            const double pen = contacts[i].penetration;
             const double vn  = -v_hub.dot(n);
             Fz[i] = std::clamp(k_tire * pen + c_vert * vn, 0.0, Fz_cap);
         }
@@ -396,7 +382,6 @@ private:
 
                 Vec3 tire_total = Vec3::Zero();
                 if (Fz[i] > 1.0) {
-                    const Vec3 hub_world   = s.position + R * rb;
                     const Vec3 v_hub_world =
                         R * (v_body + omega.cross(rb)) + ez_world * comp_dot;
                     Vec3 n = contacts[i].normal.normalized();
@@ -404,19 +389,11 @@ private:
                     // DAE toe adds to the steer angle (bump-steer); camber flows via gamma.
                     Vec3 t_long = wheel_tangent_frame(n, body_fwd,
                                                       d_wheel[i] + toe_dae_[i], t_lat);
-                    const double v_long_w = v_hub_world.dot(t_long);
+                    // General contact-frame slip on any surface (flat / banked / loop) — no
+                    // loop-specific tangent fallback; the wheel-heading projection is the
+                    // longitudinal direction everywhere.
+                    const double v_long_k = v_hub_world.dot(t_long);
                     const double v_lat    = v_hub_world.dot(t_lat);
-                    double v_long_k = v_long_w;
-                    if (stunt_loop && contacts[i].surface_id == 2) {
-                        const Vec3 t_track = loop_track_tangent(
-                            hub_world, v_hub_world, sp_.loop_center_x, sp_.loop_center_z);
-                        const double v_track = v_hub_world.dot(t_track);
-                        const double spd = v_hub_world.norm();
-                        if (std::abs(v_long_w) < 0.2 * std::max(spd, kSpeedEps)) {
-                            const double sign = (t_long.dot(t_track) >= 0.0) ? 1.0 : -1.0;
-                            v_long_k = sign * std::max(std::abs(v_track), kSpeedEps);
-                        }
-                    }
                     ITireModel::ContactInput ci;
                     ci.Fz = Fz[i]; ci.Vx = v_long_k; ci.Vy = v_lat;
                     ci.omega = s.wheel_spin[i]; ci.gamma = gamma_dae_[i];
@@ -470,28 +447,15 @@ private:
                 continue;
             }
             const Vec3& rb = r_body_[i];
-            const Vec3 hub_world = s.position + R * rb;
             const Vec3 v_hub_world = R * (v_body + omega.cross(rb));
             Vec3 n = contacts[i].normal.normalized();
             Vec3 t_lat;
             Vec3 t_long = wheel_tangent_frame(n, body_fwd, d_wheel[i], t_lat);
-            const double v_long_w = v_hub_world.dot(t_long);
+            // General contact-frame slip on any surface (flat / banked / loop): the
+            // wheel-heading projection onto the contact tangent plane is the longitudinal
+            // direction everywhere, no loop-specific tangent fallback.
+            const double v_long_k = v_hub_world.dot(t_long);
             const double v_lat = v_hub_world.dot(t_lat);
-            // Contact-frame longitudinal velocity. In a loop the wheel-heading tangent can
-            // pass through zero while the car still moves along the track, so fall back to
-            // the track-tangent speed to keep the slip well-posed (contact-frame kinematics,
-            // not a denominator hack -- the tire now owns the slip definition).
-            double v_long_k = v_long_w;
-            if (stunt_loop && contacts[i].surface_id == 2) {
-                const Vec3 t_track = loop_track_tangent(
-                    hub_world, v_hub_world, sp_.loop_center_x, sp_.loop_center_z);
-                const double v_track = v_hub_world.dot(t_track);
-                const double spd = v_hub_world.norm();
-                if (std::abs(v_long_w) < 0.2 * std::max(spd, kSpeedEps)) {
-                    const double sign = (t_long.dot(t_track) >= 0.0) ? 1.0 : -1.0;
-                    v_long_k = sign * std::max(std::abs(v_track), kSpeedEps);
-                }
-            }
 
             // Inverted tire: kinematics in (contact-frame), wrench out. The tire owns slip /
             // Re / transient; this model keeps only the integrator stabilization below.
@@ -544,35 +508,6 @@ private:
         const double F_aero = 0.5 * kAirDensity * vp_.aero_drag_coeff *
                               vp_.frontal_area * vx_fwd * std::abs(vx_fwd);
         F_total_world -= R * Vec3(F_aero, 0.0, 0.0);
-        if (stunt_loop && !sp_.loop_rail_guide && sp_.loop_radius > 1.0) {
-            const double xc = sp_.loop_center_x;
-            const double zc = sp_.loop_center_z;
-            const double Rloop = sp_.loop_radius;
-            const double target = Rloop + Rwh;
-            constexpr double kRad = 175000.0;
-            constexpr double cRad = 18000.0;
-            for (int i = 0; i < NUM_WHEELS; ++i) {
-                const Vec3 hub = s.position + R * r_body_[i];
-                const double dx = hub.x() - xc;
-                const double dz = hub.z() - zc;
-                const double hr = std::hypot(dx, dz);
-                if (hr < 0.5 * Rloop || hr > target + 0.55) continue;
-                const double err = hr - target;
-                if (std::abs(err) > 0.5) continue;
-                const Vec3 radial(dx / hr, 0.0, dz / hr);
-                const Vec3 v_hub = R * (v_body + omega.cross(r_body_[i]));
-                const double vr = v_hub.dot(radial);
-                double Fr = -kRad * err - cRad * vr;
-                if (err > 0.0) {
-                    Fr = std::clamp(Fr, -3.5 * Fz_cap, 0.0);
-                } else {
-                    Fr = std::clamp(Fr, 0.0, 0.4 * Fz_cap);
-                }
-                const Vec3 Fw = Fr * radial;
-                F_total_world += Fw;
-                tau_body += r_body_[i].cross(R.transpose() * Fw);
-            }
-        }
 
         const double Fz_sum = Fz[0] + Fz[1] + Fz[2] + Fz[3];
         const double F_rr = tp_.rolling_resistance * Fz_sum * std::tanh(vx_fwd / 0.5);

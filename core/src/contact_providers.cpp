@@ -379,7 +379,11 @@ private:
     double xs_, xt_, h_, lip_, xl_, mu_;
 };
 
-// Vertical loop in x-z: center (xc, zc), radius R. Bottom at (xc, zc-R).
+// Vertical loop in x-z: a circular wall of radius R about (xc, zc); the car drives
+// the INSIDE, so the surface normal points inward (toward the centre) and the tyre
+// contact patch rolls on the radius-R circle (wheel centre at R - r). Physical penalty
+// contact like the flat/curved grounds — no rail/reach hack; staying on the loop is
+// emergent (the contact normal supplies the centripetal force only when fast enough).
 class LoopGround final : public IContactProvider {
 public:
     LoopGround(double xc, double zc, double radius, double mu)
@@ -390,25 +394,22 @@ public:
         std::array<Vec3, NUM_WHEELS> pw{};
         wheel_world_positions(vehicle, vp, pw);
         const double r = vp.wheel_radius_nominal;
+        const double contact_rad = R_ - r;          // wheel-centre radius at first touch
         for (int i = 0; i < NUM_WHEELS; ++i) {
             const double dx = pw[i].x() - xc_;
             const double dz = pw[i].z() - zc_;
             const double hub_rad = std::hypot(dx, dz);
-            const double theta = std::atan2(dx, -dz);
-            const double px = xc_ + R_ * std::sin(theta);
-            const double pz = zc_ - R_ * std::cos(theta);
-            const Vec3 n(-std::sin(theta), 0.0, std::cos(theta));
-            const double surface_rad = R_ + r;
-            constexpr double kReach = 0.48;
-            const double pen_raw = surface_rad - hub_rad + kReach;
-            out[i].is_valid    = hub_rad > 0.5 * R_ && hub_rad < surface_rad + kReach + 0.55;
-            out[i].normal      = n.normalized();
+            const double inv = hub_rad > 1e-6 ? 1.0 / hub_rad : 0.0;
+            const Vec3 n(-dx * inv, 0.0, -dz * inv);              // inward (toward centre)
+            const double pen = hub_rad - contact_rad;            // >0 = tyre into the wall
+            out[i].is_valid    = hub_rad > 0.4 * R_ && hub_rad < R_ + 0.5;
+            out[i].normal      = n;
             out[i].mu_long     = mu_;
             out[i].mu_lat      = mu_;
             out[i].surface_id  = 2;
-            out[i].position    = Vec3(px, pw[i].y(), pz);
-            out[i].penetration = std::max(0.0, pen_raw);
-            out[i].road_dz     = pz;
+            out[i].position    = Vec3(xc_ + R_ * dx * inv, pw[i].y(), zc_ + R_ * dz * inv);
+            out[i].penetration = std::max(0.0, pen);
+            out[i].road_dz     = out[i].position.z();
         }
     }
 

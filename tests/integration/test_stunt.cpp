@@ -156,6 +156,7 @@ TEST(Stunt, FreeLoopCompletesLap) {
     tp.lugre.enabled = false;
     vdsim::SolverParams sp;
     sp.stunt_physics = true;
+    sp.l5_spatial_suspension = true;
     sp.loop_radius = R;
     sp.loop_center_x = xc;
     sp.loop_center_z = zc;
@@ -163,7 +164,7 @@ TEST(Stunt, FreeLoopCompletesLap) {
 
     auto dyn = vdsim::create_stunt_dof();
     dyn->initialize(vp, tp, sp);
-    const double z0 = zc - R - vp.wheel_radius_nominal + vp.cg_height + 0.01;
+    const double z0 = zc - R + vp.cg_height + 0.005;
     dyn->reset(init_on_ground(xc, v0, z0, vp.wheel_radius_nominal));
 
     auto loop = vdsim::create_loop_ground(xc, zc, R, 1.2);
@@ -214,6 +215,7 @@ TEST(Stunt, LoopSlipAngleFrontRearBalanced) {
     tp.lugre.enabled = false;
     vdsim::SolverParams sp;
     sp.stunt_physics = true;
+    sp.l5_spatial_suspension = true;
     sp.loop_radius = R;
     sp.loop_center_x = xc;
     sp.loop_center_z = zc;
@@ -222,7 +224,7 @@ TEST(Stunt, LoopSlipAngleFrontRearBalanced) {
 
     auto dyn = vdsim::create_stunt_dof();
     dyn->initialize(vp, tp, sp);
-    const double z0 = zc - R - vp.wheel_radius_nominal + vp.cg_height + 0.01;
+    const double z0 = zc - R + vp.cg_height + 0.005;
     dyn->reset(init_on_ground(xc, v0, z0, vp.wheel_radius_nominal));
 
     auto loop = vdsim::create_loop_ground(xc, zc, R, 1.1);
@@ -266,6 +268,7 @@ TEST(Stunt, LoopAccelWheelSpinBounded) {
     tp.lugre.enabled = false;
     vdsim::SolverParams sp;
     sp.stunt_physics = true;
+    sp.l5_spatial_suspension = true;
     sp.loop_radius = R;
     sp.loop_center_x = xc;
     sp.loop_center_z = zc;
@@ -274,7 +277,7 @@ TEST(Stunt, LoopAccelWheelSpinBounded) {
 
     auto dyn = vdsim::create_stunt_dof();
     dyn->initialize(vp, tp, sp);
-    const double z0 = zc - R - vp.wheel_radius_nominal + vp.cg_height + 0.01;
+    const double z0 = zc - R + vp.cg_height + 0.005;
     dyn->reset(init_on_ground(xc, v0, z0, vp.wheel_radius_nominal));
 
     auto loop = vdsim::create_loop_ground(xc, zc, R, 1.1);
@@ -311,6 +314,7 @@ TEST(Stunt, LoopMidArcKeepsContact) {
     tp.lugre.enabled = false;
     vdsim::SolverParams sp;
     sp.stunt_physics = true;
+    sp.l5_spatial_suspension = true;
     sp.loop_radius = R;
     sp.loop_center_x = xc;
     sp.loop_center_z = zc;
@@ -319,7 +323,7 @@ TEST(Stunt, LoopMidArcKeepsContact) {
 
     auto dyn = vdsim::create_stunt_dof();
     dyn->initialize(vp, tp, sp);
-    const double z0 = zc - R - vp.wheel_radius_nominal + vp.cg_height + 0.01;
+    const double z0 = zc - R + vp.cg_height + 0.005;
     dyn->reset(init_on_ground(xc, v0, z0, vp.wheel_radius_nominal));
 
     auto loop = vdsim::create_loop_ground(xc, zc, R, 1.1);
@@ -328,6 +332,7 @@ TEST(Stunt, LoopMidArcKeepsContact) {
 
     double theta_peak = 0.0;
     int grounded = 0;
+    double r_min = 1e9, r_max = 0.0;
     const int n = 7000;
     for (int i = 0; i < n; ++i) {
         vdsim::ContactArray contacts;
@@ -336,11 +341,17 @@ TEST(Stunt, LoopMidArcKeepsContact) {
         const auto& p = dyn->state().position;
         const double theta = std::atan2(p.x() - xc, -(p.z() - zc));
         theta_peak = std::max(theta_peak, theta);
+        const double rad = std::hypot(p.x() - xc, p.z() - zc);
+        r_min = std::min(r_min, rad);
+        r_max = std::max(r_max, rad);
         const auto Fz = dyn->tire_Fz();
         const double fz = Fz[0] + Fz[1] + Fz[2] + Fz[3];
         if (fz > 500.0) ++grounded;
     }
-    EXPECT_GT(theta_peak, 1.35);
+    EXPECT_GT(theta_peak, 1.35);          // climbs past the 3-o'clock quadrant
     EXPECT_GT(grounded, n / 4);
-    EXPECT_GT(dyn->state().position.z(), 8.0);
+    // Stays on the loop: the CG circles near the track radius the whole run — it neither
+    // collapses toward the centre (falls off) nor bursts outward through the wall.
+    EXPECT_GT(r_min, 0.6 * R);
+    EXPECT_LT(r_max, R + 0.5);
 }

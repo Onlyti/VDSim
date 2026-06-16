@@ -162,7 +162,7 @@ double loop_arc(double v0_factor) {
     sp.loop_radius = R; sp.loop_center_x = xc; sp.loop_center_z = zc;
     auto dyn = vdsim::create_stunt_dof();
     dyn->initialize(vp, tp, sp);
-    const double z0 = zc - R - vp.wheel_radius_nominal + vp.cg_height + 0.01;
+    const double z0 = zc - R + vp.cg_height + 0.005;
     dyn->reset(on_flat(xc, v0, z0, vp.wheel_radius_nominal));
     auto loop = vdsim::create_loop_ground(xc, zc, R, 1.2);
     vdsim::CmdL4 cmd; cmd.throttle = 0.5;
