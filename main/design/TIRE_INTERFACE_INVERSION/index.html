@@ -10,31 +10,27 @@
       
       
       
-        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/VALIDATION/">
+        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/design/TIRE_INTERFACE_INVERSION/">
       
       
-        <link rel="prev" href="../RUNNING/">
-      
-      
-        <link rel="next" href="../references/actuator_nonlinearity/">
       
       
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>Validation - VDSim</title>
+        <title>Tire interface inversion (Phase 2) — design + handoff - VDSim</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -53,7 +49,7 @@
       
     
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -78,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#vdsim-validation-credibility" class="md-skip">
+        <a href="#tire-interface-inversion-phase-2-design-handoff" class="md-skip">
           Skip to content
         </a>
       
@@ -96,7 +92,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="VDSim" class="md-header__button md-logo" aria-label="VDSim" data-md-component="logo">
+    <a href="../.." title="VDSim" class="md-header__button md-logo" aria-label="VDSim" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -116,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Validation
+              Tire interface inversion (Phase 2) — design + handoff
             
           </span>
         </div>
@@ -236,7 +232,7 @@
     
     
       <li class="md-tabs__item">
-        <a href=".." class="md-tabs__link">
+        <a href="../.." class="md-tabs__link">
           
   
   
@@ -258,7 +254,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../theory/" class="md-tabs__link">
+        <a href="../../theory/" class="md-tabs__link">
           
   
   
@@ -276,13 +272,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../ROADMAP/" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../ROADMAP/" class="md-tabs__link">
           
   
   
@@ -304,7 +298,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../references/actuator_nonlinearity/" class="md-tabs__link">
+        <a href="../../references/actuator_nonlinearity/" class="md-tabs__link">
           
   
   
@@ -326,7 +320,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../tasks/T22_carla_bridge/REPORT/" class="md-tabs__link">
+        <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-tabs__link">
           
   
   
@@ -348,7 +342,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../tasks/" class="md-tabs__link">
+        <a href="../../tasks/" class="md-tabs__link">
           
   
   
@@ -370,7 +364,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../examples/" class="md-tabs__link">
+        <a href="../../examples/" class="md-tabs__link">
           
   
   
@@ -406,7 +400,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="VDSim" class="md-nav__button md-logo" aria-label="VDSim" data-md-component="logo">
+    <a href="../.." title="VDSim" class="md-nav__button md-logo" aria-label="VDSim" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -461,7 +455,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href=".." class="md-nav__link ">
+            <a href="../.." class="md-nav__link ">
               
   
   
@@ -580,7 +574,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../theory/" class="md-nav__link ">
+            <a href="../../theory/" class="md-nav__link ">
               
   
   
@@ -624,7 +618,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/01_frames_and_conventions/" class="md-nav__link">
+      <a href="../../theory/01_frames_and_conventions/" class="md-nav__link">
         
   
   
@@ -652,7 +646,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/02_rigid_body_dynamics/" class="md-nav__link">
+      <a href="../../theory/02_rigid_body_dynamics/" class="md-nav__link">
         
   
   
@@ -680,7 +674,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/03_tire_pacejka_mf96/" class="md-nav__link">
+      <a href="../../theory/03_tire_pacejka_mf96/" class="md-nav__link">
         
   
   
@@ -708,7 +702,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/19_lugre_dynamic_tire/" class="md-nav__link">
+      <a href="../../theory/19_lugre_dynamic_tire/" class="md-nav__link">
         
   
   
@@ -736,7 +730,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/21_belt_transient/" class="md-nav__link">
+      <a href="../../theory/21_belt_transient/" class="md-nav__link">
         
   
   
@@ -764,7 +758,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/04_ld1_bicycle/" class="md-nav__link">
+      <a href="../../theory/04_ld1_bicycle/" class="md-nav__link">
         
   
   
@@ -792,7 +786,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/05_ld2_seven_dof/" class="md-nav__link">
+      <a href="../../theory/05_ld2_seven_dof/" class="md-nav__link">
         
   
   
@@ -820,7 +814,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/06_ld3_fourteen_dof/" class="md-nav__link">
+      <a href="../../theory/06_ld3_fourteen_dof/" class="md-nav__link">
         
   
   
@@ -848,7 +842,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/20_ld5_stunt/" class="md-nav__link">
+      <a href="../../theory/20_ld5_stunt/" class="md-nav__link">
         
   
   
@@ -876,7 +870,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/07_control_ladder/" class="md-nav__link">
+      <a href="../../theory/07_control_ladder/" class="md-nav__link">
         
   
   
@@ -904,7 +898,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/08_pid_controllers/" class="md-nav__link">
+      <a href="../../theory/08_pid_controllers/" class="md-nav__link">
         
   
   
@@ -932,7 +926,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/09_pure_pursuit_path/" class="md-nav__link">
+      <a href="../../theory/09_pure_pursuit_path/" class="md-nav__link">
         
   
   
@@ -960,7 +954,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/10_driver_model/" class="md-nav__link">
+      <a href="../../theory/10_driver_model/" class="md-nav__link">
         
   
   
@@ -988,7 +982,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/11_numerical_integration/" class="md-nav__link">
+      <a href="../../theory/11_numerical_integration/" class="md-nav__link">
         
   
   
@@ -1016,7 +1010,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/12_software_architecture/" class="md-nav__link">
+      <a href="../../theory/12_software_architecture/" class="md-nav__link">
         
   
   
@@ -1044,7 +1038,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/13_multibody_outlook/" class="md-nav__link">
+      <a href="../../theory/13_multibody_outlook/" class="md-nav__link">
         
   
   
@@ -1072,7 +1066,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/14_hardpoint_kinematics/" class="md-nav__link">
+      <a href="../../theory/14_hardpoint_kinematics/" class="md-nav__link">
         
   
   
@@ -1100,7 +1094,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/15_validation_and_doe/" class="md-nav__link">
+      <a href="../../theory/15_validation_and_doe/" class="md-nav__link">
         
   
   
@@ -1128,7 +1122,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/16_fmi_integration/" class="md-nav__link">
+      <a href="../../theory/16_fmi_integration/" class="md-nav__link">
         
   
   
@@ -1156,7 +1150,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/17_actuator_and_sensing/" class="md-nav__link">
+      <a href="../../theory/17_actuator_and_sensing/" class="md-nav__link">
         
   
   
@@ -1184,7 +1178,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/18_runtime_and_cosim/" class="md-nav__link">
+      <a href="../../theory/18_runtime_and_cosim/" class="md-nav__link">
         
   
   
@@ -1212,7 +1206,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/22_drivetrain_v2/" class="md-nav__link">
+      <a href="../../theory/22_drivetrain_v2/" class="md-nav__link">
         
   
   
@@ -1240,7 +1234,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/23_user_modules/" class="md-nav__link">
+      <a href="../../theory/23_user_modules/" class="md-nav__link">
         
   
   
@@ -1268,7 +1262,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/24_module_plugins/" class="md-nav__link">
+      <a href="../../theory/24_module_plugins/" class="md-nav__link">
         
   
   
@@ -1300,10 +1294,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -1319,22 +1311,21 @@
     
     
       
-        
-        
-      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
             
   
   
@@ -1352,7 +1343,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1370,7 +1361,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../ROADMAP/" class="md-nav__link">
+      <a href="../../ROADMAP/" class="md-nav__link">
         
   
   
@@ -1398,7 +1389,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../CATALOG_AND_PHYSICS/" class="md-nav__link">
+      <a href="../../CATALOG_AND_PHYSICS/" class="md-nav__link">
         
   
   
@@ -1426,7 +1417,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../RUNNING/" class="md-nav__link">
+      <a href="../../RUNNING/" class="md-nav__link">
         
   
   
@@ -1451,37 +1442,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Validation
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../VALIDATION/" class="md-nav__link">
         
   
   
@@ -1497,92 +1461,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#at-a-glance-validated-not-yet" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        At a glance — validated / not yet
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#validation-layers" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Validation layers
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#benchmark-matrix" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Benchmark matrix
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#notes-on-specific-results" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Notes on specific results
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#honest-limitations-what-is-not-validated" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Honest limitations (what is NOT validated)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#reproducing-the-whole-report" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Reproducing the whole report
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1666,7 +1544,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../references/actuator_nonlinearity/" class="md-nav__link">
+      <a href="../../references/actuator_nonlinearity/" class="md-nav__link">
         
   
   
@@ -1694,7 +1572,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../gui_architecture/" class="md-nav__link">
+      <a href="../../gui_architecture/" class="md-nav__link">
         
   
   
@@ -1722,7 +1600,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../vdsim_bridge_interface_requirements/" class="md-nav__link">
+      <a href="../../vdsim_bridge_interface_requirements/" class="md-nav__link">
         
   
   
@@ -1750,7 +1628,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../map_import_strategy/" class="md-nav__link">
+      <a href="../../map_import_strategy/" class="md-nav__link">
         
   
   
@@ -1853,7 +1731,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T22_carla_bridge/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-nav__link">
         
   
   
@@ -1881,7 +1759,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T23_jump_14dof/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T23_jump_14dof/REPORT/" class="md-nav__link">
         
   
   
@@ -1909,7 +1787,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T27_ld4_dw/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T27_ld4_dw/REPORT/" class="md-nav__link">
         
   
   
@@ -1937,7 +1815,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T28_ld4_mp/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T28_ld4_mp/REPORT/" class="md-nav__link">
         
   
   
@@ -1965,7 +1843,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T29_ld4_ta/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T29_ld4_ta/REPORT/" class="md-nav__link">
         
   
   
@@ -1993,7 +1871,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T30_ld4_5link/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T30_ld4_5link/REPORT/" class="md-nav__link">
         
   
   
@@ -2071,7 +1949,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../tasks/" class="md-nav__link ">
+            <a href="../../tasks/" class="md-nav__link ">
               
   
   
@@ -2115,7 +1993,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/68_poc_summary_v3/" class="md-nav__link">
+      <a href="../../tasks/68_poc_summary_v3/" class="md-nav__link">
         
   
   
@@ -2143,7 +2021,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/69_competitive_matrix/" class="md-nav__link">
+      <a href="../../tasks/69_competitive_matrix/" class="md-nav__link">
         
   
   
@@ -2171,7 +2049,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/62_cycles_overview/" class="md-nav__link">
+      <a href="../../tasks/62_cycles_overview/" class="md-nav__link">
         
   
   
@@ -2199,7 +2077,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/50_benchmark_matrix/" class="md-nav__link">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
         
   
   
@@ -2227,7 +2105,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/20_l1_l2_grid_sweep/" class="md-nav__link">
+      <a href="../../tasks/20_l1_l2_grid_sweep/" class="md-nav__link">
         
   
   
@@ -2255,7 +2133,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/30_l3_dynamic_suspension/" class="md-nav__link">
+      <a href="../../tasks/30_l3_dynamic_suspension/" class="md-nav__link">
         
   
   
@@ -2283,7 +2161,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/31_l6_l7_l8_control/" class="md-nav__link">
+      <a href="../../tasks/31_l6_l7_l8_control/" class="md-nav__link">
         
   
   
@@ -2311,7 +2189,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/57_58_59_driver_skidpad/" class="md-nav__link">
+      <a href="../../tasks/57_58_59_driver_skidpad/" class="md-nav__link">
         
   
   
@@ -2339,7 +2217,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/50_benchmark_matrix/" class="md-nav__link">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
         
   
   
@@ -2399,7 +2277,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../examples/" class="md-nav__link ">
+            <a href="../../examples/" class="md-nav__link ">
               
   
   
@@ -2465,10 +2343,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#at-a-glance-validated-not-yet" class="md-nav__link">
+  <a href="#next-step-resume-here" class="md-nav__link">
     <span class="md-ellipsis">
       
-        At a glance — validated / not yet
+        Next step (resume here)
       
     </span>
   </a>
@@ -2476,10 +2354,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#validation-layers" class="md-nav__link">
+  <a href="#deferred-bicycle-l1-and-free_3d-l5-keep-the-phase-1-shared-path-by-design" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Validation layers
+        Deferred: bicycle (L1) and free_3d (L5) keep the Phase-1 shared path — by design
       
     </span>
   </a>
@@ -2487,10 +2365,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#benchmark-matrix" class="md-nav__link">
+  <a href="#goal" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Benchmark matrix
+        Goal
       
     </span>
   </a>
@@ -2498,10 +2376,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#notes-on-specific-results" class="md-nav__link">
+  <a href="#current-state-after-phase-1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Notes on specific results
+        Current state (after Phase 1)
       
     </span>
   </a>
@@ -2509,10 +2387,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#honest-limitations-what-is-not-validated" class="md-nav__link">
+  <a href="#target-interface" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Honest limitations (what is NOT validated)
+        Target interface
       
     </span>
   </a>
@@ -2520,10 +2398,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#reproducing-the-whole-report" class="md-nav__link">
+  <a href="#what-stays-vehicle-side-do-not-move-into-the-tire" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Reproducing the whole report
+        What STAYS vehicle-side (do NOT move into the tire)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backends-to-port-3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backends to port (3)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#call-site-rewrites-3-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Call-site rewrites (3 models)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#regression-gate-non-negotiable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Regression gate (non-negotiable)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#risks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risks
       
     </span>
   </a>
@@ -2550,328 +2472,121 @@
   
 
 
-<h1 id="vdsim-validation-credibility">VDSim validation &amp; credibility<a class="headerlink" href="#vdsim-validation-credibility" title="Permanent link">&para;</a></h1>
-<blockquote>
-<p><strong>v0.1.0 experimental / pre-release.</strong> The claims below rest on open evidence
-(analytic + ISO standard + cross-model/cross-tool self-consistency). There is
-no published cross-validation against a commercial reference on real-vehicle
-data — see "Honest limitations". Not for production use.</p>
-</blockquote>
-<p>What "validated dynamics" means here, and how to reproduce every claim. VDSim is
-validated on four layers that need no proprietary data; the honest limits are in
-the last section.</p>
-<h2 id="at-a-glance-validated-not-yet">At a glance — validated / not yet<a class="headerlink" href="#at-a-glance-validated-not-yet" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Validated (open, reproducible)</th>
-<th>NOT yet validated</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>L1–L3 dynamics vs analytic (linear-bicycle yaw, drag coast, weight transfer)</td>
-<td>Full-vehicle cross-validation vs CarMaker/CarSim/Adams on real-vehicle data (data confidential, not redistributable)</td>
-</tr>
-<tr>
-<td><strong>Tire force vs CarMaker MF-Tyre/MF-Swift</strong> (same MF6.2 <code>.tir</code>, steady-state pure slip): pure-long 0.00%, pure-lat 0.09%</td>
-<td>Full-vehicle (suspension/transient) commercial cross-val</td>
-</tr>
-<tr>
-<td>ISO 7401 step-steer / 4138 understeer / 3888-2 DLC — run + measured</td>
-<td>Tire thermal, wear, full transient beyond first-order relaxation</td>
-</tr>
-<tr>
-<td>L1↔L2↔L3 cross-model consistency where physics overlaps</td>
-<td>Dependent axles (twist-beam / solid beam) — configs are stubs</td>
-</tr>
-<tr>
-<td>FMI round-trip Δ=0 (machine precision); ISO 8608 PSD RMS per class</td>
-<td>L3 unsprung lateral-transfer term (small)</td>
-</tr>
-<tr>
-<td>Full suite: <strong>345/345 ctest green</strong></td>
-<td>—</td>
-</tr>
-<tr>
-<td>Drivetrain engine inertia (open-diff carrier coupling)</td>
-<td>—</td>
-</tr>
-<tr>
-<td><strong>ISO step-steer signature gated in CI</strong> (<code>ctest -R IsoBaseline</code>, sedan L2 LuGre)</td>
-<td>DLC moose gate is a preset property, not a defect (see note)</td>
-</tr>
-</tbody>
-</table>
-<p>Note: ISO 3888-2 DLC@60 not meeting the 1.0 m gate is a default-preset
-vehicle/controller property, not a sim defect (see "Notes on specific results").</p>
-<h2 id="validation-layers">Validation layers<a class="headerlink" href="#validation-layers" title="Permanent link">&para;</a></h2>
+<h1 id="tire-interface-inversion-phase-2-design-handoff">Tire interface inversion (Phase 2) — design + handoff<a class="headerlink" href="#tire-interface-inversion-phase-2-design-handoff" title="Permanent link">&para;</a></h1>
+<p>Status: LANDED for the canonical path (364/364 ctest green, byte-stable across IsoBaseline /
+Lugre / Belt / ChronoPac02 / SevenDOF). The inverted interface (evaluate / advance_bristle /
+advance_relaxation) is defined ONCE in the <code>ITireModel</code> base (<code>tire_model.cpp</code>), dispatching
+the force law through the virtual <code>compute()</code>; the base owns <code>params_</code> (via the
+<code>on_initialize()</code> hook) so it works for every backend (pacejka / linear / MF2002).
+<code>seven_dof_dynamics.cpp</code> (and 14-DOF, which wraps it) own only <code>Transient[NUM_WHEELS]</code> +
+<code>ContactInput[NUM_WHEELS]</code>, hand kinematics to <code>evaluate()</code> per RK4 stage, advance the
+bristle per stage and the carcass relaxation per substep — all inline slip/Re/belt/lugre/
+relaxation blocks and their scratch members are deleted. The vehicle keeps only integrator
+stabilization (lambda / Fx_hold / combined-slip clamp / kinematic blend / Fx*Re).
+<code>test_tire_inversion.cpp</code> locks the backend against an independent oracle (4 force paths +
+3 transient integrators + the linear backend via base). bicycle (L1) and free_3d (L5) keep
+the Phase-1 shared path by design (see "Deferred" below).</p>
+<h2 id="next-step-resume-here">Next step (resume here)<a class="headerlink" href="#next-step-resume-here" title="Permanent link">&para;</a></h2>
 <ol>
-<li><strong>Analytic</strong> — closed-form results the model must reproduce (linear bicycle
-   yaw rate, drag-only coast decay, static/Newtonian weight transfer).</li>
-<li><strong>ISO standard maneuvers</strong> — ISO 7401 step-steer, ISO 4138 understeer
-   gradient, ISO 3888-2 double-lane-change, run by <code>apps/validation</code>.</li>
-<li><strong>Cross-model consistency</strong> — the ladder (L1↔L2↔L3) must agree where the
-   physics overlaps (steady-state transfer, planar motion).</li>
-<li><strong>Cross-tool</strong> — the exported FMU must reproduce the native run, and the
-   road roughness must match the ISO 8608 spatial PSD.</li>
+<li>DONE — <code>pacejka_mf96.cpp::evaluate()/advance()</code> + <code>test_tire_inversion.cpp</code>.
+   <code>Transient</code> gained <code>belt_vlong/belt_vlat</code> (belt+LuGre stacking needs the relaxed slip
+   <em>velocities</em>, which the original 5-field contract omitted).</li>
+<li>DONE — <code>seven_dof_dynamics.cpp</code> switched. <code>advance()</code> was split into <code>advance_bristle()</code>
+   (LuGre z, per RK4 stage at hz) and <code>advance_relaxation()</code> (belt_kappa/alpha +
+   belt_vlong/vlat + alpha_dyn, once per substep at h) to preserve the mixed cadence
+   byte-for-byte. Note: the Euler integrator branch advances only the bristle (no
+   advance_relaxation), matching the pre-existing behaviour (a latent quirk for Euler+belt —
+   not exercised by any RK4 test). Airborne wheels feed a neutral ContactInput, so the
+   bristle/relaxation do not evolve off-ground (was stale <code>*_last_</code> before; no test covers
+   it either way).</li>
+<li>DONE (and re-architected) — instead of per-backend evaluate(), the inverted interface
+   is now defined ONCE in the <code>ITireModel</code> base (<code>core/src/tire_model.cpp</code>): it computes
+   slip/Re/camber from the shared kinematics, applies the transient, and dispatches the
+   force law through the virtual <code>compute()</code>. The base stores <code>params_</code> (set by
+   <code>initialize()</code>, which forwards to the backend <code>on_initialize()</code> hook), so Re / crown /
+   belt / relaxation / LuGre work for EVERY backend. pacejka_mf96 / linear_tire /
+   magic_formula_tire (MF2002) all inherit evaluate()/advance_* with their own compute().
+   This also fixed a latent bug: after step 2, injecting a non-pacejka tire into
+   seven_dof/14-DOF (e.g. <code>create_seven_dof(create_magic_formula_tire_from_tir(...))</code>,
+   exposed in pybind) would have hit the old zero stub. A new tire is now one compute()
+   override.</li>
 </ol>
-<h2 id="benchmark-matrix">Benchmark matrix<a class="headerlink" href="#benchmark-matrix" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>#</th>
-<th>Property</th>
-<th>Reference</th>
-<th>Result</th>
-<th>Tol</th>
-<th>Reproduce</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>1</td>
-<td>L1 steady yaw rate</td>
-<td>linear bicycle model</td>
-<td>within 10% (L,R turn)</td>
-<td>10%</td>
-<td><code>ctest -R BicycleSteadyState</code></td>
-</tr>
-<tr>
-<td>2</td>
-<td>Zero-steer tracking</td>
-<td>r=vy=Y=0</td>
-<td>&lt;1e-6 / &lt;1e-3</td>
-<td>—</td>
-<td><code>ctest -R ZeroSteerStraightLine</code></td>
-</tr>
-<tr>
-<td>3</td>
-<td>Drag-only coast</td>
-<td>v(t)=v0/(1+v0 k t)</td>
-<td>within 5%</td>
-<td>5%</td>
-<td><code>ctest -R DragCoastMatchesAnalytical</code></td>
-</tr>
-<tr>
-<td>4</td>
-<td>Brake decel</td>
-<td>tire-limited</td>
-<td>a_avg ≥ 2 m/s² , monotonic</td>
-<td>—</td>
-<td><code>ctest -R BrakeStep</code></td>
-</tr>
-<tr>
-<td>5</td>
-<td>Lateral weight transfer</td>
-<td>m·a_y·h/T direction+sign</td>
-<td>outer wheels gain</td>
-<td>—</td>
-<td><code>ctest -R WeightTransfer</code></td>
-</tr>
-<tr>
-<td>6</td>
-<td>L3 ↔ L2 planar</td>
-<td>identical grip at steady state</td>
-<td>divergence ~3e-6</td>
-<td>1e-3</td>
-<td><code>ctest -R PlanarMotionMatchesL2</code></td>
-</tr>
-<tr>
-<td>7</td>
-<td>L3 attitude on slope</td>
-<td>follows surface plane</td>
-<td>6° bank→5.98° roll</td>
-<td>—</td>
-<td>see ch06 §6.4</td>
-</tr>
-<tr>
-<td>8</td>
-<td>ISO 7401 step-steer</td>
-<td>transient shape</td>
-<td>ψ̇_ss 30.3°/s, U 1.16 (+16% OS), a_y_ss 8.34 m/s² (0.85 g)</td>
-<td>gated ±band</td>
-<td><code>ctest -R IsoBaseline</code> / <code>run_validation.py</code></td>
-</tr>
-<tr>
-<td>9</td>
-<td>ISO 4138 understeer</td>
-<td>sign + magnitude of K</td>
-<td>K = +24.8 mrad/g (understeer), linear ≤4.0 m/s²</td>
-<td>—</td>
-<td><code>run_validation.py</code></td>
-</tr>
-<tr>
-<td>10</td>
-<td>ISO 3888-2 DLC</td>
-<td>excursion/speed-loss metric</td>
-<td>1.18 m / 0.9 km/h (sedan: does not meet 1.0 m)</td>
-<td>—</td>
-<td>same runner</td>
-</tr>
-<tr>
-<td>11</td>
-<td>FMI round-trip</td>
-<td>native VDSim</td>
-<td>max |Δvx| = 0 (machine precision)</td>
-<td>1e-9</td>
-<td><code>python3 fmi_export/test_roundtrip.py</code></td>
-</tr>
-<tr>
-<td>12</td>
-<td>ISO 8608 roughness</td>
-<td>PSD Gd(n)=Gd(n0)(n/n0)⁻²</td>
-<td>RMS doubles/class: A 3.5, B 7.0, C 14.1, D 28 mm</td>
-<td>15%</td>
-<td><code>ctest -R Iso8608</code></td>
-</tr>
-<tr>
-<td>13</td>
-<td><strong>MF2002 vs Chrono Pac02</strong> (BSD-3, independent)</td>
-<td>same public <code>.tir</code></td>
-<td>pure-long Fx ~0.8% + pure-lat Fy ~0.7% (Fz 2–6 kN, mean); combined cross-terms differ (rig-frame, reported)</td>
-<td>6%</td>
-<td><code>ctest -R ChronoPac02Parity</code> · <code>tools/tire_validation.py</code></td>
-</tr>
-<tr>
-<td>14</td>
-<td>Control ladder (Lc1–Lc8 + split)</td>
-<td>each level reaches target band</td>
-<td>cruise/ax/yaw-rate/curvature + EPS torque verified</td>
-<td>gated</td>
-<td><code>examples/control_ladder_demo.py</code> (ctest <code>control_ladder</code>)</td>
-</tr>
-<tr>
-<td>15</td>
-<td><strong>MF vs CarMaker MF-Tyre/MF-Swift</strong> (commercial, independent)</td>
-<td>same MF6.2 <code>.tir</code>, same Re-based slip</td>
-<td>pure-long Fx <strong>0.00%</strong>, pure-lat Fy <strong>0.09%</strong> (machine precision, steady-state pure slip)</td>
-<td>—</td>
-<td><code>external/carmaker_parity/compare_vdsim_carmaker.py</code> (needs a CarMaker license)</td>
-</tr>
-<tr>
-<td>16</td>
-<td><strong>Effective rolling radius (Re) consistency</strong></td>
-<td>reff-enabled tire, free-roll init via <code>free_roll_wheel_spin</code></td>
-<td>first-step |κ|&lt;5e-4, no phantom Fx (L1/L2/L3)</td>
-<td>gated</td>
-<td><code>ctest -R "EffectiveRollingRadius\|NoPhantom"</code></td>
-</tr>
-<tr>
-<td>17</td>
-<td><strong>Camber contact migration -&gt; overturning</strong></td>
-<td>crown_radius-enabled tire, camber input</td>
-<td>Mx = Fz·crown_radius·sin γ per wheel; feeds L3 roll DOF; crown=0 -&gt; Mx=0</td>
-<td>gated</td>
-<td><code>ctest -R CamberMigration</code></td>
-</tr>
-</tbody>
-</table>
-<p>Slip kinematics, Re and camber contact-point migration now live in one shared module
-(<code>tire_contact.hpp::tire_contact_kinematics</code>) that all four dynamics models call, instead of
-being inlined per model. A cambered tire contacts on the leaning side
-(<code>contact_dy = crown_radius·sin γ</code>), shifting the vertical-load line and producing an
-overturning moment <code>Mx = Fz·contact_dy</code> that feeds the roll DOF (L3 14-DOF). Both Re and
-camber migration are opt-in (reff_*=0 / crown_radius=0 -&gt; legacy behaviour), so all baselines
-are unchanged.</p>
-<p>Slip now uses the load-dependent effective rolling radius Re(Fz) (Pacejka BREFF/DREFF/FREFF)
-across L1/L2/L3/L5 — slip = (ω·Re − vx)/vx, so a free-rolling loaded tire reports κ=0,
-matching MF-Tyre/CarMaker. Initial wheel spin is set per-wheel via <code>free_roll_wheel_spin</code>
-(vx/Re at static load) so no phantom longitudinal force appears at t=0. Re is opt-in: tires
-without BREFF/DREFF/FREFF (reff_*=0) fall back to the unloaded radius R0 unchanged.</p>
-<p>Full automated suite: <code>cd build &amp;&amp; ctest</code> — 354 checks, 100% green (measured 2026-06-16).
-One-command evidence bundle (ctests + tire parity table + ISO figures + summary.md):
-<code>python3 tools/validation_report.py</code>.</p>
-<p><strong>LuGre baseline (re-baselined 2026-06-10, sedan L2, <code>default_pacejka</code> tire):</strong></p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python3<span class="w"> </span>apps/validation/run_validation.py<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>--vehicle<span class="w"> </span>configs/parts/chassis/sedan.yaml<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>--tire<span class="w"> </span>configs/parts/tire/default_pacejka.yaml<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span>--level<span class="w"> </span>L2<span class="w"> </span>--out<span class="w"> </span>apps/validation/results/lugre_sedan_l2
-</span></code></pre></div>
-<table>
-<thead>
-<tr>
-<th>Maneuver</th>
-<th>Key metrics</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>ISO 7401 (6°, 80 km/h)</td>
-<td>ψ̇_ss 30.3°/s, U 1.16 (+16% OS), a_y_ss 8.34 m/s² (0.85 g)</td>
-</tr>
-<tr>
-<td>ISO 4138</td>
-<td>K +24.8 mrad/g (understeer), linear a_y to 4 m/s²</td>
-</tr>
-<tr>
-<td>ISO 3888-2 DLC@60</td>
-<td>excursion 1.18 m (fail 1.0 m gate), speed loss −0.9 km/h</td>
-</tr>
-</tbody>
-</table>
-<p>This is the shipped default preset (LuGre brush on <code>default_pacejka</code>). The four
-force-sensitive 7401 metrics are locked in CI by <code>ctest -R IsoBaseline</code>
-(<code>tests/integration/test_iso_baseline.cpp</code>) so any future change that moves tire/
-dynamics forces fails the build; rebaseline that test together with this table.
-Legacy kinematic-tire numbers reproduce with <code>tire.kinematic_fallback</code>.</p>
-<p><strong>Drivetrain inertia:</strong> <code>engine_rotational_inertia</code> slows wheel spin-up on low-μ
-wheels (fixes power-on-turn overspeed). Its effect on the steady ISO numbers is
-folded into the re-baselined table above.</p>
-<h2 id="notes-on-specific-results">Notes on specific results<a class="headerlink" href="#notes-on-specific-results" title="Permanent link">&para;</a></h2>
+<h2 id="deferred-bicycle-l1-and-free_3d-l5-keep-the-phase-1-shared-path-by-design">Deferred: bicycle (L1) and free_3d (L5) keep the Phase-1 shared path — by design<a class="headerlink" href="#deferred-bicycle-l1-and-free_3d-l5-keep-the-phase-1-shared-path-by-design" title="Permanent link">&para;</a></h2>
+<p>They are NOT switched to evaluate()/advance_<em>, because their contact kinematics deviate
+from the canonical per-wheel contract in ways that the clean interface should not absorb:
+- <code>bicycle_dynamics.cpp</code> lumps two tires per axle: Re is taken at the per-WHEEL load
+  (<code>0.5*Fz_axle</code>) while the force law gets the full axle <code>Fz</code> — a single <code>ContactInput.Fz</code>
+  cannot express both without an extra <code>Re_load</code> field. Its LuGre slip velocity also uses
+  the unloaded <code>R0</code> (not Re); switching to the Re-based base <code>advance_bristle</code> would change
+  the LuGre path under a reff-enabled tire, and there is no L1+LuGre regression test to gate it.
+- <code>free_3d_dynamics.cpp</code> (stunt) uses a loop-specific slip-ratio denominator, not the
+  standard <code>max(|Vx|,eps)</code>; the base evaluate would change its slip.
+Both already use the shared <code>tire_contact_kinematics</code> + <code>compute()</code> (Phase 1), so a new
+*force law</em> still drops in. A new <em>transient</em> model would still need edits here — accepted,
+because their transient handling is coupled to the specialized kinematics. Revisit only if a
+clean way to parameterize (Re_load + slip-denominator policy) proves worthwhile.</p>
+<h2 id="goal">Goal<a class="headerlink" href="#goal" title="Permanent link">&para;</a></h2>
+<p>Invert <code>ITireModel</code> from "slip-in -&gt; force-out" to "kinematics-in -&gt; wrench-out", and move
+the transient state (relaxation / belt / LuGre) into the tire so that ALL tire physics
+lives in the tire module. A new tire (different slip law, transient, camber model) is then
+one class, not edits across 3 dynamics models.</p>
+<h2 id="current-state-after-phase-1">Current state (after Phase 1)<a class="headerlink" href="#current-state-after-phase-1" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>#10 moose test "does not pass"</strong> is a vehicle/controller property, not a sim
-  defect: the reference passive sedan with the default pure-pursuit driver runs a
-  1.18 m excursion at 60 km/h (criterion 1.0 m). The metric is computed per ISO
-  3888-2; passing requires a stiffer setup or a tracking controller — the point
-  is the maneuver is exercised and measured correctly.</li>
-<li><strong>#9 understeer sign</strong> matters more than the absolute value: a front-heavy
-  sedan must be understeer (K&gt;0), which it is. The magnitude depends on the tire
-  cornering stiffness in the config.</li>
+<li><code>core/include/vdsim/tire_contact.hpp</code> — <code>tire_contact_kinematics(Vx,Vy,omega,Fz,gamma,tp,R0)</code>
+  returns <code>{kappa, alpha, Re, vsx, vsy, contact_dy, contact_dz}</code>. Single definition of slip /
+  Re / camber offset. seven_dof, bicycle, free_3d already call it (14-DOF via inner seven_dof).</li>
+<li><code>ITireModel::Output</code> has <code>Mx</code> (default 0). <code>IVehicleDynamics::wheel_overturning_moment()</code>
+  added; seven_dof returns <code>Fz*contact_dy</code>; 14-DOF feeds <code>Σ Mx</code> into the roll DOF.</li>
+<li><code>TireParams.crown_radius</code> (camber migration) and <code>reff_*</code> (Re) are both opt-in (0 = legacy).</li>
+<li>Transient state (belt_kappa/alpha, lugre_z_long/lat, alpha_dyn) STILL lives in each
+  dynamics model. This is what Phase 2 moves.</li>
 </ul>
-<h2 id="honest-limitations-what-is-not-validated">Honest limitations (what is NOT validated)<a class="headerlink" href="#honest-limitations-what-is-not-validated" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>No published cross-validation against a commercial reference (CarMaker /
-  CarSim / Adams) on real-vehicle data.</strong> Such comparisons were run internally,
-  but the measured tire/vehicle data are confidential and cannot be redistributed,
-  so they are not part of this open benchmark. The open claims above rest on
-  analytic/standard/self-consistency evidence only.</li>
-<li><strong>Tire model</strong> is fitted Pacejka MF (and a linear fallback); no thermal,
-  transient-relaxation beyond the first-order lag, or combined wear effects.</li>
-<li><strong>Standstill / low speed</strong>: a kinematic-dynamic blend below 3 m/s governs the
-  lateral states with the slip-free kinematic bicycle (no spin/oscillation at
-  parking speed), and a viscous brake-hold damper holds the car on a grade. The
-  hold is not a true static hold — it leaves a small creep proportional to grade
-  (~1-2 cm/s on 8%); a zero-creep handbrake/locked-wheel static model is a v0.2
-  item. See <code>docs/design/LOW_SPEED_HANDLING.md</code>.</li>
-<li><strong>L1/L2 are planar</strong> — no body-attitude state from road slope (only force +
-  quasi-static estimate); see theory ch05.</li>
-<li><strong>Dependent axles</strong> (twist-beam, solid beam) are not yet modeled (configs are
-  stubs); only the four independent topologies are validated.</li>
-<li><strong>Drivetrain (default off for legacy):</strong> <code>engine_rotational_inertia</code> (default
-  <code>0.25</code> kg·m² at crank) is reflected to the wheels and open diffs are
-  carrier-coupled. Set <code>0</code> to recover pre–v0.3 wheel-only spin-up. The matrix and
-  baseline table above were re-baselined 2026-06-10 with this change active.
-  See <code>docs/design/V0.2_DRIVETRAIN.md</code>.</li>
-<li><strong>Tire default:</strong> LuGre brush (<code>lugre.enabled: true</code> on <code>tire.default_pacejka</code>).
-  <strong>ISO runner default</strong> uses <code>tire.kinematic_fallback</code> to preserve the published
-  matrix; pass <code>--tire configs/parts/tire/default_pacejka.yaml</code> to validate under LuGre.
-  Kinematic blend path: <code>LOW_SPEED_HANDLING.md</code>.</li>
-<li><strong>L3 grip Fz</strong> couples ride/road dynamically but omits the unsprung lateral-
-  transfer term (small); see ch06 §6.4.</li>
-<li><strong>Stunt / vertical loop (v0.4):</strong> the dynamic Free3D (Ld5) plant — the car is held
-  on the track by the contact normal force (penalty from penetration), the
-  centripetal condition is <em>emergent</em>, and it loses the track if too slow. It is
-  robust-tuned for stunts, not validated road contact: the loop surface uses
-  stiffened/capped contact (higher Fz cap, capped penetration, track-tangent
-  longitudinal), so it is a plausible-but-not-quantitatively-validated demo, not a
-  benchmarked maneuver. See <code>docs/design/V0.4_SLOPE_JUMP_DYNAMICS.md</code>.</li>
-</ul>
-<h2 id="reproducing-the-whole-report">Reproducing the whole report<a class="headerlink" href="#reproducing-the-whole-report" title="Permanent link">&para;</a></h2>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>cmake<span class="w"> </span>--build<span class="w"> </span>build<span class="w"> </span>-j<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">(</span><span class="nb">cd</span><span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ctest<span class="w"> </span>--output-on-failure<span class="o">)</span><span class="w">   </span><span class="c1"># 345 checks</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>python3<span class="w"> </span>apps/validation/run_validation.py<span class="w">    </span><span class="c1"># ISO 7401/4138/3888 -&gt; REPORT.md</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>python3<span class="w"> </span>fmi_export/test_roundtrip.py<span class="w">          </span><span class="c1"># FMU vs native</span>
+<h2 id="target-interface">Target interface<a class="headerlink" href="#target-interface" title="Permanent link">&para;</a></h2>
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">struct</span><span class="w"> </span><span class="nc">TireInput</span><span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">Fz</span><span class="p">,</span><span class="w"> </span><span class="n">Vx</span><span class="p">,</span><span class="w"> </span><span class="n">Vy</span><span class="p">,</span><span class="w"> </span><span class="n">omega</span><span class="p">,</span><span class="w"> </span><span class="n">gamma</span><span class="p">,</span><span class="w"> </span><span class="n">mu_long</span><span class="p">,</span><span class="w"> </span><span class="n">mu_lat</span><span class="p">,</span><span class="w"> </span><span class="n">R0</span><span class="p">;</span><span class="w"> </span><span class="p">};</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">struct</span><span class="w"> </span><span class="nc">TireTransient</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">belt_kappa</span><span class="p">,</span><span class="w"> </span><span class="n">belt_alpha</span><span class="p">,</span><span class="w"> </span><span class="n">lugre_z_long</span><span class="p">,</span><span class="w"> </span><span class="n">lugre_z_lat</span><span class="p">,</span><span class="w"> </span><span class="n">alpha_dyn</span><span class="p">;</span><span class="w"> </span><span class="p">};</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">struct</span><span class="w"> </span><span class="nc">TireOutput</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">Fx</span><span class="p">,</span><span class="w"> </span><span class="n">Fy</span><span class="p">,</span><span class="w"> </span><span class="n">Mx</span><span class="p">,</span><span class="w"> </span><span class="n">My</span><span class="p">,</span><span class="w"> </span><span class="n">Mz</span><span class="p">,</span><span class="w"> </span><span class="n">Re</span><span class="p">,</span><span class="w"> </span><span class="n">kappa</span><span class="p">,</span><span class="w"> </span><span class="n">alpha</span><span class="p">,</span><span class="w"> </span><span class="n">contact_dy</span><span class="p">;</span><span class="w"> </span><span class="p">};</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">ITireModel</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="k">virtual</span><span class="w"> </span><span class="n">TireOutput</span><span class="w">  </span><span class="nf">evaluate</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">TireInput</span><span class="o">&amp;</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">TireTransient</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="c1">// RK4 stage (frozen)</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="k">virtual</span><span class="w"> </span><span class="n">TireTransient</span><span class="w"> </span><span class="nf">advance</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">TireInput</span><span class="o">&amp;</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">TireTransient</span><span class="o">&amp;</span><span class="p">,</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">dt</span><span class="p">)</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="c1">// once/substep</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">};</span>
 </span></code></pre></div>
+<p>Key decision: tire stays STATELESS/polymorphic; the <code>TireTransient</code> is OWNED and stored
+per-wheel by the dynamics (RK4 needs to checkpoint/restore it). This preserves the existing
+"freeze within RK4 stage, advance once per substep" pattern and avoids per-wheel tire
+instances / clone(). evaluate() is const (called 4x/stage); advance() is const, returns the
+next transient.</p>
+<h2 id="what-stays-vehicle-side-do-not-move-into-the-tire">What STAYS vehicle-side (do NOT move into the tire)<a class="headerlink" href="#what-stays-vehicle-side-do-not-move-into-the-tire" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Wheel-frame velocity projection (steer angle, yaw-rate, wheel position) — vehicle kinematics.</li>
+<li>Wheel rotational ODE and the moment arm Fx·Re — vehicle (uses Re returned by the tire).</li>
+<li>Low-speed numerics: stick-blend <code>lambda</code>, <code>Fx_hold</code> creep, combined-slip saturation clamp.
+  These are integrator stabilization, not tire physics. Keep in the dynamics.</li>
+<li>free_3d stunt-loop denom specialization.</li>
+</ul>
+<h2 id="backends-to-port-3">Backends to port (3)<a class="headerlink" href="#backends-to-port-3" title="Permanent link">&para;</a></h2>
+<p><code>core/src/pacejka_mf96.cpp</code>, <code>core/src/linear_tire.cpp</code>, <code>core/src/magic_formula_tire.cpp</code>
+(MF2002). Move into each: the slip computation (call tire_contact_kinematics internally),
+the relaxation (alpha_dyn) update, the belt transient (belt_tire.hpp), and the LuGre path
+(lugre_tire.hpp) — currently invoked from the dynamics. evaluate() returns the full wrench;
+advance() integrates belt/lugre/relaxation.</p>
+<h2 id="call-site-rewrites-3-models">Call-site rewrites (3 models)<a class="headerlink" href="#call-site-rewrites-3-models" title="Permanent link">&para;</a></h2>
+<p><code>seven_dof_dynamics.cpp</code> (canonical, 4-wheel), <code>bicycle_dynamics.cpp</code> (2 axle "tires"),
+<code>free_3d_dynamics.cpp</code> (4-wheel, 3D contact). Each: store <code>TireTransient[NUM_WHEELS]</code>,
+call evaluate() per RK4 stage with frozen transient, call advance() once per substep, drop
+the now-dead belt/lugre/relaxation/slip blocks. 14-DOF wraps seven_dof — no separate tire.</p>
+<h2 id="regression-gate-non-negotiable">Regression gate (non-negotiable)<a class="headerlink" href="#regression-gate-non-negotiable" title="Permanent link">&para;</a></h2>
+<p>When the new evaluate/advance reproduce the old equations, these must stay byte-stable:
+<code>ctest -R "IsoBaseline|Lugre|Belt|ChronoPac02Parity|SevenDOF|BicycleSteadyState"</code> and full
+354/354. The MF-vs-CarMaker parity (benchmark #15) and LuGre ISO baseline are the canaries.
+Port one backend + one model first (seven_dof + pacejka), prove green, then the rest.</p>
+<h2 id="risks">Risks<a class="headerlink" href="#risks" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Belt+LuGre stacking (T2.3) and the dual belt paths (MF relaxes kappa/alpha; LuGre relaxes
+  slip velocity) are subtle — port verbatim, test against current LuGre baseline before
+  refactoring further.</li>
+<li>RK4 freeze/advance ordering must match exactly or transient tests drift.</li>
+</ul>
 
 
 
@@ -2940,12 +2655,12 @@ folded into the re-baselined table above.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.expand", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.expand", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
-        <script src="../javascripts/mathjax.js"></script>
+        <script src="../../javascripts/mathjax.js"></script>
       
         <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
       
