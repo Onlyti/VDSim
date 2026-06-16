@@ -2571,7 +2571,11 @@ the last section.</p>
 <tbody>
 <tr>
 <td>L1–L3 dynamics vs analytic (linear-bicycle yaw, drag coast, weight transfer)</td>
-<td>Cross-validation vs CarMaker/CarSim/Adams on real-vehicle data (data confidential, not redistributable)</td>
+<td>Full-vehicle cross-validation vs CarMaker/CarSim/Adams on real-vehicle data (data confidential, not redistributable)</td>
+</tr>
+<tr>
+<td><strong>Tire force vs CarMaker MF-Tyre/MF-Swift</strong> (same MF6.2 <code>.tir</code>, steady-state pure slip): pure-long 0.00%, pure-lat 0.09%</td>
+<td>Full-vehicle (suspension/transient) commercial cross-val</td>
 </tr>
 <tr>
 <td>ISO 7401 step-steer / 4138 understeer / 3888-2 DLC — run + measured</td>
@@ -2736,6 +2740,14 @@ vehicle/controller property, not a sim defect (see "Notes on specific results").
 <td>cruise/ax/yaw-rate/curvature + EPS torque verified</td>
 <td>gated</td>
 <td><code>examples/control_ladder_demo.py</code> (ctest <code>control_ladder</code>)</td>
+</tr>
+<tr>
+<td>15</td>
+<td><strong>MF vs CarMaker MF-Tyre/MF-Swift</strong> (commercial, independent)</td>
+<td>same MF6.2 <code>.tir</code>, same Re-based slip</td>
+<td>pure-long Fx <strong>0.00%</strong>, pure-lat Fy <strong>0.09%</strong> (machine precision, steady-state pure slip)</td>
+<td>—</td>
+<td><code>external/carmaker_parity/compare_vdsim_carmaker.py</code> (needs a CarMaker license)</td>
 </tr>
 </tbody>
 </table>
