@@ -152,6 +152,11 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("steering_ratio",       &vdsim::VehicleParams::steering_ratio)
         .def_readwrite("max_steer_angle_wheel",&vdsim::VehicleParams::max_steer_angle_wheel)
         .def_readwrite("ackerman_percent",     &vdsim::VehicleParams::ackerman_percent)
+        .def_readwrite("steering_dynamic",     &vdsim::VehicleParams::steering_dynamic)
+        .def_readwrite("rack_mass",            &vdsim::VehicleParams::rack_mass)
+        .def_readwrite("rack_damping",         &vdsim::VehicleParams::rack_damping)
+        .def_readwrite("pinion_radius",        &vdsim::VehicleParams::pinion_radius)
+        .def_readwrite("caster_trail",         &vdsim::VehicleParams::caster_trail)
         .def_readwrite("aero_drag_coeff",      &vdsim::VehicleParams::aero_drag_coeff)
         .def_readwrite("frontal_area",         &vdsim::VehicleParams::frontal_area)
         .def_readwrite("aero_lift_front",      &vdsim::VehicleParams::aero_lift_front)
@@ -331,6 +336,8 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("wheel_spin",       &vdsim::State::wheel_spin)
         .def_readwrite("susp_compression", &vdsim::State::susp_compression)
         .def_readwrite("susp_velocity",    &vdsim::State::susp_velocity)
+        .def_readwrite("rack_travel",      &vdsim::State::rack_travel)
+        .def_readwrite("rack_velocity",    &vdsim::State::rack_velocity)
         .def("yaw",        &vdsim::State::yaw)
         .def("yaw_rate",   &vdsim::State::yaw_rate)
         .def("vx",         &vdsim::State::vx)
@@ -463,7 +470,13 @@ PYBIND11_MODULE(vdsim, m) {
         .def(py::init<>()).def_readwrite("ax_target", &vdsim::LcLonL5::ax_target);
     py::class_<vdsim::LcLonL6>(m, "LcLonL6")
         .def(py::init<>()).def_readwrite("vx_target", &vdsim::LcLonL6::vx_target);
-    // Lateral axis levels.
+    // Lateral axis levels (L1-L3 need a Dynamic steering subsystem).
+    py::class_<vdsim::LcLatL1>(m, "LcLatL1")
+        .def(py::init<>()).def_readwrite("steer_torque", &vdsim::LcLatL1::steer_torque);
+    py::class_<vdsim::LcLatL2>(m, "LcLatL2")
+        .def(py::init<>()).def_readwrite("steer_ang_accel", &vdsim::LcLatL2::steer_ang_accel);
+    py::class_<vdsim::LcLatL3>(m, "LcLatL3")
+        .def(py::init<>()).def_readwrite("steer_ang_vel", &vdsim::LcLatL3::steer_ang_vel);
     py::class_<vdsim::LcLatL4>(m, "LcLatL4")
         .def(py::init<>()).def_readwrite("steer_angle", &vdsim::LcLatL4::steer_angle);
     py::class_<vdsim::LcLatL5>(m, "LcLatL5")

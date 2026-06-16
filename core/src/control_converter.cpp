@@ -224,29 +224,38 @@ void CascadeController::lon_to_pedals(const LcLonCmd& lon, const State& meas,
     }, lon);
 }
 
-// ---- Independent lateral cascade: LcLat L4-L8 → steer angle [rad] ----
-double CascadeController::lat_to_steer(const LcLatCmd& lat, const State& meas, double dt) {
+// ---- Independent lateral cascade ----
+// L4-L8 → steer angle (out.steer_angle_wheel, Angle mode).
+// L1-L3 → sub-L4 actuator command (out.steer_mode + steer_actuator) passed through
+//         to a Dynamic steering subsystem (the cascade can't lower these to an angle
+//         without integrating, which is the subsystem's Rack EOM job).
+void CascadeController::lat_to_cmd(const LcLatCmd& lat, const State& meas, double dt,
+                                   CmdL4& out) {
     const double vx  = meas.vx();
     const double px  = meas.position.x();
     const double py  = meas.position.y();
     const double yaw = meas.yaw();
-    double steer = 0.0;
     std::visit([&](const auto& c) {
         using T = std::decay_t<decltype(c)>;
-        if constexpr (std::is_same_v<T, LcLatL4>) {
-            steer = c.steer_angle;
+        if constexpr (std::is_same_v<T, LcLatL1>) {
+            out.steer_mode = SteerMode::Torque;   out.steer_actuator = c.steer_torque;
+        } else if constexpr (std::is_same_v<T, LcLatL2>) {
+            out.steer_mode = SteerMode::AngAccel; out.steer_actuator = c.steer_ang_accel;
+        } else if constexpr (std::is_same_v<T, LcLatL3>) {
+            out.steer_mode = SteerMode::AngVel;   out.steer_actuator = c.steer_ang_vel;
+        } else if constexpr (std::is_same_v<T, LcLatL4>) {
+            out.steer_angle_wheel = c.steer_angle;
         } else if constexpr (std::is_same_v<T, LcLatL5>) {
-            // ay_target → r_target = ay/vx → yaw-rate PI → steer
             const double r_tgt = c.ay_target / std::max(std::abs(vx), 1.0);
             const double e = r_tgt - meas.yaw_rate();
             r_integ_ = std::clamp(r_integ_ + e * dt, -2.0, 2.0);
-            steer = std::clamp(r_kp_ * e + r_ki_ * r_integ_, -max_steer_, max_steer_);
+            out.steer_angle_wheel = std::clamp(r_kp_ * e + r_ki_ * r_integ_, -max_steer_, max_steer_);
         } else if constexpr (std::is_same_v<T, LcLatL6>) {
             const double e = c.r_target - meas.yaw_rate();
             r_integ_ = std::clamp(r_integ_ + e * dt, -2.0, 2.0);
-            steer = std::clamp(r_kp_ * e + r_ki_ * r_integ_, -max_steer_, max_steer_);
+            out.steer_angle_wheel = std::clamp(r_kp_ * e + r_ki_ * r_integ_, -max_steer_, max_steer_);
         } else if constexpr (std::is_same_v<T, LcLatL7>) {
-            steer = std::clamp(std::atan(c.kappa * wheelbase_), -max_steer_, max_steer_);
+            out.steer_angle_wheel = std::clamp(std::atan(c.kappa * wheelbase_), -max_steer_, max_steer_);
         } else if constexpr (std::is_same_v<T, LcLatL8>) {
             const int n = static_cast<int>(c.path.size());
             if (n > 0) {
@@ -254,12 +263,10 @@ double CascadeController::lat_to_steer(const LcLatCmd& lat, const State& meas, d
                 for (int i = 0; i < n; ++i) { xs[i] = c.path[i].xy.x(); ys[i] = c.path[i].xy.y(); }
                 const auto o = pp_.update(px, py, yaw, vx, xs.data(), ys.data(), n, pp_idx_);
                 pp_idx_ = o.idx;
-                steer = o.steer;
+                out.steer_angle_wheel = o.steer;
             }
         }
-        // L1-L3 (torque/ang-accel/ang-vel): subsystem territory → steer stays 0.
     }, lat);
-    return steer;
 }
 
 CmdL4 CascadeController::to_l4(const ControlInput& u, const State& meas,
@@ -334,7 +341,7 @@ CmdL4 CascadeController::to_l4(const ControlInput& u, const State& meas,
         // ---- CmdSplit: independent lon + lat cascades ----
         else if constexpr (std::is_same_v<T, CmdSplit>) {
             lon_to_pedals(cmd.lon, meas, ax_meas, dt, out);
-            out.steer_angle_wheel = lat_to_steer(cmd.lat, meas, dt);
+            lat_to_cmd(cmd.lat, meas, dt, out);
         }
         return out;
     }, u);

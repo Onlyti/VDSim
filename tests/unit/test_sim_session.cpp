@@ -108,3 +108,24 @@ TEST(SimSession, CascadeSplitIndependentAxes) {
     EXPECT_NEAR(s->state().vx(), 18.0, 1.5)              << "lon axis tracks vx target";
     EXPECT_NEAR(s->state().yaw_rate(), 0.15, 0.08)       << "lat axis tracks yaw-rate target";
 }
+
+// Dynamic steering (Rack EOM): LcLat L1 steer torque moves the rack and yaws.
+// Build a dynamic-steering session directly (make_session uses defaults).
+TEST(SimSession, DynamicSteeringTorqueYaws) {
+    VehicleParams vp; vp.steering_dynamic = true;
+    TireParams tp; SolverParams sp;
+    auto s = std::make_unique<SimSession>(
+        create_seven_dof(), create_flat_ground(0.0, 1.0), vp, tp, sp);
+    State s0; s0.velocity = {15.0, 0.0, 0.0};
+    const double w = 15.0 / 0.33; s0.wheel_spin = {{w, w, w, w}};
+    s->reset(s0);
+    CmdSplit cmd;
+    cmd.lon = LcLonL6{15.0};
+    cmd.lat = LcLatL1{1.0};        // +1 Nm column torque
+    for (int i = 0; i < int(3.0 / 0.005); ++i) { s->set_input(ControlInput{cmd}); s->tick(0.005); }
+    EXPECT_GT(std::abs(s->state().rack_travel), 1e-3)  << "torque should move the rack";
+    EXPECT_GT(s->state().yaw_rate(), 0.02)             << "+torque → +rack → +yaw";
+    // Steering lock: rack must not exceed max_steer · ratio.
+    EXPECT_LE(std::abs(s->state().rack_travel),
+              vp.max_steer_angle_wheel * vp.steering_ratio + 1e-6) << "rack clamps at lock";
+}

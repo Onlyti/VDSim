@@ -132,6 +132,48 @@ SteeringOutput UnitySteering::apply(const SubsystemContext& ctx) {
     return out;
 }
 
+// ── DynamicSteering ─────────────────────────────────────────────────────────
+DynamicSteering::DynamicSteering(const VehicleParams& vp)
+    : ratio_(std::max(1e-6, vp.steering_ratio)),
+      pinion_radius_(std::max(1e-4, vp.pinion_radius)),
+      m_rack_(std::max(1e-3, vp.rack_mass)),
+      c_rack_(vp.rack_damping) {}
+
+SteeringOutput DynamicSteering::apply(const SubsystemContext& ctx) {
+    SteeringOutput out;
+    out.mode = SteeringOutput::Mode::Dynamic;
+    const double rack     = ctx.state.rack_travel;     // generalized steering DOF
+    const double rack_vel = ctx.state.rack_velocity;
+
+    switch (ctx.cmd.steer_mode) {
+        case SteerMode::Torque: {
+            // Column/motor torque [Nm] → rack force [N] via pinion radius.
+            out.motor_force = ctx.cmd.steer_actuator / pinion_radius_;
+            break;
+        }
+        case SteerMode::AngVel: {
+            // Target wheel angular rate → target rack velocity (rack = angle·ratio).
+            const double rack_vel_tgt = ctx.cmd.steer_actuator * ratio_;
+            out.motor_force = vel_kv_ * (rack_vel_tgt - rack_vel);
+            break;
+        }
+        case SteerMode::AngAccel: {
+            // Feed-forward: F = m·a_rack + c·v_rack (a_rack = wheel ang-accel · ratio).
+            const double rack_acc_tgt = ctx.cmd.steer_actuator * ratio_;
+            out.motor_force = m_rack_ * rack_acc_tgt + c_rack_ * rack_vel;
+            break;
+        }
+        case SteerMode::Angle:
+        default: {
+            // Position servo: drive rack toward the commanded angle (× ratio).
+            const double rack_tgt = ctx.cmd.handwheel_angle * ratio_;
+            out.motor_force = pos_kp_ * (rack_tgt - rack) - pos_kd_ * rack_vel;
+            break;
+        }
+    }
+    return out;
+}
+
 LinearSuspension::LinearSuspension(const VehicleParams& vp) : vp_(vp) {}
 
 double LinearSuspension::force(const SubsystemContext&, const CornerInput& corner) {

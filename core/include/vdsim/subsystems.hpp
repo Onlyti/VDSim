@@ -18,6 +18,9 @@ struct DriverCmd {
     double brake           {0.0};
     int    gear            {1};
     bool   handbrake       {false};
+    // Sub-L4 steering actuator command (carried to a Dynamic steering subsystem).
+    SteerMode steer_mode     {SteerMode::Angle};
+    double    steer_actuator {0.0};  // Torque[Nm] / AngVel[rad/s] / AngAccel[rad/s²]
 };
 
 struct SubsystemContext {

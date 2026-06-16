@@ -41,13 +41,22 @@ struct CmdL3 {
     double steer_angle_wheel {0.0};   // [rad]
 };
 
+// Steering actuator command interpretation. Default = Angle (kinematic path).
+// Sub-L4 lateral levels (torque/rate/accel) require a Dynamic steering subsystem
+// that integrates them via the Rack EOM.
+enum class SteerMode { Angle, Torque, AngVel, AngAccel };
+
 // L4: pedal-level (CARLA-compatible)
 struct CmdL4 {
     double throttle {0.0};            // [0, 1]
     double brake    {0.0};            // [0, 1]
-    double steer_angle_wheel {0.0};   // [rad] at wheel
+    double steer_angle_wheel {0.0};   // [rad] at wheel  (used when steer_mode == Angle)
     int    gear     {1};              // +1 fwd, -1 rev, 0 N
     bool   handbrake {false};
+    // Sub-L4 steering actuator command (Dynamic steering). When steer_mode != Angle,
+    // steer_actuator holds: Torque[Nm] / AngVel[rad/s] / AngAccel[rad/s²] at the wheel.
+    SteerMode steer_mode    {SteerMode::Angle};
+    double    steer_actuator {0.0};
 };
 
 // L5: longitudinal acceleration target

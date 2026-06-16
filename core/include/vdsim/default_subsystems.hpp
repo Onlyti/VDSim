@@ -75,6 +75,36 @@ public:
     void reset() override {}
 };
 
+// Dynamic steering: emits a motor force into the Rack EOM (integrated by the
+// dynamics). Accepts sub-L4 lateral commands (steer torque / ang-vel / ang-accel)
+// as well as an angle reference (position servo). This is the EPS/MDPS path —
+// tire aligning-moment kickback feeds back through the Rack EOM.
+//
+//   SteerMode::Torque   : motor_force = steer_torque / pinion_radius (column → rack)
+//   SteerMode::AngVel   : velocity servo  Kv·(rack_vel_target − rack_vel)
+//   SteerMode::AngAccel : feed-forward    m_rack·rack_accel_target + c_rack·rack_vel
+//   SteerMode::Angle    : position servo  Kp·(rack_target − rack) − Kd·rack_vel
+class DynamicSteering final : public ISteeringSystem {
+public:
+    explicit DynamicSteering(const VehicleParams& vp);
+
+    // Accepts L1 (torque) through L4 (angle) — the cascade handles L5-L8 → angle.
+    LcLevel min_lat_level() const override { return LcLevel::L1; }
+    LcLevel max_lat_level() const override { return LcLevel::L4; }
+
+    SteeringOutput apply(const SubsystemContext& ctx) override;
+    void reset() override {}
+
+private:
+    double ratio_;          // rack travel ↔ wheel angle (rack = angle·ratio)
+    double pinion_radius_;
+    double m_rack_;
+    double c_rack_;
+    double pos_kp_ {4.0e4};  // position-servo gain (Angle mode)
+    double pos_kd_ {2.0e3};
+    double vel_kv_ {1.0e4};  // velocity-servo gain (AngVel mode)
+};
+
 class LinearSuspension final : public ISuspension {
 public:
     explicit LinearSuspension(const VehicleParams& vp);

@@ -103,7 +103,9 @@ public:
         }
         drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
         brake_      = make_default_brake(vp_, vp_.brake_deadtime_s);
-        steering_   = make_default_steering(vp_, vp_.steer_deadtime_s);
+        steering_   = vp_.steering_dynamic
+                          ? std::unique_ptr<ISteeringSystem>(std::make_unique<DynamicSteering>(vp_))
+                          : make_default_steering(vp_, vp_.steer_deadtime_s);
         steer_kin_  = make_ratio_steering_kinematics(
                           std::max(1e-6, vp_.steering_ratio));
         spdlog::debug("[L2 7-DOF] init: mass={:.0f} kg, L={:.2f} m, Tw_f={:.2f} m, "
@@ -130,7 +132,9 @@ public:
         lugre_z_lat_.fill(0.0);
         drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
         brake_      = make_default_brake(vp_, vp_.brake_deadtime_s);
-        steering_   = make_default_steering(vp_, vp_.steer_deadtime_s);
+        steering_   = vp_.steering_dynamic
+                          ? std::unique_ptr<ISteeringSystem>(std::make_unique<DynamicSteering>(vp_))
+                          : make_default_steering(vp_, vp_.steer_deadtime_s);
         steer_kin_  = make_ratio_steering_kinematics(
                           std::max(1e-6, vp_.steering_ratio));
         // Clear diagnostics so accessors don't return stale values before step().
@@ -154,6 +158,8 @@ public:
             cmd.brake,
             cmd.gear,
             cmd.handbrake,
+            cmd.steer_mode,
+            cmd.steer_actuator,
         };
         SubsystemContext ctx{state_, driver_cmd, dt};
         brake_->begin_step(ctx, dt);
@@ -348,6 +354,8 @@ private:
             cmd.brake,
             cmd.gear,
             cmd.handbrake,
+            cmd.steer_mode,
+            cmd.steer_actuator,
         };
         SubsystemContext ctx{s, driver_cmd, 0.0};
         ctx.Fz = Fz;
@@ -651,6 +659,11 @@ private:
         // Rack EOM (Dynamic steering mode only; zero when Kinematic).
         s.rack_travel   = s0.rack_travel   + d.drack_travel   * h;
         s.rack_velocity = s0.rack_velocity + d.drack_velocity * h;
+        // Steering lock: clamp rack travel to ±(max_steer · ratio); kill velocity
+        // into the stop so a constant motor torque rests at the lock (no runaway).
+        const double rack_lock = vp_.max_steer_angle_wheel * std::max(1e-6, vp_.steering_ratio);
+        if (s.rack_travel >  rack_lock) { s.rack_travel =  rack_lock; if (s.rack_velocity > 0.0) s.rack_velocity = 0.0; }
+        if (s.rack_travel < -rack_lock) { s.rack_travel = -rack_lock; if (s.rack_velocity < 0.0) s.rack_velocity = 0.0; }
         return s;
     }
 

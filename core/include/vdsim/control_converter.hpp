@@ -169,9 +169,9 @@ private:
     // Independent longitudinal cascade (LcLon → throttle/brake[/gear]).
     void lon_to_pedals(const LcLonCmd& lon, const State& meas, double ax_meas,
                        double dt, CmdL4& out);
-    // Independent lateral cascade (LcLat L4-L8 → steer angle [rad]).
-    // L1-L3 (torque/ang-accel/ang-vel) are subsystem territory and pass through 0.
-    double lat_to_steer(const LcLatCmd& lat, const State& meas, double dt);
+    // Independent lateral cascade → fills out.steer_angle_wheel (L4-L8) OR
+    // out.steer_mode/steer_actuator (L1-L3 sub-L4, for a Dynamic steering subsystem).
+    void lat_to_cmd(const LcLatCmd& lat, const State& meas, double dt, CmdL4& out);
 
     LongVxController vxc_;
     LongAxController axc_;

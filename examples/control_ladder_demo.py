@@ -26,12 +26,17 @@ sys.path[:0] = [str(REPO / "build" / "python"), str(REPO / "python")]
 import vdsim
 
 
-def make_sim(v0=15.0):
+def make_sim(v0=15.0, dynamic_steering=False):
     vp = vdsim.VehicleParams.from_yaml(str(REPO / "configs/parts/body/sedan.yaml"))
+    vp.steering_dynamic = dynamic_steering
     tp = vdsim.TireParams.from_yaml(str(REPO / "configs/parts/tire/default_pacejka.yaml"))
     sess = vdsim.make_sim_session(vp, tp, "L2", nominal_dt=0.005, mu=1.0)
     sess.reset(vdsim.make_init_state(v=v0, wheel_radius=vp.wheel_radius_nominal))
     return sess
+
+
+def make_sim_dyn(v0=15.0):
+    return make_sim(v0, dynamic_steering=True)
 
 
 def run(sess, cmd, t_end, dt=0.005):
@@ -73,6 +78,16 @@ def main():
     ok_r  = check("Split lat yaw-rate", o.state.yaw_rate(), 0.10, 0.06)
     results.append(ok_vx and ok_r)
 
+    # --- Lat L1 steer torque (Dynamic steering / EPS path) ---
+    # Open-loop column torque has no position target — verify it moves the rack and
+    # yaws the car in the correct direction (a real EPS closes the position loop).
+    o = run(make_sim_dyn(15.0), _split_torque(15.0, 1.0), 3.0)
+    moved = abs(o.state.rack_travel) > 1e-3
+    yawed = o.state.yaw_rate() > 0.02      # +torque → +rack → +yaw
+    print(f"  [{'PASS' if moved and yawed else 'FAIL'}] {'Lat L1 steer-torque→yaw':28s} "
+          f"rack={o.state.rack_travel:.3f}  yaw={o.state.yaw_rate():.3f}  (moved+yawed)")
+    results.append(moved and yawed)
+
     print()
     if all(results):
         print(f"ALL {len(results)} control-ladder levels verified.")
@@ -99,6 +114,12 @@ def _l6_lat_via_split(vx, r):
 
 def _split(vx, r):
     return _l6_lat_via_split(vx, r)
+
+def _split_torque(vx, torque):
+    c = vdsim.CmdSplit()
+    c.lon = vdsim.LcLonL6(); c.lon.vx_target = vx
+    c.lat = vdsim.LcLatL1(); c.lat.steer_torque = torque
+    return c
 
 
 if __name__ == "__main__":
