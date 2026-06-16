@@ -2519,8 +2519,42 @@ validatable model, and lets L5 share the inverted tire interface like L2/L3.</p>
   top), so L5 joins the inverted contract with the standard slip denominator. Also fixed:
   the LuGre bristle <code>z</code> is now integrated (was degenerate / never advanced). All stunt/L5/
   terrain tests pass (loop tests included); 364/364 ctest green.</li>
-<li><strong>B</strong> — attach the L4 corner DAE to the 6-DOF body (true spatial multibody).</li>
-<li><strong>C</strong> — validation (below).</li>
+<li><strong>B1 — DONE</strong> — spatial sprung/unsprung strut on the 6-DOF body, opt-in behind
+  <code>SolverParams::l5_spatial_suspension</code> (default false keeps the penalty-at-hub path
+  byte-stable; all 364 prior tests unchanged). Per corner: an unsprung mass <code>m_u[i]</code> with a
+  travel DOF reusing <code>State::susp_compression/velocity[i]</code> along the body-up (strut) axis.
+  Tire-spring acts on the unsprung via an effective penetration <code>pen = pen_rigid -
+  comp·(ez·n)</code> (the wheel centre rides <code>comp</code> above the rigid hub the contact provider
+  assumed); the strut spring+damper carries the sprung corner with a static preload so
+  <code>comp=0</code> is the ride position, tops out at <code>F_susp=0</code> (no coilover tension), bump/droop
+  clamps on travel. The vertical body↔wheel coupling goes through the strut (the strut-axis
+  component of the tire force is replaced by <code>F_susp</code>); in-plane tire force is reacted
+  rigidly. Body translational mass is anisotropic on the strut path: m_sprung along the
+  strut axis (the unsprung decouples there via the travel DOF), total mass in-plane (the
+  unsprung is rigidly carried), so flat-ground handling stays matched to planar L2/L3;
+  rotational inertia uses <code>inertia_diag</code> as L2/L3 do. Isolation evidence (tests
+  <code>L5Strut.*</code>): settles to static equilibrium (Fz_sum=14808 N vs weight 14710 N, comp≈0,
+  z=0.533 m = ride height − tire static deflection); heave ride frequency 1.33 Hz measured
+  vs 1.41 Hz quarter-car analytic (k_eff = 4·k_s·k_t/(k_s+k_t) over m_sprung).</li>
+<li><strong>B2 — DONE</strong> — per-corner L4 hard-joint corner DAE on the strut path, opt-in via
+  <code>free_3d_attach_multibody(dyn, front_axle, topo, enable)</code> (mirrors the 14-DOF attach).
+  One DAE model per axle (front/rear) shared by its two corners, each keeping its own
+  <code>HardJointCornerState</code>. Once per outer step (held through the substeps, like L4) each
+  corner is advanced with <code>PrescribedCornerMotion{travel_z=comp[i], travel_z_dot, steer_rack}</code>
+  and the last corner tire load; the returned <code>WheelPose</code> gives per-wheel toe/camber (L/R
+  sign flip from the single-side topology). Camber feeds the tire <code>ContactInput.gamma</code>; toe
+  adds to the wheel-heading (bump-steer). Inactive unless the strut path is on AND a DAE is
+  attached, so B1 behavior is unchanged otherwise. Evidence (<code>L5StrutDae.*</code>): attach/enable
+  reported; static settle still holds full weight with the DAE; a steady steer with the DAE
+  attached diverges from the DAE-off run (vy 0.863 vs 0.926 m/s) — the corner kinematics
+  measurably alter handling.</li>
+<li><strong>C — DONE</strong> — gating validation passed on the strut path. Evidence:
+  <code>docs/evidence/l5/PHASE_C.md</code> (suite <code>L5StrutValidation.*</code>): flat cross-model vs L2
+  (yaw rate 1.9%, lateral g 3.6%), ballistic jump (fit g within 0.5%, horizontal speed
+  drift 0.5%), emergent loop critical speed (1.15 v_crit climbs ~20 rad, 0.70 v_crit
+  stalls at ~2.7 rad), per-corner camber matching the standalone L4 corner DAE to
+  &lt; 1.3e-4 rad. L5 spatial-strut promoted from experimental to validated in
+  VALIDATION.md; the default penalty path stays the stunt demo.</li>
 </ul>
 <h2 id="phase-b-implementation-design-spatial-suspension-on-the-6-dof-body">Phase B — implementation design (spatial suspension on the 6-DOF body)<a class="headerlink" href="#phase-b-implementation-design-spatial-suspension-on-the-6-dof-body" title="Permanent link">&para;</a></h2>
 <p>Grounding (studied): the L4 corner DAE (<code>multibody.hpp::IHardJointDaeModel::step</code>) is a
@@ -2569,7 +2603,9 @@ mandatory (figure / numeric table):</p>
 <li><strong>Suspension (phase B)</strong>: corner travel / camber gain under jounce matches the L4 corner
   DAE on the shared topology.</li>
 </ul>
-<p>Until C passes, L5 stays labelled experimental in VALIDATION.md.</p>
+<p>Until C passes, L5 stays labelled experimental in VALIDATION.md.
+(Done — see <code>docs/evidence/l5/PHASE_C.md</code>; the strut path is now validated, the default
+penalty path remains the stunt demo.)</p>
 <h2 id="risks">Risks<a class="headerlink" href="#risks" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Loop stability without the denom hack: contact-frame slip must stay well-posed as the

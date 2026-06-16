@@ -2442,26 +2442,43 @@
   <code>python3 tools/tire_inversion_evidence.py</code>.</li>
 </ul>
 <h2 id="_2">완료<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
-<h1 id="209220-221phase-a-l1l5">209–#220, #221(phase A). 타이어 역전 + L1~L5 통일 + 검증.<a class="headerlink" href="#209220-221phase-a-l1l5" title="Permanent link">&para;</a></h1>
-<h2 id="l5-6-dof-phase-bc">미완 (다음 할 일) — L5 6-DOF phase B/C<a class="headerlink" href="#l5-6-dof-phase-bc" title="Permanent link">&para;</a></h2>
-<p>설계 spec: <code>docs/design/L5_6DOF_MULTIBODY.md</code> (phase B 구현설계 포함, 코드 수준).
-- <strong>#222 B1 (먼저)</strong> — free_3d 에 spatial sprung/unsprung strut 동역학 신규 추가. 현재 free_3d 는
-  서스펜션이 없고 penalty-at-hub 로 차를 떠받침. per-corner unsprung mass + body-frame strut
-  travel DOF <code>z_strut</code>(+rate) 추가, strut spring/damper 를 6-DOF Newton-Euler 에, tire-spring 을
-  unsprung 에. 14-DOF <code>derivatives_vertical</code>(fourteen_dof_dynamics.cpp:345-424) 이 참고 모델
-  (heave/roll/pitch+unsprung 를 평면 기준으로 함 → 6-DOF body-fixed strut 축으로 일반화).
-- <strong>#223 B2</strong> — <code>z_strut</code> 를 <code>PrescribedCornerMotion.travel_z</code> 로 corner DAE
-  (<code>create_hard_joint_dae_model</code>, <code>step_hard_joint_dae</code>) 에 넘겨 <code>WheelPose</code>(toe/camber) 받아
-  tire <code>ContactInput.gamma</code>/toe 로. 14-DOF 배선(fourteen_dof_dynamics.cpp:205-278) 재사용.
-- <strong>#224 C</strong> — 검증 evidence: ballistic jump 포물선/에너지, loop critical speed, flat 교차검증
-  vs L2/L3, suspension travel vs L4. 통과 시 VALIDATION.md 의 L5 experimental 캐비엣 제거.</p>
+<h1 id="209220-221phase-a-222b1-223b2-224phase-c">209–#220, #221(phase A), <strong>#222(B1)</strong>, <strong>#223(B2)</strong>, <strong>#224(phase C)</strong>. 타이어 역전 +<a class="headerlink" href="#209220-221phase-a-222b1-223b2-224phase-c" title="Permanent link">&para;</a></h1>
+<p>L1~L5 통일 + 검증 + L5 spatial strut + corner DAE toe/camber + 검증 게이트 통과.
+L5 6-DOF spatial-strut 트랙 종료 — strut 경로는 validated, default penalty 경로는 stunt demo 유지.</p>
+<h2 id="phase-c-strut">검증 완료 — phase C (strut 경로)<a class="headerlink" href="#phase-c-strut" title="Permanent link">&para;</a></h2>
+<p>evidence: <code>docs/evidence/l5/PHASE_C.md</code> (suite <code>L5StrutValidation.*</code>, 376/376 ctest green).
+- C1 flat cross-model vs L2: yaw rate 1.9%, lateral g 3.6%.
+- C2 ballistic jump: fit g 0.5% 오차, horizontal speed drift 0.5%.
+- C3 loop critical speed emergent: 1.15 v_crit ~20 rad, 0.70 v_crit ~2.7 rad.
+- C4 corner camber vs standalone L4 DAE: &lt; 1.3e-4 rad 일치.
+- (B1) quarter-car heave 1.33 vs 1.41 Hz analytic.</p>
+<h2 id="spec">참고 — 설계 spec<a class="headerlink" href="#spec" title="Permanent link">&para;</a></h2>
+<p><code>docs/design/L5_6DOF_MULTIBODY.md</code> (phase B1/B2/C DONE 기록 포함).
+- <strong>#222 B1 — DONE</strong> — free_3d 에 opt-in spatial strut 추가 (<code>SolverParams::l5_spatial_suspension</code>,
+  default false → penalty 경로 byte-stable, 기존 364 ctest 불변). per-corner unsprung mass +
+  travel DOF(State.susp_compression/velocity 재사용, body-up strut 축). tire-spring on unsprung
+  via <code>pen = pen_rigid - comp·(ez·n)</code>; strut spring/damper(preload→comp=0 static, F_susp≥0 top-out,
+  bump/droop clamp) 가 6-DOF body 에 strut 축으로, in-plane tire force 는 rigid. body 병진질량
+  비등방: strut 축=m_sprung, in-plane=total (평면 핸들링 L2/L3 일치). 검증: <code>L5Strut.*</code> 5개 green —
+  settle(Fz_sum=14808 vs 14710 N, comp≈0, z=0.533m), heave 1.33Hz vs quarter-car 1.41Hz analytic.
+- <strong>#223 B2 — DONE</strong> — corner DAE 배선. <code>free_3d_attach_multibody(dyn, front_axle, topo, enable)</code>
+  (14-DOF attach 미러). axle 당 DAE model 1개를 두 corner 가 공유(corner 별 HardJointCornerState),
+  outer step 당 1회 <code>PrescribedCornerMotion{travel_z=comp[i], rate, steer_rack}</code> + 직전 corner
+  하중으로 advance → <code>WheelPose</code> toe/camber (L/R sign flip) 를 tire <code>ContactInput.gamma</code> 와
+  wheel-heading(toe=bump-steer) 로. strut on + DAE attach 시에만 활성 → 미부착 시 B1 불변.
+  검증: <code>L5StrutDae.*</code> 3개 green — attach/enable, settle 하중유지, steer 시 DAE on/off 핸들링 분기
+  (vy 0.863 vs 0.926 m/s).
+- <strong>#224 C — DONE</strong> — 위 "검증 완료" 참조. VALIDATION.md 의 L5(strut) experimental 캐비엣 제거됨.</p>
 <h2 id="_3">주의 / 함정<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>B2 는 B1 에 의존</strong>: travel source 가 없으면 DAE 는 no-op. 반드시 B1 먼저.</li>
-<li>B1 은 차를 떠받치는 방식을 교체 → 모든 stunt/L5/terrain 테스트 rebaseline + loop 가 attitude
-  sweep 내내 안정해야 함. <strong>권장: opt-in flag 로 strut 경로 추가(default penalty 유지 → 기존
-  baseline byte-stable), 신규 settle/ride-frequency 테스트로 격리 검증.</strong> VDSim 의 reff/drivetrain-v2
-  opt-in 패턴 따르기. 무검증 default 전환 금지(verification-first).</li>
+<li><strong>B1/B2 둘 다 opt-in 격리</strong>: B1=<code>SolverParams::l5_spatial_suspension</code>(default false),
+  B2=<code>free_3d_attach_multibody</code>(미부착이 default). 둘 다 off 이면 penalty 경로 byte-stable →
+  기존 stunt/L5/terrain/loop 테스트 전부 불변 통과. strut/DAE 검증은 <code>L5Strut*.*</code> 신규 테스트로 격리.</li>
+<li>B2 의 toe/camber 는 corner DAE 가 prescribed travel(=<code>comp</code>, B1 strut DOF)로부터 계산. DAE 는
+  outer step 당 1회만 advance(substep/RK4 stage 마다 X) — 비용·안정성 고려, 14-DOF 와 동일.</li>
+<li><strong>ax/ay_body_est 규약</strong>: free_3d 는 이제 body-frame specific force(중력 제거, =L2/L3 Fy/m 규약)를
+  보고 — 정상 선회에서 0 이 되는 body-velocity 미분이 아님. C1 cross-model 이 이 규약으로 L2 와 일치.
+  (state 불변, 보고값만 수정 → penalty state byte-stable.)</li>
 <li>Python 으로 L5 직접 구동 불가(contact <code>penetration</code>·loop/ramp ground 미바인딩) → 검증은 C++ ctest.</li>
 <li>대외비: 현대 tire 실측값 커밋 금지. 영상 git 금지.</li>
 </ul>
