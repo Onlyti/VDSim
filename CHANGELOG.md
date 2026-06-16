@@ -29,9 +29,14 @@ All notable changes to VDSim are documented here. Format follows
 - `seven_dof` (and 14-DOF, which wraps it) own only the per-wheel `Transient` + `ContactInput`
   and keep integrator stabilization (lambda / Fx_hold / combined-slip clamp / kinematic blend /
   `Fx*Re`) vehicle-side. The transient advances at two cadences — bristle per RK4 stage,
-  carcass relaxation per substep — to stay byte-stable. bicycle (L1) / free_3d (L5) keep the
-  shared path by design (specialized contact kinematics). Backends/baselines byte-stable:
+  carcass relaxation per substep — to stay byte-stable. Backends/baselines byte-stable:
   IsoBaseline / Lugre / Belt / ChronoPac02Parity unchanged. Tests `TireInversion*`.
+- **L1 bicycle also inverted** via per-tire individual contact: each axle is modelled as a
+  per-tire contact at the per-wheel load (`ContactInput.Fz = 0.5*Fz_axle`), the wrench doubled
+  for the axle force, so force law + Re see a consistent load (load-sensitive mu now at the
+  true per-tire load). Byte-stable (load_sensitivity=0 default); gated under LuGre. free_3d
+  (L5) stays on the shared path pending its re-founding as a full 6-DOF multibody model
+  (design: `docs/design/L5_6DOF_MULTIBODY.md`).
 
 ### Added — multi-vehicle comparison tool (headless evaluation)
 - `tools/vdsim_compare.py`: run the ISO maneuver set (step-steer / skidpad / DLC) across

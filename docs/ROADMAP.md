@@ -20,7 +20,7 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 
 | Area | Shipped (high level) | Next |
 |------|----------------------|------|
-| Dynamics L1–L5 | L1–L3 planar/14-DOF; **Ld4** hard-joint; **Ld5** stunt + **terrain (v0.5)** | GUI terrain Play (v0.5.2); V2V |
+| Dynamics L1–L5 | L1–L3 planar/14-DOF; **Ld4** hard-joint; **Ld5** stunt + **terrain (v0.5)** | **Ld5 → full 6-DOF multibody** ([design](design/L5_6DOF_MULTIBODY.md)); GUI terrain Play (v0.5.2); V2V |
 | Tire | MF96 + LuGre **default**; **MF2002 `.tir` backend (T1, Chrono-cross-checked)**; **belt transient (T2)** | bicycle belt; combined-slip vs Pac02; GUI `.tir` |
 | Drivetrain | Engine inertia + open-diff; **2D torque map + gearbox + shift policy (v2, opt-in)**; **catalog `drivetrain_v2` part** | Engine-map workshop (UI); L1 powertrain |
 | Brake / steer | Pluggable modules + deadtime; **user-defined modules (C++/Python subclass)** | Booster/MDPS physics |
