@@ -22,14 +22,25 @@
 #include <math.h>
 #include "mfs_tire_api.h"
 
-static MFS_API_TIRE* g_tire;
+static MFS_API_TIRE*       g_tire;
+static MFS_API_SIMULATION* g_sim;
+/* varinf indices (from mfs_api_simulation_get_varinf_name): 6 = slip ratio
+ * longitudinal, 7 = slip angle lateral. We report the slip CarMaker ACTUALLY
+ * computed (from the effective rolling radius), not the prescribed value — the
+ * two differ at low slip because CarMaker's kappa uses Re, not the unloaded R. */
+#define VARINF_KAPPA 6
+#define VARINF_ALPHA 7
 
 /* Evaluate steady-state forces at a prescribed (Fz, kappa, alpha).
- * Fz is reached by a 1-D bisection on vertical penetration (Fz grows with it). */
+ * Fz is reached by a 1-D bisection on vertical penetration (Fz grows with it).
+ * Outputs the realized Fz and the slip ratio/angle CarMaker actually used. */
 static void eval_point(double Fz_tgt, double kappa, double alpha,
-                       double R, double vx, double* Fx, double* Fy, double* Mz) {
+                       double R, double vx, double* Fz_out, double* k_out,
+                       double* a_out, double* Fx, double* Fy, double* Mz) {
     double pen_lo = 0.0, pen_hi = 0.08;   /* [m] vertical penetration search range */
     double force[3] = {0,0,0}, torque[3] = {0,0,0};
+    static double varinf[64];
+    size_t vsz = 64;
     for (int it = 0; it < 40; ++it) {
         const double pen = 0.5 * (pen_lo + pen_hi);
         MFS_INPUT_DATA in; memset(&in, 0, sizeof(in));
@@ -39,18 +50,22 @@ static void eval_point(double Fz_tgt, double kappa, double alpha,
         in.wheel_carrier_velocity_WC[1] = vx * tan(alpha);   /* lateral → slip angle */
         in.WC_to_G_transformation[0] = 1; in.WC_to_G_transformation[4] = 1;
         in.WC_to_G_transformation[8] = 1;
-        in.wheel_angular_velocity = vx * (1.0 + kappa) / R;  /* kappa = (wR-vx)/vx */
+        in.wheel_angular_velocity = vx * (1.0 + kappa) / R;  /* prescribed (approx) */
         mfs_api_tire_set_input(g_tire, &in);
         mfs_api_tire_update(g_tire);
-        mfs_api_tire_get_output(g_tire, force, torque, NULL, 0);
+        mfs_api_tire_get_output(g_tire, force, torque, varinf, vsz);
         if (force[2] < Fz_tgt) pen_lo = pen; else pen_hi = pen;
     }
+    *Fz_out = force[2];
+    *k_out  = varinf[VARINF_KAPPA];   /* slip CarMaker actually used (Re-based) */
+    *a_out  = varinf[VARINF_ALPHA];
     *Fx = force[0]; *Fy = force[1]; *Mz = torque[2];
 }
 
 int main(int argc, char** argv) {
     if (argc < 4) { fprintf(stderr, "usage: %s <tir> <grid.csv> <out.csv>\n", argv[0]); return 2; }
-    MFS_API_SIMULATION* sim = mfs_api_simulation_create();
+    g_sim = mfs_api_simulation_create();
+    MFS_API_SIMULATION* sim = g_sim;
     g_tire = mfs_api_tire_create(sim);
     if (!mfs_api_tire_initialize_tire_property_file(g_tire, argv[1])) {
         fprintf(stderr, "tir load failed\n"); return 1; }
@@ -65,6 +80,8 @@ int main(int argc, char** argv) {
 
     FILE* in = fopen(argv[2], "r"); if (!in) { perror("grid"); return 1; }
     FILE* out = fopen(argv[3], "w"); if (!out) { perror("out"); return 1; }
+    /* kappa/alpha columns hold the slip CarMaker actually used (Re-based), so a
+     * downstream comparator feeds VDSim the SAME slip — true apples-to-apples. */
     fprintf(out, "Fz,kappa,alpha,Fx,Fy,Mz\n");
 
     char line[1024]; int header = 1, n = 0;
@@ -73,9 +90,9 @@ int main(int argc, char** argv) {
         if (header) { header = 0; continue; }       /* skip CSV header */
         double Fz, kappa, alpha;
         if (sscanf(line, "%lf,%lf,%lf", &Fz, &kappa, &alpha) != 3) continue;
-        double Fx, Fy, Mz;
-        eval_point(Fz, kappa, alpha, R, vx, &Fx, &Fy, &Mz);
-        fprintf(out, "%.3f,%.5f,%.5f,%.3f,%.3f,%.4f\n", Fz, kappa, alpha, Fx, Fy, Mz);
+        double Fz_r, k_r, a_r, Fx, Fy, Mz;
+        eval_point(Fz, kappa, alpha, R, vx, &Fz_r, &k_r, &a_r, &Fx, &Fy, &Mz);
+        fprintf(out, "%.3f,%.6f,%.6f,%.3f,%.3f,%.4f\n", Fz_r, k_r, a_r, Fx, Fy, Mz);
         ++n;
     }
     fclose(in); fclose(out);

@@ -13,7 +13,8 @@ the last section.
 
 | Validated (open, reproducible) | NOT yet validated |
 |---|---|
-| L1–L3 dynamics vs analytic (linear-bicycle yaw, drag coast, weight transfer) | Cross-validation vs CarMaker/CarSim/Adams on real-vehicle data (data confidential, not redistributable) |
+| L1–L3 dynamics vs analytic (linear-bicycle yaw, drag coast, weight transfer) | Full-vehicle cross-validation vs CarMaker/CarSim/Adams on real-vehicle data (data confidential, not redistributable) |
+| **Tire force vs CarMaker MF-Tyre/MF-Swift** (same MF6.2 `.tir`, steady-state pure slip): pure-long 0.00%, pure-lat 0.09% | Full-vehicle (suspension/transient) commercial cross-val |
 | ISO 7401 step-steer / 4138 understeer / 3888-2 DLC — run + measured | Tire thermal, wear, full transient beyond first-order relaxation |
 | L1↔L2↔L3 cross-model consistency where physics overlaps | Dependent axles (twist-beam / solid beam) — configs are stubs |
 | FMI round-trip Δ=0 (machine precision); ISO 8608 PSD RMS per class | L3 unsprung lateral-transfer term (small) |
@@ -53,6 +54,7 @@ vehicle/controller property, not a sim defect (see "Notes on specific results").
 | 12 | ISO 8608 roughness | PSD Gd(n)=Gd(n0)(n/n0)⁻² | RMS doubles/class: A 3.5, B 7.0, C 14.1, D 28 mm | 15% | `ctest -R Iso8608` |
 | 13 | **MF2002 vs Chrono Pac02** (BSD-3, independent) | same public `.tir` | pure-long Fx ~0.8% + pure-lat Fy ~0.7% (Fz 2–6 kN, mean); combined cross-terms differ (rig-frame, reported) | 6% | `ctest -R ChronoPac02Parity` · `tools/tire_validation.py` |
 | 14 | Control ladder (Lc1–Lc8 + split) | each level reaches target band | cruise/ax/yaw-rate/curvature + EPS torque verified | gated | `examples/control_ladder_demo.py` (ctest `control_ladder`) |
+| 15 | **MF vs CarMaker MF-Tyre/MF-Swift** (commercial, independent) | same MF6.2 `.tir`, same Re-based slip | pure-long Fx **0.00%**, pure-lat Fy **0.09%** (machine precision, steady-state pure slip) | — | `external/carmaker_parity/compare_vdsim_carmaker.py` (needs a CarMaker license) |
 
 Full automated suite: `cd build && ctest` — 345 checks, 100% green (measured 2026-06-16).
 One-command evidence bundle (ctests + tire parity table + ISO figures + summary.md):

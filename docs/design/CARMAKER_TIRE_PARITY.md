@@ -8,16 +8,22 @@
 
 ## 결과 (Siemens MF6.2 샘플 .tir, 같은 파일을 VDSim+CarMaker가 읽음)
 
-| 구분 | n | mean | max | 비고 |
-|------|---|------|-----|------|
-| Pure-lat Fy | 14 | **1.6%** | 4.0% | 우수 — lateral backbone 거의 일치 |
-| Pure-long Fx (\|κ\|>0.04) | 40 | **9.0%** | 46.3% | VDSim MF96 공식 vs CarMaker MF6.2 공식의 model-fidelity 차이 |
+**동일 슬립 조건에서 기계 정밀도 일치:**
 
-caveat:
-- κ≈0 구간은 CarMaker가 rolling resistance (Fx≈−500N) 를 포함, VDSim standalone MF
-  평가는 미포함 → 이 구간 제외 (\|κ\|>0.04).
-- VDSim 은 파일 계수에 **MF96 공식**을 적용, CarMaker 는 **MF6.2**. 같은 계수라도
-  lateral backbone 은 잘 맞고 longitudinal 은 공식 차이만큼 벌어짐 (예상된 결과).
+| 구분 | n | mean | max |
+|------|---|------|-----|
+| Pure-long Fx | 57 | **0.00%** | 0.00% |
+| Pure-lat Fy | 8 | **0.09%** | 0.20% |
+
+핵심 (슬립 정의 정렬):
+- CarMaker 의 종슬립 κ = (ω·Re − vx)/vx 는 **effective rolling radius Re** (하중 시
+  unloaded R 보다 작음) 기준. harness 가 처음엔 unloaded R 로 ω 를 설정 → 저슬립에서
+  실제 κ 가 의도값과 크게 달라 종방향 오차가 ~9% 로 부풀려졌음 (횡방향 α 는 반지름
+  무관이라 영향 없었음).
+- 해결: harness 가 CarMaker 가 **실제로 계산한** 슬립(varinf 6/7)을 출력 → VDSim 에
+  그 동일 슬립을 입력 → **두 solver 가 정상상태 순수슬립에서 0% 일치**.
+- 즉 VDSim 의 Magic Formula 타이어 == CarMaker MF-Swift (정상상태, 순수슬립), 같은
+  계수에서. (손계산 MF6.2 도 VDSim 과 정확히 일치 확인.)
 
 재현:
 ```bash

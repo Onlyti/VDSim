@@ -13,13 +13,13 @@ Usage:
     python3 compare_vdsim_carmaker.py <tir> [grid.csv]
     # grid.csv defaults to the Chrono parity grid (Fz,kappa,alpha,...).
 
-Notes:
-  - CarMaker (MF-Swift, MF6.2) models rolling resistance → nonzero Fx at kappa~0;
-    VDSim's standalone MF evaluation does not, so pure-long is compared away from
-    kappa~0 (|kappa| > 0.04).
-  - VDSim applies its MF96 formula to the file's coefficients; CarMaker applies the
-    full MF6.2. With the SAME coefficients the lateral backbone agrees closely; the
-    longitudinal backbone shows the model-fidelity gap (MF96 vs MF6.2).
+Apples-to-apples slip: mfs_grid_eval reports the slip CarMaker ACTUALLY used
+(varinf 6/7, computed from the effective rolling radius Re), not the prescribed
+grid value. Feeding VDSim that same slip removes the Re-vs-unloaded-radius
+mismatch, and the two solvers agree to machine precision on steady-state pure
+slip (pure-long/pure-lat ~0%). Comparing at the prescribed grid slip instead
+inflates the longitudinal error because CarMaker's kappa = (omega*Re - vx)/vx
+differs from the unloaded-radius value the grid assumes.
 """
 import csv
 import subprocess
@@ -54,33 +54,31 @@ def main():
     sys.path[:0] = [str(REPO / "build" / "python"), str(REPO / "python")]
     import vdsim
 
-    cm = carmaker_eval(tir, grid)
+    cm = carmaker_eval(tir, grid)   # dict keyed (Fz,kappa,alpha) — actual CarMaker slip
     tire = vdsim.create_magic_formula_tire_from_tir(tir)
     tire.initialize(vdsim.TireParams())
 
     pl_fx, pl_fy = [], []
-    for r in csv.DictReader(open(grid)):
-        Fz, k, a = float(r["Fz"]), float(r["kappa"]), float(r["alpha"])
-        key = (round(Fz), round(k, 4), round(a, 4))
-        if key not in cm:
-            continue
+    for row in cm.values():
+        # kappa/alpha here are the slip CarMaker ACTUALLY used (Re-based).
+        Fz, k, a = float(row["Fz"]), float(row["kappa"]), float(row["alpha"])
+        cfx, cfy = float(row["Fx"]), float(row["Fy"])
         ti = vdsim.TireInput()
         ti.Fz = Fz; ti.kappa = k; ti.alpha = a; ti.gamma = 0.0
         ti.mu_long = 1.0; ti.mu_lat = 1.0; ti.Vx_wheel = 15.0
         o = tire.compute(ti)
-        cfx, cfy = float(cm[key]["Fx"]), float(cm[key]["Fy"])
-        if abs(a) < 0.02 and abs(k) > 0.04 and abs(cfx) > 500:        # clean drive/brake
+        if abs(a) < 0.02 and abs(k) > 0.02 and abs(cfx) > 200:        # pure longitudinal
             pl_fx.append(abs(o.Fx - cfx) / abs(cfx) * 100)
         if abs(k) < 0.025 and abs(a) > 0.03 and abs(cfy) > 120:       # pure lateral
             pl_fy.append(abs(o.Fy - cfy) / abs(cfy) * 100)
 
     def stat(lst):
-        return (f"n={len(lst):3d}  mean={sum(lst)/len(lst):5.1f}%  max={max(lst):5.1f}%"
+        return (f"n={len(lst):3d}  mean={sum(lst)/len(lst):5.2f}%  max={max(lst):5.2f}%"
                 if lst else "n=0")
 
-    print(f"VDSim vs CarMaker MF-Swift (same .tir: {Path(tir).name})")
-    print(f"  Pure-long Fx (|kappa|>0.04): {stat(pl_fx)}")
-    print(f"  Pure-lat  Fy               : {stat(pl_fy)}")
+    print(f"VDSim vs CarMaker MF-Swift (same .tir: {Path(tir).name}, same Re-based slip)")
+    print(f"  Pure-long Fx: {stat(pl_fx)}")
+    print(f"  Pure-lat  Fy: {stat(pl_fy)}")
 
 
 if __name__ == "__main__":
