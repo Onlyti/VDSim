@@ -451,9 +451,37 @@ PYBIND11_MODULE(vdsim, m) {
         .def(py::init<>())
         .def_readwrite("v_target", &vdsim::CmdL7::v_target)
         .def_readwrite("kappa",    &vdsim::CmdL7::kappa);
-    // ControlInput is std::variant<CmdL1..CmdL8>; pybind11's <stl.h> variant
-    // caster converts any registered CmdLx python object → ControlInput, so
-    // sim.set_input(CmdL6(...)) dispatches to set_input(const ControlInput&).
+
+    // ---- Split lon/lat commands (independent axis levels) ----
+    // Longitudinal axis levels.
+    py::class_<vdsim::LcLonL4>(m, "LcLonL4")
+        .def(py::init<>())
+        .def_readwrite("throttle", &vdsim::LcLonL4::throttle)
+        .def_readwrite("brake",    &vdsim::LcLonL4::brake)
+        .def_readwrite("gear",     &vdsim::LcLonL4::gear);
+    py::class_<vdsim::LcLonL5>(m, "LcLonL5")
+        .def(py::init<>()).def_readwrite("ax_target", &vdsim::LcLonL5::ax_target);
+    py::class_<vdsim::LcLonL6>(m, "LcLonL6")
+        .def(py::init<>()).def_readwrite("vx_target", &vdsim::LcLonL6::vx_target);
+    // Lateral axis levels.
+    py::class_<vdsim::LcLatL4>(m, "LcLatL4")
+        .def(py::init<>()).def_readwrite("steer_angle", &vdsim::LcLatL4::steer_angle);
+    py::class_<vdsim::LcLatL5>(m, "LcLatL5")
+        .def(py::init<>()).def_readwrite("ay_target", &vdsim::LcLatL5::ay_target);
+    py::class_<vdsim::LcLatL6>(m, "LcLatL6")
+        .def(py::init<>()).def_readwrite("r_target", &vdsim::LcLatL6::r_target);
+    py::class_<vdsim::LcLatL7>(m, "LcLatL7")
+        .def(py::init<>()).def_readwrite("kappa", &vdsim::LcLatL7::kappa);
+    // CmdSplit: independent lon + lat. lon/lat are std::variant fields; the
+    // <stl.h> variant caster accepts any registered LcLon*/LcLat* python object.
+    py::class_<vdsim::CmdSplit>(m, "CmdSplit")
+        .def(py::init<>())
+        .def_readwrite("lon", &vdsim::CmdSplit::lon)
+        .def_readwrite("lat", &vdsim::CmdSplit::lat);
+
+    // ControlInput is std::variant<CmdL1..CmdL8, CmdSplit>; pybind11's <stl.h>
+    // variant caster converts any registered Cmd python object → ControlInput, so
+    // sim.set_input(CmdL6(...)) / sim.set_input(CmdSplit(...)) both dispatch.
 
     // -------- IVehicleDynamics --------
     py::class_<vdsim::ShiftContext>(m, "ShiftContext")

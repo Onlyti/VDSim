@@ -166,12 +166,23 @@ public:
     CmdL4 to_l4(const ControlInput& u, const State& meas, double ax_meas, double dt);
 
 private:
+    // Independent longitudinal cascade (LcLon → throttle/brake[/gear]).
+    void lon_to_pedals(const LcLonCmd& lon, const State& meas, double ax_meas,
+                       double dt, CmdL4& out);
+    // Independent lateral cascade (LcLat L4-L8 → steer angle [rad]).
+    // L1-L3 (torque/ang-accel/ang-vel) are subsystem territory and pass through 0.
+    double lat_to_steer(const LcLatCmd& lat, const State& meas, double dt);
+
     LongVxController vxc_;
     LongAxController axc_;
     PurePursuitController pp_;
     double wheelbase_ {2.7};
     double max_steer_ {0.5};
     int    pp_idx_    {0};
+    // Lateral yaw-rate PI (L6 r_target → steer): integral state.
+    double r_integ_   {0.0};
+    double r_kp_      {0.15};   // [rad steer / (rad/s err)]
+    double r_ki_      {0.05};
 };
 
 }  // namespace vdsim

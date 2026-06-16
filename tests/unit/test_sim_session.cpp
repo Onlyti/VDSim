@@ -97,3 +97,14 @@ TEST(SimSession, CascadeL7CurvatureYaws) {
     for (int i = 0; i < int(8.0 / 0.005); ++i) { s->set_input(ControlInput{cmd}); s->tick(0.005); }
     EXPECT_GT(std::abs(s->state().yaw_rate()), 0.05) << "L7 curvature should yaw the vehicle";
 }
+
+// CmdSplit: independent longitudinal (vx) + lateral (yaw-rate) levels.
+TEST(SimSession, CascadeSplitIndependentAxes) {
+    auto s = make_session();   // 20 m/s
+    CmdSplit cmd;
+    cmd.lon = LcLonL6{18.0};       // vx target 18 m/s
+    cmd.lat = LcLatL6{0.15};       // yaw-rate target 0.15 rad/s
+    for (int i = 0; i < int(8.0 / 0.005); ++i) { s->set_input(ControlInput{cmd}); s->tick(0.005); }
+    EXPECT_NEAR(s->state().vx(), 18.0, 1.5)              << "lon axis tracks vx target";
+    EXPECT_NEAR(s->state().yaw_rate(), 0.15, 0.08)       << "lat axis tracks yaw-rate target";
+}

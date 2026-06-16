@@ -81,7 +81,8 @@ struct CmdL8 {
     double lookahead_distance {5.0};  // [m]
 };
 
-using ControlInput = std::variant<CmdL1, CmdL2, CmdL3, CmdL4, CmdL5, CmdL6, CmdL7, CmdL8>;
+// NOTE: ControlInput is defined at the end of this header, after CmdSplit,
+// because std::variant requires complete types.
 
 // ─── Lateral control commands (LcLat) ─────────────────────────────────────
 // These carry the lateral component independently from the longitudinal.
@@ -134,5 +135,20 @@ inline LcLevel lc_lat_level(const LcLatCmd& cmd) {
 inline LcLevel lc_lon_level(const LcLonCmd& cmd) {
     return static_cast<LcLevel>(cmd.index() + 1);
 }
+
+// ─── Split command: independent longitudinal + lateral levels ──────────────
+// Lets the two axes be commanded at *different* abstraction levels, e.g.
+// vx-target (lon L6) + yaw-rate-target (lat L6), or pedal (lon L4) + curvature
+// (lat L7). The CascadeController converts each axis independently to CmdL4.
+struct CmdSplit {
+    LcLonCmd lon {LcLonL4{}};
+    LcLatCmd lat {LcLatL4{}};
+};
+
+// Unified control command: any single-axis ladder level (CmdL1..CmdL8) OR a
+// CmdSplit carrying independent lon/lat levels. Defined here (after CmdSplit)
+// because std::variant requires complete alternative types.
+using ControlInput = std::variant<CmdL1, CmdL2, CmdL3, CmdL4, CmdL5, CmdL6, CmdL7,
+                                  CmdL8, CmdSplit>;
 
 }  // namespace vdsim
