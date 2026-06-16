@@ -6,9 +6,15 @@ $ VDSim <-> Chrono Pac02 parity cross-check (see external/chrono_parity/README.m
 $ Safe to commit (the repo .gitignore *.tir rule has an explicit exception for this
 $ one file). Confidential/measured .tir files are never committed.
 $
-$ TNO MF-Tyre / Pacejka-2002 flat key=value layout: read by both VDSim's parse_tir
-$ (it picks the keys it needs, ignores the rest) and Chrono's file-driven Pac02 tire.
+$ TNO MF-Tyre / Pacejka-2002 flat key=value layout: read by VDSim's parse_tir
+$ (it picks the keys it needs, ignores the rest), Chrono's file-driven Pac02 tire,
+$ and Siemens MF-Tyre/MF-Swift (requires the [MDI_HEADER] block below).
 $-----------------------------------------------------------------------------
+[MDI_HEADER]
+FILE_TYPE          = 'tir'
+FILE_VERSION       = 3.0
+FILE_FORMAT        = 'ASCII'
+
 [UNITS]
 LENGTH             = 'meter'
 FORCE              = 'newton'
@@ -17,6 +23,8 @@ MASS               = 'kg'
 TIME               = 'second'
 
 [MODEL]
+PROPERTY_FILE_FORMAT = 'MF_05'
+USE_MODE           = 14
 FITTYP             = 6
 TYRESIDE           = 'LEFT'
 LONGVL             = 16.0
