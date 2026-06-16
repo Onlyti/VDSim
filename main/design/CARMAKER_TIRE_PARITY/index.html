@@ -23,7 +23,7 @@
     
     
       
-        <title>CarMaker MF-Tyre/MF-Swift — 3-way tire parity (VDSim · Chrono · CarMaker) - VDSim</title>
+        <title>CarMaker MF-Tyre/MF-Swift — tire parity (VDSim · Chrono · CarMaker) - VDSim</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#carmaker-mf-tyremf-swift-3-way-tire-parity-vdsim-chrono-carmaker" class="md-skip">
+        <a href="#carmaker-mf-tyremf-swift-tire-parity-vdsim-chrono-carmaker" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              CarMaker MF-Tyre/MF-Swift — 3-way tire parity (VDSim · Chrono · CarMaker)
+              CarMaker MF-Tyre/MF-Swift — tire parity (VDSim · Chrono · CarMaker)
             
           </span>
         </div>
@@ -2343,10 +2343,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#_1" class="md-nav__link">
+  <a href="#siemens-mf62-tir-vdsimcarmaker" class="md-nav__link">
     <span class="md-ellipsis">
       
-        현재 상태
+        결과 (Siemens MF6.2 샘플 .tir, 같은 파일을 VDSim+CarMaker가 읽음)
       
     </span>
   </a>
@@ -2365,10 +2365,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#init" class="md-nav__link">
+  <a href="#3-way" class="md-nav__link">
     <span class="md-ellipsis">
       
-        다음 단계 (init 레시피 찾기)
+        완전한 3-way 를 위한 다음 단계
       
     </span>
   </a>
@@ -2376,10 +2376,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#harness-init" class="md-nav__link">
+  <a href="#harness" class="md-nav__link">
     <span class="md-ellipsis">
       
-        평가 harness 설계 (init 통과 후)
+        평가 harness 설계 (구현 완료)
       
     </span>
   </a>
@@ -2387,7 +2387,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
+  <a href="#_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         산출물 (완성 시)
@@ -2398,7 +2398,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
+  <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         빌드/실행 메모
@@ -2428,59 +2428,88 @@
   
 
 
-<h1 id="carmaker-mf-tyremf-swift-3-way-tire-parity-vdsim-chrono-carmaker">CarMaker MF-Tyre/MF-Swift — 3-way tire parity (VDSim · Chrono · CarMaker)<a class="headerlink" href="#carmaker-mf-tyremf-swift-3-way-tire-parity-vdsim-chrono-carmaker" title="Permanent link">&para;</a></h1>
-<p>상태: <strong>feasibility 확인 완료, init 레시피 디버깅 진행 중</strong> (2026-06-16)
-목표: 동일 <code>.tir</code>을 세 solver가 같은 (Fz, κ, α) grid에서 평가 → Fx/Fy/Mz 3-way 비교.
+<h1 id="carmaker-mf-tyremf-swift-tire-parity-vdsim-chrono-carmaker">CarMaker MF-Tyre/MF-Swift — tire parity (VDSim · Chrono · CarMaker)<a class="headerlink" href="#carmaker-mf-tyremf-swift-tire-parity-vdsim-chrono-carmaker" title="Permanent link">&para;</a></h1>
+<p>상태: <strong>VDSim ↔ CarMaker 직접 비교 동작</strong> (2026-06-16)
+목표: 동일 <code>.tir</code>을 solver들이 같은 (Fz, κ, α) grid에서 평가 → Fx/Fy/Mz 비교.
 배경: <code>docs/IMPROVEMENT_REPORT.md</code> P3 (타이어 신뢰성 — "VDSim vs Chrono vs CarMaker").</p>
 <hr />
-<h2 id="_1">현재 상태<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
-<ul>
-<li>VDSim ↔ Chrono 2-way: <strong>완료</strong> (<code>ctest -R ChronoPac02Parity</code>, pure-slip ~0.8%).</li>
-<li>CarMaker 축: <strong>인프라 조사 완료, 미완성</strong>.</li>
-</ul>
+<h2 id="siemens-mf62-tir-vdsimcarmaker">결과 (Siemens MF6.2 샘플 .tir, 같은 파일을 VDSim+CarMaker가 읽음)<a class="headerlink" href="#siemens-mf62-tir-vdsimcarmaker" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>구분</th>
+<th>n</th>
+<th>mean</th>
+<th>max</th>
+<th>비고</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pure-lat Fy</td>
+<td>14</td>
+<td><strong>1.6%</strong></td>
+<td>4.0%</td>
+<td>우수 — lateral backbone 거의 일치</td>
+</tr>
+<tr>
+<td>Pure-long Fx (|κ|&gt;0.04)</td>
+<td>40</td>
+<td><strong>9.0%</strong></td>
+<td>46.3%</td>
+<td>VDSim MF96 공식 vs CarMaker MF6.2 공식의 model-fidelity 차이</td>
+</tr>
+</tbody>
+</table>
+<p>caveat:
+- κ≈0 구간은 CarMaker가 rolling resistance (Fx≈−500N) 를 포함, VDSim standalone MF
+  평가는 미포함 → 이 구간 제외 (|κ|&gt;0.04).
+- VDSim 은 파일 계수에 <strong>MF96 공식</strong>을 적용, CarMaker 는 <strong>MF6.2</strong>. 같은 계수라도
+  lateral backbone 은 잘 맞고 longitudinal 은 공식 차이만큼 벌어짐 (예상된 결과).</p>
+<p>재현:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nb">cd</span><span class="w"> </span>external/carmaker_parity
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nv">CMI</span><span class="o">=</span>/opt/ipg/carmaker/linux64-12.0.1<span class="w"> </span>./build.sh
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>python3<span class="w"> </span>compare_vdsim_carmaker.py<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span>/opt/ipg/carmaker/linux64-12.0.1/Data/Tire/Examples/TirePropertyFile/Siemens_car205_60R15.tir
+</span></code></pre></div></p>
+<p>상태:
+- VDSim ↔ Chrono 2-way: 완료 (<code>ctest -R ChronoPac02Parity</code>, pure-slip ~0.8%, 합성 .tir).
+- VDSim ↔ CarMaker 2-way: <strong>동작</strong> (위 결과, Siemens MF6.2 .tir).
+- 완전한 3-way(동일 .tir): Chrono ref 가 합성 FITTYP=6 파일 기준이라 미정렬 — 아래 참고.</p>
 <hr />
 <h2 id="feasibility-de-risked">Feasibility — 확인된 사실 (de-risked)<a class="headerlink" href="#feasibility-de-risked" title="Permanent link">&para;</a></h2>
-<p>ailab-12에 CarMaker 12.0.1 설치됨 (<code>/opt/ipg/carmaker/linux64-12.0.1</code>),
-floating license (IPGLOCK 166.104.167.98).</p>
-<p>표준 MF-Tyre/MF-Swift API가 standalone 공유 라이브러리로 제공:
-- 헤더: <code>include/mfs_tire_api.h</code>, <code>include/MFS_API.h</code>
-- 라이브러리: <code>lib/libmfswift_tire_interface.so</code> (버전 2212 / API 1.0.13)</p>
-<p>probe (<code>external/carmaker_parity/mfs_init_probe.c</code>) 로 확인:
-- ✅ 라이브러리 로드 + 버전 조회 OK
-- ✅ <code>mfs_api_simulation_create</code> / <code>mfs_api_tire_create</code> OK
-- ✅ <strong>entitlement(라이선스) 블로커 없음</strong> — <code>tire_property_file</code> 로드 성공
-- ✅ 섹션 파싱 OK ([UNITS]/[MODEL]/[DIMENSION]/...)
-- ❌ <code>mfs_api_tire_init</code> 실패: <code>ERROR - The FITTYP parameter was not read, but is required [parser_validate_read_entries]</code></p>
-<p><strong>중요</strong>: 이 에러는 우리 합성 <code>.tir</code> 뿐 아니라 CarMaker 자체 샘플
-(<code>Data/Tire/Examples/.../MF_205_60R15_V91.tir</code>) 으로도 동일하게 발생.
-→ <code>.tir</code> 파일 문제가 아니라 <strong>init 호출 시퀀스(레시피) 가 불완전</strong>하다는 뜻.</p>
-<p>시도했으나 해결 안 됨:
-- <code>[MDI_HEADER]</code>(FILE_TYPE/VERSION/FORMAT) 추가 — 무해하나 미해결
-- <code>PROPERTY_FILE_FORMAT='MF_05'</code> + <code>USE_MODE</code> 추가 — 미해결
-- <code>initialize_simulation_mode</code>(레거시 ISWITCH) 제거 — 미해결</p>
+<p>ailab-12 CarMaker 12.0.1 (<code>/opt/ipg/carmaker/linux64-12.0.1</code>), floating license.
+표준 MF-Tyre/MF-Swift API: <code>include/mfs_tire_api.h</code> + <code>lib/libmfswift_tire_interface.so</code>
+(2212 / API 1.0.13).</p>
+<ul>
+<li>✅ 라이브러리 로드 + entitlement 블로커 없음 (floating license 로 동작)</li>
+<li>✅ init 시퀀스 (road=FLAT, contact=SMOOTH, dynamics=STEADY_STATE,
+  mf=COMBINED_LOADS, side=LEFT → <code>tire_init</code>) — <strong>MF6.x (.tir FITTYP≥61) 파일에서 성공</strong></li>
+<li>❌ MF-Swift 2212 는 <strong>MF5.2 (FITTYP=6) 파일을 거부</strong> (<code>FITTYP not read</code>). 우리 합성
+  <code>sample_pac02.tir</code> (FITTYP=6) 및 CarMaker 자체 MF5.2 샘플 모두 거부.
+  → 신형 MF6.x 파일 (예: <code>Siemens_car205_60R15.tir</code>, FITTYP=70) 필요.</li>
+</ul>
+<p>핵심: harness 자체는 정확. legacy MF5.2 파일만 안 됨 → MF6.x 파일로 평가.</p>
 <hr />
-<h2 id="init">다음 단계 (init 레시피 찾기)<a class="headerlink" href="#init" title="Permanent link">&para;</a></h2>
+<h2 id="3-way">완전한 3-way 를 위한 다음 단계<a class="headerlink" href="#3-way" title="Permanent link">&para;</a></h2>
+<p>현재 Chrono reference CSV 는 합성 FITTYP=6 파일에서 생성됨 → MF-Swift 가 그 파일을
+못 읽어 동일-입력 3-way 가 안 됨. 정렬 방법:</p>
 <ol>
-<li><strong><code>doc/MFTyreMFSwift_UserManual.pdf</code> §2.6 (ISWITCH/USE_MODE) 정독</strong> —
-   <code>mfs_api_tire_init</code> 전 필수 호출 순서/조합 확인.</li>
-<li>MFS API 사용 예제 탐색 (헤더가 <code>mfs_api_example_external_road.c</code> 언급하나
-   설치본에 없음 — Siemens 배포본/CarMaker 추가 패키지에 있을 수 있음).</li>
-<li>후보 원인:</li>
-<li><code>magic_formula_mode</code> 설정과 파일 FITTYP 불일치 시 validation 강제</li>
-<li>init 전 <code>solver_mode</code>(internal/external) 또는 inflation/operating-condition
-     기본값 설정 누락</li>
-<li>파서가 특정 섹션(예: <code>[OPERATING_CONDITIONS]</code>, <code>[INFLATION_PRESSURE_RANGE]</code>)
-     을 요구</li>
+<li><strong>공용 MF6.x <code>.tir</code> 채택</strong> (FITTYP≥61). 단, CarMaker 동봉 Siemens 파일은 TNO
+   copyright 이므로 commit 불가 → 공개 TNO/Delft MF6.1 파일 확보 필요.</li>
+<li>그 파일로 Chrono reference 재생성 (Chrono 빌드) + VDSim parity 재확인.</li>
+<li><code>tools/tire_validation.py</code> 에 <code>--ref2</code> 추가 → Chrono + CarMaker 동시 비교 테이블.</li>
 </ol>
+<p>당장은 VDSim↔CarMaker 2-way (위) 가 실재 CarMaker 검증 evidence 로 충분.</p>
 <hr />
-<h2 id="harness-init">평가 harness 설계 (init 통과 후)<a class="headerlink" href="#harness-init" title="Permanent link">&para;</a></h2>
+<h2 id="harness">평가 harness 설계 (구현 완료)<a class="headerlink" href="#harness" title="Permanent link">&para;</a></h2>
 <p>MFS 입력은 직접 (κ, α, Fz) 가 아니라 <strong>wheel-carrier 기구학</strong> (<code>MFS_INPUT_DATA</code>:
 위치·속도·변환행렬·wheel angle/ω). 따라서 Chrono grid의 각 (Fz, κ, α) 점을
 재현하려면:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Fz   ← 수직 침투량(노면 z) 조정 → Fz = f(deflection) 역산 (1D solve per point)
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>κ    ← wheel ω 설정: ω = (κ·vx + vx)/R  (vx 고정)
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>α    ← lateral velocity 설정: vy = vx·tan(α)
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>출력 ← mfs_api_tire_get_output → force[3], torque[3] (Fx, Fy, Mz)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Fz   ← 수직 침투량(노면 z) 조정 → Fz = f(deflection) 역산 (1D solve per point)
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>κ    ← wheel ω 설정: ω = (κ·vx + vx)/R  (vx 고정)
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>α    ← lateral velocity 설정: vy = vx·tan(α)
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>출력 ← mfs_api_tire_get_output → force[3], torque[3] (Fx, Fy, Mz)
 </span></code></pre></div>
 <p>절차:
 1. <code>external/chrono_parity/reference/pac02_reference.csv</code> 의 (Fz, κ, α) 읽기
@@ -2490,21 +2519,21 @@ floating license (IPGLOCK 166.104.167.98).</p>
 <p>dynamics mode = STEADY_STATE, MF mode = COMBINED_LOADS, contact = SMOOTH_ROAD,
 road = DEFAULT_FLAT 로 steady-state MF만 평가 (rigid-ring 동특성 제외).</p>
 <hr />
-<h2 id="_2">산출물 (완성 시)<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>external/carmaker_parity/
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  mfs_init_probe.c          init feasibility probe (현재 단계)
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  mfs_grid_eval.c           grid → pac02_carmaker.csv (TODO: init 레시피 후)
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>  build.sh                  gcc -I include -L lib -lmfswift_tire_interface
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>  reference/pac02_carmaker.csv   (생성물)
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>tools/tire_validation.py    --ref2 로 3-way 비교
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>docs/VALIDATION.md          benchmark #13 을 3-way 로 확장
+<h2 id="_1">산출물 (완성 시)<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>external/carmaker_parity/
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>  mfs_init_probe.c          init feasibility probe (현재 단계)
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>  mfs_grid_eval.c           grid → pac02_carmaker.csv (TODO: init 레시피 후)
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>  build.sh                  gcc -I include -L lib -lmfswift_tire_interface
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>  reference/pac02_carmaker.csv   (생성물)
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>tools/tire_validation.py    --ref2 로 3-way 비교
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>docs/VALIDATION.md          benchmark #13 을 3-way 로 확장
 </span></code></pre></div>
 <hr />
-<h2 id="_3">빌드/실행 메모<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nv">CMI</span><span class="o">=</span>/opt/ipg/carmaker/linux64-12.0.1
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>gcc<span class="w"> </span>-I<span class="w"> </span><span class="nv">$CMI</span>/include<span class="w"> </span>mfs_init_probe.c<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span>-L<span class="w"> </span><span class="nv">$CMI</span>/lib<span class="w"> </span>-lmfswift_tire_interface<span class="w"> </span>-Wl,-rpath,<span class="nv">$CMI</span>/lib<span class="w"> </span>-o<span class="w"> </span>mfs_init_probe
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>./mfs_init_probe<span class="w">   </span><span class="c1"># 현재: init 0 (FITTYP validation) — 레시피 디버깅 필요</span>
+<h2 id="_2">빌드/실행 메모<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nv">CMI</span><span class="o">=</span>/opt/ipg/carmaker/linux64-12.0.1
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>gcc<span class="w"> </span>-I<span class="w"> </span><span class="nv">$CMI</span>/include<span class="w"> </span>mfs_init_probe.c<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span>-L<span class="w"> </span><span class="nv">$CMI</span>/lib<span class="w"> </span>-lmfswift_tire_interface<span class="w"> </span>-Wl,-rpath,<span class="nv">$CMI</span>/lib<span class="w"> </span>-o<span class="w"> </span>mfs_init_probe
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>./mfs_init_probe<span class="w">   </span><span class="c1"># 현재: init 0 (FITTYP validation) — 레시피 디버깅 필요</span>
 </span></code></pre></div>
 <p>라이선스: CarMaker floating license 가 동작 중이면 별도 entitlement 파일 불필요
 (probe 에서 확인). license 서버 다운 시 라이브러리 호출이 막힐 수 있음.</p>
