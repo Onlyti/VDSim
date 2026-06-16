@@ -13,6 +13,9 @@ add_executable(vdsim_integration_tests
     test_belt_transient.cpp
     test_belt_validation.cpp
     test_iso_baseline.cpp
+    test_effective_rolling_radius.cpp
+    test_camber_migration.cpp
+    test_tire_inversion.cpp
     test_tire_frame.cpp
     test_drivetrain_v2.cpp
     test_user_modules.cpp
