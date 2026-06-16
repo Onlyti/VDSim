@@ -33,6 +33,10 @@
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
+         <loc>https://onlyti.github.io/VDSim/main/HANDOFF_L5_MBD/</loc>
+         <lastmod>2026-06-16</lastmod>
+    </url>
+    <url>
          <loc>https://onlyti.github.io/VDSim/main/HANDOFF_TIRE_L5/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
@@ -106,6 +110,10 @@
     </url>
     <url>
          <loc>https://onlyti.github.io/VDSim/main/design/L5_6DOF_MULTIBODY/</loc>
+         <lastmod>2026-06-16</lastmod>
+    </url>
+    <url>
+         <loc>https://onlyti.github.io/VDSim/main/design/L5_MBD_DYNAMIC_COUPLING/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
