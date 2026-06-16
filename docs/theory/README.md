@@ -100,6 +100,7 @@ lumped 14-DOF 의 한계 → hardpoint kinematics → ISO 표준 maneuver / DOE
 | 02 | [Rigid-Body Dynamics](02_rigid_body_dynamics.md) | 중 | 01 | Body-frame Newton-Euler EoM 을 inertial / body 의 차이와 함께 유도 |
 | 03 | [Tire — Pacejka MF96](03_tire_pacejka_mf96.md) | 길음 | 01, 02 | Magic Formula 의 의미와 friction-ellipse rescale 의 가정 |
 | 19 | [Tire — LuGre / brush-dynamic](19_lugre_dynamic_tire.md) | 중 | 01, 03, 11 | Bristle state $z$, MF96 as $g()$, presliding vs sliding; VDSim opt-in |
+| 25 | [Tire Contact & Interface](25_tire_contact_interface.md) | 중 | 01, 03, 19, 21 | Effective rolling radius $R_e(F_z)$, camber contact migration → $M_x$, inverted kinematics-in/wrench-out interface |
 | 04 | [Ld1 — Bicycle (5 DOF)](04_ld1_bicycle.md) | 중 | 02, 03 | Single-track 가정 하의 5 DOF EoM 과 understeer gradient 의 해석해 |
 | 05 | [Ld2 — Seven-DOF](05_ld2_seven_dof.md) | 중 | 04 | Per-tire + lateral weight transfer + Ackerman + differential 분기 |
 | 06 | [Ld3 — Fourteen-DOF](06_ld3_fourteen_dof.md) | 길음 | 02, 04 | Sprung 3 + unsprung 4 의 lumped vertical 동역학 |

@@ -6,6 +6,33 @@ All notable changes to VDSim are documented here. Format follows
 
 ## [Unreleased]
 
+### Added — load-dependent Re, camber contact migration & inverted tire interface
+- **Effective rolling radius `Re(Fz)`** (Pacejka BREFF/DREFF/FREFF) across L1/L2/L3/L5:
+  slip `= (omega*Re - vx)/vx`, so a free-rolling loaded tire reports `kappa = 0` (matches
+  MF-Tyre/CarMaker). Initial wheel spin via `free_roll_wheel_spin` (vx/Re at static load)
+  removes the t=0 phantom longitudinal force. Opt-in (`reff_*=0` -> `R0`, legacy unchanged).
+- **Camber contact-point migration**: a cambered tire contacts on the leaning side
+  (`contact_dy = crown_radius*sin g`), producing an overturning moment `Mx = Fz*contact_dy`
+  fed into the L3/L5 roll DOF. Opt-in (`crown_radius=0` -> centreline contact, `Mx=0`).
+- **Shared `tire_contact` module**: one definition of slip / Re / camber migration for every
+  dynamics model (`vdsim/tire_contact.hpp::tire_contact_kinematics`).
+- Tests `EffectiveRollingRadius*` / `NoPhantomForce*` (VALIDATION #16) and `CamberMigration*`
+  (#17). New theory chapter 25 (tire contact & interface).
+
+### Changed — tire interface inverted to kinematics-in / wrench-out (Phase 2)
+- `ITireModel` gains `evaluate()` / `advance_bristle()` / `advance_relaxation()`, defined ONCE
+  in the base (`tire_model.cpp`) and dispatching the force law through the virtual
+  `compute()`; the base owns `TireParams` (via the `on_initialize()` hook), so Re / camber /
+  belt / relaxation / LuGre work for every backend (MF96 / linear / MF2002). A new tire is now
+  one `compute()` override. (Fixes a latent bug where a non-pacejka tire injected into
+  seven_dof/14-DOF produced zero force.)
+- `seven_dof` (and 14-DOF, which wraps it) own only the per-wheel `Transient` + `ContactInput`
+  and keep integrator stabilization (lambda / Fx_hold / combined-slip clamp / kinematic blend /
+  `Fx*Re`) vehicle-side. The transient advances at two cadences — bristle per RK4 stage,
+  carcass relaxation per substep — to stay byte-stable. bicycle (L1) / free_3d (L5) keep the
+  shared path by design (specialized contact kinematics). Backends/baselines byte-stable:
+  IsoBaseline / Lugre / Belt / ChronoPac02Parity unchanged. Tests `TireInversion*`.
+
 ### Added — multi-vehicle comparison tool (headless evaluation)
 - `tools/vdsim_compare.py`: run the ISO maneuver set (step-steer / skidpad / DLC) across
   several vehicle presets and tabulate the objective metrics side by side — the comparison
