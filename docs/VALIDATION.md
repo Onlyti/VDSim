@@ -146,13 +146,21 @@ folded into the re-baselined table above.
   Kinematic blend path: `LOW_SPEED_HANDLING.md`.
 - **L3 grip Fz** couples ride/road dynamically but omits the unsprung lateral-
   transfer term (small); see ch06 §6.4.
-- **Stunt / vertical loop (v0.4):** the dynamic Free3D (Ld5) plant — the car is held
-  on the track by the contact normal force (penalty from penetration), the
-  centripetal condition is *emergent*, and it loses the track if too slow. It is
-  robust-tuned for stunts, not validated road contact: the loop surface uses
-  stiffened/capped contact (higher Fz cap, capped penetration, track-tangent
-  longitudinal), so it is a plausible-but-not-quantitatively-validated demo, not a
-  benchmarked maneuver. See `docs/design/V0.4_SLOPE_JUMP_DYNAMICS.md`.
+- **Stunt / vertical loop (v0.4) — default penalty path:** the dynamic Free3D (Ld5)
+  plant holds the car on the track by the contact normal force (penalty from
+  penetration); the centripetal condition is *emergent* and it loses the track if too
+  slow. The default path (`l5_spatial_suspension = false`) is robust-tuned for stunts,
+  not validated road contact: the loop surface uses stiffened/capped contact (higher Fz
+  cap, capped penetration, track-tangent longitudinal), so it is a plausible-but-not-
+  quantitatively-validated demo. See `docs/design/V0.4_SLOPE_JUMP_DYNAMICS.md`.
+- **L5 spatial-strut path (opt-in, `l5_spatial_suspension = true`) — validated.** The
+  6-DOF body carries per-corner sprung/unsprung strut dynamics with the inverted tire
+  and (optionally) the L4 corner DAE for toe/camber. Phase-C evidence
+  (`docs/evidence/l5/PHASE_C.md`, suite `L5StrutValidation.*`): flat cross-model vs L2
+  (yaw rate 1.9%, lateral g 3.6%), ballistic jump (fit g within 0.5%, speed drift 0.5%),
+  emergent loop critical speed, and per-corner camber matching the standalone L4 DAE to
+  < 1.3e-4 rad. Quarter-car heave 1.33 vs 1.41 Hz analytic (`L5Strut.*`). See
+  `docs/design/L5_6DOF_MULTIBODY.md`.
 
 ## Reproducing the whole report
 

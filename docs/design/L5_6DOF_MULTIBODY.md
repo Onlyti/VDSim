@@ -85,7 +85,13 @@ validatable model, and lets L5 share the inverted tire interface like L2/L3.
   reported; static settle still holds full weight with the DAE; a steady steer with the DAE
   attached diverges from the DAE-off run (vy 0.863 vs 0.926 m/s) — the corner kinematics
   measurably alter handling.
-- **C** — validation (below).
+- **C — DONE** — gating validation passed on the strut path. Evidence:
+  `docs/evidence/l5/PHASE_C.md` (suite `L5StrutValidation.*`): flat cross-model vs L2
+  (yaw rate 1.9%, lateral g 3.6%), ballistic jump (fit g within 0.5%, horizontal speed
+  drift 0.5%), emergent loop critical speed (1.15 v_crit climbs ~20 rad, 0.70 v_crit
+  stalls at ~2.7 rad), per-corner camber matching the standalone L4 corner DAE to
+  < 1.3e-4 rad. L5 spatial-strut promoted from experimental to validated in
+  VALIDATION.md; the default penalty path stays the stunt demo.
 
 ## Phase B — implementation design (spatial suspension on the 6-DOF body)
 
@@ -139,6 +145,8 @@ mandatory (figure / numeric table):
   DAE on the shared topology.
 
 Until C passes, L5 stays labelled experimental in VALIDATION.md.
+(Done — see `docs/evidence/l5/PHASE_C.md`; the strut path is now validated, the default
+penalty path remains the stunt demo.)
 
 ## Risks
 

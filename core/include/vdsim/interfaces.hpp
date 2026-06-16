@@ -134,6 +134,10 @@ bool free_3d_attach_multibody(IVehicleDynamics& dyn,
                               const mb::SuspensionTopology& topo,
                               bool enable_dynamics);
 bool free_3d_mb_dynamics_enabled(const IVehicleDynamics& dyn, int axle);
+// Per-wheel suspension toe/camber [rad] last applied to the tire (strut path + DAE).
+// Zero for any other model. For inspection / suspension-vs-L4 validation.
+std::array<double, NUM_WHEELS> free_3d_wheel_camber(const IVehicleDynamics& dyn);
+std::array<double, NUM_WHEELS> free_3d_wheel_toe(const IVehicleDynamics& dyn);
 // Kinematic bicycle (no tire forces / no slip): yaw_rate = v*tan(delta)/L.
 // For path-planning / kinematic-MPC use and as the simplest ladder rung.
 std::unique_ptr<IVehicleDynamics> create_kinematic();

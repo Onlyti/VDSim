@@ -9,6 +9,7 @@ add_executable(vdsim_integration_tests
     test_lugre_tire.cpp
     test_stunt.cpp
     test_l5_driving.cpp
+    test_l5_strut_validation.cpp
     test_terrain_l5.cpp
     test_belt_transient.cpp
     test_belt_validation.cpp

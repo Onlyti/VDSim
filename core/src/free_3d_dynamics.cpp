@@ -215,6 +215,8 @@ public:
     bool mb_enabled(int axle) const noexcept {
         return axle == 0 ? mb_enabled_front_ : mb_enabled_rear_;
     }
+    std::array<double, NUM_WHEELS> wheel_camber() const noexcept { return gamma_dae_; }
+    std::array<double, NUM_WHEELS> wheel_toe()    const noexcept { return toe_dae_; }
 
     std::array<Vec3, NUM_WHEELS>   tire_forces_body() const override { return tire_F_; }
     std::array<double, NUM_WHEELS> tire_Fz()           const override { return tire_Fz_; }
@@ -586,6 +588,11 @@ private:
             a_world = F_total_world / m_body;
         }
         const Vec3 a_body = R.transpose() * a_world - omega.cross(v_body);
+        // Reported ax/ay are the body-frame specific force (gravity removed), matching
+        // the planar L2/L3 convention (Fy/m) — the accelerometer/load-transfer signal,
+        // not the body-velocity derivative (which is ~0 in a steady turn).
+        const Vec3 accel_sf_body =
+            R.transpose() * (a_world + Vec3(0.0, 0.0, kGravity));
         const Vec3 Iw(
             vp_.inertia_diag.x() * omega.x(),
             vp_.inertia_diag.y() * omega.y(),
@@ -599,8 +606,8 @@ private:
         d_out.dp_world = R * v_body;
         d_out.d_v_body = a_body;
         d_out.d_omega  = alpha_body;
-        d_out.ax_body  = a_body.x();
-        d_out.ay_body  = a_body.y();
+        d_out.ax_body  = accel_sf_body.x();
+        d_out.ay_body  = accel_sf_body.y();
         d_out.d_comp     = dcomp;
         d_out.d_comp_dot = dcomp_dot;
 
@@ -813,6 +820,16 @@ bool free_3d_mb_dynamics_enabled(const IVehicleDynamics& dyn, int axle) {
     const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);
     if (!p) return false;
     return p->mb_enabled(axle);
+}
+
+std::array<double, NUM_WHEELS> free_3d_wheel_camber(const IVehicleDynamics& dyn) {
+    const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);
+    return p ? p->wheel_camber() : std::array<double, NUM_WHEELS>{};
+}
+
+std::array<double, NUM_WHEELS> free_3d_wheel_toe(const IVehicleDynamics& dyn) {
+    const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);
+    return p ? p->wheel_toe() : std::array<double, NUM_WHEELS>{};
 }
 
 }  // namespace vdsim
