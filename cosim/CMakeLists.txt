@@ -101,4 +101,10 @@ if(Python3_FOUND)
     set_tests_properties(experiment_api PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/build/python:${CMAKE_SOURCE_DIR}/python")
+    add_test(NAME control_ladder
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/examples/control_ladder_demo.py)
+    set_tests_properties(control_ladder PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/build/python:${CMAKE_SOURCE_DIR}/python")
 endif()
