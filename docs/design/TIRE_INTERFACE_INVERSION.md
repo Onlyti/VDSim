@@ -39,21 +39,27 @@ the Phase-1 shared path by design (see "Deferred" below).
    exposed in pybind) would have hit the old zero stub. A new tire is now one compute()
    override.
 
-## Deferred: bicycle (L1) and free_3d (L5) keep the Phase-1 shared path — by design
+## L1 bicycle — switched (per-tire individual contact)
 
-They are NOT switched to evaluate()/advance_*, because their contact kinematics deviate
-from the canonical per-wheel contract in ways that the clean interface should not absorb:
-- `bicycle_dynamics.cpp` lumps two tires per axle: Re is taken at the per-WHEEL load
-  (`0.5*Fz_axle`) while the force law gets the full axle `Fz` — a single `ContactInput.Fz`
-  cannot express both without an extra `Re_load` field. Its LuGre slip velocity also uses
-  the unloaded `R0` (not Re); switching to the Re-based base `advance_bristle` would change
-  the LuGre path under a reff-enabled tire, and there is no L1+LuGre regression test to gate it.
-- `free_3d_dynamics.cpp` (stunt) uses a loop-specific slip-ratio denominator, not the
-  standard `max(|Vx|,eps)`; the base evaluate would change its slip.
-Both already use the shared `tire_contact_kinematics` + `compute()` (Phase 1), so a new
-*force law* still drops in. A new *transient* model would still need edits here — accepted,
-because their transient handling is coupled to the specialized kinematics. Revisit only if a
-clean way to parameterize (Re_load + slip-denominator policy) proves worthwhile.
+`bicycle_dynamics.cpp` now uses the inverted interface. Resolution of the old axle-lump
+load split: model each axle as a per-tire contact at the per-wheel load
+(`ContactInput.Fz = 0.5*Fz_axle`) and double the returned wrench for the axle force. Force
+law AND Re then see a consistent load, and the load-sensitive mu is applied at the true
+per-tire load (more correct than the old full-axle-load `compute()`). Byte-stable on
+BicycleSteadyState (load_sensitivity defaults to 0 -> 2*F(0.5Fz) == F(Fz)); gated under
+LuGre by `LuGreTire.HighSpeedLongitudinalNearPacejka` (L1) + the L1 no-phantom (reff) test.
+Owns `Transient[2]` + `ContactInput[2]` (front/rear); the LuGre slip velocity now uses Re
+consistently (was R0). 14-DOF/L2 already inverted (Phase 2).
+
+## free_3d (L5) — being re-founded as the full 6-DOF model (see V0.x roadmap)
+
+L5 is NOT on the inverted contract yet: it uses a loop-specific slip-ratio denominator
+(not the standard `max(|Vx|,eps)`) and capped/penalty stunt contact, so the base evaluate
+would change its slip. Rather than keep it as a throwaway stunt plant, the decision is to
+re-found L5 as the full 6-DOF sibling of L4 (the only airborne/loop-capable model, since
+L1-L4 are planar/ride and cannot jump). That is a separate, validation-gated effort — see
+the L5 6-DOF design doc / ROADMAP. Until then L5 keeps the Phase-1 shared
+`tire_contact_kinematics` + `compute()` path (a new force law still drops in).
 
 ## Goal
 

@@ -14,14 +14,11 @@
 // Note: this differs from Rajamani's "delta - atan(...)" which assumes
 // SAE Y-right convention.
 
-#include "vdsim/belt_tire.hpp"
 #include "vdsim/coordinate.hpp"
 #include "vdsim/drivetrain_inertia.hpp"
 #include "vdsim/interfaces.hpp"
 #include "vdsim/low_speed.hpp"
-#include "vdsim/lugre_tire.hpp"
 #include "vdsim/powertrain.hpp"
-#include "vdsim/tire_contact.hpp"
 
 #include <spdlog/spdlog.h>
 
@@ -72,7 +69,6 @@ inline CmdL4 lower_to_l4(const ControlInput& u) {
 
 constexpr double kAirDensity   = 1.225;   // [kg/m^3]
 constexpr double kGravity      = 9.80665; // [m/s^2]
-constexpr double kSpeedEps     = 0.15;    // [m/s] minimum denom for slip ratio / angle
 constexpr double kBrakeWidth   = 1.0;     // [rad/s] tanh transition width
 // kStickBlend / kStickC / kKinTau: shared low-speed constants in vdsim/low_speed.hpp
 
@@ -134,15 +130,8 @@ public:
         if (has_powertrain_) engine_gb_.reset();
         pt_T_front_ = pt_T_rear_ = 0.0;
         pt_I_axle_f_ = pt_I_axle_r_ = 0.0;
-        alpha_dyn_f_ = alpha_dyn_r_ = 0.0;
-        alpha_geom_f_last_ = alpha_geom_r_last_ = 0.0;
-        kappa_geom_f_last_ = kappa_geom_r_last_ = 0.0;
-        belt_kappa_f_ = belt_kappa_r_ = belt_alpha_f_ = belt_alpha_r_ = 0.0;
-        belt_vlong_f_ = belt_vlong_r_ = belt_vlat_f_ = belt_vlat_r_ = 0.0;
-        v_slip_long_f_last_ = v_slip_lat_f_last_ = 0.0;
-        v_slip_long_r_last_ = v_slip_lat_r_last_ = 0.0;
-        lugre_z_long_f_ = lugre_z_lat_f_ = lugre_z_long_r_ = lugre_z_lat_r_ = 0.0;
-        v_fx_wheel_last_ = v_rx_body_last_ = 0.0;
+        transient_.fill(ITireModel::Transient{});
+        ci_.fill(ITireModel::ContactInput{});
         // Clear diagnostics so accessors don't return stale values before step().
         tire_F_.fill(Vec3::Zero());
         tire_Fz_.fill(0.0);
@@ -272,50 +261,33 @@ private:
         const double v_fy_wheel = -v_fx_body * sd + v_fy_body * cd;
         // Rear wheel: no steering, wheel frame == body frame.
 
-        // ---- Slip quantities (ISO 8855 RH) ----
-        // alpha = atan2(v_wheel_y, v_wheel_x) (positive when velocity is left of wheel-forward)
-        const double alpha_f = std::atan2(v_fy_wheel, v_fx_wheel);
-        const double alpha_r = std::atan2(v_ry_body,  v_rx_body);
-
-        // Slip kinematics + Re from the shared tire-contact module. Fz_f/Fz_r are
-        // per-axle (2 tires lumped) -> Re takes the per-wheel load (half).
-        const auto ck_f = tire_contact_kinematics(v_fx_wheel, v_fy_wheel, of, 0.5 * Fz_f, 0.0, tp_, R);
-        const auto ck_r = tire_contact_kinematics(v_rx_body,  v_ry_body, or_, 0.5 * Fz_r, 0.0, tp_, R);
-        const double Re_f = ck_f.Re;
-        const double Re_r = ck_r.Re;
-        const double kappa_f = ck_f.kappa;
-        const double kappa_r = ck_r.kappa;
-
         const bool lugre_on = tp_.lugre.enabled;
-        // Belt transient (T2): on the MF path feed the relaxed slip (substep()
-        // advances belt_*_); held frozen within RK4 so all stages see one
-        // linearization. Default off -> identical to the legacy slip.
-        const bool belt_on = tp_.belt.enabled && !lugre_on;
-        const double alpha_in_f = belt_on ? belt_alpha_f_
-                                : (lugre_on || tp_.relaxation_length_lat <= 1e-6)
-                                  ? alpha_f : alpha_dyn_f_;
-        const double alpha_in_r = belt_on ? belt_alpha_r_
-                                : (lugre_on || tp_.relaxation_length_lat <= 1e-6)
-                                  ? alpha_r : alpha_dyn_r_;
-        const double kappa_in_f = belt_on ? belt_kappa_f_ : kappa_f;
-        const double kappa_in_r = belt_on ? belt_kappa_r_ : kappa_r;
-        ITireModel::Input in_f;
-        in_f.Fz = Fz_f; in_f.kappa = kappa_in_f; in_f.alpha = alpha_in_f;
-        in_f.mu_long = mu_long_f; in_f.mu_lat = mu_lat_f; in_f.Vx_wheel = v_fx_wheel;
-        ITireModel::Input in_r;
-        in_r.Fz = Fz_r; in_r.kappa = kappa_in_r; in_r.alpha = alpha_in_r;
-        in_r.mu_long = mu_long_r; in_r.mu_lat = mu_lat_r; in_r.Vx_wheel = v_rx_body;
 
-        alpha_geom_f_last_ = alpha_f;
-        alpha_geom_r_last_ = alpha_r;
-        kappa_geom_f_last_ = kappa_f;
-        kappa_geom_r_last_ = kappa_r;
-        v_fx_wheel_last_   = v_fx_wheel;
-        v_rx_body_last_    = v_rx_body;
-        v_fy_wheel_last_   = v_fy_wheel;
-        v_ry_body_last_    = v_ry_body;
-        wheel_spin_f_last_ = of;
-        wheel_spin_r_last_ = or_;
+        // Per-tire individual contact: each axle is two identical tires (single-track,
+        // no lateral transfer) at half the axle load. Evaluate ONE tire at the per-wheel
+        // load (ci.Fz = 0.5*Fz, so the force law AND Re see a consistent load -- the
+        // load-sensitive mu is applied at the true per-tire load) and double the wrench
+        // for the axle. The tire owns slip / Re / transient (advanced per stage/substep
+        // below); only the integrator stabilization stays here.
+        ITireModel::ContactInput ci_f;
+        ci_f.Fz = 0.5 * Fz_f; ci_f.Vx = v_fx_wheel; ci_f.Vy = v_fy_wheel;
+        ci_f.omega = of; ci_f.gamma = 0.0;
+        ci_f.mu_long = mu_long_f; ci_f.mu_lat = mu_lat_f; ci_f.R0 = R;
+        ITireModel::ContactInput ci_r;
+        ci_r.Fz = 0.5 * Fz_r; ci_r.Vx = v_rx_body; ci_r.Vy = v_ry_body;
+        ci_r.omega = or_; ci_r.gamma = 0.0;
+        ci_r.mu_long = mu_long_r; ci_r.mu_lat = mu_lat_r; ci_r.R0 = R;
+        ci_[0] = ci_f; ci_[1] = ci_r;
+
+        const ITireModel::Wrench wf = tire_->evaluate(ci_f, transient_[0]);
+        const ITireModel::Wrench wr = tire_->evaluate(ci_r, transient_[1]);
+        const double Re_f = wf.Re, Re_r = wr.Re;
+        const double kappa_f = wf.kappa, kappa_r = wr.kappa;
+        const double alpha_f = wf.alpha, alpha_r = wr.alpha;
+        // Axle force = two per-tire wrenches.
+        ITireModel::Output F_f, F_r;
+        F_f.Fx = 2.0 * wf.Fx; F_f.Fy = 2.0 * wf.Fy; F_f.Mz = 2.0 * wf.Mz;
+        F_r.Fx = 2.0 * wr.Fx; F_r.Fy = 2.0 * wr.Fy; F_r.Mz = 2.0 * wr.Mz;
 
         const double speed = std::hypot(vx, vy);
         double lambda = lugre_on ? 1.0 : std::clamp(speed / kStickBlend, 0.0, 1.0);
@@ -323,36 +295,15 @@ private:
 
         const double muFz_f = std::min(mu_long_f, mu_lat_f) * std::max(0.0, Fz_f);
         const double muFz_r = std::min(mu_long_r, mu_lat_r) * std::max(0.0, Fz_r);
-        const double v_slip_long_f = ck_f.vsx;
-        const double v_slip_lat_f  = v_fy_wheel;
-        const double v_slip_long_r = ck_r.vsx;
-        const double v_slip_lat_r  = v_ry_body;
-        v_slip_long_f_last_ = v_slip_long_f; v_slip_lat_f_last_ = v_slip_lat_f;
-        v_slip_long_r_last_ = v_slip_long_r; v_slip_lat_r_last_ = v_slip_lat_r;
-        // Belt on the LuGre path relaxes the slip *velocity* feeding the bristle v_r.
-        const bool belt_lugre = tp_.belt.enabled && lugre_on;
-        const double vsl_long_f = belt_lugre ? belt_vlong_f_ : v_slip_long_f;
-        const double vsl_lat_f  = belt_lugre ? belt_vlat_f_  : v_slip_lat_f;
-        const double vsl_long_r = belt_lugre ? belt_vlong_r_ : v_slip_long_r;
-        const double vsl_lat_r  = belt_lugre ? belt_vlat_r_  : v_slip_lat_r;
 
-        ITireModel::Output F_f{}, F_r{};
         double Fxh_f = 0.0, Fxh_r = 0.0;
         double Fx_f_wheel = 0.0, Fy_f_wheel = 0.0;
         double Fx_r_axle = 0.0, Fy_r_axle = 0.0;
         double fx_kin_f = 0.0, fx_kin_r = 0.0;
         if (lugre_on) {
-            const auto lf = lugre_wheel_forces(
-                *tire_, tp_, lugre_z_long_f_, lugre_z_lat_f_,
-                vsl_long_f, vsl_lat_f, in_f);
-            const auto lr = lugre_wheel_forces(
-                *tire_, tp_, lugre_z_long_r_, lugre_z_lat_r_,
-                vsl_long_r, vsl_lat_r, in_r);
-            Fx_f_wheel = lf.Fx; Fy_f_wheel = lf.Fy; F_f.Mz = lf.Mz;
-            Fx_r_axle  = lr.Fx; Fy_r_axle  = lr.Fy; F_r.Mz = lr.Mz;
+            Fx_f_wheel = F_f.Fx; Fy_f_wheel = F_f.Fy;
+            Fx_r_axle  = F_r.Fx; Fy_r_axle  = F_r.Fy;
         } else {
-            F_f = tire_->compute(in_f);
-            F_r = tire_->compute(in_r);
             const double hold_gate = (1.0 - lambda) *
                 std::clamp(cmd.brake - cmd.throttle, 0.0, 1.0);
             const double c_hold = 2.0 * kStickC;
@@ -505,36 +456,16 @@ private:
         return s;
     }
 
-    void advance_lugre_states_(double h) {
+    // LuGre bristle z — per RK4 stage (per-axle: front=index 0, rear=index 1).
+    void advance_bristle_(double dt) {
         if (!tp_.lugre.enabled) return;
-        const double sigma0 = std::max(1.0, tp_.lugre.sigma0);
-        const double Rloc = vp_.wheel_radius_nominal;
-        auto advance = [&](double& z_long, double& z_lat,
-                           double w_spin, double vx_w, double vy_w,
-                           const ITireModel::Input& in) {
-            const double v_slip_long = Rloc * w_spin - vx_w;
-            const double v_slip_lat  = vy_w;
-            const auto mf = tire_->compute(in);
-            z_long = lugre_advance_z(z_long, v_slip_long,
-                lugre_breakaway(mf, true, in.Fz, in.mu_long, in.mu_lat), sigma0, h);
-            z_lat  = lugre_advance_z(z_lat, v_slip_lat,
-                lugre_breakaway(mf, false, in.Fz, in.mu_long, in.mu_lat, in.alpha), sigma0, h);
-        };
-        ITireModel::Input in_f;
-        in_f.Fz = 2.0 * tire_Fz_[WHEEL_FL];
-        in_f.kappa = slip_ratio_[WHEEL_FL];
-        in_f.alpha = slip_angle_[WHEEL_FL];
-        in_f.mu_long = 1.0; in_f.mu_lat = 1.0;
-        in_f.Vx_wheel = v_fx_wheel_last_;
-        ITireModel::Input in_r = in_f;
-        in_r.Fz = 2.0 * tire_Fz_[WHEEL_RL];
-        in_r.kappa = slip_ratio_[WHEEL_RL];
-        in_r.alpha = slip_angle_[WHEEL_RL];
-        in_r.Vx_wheel = v_rx_body_last_;
-        advance(lugre_z_long_f_, lugre_z_lat_f_, wheel_spin_f_last_,
-                v_fx_wheel_last_, v_fy_wheel_last_, in_f);
-        advance(lugre_z_long_r_, lugre_z_lat_r_, wheel_spin_r_last_,
-                v_rx_body_last_, v_ry_body_last_, in_r);
+        transient_[0] = tire_->advance_bristle(ci_[0], transient_[0], dt);
+        transient_[1] = tire_->advance_bristle(ci_[1], transient_[1], dt);
+    }
+    // Carcass/belt + relaxation-length lag — once per substep.
+    void advance_relaxation_(double dt) {
+        transient_[0] = tire_->advance_relaxation(ci_[0], transient_[0], dt);
+        transient_[1] = tire_->advance_relaxation(ci_[1], transient_[1], dt);
     }
 
     void substep(const CmdL4& cmd, const ContactArray& contacts, double h) {
@@ -575,17 +506,17 @@ private:
             const Deriv k = derivatives(s0, cmd, contacts);
             state_   = apply(s0, k, h);
             ax_prev_ = k.ax_body;
-            if (lugre_on) advance_lugre_states_(h);
+            if (lugre_on) advance_bristle_(h);
             return;
         }
         const Deriv k1 = derivatives(s0,                       cmd, contacts);
-        if (lugre_on) advance_lugre_states_(hz);
+        if (lugre_on) advance_bristle_(hz);
         const Deriv k2 = derivatives(apply(s0, k1, 0.5 * h),  cmd, contacts);
-        if (lugre_on) advance_lugre_states_(hz);
+        if (lugre_on) advance_bristle_(hz);
         const Deriv k3 = derivatives(apply(s0, k2, 0.5 * h),  cmd, contacts);
-        if (lugre_on) advance_lugre_states_(hz);
+        if (lugre_on) advance_bristle_(hz);
         const Deriv k4 = derivatives(apply(s0, k3, h),        cmd, contacts);
-        if (lugre_on) advance_lugre_states_(hz);
+        if (lugre_on) advance_bristle_(hz);
 
         Deriv k;
         k.dx_world = (k1.dx_world + 2.0 * k2.dx_world + 2.0 * k3.dx_world + k4.dx_world) / 6.0;
@@ -600,31 +531,8 @@ private:
 
         state_   = apply(s0, k, h);
         ax_prev_ = k.ax_body;
-        // Transient slip-angle relaxation (per axle, between substeps).
-        if (!tp_.lugre.enabled && tp_.relaxation_length_lat > 1e-6) {
-            const double sigma = tp_.relaxation_length_lat;
-            const double vf = std::max(std::abs(v_fx_wheel_last_), kSpeedEps);
-            const double vr = std::max(std::abs(v_rx_body_last_),  kSpeedEps);
-            const double df = std::exp(-vf * h / sigma);
-            const double dr = std::exp(-vr * h / sigma);
-            alpha_dyn_f_ = alpha_geom_f_last_
-                         + (alpha_dyn_f_ - alpha_geom_f_last_) * df;
-            alpha_dyn_r_ = alpha_geom_r_last_
-                         + (alpha_dyn_r_ - alpha_geom_r_last_) * dr;
-        }
-        // Belt transient (T2): relax slip toward its geometric value with
-        // tau = sigma/|Vx| (MF path); on the LuGre path relax the slip velocity.
-        if (tp_.belt.enabled && !tp_.lugre.enabled) {
-            belt_kappa_f_ = belt_relax(belt_kappa_f_, kappa_geom_f_last_, v_fx_wheel_last_, tp_.belt.sigma_long, h);
-            belt_alpha_f_ = belt_relax(belt_alpha_f_, alpha_geom_f_last_, v_fx_wheel_last_, tp_.belt.sigma_lat,  h);
-            belt_kappa_r_ = belt_relax(belt_kappa_r_, kappa_geom_r_last_, v_rx_body_last_,  tp_.belt.sigma_long, h);
-            belt_alpha_r_ = belt_relax(belt_alpha_r_, alpha_geom_r_last_, v_rx_body_last_,  tp_.belt.sigma_lat,  h);
-        } else if (tp_.belt.enabled && tp_.lugre.enabled) {
-            belt_vlong_f_ = belt_relax(belt_vlong_f_, v_slip_long_f_last_, v_fx_wheel_last_, tp_.belt.sigma_long, h);
-            belt_vlat_f_  = belt_relax(belt_vlat_f_,  v_slip_lat_f_last_,  v_fx_wheel_last_, tp_.belt.sigma_lat,  h);
-            belt_vlong_r_ = belt_relax(belt_vlong_r_, v_slip_long_r_last_, v_rx_body_last_,  tp_.belt.sigma_long, h);
-            belt_vlat_r_  = belt_relax(belt_vlat_r_,  v_slip_lat_r_last_,  v_rx_body_last_,  tp_.belt.sigma_lat,  h);
-        }
+        // Carcass relaxation + relaxation-length lag, once per substep (tire-owned).
+        advance_relaxation_(h);
     }
 
     VehicleParams vp_;
@@ -652,28 +560,10 @@ private:
     std::array<double, NUM_WHEELS> tire_Fz_   {};
     std::array<double, NUM_WHEELS> slip_ratio_ {};
     std::array<double, NUM_WHEELS> slip_angle_ {};
-    // Per-axle transient slip + last-step caches (for relaxation length).
-    double alpha_dyn_f_       {0.0};
-    double alpha_dyn_r_       {0.0};
-    double alpha_geom_f_last_ {0.0};
-    double alpha_geom_r_last_ {0.0};
-    double v_fx_wheel_last_   {0.0};
-    double v_rx_body_last_    {0.0};
-    double v_fy_wheel_last_   {0.0};
-    double v_ry_body_last_    {0.0};
-    double wheel_spin_f_last_  {0.0};
-    double wheel_spin_r_last_  {0.0};
-    double kappa_geom_f_last_ {0.0};
-    double kappa_geom_r_last_ {0.0};
-    // Belt transient (T2): per-axle relaxed slip (MF) / slip velocity (LuGre).
-    double belt_kappa_f_ {0.0}, belt_kappa_r_ {0.0};
-    double belt_alpha_f_ {0.0}, belt_alpha_r_ {0.0};
-    double belt_vlong_f_ {0.0}, belt_vlong_r_ {0.0};
-    double belt_vlat_f_  {0.0}, belt_vlat_r_  {0.0};
-    double v_slip_long_f_last_ {0.0}, v_slip_lat_f_last_ {0.0};
-    double v_slip_long_r_last_ {0.0}, v_slip_lat_r_last_ {0.0};
-    double lugre_z_long_f_ {0.0}, lugre_z_lat_f_ {0.0};
-    double lugre_z_long_r_ {0.0}, lugre_z_lat_r_ {0.0};
+    // Per-axle (index 0 = front, 1 = rear) tire transient + the contact kinematics the
+    // tire was last evaluated at, feeding the per-stage / per-substep advance calls.
+    std::array<ITireModel::Transient, 2> transient_ {};
+    std::array<ITireModel::ContactInput, 2> ci_ {};
 };
 
 }  // namespace
