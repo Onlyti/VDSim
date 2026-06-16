@@ -59,6 +59,43 @@ validatable model, and lets L5 share the inverted tire interface like L2/L3.
 - **B** — attach the L4 corner DAE to the 6-DOF body (true spatial multibody).
 - **C** — validation (below).
 
+## Phase B — implementation design (spatial suspension on the 6-DOF body)
+
+Grounding (studied): the L4 corner DAE (`multibody.hpp::IHardJointDaeModel::step`) is a
+per-corner suspension *kinematics/quasi-dynamics*: it consumes a PRESCRIBED travel
+(`PrescribedCornerMotion{travel_z, travel_z_dot, ...}`) + the wheel `WheelLoad`, integrates
+the revolute + Baumgarte travel constraint, and returns a `WheelPose` (toe/camber/caster).
+The 14-DOF feeds it `travel = z_u[i] - z_corner_s` (unsprung world z minus sprung corner z)
+from its OWN heave/roll/pitch + unsprung vertical dynamics, then applies the camber to the
+tire via `set_camber_per_wheel`. So the DAE does NOT generate the vertical force law — the
+host owns the sprung/unsprung dynamics that produce `travel`.
+
+free_3d today has NO suspension: wheels are glued to the body at fixed `r_body_[i]` and held
+up by a penalty contact (`Fz = k_tire*penetration + c*vn`, capped). Phase B therefore must
+add a spatial sprung/unsprung suspension to the 6-DOF body before the DAE has a `travel` to
+consume. Two sub-pieces:
+
+- **B1 — spatial strut dynamics (the large, new piece).** Per corner add an unsprung mass
+  `m_u[i]` with one travel DOF `z_strut[i]` along the strut axis expressed in the BODY frame
+  (so it rotates with the 6-DOF attitude). Forces: a strut spring+damper between the body
+  mount and the unsprung (`F_susp = k_s*z_strut + c_s*z_strut_dot`), and the tire vertical
+  via the existing contact (`Fz` from the road, now acting on the unsprung not the body).
+  The strut reaction feeds the 6-DOF body Newton-Euler (force at the mount point `r_body_[i]`,
+  moment `r_body_[i] x F`); the unsprung gets `m_u*z_strut_ddot = Fz_tire - F_susp - m_u*g·n`.
+  This generalises the 14-DOF heave/roll/pitch+unsprung to a free 6-DOF body: the "sprung
+  mass" is the full spatial body, the strut axis is body-fixed. State grows by `z_strut[i]`,
+  `z_strut_dot[i]` (8 scalars). The penalty-at-fixed-hub contact is replaced by tire-spring
+  on the unsprung.
+- **B2 — corner DAE wiring (small, once B1 exists).** Feed `travel = z_strut[i]` (and rate)
+  as `PrescribedCornerMotion` to `create_hard_joint_dae_model(topo)` per corner, get the
+  `WheelPose`, set `gamma[i] = camber_rad` and `toe[i]` into the tire `ContactInput` (camber
+  already flows through `evaluate()`; toe rotates the wheel-heading tangent). Reuse the
+  14-DOF wiring pattern (`step_hard_joint_dae`, `axle_prescribed_motion`).
+
+Risk: B1 changes how the car is supported (strut+tire-spring instead of penalty-at-hub), so
+every stunt/L5/terrain test rebaselines and the loop contact must stay stable through the
+attitude sweep. This is why phase C (below) gates B.
+
 ## Validation plan (gating, per evidence policy)
 
 L5 is currently "plausible-but-not-validated". To promote it to a model, evidence is
