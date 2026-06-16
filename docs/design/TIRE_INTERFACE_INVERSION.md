@@ -51,15 +51,22 @@ LuGre by `LuGreTire.HighSpeedLongitudinalNearPacejka` (L1) + the L1 no-phantom (
 Owns `Transient[2]` + `ContactInput[2]` (front/rear); the LuGre slip velocity now uses Re
 consistently (was R0). 14-DOF/L2 already inverted (Phase 2).
 
-## free_3d (L5) — being re-founded as the full 6-DOF model (see V0.x roadmap)
+## free_3d (L5) — switched (phase A of the 6-DOF re-founding)
 
-L5 is NOT on the inverted contract yet: it uses a loop-specific slip-ratio denominator
-(not the standard `max(|Vx|,eps)`) and capped/penalty stunt contact, so the base evaluate
-would change its slip. Rather than keep it as a throwaway stunt plant, the decision is to
-re-found L5 as the full 6-DOF sibling of L4 (the only airborne/loop-capable model, since
-L1-L4 are planar/ride and cannot jump). That is a separate, validation-gated effort — see
-the L5 6-DOF design doc / ROADMAP. Until then L5 keeps the Phase-1 shared
-`tire_contact_kinematics` + `compute()` path (a new force law still drops in).
+L5 now uses the inverted interface too: `evaluate()` per RK4 stage + `advance_bristle()`
+(per stage) / `advance_relaxation()` (per substep). The old loop-specific slip-ratio
+denominator floor is gone — the contact-frame longitudinal velocity `v_long_k` (project the
+hub velocity onto the wheel-heading tangent; fall back to the track-tangent speed near a
+loop top where the heading tangent passes through zero) is fed as `ContactInput.Vx`, and the
+tire owns the slip definition with the standard `max(|Vx|,eps)`. This also fixed a latent
+bug: free_3d never integrated the LuGre bristle `z` (it stayed 0); it now advances it per
+stage like L2/L3. Stunt loop tests (`FreeLoopCompletesLap`, `LoopSlipAngleFrontRearBalanced`)
+still pass — the contact-frame `v_long_k` alone keeps the loop well-posed; the dropped floor
+was not load-bearing. All L1-L5 + every backend now share one tire definition.
+
+Remaining for L5 (separate, validation-gated — see `docs/design/L5_6DOF_MULTIBODY.md`):
+phase B (attach the L4 hard-joint corner DAE suspension to the 6-DOF body) and phase C
+(promote from "experimental" with jump/loop/cross-model validation evidence).
 
 ## Goal
 

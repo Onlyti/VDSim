@@ -49,8 +49,13 @@ validatable model, and lets L5 share the inverted tire interface like L2/L3.
 
 ## Phasing
 
-- **A** — 6-DOF body + contact-frame slip + inverted tire (suspension still rigid/penalty).
-  Closes the L5 inversion gap; L5 becomes a real 6-DOF vehicle with shared tires.
+- **A — DONE** — 6-DOF body + contact-frame slip + inverted tire (suspension still
+  rigid/penalty). free_3d now routes the tire through `evaluate()` / `advance_bristle()` /
+  `advance_relaxation()`; the loop-denominator floor is replaced by the contact-frame
+  `v_long_k` (hub velocity onto the wheel-heading tangent, track-tangent fallback near a loop
+  top), so L5 joins the inverted contract with the standard slip denominator. Also fixed:
+  the LuGre bristle `z` is now integrated (was degenerate / never advanced). All stunt/L5/
+  terrain tests pass (loop tests included); 364/364 ctest green.
 - **B** — attach the L4 corner DAE to the 6-DOF body (true spatial multibody).
 - **C** — validation (below).
 
