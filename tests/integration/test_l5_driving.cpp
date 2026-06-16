@@ -1,5 +1,6 @@
 #include "vdsim/coordinate.hpp"
 #include "vdsim/interfaces.hpp"
+#include "vdsim/multibody.hpp"
 #include "vdsim/params.hpp"
 
 #include <gtest/gtest.h>
@@ -264,6 +265,68 @@ TEST(L5Strut, HeaveRideFrequencyMatchesQuarterCar) {
     const double wn = std::sqrt(k_eff / h.vp.mass_sprung);
     const double half_period = M_PI / wn;           // first return-to-eq time
     EXPECT_NEAR(t_cross, half_period, 0.30 * half_period);
+}
+
+// ---------------------------------------------------------------------------
+// B2 — per-corner L4 corner DAE on the strut path: prescribed strut travel ->
+// WheelPose toe/camber -> tire. Inactive unless a DAE is attached.
+// ---------------------------------------------------------------------------
+namespace {
+std::string kin_path(const char* rel) {
+    return std::string(VDSIM_SOURCE_DIR) + "/configs/parts/susp_kinematics/kin/" + rel;
+}
+void attach_corner_dae(vdsim::IVehicleDynamics& dyn) {
+    auto front = vdsim::mb::SuspensionTopology::from_yaml(kin_path("mp_front_sedan.yaml"));
+    auto rear  = vdsim::mb::SuspensionTopology::from_yaml(kin_path("ta_rear_sedan.yaml"));
+    vdsim::free_3d_attach_multibody(dyn, true,  front, true);
+    vdsim::free_3d_attach_multibody(dyn, false, rear,  true);
+}
+}  // namespace
+
+TEST(L5StrutDae, AttachReportsEnabled) {
+    L5StrutSetup h;
+    attach_corner_dae(*h.dyn);
+    EXPECT_TRUE(vdsim::free_3d_mb_dynamics_enabled(*h.dyn, 0));
+    EXPECT_TRUE(vdsim::free_3d_mb_dynamics_enabled(*h.dyn, 1));
+}
+
+TEST(L5StrutDae, SettleStillHoldsWeight) {
+    L5StrutSetup h;
+    attach_corner_dae(*h.dyn);
+    h.reset_level(0.0);
+    vdsim::CmdL4 cmd;
+    h.run(cmd, 3000, 0.001);
+    const auto fz = h.dyn->tire_Fz();
+    const double sum = fz[0] + fz[1] + fz[2] + fz[3];
+    EXPECT_NEAR(sum, h.vp.mass * G, 0.12 * h.vp.mass * G);
+    EXPECT_TRUE(std::isfinite(h.dyn->state().position.z()));
+    EXPECT_LT(std::abs(h.dyn->roll_angle_qs()), 0.05);
+}
+
+// The corner kinematics (bump-steer toe + camber gain) must change the handling
+// response: a steady steer with the DAE attached diverges from the DAE-off run.
+TEST(L5StrutDae, CornerKinematicsAlterHandling) {
+    vdsim::CmdL4 cmd;
+    cmd.steer_angle_wheel = 0.05;
+
+    L5StrutSetup off;
+    off.reset_level(14.0);
+    off.run(cmd, 2500, 0.001);
+    const double vy_off  = off.dyn->state().velocity.y();
+    const double yaw_off = off.dyn->state().yaw();
+
+    L5StrutSetup on;
+    on.vp.camber_per_roll = 0.0;
+    attach_corner_dae(*on.dyn);
+    on.reset_level(14.0);
+    on.run(cmd, 2500, 0.001);
+    const double vy_on  = on.dyn->state().velocity.y();
+    const double yaw_on = on.dyn->state().yaw();
+
+    EXPECT_TRUE(std::isfinite(vy_on) && std::isfinite(yaw_on));
+    const double dvy  = std::abs(vy_on - vy_off);
+    const double dyaw = std::abs(yaw_on - yaw_off);
+    EXPECT_GT(dvy + dyaw, 1e-3) << "DAE toe/camber did not affect handling";
 }
 
 TEST(L5Driving, UphillCoastSlows) {

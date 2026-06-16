@@ -73,8 +73,18 @@ validatable model, and lets L5 share the inverted tire interface like L2/L3.
   `L5Strut.*`): settles to static equilibrium (Fz_sum=14808 N vs weight 14710 N, comp≈0,
   z=0.533 m = ride height − tire static deflection); heave ride frequency 1.33 Hz measured
   vs 1.41 Hz quarter-car analytic (k_eff = 4·k_s·k_t/(k_s+k_t) over m_sprung).
-- **B2** — feed `comp` (+ rate) as `PrescribedCornerMotion.travel_z` to the L4 corner DAE,
-  set the returned `WheelPose` toe/camber into the tire `ContactInput`.
+- **B2 — DONE** — per-corner L4 hard-joint corner DAE on the strut path, opt-in via
+  `free_3d_attach_multibody(dyn, front_axle, topo, enable)` (mirrors the 14-DOF attach).
+  One DAE model per axle (front/rear) shared by its two corners, each keeping its own
+  `HardJointCornerState`. Once per outer step (held through the substeps, like L4) each
+  corner is advanced with `PrescribedCornerMotion{travel_z=comp[i], travel_z_dot, steer_rack}`
+  and the last corner tire load; the returned `WheelPose` gives per-wheel toe/camber (L/R
+  sign flip from the single-side topology). Camber feeds the tire `ContactInput.gamma`; toe
+  adds to the wheel-heading (bump-steer). Inactive unless the strut path is on AND a DAE is
+  attached, so B1 behavior is unchanged otherwise. Evidence (`L5StrutDae.*`): attach/enable
+  reported; static settle still holds full weight with the DAE; a steady steer with the DAE
+  attached diverges from the DAE-off run (vy 0.863 vs 0.926 m/s) — the corner kinematics
+  measurably alter handling.
 - **C** — validation (below).
 
 ## Phase B — implementation design (spatial suspension on the 6-DOF body)

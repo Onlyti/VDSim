@@ -125,6 +125,15 @@ bool fourteen_dof_attach_multibody(IVehicleDynamics& dyn,
                                    bool enable_dynamics);
 bool fourteen_dof_mb_dynamics_enabled(const IVehicleDynamics& dyn, int axle);
 std::unique_ptr<IVehicleDynamics> create_stunt_dof();
+// L5 (free_3d) spatial-strut corner DAE: per corner, feed the strut travel to the
+// L4 hard-joint corner DAE and apply the resulting toe/camber to the tire. Requires
+// SolverParams::l5_spatial_suspension (the DAE consumes the strut travel). front_axle
+// selects the FL/FR (true) or RL/RR (false) topology.
+bool free_3d_attach_multibody(IVehicleDynamics& dyn,
+                              bool front_axle,
+                              const mb::SuspensionTopology& topo,
+                              bool enable_dynamics);
+bool free_3d_mb_dynamics_enabled(const IVehicleDynamics& dyn, int axle);
 // Kinematic bicycle (no tire forces / no slip): yaw_rate = v*tan(delta)/L.
 // For path-planning / kinematic-MPC use and as the simplest ladder rung.
 std::unique_ptr<IVehicleDynamics> create_kinematic();

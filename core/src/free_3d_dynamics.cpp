@@ -2,6 +2,7 @@
 #include "vdsim/default_subsystems.hpp"
 #include "vdsim/drivetrain_inertia.hpp"
 #include "vdsim/interfaces.hpp"
+#include "vdsim/multibody.hpp"
 #include "vdsim/subsystems.hpp"
 
 #include <spdlog/spdlog.h>
@@ -56,6 +57,7 @@ constexpr double kStickBlend   = 3.0;
 constexpr double kStickC       = 6.0e4;
 constexpr double kWheelSpinDrag = 2.5;
 constexpr double kTireDampRatio = 0.08;   // tire-spring damping ratio (strut path)
+constexpr double kRackPerRad    = 0.08;   // tie-rod rack travel per roadwheel rad (mirrors L4)
 
 class Free3DDynamics final : public IVehicleDynamics {
 public:
@@ -128,6 +130,19 @@ public:
         slip_ratio_.fill(0.0);
         slip_angle_.fill(0.0);
         mz_front_sum_ = 0.0;
+        gamma_dae_.fill(0.0);
+        toe_dae_.fill(0.0);
+        const mb::PrescribedCornerMotion mot {};
+        if (mb_dae_front_) {
+            mb_state_[WHEEL_FL] = {}; mb_state_[WHEEL_FR] = {};
+            mb_dae_front_->initialize(mb_state_[WHEEL_FL], mot);
+            mb_dae_front_->initialize(mb_state_[WHEEL_FR], mot);
+        }
+        if (mb_dae_rear_) {
+            mb_state_[WHEEL_RL] = {}; mb_state_[WHEEL_RR] = {};
+            mb_dae_rear_->initialize(mb_state_[WHEEL_RL], mot);
+            mb_dae_rear_->initialize(mb_state_[WHEEL_RR], mot);
+        }
     }
 
     void step(const ControlInput& u,
@@ -142,6 +157,11 @@ public:
         brake_->begin_step(ctx, dt);
         drivetrain_->begin_step(ctx, dt);
         steering_->begin_step(ctx, dt);
+
+        // Advance the corner suspension kinematics once per outer step (toe/camber from
+        // the prescribed strut travel), held constant through the substeps below — like
+        // L4's once-per-step DAE update. No-op unless strut path + a corner DAE attached.
+        update_corner_dae(cmd, dt);
 
         const int N = std::max(1,
                        std::min(sp_.max_substeps,
@@ -168,6 +188,32 @@ public:
         if (!m) return false;
         drivetrain_ = std::move(m);
         return true;
+    }
+
+    // B2: attach the L4 corner DAE for an axle (FL/FR if front, else RL/RR). The same
+    // topology drives both corners; each keeps its own DAE state fed by its strut travel.
+    void attach_mb_corner(bool front, mb::SuspensionTopology topo, bool enable) {
+        mb::PrescribedCornerMotion mot {};
+        if (front) {
+            mb_topo_front_   = std::move(topo);
+            mb_enabled_front_ = enable;
+            mb_dae_front_ = enable ? mb::create_hard_joint_dae_model(mb_topo_front_) : nullptr;
+            if (mb_dae_front_) {
+                mb_dae_front_->initialize(mb_state_[WHEEL_FL], mot);
+                mb_dae_front_->initialize(mb_state_[WHEEL_FR], mot);
+            }
+        } else {
+            mb_topo_rear_   = std::move(topo);
+            mb_enabled_rear_ = enable;
+            mb_dae_rear_ = enable ? mb::create_hard_joint_dae_model(mb_topo_rear_) : nullptr;
+            if (mb_dae_rear_) {
+                mb_dae_rear_->initialize(mb_state_[WHEEL_RL], mot);
+                mb_dae_rear_->initialize(mb_state_[WHEEL_RR], mot);
+            }
+        }
+    }
+    bool mb_enabled(int axle) const noexcept {
+        return axle == 0 ? mb_enabled_front_ : mb_enabled_rear_;
     }
 
     std::array<Vec3, NUM_WHEELS>   tire_forces_body() const override { return tire_F_; }
@@ -339,7 +385,9 @@ private:
                         R * (v_body + omega.cross(rb)) + ez_world * comp_dot;
                     Vec3 n = contacts[i].normal.normalized();
                     Vec3 t_lat;
-                    Vec3 t_long = wheel_tangent_frame(n, body_fwd, d_wheel[i], t_lat);
+                    // DAE toe adds to the steer angle (bump-steer); camber flows via gamma.
+                    Vec3 t_long = wheel_tangent_frame(n, body_fwd,
+                                                      d_wheel[i] + toe_dae_[i], t_lat);
                     const double v_long_w = v_hub_world.dot(t_long);
                     const double v_lat    = v_hub_world.dot(t_lat);
                     double v_long_k = v_long_w;
@@ -355,7 +403,7 @@ private:
                     }
                     ITireModel::ContactInput ci;
                     ci.Fz = Fz[i]; ci.Vx = v_long_k; ci.Vy = v_lat;
-                    ci.omega = s.wheel_spin[i]; ci.gamma = 0.0;
+                    ci.omega = s.wheel_spin[i]; ci.gamma = gamma_dae_[i];
                     ci.mu_long = contacts[i].mu_long; ci.mu_lat = contacts[i].mu_lat;
                     ci.R0 = Rwh;
                     ci_[i] = ci;
@@ -629,6 +677,33 @@ private:
         return s;
     }
 
+    // B2: advance each attached corner DAE with the prescribed strut travel (comp + rate)
+    // and the last corner tire load, reading back per-wheel toe/camber (L/R sign flip).
+    void update_corner_dae(const CmdL4& cmd, double dt) {
+        if (!sp_.l5_spatial_suspension) return;
+        if (!(mb_enabled_front_ || mb_enabled_rear_)) return;
+        const DriverCmd dc{cmd.steer_angle_wheel, cmd.throttle, cmd.brake,
+                           cmd.gear, cmd.handbrake};
+        SubsystemContext ctx{state_, dc, 0.0};
+        const double steer_rad = steering_->apply(ctx).roadwheel_angle;
+        const Mat3 R = state_.orientation.toRotationMatrix();
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            const bool front = (i == WHEEL_FL || i == WHEEL_FR);
+            mb::IHardJointDaeModel* dae = front ? mb_dae_front_.get() : mb_dae_rear_.get();
+            if (!dae) continue;
+            mb::PrescribedCornerMotion mot;
+            mot.travel_z      = state_.susp_compression[i];
+            mot.travel_z_dot  = state_.susp_velocity[i];
+            mot.steer_rack_dy = front ? steer_rad * kRackPerRad : 0.0;
+            mb::WheelLoad wl;
+            wl.force_world = R * tire_F_[i];
+            const mb::WheelPose wp = dae->step(mb_state_[i], mot, wl, dt);
+            const double s = (i == WHEEL_FR || i == WHEEL_RR) ? -1.0 : 1.0;
+            gamma_dae_[i] = s * wp.camber_rad;
+            toe_dae_[i]   = s * wp.toe_rad;
+        }
+    }
+
     void substep(const CmdL4& cmd, const ContactArray& contacts, double h) {
         const State s0 = state_;
         const bool lugre_on = tp_.lugre.enabled;
@@ -694,6 +769,15 @@ private:
     std::array<double, NUM_WHEELS> F_preload_ {};
     std::array<double, NUM_WHEELS> comp_min_ {};   // droop limit [m] (spring topped out)
     std::array<double, NUM_WHEELS> comp_max_ {};   // bump limit [m]
+    // Per-corner L4 hard-joint corner DAE (B2): one model per axle (front/rear) shared by
+    // its two corners, each with its own state, fed the corner strut travel. Produces the
+    // per-wheel toe/camber applied to the tire. Inactive unless attached AND strut path on.
+    mb::SuspensionTopology mb_topo_front_ {}, mb_topo_rear_ {};
+    std::unique_ptr<mb::IHardJointDaeModel> mb_dae_front_, mb_dae_rear_;
+    std::array<mb::HardJointCornerState, NUM_WHEELS> mb_state_ {};
+    bool mb_enabled_front_ {false}, mb_enabled_rear_ {false};
+    std::array<double, NUM_WHEELS> gamma_dae_ {};   // per-wheel camber [rad] from the DAE
+    std::array<double, NUM_WHEELS> toe_dae_ {};     // per-wheel toe [rad] from the DAE
     State state_;
     double ax_prev_ {0.0};
     double ay_prev_ {0.0};
@@ -713,6 +797,22 @@ private:
 
 std::unique_ptr<IVehicleDynamics> create_stunt_dof() {
     return std::make_unique<Free3DDynamics>();
+}
+
+bool free_3d_attach_multibody(IVehicleDynamics& dyn,
+                              bool front_axle,
+                              const mb::SuspensionTopology& topo,
+                              bool enable_dynamics) {
+    auto* p = dynamic_cast<Free3DDynamics*>(&dyn);
+    if (!p) return false;
+    p->attach_mb_corner(front_axle, topo, enable_dynamics);
+    return true;
+}
+
+bool free_3d_mb_dynamics_enabled(const IVehicleDynamics& dyn, int axle) {
+    const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);
+    if (!p) return false;
+    return p->mb_enabled(axle);
 }
 
 }  // namespace vdsim

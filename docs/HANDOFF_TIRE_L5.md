@@ -16,10 +16,11 @@
   `python3 tools/tire_inversion_evidence.py`.
 
 ## 완료
-#209–#220, #221(phase A), **#222(B1)**. 타이어 역전 + L1~L5 통일 + 검증 + L5 spatial strut.
+#209–#220, #221(phase A), **#222(B1)**, **#223(B2)**. 타이어 역전 + L1~L5 통일 + 검증
++ L5 spatial strut + corner DAE toe/camber 배선.
 
-## 미완 (다음 할 일) — L5 6-DOF phase B2/C
-설계 spec: `docs/design/L5_6DOF_MULTIBODY.md` (phase B1 DONE 기록 포함).
+## 미완 (다음 할 일) — L5 6-DOF phase C
+설계 spec: `docs/design/L5_6DOF_MULTIBODY.md` (phase B1/B2 DONE 기록 포함).
 - **#222 B1 — DONE** — free_3d 에 opt-in spatial strut 추가 (`SolverParams::l5_spatial_suspension`,
   default false → penalty 경로 byte-stable, 기존 364 ctest 불변). per-corner unsprung mass +
   travel DOF(State.susp_compression/velocity 재사용, body-up strut 축). tire-spring on unsprung
@@ -27,17 +28,22 @@
   bump/droop clamp) 가 6-DOF body 에 strut 축으로, in-plane tire force 는 rigid. body 병진질량
   비등방: strut 축=m_sprung, in-plane=total (평면 핸들링 L2/L3 일치). 검증: `L5Strut.*` 5개 green —
   settle(Fz_sum=14808 vs 14710 N, comp≈0, z=0.533m), heave 1.33Hz vs quarter-car 1.41Hz analytic.
-- **#223 B2 (다음)** — `comp`(susp_compression) 를 `PrescribedCornerMotion.travel_z` 로 corner DAE
-  (`create_hard_joint_dae_model`, `step_hard_joint_dae`) 에 넘겨 `WheelPose`(toe/camber) 받아
-  tire `ContactInput.gamma`/toe 로. 14-DOF 배선(fourteen_dof_dynamics.cpp:205-278) 재사용.
-- **#224 C** — 검증 evidence: ballistic jump 포물선/에너지, loop critical speed, flat 교차검증
+- **#223 B2 — DONE** — corner DAE 배선. `free_3d_attach_multibody(dyn, front_axle, topo, enable)`
+  (14-DOF attach 미러). axle 당 DAE model 1개를 두 corner 가 공유(corner 별 HardJointCornerState),
+  outer step 당 1회 `PrescribedCornerMotion{travel_z=comp[i], rate, steer_rack}` + 직전 corner
+  하중으로 advance → `WheelPose` toe/camber (L/R sign flip) 를 tire `ContactInput.gamma` 와
+  wheel-heading(toe=bump-steer) 로. strut on + DAE attach 시에만 활성 → 미부착 시 B1 불변.
+  검증: `L5StrutDae.*` 3개 green — attach/enable, settle 하중유지, steer 시 DAE on/off 핸들링 분기
+  (vy 0.863 vs 0.926 m/s).
+- **#224 C (다음)** — 검증 evidence: ballistic jump 포물선/에너지, loop critical speed, flat 교차검증
   vs L2/L3, suspension travel vs L4. 통과 시 VALIDATION.md 의 L5 experimental 캐비엣 제거.
 
 ## 주의 / 함정
-- **B2 는 B1 에 의존**: travel source(=`comp`)는 이제 B1 strut DOF 에서 나옴. B2 는 그 `comp` 를
-  corner DAE 에 배선만 하면 됨. B2 도 strut 경로(flag on)에서만 동작.
-- B1 은 opt-in flag(`l5_spatial_suspension`) 뒤에 격리됨 → default penalty 경로는 byte-stable,
-  기존 stunt/L5/terrain/loop 테스트 전부 불변 통과. strut 검증은 `L5Strut.*` 신규 테스트로 격리.
+- **B1/B2 둘 다 opt-in 격리**: B1=`SolverParams::l5_spatial_suspension`(default false),
+  B2=`free_3d_attach_multibody`(미부착이 default). 둘 다 off 이면 penalty 경로 byte-stable →
+  기존 stunt/L5/terrain/loop 테스트 전부 불변 통과. strut/DAE 검증은 `L5Strut*.*` 신규 테스트로 격리.
+- B2 의 toe/camber 는 corner DAE 가 prescribed travel(=`comp`, B1 strut DOF)로부터 계산. DAE 는
+  outer step 당 1회만 advance(substep/RK4 stage 마다 X) — 비용·안정성 고려, 14-DOF 와 동일.
 - **phase C(#224) 미완**: ballistic jump/loop critical speed/flat cross-model(L5 strut vs L2/L3)/
   suspension travel vs L4 evidence 필요. 통과 전까지 L5 = experimental 유지. B1 의 in-plane 비등방
   질량은 flat 핸들링을 L2/L3 에 맞추려는 것 → C 의 cross-model 로 정량 확인 必.
