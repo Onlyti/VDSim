@@ -2365,6 +2365,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#control-ladder-command-at-any-abstraction-level" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Control ladder — command at any abstraction level
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#building-the-plant-sim" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2473,6 +2484,66 @@ from your function. Same core, same seam.</p>
 <p>Run the template directly:</p>
 <div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nv">PYTHONPATH</span><span class="o">=</span>build/python:python<span class="w"> </span>python3<span class="w"> </span>templates/experiment_template.py
 </span></code></pre></div>
+<h2 id="control-ladder-command-at-any-abstraction-level">Control ladder — command at any abstraction level<a class="headerlink" href="#control-ladder-command-at-any-abstraction-level" title="Permanent link">&para;</a></h2>
+<p><code>set_input</code> accepts more than pedals. The CascadeController converts any ladder
+level to the realized pedal/steer each tick, using measured-state feedback. So
+you can hand the sim a high-level intent and let it close the inner loops.</p>
+<table>
+<thead>
+<tr>
+<th>level</th>
+<th>command</th>
+<th>longitudinal</th>
+<th>lateral</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L4</td>
+<td><code>CmdL4</code></td>
+<td>throttle/brake</td>
+<td>steer angle [rad]</td>
+</tr>
+<tr>
+<td>L5</td>
+<td><code>CmdL5</code></td>
+<td><code>ax_target</code> [m/s²]</td>
+<td>(steer angle)</td>
+</tr>
+<tr>
+<td>L6</td>
+<td><code>CmdL6</code></td>
+<td><code>v_target</code> [m/s] (cruise)</td>
+<td>(steer angle)</td>
+</tr>
+<tr>
+<td>L7</td>
+<td><code>CmdL7</code></td>
+<td><code>v_target</code></td>
+<td><code>kappa</code> [1/m] curvature</td>
+</tr>
+<tr>
+<td>split</td>
+<td><code>CmdSplit</code></td>
+<td>any <code>LcLon*</code></td>
+<td>any <code>LcLat*</code> (independent)</td>
+</tr>
+</tbody>
+</table>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">vdsim</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">sim</span><span class="o">.</span><span class="n">set_input</span><span class="p">(</span><span class="n">vdsim</span><span class="o">.</span><span class="n">CmdL6</span><span class="p">(</span><span class="n">v_target</span><span class="o">=</span><span class="mf">20.0</span><span class="p">))</span>           <span class="c1"># cruise control (lon L6)</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">c</span> <span class="o">=</span> <span class="n">vdsim</span><span class="o">.</span><span class="n">CmdSplit</span><span class="p">()</span>                                  <span class="c1"># independent axes</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">c</span><span class="o">.</span><span class="n">lon</span> <span class="o">=</span> <span class="n">vdsim</span><span class="o">.</span><span class="n">LcLonL6</span><span class="p">();</span> <span class="n">c</span><span class="o">.</span><span class="n">lon</span><span class="o">.</span><span class="n">vx_target</span> <span class="o">=</span> <span class="mf">18.0</span>       <span class="c1"># speed control</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">c</span><span class="o">.</span><span class="n">lat</span> <span class="o">=</span> <span class="n">vdsim</span><span class="o">.</span><span class="n">LcLatL6</span><span class="p">();</span> <span class="n">c</span><span class="o">.</span><span class="n">lat</span><span class="o">.</span><span class="n">r_target</span>  <span class="o">=</span> <span class="mf">0.15</span>       <span class="c1"># yaw-rate control</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">sim</span><span class="o">.</span><span class="n">set_input</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Lateral levels: <code>LcLatL4</code> angle · <code>LcLatL5</code> <code>ay_target</code> · <code>LcLatL6</code> <code>r_target</code>
+(yaw rate) · <code>LcLatL7</code> <code>kappa</code>. Levels below L4 (steer torque / rate) are the
+steering subsystem's territory (Dynamic mode), not the cascade.</p>
+<p>Verify all levels end-to-end:
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nv">PYTHONPATH</span><span class="o">=</span>build/python:python<span class="w"> </span>python3<span class="w"> </span>examples/control_ladder_demo.py
+</span></code></pre></div></p>
 <h2 id="building-the-plant-sim">Building the plant — <code>Sim(...)</code><a class="headerlink" href="#building-the-plant-sim" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
