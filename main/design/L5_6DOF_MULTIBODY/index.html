@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/design/TIRE_INTERFACE_INVERSION/">
+        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/design/L5_6DOF_MULTIBODY/">
       
       
       
@@ -23,7 +23,7 @@
     
     
       
-        <title>Tire interface inversion (Phase 2) — design + handoff - VDSim</title>
+        <title>L5 — re-found as the full 6-DOF multibody model (design + roadmap) - VDSim</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#tire-interface-inversion-phase-2-design-handoff" class="md-skip">
+        <a href="#l5-re-found-as-the-full-6-dof-multibody-model-design-roadmap" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Tire interface inversion (Phase 2) — design + handoff
+              L5 — re-found as the full 6-DOF multibody model (design + roadmap)
             
           </span>
         </div>
@@ -2373,10 +2373,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#next-step-resume-here" class="md-nav__link">
+  <a href="#why" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Next step (resume here)
+        Why
       
     </span>
   </a>
@@ -2384,10 +2384,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#l1-bicycle-switched-per-tire-individual-contact" class="md-nav__link">
+  <a href="#target-architecture" class="md-nav__link">
     <span class="md-ellipsis">
       
-        L1 bicycle — switched (per-tire individual contact)
+        Target architecture
       
     </span>
   </a>
@@ -2395,10 +2395,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#free_3d-l5-being-re-founded-as-the-full-6-dof-model-see-v0x-roadmap" class="md-nav__link">
+  <a href="#phasing" class="md-nav__link">
     <span class="md-ellipsis">
       
-        free_3d (L5) — being re-founded as the full 6-DOF model (see V0.x roadmap)
+        Phasing
       
     </span>
   </a>
@@ -2406,76 +2406,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#goal" class="md-nav__link">
+  <a href="#validation-plan-gating-per-evidence-policy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Goal
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#current-state-after-phase-1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Current state (after Phase 1)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#target-interface" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Target interface
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-stays-vehicle-side-do-not-move-into-the-tire" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What STAYS vehicle-side (do NOT move into the tire)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#backends-to-port-3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Backends to port (3)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#call-site-rewrites-3-models" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Call-site rewrites (3 models)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#regression-gate-non-negotiable" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Regression gate (non-negotiable)
+        Validation plan (gating, per evidence policy)
       
     </span>
   </a>
@@ -2487,6 +2421,17 @@
     <span class="md-ellipsis">
       
         Risks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scope-note" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope note
       
     </span>
   </a>
@@ -2513,125 +2458,80 @@
   
 
 
-<h1 id="tire-interface-inversion-phase-2-design-handoff">Tire interface inversion (Phase 2) — design + handoff<a class="headerlink" href="#tire-interface-inversion-phase-2-design-handoff" title="Permanent link">&para;</a></h1>
-<p>Status: LANDED for the canonical path (364/364 ctest green, byte-stable across IsoBaseline /
-Lugre / Belt / ChronoPac02 / SevenDOF). The inverted interface (evaluate / advance_bristle /
-advance_relaxation) is defined ONCE in the <code>ITireModel</code> base (<code>tire_model.cpp</code>), dispatching
-the force law through the virtual <code>compute()</code>; the base owns <code>params_</code> (via the
-<code>on_initialize()</code> hook) so it works for every backend (pacejka / linear / MF2002).
-<code>seven_dof_dynamics.cpp</code> (and 14-DOF, which wraps it) own only <code>Transient[NUM_WHEELS]</code> +
-<code>ContactInput[NUM_WHEELS]</code>, hand kinematics to <code>evaluate()</code> per RK4 stage, advance the
-bristle per stage and the carcass relaxation per substep — all inline slip/Re/belt/lugre/
-relaxation blocks and their scratch members are deleted. The vehicle keeps only integrator
-stabilization (lambda / Fx_hold / combined-slip clamp / kinematic blend / Fx*Re).
-<code>test_tire_inversion.cpp</code> locks the backend against an independent oracle (4 force paths +
-3 transient integrators + the linear backend via base). bicycle (L1) and free_3d (L5) keep
-the Phase-1 shared path by design (see "Deferred" below).</p>
-<h2 id="next-step-resume-here">Next step (resume here)<a class="headerlink" href="#next-step-resume-here" title="Permanent link">&para;</a></h2>
-<ol>
-<li>DONE — <code>pacejka_mf96.cpp::evaluate()/advance()</code> + <code>test_tire_inversion.cpp</code>.
-   <code>Transient</code> gained <code>belt_vlong/belt_vlat</code> (belt+LuGre stacking needs the relaxed slip
-   <em>velocities</em>, which the original 5-field contract omitted).</li>
-<li>DONE — <code>seven_dof_dynamics.cpp</code> switched. <code>advance()</code> was split into <code>advance_bristle()</code>
-   (LuGre z, per RK4 stage at hz) and <code>advance_relaxation()</code> (belt_kappa/alpha +
-   belt_vlong/vlat + alpha_dyn, once per substep at h) to preserve the mixed cadence
-   byte-for-byte. Note: the Euler integrator branch advances only the bristle (no
-   advance_relaxation), matching the pre-existing behaviour (a latent quirk for Euler+belt —
-   not exercised by any RK4 test). Airborne wheels feed a neutral ContactInput, so the
-   bristle/relaxation do not evolve off-ground (was stale <code>*_last_</code> before; no test covers
-   it either way).</li>
-<li>DONE (and re-architected) — instead of per-backend evaluate(), the inverted interface
-   is now defined ONCE in the <code>ITireModel</code> base (<code>core/src/tire_model.cpp</code>): it computes
-   slip/Re/camber from the shared kinematics, applies the transient, and dispatches the
-   force law through the virtual <code>compute()</code>. The base stores <code>params_</code> (set by
-   <code>initialize()</code>, which forwards to the backend <code>on_initialize()</code> hook), so Re / crown /
-   belt / relaxation / LuGre work for EVERY backend. pacejka_mf96 / linear_tire /
-   magic_formula_tire (MF2002) all inherit evaluate()/advance_* with their own compute().
-   This also fixed a latent bug: after step 2, injecting a non-pacejka tire into
-   seven_dof/14-DOF (e.g. <code>create_seven_dof(create_magic_formula_tire_from_tir(...))</code>,
-   exposed in pybind) would have hit the old zero stub. A new tire is now one compute()
-   override.</li>
-</ol>
-<h2 id="l1-bicycle-switched-per-tire-individual-contact">L1 bicycle — switched (per-tire individual contact)<a class="headerlink" href="#l1-bicycle-switched-per-tire-individual-contact" title="Permanent link">&para;</a></h2>
-<p><code>bicycle_dynamics.cpp</code> now uses the inverted interface. Resolution of the old axle-lump
-load split: model each axle as a per-tire contact at the per-wheel load
-(<code>ContactInput.Fz = 0.5*Fz_axle</code>) and double the returned wrench for the axle force. Force
-law AND Re then see a consistent load, and the load-sensitive mu is applied at the true
-per-tire load (more correct than the old full-axle-load <code>compute()</code>). Byte-stable on
-BicycleSteadyState (load_sensitivity defaults to 0 -&gt; 2*F(0.5Fz) == F(Fz)); gated under
-LuGre by <code>LuGreTire.HighSpeedLongitudinalNearPacejka</code> (L1) + the L1 no-phantom (reff) test.
-Owns <code>Transient[2]</code> + <code>ContactInput[2]</code> (front/rear); the LuGre slip velocity now uses Re
-consistently (was R0). 14-DOF/L2 already inverted (Phase 2).</p>
-<h2 id="free_3d-l5-being-re-founded-as-the-full-6-dof-model-see-v0x-roadmap">free_3d (L5) — being re-founded as the full 6-DOF model (see V0.x roadmap)<a class="headerlink" href="#free_3d-l5-being-re-founded-as-the-full-6-dof-model-see-v0x-roadmap" title="Permanent link">&para;</a></h2>
-<p>L5 is NOT on the inverted contract yet: it uses a loop-specific slip-ratio denominator
-(not the standard <code>max(|Vx|,eps)</code>) and capped/penalty stunt contact, so the base evaluate
-would change its slip. Rather than keep it as a throwaway stunt plant, the decision is to
-re-found L5 as the full 6-DOF sibling of L4 (the only airborne/loop-capable model, since
-L1-L4 are planar/ride and cannot jump). That is a separate, validation-gated effort — see
-the L5 6-DOF design doc / ROADMAP. Until then L5 keeps the Phase-1 shared
-<code>tire_contact_kinematics</code> + <code>compute()</code> path (a new force law still drops in).</p>
-<h2 id="goal">Goal<a class="headerlink" href="#goal" title="Permanent link">&para;</a></h2>
-<p>Invert <code>ITireModel</code> from "slip-in -&gt; force-out" to "kinematics-in -&gt; wrench-out", and move
-the transient state (relaxation / belt / LuGre) into the tire so that ALL tire physics
-lives in the tire module. A new tire (different slip law, transient, camber model) is then
-one class, not edits across 3 dynamics models.</p>
-<h2 id="current-state-after-phase-1">Current state (after Phase 1)<a class="headerlink" href="#current-state-after-phase-1" title="Permanent link">&para;</a></h2>
-<ul>
-<li><code>core/include/vdsim/tire_contact.hpp</code> — <code>tire_contact_kinematics(Vx,Vy,omega,Fz,gamma,tp,R0)</code>
-  returns <code>{kappa, alpha, Re, vsx, vsy, contact_dy, contact_dz}</code>. Single definition of slip /
-  Re / camber offset. seven_dof, bicycle, free_3d already call it (14-DOF via inner seven_dof).</li>
-<li><code>ITireModel::Output</code> has <code>Mx</code> (default 0). <code>IVehicleDynamics::wheel_overturning_moment()</code>
-  added; seven_dof returns <code>Fz*contact_dy</code>; 14-DOF feeds <code>Σ Mx</code> into the roll DOF.</li>
-<li><code>TireParams.crown_radius</code> (camber migration) and <code>reff_*</code> (Re) are both opt-in (0 = legacy).</li>
-<li>Transient state (belt_kappa/alpha, lugre_z_long/lat, alpha_dyn) STILL lives in each
-  dynamics model. This is what Phase 2 moves.</li>
-</ul>
-<h2 id="target-interface">Target interface<a class="headerlink" href="#target-interface" title="Permanent link">&para;</a></h2>
-<div class="language-cpp highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">struct</span><span class="w"> </span><span class="nc">TireInput</span><span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">Fz</span><span class="p">,</span><span class="w"> </span><span class="n">Vx</span><span class="p">,</span><span class="w"> </span><span class="n">Vy</span><span class="p">,</span><span class="w"> </span><span class="n">omega</span><span class="p">,</span><span class="w"> </span><span class="n">gamma</span><span class="p">,</span><span class="w"> </span><span class="n">mu_long</span><span class="p">,</span><span class="w"> </span><span class="n">mu_lat</span><span class="p">,</span><span class="w"> </span><span class="n">R0</span><span class="p">;</span><span class="w"> </span><span class="p">};</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">struct</span><span class="w"> </span><span class="nc">TireTransient</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">belt_kappa</span><span class="p">,</span><span class="w"> </span><span class="n">belt_alpha</span><span class="p">,</span><span class="w"> </span><span class="n">lugre_z_long</span><span class="p">,</span><span class="w"> </span><span class="n">lugre_z_lat</span><span class="p">,</span><span class="w"> </span><span class="n">alpha_dyn</span><span class="p">;</span><span class="w"> </span><span class="p">};</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">struct</span><span class="w"> </span><span class="nc">TireOutput</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">Fx</span><span class="p">,</span><span class="w"> </span><span class="n">Fy</span><span class="p">,</span><span class="w"> </span><span class="n">Mx</span><span class="p">,</span><span class="w"> </span><span class="n">My</span><span class="p">,</span><span class="w"> </span><span class="n">Mz</span><span class="p">,</span><span class="w"> </span><span class="n">Re</span><span class="p">,</span><span class="w"> </span><span class="n">kappa</span><span class="p">,</span><span class="w"> </span><span class="n">alpha</span><span class="p">,</span><span class="w"> </span><span class="n">contact_dy</span><span class="p">;</span><span class="w"> </span><span class="p">};</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">ITireModel</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="k">virtual</span><span class="w"> </span><span class="n">TireOutput</span><span class="w">  </span><span class="nf">evaluate</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">TireInput</span><span class="o">&amp;</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">TireTransient</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="c1">// RK4 stage (frozen)</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="k">virtual</span><span class="w"> </span><span class="n">TireTransient</span><span class="w"> </span><span class="nf">advance</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">TireInput</span><span class="o">&amp;</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">TireTransient</span><span class="o">&amp;</span><span class="p">,</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">dt</span><span class="p">)</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="c1">// once/substep</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">};</span>
+<h1 id="l5-re-found-as-the-full-6-dof-multibody-model-design-roadmap">L5 — re-found as the full 6-DOF multibody model (design + roadmap)<a class="headerlink" href="#l5-re-found-as-the-full-6-dof-multibody-model-design-roadmap" title="Permanent link">&para;</a></h1>
+<p>Status: DESIGN (not implemented). This supersedes the earlier "remove L5" option.</p>
+<h2 id="why">Why<a class="headerlink" href="#why" title="Permanent link">&para;</a></h2>
+<p>L1-L4 cannot jump. L1/L2 are planar (no vertical state); L3/L4 model ride/suspension
+travel about the road plane (heave/roll/pitch + unsprung, tire-spring coupled) but the body
+pose stays planar <code>(x, y, yaw)</code> — there is no free-flight CG world-z + 3D attitude, so a
+vehicle cannot leave the ground ballistically and land. <code>free_3d</code> (L5) is the ONLY model
+with a full 6-DOF spatial rigid body (world position incl. z, quaternion roll/pitch/yaw,
+penalty contact), hence the only airborne/loop-capable rung.</p>
+<p>Today L5 is a stunt plant: 6-DOF body + penalty-glued wheels + capped/stiffened contact +
+a loop-specific slip-ratio denominator, and NO suspension. L4 already carries the
+high-fidelity multibody DYNAMICS (hard-joint corner DAE: revolute + Baumgarte travel
+constraint) — but only on the planar+ride base. So the coherent ladder is:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>L1 planar single-track -&gt; L2 planar 4-wheel -&gt; L3 14-DOF ride
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>   -&gt; L4 hardpoint multibody (planar+ride base)
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>   -&gt; L5 = L4&#39;s multibody on a full 6-DOF spatial body   &lt;-- target
 </span></code></pre></div>
-<p>Key decision: tire stays STATELESS/polymorphic; the <code>TireTransient</code> is OWNED and stored
-per-wheel by the dynamics (RK4 needs to checkpoint/restore it). This preserves the existing
-"freeze within RK4 stage, advance once per substep" pattern and avoids per-wheel tire
-instances / clone(). evaluate() is const (called 4x/stage); advance() is const, returns the
-next transient.</p>
-<h2 id="what-stays-vehicle-side-do-not-move-into-the-tire">What STAYS vehicle-side (do NOT move into the tire)<a class="headerlink" href="#what-stays-vehicle-side-do-not-move-into-the-tire" title="Permanent link">&para;</a></h2>
+<p>Re-founding L5 this way turns jump/loop from a robust-tuned demo hack into a real,
+validatable model, and lets L5 share the inverted tire interface like L2/L3.</p>
+<h2 id="target-architecture">Target architecture<a class="headerlink" href="#target-architecture" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>6-DOF spatial body</strong> — Newton-Euler in world frame: translational (incl. z, gravity,
+   contact + tire forces) + rotational (quaternion + body inertia, suspension/tire moments).
+   free_3d already integrates position+quaternion+vel+omega; reuse it.</li>
+<li><strong>L4 corner suspension on the 6-DOF body</strong> — attach the hard-joint corner DAE
+   (<code>multibody.hpp::IHardJointCornerDae</code>) per wheel, with the corner mount kinematics
+   expressed in the 6-DOF body frame; the corner constraint/spring/damper forces feed the
+   spatial Newton-Euler EoM. (Currently the DAE attaches to the 14-DOF planar+ride base.)</li>
+<li><strong>Inverted tire interface</strong> — replace the inline penalty/loop tire with
+   <code>tire_-&gt;evaluate()</code> + <code>advance_bristle</code>/<code>advance_relaxation</code>, like L2/L3/L1.</li>
+<li><strong>Contact-frame slip (the key fix)</strong> — replace the loop-specific slip-ratio denominator
+   with a <em>contact-frame</em> slip: project the hub velocity onto the contact tangent plane
+   (normal from the surface), and define slip from the contact-tangential speed. This is
+   physically correct on arbitrary 3D surfaces (flat, banked, loop) and uses the standard
+   <code>max(|V_tangent|, eps)</code> denominator — so L5 joins the inverted contract with no
+   special-case knob. The loop denom was a workaround for the missing contact-frame
+   projection.</li>
+<li><strong>Honest 3D contact</strong> — keep a penalty normal force (needed for airborne/landing) but
+   drop the stunt-specific caps where the contact-frame slip + real tire make them
+   unnecessary; document any remaining numerical guards.</li>
+</ol>
+<h2 id="phasing">Phasing<a class="headerlink" href="#phasing" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Wheel-frame velocity projection (steer angle, yaw-rate, wheel position) — vehicle kinematics.</li>
-<li>Wheel rotational ODE and the moment arm Fx·Re — vehicle (uses Re returned by the tire).</li>
-<li>Low-speed numerics: stick-blend <code>lambda</code>, <code>Fx_hold</code> creep, combined-slip saturation clamp.
-  These are integrator stabilization, not tire physics. Keep in the dynamics.</li>
-<li>free_3d stunt-loop denom specialization.</li>
+<li><strong>A</strong> — 6-DOF body + contact-frame slip + inverted tire (suspension still rigid/penalty).
+  Closes the L5 inversion gap; L5 becomes a real 6-DOF vehicle with shared tires.</li>
+<li><strong>B</strong> — attach the L4 corner DAE to the 6-DOF body (true spatial multibody).</li>
+<li><strong>C</strong> — validation (below).</li>
 </ul>
-<h2 id="backends-to-port-3">Backends to port (3)<a class="headerlink" href="#backends-to-port-3" title="Permanent link">&para;</a></h2>
-<p><code>core/src/pacejka_mf96.cpp</code>, <code>core/src/linear_tire.cpp</code>, <code>core/src/magic_formula_tire.cpp</code>
-(MF2002). Move into each: the slip computation (call tire_contact_kinematics internally),
-the relaxation (alpha_dyn) update, the belt transient (belt_tire.hpp), and the LuGre path
-(lugre_tire.hpp) — currently invoked from the dynamics. evaluate() returns the full wrench;
-advance() integrates belt/lugre/relaxation.</p>
-<h2 id="call-site-rewrites-3-models">Call-site rewrites (3 models)<a class="headerlink" href="#call-site-rewrites-3-models" title="Permanent link">&para;</a></h2>
-<p><code>seven_dof_dynamics.cpp</code> (canonical, 4-wheel), <code>bicycle_dynamics.cpp</code> (2 axle "tires"),
-<code>free_3d_dynamics.cpp</code> (4-wheel, 3D contact). Each: store <code>TireTransient[NUM_WHEELS]</code>,
-call evaluate() per RK4 stage with frozen transient, call advance() once per substep, drop
-the now-dead belt/lugre/relaxation/slip blocks. 14-DOF wraps seven_dof — no separate tire.</p>
-<h2 id="regression-gate-non-negotiable">Regression gate (non-negotiable)<a class="headerlink" href="#regression-gate-non-negotiable" title="Permanent link">&para;</a></h2>
-<p>When the new evaluate/advance reproduce the old equations, these must stay byte-stable:
-<code>ctest -R "IsoBaseline|Lugre|Belt|ChronoPac02Parity|SevenDOF|BicycleSteadyState"</code> and full
-354/354. The MF-vs-CarMaker parity (benchmark #15) and LuGre ISO baseline are the canaries.
-Port one backend + one model first (seven_dof + pacejka), prove green, then the rest.</p>
+<h2 id="validation-plan-gating-per-evidence-policy">Validation plan (gating, per evidence policy)<a class="headerlink" href="#validation-plan-gating-per-evidence-policy" title="Permanent link">&para;</a></h2>
+<p>L5 is currently "plausible-but-not-validated". To promote it to a model, evidence is
+mandatory (figure / numeric table):</p>
+<ul>
+<li><strong>Flat-ground cross-model</strong>: at low excitation L5 must match L3/L2 handling
+  (yaw rate, ay) within tolerance — the spatial model reduces to the planar one on flat road.</li>
+<li><strong>Ballistic jump</strong>: off a ramp, the airborne CG must follow projectile motion
+  (parabola, energy-conserving) to numerical tolerance.</li>
+<li><strong>Loop completion</strong>: the car completes a vertical loop above the critical speed and
+  loses it below — the centripetal condition is emergent, not imposed.</li>
+<li><strong>Suspension (phase B)</strong>: corner travel / camber gain under jounce matches the L4 corner
+  DAE on the shared topology.</li>
+</ul>
+<p>Until C passes, L5 stays labelled experimental in VALIDATION.md.</p>
 <h2 id="risks">Risks<a class="headerlink" href="#risks" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Belt+LuGre stacking (T2.3) and the dual belt paths (MF relaxes kappa/alpha; LuGre relaxes
-  slip velocity) are subtle — port verbatim, test against current LuGre baseline before
-  refactoring further.</li>
-<li>RK4 freeze/advance ordering must match exactly or transient tests drift.</li>
+<li>Loop stability without the denom hack: contact-frame slip must stay well-posed as the
+  contact normal rotates through the loop (low tangential speed near the top).</li>
+<li>Constraint stiffness of the corner DAE on a free 6-DOF body (Baumgarte tuning).</li>
+<li>Contact normal estimation on arbitrary meshes (already provided by IContactProvider).</li>
 </ul>
+<h2 id="scope-note">Scope note<a class="headerlink" href="#scope-note" title="Permanent link">&para;</a></h2>
+<p>This is a multi-step, validation-gated build, not a relabel. The C++ stunt tests
+(<code>test_stunt</code>, <code>test_l5_driving</code>, <code>test_terrain_l5</code>) will be rebaselined against the new
+(physically-grounded) behaviour as part of phase A/C, since the current numbers are tuned to
+the penalty/denom hack and have no validated reference.</p>
 
 
 
