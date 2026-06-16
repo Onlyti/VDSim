@@ -2406,6 +2406,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#phase-b-implementation-design-spatial-suspension-on-the-6-dof-body" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase B — implementation design (spatial suspension on the 6-DOF body)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#validation-plan-gating-per-evidence-policy" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2511,6 +2522,40 @@ validatable model, and lets L5 share the inverted tire interface like L2/L3.</p>
 <li><strong>B</strong> — attach the L4 corner DAE to the 6-DOF body (true spatial multibody).</li>
 <li><strong>C</strong> — validation (below).</li>
 </ul>
+<h2 id="phase-b-implementation-design-spatial-suspension-on-the-6-dof-body">Phase B — implementation design (spatial suspension on the 6-DOF body)<a class="headerlink" href="#phase-b-implementation-design-spatial-suspension-on-the-6-dof-body" title="Permanent link">&para;</a></h2>
+<p>Grounding (studied): the L4 corner DAE (<code>multibody.hpp::IHardJointDaeModel::step</code>) is a
+per-corner suspension <em>kinematics/quasi-dynamics</em>: it consumes a PRESCRIBED travel
+(<code>PrescribedCornerMotion{travel_z, travel_z_dot, ...}</code>) + the wheel <code>WheelLoad</code>, integrates
+the revolute + Baumgarte travel constraint, and returns a <code>WheelPose</code> (toe/camber/caster).
+The 14-DOF feeds it <code>travel = z_u[i] - z_corner_s</code> (unsprung world z minus sprung corner z)
+from its OWN heave/roll/pitch + unsprung vertical dynamics, then applies the camber to the
+tire via <code>set_camber_per_wheel</code>. So the DAE does NOT generate the vertical force law — the
+host owns the sprung/unsprung dynamics that produce <code>travel</code>.</p>
+<p>free_3d today has NO suspension: wheels are glued to the body at fixed <code>r_body_[i]</code> and held
+up by a penalty contact (<code>Fz = k_tire*penetration + c*vn</code>, capped). Phase B therefore must
+add a spatial sprung/unsprung suspension to the 6-DOF body before the DAE has a <code>travel</code> to
+consume. Two sub-pieces:</p>
+<ul>
+<li><strong>B1 — spatial strut dynamics (the large, new piece).</strong> Per corner add an unsprung mass
+  <code>m_u[i]</code> with one travel DOF <code>z_strut[i]</code> along the strut axis expressed in the BODY frame
+  (so it rotates with the 6-DOF attitude). Forces: a strut spring+damper between the body
+  mount and the unsprung (<code>F_susp = k_s*z_strut + c_s*z_strut_dot</code>), and the tire vertical
+  via the existing contact (<code>Fz</code> from the road, now acting on the unsprung not the body).
+  The strut reaction feeds the 6-DOF body Newton-Euler (force at the mount point <code>r_body_[i]</code>,
+  moment <code>r_body_[i] x F</code>); the unsprung gets <code>m_u*z_strut_ddot = Fz_tire - F_susp - m_u*g·n</code>.
+  This generalises the 14-DOF heave/roll/pitch+unsprung to a free 6-DOF body: the "sprung
+  mass" is the full spatial body, the strut axis is body-fixed. State grows by <code>z_strut[i]</code>,
+  <code>z_strut_dot[i]</code> (8 scalars). The penalty-at-fixed-hub contact is replaced by tire-spring
+  on the unsprung.</li>
+<li><strong>B2 — corner DAE wiring (small, once B1 exists).</strong> Feed <code>travel = z_strut[i]</code> (and rate)
+  as <code>PrescribedCornerMotion</code> to <code>create_hard_joint_dae_model(topo)</code> per corner, get the
+  <code>WheelPose</code>, set <code>gamma[i] = camber_rad</code> and <code>toe[i]</code> into the tire <code>ContactInput</code> (camber
+  already flows through <code>evaluate()</code>; toe rotates the wheel-heading tangent). Reuse the
+  14-DOF wiring pattern (<code>step_hard_joint_dae</code>, <code>axle_prescribed_motion</code>).</li>
+</ul>
+<p>Risk: B1 changes how the car is supported (strut+tire-spring instead of penalty-at-hub), so
+every stunt/L5/terrain test rebaselines and the loop contact must stay stable through the
+attitude sweep. This is why phase C (below) gates B.</p>
 <h2 id="validation-plan-gating-per-evidence-policy">Validation plan (gating, per evidence policy)<a class="headerlink" href="#validation-plan-gating-per-evidence-policy" title="Permanent link">&para;</a></h2>
 <p>L5 is currently "plausible-but-not-validated". To promote it to a model, evidence is
 mandatory (figure / numeric table):</p>
