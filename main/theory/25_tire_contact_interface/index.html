@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/theory/15_validation_and_doe/">
+        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/theory/25_tire_contact_interface/">
       
       
-        <link rel="prev" href="../14_hardpoint_kinematics/">
+        <link rel="prev" href="../21_belt_transient/">
       
       
-        <link rel="next" href="../16_fmi_integration/">
+        <link rel="next" href="../04_ld1_bicycle/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>15 — Validation & DOE - VDSim</title>
+        <title>25 — Tire contact & interface - VDSim</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#15-validation-doe-maneuver" class="md-skip">
+        <a href="#25-tire-contact-effective-rolling-radius-camber-migration-the-inverted-interface" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              15 — Validation & DOE
+              25 — Tire contact & interface
             
           </span>
         </div>
@@ -766,10 +766,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../25_tire_contact_interface/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    25 — Tire contact & interface
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -785,6 +812,142 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#learning-objectives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Learning objectives
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#251-effective-rolling-radius-refz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        25.1 Effective rolling radius Re(Fz)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#252-camber-contact-point-migration-overturning-moment-mx" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        25.2 Camber contact-point migration -&gt; overturning moment Mx
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#253-contact-kinematics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        25.3 공유 contact-kinematics 모듈
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#254-inverted-tire-interface-kinematics-in-wrench-out" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        25.4 Inverted tire interface — kinematics-in / wrench-out
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="25.4 Inverted tire interface — kinematics-in / wrench-out">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#transient-ownership-cadence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Transient ownership 과 두 개의 cadence
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#255-vehicle-side" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        25.5 무엇이 vehicle-side 로 남는가
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#256" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        25.6 적용 범위
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        검증
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1130,37 +1293,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    15 — Validation & DOE
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../15_validation_and_doe/" class="md-nav__link">
         
   
   
@@ -1176,180 +1312,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#learning-objectives" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Learning objectives
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Prerequisites
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#151-maneuver" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        15.1 동기 — 표준 maneuver
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#152" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        15.2 가정 / 범위
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#153-iso-7401-step-steer-transient" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        15.3 ISO 7401 — step-steer transient
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#154-iso-4138-understeer-gradient-k" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        15.4 ISO 4138 — understeer gradient K
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#155-iso-3888-2-double-lane-change-moose-test" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        15.5 ISO 3888-2 — double lane change (moose test)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#156-doe-parameter-sweep" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        15.6 DOE — parameter sweep
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#157" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        15.7 산업적 의의
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#158" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        15.8 한계
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#159-chapter" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        15.9 다음 chapter 와의 연결
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#1510" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        15.10 참고문헌
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#1511-self-check" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        15.11 Self-check
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#1512-vdsim" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        15.12 VDSim 구현 노트
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2605,10 +2567,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#151-maneuver" class="md-nav__link">
+  <a href="#251-effective-rolling-radius-refz" class="md-nav__link">
     <span class="md-ellipsis">
       
-        15.1 동기 — 표준 maneuver
+        25.1 Effective rolling radius Re(Fz)
       
     </span>
   </a>
@@ -2616,10 +2578,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#152" class="md-nav__link">
+  <a href="#252-camber-contact-point-migration-overturning-moment-mx" class="md-nav__link">
     <span class="md-ellipsis">
       
-        15.2 가정 / 범위
+        25.2 Camber contact-point migration -&gt; overturning moment Mx
       
     </span>
   </a>
@@ -2627,10 +2589,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#153-iso-7401-step-steer-transient" class="md-nav__link">
+  <a href="#253-contact-kinematics" class="md-nav__link">
     <span class="md-ellipsis">
       
-        15.3 ISO 7401 — step-steer transient
+        25.3 공유 contact-kinematics 모듈
       
     </span>
   </a>
@@ -2638,10 +2600,38 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#154-iso-4138-understeer-gradient-k" class="md-nav__link">
+  <a href="#254-inverted-tire-interface-kinematics-in-wrench-out" class="md-nav__link">
     <span class="md-ellipsis">
       
-        15.4 ISO 4138 — understeer gradient K
+        25.4 Inverted tire interface — kinematics-in / wrench-out
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="25.4 Inverted tire interface — kinematics-in / wrench-out">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#transient-ownership-cadence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Transient ownership 과 두 개의 cadence
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#255-vehicle-side" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        25.5 무엇이 vehicle-side 로 남는가
       
     </span>
   </a>
@@ -2649,10 +2639,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#155-iso-3888-2-double-lane-change-moose-test" class="md-nav__link">
+  <a href="#256" class="md-nav__link">
     <span class="md-ellipsis">
       
-        15.5 ISO 3888-2 — double lane change (moose test)
+        25.6 적용 범위
       
     </span>
   </a>
@@ -2660,76 +2650,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#156-doe-parameter-sweep" class="md-nav__link">
+  <a href="#_1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        15.6 DOE — parameter sweep
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#157" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        15.7 산업적 의의
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#158" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        15.8 한계
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#159-chapter" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        15.9 다음 chapter 와의 연결
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#1510" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        15.10 참고문헌
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#1511-self-check" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        15.11 Self-check
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#1512-vdsim" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        15.12 VDSim 구현 노트
+        검증
       
     </span>
   </a>
@@ -2756,326 +2680,120 @@
   
 
 
-<h1 id="15-validation-doe-maneuver">15. Validation &amp; DOE (표준 maneuver / 설계 탐색)<a class="headerlink" href="#15-validation-doe-maneuver" title="Permanent link">&para;</a></h1>
+<h1 id="25-tire-contact-effective-rolling-radius-camber-migration-the-inverted-interface">25. Tire Contact — Effective Rolling Radius, Camber Migration &amp; the Inverted Interface<a class="headerlink" href="#25-tire-contact-effective-rolling-radius-camber-migration-the-inverted-interface" title="Permanent link">&para;</a></h1>
 <h2 id="learning-objectives">Learning objectives<a class="headerlink" href="#learning-objectives" title="Permanent link">&para;</a></h2>
 <p>이 chapter 를 마치면 다음을 할 수 있다.</p>
 <ol>
-<li>ISO 7401 / 4138 / 3888-2 의 표준 maneuver 정의와 각각이 측정하는 handling
-   metric 을 설명한다.</li>
-<li>understeer gradient <span class="arithmatex">\(K\)</span>, yaw overshoot, response time 의 정의를 식으로 안다.</li>
-<li>parameter sweep (DOE) 이 설계 검증/sensitivity 분석에서 하는 역할을
-   설명한다.</li>
-<li>metric 추출기가 ISO validation 과 DOE 에 공유되는 구조의 의의를 안다.</li>
+<li>Load-dependent effective rolling radius <code>Re(Fz)</code> 의 정의와, free-rolling loaded
+   tire 가 <code>kappa = 0</code> 을 보고해야 하는 이유를 설명한다.</li>
+<li>Camber contact-point migration 이 왜 overturning moment <code>Mx</code> 를 만드는지,
+   그리고 그것이 roll DOF 로 어떻게 들어가는지 유도한다.</li>
+<li>모든 dynamics model 이 공유하는 단일 contact-kinematics 정의(<code>tire_contact</code>)
+   의 역할을 안다.</li>
+<li>Tire interface 가 "slip-in / force-out" 에서 "kinematics-in / wrench-out" 으로
+   역전된 구조(<code>evaluate</code> / <code>advance_bristle</code> / <code>advance_relaxation</code>)와, transient
+   state 를 dynamics 가 소유하는 이유를 설명한다.</li>
+<li>어떤 항이 tire 안으로 들어가고 어떤 항이 vehicle-side(integrator 안정화)로
+   남는지 구분한다.</li>
 </ol>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Chapter 04-06</strong> — Ld1-Ld3 (시험 대상 plant).</li>
-<li><strong>Chapter 09</strong> — Pure Pursuit (DLC follower).</li>
-<li><strong>외부</strong> — ISO 7401/4138/3888-2 개요, least-squares fit.</li>
+<li><strong>Chapter 01</strong> — slip ratio <code>kappa</code> / slip angle <code>alpha</code> 의 ISO 8855 정의.</li>
+<li><strong>Chapter 03 / 19 / 21</strong> — MF96, LuGre brush, belt relaxation 의 force law 와
+  transient.</li>
 </ul>
-<hr />
-<h2 id="151-maneuver">15.1 동기 — 표준 maneuver<a class="headerlink" href="#151-maneuver" title="Permanent link">&para;</a></h2>
-<p>모델 신뢰성은 재현 가능한 표준 시험으로 입증된다. ISO 시리즈는 OEM/인증기관의
-공통 언어 — 같은 maneuver 로 같은 metric 을 비교하면 모델·실차·경쟁 도구가
-대조 가능하다.</p>
-<table>
-<thead>
-<tr>
-<th>시험</th>
-<th>ISO</th>
-<th>측정 영역</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Step steer</td>
-<td>7401:2003</td>
-<td>transient yaw response</td>
-</tr>
-<tr>
-<td>Steady-state circular</td>
-<td>4138:2012</td>
-<td>understeer gradient</td>
-</tr>
-<tr>
-<td>Double lane change</td>
-<td>3888-2:2011</td>
-<td>severe transient / 한계 회피</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="152">15.2 가정 / 범위<a class="headerlink" href="#152" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>가정</th>
-<th>의미</th>
-<th>깨지는 case</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Gate-width 판정</td>
-<td>DLC cone 충돌 단순화</td>
-<td>정확한 cone 판정</td>
-</tr>
-<tr>
-<td>Pure Pursuit follower</td>
-<td>preview/delay 없는 단순 추종</td>
-<td>실제 driver model</td>
-</tr>
-<tr>
-<td>Full-factorial DOE</td>
-<td>격자 전수</td>
-<td>LHS / response-surface DoE</td>
-</tr>
-<tr>
-<td>ISO-based metric</td>
-<td>정의는 ISO, 공식 인증 아님</td>
-<td>인증 절차</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="153-iso-7401-step-steer-transient">15.3 ISO 7401 — step-steer transient<a class="headerlink" href="#153-iso-7401-step-steer-transient" title="Permanent link">&para;</a></h2>
-<p>정상 주행 중 steering 을 계단 입력으로 급변 → yaw rate 과도응답. 입력: 직진
-settle → <span class="arithmatex">\(\delta\)</span> step → 관찰.</p>
-<table>
-<thead>
-<tr>
-<th>기호</th>
-<th>정의</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><span class="arithmatex">\(\dot\psi_{ss}\)</span></td>
-<td>정상상태 yaw rate (마지막 20 % 평균)</td>
-</tr>
-<tr>
-<td><span class="arithmatex">\(\dot\psi_{\text{peak}}\)</span></td>
-<td>최대 yaw rate</td>
-</tr>
-<tr>
-<td><span class="arithmatex">\(U\)</span></td>
-<td>overshoot ratio <span class="arithmatex">\(= \dot\psi_{\text{peak}}/\dot\psi_{ss}\)</span></td>
-</tr>
-<tr>
-<td><span class="arithmatex">\(T_{\max}\)</span></td>
-<td>step → peak 시간</td>
-</tr>
-<tr>
-<td><span class="arithmatex">\(T_{\dot\psi}\)</span></td>
-<td>step → 90 % <span class="arithmatex">\(\dot\psi_{ss}\)</span> (response time)</td>
-</tr>
-<tr>
-<td>5 % settling</td>
-<td>±5 % 밴드 진입·유지 시각</td>
-</tr>
-</tbody>
-</table>
-<p><span class="arithmatex">\(U\)</span> 가 1 에 가까울수록 잘 damped; 1.3 이상이면 oscillatory/불안정 경향. 샘플은
-§15.10 box.</p>
-<hr />
-<h2 id="154-iso-4138-understeer-gradient-k">15.4 ISO 4138 — understeer gradient K<a class="headerlink" href="#154-iso-4138-understeer-gradient-k" title="Permanent link">&para;</a></h2>
-<p>일정 속도로 steer 를 천천히 ramp 하며 <span class="arithmatex">\(a_y\)</span> 를 0 → 한계까지 sweep.</p>
-<div class="arithmatex">\[
-K = \frac{d(\delta - \delta_{\text{kin}})}{d(a_y)}, \qquad
-\delta_{\text{kin}} = \frac{L}{R} = \frac{L\dot\psi}{v}
-\]</div>
-<ul>
-<li><span class="arithmatex">\(\delta\)</span> — 실제 road-wheel steer.</li>
-<li><span class="arithmatex">\(\delta_{\text{kin}}\)</span> — 그 반경의 운동학적 최소 steer.</li>
-<li><span class="arithmatex">\(K&gt;0\)</span> understeer (한계에서 steer 더 필요, "밀림"), <span class="arithmatex">\(K&lt;0\)</span> oversteer,
-  <span class="arithmatex">\(K\approx0\)</span> neutral.</li>
-</ul>
-<p>선형 영역 (<span class="arithmatex">\(1\le a_y\le4\)</span> m/s²) 에서 <span class="arithmatex">\((\delta-\delta_{\text{kin}})\)</span> vs <span class="arithmatex">\(a_y\)</span> 의
-기울기를 least-squares fit. 단위는 mrad/g (g 당 milliradian) 와 mrad·s²/m 둘 다
-보고한다.</p>
-<hr />
-<h2 id="155-iso-3888-2-double-lane-change-moose-test">15.5 ISO 3888-2 — double lane change (moose test)<a class="headerlink" href="#155-iso-3888-2-double-lane-change-moose-test" title="Permanent link">&para;</a></h2>
-<p>cone 으로 정의된 차선 변경 코스를 일정 진입속도로 통과 (passenger car):</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>A 진입 12.0 m (y=0)
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>B 전환 13.5 m (y: 0 → +3.5)
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>C 오프셋 11.0 m (y=+3.5)
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>D 복귀 12.5 m (y: +3.5 → 0)
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>E 탈출 12.0 m (y=0)
+<h2 id="251-effective-rolling-radius-refz">25.1 Effective rolling radius Re(Fz)<a class="headerlink" href="#251-effective-rolling-radius-refz" title="Permanent link">&para;</a></h2>
+<p>타이어는 강체 바퀴가 아니라 하중을 받으면 눌린다. 접지면의 유효 굴림 반경
+<code>Re</code> 는 unloaded radius <code>R0</code> 보다 작고 하중에 따라 변한다. Pacejka form 으로</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>rho_n = Fz / Fz0
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>Re    = R0 - (Fz0/Cz) * (DREFF*atan(BREFF*rho_n) + FREFF*rho_n)
 </span></code></pre></div>
-<p>전환 구간은 raised-cosine S-curve waypoint:</p>
-<div class="arithmatex">\[
-y_B(x) = \text{OFF}\cdot 0.5\,(1 - \cos(\pi x / L_B))
-\]</div>
-<p>(linear ramp 는 Pure Pursuit follower 가 overshoot — 부드러운 곡선이 실제
-운전자 궤적에 가깝고 follower 도 안정.) Pure Pursuit (chapter 09) 로
-center-line 추종 + 비례 vx 제어.</p>
-<table>
-<thead>
-<tr>
-<th>metric</th>
-<th>정의</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>speed loss</td>
-<td>진입 − 탈출 속도 [km/h]</td>
-</tr>
-<tr>
-<td>max lateral excursion</td>
-<td>target lane 대비 최대 횡 이탈 [m]</td>
-</tr>
-<tr>
-<td>peak yaw rate, peak <span class="arithmatex">\(a_y\)</span></td>
-<td>한계 거동 지표</td>
-</tr>
-</tbody>
-</table>
-<p>Pass (단순화): speed loss &lt; 2 km/h AND excursion &lt; 1 m. 속도가 오를수록 한계
-에서 follow 실패 — 실차 moose test 패턴 (샘플 §15.10 box).</p>
-<hr />
-<h2 id="156-doe-parameter-sweep">15.6 DOE — parameter sweep<a class="headerlink" href="#156-doe-parameter-sweep" title="Permanent link">&para;</a></h2>
-<p>단일 maneuver 가 아니라 파라미터 격자 × 시나리오를 일괄 실행 → response
-surface. 설계 검증의 핵심 워크플로다. <code>vehicle.* / tire.* / solver.*</code>
-dotted-path 로 임의 parameter override, 출력 자동 분기:</p>
-<ul>
-<li>1-param → line plot.</li>
-<li>2-param → heatmap (response surface).</li>
-<li>3+ param → sensitivity bar (<span class="arithmatex">\(\text{std}/\text{mean}\)</span> 상대 민감도).</li>
-</ul>
-<p>metric 추출기는 ISO validation 과 공유되어 DOE 가 ISO metric (예: 100 tire
-variant 의 <span class="arithmatex">\(K\)</span> 분포) 을 격자 위에서 sweep 할 수 있다.</p>
-<hr />
-<h2 id="157">15.7 산업적 의의<a class="headerlink" href="#157" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>사용자</th>
-<th>활용</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>OEM 설계</td>
-<td>tire vendor 후보 × CG variant → spec 만족 조합 탐색</td>
-</tr>
-<tr>
-<td>AV lab</td>
-<td>vehicle param 변화가 path-tracking 성능에 미치는 영향</td>
-</tr>
-<tr>
-<td>인증 준비</td>
-<td>ISO maneuver metric 의 사전 검증</td>
-</tr>
-</tbody>
-</table>
-<p>Adams Car 의 DOE 모듈이 하는 일을 가벼운 YAML + Python 으로 — full Adams seat
-없이 trend 확인.</p>
-<hr />
-<h2 id="158">15.8 한계<a class="headerlink" href="#158" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>항목</th>
-<th>현재</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>ISO 3888-2 cone 판정</td>
-<td>gate width 단순화</td>
-</tr>
-<tr>
-<td>Pass 기준</td>
-<td>ISO 완전 조건의 부분집합</td>
-</tr>
-<tr>
-<td>Driver model</td>
-<td>Pure Pursuit (preview/delay 모델 아님)</td>
-</tr>
-<tr>
-<td>통계적 DOE</td>
-<td>full-factorial 만 (LHS/RSM 미구현)</td>
-</tr>
-<tr>
-<td>측정 표준</td>
-<td>정의는 ISO 기반, 공식 인증 아님</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="159-chapter">15.9 다음 chapter 와의 연결<a class="headerlink" href="#159-chapter" title="Permanent link">&para;</a></h2>
-<p>validation/DOE 가 모델의 정확성을 보증한다. chapter 16 은 이 검증된 모델을
-FMI 표준으로 패키징하여 산업 도구와 양방향 교환하는 방법을 다룬다.</p>
-<hr />
-<h2 id="1510">15.10 참고문헌<a class="headerlink" href="#1510" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>ISO 7401:2003</strong> — Lateral transient response test methods.</li>
-<li><strong>ISO 4138:2012</strong> — Steady-state circular driving behaviour.</li>
-<li><strong>ISO 3888-2:2011</strong> — Severe lane-change manoeuvre.</li>
-<li><strong>Gillespie, T.</strong>, <em>Fundamentals of Vehicle Dynamics</em>, SAE, 1992 — understeer gradient.</li>
-</ul>
-<hr />
-<h2 id="1511-self-check">15.11 Self-check<a class="headerlink" href="#1511-self-check" title="Permanent link">&para;</a></h2>
-<details>
-<summary>1. overshoot ratio U 가 1.3 이상이면 무엇을 뜻하나?</summary>
-
-yaw rate peak 가 정상값의 1.3 배 이상 — under-damped/oscillatory. transient 가
-출렁여 안정성/승차감이 나쁜 setup.
-</details>
-
-<details>
-<summary>2. understeer gradient 에서 δ_kin 을 빼는 이유?</summary>
-
-$\delta_{\text{kin}}=L/R$ 은 그 반경을 위한 순수 기하 steer. 실제 $\delta$ 에서
-이를 빼면 tire slip 때문에 추가로 필요한 steer 만 남아, 그 $a_y$ 기울기가
-under/oversteer 성향을 정량화한다.
-</details>
-
-<details>
-<summary>3. DLC 전환 구간에 raised-cosine 을 쓰는 이유?</summary>
-
-linear ramp 는 곡률이 모서리에서 불연속이라 Pure Pursuit 가 overshoot. cosine
-S-curve 는 곡률이 연속이라 실제 운전 궤적에 가깝고 follower 도 안정.
-</details>
-
-<details>
-<summary>4. metric 추출기를 ISO validation 과 DOE 가 공유하는 이점?</summary>
-
-같은 $K$, overshoot 정의를 격자 위에서 sweep 가능 — 단일 시험과 대량 설계
-탐색이 동일 metric 으로 일관 비교된다.
-</details>
-
-<details>
-<summary>5. DLC 가 속도가 오를수록 fail 하는 물리적 이유?</summary>
-
-고속에서 같은 lateral 변위에 필요한 $a_y$ 가 커져 tire saturation 에 도달 →
-follower 가 곡률을 못 내고 excursion/speed loss 증가. 실차 moose test 와 동일.
-</details>
-
-<hr />
-<h2 id="1512-vdsim">15.12 VDSim 구현 노트<a class="headerlink" href="#1512-vdsim" title="Permanent link">&para;</a></h2>
-<blockquote>
-<p><strong>[VDSim impl] § 15.3-15.5 — validation 스크립트 + 샘플</strong></p>
-<p><code>apps/validation/iso_{7401,4138,3888}.py</code>.</p>
-<p>ISO 7401 (sports L3, 80 km/h, 6° steer): U=1.21 (20.6 % overshoot),
-<span class="arithmatex">\(T_{\dot\psi}\)</span>=0.20 s, settling 2.29 s, <span class="arithmatex">\(a_{y,ss}\)</span>=0.82 g.</p>
-<p>ISO 4138 (sports L3, 80 km/h): K=+9.69 mrad/g (understeer). sports typical
-5-15 mrad/g 범위.</p>
-<p>ISO 3888-2 (sports L3): 60 km/h FAIL (excursion 1.3 m, speed loss 5.5 km/h),
-40 km/h PASS (excursion 0.3 m, speed loss 1.0 km/h).</p>
-<p><strong>[VDSim impl] § 15.6 — DOE runner</strong></p>
-<p><code>apps/doe/sweep_runner.py</code>. config 예:</p>
-<p><div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">parameters</span><span class="p">:</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">vehicle.cg_height</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.35</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.42</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.50</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.58</span><span class="p p-Indicator">]</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">tire.D_lat</span><span class="p">:</span><span class="w">        </span><span class="p p-Indicator">[</span><span class="nv">0.8</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.95</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">1.05</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">1.20</span><span class="p p-Indicator">]</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nt">scenarios</span><span class="p">:</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="nt">step_30deg_at_25</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">step_steer</span><span class="p p-Indicator">,</span><span class="nt"> params</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nv">...</span><span class="p p-Indicator">}}</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="nt">metrics</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">peak_yaw_rate</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">yaw_overshoot</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">understeer_gradient_K</span><span class="p p-Indicator">]</span>
+<p>slip ratio 의 정의에 <code>Re</code> 를 쓴다.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>kappa = (omega * Re - Vx) / max(|Vx|, eps)
 </span></code></pre></div>
-16 combos × 2 scenarios = 32 runs 가 수 초. metric 추출은 <code>metrics.py</code>
-(validation 과 공유).</p>
-</blockquote>
+<p>이렇게 하면 <strong>자유 굴림(free-rolling) 중인 하중 받은 타이어가 <code>kappa = 0</code></strong> 을
+보고한다 — <code>omega = Vx / Re</code> 이기 때문이다. 이것이 MF-Tyre / CarMaker 와 일치하는
+관례다. <code>R0</code> 를 쓰면 같은 자유 굴림에서 가짜 slip 이 생긴다.</p>
+<p>중요한 결과: 초기 wheel spin 도 <code>Re</code> 와 정합해야 한다. <code>free_roll_wheel_spin</code>
+은 정적 하중에서 wheel 별 <code>omega = Vx / Re(Fz_static)</code> 를 준다(앞/뒤 정적 하중
+분배가 다르므로 wheel 별로 다름). 이 정합이 없으면 <code>t = 0</code> 에서 수천 N 의 phantom
+longitudinal force 가 나온다. <code>Re</code> 는 opt-in 이다(<code>reff_* = 0</code> 이면 <code>R0</code> 로 fallback,
+legacy 동작 유지).</p>
+<h2 id="252-camber-contact-point-migration-overturning-moment-mx">25.2 Camber contact-point migration -&gt; overturning moment Mx<a class="headerlink" href="#252-camber-contact-point-migration-overturning-moment-mx" title="Permanent link">&para;</a></h2>
+<p>타이어 트레드는 toroidal(원환) 단면을 가진다. Camber <code>gamma</code> 로 기울면 접지점이
+타이어 중심선이 아니라 기운 쪽으로 옮겨간다.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>contact_dy = crown_radius * sin(gamma)
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>contact_dz = crown_radius * (1 - cos(gamma))
+</span></code></pre></div>
+<p>수직 하중선이 <code>contact_dy</code> 만큼 옆으로 옮겨가므로 wheel-forward 축에 대한
+overturning moment 가 생긴다.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Mx = Fz * contact_dy = Fz * crown_radius * sin(gamma)
+</span></code></pre></div>
+<p>이 <code>Mx</code> 는 roll DOF 가 있는 model(L3 14-DOF / L5)에서 roll 방정식으로 들어간다.
+ISO roll-camber 패턴(<code>+g, -g, +g, -g</code>)에서는 좌/우 <code>Mx</code> 가 부호 반대라 대칭 roll
+에서 자연히 상쇄된다. Opt-in 이다(<code>crown_radius = 0</code> 이면 중심선 접지, <code>Mx = 0</code>).</p>
+<h2 id="253-contact-kinematics">25.3 공유 contact-kinematics 모듈<a class="headerlink" href="#253-contact-kinematics" title="Permanent link">&para;</a></h2>
+<p>slip / <code>Re</code> / camber migration 의 정의는 한 곳(<code>vdsim/tire_contact.hpp</code> 의
+<code>tire_contact_kinematics</code>)에만 있다. 네 dynamics model 이 모두 이것을 호출하므로
+정의가 model 마다 달라질 수 없다. 반환은 <code>{kappa, alpha, Re, vsx, vsy, contact_dy,
+contact_dz}</code> 이다.</p>
+<h2 id="254-inverted-tire-interface-kinematics-in-wrench-out">25.4 Inverted tire interface — kinematics-in / wrench-out<a class="headerlink" href="#254-inverted-tire-interface-kinematics-in-wrench-out" title="Permanent link">&para;</a></h2>
+<p>예전 <code>ITireModel</code> 은 "slip-in / force-out" 이었다: dynamics 가 slip 을 계산해서
+<code>compute(Fz, kappa, alpha, ...)</code> 에 넘겼다. 그래서 새 타이어(다른 slip law, transient,
+camber model)를 넣으려면 dynamics 3곳을 고쳐야 했다 — 추상화가 덜 된 것이다.</p>
+<p>역전 후에는 "kinematics-in / wrench-out" 이다.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>struct ContactInput  { Fz, Vx, Vy, omega, gamma, mu_long, mu_lat, R0; };
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>struct Transient     { belt_kappa, belt_alpha, belt_vlong, belt_vlat,
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>                       lugre_z_long, lugre_z_lat, alpha_dyn; };
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>struct Wrench        { Fx, Fy, Mx, My, Mz, Re, kappa, alpha, contact_dy; };
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>Wrench    evaluate(ContactInput, Transient)            // RK4 stage (frozen)
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>Transient advance_bristle(ContactInput, Transient, dt) // per stage
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>Transient advance_relaxation(ContactInput, Transient, dt) // per substep
+</span></code></pre></div>
+<p><code>evaluate()</code> 가 slip / <code>Re</code> / camber migration 을 contact kinematics 에서 직접
+계산하고, caller 가 준 transient 를 적용한 뒤 wrench 를 돌려준다. force law 는
+virtual <code>compute()</code> 로 dispatch 되므로 이 plumbing 은 <strong>base 에 한 번만</strong> 정의되고
+(<code>tire_model.cpp</code>) 모든 backend(MF96 / linear / MF2002)가 공유한다. 새 타이어는
+<code>compute()</code> override 하나면 된다.</p>
+<h3 id="transient-ownership-cadence">Transient ownership 과 두 개의 cadence<a class="headerlink" href="#transient-ownership-cadence" title="Permanent link">&para;</a></h3>
+<p>Transient(belt / relaxation / LuGre bristle)는 <strong>dynamics 가 wheel 별로 소유</strong>한다.
+RK4 integrator 가 stage 안에서는 freeze 하고 substep 사이에서 advance 해야 하기
+때문이다(tire 는 stateless / polymorphic 유지, per-wheel clone 불필요).</p>
+<p>advance 가 두 cadence 로 나뉘는 이유:</p>
+<ul>
+<li><code>advance_bristle()</code> — LuGre bristle <code>z</code> 는 빠른 contact state 라 RK4 stage 마다
+  (sub-substep <code>dt</code>)에서 적분한다.</li>
+<li><code>advance_relaxation()</code> — carcass/belt slip lag + relaxation-length lag 는 느린
+  state 라 substep 당 한 번, 마지막 stage 의 geometric slip 기준으로 적분한다.</li>
+</ul>
+<p>둘을 한 <code>dt</code> 로 합치면 byte-equivalent 가 아니다(느린 lag 를 stage별 target 에 대해
+N 번 relax 한 것 != 최종 target 에 대해 1번 relax 한 것). 그래서 분리한다.</p>
+<h2 id="255-vehicle-side">25.5 무엇이 vehicle-side 로 남는가<a class="headerlink" href="#255-vehicle-side" title="Permanent link">&para;</a></h2>
+<p>다음은 tire physics 가 아니라 integrator 안정화이므로 dynamics 에 남는다.</p>
+<ul>
+<li>Stick-blend <code>lambda</code>, <code>Fx_hold</code> creep, combined-slip clamp — 저속 수치 안정화.</li>
+<li>Wheel-frame velocity projection(steer / yaw-rate / wheel position) — vehicle kinematics.</li>
+<li>Wheel rotational ODE 와 moment arm <code>Fx * Re</code> — vehicle(다만 <code>Re</code> 는 tire 가 돌려준 값).</li>
+<li>Kinematic-dynamic blend(저속 lateral) 와 free_3d 의 stunt-loop denom 특화.</li>
+</ul>
+<h2 id="256">25.6 적용 범위<a class="headerlink" href="#256" title="Permanent link">&para;</a></h2>
+<p>L2(seven_dof)와 L3(14-DOF, seven_dof 를 wrap)는 이 inverted interface 를 사용한다.
+L1(bicycle)과 L5(free_3d)는 의도적으로 공유 contact 경로(§25.3)에 남아 있다 —
+이들의 contact kinematics 가 per-wheel 계약과 다르기 때문이다(bicycle 은 축당 2개
+타이어를 묶어 <code>Re</code> 는 wheel 하중(<code>0.5*Fz</code>), force 는 축 하중(<code>Fz</code>)을 쓰고 LuGre slip
+은 <code>R0</code> 기반; free_3d 는 loop 전용 slip denominator). 새 force law 는 둘 다
+<code>compute()</code> 로 그대로 들어간다.</p>
+<h2 id="_1">검증<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Re consistency / no-phantom-force: <code>ctest -R "EffectiveRollingRadius|NoPhantom"</code>
+  (VALIDATION benchmark #16).</li>
+<li>Camber migration -&gt; Mx: <code>ctest -R CamberMigration</code> (benchmark #17).</li>
+<li>Inverted interface 등가: <code>ctest -R TireInversion</code> — 네 force 경로 + 세 transient
+  적분기를 독립 oracle 에 대해 lock.</li>
+<li>Byte-stability: IsoBaseline / Lugre / Belt / ChronoPac02Parity 가 그대로 통과.</li>
+</ul>
+<p>설계·핸드오프 상세는 <code>docs/design/TIRE_INTERFACE_INVERSION.md</code>.</p>
 
 
 
