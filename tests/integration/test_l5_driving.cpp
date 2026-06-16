@@ -151,6 +151,121 @@ TEST(L5Driving, LuGreFlatDrivingSmoke) {
     EXPECT_NEAR(h.dyn->state().position.z(), h.vp.cg_height, 0.06);
 }
 
+// ---------------------------------------------------------------------------
+// Spatial strut (l5_spatial_suspension) — opt-in B1 path. Isolated from the
+// penalty-path tests above; default flag stays off so those remain byte-stable.
+// ---------------------------------------------------------------------------
+struct L5StrutSetup {
+    vdsim::VehicleParams vp;
+    vdsim::TireParams tp;
+    vdsim::SolverParams sp;
+    std::unique_ptr<vdsim::IVehicleDynamics> dyn;
+    std::unique_ptr<vdsim::IContactProvider> ground;
+
+    L5StrutSetup() {
+        vp.aero_drag_coeff = 0.0;
+        tp.lugre.enabled = false;
+        sp.stunt_physics = true;
+        sp.l5_spatial_suspension = true;
+        sp.max_substep_dt = 2e-4;
+        sp.max_substeps = 16;
+        dyn = vdsim::create_stunt_dof();
+        dyn->initialize(vp, tp, sp);
+        ground = vdsim::create_flat_ground(0.0, 1.0);
+    }
+    void reset_level(double vx) {
+        dyn->reset(level_on_flat(vx, vp.cg_height, vp.wheel_radius_nominal));
+    }
+    void run(const vdsim::CmdL4& cmd, int n, double dt) {
+        run_l5_flat(*dyn, *ground, vp, cmd, n, dt);
+    }
+};
+
+TEST(L5Strut, SettlesToStaticEquilibrium) {
+    L5StrutSetup h;
+    h.reset_level(0.0);
+    vdsim::CmdL4 cmd;
+    h.run(cmd, 3000, 0.001);
+    const auto& s = h.dyn->state();
+    // Tire vertical loads sum to the full vehicle weight (tire carries sprung +
+    // unsprung; suspension carries only the sprung corner).
+    const auto fz = h.dyn->tire_Fz();
+    const double sum = fz[0] + fz[1] + fz[2] + fz[3];
+    EXPECT_NEAR(sum, h.vp.mass * G, 0.12 * h.vp.mass * G);
+    // comp=0 is the static ride position by preload construction.
+    for (int i = 0; i < vdsim::NUM_WHEELS; ++i)
+        EXPECT_NEAR(s.susp_compression[i], 0.0, 0.012) << "corner " << i;
+    // Body sits just below design ride height by the tire static deflection.
+    EXPECT_GT(s.position.z(), 0.50);
+    EXPECT_LT(s.position.z(), h.vp.cg_height + 0.005);
+    EXPECT_LT(std::abs(h.dyn->pitch_angle_qs()), 0.03);
+    EXPECT_LT(std::abs(h.dyn->roll_angle_qs()), 0.03);
+}
+
+TEST(L5Strut, NoSinkOnFlatCoast) {
+    L5StrutSetup h;
+    h.reset_level(12.0);
+    vdsim::CmdL4 cmd;
+    h.run(cmd, 1000, 0.001);
+    const double z0 = h.dyn->state().position.z();
+    h.run(cmd, 3000, 0.001);
+    EXPECT_NEAR(h.dyn->state().position.z(), z0, 0.02);
+}
+
+TEST(L5Strut, ThrottleAccelerates) {
+    L5StrutSetup h;
+    h.reset_level(2.0);
+    vdsim::CmdL4 cmd;
+    cmd.throttle = 0.5;
+    h.run(cmd, 3000, 0.001);
+    EXPECT_GT(h.dyn->state().velocity.x(), 4.0);
+}
+
+TEST(L5Strut, SteerProducesYaw) {
+    L5StrutSetup h;
+    h.reset_level(10.0);
+    vdsim::CmdL4 cmd;
+    cmd.steer_angle_wheel = 0.06;
+    const double yaw0 = h.dyn->state().yaw();
+    h.run(cmd, 2500, 0.001);
+    EXPECT_GT(std::abs(h.dyn->state().yaw() - yaw0), 0.08);
+}
+
+// Heave ride frequency: settle, then inject a vertical impulse and measure the
+// sprung-mass oscillation. Analytic quarter-car heave uses the tire spring in
+// series with the corner spring: k_eff = 4 k_s k_t / (k_s + k_t) over m_sprung.
+TEST(L5Strut, HeaveRideFrequencyMatchesQuarterCar) {
+    L5StrutSetup h;
+    h.reset_level(0.0);
+    vdsim::CmdL4 cmd;
+    h.run(cmd, 3000, 0.001);                       // reach static equilibrium
+    const double z_eq = h.dyn->state().position.z();
+
+    vdsim::State s = h.dyn->state();
+    s.velocity.z() = -0.45;                         // downward heave impulse
+    h.dyn->reset(s);
+
+    const double dt = 0.0005;
+    double t = 0.0, prev = 0.0, t_cross = -1.0;
+    for (int i = 0; i < 4000; ++i) {                // 2 s
+        vdsim::ContactArray c;
+        h.ground->query(h.dyn->state(), h.vp, c);
+        h.dyn->step(cmd, c, dt);
+        t += dt;
+        const double d = h.dyn->state().position.z() - z_eq;
+        if (t > 0.05 && prev < 0.0 && d >= 0.0) { t_cross = t; break; }
+        prev = d;
+    }
+    ASSERT_GT(t_cross, 0.0) << "no heave restoring crossing detected";
+
+    const double ks = h.vp.spring_stiffness[0];
+    const double kt = h.tp.tire_vertical_stiffness;
+    const double k_eff = 4.0 * ks * kt / (ks + kt);
+    const double wn = std::sqrt(k_eff / h.vp.mass_sprung);
+    const double half_period = M_PI / wn;           // first return-to-eq time
+    EXPECT_NEAR(t_cross, half_period, 0.30 * half_period);
+}
+
 TEST(L5Driving, UphillCoastSlows) {
     vdsim::VehicleParams vp;
     vp.aero_drag_coeff = 0.0;

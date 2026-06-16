@@ -221,6 +221,11 @@ struct SolverParams {
     double     loop_center_x  {0.0};
     double     loop_center_z  {0.0};
     bool       loop_rail_guide {false};         // true=kinematic rail; false=tire-driven arc
+    // L5 (free_3d) spatial suspension (opt-in). false -> legacy penalty-at-hub contact
+    // (body held up by a capped tire-stiffness penalty, no unsprung). true -> per-corner
+    // unsprung mass + body-frame strut spring/damper on the 6-DOF body; the body becomes
+    // the sprung mass and the tire-spring acts on the unsprung. See free_3d_dynamics.cpp.
+    bool       l5_spatial_suspension {false};
 
     static SolverParams from_yaml(const std::string& path);
     void                to_yaml (const std::string& path) const;

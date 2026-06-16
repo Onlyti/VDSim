@@ -412,6 +412,7 @@ SolverParams SolverParams::from_yaml(const std::string& path) {
     }
     pull(root, "max_substep_dt", p.max_substep_dt);
     pull(root, "max_substeps",   p.max_substeps);
+    pull(root, "l5_spatial_suspension", p.l5_spatial_suspension);
     if (p.max_substep_dt <= 0.0) {
         throw std::runtime_error("YAML field 'max_substep_dt' must be > 0");
     }
@@ -428,6 +429,7 @@ void SolverParams::to_yaml(const std::string& path) const {
     out << YAML::Key << "integrator"     << YAML::Value << integrator_to_string(integrator);
     out << YAML::Key << "max_substep_dt" << YAML::Value << max_substep_dt;
     out << YAML::Key << "max_substeps"   << YAML::Value << max_substeps;
+    out << YAML::Key << "l5_spatial_suspension" << YAML::Value << l5_spatial_suspension;
     out << YAML::EndMap;
     std::ofstream ofs(path);
     if (!ofs) throw std::runtime_error("Cannot open YAML file for write: " + path);

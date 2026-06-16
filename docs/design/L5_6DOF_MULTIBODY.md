@@ -56,7 +56,25 @@ validatable model, and lets L5 share the inverted tire interface like L2/L3.
   top), so L5 joins the inverted contract with the standard slip denominator. Also fixed:
   the LuGre bristle `z` is now integrated (was degenerate / never advanced). All stunt/L5/
   terrain tests pass (loop tests included); 364/364 ctest green.
-- **B** — attach the L4 corner DAE to the 6-DOF body (true spatial multibody).
+- **B1 — DONE** — spatial sprung/unsprung strut on the 6-DOF body, opt-in behind
+  `SolverParams::l5_spatial_suspension` (default false keeps the penalty-at-hub path
+  byte-stable; all 364 prior tests unchanged). Per corner: an unsprung mass `m_u[i]` with a
+  travel DOF reusing `State::susp_compression/velocity[i]` along the body-up (strut) axis.
+  Tire-spring acts on the unsprung via an effective penetration `pen = pen_rigid -
+  comp·(ez·n)` (the wheel centre rides `comp` above the rigid hub the contact provider
+  assumed); the strut spring+damper carries the sprung corner with a static preload so
+  `comp=0` is the ride position, tops out at `F_susp=0` (no coilover tension), bump/droop
+  clamps on travel. The vertical body↔wheel coupling goes through the strut (the strut-axis
+  component of the tire force is replaced by `F_susp`); in-plane tire force is reacted
+  rigidly. Body translational mass is anisotropic on the strut path: m_sprung along the
+  strut axis (the unsprung decouples there via the travel DOF), total mass in-plane (the
+  unsprung is rigidly carried), so flat-ground handling stays matched to planar L2/L3;
+  rotational inertia uses `inertia_diag` as L2/L3 do. Isolation evidence (tests
+  `L5Strut.*`): settles to static equilibrium (Fz_sum=14808 N vs weight 14710 N, comp≈0,
+  z=0.533 m = ride height − tire static deflection); heave ride frequency 1.33 Hz measured
+  vs 1.41 Hz quarter-car analytic (k_eff = 4·k_s·k_t/(k_s+k_t) over m_sprung).
+- **B2** — feed `comp` (+ rate) as `PrescribedCornerMotion.travel_z` to the L4 corner DAE,
+  set the returned `WheelPose` toe/camber into the tire `ContactInput`.
 - **C** — validation (below).
 
 ## Phase B — implementation design (spatial suspension on the 6-DOF body)

@@ -55,6 +55,7 @@ constexpr double kSpeedEps     = 0.15;
 constexpr double kStickBlend   = 3.0;
 constexpr double kStickC       = 6.0e4;
 constexpr double kWheelSpinDrag = 2.5;
+constexpr double kTireDampRatio = 0.08;   // tire-spring damping ratio (strut path)
 
 class Free3DDynamics final : public IVehicleDynamics {
 public:
@@ -91,6 +92,19 @@ public:
             1.0 / std::max(1.0, vp.inertia_diag.x()),
             1.0 / std::max(1.0, vp.inertia_diag.y()),
             1.0 / std::max(1.0, vp.inertia_diag.z()));
+        // Spatial-strut static preload: each strut carries the sprung corner load so
+        // comp=0 is the static ride position (sum F_preload = m_sprung·g). Droop stop
+        // at the spring's free length (F_susp=0); bump room above static.
+        const double ms = vp.mass_sprung > 1.0 ? vp.mass_sprung : vp.mass;
+        const double Lwb = vp.wheelbase > 1e-6 ? vp.wheelbase : 2.7;
+        const double Fs_f = 0.5 * ms * kGravity * vp.cg_to_rear  / Lwb;
+        const double Fs_r = 0.5 * ms * kGravity * vp.cg_to_front / Lwb;
+        F_preload_ = {{Fs_f, Fs_f, Fs_r, Fs_r}};
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            const double ks = std::max(1.0, vp.spring_stiffness[i]);
+            comp_min_[i] = -F_preload_[i] / ks;   // spring free length (no tension)
+            comp_max_[i] =  0.12;                  // bump room above static [m]
+        }
         drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
         brake_      = make_default_brake(vp_, vp_.brake_deadtime_s);
         steering_   = make_default_steering(vp_, vp_.steer_deadtime_s);
@@ -181,6 +195,9 @@ private:
         double ax_body {0.0};
         double ay_body {0.0};
         std::array<double, NUM_WHEELS> domega {{0.0, 0.0, 0.0, 0.0}};
+        // Spatial-strut travel DOF (zero on the penalty path).
+        std::array<double, NUM_WHEELS> d_comp     {{0.0, 0.0, 0.0, 0.0}};
+        std::array<double, NUM_WHEELS> d_comp_dot {{0.0, 0.0, 0.0, 0.0}};
     };
 
     static Vec3 wheel_tangent_frame(const Vec3& n_in, const Vec3& body_fwd,
@@ -222,6 +239,12 @@ private:
         const bool stunt_loop = sp_.stunt_physics && sp_.loop_radius > 1.0;
         double k_tire = std::min(80000.0, std::max(1.0, tp_.tire_vertical_stiffness));
         if (stunt_loop) k_tire *= 0.5;
+        // Spatial-strut path: the 6-DOF body is the sprung mass; the (unclamped) tire
+        // stiffness acts on the per-corner unsprung mass. Penalty path leaves m_body==m
+        // and k_tire untouched, so its arithmetic is byte-identical to before.
+        const bool strut = sp_.l5_spatial_suspension;
+        const double m_body = strut ? (vp_.mass_sprung > 1.0 ? vp_.mass_sprung : vp_.mass) : m;
+        const double k_tire_strut = std::max(1.0, tp_.tire_vertical_stiffness);
         const double L = vp_.wheelbase;
         const double Tw_f = vp_.track_front;
 
@@ -234,15 +257,29 @@ private:
         constexpr double kLoopPenCap = 0.016;
         double c_vert = 2.0 * std::sqrt(k_tire * m / static_cast<double>(NUM_WHEELS));
         if (stunt_loop) c_vert *= 1.4;
+        const Vec3 ez_world = R.col(2);   // body up axis in world (strut travel axis)
         std::array<double, NUM_WHEELS> Fz {};
         for (int i = 0; i < NUM_WHEELS; ++i) {
-            if (!contacts[i].is_valid || contacts[i].penetration <= 0.0) {
-                Fz[i] = 0.0;
+            if (!contacts[i].is_valid) { Fz[i] = 0.0; continue; }
+            const Vec3& rb = r_body_[i];
+            const Vec3 n = contacts[i].normal.normalized();
+            if (strut) {
+                // Tire-spring on the unsprung: the wheel centre rides comp·ez above the
+                // rigid hub the contact provider assumed, so the effective penetration is
+                // the reported (rigid) penetration minus that travel along the normal.
+                const double comp     = s.susp_compression[i];
+                const double comp_dot = s.susp_velocity[i];
+                const double pen = contacts[i].penetration - comp * ez_world.dot(n);
+                if (pen <= 0.0) { Fz[i] = 0.0; continue; }
+                const Vec3 v_wc = R * (v_body + omega.cross(rb)) + ez_world * comp_dot;
+                const double vn = -v_wc.dot(n);
+                const double m_u = std::max(1.0, vp_.unsprung_mass[i]);
+                const double c_t = kTireDampRatio * 2.0 * std::sqrt(k_tire_strut * m_u);
+                Fz[i] = std::clamp(k_tire_strut * pen + c_t * vn, 0.0, Fz_cap);
                 continue;
             }
-            const Vec3& rb = r_body_[i];
+            if (contacts[i].penetration <= 0.0) { Fz[i] = 0.0; continue; }
             const Vec3 v_hub = R * (v_body + omega.cross(rb));
-            const Vec3 n = contacts[i].normal.normalized();
             const double pen_raw = contacts[i].penetration;
             const double pen = stunt_loop ? std::min(pen_raw, kLoopPenCap) : pen_raw;
             const double vn  = -v_hub.dot(n);
@@ -273,14 +310,96 @@ private:
         double lambda = lugre_on ? 1.0 : std::clamp(speed / kStickBlend, 0.0, 1.0);
         if (!lugre_on) lambda = lambda * lambda * (3.0 - 2.0 * lambda);
 
-        Vec3 F_total_world = Vec3(0.0, 0.0, -m * kGravity);
+        Vec3 F_total_world = Vec3(0.0, 0.0, -m_body * kGravity);
         Vec3 tau_body = Vec3::Zero();
         std::array<Vec3, NUM_WHEELS> F_body {};
         std::array<double, NUM_WHEELS> kappa {}, alpha {};
         std::array<double, NUM_WHEELS> mz_wheel {{0.0, 0.0, 0.0, 0.0}};
         std::array<double, NUM_WHEELS> fx_kin {{0.0, 0.0, 0.0, 0.0}};
+        std::array<double, NUM_WHEELS> dcomp {{0.0, 0.0, 0.0, 0.0}};
+        std::array<double, NUM_WHEELS> dcomp_dot {{0.0, 0.0, 0.0, 0.0}};
 
         for (int i = 0; i < NUM_WHEELS; ++i) {
+            if (strut) {
+                const Vec3& rb = r_body_[i];
+                const double comp     = s.susp_compression[i];
+                const double comp_dot = s.susp_velocity[i];
+                const double ks  = std::max(1.0, vp_.spring_stiffness[i]);
+                const double cs  = std::max(0.0, vp_.damper_coefficient[i]);
+                const double m_u = std::max(1.0, vp_.unsprung_mass[i]);
+                // Strut spring+damper carries the sprung corner (preload so comp=0 is the
+                // static ride position); a coilover cannot pull, so it tops out at F_susp=0.
+                double F_susp = F_preload_[i] + ks * comp + cs * comp_dot;
+                if (F_susp < 0.0) F_susp = 0.0;
+
+                Vec3 tire_total = Vec3::Zero();
+                if (Fz[i] > 1.0) {
+                    const Vec3 hub_world   = s.position + R * rb;
+                    const Vec3 v_hub_world =
+                        R * (v_body + omega.cross(rb)) + ez_world * comp_dot;
+                    Vec3 n = contacts[i].normal.normalized();
+                    Vec3 t_lat;
+                    Vec3 t_long = wheel_tangent_frame(n, body_fwd, d_wheel[i], t_lat);
+                    const double v_long_w = v_hub_world.dot(t_long);
+                    const double v_lat    = v_hub_world.dot(t_lat);
+                    double v_long_k = v_long_w;
+                    if (stunt_loop && contacts[i].surface_id == 2) {
+                        const Vec3 t_track = loop_track_tangent(
+                            hub_world, v_hub_world, sp_.loop_center_x, sp_.loop_center_z);
+                        const double v_track = v_hub_world.dot(t_track);
+                        const double spd = v_hub_world.norm();
+                        if (std::abs(v_long_w) < 0.2 * std::max(spd, kSpeedEps)) {
+                            const double sign = (t_long.dot(t_track) >= 0.0) ? 1.0 : -1.0;
+                            v_long_k = sign * std::max(std::abs(v_track), kSpeedEps);
+                        }
+                    }
+                    ITireModel::ContactInput ci;
+                    ci.Fz = Fz[i]; ci.Vx = v_long_k; ci.Vy = v_lat;
+                    ci.omega = s.wheel_spin[i]; ci.gamma = 0.0;
+                    ci.mu_long = contacts[i].mu_long; ci.mu_lat = contacts[i].mu_lat;
+                    ci.R0 = Rwh;
+                    ci_[i] = ci;
+                    const ITireModel::Wrench w = tire_->evaluate(ci, transient_[i]);
+                    Re_w_[i] = w.Re; kappa[i] = w.kappa; alpha[i] = w.alpha;
+
+                    const double muFz = std::min(contacts[i].mu_long, contacts[i].mu_lat)
+                                        * std::max(0.0, Fz[i]);
+                    double Fx_w = 0.0, Fy_w = 0.0;
+                    if (lugre_on) {
+                        Fx_w = w.Fx; Fy_w = w.Fy; mz_wheel[i] = w.Mz;
+                    } else {
+                        const double hold_gate = (1.0 - lambda) *
+                            std::clamp(cmd.brake - cmd.throttle, 0.0, 1.0);
+                        double Fx_hold = -kStickC * (R * v_body).dot(t_long) * hold_gate;
+                        if (std::abs(Fx_hold) > muFz) Fx_hold = std::copysign(muFz, Fx_hold);
+                        Fx_w = w.Fx + Fx_hold;
+                        Fy_w = lambda * w.Fy;
+                        fx_kin[i] = w.Fx;
+                        mz_wheel[i] = w.Mz * lambda;
+                    }
+                    const double Fmag = std::hypot(Fx_w, Fy_w);
+                    if (!tp_.model_provides_combined_slip() && Fmag > muFz && Fmag > 1e-9) {
+                        const double c = muFz / Fmag; Fx_w *= c; Fy_w *= c;
+                    }
+                    tire_total = Fx_w * t_long + Fy_w * t_lat + Fz[i] * n;
+                } else {
+                    ci_[i] = ITireModel::ContactInput{};   // neutral: no transient evolution
+                }
+                // The vertical coupling between body and wheel goes through the strut (along
+                // the body-up axis); the in-plane tire force is reacted rigidly by the body.
+                // So replace the strut-axis component of the tire force with the strut force.
+                const double f_ez = tire_total.dot(ez_world);
+                const Vec3 F_w_body = tire_total - (f_ez - F_susp) * ez_world;
+                F_total_world += F_w_body;
+                F_body[i] = R.transpose() * F_w_body;
+                tau_body += rb.cross(F_body[i]);
+                tau_body.z() += mz_wheel[i];
+                // Unsprung travel DOF (m_u·comp̈ along the body-up axis): the tire pushes the
+                // wheel up (+comp), the strut pushes it down, gravity acts along world-down.
+                dcomp[i]     = comp_dot;
+                dcomp_dot[i] = (f_ez - F_susp - m_u * kGravity * ez_world.z()) / m_u;
+                continue;
+            }
             if (!contacts[i].is_valid || contacts[i].penetration <= 0.0) {
                 F_body[i] = Vec3::Zero();
                 ci_[i] = ITireModel::ContactInput{};   // neutral: no transient evolution
@@ -405,7 +524,20 @@ private:
         const SubsystemContext ctx_brake{s, cmd_residual, ctx.dt, ctx.Fz};
         const std::array<double, NUM_WHEELS> Tb = brake_->wheel_torque(ctx_brake);
 
-        const Vec3 a_body = R.transpose() * (F_total_world / m) - omega.cross(v_body);
+        // Strut path: the sprung body responds along the strut axis with m_sprung
+        // (the unsprung decouples there via the travel DOF), but in-plane the unsprung
+        // is rigidly carried, so the perpendicular response sees the total mass — this
+        // keeps flat-ground handling matched to the planar L2/L3 models. Penalty path
+        // divides by the single total mass (byte-identical to before).
+        Vec3 a_world;
+        if (strut) {
+            const double F_ez = F_total_world.dot(ez_world);
+            const Vec3 F_perp = F_total_world - F_ez * ez_world;
+            a_world = (F_ez / m_body) * ez_world + F_perp / m;
+        } else {
+            a_world = F_total_world / m_body;
+        }
+        const Vec3 a_body = R.transpose() * a_world - omega.cross(v_body);
         const Vec3 Iw(
             vp_.inertia_diag.x() * omega.x(),
             vp_.inertia_diag.y() * omega.y(),
@@ -421,6 +553,8 @@ private:
         d_out.d_omega  = alpha_body;
         d_out.ax_body  = a_body.x();
         d_out.ay_body  = a_body.y();
+        d_out.d_comp     = dcomp;
+        d_out.d_comp_dot = dcomp_dot;
 
         const bool open_diff = vp_.differential == VehicleParams::Differential::Open;
         // Effective per-wheel reflected engine inertia: gear-dependent from the
@@ -467,7 +601,7 @@ private:
         return d_out;
     }
 
-    static State apply(const State& s0, const Deriv& d, double h) {
+    State apply(const State& s0, const Deriv& d, double h) const {
         State s = s0;
         s.position += d.dp_world * h;
         s.velocity += d.d_v_body * h;
@@ -480,6 +614,18 @@ private:
         }
         for (int i = 0; i < NUM_WHEELS; ++i)
             s.wheel_spin[i] = s0.wheel_spin[i] + d.domega[i] * h;
+        // Strut travel DOF (zero derivatives on the penalty path -> comp stays put).
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            s.susp_compression[i] = s0.susp_compression[i] + d.d_comp[i] * h;
+            s.susp_velocity[i]    = s0.susp_velocity[i]    + d.d_comp_dot[i] * h;
+            if (s.susp_compression[i] > comp_max_[i]) {
+                s.susp_compression[i] = comp_max_[i];
+                if (s.susp_velocity[i] > 0.0) s.susp_velocity[i] = 0.0;   // bump stop
+            } else if (s.susp_compression[i] < comp_min_[i]) {
+                s.susp_compression[i] = comp_min_[i];
+                if (s.susp_velocity[i] < 0.0) s.susp_velocity[i] = 0.0;   // droop stop
+            }
+        }
         return s;
     }
 
@@ -509,8 +655,12 @@ private:
         k.d_omega  = (k1.d_omega  + 2*k2.d_omega  + 2*k3.d_omega  + k4.d_omega) / 6.0;
         k.ax_body  = (k1.ax_body  + 2*k2.ax_body  + 2*k3.ax_body  + k4.ax_body) / 6.0;
         k.ay_body  = (k1.ay_body  + 2*k2.ay_body  + 2*k3.ay_body  + k4.ay_body) / 6.0;
-        for (int i = 0; i < NUM_WHEELS; ++i)
+        for (int i = 0; i < NUM_WHEELS; ++i) {
             k.domega[i] = (k1.domega[i] + 2*k2.domega[i] + 2*k3.domega[i] + k4.domega[i]) / 6.0;
+            k.d_comp[i] = (k1.d_comp[i] + 2*k2.d_comp[i] + 2*k3.d_comp[i] + k4.d_comp[i]) / 6.0;
+            k.d_comp_dot[i] = (k1.d_comp_dot[i] + 2*k2.d_comp_dot[i]
+                             + 2*k3.d_comp_dot[i] + k4.d_comp_dot[i]) / 6.0;
+        }
         state_ = apply(s0, k, h);
         ax_prev_ = k.ax_body;
         ay_prev_ = k.ay_body;
@@ -539,6 +689,11 @@ private:
     std::array<Vec3, NUM_WHEELS> r_body_ {};
     std::array<double, NUM_WHEELS> I_wheel_ {};
     Vec3 I_body_inv_ {Vec3::Zero()};
+    // Spatial strut (l5_spatial_suspension): per-corner sprung static load (preload so
+    // comp=0 is the static ride position) and travel limits (bump / droop stops).
+    std::array<double, NUM_WHEELS> F_preload_ {};
+    std::array<double, NUM_WHEELS> comp_min_ {};   // droop limit [m] (spring topped out)
+    std::array<double, NUM_WHEELS> comp_max_ {};   // bump limit [m]
     State state_;
     double ax_prev_ {0.0};
     double ay_prev_ {0.0};
