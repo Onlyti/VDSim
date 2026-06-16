@@ -2586,7 +2586,7 @@ the last section.</p>
 <td>L3 unsprung lateral-transfer term (small)</td>
 </tr>
 <tr>
-<td>Full suite: <strong>317/317 ctest green</strong></td>
+<td>Full suite: <strong>345/345 ctest green</strong></td>
 <td>—</td>
 </tr>
 <tr>
@@ -2725,13 +2725,23 @@ vehicle/controller property, not a sim defect (see "Notes on specific results").
 <td>13</td>
 <td><strong>MF2002 vs Chrono Pac02</strong> (BSD-3, independent)</td>
 <td>same public <code>.tir</code></td>
-<td>pure-long Fx ~2% + pure-lat Fy ~1% (Fz 2–6 kN); combined cross-terms differ (rig-frame, reported)</td>
+<td>pure-long Fx ~0.8% + pure-lat Fy ~0.7% (Fz 2–6 kN, mean); combined cross-terms differ (rig-frame, reported)</td>
 <td>6%</td>
-<td><code>ctest -R ChronoPac02Parity</code></td>
+<td><code>ctest -R ChronoPac02Parity</code> · <code>tools/tire_validation.py</code></td>
+</tr>
+<tr>
+<td>14</td>
+<td>Control ladder (Lc1–Lc8 + split)</td>
+<td>each level reaches target band</td>
+<td>cruise/ax/yaw-rate/curvature + EPS torque verified</td>
+<td>gated</td>
+<td><code>examples/control_ladder_demo.py</code> (ctest <code>control_ladder</code>)</td>
 </tr>
 </tbody>
 </table>
-<p>Full automated suite: <code>cd build &amp;&amp; ctest</code> — 317 checks, 100% green (measured 2026-06-10).</p>
+<p>Full automated suite: <code>cd build &amp;&amp; ctest</code> — 345 checks, 100% green (measured 2026-06-16).
+One-command evidence bundle (ctests + tire parity table + ISO figures + summary.md):
+<code>python3 tools/validation_report.py</code>.</p>
 <p><strong>LuGre baseline (re-baselined 2026-06-10, sedan L2, <code>default_pacejka</code> tire):</strong></p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python3<span class="w"> </span>apps/validation/run_validation.py<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>--vehicle<span class="w"> </span>configs/parts/chassis/sedan.yaml<span class="w"> </span><span class="se">\</span>
@@ -2818,7 +2828,7 @@ folded into the re-baselined table above.</p>
   benchmarked maneuver. See <code>docs/design/V0.4_SLOPE_JUMP_DYNAMICS.md</code>.</li>
 </ul>
 <h2 id="reproducing-the-whole-report">Reproducing the whole report<a class="headerlink" href="#reproducing-the-whole-report" title="Permanent link">&para;</a></h2>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>cmake<span class="w"> </span>--build<span class="w"> </span>build<span class="w"> </span>-j<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">(</span><span class="nb">cd</span><span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ctest<span class="w"> </span>--output-on-failure<span class="o">)</span><span class="w">   </span><span class="c1"># 317 checks</span>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>cmake<span class="w"> </span>--build<span class="w"> </span>build<span class="w"> </span>-j<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">(</span><span class="nb">cd</span><span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ctest<span class="w"> </span>--output-on-failure<span class="o">)</span><span class="w">   </span><span class="c1"># 345 checks</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>python3<span class="w"> </span>apps/validation/run_validation.py<span class="w">    </span><span class="c1"># ISO 7401/4138/3888 -&gt; REPORT.md</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>python3<span class="w"> </span>fmi_export/test_roundtrip.py<span class="w">          </span><span class="c1"># FMU vs native</span>
 </span></code></pre></div>
