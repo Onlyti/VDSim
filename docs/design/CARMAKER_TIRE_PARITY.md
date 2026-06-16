@@ -1,61 +1,71 @@
-# CarMaker MF-Tyre/MF-Swift — 3-way tire parity (VDSim · Chrono · CarMaker)
+# CarMaker MF-Tyre/MF-Swift — tire parity (VDSim · Chrono · CarMaker)
 
-상태: **feasibility 확인 완료, init 레시피 디버깅 진행 중** (2026-06-16)
-목표: 동일 `.tir`을 세 solver가 같은 (Fz, κ, α) grid에서 평가 → Fx/Fy/Mz 3-way 비교.
+상태: **VDSim ↔ CarMaker 직접 비교 동작** (2026-06-16)
+목표: 동일 `.tir`을 solver들이 같은 (Fz, κ, α) grid에서 평가 → Fx/Fy/Mz 비교.
 배경: `docs/IMPROVEMENT_REPORT.md` P3 (타이어 신뢰성 — "VDSim vs Chrono vs CarMaker").
 
 ---
 
-## 현재 상태
+## 결과 (Siemens MF6.2 샘플 .tir, 같은 파일을 VDSim+CarMaker가 읽음)
 
-- VDSim ↔ Chrono 2-way: **완료** (`ctest -R ChronoPac02Parity`, pure-slip ~0.8%).
-- CarMaker 축: **인프라 조사 완료, 미완성**.
+| 구분 | n | mean | max | 비고 |
+|------|---|------|-----|------|
+| Pure-lat Fy | 14 | **1.6%** | 4.0% | 우수 — lateral backbone 거의 일치 |
+| Pure-long Fx (\|κ\|>0.04) | 40 | **9.0%** | 46.3% | VDSim MF96 공식 vs CarMaker MF6.2 공식의 model-fidelity 차이 |
+
+caveat:
+- κ≈0 구간은 CarMaker가 rolling resistance (Fx≈−500N) 를 포함, VDSim standalone MF
+  평가는 미포함 → 이 구간 제외 (\|κ\|>0.04).
+- VDSim 은 파일 계수에 **MF96 공식**을 적용, CarMaker 는 **MF6.2**. 같은 계수라도
+  lateral backbone 은 잘 맞고 longitudinal 은 공식 차이만큼 벌어짐 (예상된 결과).
+
+재현:
+```bash
+cd external/carmaker_parity
+CMI=/opt/ipg/carmaker/linux64-12.0.1 ./build.sh
+python3 compare_vdsim_carmaker.py \
+  /opt/ipg/carmaker/linux64-12.0.1/Data/Tire/Examples/TirePropertyFile/Siemens_car205_60R15.tir
+```
+
+상태:
+- VDSim ↔ Chrono 2-way: 완료 (`ctest -R ChronoPac02Parity`, pure-slip ~0.8%, 합성 .tir).
+- VDSim ↔ CarMaker 2-way: **동작** (위 결과, Siemens MF6.2 .tir).
+- 완전한 3-way(동일 .tir): Chrono ref 가 합성 FITTYP=6 파일 기준이라 미정렬 — 아래 참고.
 
 ---
 
 ## Feasibility — 확인된 사실 (de-risked)
 
-ailab-12에 CarMaker 12.0.1 설치됨 (`/opt/ipg/carmaker/linux64-12.0.1`),
-floating license (IPGLOCK 166.104.167.98).
+ailab-12 CarMaker 12.0.1 (`/opt/ipg/carmaker/linux64-12.0.1`), floating license.
+표준 MF-Tyre/MF-Swift API: `include/mfs_tire_api.h` + `lib/libmfswift_tire_interface.so`
+(2212 / API 1.0.13).
 
-표준 MF-Tyre/MF-Swift API가 standalone 공유 라이브러리로 제공:
-- 헤더: `include/mfs_tire_api.h`, `include/MFS_API.h`
-- 라이브러리: `lib/libmfswift_tire_interface.so` (버전 2212 / API 1.0.13)
+- ✅ 라이브러리 로드 + entitlement 블로커 없음 (floating license 로 동작)
+- ✅ init 시퀀스 (road=FLAT, contact=SMOOTH, dynamics=STEADY_STATE,
+  mf=COMBINED_LOADS, side=LEFT → `tire_init`) — **MF6.x (.tir FITTYP≥61) 파일에서 성공**
+- ❌ MF-Swift 2212 는 **MF5.2 (FITTYP=6) 파일을 거부** (`FITTYP not read`). 우리 합성
+  `sample_pac02.tir` (FITTYP=6) 및 CarMaker 자체 MF5.2 샘플 모두 거부.
+  → 신형 MF6.x 파일 (예: `Siemens_car205_60R15.tir`, FITTYP=70) 필요.
 
-probe (`external/carmaker_parity/mfs_init_probe.c`) 로 확인:
-- ✅ 라이브러리 로드 + 버전 조회 OK
-- ✅ `mfs_api_simulation_create` / `mfs_api_tire_create` OK
-- ✅ **entitlement(라이선스) 블로커 없음** — `tire_property_file` 로드 성공
-- ✅ 섹션 파싱 OK ([UNITS]/[MODEL]/[DIMENSION]/...)
-- ❌ `mfs_api_tire_init` 실패: `ERROR - The FITTYP parameter was not read, but is required [parser_validate_read_entries]`
-
-**중요**: 이 에러는 우리 합성 `.tir` 뿐 아니라 CarMaker 자체 샘플
-(`Data/Tire/Examples/.../MF_205_60R15_V91.tir`) 으로도 동일하게 발생.
-→ `.tir` 파일 문제가 아니라 **init 호출 시퀀스(레시피) 가 불완전**하다는 뜻.
-
-시도했으나 해결 안 됨:
-- `[MDI_HEADER]`(FILE_TYPE/VERSION/FORMAT) 추가 — 무해하나 미해결
-- `PROPERTY_FILE_FORMAT='MF_05'` + `USE_MODE` 추가 — 미해결
-- `initialize_simulation_mode`(레거시 ISWITCH) 제거 — 미해결
+핵심: harness 자체는 정확. legacy MF5.2 파일만 안 됨 → MF6.x 파일로 평가.
 
 ---
 
-## 다음 단계 (init 레시피 찾기)
+## 완전한 3-way 를 위한 다음 단계
 
-1. **`doc/MFTyreMFSwift_UserManual.pdf` §2.6 (ISWITCH/USE_MODE) 정독** —
-   `mfs_api_tire_init` 전 필수 호출 순서/조합 확인.
-2. MFS API 사용 예제 탐색 (헤더가 `mfs_api_example_external_road.c` 언급하나
-   설치본에 없음 — Siemens 배포본/CarMaker 추가 패키지에 있을 수 있음).
-3. 후보 원인:
-   - `magic_formula_mode` 설정과 파일 FITTYP 불일치 시 validation 강제
-   - init 전 `solver_mode`(internal/external) 또는 inflation/operating-condition
-     기본값 설정 누락
-   - 파서가 특정 섹션(예: `[OPERATING_CONDITIONS]`, `[INFLATION_PRESSURE_RANGE]`)
-     을 요구
+현재 Chrono reference CSV 는 합성 FITTYP=6 파일에서 생성됨 → MF-Swift 가 그 파일을
+못 읽어 동일-입력 3-way 가 안 됨. 정렬 방법:
+
+1. **공용 MF6.x `.tir` 채택** (FITTYP≥61). 단, CarMaker 동봉 Siemens 파일은 TNO
+   copyright 이므로 commit 불가 → 공개 TNO/Delft MF6.1 파일 확보 필요.
+2. 그 파일로 Chrono reference 재생성 (Chrono 빌드) + VDSim parity 재확인.
+3. `tools/tire_validation.py` 에 `--ref2` 추가 → Chrono + CarMaker 동시 비교 테이블.
+
+당장은 VDSim↔CarMaker 2-way (위) 가 실재 CarMaker 검증 evidence 로 충분.
 
 ---
 
-## 평가 harness 설계 (init 통과 후)
+## 평가 harness 설계 (구현 완료)
 
 MFS 입력은 직접 (κ, α, Fz) 가 아니라 **wheel-carrier 기구학** (`MFS_INPUT_DATA`:
 위치·속도·변환행렬·wheel angle/ω). 따라서 Chrono grid의 각 (Fz, κ, α) 점을

@@ -1,0 +1,4 @@
+# Compiled MF-Swift harness binaries (built locally against CarMaker)
+mfs_init_probe
+mfs_grid_eval
+*.o
