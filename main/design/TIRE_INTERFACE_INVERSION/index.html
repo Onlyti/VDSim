@@ -2395,10 +2395,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#free_3d-l5-being-re-founded-as-the-full-6-dof-model-see-v0x-roadmap" class="md-nav__link">
+  <a href="#free_3d-l5-switched-phase-a-of-the-6-dof-re-founding" class="md-nav__link">
     <span class="md-ellipsis">
       
-        free_3d (L5) — being re-founded as the full 6-DOF model (see V0.x roadmap)
+        free_3d (L5) — switched (phase A of the 6-DOF re-founding)
       
     </span>
   </a>
@@ -2562,14 +2562,20 @@ BicycleSteadyState (load_sensitivity defaults to 0 -&gt; 2*F(0.5Fz) == F(Fz)); g
 LuGre by <code>LuGreTire.HighSpeedLongitudinalNearPacejka</code> (L1) + the L1 no-phantom (reff) test.
 Owns <code>Transient[2]</code> + <code>ContactInput[2]</code> (front/rear); the LuGre slip velocity now uses Re
 consistently (was R0). 14-DOF/L2 already inverted (Phase 2).</p>
-<h2 id="free_3d-l5-being-re-founded-as-the-full-6-dof-model-see-v0x-roadmap">free_3d (L5) — being re-founded as the full 6-DOF model (see V0.x roadmap)<a class="headerlink" href="#free_3d-l5-being-re-founded-as-the-full-6-dof-model-see-v0x-roadmap" title="Permanent link">&para;</a></h2>
-<p>L5 is NOT on the inverted contract yet: it uses a loop-specific slip-ratio denominator
-(not the standard <code>max(|Vx|,eps)</code>) and capped/penalty stunt contact, so the base evaluate
-would change its slip. Rather than keep it as a throwaway stunt plant, the decision is to
-re-found L5 as the full 6-DOF sibling of L4 (the only airborne/loop-capable model, since
-L1-L4 are planar/ride and cannot jump). That is a separate, validation-gated effort — see
-the L5 6-DOF design doc / ROADMAP. Until then L5 keeps the Phase-1 shared
-<code>tire_contact_kinematics</code> + <code>compute()</code> path (a new force law still drops in).</p>
+<h2 id="free_3d-l5-switched-phase-a-of-the-6-dof-re-founding">free_3d (L5) — switched (phase A of the 6-DOF re-founding)<a class="headerlink" href="#free_3d-l5-switched-phase-a-of-the-6-dof-re-founding" title="Permanent link">&para;</a></h2>
+<p>L5 now uses the inverted interface too: <code>evaluate()</code> per RK4 stage + <code>advance_bristle()</code>
+(per stage) / <code>advance_relaxation()</code> (per substep). The old loop-specific slip-ratio
+denominator floor is gone — the contact-frame longitudinal velocity <code>v_long_k</code> (project the
+hub velocity onto the wheel-heading tangent; fall back to the track-tangent speed near a
+loop top where the heading tangent passes through zero) is fed as <code>ContactInput.Vx</code>, and the
+tire owns the slip definition with the standard <code>max(|Vx|,eps)</code>. This also fixed a latent
+bug: free_3d never integrated the LuGre bristle <code>z</code> (it stayed 0); it now advances it per
+stage like L2/L3. Stunt loop tests (<code>FreeLoopCompletesLap</code>, <code>LoopSlipAngleFrontRearBalanced</code>)
+still pass — the contact-frame <code>v_long_k</code> alone keeps the loop well-posed; the dropped floor
+was not load-bearing. All L1-L5 + every backend now share one tire definition.</p>
+<p>Remaining for L5 (separate, validation-gated — see <code>docs/design/L5_6DOF_MULTIBODY.md</code>):
+phase B (attach the L4 hard-joint corner DAE suspension to the 6-DOF body) and phase C
+(promote from "experimental" with jump/loop/cross-model validation evidence).</p>
 <h2 id="goal">Goal<a class="headerlink" href="#goal" title="Permanent link">&para;</a></h2>
 <p>Invert <code>ITireModel</code> from "slip-in -&gt; force-out" to "kinematics-in -&gt; wrench-out", and move
 the transient state (relaxation / belt / LuGre) into the tire so that ALL tire physics
