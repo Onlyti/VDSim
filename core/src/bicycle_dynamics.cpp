@@ -21,6 +21,7 @@
 #include "vdsim/low_speed.hpp"
 #include "vdsim/lugre_tire.hpp"
 #include "vdsim/powertrain.hpp"
+#include "vdsim/tire_contact.hpp"
 
 #include <spdlog/spdlog.h>
 
@@ -276,10 +277,14 @@ private:
         const double alpha_f = std::atan2(v_fy_wheel, v_fx_wheel);
         const double alpha_r = std::atan2(v_ry_body,  v_rx_body);
 
-        const double denom_f = std::max(std::abs(v_fx_wheel), kSpeedEps);
-        const double denom_r = std::max(std::abs(v_rx_body),  kSpeedEps);
-        const double kappa_f = (R * of  - v_fx_wheel) / denom_f;
-        const double kappa_r = (R * or_ - v_rx_body)  / denom_r;
+        // Slip kinematics + Re from the shared tire-contact module. Fz_f/Fz_r are
+        // per-axle (2 tires lumped) -> Re takes the per-wheel load (half).
+        const auto ck_f = tire_contact_kinematics(v_fx_wheel, v_fy_wheel, of, 0.5 * Fz_f, 0.0, tp_, R);
+        const auto ck_r = tire_contact_kinematics(v_rx_body,  v_ry_body, or_, 0.5 * Fz_r, 0.0, tp_, R);
+        const double Re_f = ck_f.Re;
+        const double Re_r = ck_r.Re;
+        const double kappa_f = ck_f.kappa;
+        const double kappa_r = ck_r.kappa;
 
         const bool lugre_on = tp_.lugre.enabled;
         // Belt transient (T2): on the MF path feed the relaxed slip (substep()
@@ -318,9 +323,9 @@ private:
 
         const double muFz_f = std::min(mu_long_f, mu_lat_f) * std::max(0.0, Fz_f);
         const double muFz_r = std::min(mu_long_r, mu_lat_r) * std::max(0.0, Fz_r);
-        const double v_slip_long_f = R * of - v_fx_wheel;
+        const double v_slip_long_f = ck_f.vsx;
         const double v_slip_lat_f  = v_fy_wheel;
-        const double v_slip_long_r = R * or_ - v_rx_body;
+        const double v_slip_long_r = ck_r.vsx;
         const double v_slip_lat_r  = v_ry_body;
         v_slip_long_f_last_ = v_slip_long_f; v_slip_lat_f_last_ = v_slip_lat_f;
         v_slip_long_r_last_ = v_slip_long_r; v_slip_lat_r_last_ = v_slip_lat_r;
@@ -449,8 +454,8 @@ private:
         }
         // Gear-dependent reflected engine inertia (powertrain) is added to the
         // wheel-only base; zero when the flat-torque path is active.
-        d_out.domega_f = (Td_f + Tb_f - fx_kin_f * R) / (I_spin_f_ + pt_I_axle_f_);
-        d_out.domega_r = (Td_r + Tb_r - fx_kin_r * R) / (I_spin_r_ + pt_I_axle_r_);
+        d_out.domega_f = (Td_f + Tb_f - fx_kin_f * Re_f) / (I_spin_f_ + pt_I_axle_f_);
+        d_out.domega_r = (Td_r + Tb_r - fx_kin_r * Re_r) / (I_spin_r_ + pt_I_axle_r_);
 
         // ---- Diagnostics ----
         // Reported force: fade the raw slip force by lambda and let the smooth

@@ -198,6 +198,10 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("relaxation_length_lat",  &vdsim::TireParams::relaxation_length_lat)
         .def_readwrite("relaxation_length_long", &vdsim::TireParams::relaxation_length_long)
         .def_readwrite("tire_vertical_stiffness", &vdsim::TireParams::tire_vertical_stiffness)
+        .def_readwrite("reff_breff", &vdsim::TireParams::reff_breff)
+        .def_readwrite("reff_dreff", &vdsim::TireParams::reff_dreff)
+        .def_readwrite("reff_freff", &vdsim::TireParams::reff_freff)
+        .def_readwrite("crown_radius", &vdsim::TireParams::crown_radius)
         .def_readwrite("lugre", &vdsim::TireParams::lugre)
         .def_static("from_yaml", &vdsim::TireParams::from_yaml)
         .def("to_yaml",          &vdsim::TireParams::to_yaml);
@@ -359,6 +363,30 @@ PYBIND11_MODULE(vdsim, m) {
           py::arg("x") = 0.0, py::arg("y") = 0.0, py::arg("yaw") = 0.0,
           py::arg("v") = 0.0, py::arg("wheel_radius") = 0.32);
 
+    // Re-consistent overload: per-wheel wheel_spin = v/Re(static Fz) so a free-rolling
+    // tire reports slip=0 (matches MF-Tyre/CarMaker init). Identical to the radius
+    // overload when the tire has no Re coefficients (reff_*=0).
+    m.def("make_init_state",
+          [](const vdsim::VehicleParams& vp, const vdsim::TireParams& tp,
+             double x, double y, double yaw, double v) {
+              vdsim::State s;
+              s.position = vdsim::Vec3(x, y, 0.0);
+              s.orientation = vdsim::quat_from_euler(vdsim::Euler{0.0, 0.0, yaw});
+              s.velocity = vdsim::Vec3(v, 0.0, 0.0);
+              s.wheel_spin = vdsim::free_roll_wheel_spin(vp, tp, v);
+              return s;
+          },
+          py::arg("vp"), py::arg("tp"), py::arg("x") = 0.0, py::arg("y") = 0.0,
+          py::arg("yaw") = 0.0, py::arg("v") = 0.0);
+
+    m.def("free_roll_wheel_spin",
+          [](const vdsim::VehicleParams& vp, const vdsim::TireParams& tp, double vx) {
+              const auto w = vdsim::free_roll_wheel_spin(vp, tp, vx);
+              return std::vector<double>(w.begin(), w.end());
+          },
+          py::arg("vp"), py::arg("tp"), py::arg("vx"),
+          "Per-wheel free-rolling wheel spin [rad/s] (FL,FR,RL,RR) using Re(Fz).");
+
     // Linearize the planar vehicle map about an operating point via central
     // finite differences. State x=[X,Y,psi,vx,vy,r], input u=[steer, pedal]
     // (pedal>0 -> throttle, <0 -> brake). Returns the discrete one-step Jacobian
@@ -379,7 +407,6 @@ PYBIND11_MODULE(vdsim, m) {
               vdsim::SolverParams sp;
               dyn->initialize(vp, tp, sp);
               auto ground = vdsim::create_flat_ground(0.0, mu);
-              const double R = vp.wheel_radius_nominal;
               x0.resize(6, 0.0); u0.resize(2, 0.0);
 
               auto f = [&](std::vector<double> x, std::vector<double> u) {
@@ -388,8 +415,7 @@ PYBIND11_MODULE(vdsim, m) {
                   s.orientation = vdsim::quat_from_euler(vdsim::Euler{0.0, 0.0, x[2]});
                   s.velocity = vdsim::Vec3(x[3], x[4], 0.0);
                   s.angular_velocity = vdsim::Vec3(0.0, 0.0, x[5]);
-                  const double w = (R > 1e-6) ? x[3] / R : 0.0;
-                  s.wheel_spin = {{w, w, w, w}};
+                  s.wheel_spin = vdsim::free_roll_wheel_spin(vp, tp, x[3]);
                   dyn->reset(s);
                   vdsim::CmdL4 c; c.steer_angle_wheel = u[0];
                   if (u[1] >= 0.0) { c.throttle = u[1]; } else { c.brake = -u[1]; }
@@ -627,6 +653,7 @@ PYBIND11_MODULE(vdsim, m) {
              "Install a user AntiRollBarModule on axle 0=front/1=rear (L3 only).")
         .def("wheel_slip_ratio", &vdsim::IVehicleDynamics::wheel_slip_ratio)
         .def("wheel_slip_angle", &vdsim::IVehicleDynamics::wheel_slip_angle)
+        .def("wheel_overturning_moment", &vdsim::IVehicleDynamics::wheel_overturning_moment)
         .def("roll_angle_qs",  &vdsim::IVehicleDynamics::roll_angle_qs)
         .def("pitch_angle_qs", &vdsim::IVehicleDynamics::pitch_angle_qs)
         .def("ax_body_est",    &vdsim::IVehicleDynamics::ax_body_est)

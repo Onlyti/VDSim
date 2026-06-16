@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cmath>
 #include <string>
 
 #include "vdsim/powertrain.hpp"
@@ -155,6 +156,11 @@ struct TireParams {
     // Camber thrust: extra Fy_camber = -camber_stiffness * gamma * Fz * mu
     double camber_stiffness      {0.0};         // [1/rad]  default off
 
+    // Tread crown radius (transverse curvature). A cambered tire contacts on the
+    // leaning side -> contact point migrates dy = crown_radius * sin(gamma),
+    // producing an overturning moment Fz*dy. 0 = off (contact stays at centerline).
+    double crown_radius          {0.0};         // [m]  default off
+
     // Load sensitivity:  μ_eff(Fz) = μ_nominal · (1 - load_sensitivity · (Fz/Fz_nominal - 1))
     // Floor μ_eff at 0.3 · μ_nominal to keep numerics sane at very high Fz.
     // Typical 0.10 – 0.25.  0.0 = legacy (no load sensitivity).
@@ -170,6 +176,14 @@ struct TireParams {
 
     // Vertical tire stiffness (for L3 ride dynamics). Typical 150-300 kN/m.
     double tire_vertical_stiffness {220000.0};  // [N/m]
+
+    // Effective rolling radius (Pacejka): the slip ratio uses Re, not the unloaded
+    // radius, so a free-rolling loaded tire reports kappa = 0 (no phantom drive slip).
+    //   Re = R0 - (Fz0/Cz)·(DREFF·atan(BREFF·rho_n) + FREFF·rho_n),  rho_n = Fz/Fz0
+    // BREFF=DREFF=FREFF=0 → Re falls back to the unloaded radius (legacy behaviour).
+    double reff_breff {0.0};   // [-] BREFF
+    double reff_dreff {0.0};   // [-] DREFF
+    double reff_freff {0.0};   // [-] FREFF
 
     // Force backend selector (T1):
     //   "mf96"          — parametric Pacejka MF96 from the B/C/D/E fields above (default)
@@ -211,5 +225,47 @@ struct SolverParams {
     static SolverParams from_yaml(const std::string& path);
     void                to_yaml (const std::string& path) const;
 };
+
+// Effective rolling radius Re(Fz) — the radius at which a free-rolling loaded tire
+// satisfies vx = omega·Re (so slip = (omega·Re - vx)/vx is zero at free roll).
+// Pacejka form using BREFF/DREFF/FREFF; falls back to R0 when those are zero.
+//   rho_n = Fz / Fz0   (load ratio)
+//   Re    = R0 - (Fz0/Cz)·(DREFF·atan(BREFF·rho_n) + FREFF·rho_n)
+inline double effective_rolling_radius(const TireParams& tp, double R0, double Fz) {
+    if (tp.reff_breff == 0.0 && tp.reff_dreff == 0.0 && tp.reff_freff == 0.0)
+        return R0;                                  // legacy: unloaded radius
+    const double Cz  = tp.tire_vertical_stiffness > 1.0 ? tp.tire_vertical_stiffness : 220000.0;
+    const double Fz0 = tp.Fz_nominal > 1.0 ? tp.Fz_nominal : 4000.0;
+    const double rho_n = (Fz > 0.0 ? Fz : 0.0) / Fz0;
+    const double Re = R0 - (Fz0 / Cz) *
+                      (tp.reff_dreff * std::atan(tp.reff_breff * rho_n) + tp.reff_freff * rho_n);
+    return Re > 0.05 ? Re : R0;                      // guard against degenerate params
+}
+
+// Static per-wheel vertical load [N] on level ground (no aero, no load transfer).
+// Front axle carries m·g·b/L, rear m·g·a/L; split evenly L/R. Order FL,FR,RL,RR.
+inline std::array<double, NUM_WHEELS> static_wheel_loads(const VehicleParams& vp) {
+    constexpr double g = 9.80665;
+    const double L = vp.wheelbase > 1e-6 ? vp.wheelbase : 2.7;
+    const double Fz_f = 0.5 * vp.mass * g * vp.cg_to_rear  / L;
+    const double Fz_r = 0.5 * vp.mass * g * vp.cg_to_front / L;
+    return {{Fz_f, Fz_f, Fz_r, Fz_r}};
+}
+
+// Free-rolling wheel spin [rad/s] consistent with the effective rolling radius, so a
+// tire initialised at this spin reports slip=0 (matches MF-Tyre/CarMaker static init).
+// Per-wheel because front/rear static load -> different Re. Falls back to vx/R0 when
+// the tire has no Re coefficients (reff_*=0).
+inline std::array<double, NUM_WHEELS> free_roll_wheel_spin(
+        const VehicleParams& vp, const TireParams& tp, double vx) {
+    const auto Fz = static_wheel_loads(vp);
+    const double R0 = vp.wheel_radius_nominal > 1e-6 ? vp.wheel_radius_nominal : 0.32;
+    std::array<double, NUM_WHEELS> w{};
+    for (int i = 0; i < NUM_WHEELS; ++i) {
+        const double Re = effective_rolling_radius(tp, R0, Fz[i]);
+        w[i] = Re > 1e-6 ? vx / Re : 0.0;
+    }
+    return w;
+}
 
 }  // namespace vdsim

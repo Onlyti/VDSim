@@ -4,6 +4,7 @@ add_library(vdsim_core
     src/pacejka_mf96.cpp
     src/magic_formula_tire.cpp
     src/linear_tire.cpp
+    src/tire_model.cpp
     src/bicycle_dynamics.cpp
     src/kinematic_dynamics.cpp
     src/seven_dof_dynamics.cpp

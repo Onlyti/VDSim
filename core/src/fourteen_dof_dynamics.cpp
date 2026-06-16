@@ -196,6 +196,7 @@ public:
 
         inner_->step(u, contacts, dt);
         state_ = inner_->state();
+        mx_ = inner_->wheel_overturning_moment();   // camber contact-migration overturning
         if (dt > 0.0 && (mb_dyn_front_ || mb_dyn_rear_)) {
             const auto F = inner_->tire_forces_body();
             if (mb_dyn_front_ && mb_dae_front_) {
@@ -321,6 +322,8 @@ public:
         { return inner_->wheel_slip_ratio(); }
     std::array<double, NUM_WHEELS> wheel_slip_angle() const override
         { return inner_->wheel_slip_angle(); }
+    std::array<double, NUM_WHEELS> wheel_overturning_moment() const override
+        { return inner_->wheel_overturning_moment(); }
 
     double roll_angle_qs()  const override { return phi_; }
     double pitch_angle_qs() const override { return th_;  }
@@ -403,7 +406,8 @@ private:
         d.dz       = z_dot;
         d.dz_dot   = Fz_sum / std::max(1.0, m_s);
         d.dphi     = phi_dot;
-        d.dphi_dot = (M_roll_spring + m_s * ay * h) / std::max(1e-3, Ixx);
+        const double M_overturn = mx_[0] + mx_[1] + mx_[2] + mx_[3];   // camber contact migration
+        d.dphi_dot = (M_roll_spring + m_s * ay * h + M_overturn) / std::max(1e-3, Ixx);
         d.dth      = th_dot;
         d.dth_dot  = (M_pitch_spring + M_inertia_pitch) / std::max(1e-3, Iyy);
 
@@ -518,6 +522,7 @@ private:
     double th_  {0.0}, th_dot_  {0.0};
     std::array<double, NUM_WHEELS> z_u_     {{0.0, 0.0, 0.0, 0.0}};
     std::array<double, NUM_WHEELS> z_u_dot_ {{0.0, 0.0, 0.0, 0.0}};
+    std::array<double, NUM_WHEELS> mx_      {{0.0, 0.0, 0.0, 0.0}};  // camber overturning from inner
     std::array<double, NUM_WHEELS> road_dz_ {{0.0, 0.0, 0.0, 0.0}};
 
     // Optional hardpoint kinematics (Ld4 Stage D).  When attached, replaces

@@ -5,6 +5,7 @@
 #include "vdsim/interfaces.hpp"
 #include "vdsim/lugre_tire.hpp"
 #include "vdsim/subsystems.hpp"
+#include "vdsim/tire_contact.hpp"
 
 #include <spdlog/spdlog.h>
 
@@ -318,7 +319,10 @@ private:
             double denom = std::max(std::abs(v_long_k), kSpeedEps);
             if (stunt_loop && contacts[i].surface_id == 2)
                 denom = std::max(denom, 0.05 * v_hub_world.norm());
-            const double k_slip = (Rwh * s.wheel_spin[i] - v_long_k) / denom;
+            // Re + slip velocity from the shared tire-contact module; free_3d keeps
+            // its own denom (stunt-loop specialisation) for the slip ratio.
+            const auto ck = tire_contact_kinematics(v_long_k, v_lat, s.wheel_spin[i], Fz[i], 0.0, tp_, Rwh);
+            const double k_slip = ck.vsx / denom;
             kappa[i] = k_slip;
             alpha[i] = a_slip;
 
@@ -345,7 +349,7 @@ private:
             const double muFz = std::min(in.mu_long, in.mu_lat) * std::max(0.0, Fz[i]);
             double Fx_w = 0.0, Fy_w = 0.0;
             if (lugre_on) {
-                const double v_slip_long_geom = Rwh * s.wheel_spin[i] - v_long_k;
+                const double v_slip_long_geom = ck.vsx;
                 v_slip_long_last_[i] = v_slip_long_geom;
                 v_slip_lat_last_[i]  = v_lat;
                 const double v_slip_long = tp_.belt.enabled ? belt_vlong_[i] : v_slip_long_geom;
@@ -463,7 +467,7 @@ private:
                                   && Fz[i] >= 1.0;
             const double T_drive = grounded ? Td[i] : 0.0;
             const double T_react = grounded
-                ? fx_kin[i] * Rwh
+                ? fx_kin[i] * effective_rolling_radius(tp_, Rwh, Fz[i])
                 : kWheelSpinDrag * s.wheel_spin[i];
             T_net[i]   = T_drive + Tb[i] - T_react;
             I_eng_w[i] = grounded ? eff_wheel_I(i) : 0.0;

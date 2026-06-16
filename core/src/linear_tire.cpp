@@ -13,7 +13,7 @@ namespace {
 
 class LinearTire final : public ITireModel {
 public:
-    void initialize(const TireParams& tp) override {
+    void on_initialize(const TireParams& tp) override {
         C_alpha_ = tp.cornering_stiffness;
         // Common approximation: longitudinal stiffness ~ 2x cornering stiffness.
         // Acceptable for PoC; refine when an explicit C_kappa is added.

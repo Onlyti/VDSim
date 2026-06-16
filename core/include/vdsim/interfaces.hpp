@@ -58,6 +58,12 @@ public:
     virtual std::array<double, NUM_WHEELS> tire_Fz()           const = 0;  // [N]
     virtual std::array<double, NUM_WHEELS> wheel_slip_ratio()  const = 0;  // [-]
     virtual std::array<double, NUM_WHEELS> wheel_slip_angle()  const = 0;  // [rad]
+    // Per-wheel overturning moment [N m] about the wheel-forward axis: tire carcass
+    // Mx + camber contact-point migration (Fz * crown_radius * sin gamma). Feeds the
+    // roll DOF on models that have one (L3/L5). Default 0 (no camber migration).
+    virtual std::array<double, NUM_WHEELS> wheel_overturning_moment() const {
+        return {{0.0, 0.0, 0.0, 0.0}};
+    }
 
     // Quasi-static roll / pitch estimates (zero for L1; non-zero for L2 onward).
     virtual double roll_angle_qs()  const { return 0.0; }   // [rad]
@@ -140,12 +146,71 @@ public:
     struct Output {
         double Fx {0.0};          // [N] body frame, wheel-axis longitudinal
         double Fy {0.0};          // [N] lateral
-        double Mz {0.0};          // [N m] aligning moment
+        double Mz {0.0};          // [N m] aligning moment (about contact normal)
+        double Mx {0.0};          // [N m] overturning moment (about wheel-forward axis)
+    };
+
+    // ----- Inverted ("kinematics-in -> wrench-out") interface (Phase 2) -----
+    // The dynamics supplies the raw contact kinematics + load; the tire owns the slip
+    // definition, effective rolling radius, camber migration and (eventually) the
+    // transient state (relaxation / belt / LuGre). The transient is OWNED and stored
+    // per-wheel by the caller so the RK4 integrator can checkpoint/restore it: evaluate()
+    // is the frozen per-stage force evaluation, advance() integrates the transient once
+    // per substep. Migration in progress — see docs/design/TIRE_INTERFACE_INVERSION.md.
+    struct ContactInput {
+        double Fz      {0.0};     // [N] vertical load
+        double Vx      {0.0};     // [m/s] wheel-frame longitudinal contact velocity
+        double Vy      {0.0};     // [m/s] wheel-frame lateral contact velocity
+        double omega   {0.0};     // [rad/s] wheel spin
+        double gamma   {0.0};     // [rad] camber
+        double mu_long {1.0};
+        double mu_lat  {1.0};
+        double R0      {0.32};    // [m] unloaded radius
+    };
+    struct Transient {
+        double belt_kappa   {0.0};   // MF path: relaxed slip ratio
+        double belt_alpha   {0.0};   // MF path: relaxed slip angle [rad]
+        double belt_vlong   {0.0};   // LuGre path: relaxed long. slip velocity [m/s]
+        double belt_vlat    {0.0};   // LuGre path: relaxed lat. slip velocity [m/s]
+        double lugre_z_long {0.0};
+        double lugre_z_lat  {0.0};
+        double alpha_dyn    {0.0};   // relaxation-length transient slip angle [rad]
+    };
+    struct Wrench {
+        double Fx {0.0}, Fy {0.0};
+        double Mx {0.0}, My {0.0}, Mz {0.0};
+        double Re {0.0};
+        double kappa {0.0}, alpha {0.0};
+        double contact_dy {0.0};
     };
 
     virtual ~ITireModel() = default;
-    virtual void   initialize(const TireParams&)         = 0;
-    virtual Output compute   (const Input&) const noexcept = 0;
+
+    // Store the tire parameters (Re / camber / belt / relaxation / LuGre live here so the
+    // inverted interface below works for every backend) and forward to the backend hook.
+    void initialize(const TireParams& tp) { params_ = tp; on_initialize(tp); }
+
+    virtual Output compute(const Input&) const noexcept = 0;
+
+    // Inverted interface (Phase 2) — defined once in tire_model.cpp for ALL backends; it
+    // computes slip / Re / camber-migration from the contact kinematics, applies the
+    // transient, and dispatches the constitutive force law via the virtual compute().
+    // evaluate() is the frozen per-RK4-stage force evaluation. The transient advances at
+    // two cadences, so it has two integrators:
+    //   advance_bristle()    — the LuGre bristle z (fast contact state): once per RK4 stage.
+    //   advance_relaxation() — carcass/belt + relaxation-length lag (slow): once per substep
+    //                          against the final stage's geometric slip.
+    // Folding both into one dt is not byte-equivalent (a slow lag relaxed N times against
+    // per-stage targets differs from once against the final target), hence the split.
+    // See docs/design/TIRE_INTERFACE_INVERSION.md.
+    Wrench    evaluate(const ContactInput&, const Transient&) const;
+    Transient advance_bristle(const ContactInput&, const Transient&, double dt) const;
+    Transient advance_relaxation(const ContactInput&, const Transient&, double dt) const;
+
+protected:
+    // Backend-specific setup hook (e.g. precompute stiffnesses). params_ is already stored.
+    virtual void on_initialize(const TireParams&) {}
+    TireParams params_ {};
 };
 
 std::unique_ptr<ITireModel> create_pacejka_mf96();

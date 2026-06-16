@@ -45,7 +45,8 @@ public:
         LFZO_ = c_.g("LFZO", 1.0);
     }
 
-    void initialize(const TireParams&) override {}  // coefficients come from .tir
+    void on_initialize(const TireParams&) override {}  // coefficients come from .tir
+                                                       // (Re/crown/transient via base params_)
 
     Output compute(const Input& in) const noexcept override {
         Output out;

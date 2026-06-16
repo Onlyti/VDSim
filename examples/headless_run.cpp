@@ -80,9 +80,7 @@ int main(int argc, char** argv) {
     vdsim::SimSession sim(make_dyn(level), vdsim::create_flat_ground(0.0, sc.mu),
                           vp, tp, sp, cfg);
     vdsim::State s0; s0.velocity.x() = sc.initial_vx;
-    const double w0 = (vp.wheel_radius_nominal > 0.0)
-                      ? sc.initial_vx / vp.wheel_radius_nominal : 0.0;
-    s0.wheel_spin = {{w0, w0, w0, w0}};
+    s0.wheel_spin = vdsim::free_roll_wheel_spin(vp, tp, sc.initial_vx);
     sim.reset(s0);
 
     std::ofstream csv(out_path);

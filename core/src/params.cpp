@@ -314,6 +314,10 @@ TireParams TireParams::from_yaml(const std::string& path) {
     pull(root, "relaxation_length_lat", p.relaxation_length_lat);
     pull(root, "relaxation_length_long", p.relaxation_length_long);
     pull(root, "tire_vertical_stiffness", p.tire_vertical_stiffness);
+    pull(root, "reff_breff", p.reff_breff);
+    pull(root, "reff_dreff", p.reff_dreff);
+    pull(root, "reff_freff", p.reff_freff);
+    pull(root, "crown_radius", p.crown_radius);
     pull(root, "backend",  p.backend);
     pull(root, "tir_path", p.tir_path);
     if (const auto n = root["lugre"]; n && n.IsMap()) {
@@ -355,6 +359,10 @@ void TireParams::to_yaml(const std::string& path) const {
     out << YAML::Key << "relaxation_length_lat" << YAML::Value << relaxation_length_lat;
     out << YAML::Key << "relaxation_length_long" << YAML::Value << relaxation_length_long;
     out << YAML::Key << "tire_vertical_stiffness" << YAML::Value << tire_vertical_stiffness;
+    out << YAML::Key << "reff_breff"            << YAML::Value << reff_breff;
+    out << YAML::Key << "reff_dreff"            << YAML::Value << reff_dreff;
+    out << YAML::Key << "reff_freff"            << YAML::Value << reff_freff;
+    out << YAML::Key << "crown_radius"          << YAML::Value << crown_radius;
     out << YAML::Key << "lugre" << YAML::Value << YAML::BeginMap;
     out << YAML::Key << "enabled" << YAML::Value << lugre.enabled;
     out << YAML::Key << "sigma0"  << YAML::Value << lugre.sigma0;

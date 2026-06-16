@@ -21,6 +21,11 @@ body:
   relaxation_length_long: 0.15
   cornering_stiffness: 80000.0
   rolling_resistance: 0.015
+  # Effective rolling radius (Pacejka BREFF/DREFF/FREFF): slip uses Re(Fz), not the
+  # unloaded radius, so a free-rolling loaded tire reports kappa=0 (matches MF-Tyre).
+  reff_breff: 8.4
+  reff_dreff: 0.27
+  reff_freff: 0.07
   lugre:
     enabled: true
     sigma0: 90000.0

@@ -35,9 +35,8 @@ inline double pacejka_form(double B, double C, double D, double E, double s) {
 
 class PacejkaMF96 final : public ITireModel {
 public:
-    void initialize(const TireParams& tp) override { tp_ = tp; }
-
     Output compute(const Input& in) const noexcept override {
+        const TireParams& tp_ = params_;
         Output out;
         const double Fz = std::max(0.0, in.Fz);
         if (Fz < 1.0) return out;
@@ -93,9 +92,6 @@ public:
         out.Mz = -trail * Fy + Mz_camber;
         return out;
     }
-
-private:
-    TireParams tp_;
 };
 
 }  // namespace

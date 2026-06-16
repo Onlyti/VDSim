@@ -506,9 +506,7 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
         s0.position = vdsim::Vec3(spn.x0, spn.y0, spn.z0);
         s0.orientation = vdsim::quat_from_euler(vdsim::Euler{0.0, 0.0, spn.yaw0});
         s0.velocity.x() = spn.vx0;
-        const double w0 = (wv.vp.wheel_radius_nominal > 0.0)
-            ? spn.vx0 / wv.vp.wheel_radius_nominal : 0.0;
-        s0.wheel_spin = {{w0, w0, w0, w0}};
+        s0.wheel_spin = vdsim::free_roll_wheel_spin(wv.vp, tp, spn.vx0);
         settle_spawn_on_ground(*gnd, wv.vp, s0);
         // Load path waypoints for internal path-follow controller.
         if (!spn.path_yaml.empty()) {

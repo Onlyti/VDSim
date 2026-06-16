@@ -537,8 +537,8 @@ class Experiment:
         sp = self._sensors.sp if self._sensors else vdsim.SensorParams()
         sess = self._road._session(vp, tp, self.level, self.dt, sp)
         x0, y0 = getattr(self._man, "start", (0.0, 0.0))
-        s0 = vdsim.make_init_state(x=x0, y=y0, yaw=self._man.init_yaw,
-                                   v=self._man.init_v, wheel_radius=vp.wheel_radius_nominal)
+        s0 = vdsim.make_init_state(vp, tp, x=x0, y=y0, yaw=self._man.init_yaw,
+                                   v=self._man.init_v)
         sess.reset(s0)
         rows, n = [], int(duration / self.dt)
         for k in range(n):
@@ -575,8 +575,8 @@ class Simulation:
         self.sess = exp._road._session(self._vp, exp._tire.tp, exp.level, self.dt, sp)
         man = exp._man
         x0, y0 = getattr(man, "start", (0.0, 0.0))
-        self.sess.reset(vdsim.make_init_state(x=x0, y=y0, yaw=man.init_yaw, v=man.init_v,
-                                              wheel_radius=self._vp.wheel_radius_nominal))
+        self.sess.reset(vdsim.make_init_state(self._vp, exp._tire.tp,
+                                              x=x0, y=y0, yaw=man.init_yaw, v=man.init_v))
         self._k = 0
         self._ext = None
         self._prev_r = 0.0
@@ -749,9 +749,9 @@ class Sim:
         else:
             sp = sensors                           # raw vdsim.SensorParams
         self.sess = self._road._session(vp, tp, level, dt, sp)
-        self.sess.reset(vdsim.make_init_state(
-            x=x0, y=y0, yaw=yaw0, v=v0, wheel_radius=vp.wheel_radius_nominal))
+        self.sess.reset(vdsim.make_init_state(vp, tp, x=x0, y=y0, yaw=yaw0, v=v0))
         self._vp = vp
+        self._tp = tp
         self._cmd = vdsim.CmdL4()
         self._k = 0
         self._prev_r = 0.0
@@ -891,8 +891,7 @@ class Sim:
         y  = y0  if y0  is not None else self._y0
         yaw = yaw0 if yaw0 is not None else self._yaw0
         v  = v0  if v0  is not None else self._v0
-        self.sess.reset(vdsim.make_init_state(
-            x=x, y=y, yaw=yaw, v=v, wheel_radius=self._vp.wheel_radius_nominal))
+        self.sess.reset(vdsim.make_init_state(self._vp, self._tp, x=x, y=y, yaw=yaw, v=v))
         self._cmd = vdsim.CmdL4()
         self._k = 0; self._prev_r = 0.0; self._alpha = 0.0
         self.rows = []; self._extras = []
