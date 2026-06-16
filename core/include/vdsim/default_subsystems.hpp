@@ -22,6 +22,31 @@ private:
     VehicleParams vp_;
 };
 
+// SimpleABS — reference anti-lock brake module (swappable; not default).
+// Wraps the proportional/EBD base brake, then per wheel reduces brake torque
+// when the wheel slip ratio exceeds the lock threshold (Bosch-style slip
+// regulation around the longitudinal grip peak). A first reference algorithm
+// developers can replace via set_brake_module() with their own ABS/ESC.
+//
+//   slip_i = (omega_i·R − vx) / max(vx, eps)   (negative = braking/locking)
+//   if |slip_i| > slip_release: scale brake torque down toward slip_target
+class SimpleABS final : public IBrakeSystem {
+public:
+    explicit SimpleABS(const VehicleParams& vp,
+                       double slip_target = 0.12,   // peak-grip longitudinal slip
+                       double slip_release = 0.18);  // release above this magnitude
+
+    std::array<double, NUM_WHEELS> wheel_torque(const SubsystemContext& ctx) override;
+    void reset() override { mod_.fill(1.0); }
+
+private:
+    ProportionalBrake base_;
+    VehicleParams     vp_;
+    double            slip_target_;
+    double            slip_release_;
+    std::array<double, NUM_WHEELS> mod_ {{1.0, 1.0, 1.0, 1.0}};  // per-wheel torque scale
+};
+
 class BasicDrivetrain final : public IDrivetrain {
 public:
     explicit BasicDrivetrain(const VehicleParams& vp, double /*deadtime_s*/ = 0.0);

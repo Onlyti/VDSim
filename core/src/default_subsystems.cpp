@@ -78,6 +78,37 @@ std::array<double, NUM_WHEELS> ProportionalBrake::wheel_torque(const SubsystemCo
     return Tb;
 }
 
+// ── SimpleABS ───────────────────────────────────────────────────────────────
+SimpleABS::SimpleABS(const VehicleParams& vp, double slip_target, double slip_release)
+    : base_(vp), vp_(vp), slip_target_(slip_target), slip_release_(slip_release) {}
+
+std::array<double, NUM_WHEELS> SimpleABS::wheel_torque(const SubsystemContext& ctx) {
+    const auto Tb = base_.wheel_torque(ctx);   // proportional + EBD base demand
+    const double vx = ctx.state.vx();
+    const double R  = std::max(1e-3, vp_.wheel_radius_nominal);
+    const double v  = std::max(std::abs(vx), 1.0);   // avoid /0 at low speed
+
+    std::array<double, NUM_WHEELS> out{};
+    for (int i = 0; i < NUM_WHEELS; ++i) {
+        // Longitudinal slip ratio (negative under braking = wheel slower than ground).
+        const double slip = (ctx.state.wheel_spin[i] * R - vx) / v;
+        const double lock = -slip;   // positive when the wheel is locking up
+
+        // Release valve: above the release threshold, ramp the modulation down
+        // toward zero; recover (re-apply) below the target. First-order toward goal.
+        double goal = 1.0;
+        if (lock > slip_release_) {
+            goal = 0.0;                                   // dump pressure
+        } else if (lock > slip_target_) {
+            goal = (slip_release_ - lock) / (slip_release_ - slip_target_);  // taper
+        }
+        // Smooth the valve so it cycles rather than chatters every step.
+        mod_[i] += 0.4 * (goal - mod_[i]);
+        out[i] = Tb[i] * std::clamp(mod_[i], 0.0, 1.0);
+    }
+    return out;
+}
+
 BasicDrivetrain::BasicDrivetrain(const VehicleParams& vp, double /*deadtime_s*/)
     : vp_(vp) {}
 

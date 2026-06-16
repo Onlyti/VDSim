@@ -9,6 +9,7 @@
 #include "vdsim/control.hpp"
 #include "vdsim/control_converter.hpp"
 #include "vdsim/coordinate.hpp"
+#include "vdsim/default_subsystems.hpp"
 #include "vdsim/interfaces.hpp"
 #include "vdsim/magic_formula.hpp"
 #include "vdsim/params.hpp"
@@ -553,6 +554,14 @@ PYBIND11_MODULE(vdsim, m) {
         .def("wheel_torque", &vdsim::IBrakeSystem::wheel_torque)
         .def("begin_step",   &vdsim::IBrakeSystem::begin_step)
         .def("reset",        &vdsim::IBrakeSystem::reset);
+    // SimpleABS reference module: dyn.set_brake_module(vdsim.make_simple_abs(vp)).
+    m.def("make_simple_abs",
+          [](const vdsim::VehicleParams& vp, double slip_target, double slip_release) {
+              return std::shared_ptr<vdsim::IBrakeSystem>(
+                  std::make_shared<vdsim::SimpleABS>(vp, slip_target, slip_release));
+          },
+          py::arg("vp"), py::arg("slip_target") = 0.12, py::arg("slip_release") = 0.18,
+          "Reference anti-lock brake module; install via dyn.set_brake_module(...).");
     py::class_<vdsim::ISteeringSystem, PySteeringSystem, std::shared_ptr<vdsim::ISteeringSystem>>(
             m, "SteeringModule",
             "Subclass and override apply(ctx)->SteeringOutput (roadwheel_angle, rack_travel).")
@@ -832,7 +841,10 @@ PYBIND11_MODULE(vdsim, m) {
         .def("state",          &vdsim::SimSession::state)
         .def("measured_state", &vdsim::SimSession::measured_state)
         .def("output",         &vdsim::SimSession::output)
-        .def("sim_time",       &vdsim::SimSession::sim_time);
+        .def("sim_time",       &vdsim::SimSession::sim_time)
+        .def("dynamics",       &vdsim::SimSession::dynamics,
+             py::return_value_policy::reference_internal,
+             "Access the plant to install subsystem modules (e.g. set_brake_module).");
 
     // Factory: build a SimSession (flat ground) from level + params.
     m.def("make_sim_session",

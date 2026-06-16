@@ -221,3 +221,36 @@ TEST(UserModules, InstallScoping) {
     EXPECT_FALSE(l2->set_brake_module(nullptr));
     EXPECT_FALSE(l3->set_antirollbar_module(2, std::make_shared<WrapARB>(vp, 1)));
 }
+
+// SimpleABS reference module: on a low-mu surface a full-brake stop locks the
+// wheels with the default brake, but SimpleABS keeps them rolling (slip regulated).
+TEST(UserModules, SimpleABSPreventsWheelLock) {
+    vdsim::VehicleParams vp;
+    const double mu = 0.2;   // icy
+
+    auto run_min_wheel_ratio = [&](bool abs) {
+        auto dyn = vdsim::create_seven_dof();
+        dyn->initialize(vp, vdsim::TireParams{}, vdsim::SolverParams{});
+        dyn->reset(rolling(20.0));
+        if (abs) dyn->set_brake_module(std::make_shared<vdsim::SimpleABS>(vp));
+        auto ground = vdsim::create_flat_ground(0.0, mu);
+        vdsim::CmdL4 cmd; cmd.brake = 1.0;
+        const vdsim::ControlInput u = cmd;
+        double min_ratio = 1.0;
+        for (int i = 0; i < 3000 && dyn->state().vx() > 1.0; ++i) {
+            vdsim::ContactArray c; ground->query(dyn->state(), vp, c);
+            dyn->step(u, c, 1e-3);
+            const auto& s = dyn->state();
+            const double ratio = s.wheel_spin[0] * vp.wheel_radius_nominal
+                               / std::max(s.vx(), 0.5);
+            min_ratio = std::min(min_ratio, ratio);
+        }
+        return min_ratio;
+    };
+
+    const double locked = run_min_wheel_ratio(false);  // wheels lock (ratio → 0)
+    const double abs    = run_min_wheel_ratio(true);    // ABS keeps rolling
+    EXPECT_LT(locked, 0.2)      << "default brake locks the wheel on ice";
+    EXPECT_GT(abs,    0.5)      << "SimpleABS keeps the wheel rolling";
+    EXPECT_GT(abs, locked + 0.3) << "ABS clearly reduces lock vs baseline";
+}
