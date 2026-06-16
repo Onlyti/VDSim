@@ -13,6 +13,7 @@ SimSession::SimSession(std::unique_ptr<IVehicleDynamics> dyn,
     actuator_.initialize(cfg.actuator, cfg.nominal_dt);
     sensor_.initialize(cfg.sensor_delay_s, cfg.nominal_dt);
     sensors_.initialize(cfg.sensors);
+    cascade_.initialize(vp);
 }
 
 void SimSession::reset(const State& s0) {
@@ -22,14 +23,21 @@ void SimSession::reset(const State& s0) {
     actuator_.reset();
     sensor_.reset(s0);
     sensors_.reset();
+    cascade_.reset();
     true_state_ = s0;
     meas_state_ = s0;
-    latched_    = CmdL4{};
+    latched_    = ControlInput{CmdL4{}};
     sim_time_   = 0.0;
     last_input_tp_ = std::chrono::steady_clock::now();
 }
 
 void SimSession::set_input(const CmdL4& u) {
+    std::lock_guard<std::mutex> lk(mtx_);
+    latched_ = ControlInput{u};
+    last_input_tp_ = std::chrono::steady_clock::now();
+}
+
+void SimSession::set_input(const ControlInput& u) {
     std::lock_guard<std::mutex> lk(mtx_);
     latched_ = u;
     last_input_tp_ = std::chrono::steady_clock::now();
@@ -38,7 +46,7 @@ void SimSession::set_input(const CmdL4& u) {
 void SimSession::tick(double dt) {
     if (!(dt > 0.0)) return;
 
-    CmdL4 cmd;
+    ControlInput cmd;
     State s;
     {
         std::lock_guard<std::mutex> lk(mtx_);
@@ -49,16 +57,17 @@ void SimSession::tick(double dt) {
     ContactArray contacts;
     ground_->query(s, vp_, contacts);
 
-    // 1. VehNetwork: stochastic deadtime + packet drop (ECU/CAN layer)
-    const ControlInput net_cmd = network_->apply(ControlInput{cmd}, dt);
-    // VehNetwork preserves the Lc level; SimSession operates on CmdL4 (Lc4 is the
-    // SimSession native boundary). Higher-level Lc variants are lowered by the
-    // dynamics' own lower_to_l4 inside dyn_->step(). Here we extract CmdL4 directly
-    // since set_input currently accepts only CmdL4 (set_input(const CmdL4&)).
-    const CmdL4 net_l4 = std::holds_alternative<CmdL4>(net_cmd)
-                         ? std::get<CmdL4>(net_cmd) : cmd;
+    // 1. CascadeController: any Lc level (L1..L8) → CmdL4 using measured-state feedback.
+    //    This is the "controller" entity (ECU): converts high-level intent to pedals.
+    const double ax_meas = dyn_->ax_body_est();
+    const CmdL4 ctrl_l4 = cascade_.to_l4(cmd, meas_state_, ax_meas, dt);
 
-    // 2. Actuator: physical lag, rate-limit, saturation
+    // 2. VehNetwork: stochastic deadtime + packet drop (ECU → actuator CAN link).
+    const ControlInput net_cmd = network_->apply(ControlInput{ctrl_l4}, dt);
+    const CmdL4 net_l4 = std::holds_alternative<CmdL4>(net_cmd)
+                         ? std::get<CmdL4>(net_cmd) : ctrl_l4;
+
+    // 3. Actuator: physical lag, rate-limit, saturation.
     const double speed = s.speed_xy();
     const CmdL4 realized = actuator_.apply(net_l4, speed, dt);
 

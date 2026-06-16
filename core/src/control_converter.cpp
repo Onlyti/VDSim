@@ -170,4 +170,99 @@ DriverModel::Output DriverModel::update(double x, double y, double psi, double v
     return out;
 }
 
+// =============================================================================
+// CascadeController
+// =============================================================================
+
+void CascadeController::initialize(const VehicleParams& vp) {
+    wheelbase_ = vp.wheelbase > 1e-3 ? vp.wheelbase : 2.7;
+    max_steer_ = vp.max_steer_angle_wheel > 1e-3 ? vp.max_steer_angle_wheel : 0.5;
+    vxc_.initialize({});
+    axc_.initialize({});
+    PurePursuitController::Gains pg;
+    pg.wheelbase = wheelbase_;
+    pg.max_steer = max_steer_;
+    pp_.initialize(pg);
+    reset();
+}
+
+void CascadeController::reset() noexcept {
+    vxc_.reset();
+    axc_.reset();
+    pp_idx_ = 0;
+}
+
+CmdL4 CascadeController::to_l4(const ControlInput& u, const State& meas,
+                              double ax_meas, double dt) {
+    const double vx  = meas.vx();
+    const double px  = meas.position.x();
+    const double py  = meas.position.y();
+    const double yaw = meas.yaw();
+
+    return std::visit([&](const auto& cmd) -> CmdL4 {
+        using T = std::decay_t<decltype(cmd)>;
+        CmdL4 out;
+        // ---- L1-L4: stateless lowering (no feedback) ----
+        if constexpr (std::is_same_v<T, CmdL1>) {
+            const double T_drive = cmd.motor_torque[0] + cmd.motor_torque[1]
+                                 + cmd.motor_torque[2] + cmd.motor_torque[3];
+            const double T_brake = cmd.brake_torque[0] + cmd.brake_torque[1]
+                                 + cmd.brake_torque[2] + cmd.brake_torque[3];
+            out.throttle = std::clamp(T_drive / 600.0, 0.0, 1.0);
+            out.brake    = std::clamp(T_brake / 4000.0 - std::min(0.0, T_drive) / 4000.0,
+                                       0.0, 1.0);
+            out.steer_angle_wheel = cmd.steer_angle_wheel;
+        } else if constexpr (std::is_same_v<T, CmdL2>) {
+            out.throttle = std::clamp(cmd.drive_torque / 600.0, 0.0, 1.0);
+            out.brake    = std::clamp(cmd.brake_torque / 4000.0
+                                       - std::min(0.0, cmd.drive_torque) / 4000.0, 0.0, 1.0);
+            out.steer_angle_wheel = cmd.steer_angle_wheel;
+        } else if constexpr (std::is_same_v<T, CmdL3>) {
+            const double scale = cmd.Fx_total / (1500.0 * 5.0);
+            out.throttle = std::clamp(scale, 0.0, 1.0);
+            out.brake    = std::clamp(-scale, 0.0, 1.0);
+            out.steer_angle_wheel = cmd.steer_angle_wheel;
+        } else if constexpr (std::is_same_v<T, CmdL4>) {
+            out = cmd;
+        }
+        // ---- L5: ax_target → throttle/brake (LongAx, needs ax_meas) ----
+        else if constexpr (std::is_same_v<T, CmdL5>) {
+            const auto [thr, brk] = axc_.update(cmd.ax_target, ax_meas, dt);
+            out.throttle = thr; out.brake = brk;
+            out.steer_angle_wheel = cmd.steer_angle_wheel;
+        }
+        // ---- L6: vx_target → ax_target → throttle/brake (LongVx → LongAx) ----
+        else if constexpr (std::is_same_v<T, CmdL6>) {
+            const double ax_tgt = vxc_.update(cmd.v_target, vx, dt);
+            const auto [thr, brk] = axc_.update(ax_tgt, ax_meas, dt);
+            out.throttle = thr; out.brake = brk;
+            out.steer_angle_wheel = cmd.steer_angle_wheel;
+        }
+        // ---- L7: (v_target, kappa) → speed cascade + steer = atan(kappa·L) ----
+        else if constexpr (std::is_same_v<T, CmdL7>) {
+            const double ax_tgt = vxc_.update(cmd.v_target, vx, dt);
+            const auto [thr, brk] = axc_.update(ax_tgt, ax_meas, dt);
+            out.throttle = thr; out.brake = brk;
+            out.steer_angle_wheel = std::clamp(std::atan(cmd.kappa * wheelbase_),
+                                               -max_steer_, max_steer_);
+        }
+        // ---- L8: waypoint path → PurePursuit steer + per-point speed cascade ----
+        else if constexpr (std::is_same_v<T, CmdL8>) {
+            const int n = static_cast<int>(cmd.path.size());
+            if (n > 0) {
+                std::vector<double> xs(n), ys(n);
+                for (int i = 0; i < n; ++i) { xs[i] = cmd.path[i].xy.x(); ys[i] = cmd.path[i].xy.y(); }
+                const auto pp_out = pp_.update(px, py, yaw, vx, xs.data(), ys.data(), n, pp_idx_);
+                pp_idx_ = pp_out.idx;
+                out.steer_angle_wheel = pp_out.steer;
+                const double v_des = cmd.path[pp_out.idx].v_des;
+                const double ax_tgt = vxc_.update(v_des, vx, dt);
+                const auto [thr, brk] = axc_.update(ax_tgt, ax_meas, dt);
+                out.throttle = thr; out.brake = brk;
+            }
+        }
+        return out;
+    }, u);
+}
+
 }  // namespace vdsim

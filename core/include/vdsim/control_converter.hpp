@@ -2,6 +2,10 @@
 
 #include <vector>
 
+#include "vdsim/control.hpp"
+#include "vdsim/params.hpp"
+#include "vdsim/state.hpp"
+
 // L5 Longitudinal Acceleration controller (PI + feed-forward).
 //
 //   input : ax_target [m/s^2] desired longitudinal acceleration
@@ -136,6 +140,38 @@ private:
     int                 steer_idx_ {0};
     int                 prev_idx_  {0};   // Pure-Pursuit lookahead progress (monotonic)
     double              prev_dt_   {0.005};
+};
+
+// =============================================================================
+// CascadeController — converts ANY control-ladder level (CmdL1..CmdL8) to CmdL4.
+//
+//   L1-L4: stateless lowering (per-wheel/axle/Fx/pedal → throttle/brake/steer).
+//   L5    : ax_target  → throttle/brake via LongAxController (needs ax_meas).
+//   L6    : vx_target  → ax_target → throttle/brake (LongVx → LongAx cascade).
+//   L7    : (v_target, kappa) → speed cascade + steer = atan(kappa·L).
+//   L8    : waypoint path → PurePursuit steer + per-point speed cascade.
+//
+// Stateful (PID integrators + pursuit progress). Lives at the session level,
+// fed the measured state each tick. This is the "controller" entity in the
+// architecture: User Lc-command → CascadeController → CmdL4 → VehNetwork → actuator.
+// =============================================================================
+class CascadeController {
+public:
+    void initialize(const VehicleParams& vp);
+    void reset() noexcept;
+
+    // Convert a ladder command to CmdL4 using current feedback.
+    //   meas    : measured plant state (pose, vx for cascade)
+    //   ax_meas : measured longitudinal accel [m/s²] (for L5/L6 inner loop)
+    CmdL4 to_l4(const ControlInput& u, const State& meas, double ax_meas, double dt);
+
+private:
+    LongVxController vxc_;
+    LongAxController axc_;
+    PurePursuitController pp_;
+    double wheelbase_ {2.7};
+    double max_steer_ {0.5};
+    int    pp_idx_    {0};
 };
 
 }  // namespace vdsim

@@ -80,3 +80,20 @@ TEST(SimSession, RealTimeRunnerPacesAndFailsafe) {
     EXPECT_TRUE(std::isfinite(s->state().vx()));
     EXPECT_LT(s->state().vx(), 20.0);                 // fail-safe brake decelerated
 }
+
+// CascadeController: set_input(CmdL6) converts a speed target to pedals each tick.
+// Starting at 20 m/s, a 10 m/s target must decelerate the vehicle toward 10.
+TEST(SimSession, CascadeL6SpeedTargetTracks) {
+    auto s = make_session();   // starts at vx = 20 m/s
+    CmdL6 cmd; cmd.v_target = 10.0;
+    for (int i = 0; i < int(15.0 / 0.005); ++i) { s->set_input(ControlInput{cmd}); s->tick(0.005); }
+    EXPECT_NEAR(s->state().vx(), 10.0, 1.5) << "L6 cruise should converge to target";
+}
+
+// CascadeController: set_input(CmdL7) with curvature produces a steady yaw rate.
+TEST(SimSession, CascadeL7CurvatureYaws) {
+    auto s = make_session();   // 20 m/s
+    CmdL7 cmd; cmd.v_target = 12.0; cmd.kappa = 0.02;
+    for (int i = 0; i < int(8.0 / 0.005); ++i) { s->set_input(ControlInput{cmd}); s->tick(0.005); }
+    EXPECT_GT(std::abs(s->state().yaw_rate()), 0.05) << "L7 curvature should yaw the vehicle";
+}

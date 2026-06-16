@@ -435,6 +435,26 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("steer_angle_wheel", &vdsim::CmdL4::steer_angle_wheel)
         .def_readwrite("gear",              &vdsim::CmdL4::gear);
 
+    // -------- Higher control-ladder commands (cascaded by SimSession) --------
+    // L5: longitudinal accel target + steer angle.
+    py::class_<vdsim::CmdL5>(m, "CmdL5")
+        .def(py::init<>())
+        .def_readwrite("ax_target",         &vdsim::CmdL5::ax_target)
+        .def_readwrite("steer_angle_wheel", &vdsim::CmdL5::steer_angle_wheel);
+    // L6: longitudinal speed target + steer angle.
+    py::class_<vdsim::CmdL6>(m, "CmdL6")
+        .def(py::init<>())
+        .def_readwrite("v_target",          &vdsim::CmdL6::v_target)
+        .def_readwrite("steer_angle_wheel", &vdsim::CmdL6::steer_angle_wheel);
+    // L7: speed target + path curvature.
+    py::class_<vdsim::CmdL7>(m, "CmdL7")
+        .def(py::init<>())
+        .def_readwrite("v_target", &vdsim::CmdL7::v_target)
+        .def_readwrite("kappa",    &vdsim::CmdL7::kappa);
+    // ControlInput is std::variant<CmdL1..CmdL8>; pybind11's <stl.h> variant
+    // caster converts any registered CmdLx python object → ControlInput, so
+    // sim.set_input(CmdL6(...)) dispatches to set_input(const ControlInput&).
+
     // -------- IVehicleDynamics --------
     py::class_<vdsim::ShiftContext>(m, "ShiftContext")
         .def_readonly("engine_rpm",    &vdsim::ShiftContext::engine_rpm)
@@ -761,7 +781,12 @@ PYBIND11_MODULE(vdsim, m) {
 
     py::class_<vdsim::SimSession>(m, "SimSession")
         .def("reset",          &vdsim::SimSession::reset)
-        .def("set_input",      &vdsim::SimSession::set_input)
+        .def("set_input",
+             static_cast<void (vdsim::SimSession::*)(const vdsim::CmdL4&)>(
+                 &vdsim::SimSession::set_input))
+        .def("set_input",
+             static_cast<void (vdsim::SimSession::*)(const vdsim::ControlInput&)>(
+                 &vdsim::SimSession::set_input))
         .def("tick",           &vdsim::SimSession::tick)
         .def("state",          &vdsim::SimSession::state)
         .def("measured_state", &vdsim::SimSession::measured_state)

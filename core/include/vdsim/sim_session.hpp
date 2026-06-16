@@ -20,6 +20,7 @@
 #include "vdsim/actuator.hpp"
 #include "vdsim/contact.hpp"
 #include "vdsim/control.hpp"
+#include "vdsim/control_converter.hpp"
 #include "vdsim/interfaces.hpp"
 #include "vdsim/params.hpp"
 #include "vdsim/sensors.hpp"
@@ -66,6 +67,9 @@ public:
 
     // Latch the command (thread-safe). Subsequent ticks use it until replaced.
     void set_input(const CmdL4& u);
+    // Latch any ladder-level command (CmdL1..CmdL8). Levels above L4 are cascaded
+    // to CmdL4 each tick by the CascadeController using the measured-state feedback.
+    void set_input(const ControlInput& u);
 
     // Advance one fixed-dt step: latched cmd -> actuator -> step -> sensor.
     void tick(double dt);
@@ -85,13 +89,14 @@ private:
     std::unique_ptr<IVehicleDynamics> dyn_;
     std::unique_ptr<IContactProvider> ground_;
     std::unique_ptr<IVehNetwork>      network_;   // ECU/CAN network (deadtime + drop)
-    ActuatorModel actuator_;
-    SensorDelay   sensor_;
-    SensorModel   sensors_;
+    ActuatorModel     actuator_;
+    SensorDelay       sensor_;
+    SensorModel       sensors_;
+    CascadeController cascade_;   // Lc5-L8 → CmdL4 (with measured-state feedback)
     VehicleParams vp_;
 
     mutable std::mutex mtx_;
-    CmdL4  latched_ {};
+    ControlInput latched_ {CmdL4{}};
     State  true_state_ {};
     State  meas_state_ {};
     double ax_ {0.0}, ay_ {0.0}, roll_ {0.0}, pitch_ {0.0}, rack_ {0.0};
