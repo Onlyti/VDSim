@@ -238,15 +238,17 @@ public:
         if (dt <= 0.0) return pose_at(st.q, mot.steer_rack_dy, st.knuckle_aa);
         const double z_target = wheel_static_.z() + mot.travel_z;
         const auto geom = geometry_at(st.q, mot.steer_rack_dy, st.knuckle_aa);
-        const double dth = 1e-5;
+        // CENTRAL differences for w'(=J) and w''(=phi_qq) at dth=1e-3 (was forward diff
+        // at 1e-5, plus a redundant re-solve for the 2nd difference). See the
+        // kinematic_at variant — robustness/cleanup, not a behavioral change.
+        const double dth = 1e-3;
         const auto geom_p = geometry_at(st.q + dth, mot.steer_rack_dy, geom.aa);
-        const Vec3 J = (geom_p.wheel - geom.wheel) / dth;
+        const auto geom_m = geometry_at(st.q - dth, mot.steer_rack_dy, geom.aa);
+        const Vec3 J = (geom_p.wheel - geom_m.wheel) / (2.0 * dth);
         const double phi_q = J.z();
         const double phi = geom.wheel.z() - z_target;
         const double phi_d = phi_q * st.qd - mot.travel_z_dot;
-        const double phi_qq = (geometry_at(st.q + dth, mot.steer_rack_dy, geom.aa).wheel.z()
-                             - 2.0 * geom.wheel.z()
-                             + geometry_at(st.q - dth, mot.steer_rack_dy, geom.aa).wheel.z())
+        const double phi_qq = (geom_p.wheel.z() - 2.0 * geom.wheel.z() + geom_m.wheel.z())
                             / (dth * dth);
         const double tau = J.dot(load.force_world);
         const auto sol = solve_constrained_revolute(
@@ -392,19 +394,26 @@ public:
         const double z_target = wheel_static_.z() + mot.travel_z;
         KinState geom;
         if (!kinematic_at(st.q, mot.steer_rack_dy, geom)) return pose_at(st.q, mot.steer_rack_dy);
-        constexpr double dth = 1e-5;
-        KinState geom_p;
+        // CENTRAL differences for the travel Jacobian w'(=J) and curvature w''(=phi_qq).
+        // w' was a forward difference (O(dth) biased); central is O(dth^2). The 2nd
+        // difference reuses the same two side points (no extra solves — the old code
+        // re-evaluated q+dth a second time). dth=1e-3 keeps the curvature well clear of
+        // any inner-solver noise floor (each wheel_pos comes from an LM solve); in
+        // practice the solver is smooth enough that 1e-5 and 1e-3 agree, so this is a
+        // robustness/cleanup change, not a behavioral one.
+        constexpr double dth = 1e-3;
+        KinState geom_p, geom_m;
         if (!kinematic_at(st.q + dth, mot.steer_rack_dy, geom_p))
             return pose_at(st.q, mot.steer_rack_dy);
-        const Vec3 J = (geom_p.wheel_pos - geom.wheel_pos) / dth;
+        const bool have_m = kinematic_at(st.q - dth, mot.steer_rack_dy, geom_m);
+        const Vec3 J = have_m
+            ? Vec3((geom_p.wheel_pos - geom_m.wheel_pos) / (2.0 * dth))
+            : Vec3((geom_p.wheel_pos - geom.wheel_pos) / dth);
         const double phi_q = J.z();
         const double phi = geom.wheel_pos.z() - z_target;
         const double phi_d = phi_q * st.qd - mot.travel_z_dot;
-        KinState geom_m, geom_pp;
-        const bool have_m = kinematic_at(st.q - dth, mot.steer_rack_dy, geom_m);
-        const bool have_pp = kinematic_at(st.q + dth, mot.steer_rack_dy, geom_pp);
-        const double phi_qq = (have_m && have_pp)
-            ? (geom_pp.wheel_pos.z() - 2.0 * geom.wheel_pos.z() + geom_m.wheel_pos.z())
+        const double phi_qq = have_m
+            ? (geom_p.wheel_pos.z() - 2.0 * geom.wheel_pos.z() + geom_m.wheel_pos.z())
               / (dth * dth)
             : 0.0;
         const double tau = J.dot(load.force_world);
