@@ -665,9 +665,17 @@ private:
         // body. This couples yaw<->roll (and roll->yaw) at speed: a fast-spinning set of
         // wheels resists tilting the spin axis. Spin axis approximated as body-y (steer/camber
         // tilt is second order). Applies on both the strut and penalty paths.
-        double H_spin = 0.0;
-        for (int i = 0; i < NUM_WHEELS; ++i) H_spin += I_wheel_[i] * s.wheel_spin[i];
-        tau_body -= omega.cross(Vec3(0.0, H_spin, 0.0));
+        Vec3 H_spin = Vec3::Zero();
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            // Spin axis = body-lateral, tilted by the steer angle (rotated about body-z):
+            // a steered spinning wheel's momentum points partly fore-aft. Camber tilt is
+            // omitted (smaller, sign-sensitive). Small-angle: yhat -> (-delta, 1, 0).
+            const double delta = d_wheel[i] + toe_dae_[i];
+            Vec3 s_hat(-delta, 1.0, 0.0);
+            s_hat.normalize();
+            H_spin += (I_wheel_[i] * s.wheel_spin[i]) * s_hat;
+        }
+        tau_body -= omega.cross(H_spin);
         const Vec3 Iw(
             vp_.inertia_diag.x() * omega.x(),
             vp_.inertia_diag.y() * omega.y(),

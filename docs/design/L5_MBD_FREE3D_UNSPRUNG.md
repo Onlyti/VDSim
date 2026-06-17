@@ -150,13 +150,19 @@ not a constant wheel rate:
 Each spinning wheel carries spin angular momentum `H_i = I_wheel*omega_spin` along the lateral
 (body-y) axis. A body rotating at `omega` must supply `omega x H`, so the wheels exert the
 reaction `-omega x H` on the body, added to `tau_body`. This couples yaw<->roll at speed
-(yawing a fast-spinning wheel set produces a roll moment, and vice versa). Spin axis is
-approximated as body-y (steer/camber tilt is second order). Verified airborne (no tyre
-forces): a yaw rate + spinning wheels develops a roll rate; non-spinning does not
-(`Stunt.GyroscopicWheelSpinCouplesYawToRoll`).
+(yawing a fast-spinning wheel set produces a roll moment, and vice versa). The spin axis is
+body-lateral, tilted by the steer angle (rotated about body-z, so a steered spinning wheel's
+momentum points partly fore-aft); camber tilt is omitted (smaller, sign-sensitive). Verified
+airborne (no tyre forces): a yaw rate + spinning wheels develops a roll rate; non-spinning
+does not (`Stunt.GyroscopicWheelSpinCouplesYawToRoll`).
 
 ## Open / next cut
 
-- Gyro refinements: spin axis steer/camber tilt; the spin-up reaction torque (`I_wheel*domega`)
-  on the body — both second order.
-- Bushing/link compliance (KC) under load is a stiff penalty, not a full compliance model.
+- KC compliance under load (bushing deflection -> compliance steer/camber). Attempted with the
+  existing lumped model (`compliance_targets_rad`) + default bushings, but it produced ~1.5
+  deg/g of compliance steer — ~5-10x too large and unvalidated — so it was reverted. Needs the
+  Adams/KC reference (Tier 1) to set the bushing rates and validate sign/magnitude before
+  shipping; tuning it blind is a guess.
+- Gyro camber-axis tilt and the wheel spin-UP reaction. The spin-up reaction is really the
+  DRIVE-torque reaction routed through the drivetrain mounts (a free wheel's bearing carries no
+  spin-axis torque), so it belongs to the drivetrain model, not the unsprung.
