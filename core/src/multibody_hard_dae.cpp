@@ -190,6 +190,10 @@ private:
         return theta;
     }
 
+    WheelPose pose_at_theta(double theta, double steer, const Vec3&) const override {
+        return pose_at(theta, steer);
+    }
+
     WheelPose pose_at(double theta, double /*steer*/) const {
         const Mat3 R = rodrigues(axis_, theta);
         const Vec3 wheel = pivot_ + R * wheel_off_;
@@ -328,6 +332,10 @@ private:
             theta -= err / slope;
         }
         return theta;
+    }
+
+    WheelPose pose_at_theta(double theta, double steer, const Vec3& seed) const override {
+        return pose_at(theta, steer, seed);
     }
 
     WheelPose pose_at(double theta, double steer_dy, const Vec3& aa) const {
@@ -497,6 +505,10 @@ private:
         return theta;
     }
 
+    WheelPose pose_at_theta(double theta, double steer, const Vec3&) const override {
+        return pose_at(theta, steer);
+    }
+
     WheelPose pose_at(double theta, double steer_dy) const {
         KinState s;
         if (!kinematic_at(theta, steer_dy, s)) return {};
@@ -626,6 +638,11 @@ private:
         return g;
     }
 
+    WheelPose pose_at_theta(double theta, double /*steer*/, const Vec3& seed) const override {
+        const Geom g = driven_pose_at(theta, seed);
+        return pose_from_spin(g.wheel, g.spin, wheel_static_, side_);
+    }
+
     Geom driven_pose_at(double theta, Vec3 aa0) const {
         const Vec3 p_la = lower_aft_attach_at(theta);
         Eigen::VectorXd pose(6);
@@ -684,12 +701,37 @@ public:
         return kin_->forward_kinematics(topo_, mot.travel_z, mot.steer_rack_dy);
     }
 
+    WheelPose pose_at_theta(double theta, double steer, const Vec3&) const override {
+        return kin_->forward_kinematics(topo_, theta, steer);
+    }
+
 private:
     mutable SuspensionTopology topo_;
     std::unique_ptr<IMultibodySolver> kin_;
 };
 
 }  // namespace
+
+CornerTravelMaps IHardJointDaeModel::travel_maps(const HardJointCornerState& st,
+                                                 double steer_rad) const {
+    // Central finite difference of the body-frame wheel path vs the travel
+    // coordinate. dth=1e-3 keeps w'' clear of the inner-solver noise floor (the
+    // pose comes from an LM/Newton solve). The corner state's knuckle_aa warm-
+    // starts the inner solve at all three sample points.
+    constexpr double dth = 1e-3;
+    const WheelPose p0 = pose_at_theta(st.q,        steer_rad, st.knuckle_aa);
+    const WheelPose pp = pose_at_theta(st.q + dth,  steer_rad, st.knuckle_aa);
+    const WheelPose pm = pose_at_theta(st.q - dth,  steer_rad, st.knuckle_aa);
+    CornerTravelMaps m;
+    m.w     = p0.position_world;
+    m.w_dq  = (pp.position_world - pm.position_world) / (2.0 * dth);
+    m.w_dqq = (pp.position_world - 2.0 * p0.position_world + pm.position_world)
+              / (dth * dth);
+    m.toe_rad    = p0.toe_rad;
+    m.camber_rad = p0.camber_rad;
+    m.caster_rad = p0.caster_rad;
+    return m;
+}
 
 std::unique_ptr<IHardJointDaeModel>
 create_hard_joint_dae_model(const SuspensionTopology& topo) {

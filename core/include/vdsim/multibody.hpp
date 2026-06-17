@@ -196,6 +196,19 @@ struct CornerDynamicsState {
     double q_camber_dot   {0.0};
 };
 
+// Travel-path kinematic maps for the coupled MBD solve (Ld5): the body-frame
+// wheel-centre path w(theta) and its derivatives wrt the travel coordinate, plus
+// the wheel orientation. theta is the DAE's own travel coordinate (q); for the
+// kinematic-fallback model theta is simply the vertical travel.
+struct CornerTravelMaps {
+    Vec3   w     {Vec3::Zero()};   // wheel-centre, body frame [m]
+    Vec3   w_dq  {Vec3::Zero()};   // dw/dtheta [m/rad]
+    Vec3   w_dqq {Vec3::Zero()};   // d2w/dtheta2 [m/rad^2]
+    double toe_rad    {0.0};
+    double camber_rad {0.0};
+    double caster_rad {0.0};
+};
+
 class IHardJointDaeModel {
 public:
     virtual ~IHardJointDaeModel() = default;
@@ -205,6 +218,18 @@ public:
                            const PrescribedCornerMotion& mot,
                            const WheelLoad& load,
                            double dt) const = 0;
+
+    // Body-frame wheel pose at an arbitrary travel coordinate theta, with a
+    // warm-start seed for the inner knuckle solve (pass the corner state's
+    // knuckle_aa). position_world holds the body-frame wheel centre.
+    virtual WheelPose pose_at_theta(double theta, double steer_rad,
+                                    const Vec3& seed) const = 0;
+
+    // w(theta), w'(theta), w''(theta) + orientation, by central finite difference
+    // of pose_at_theta. Used by the Ld5 coupled solve to drive the real linkage
+    // travel path instead of a vertical slider.
+    CornerTravelMaps travel_maps(const HardJointCornerState& st,
+                                 double steer_rad) const;
 };
 
 class IMultibodySolver {

@@ -32,6 +32,41 @@ TEST(MultibodyKinematics, ForwardKinematicsFinite) {
     EXPECT_TRUE(std::isfinite(topo.camber_deg));
 }
 
+// Ld5 coupled solve drives the REAL linkage travel path w(theta) (not a vertical
+// slider). travel_maps must return the static wheel centre, a travel direction with
+// the suspension's characteristic vertical motion ratio AND a non-zero lateral
+// component (the roll-centre geometry the slider trick lacked), and bounded curvature.
+TEST(MultibodyKinematics, TravelMapsRealLinkageGeometry) {
+    const std::string path = std::string(VDSIM_SOURCE_DIR)
+        + "/configs/parts/susp_kinematics/kin/mp_front_sedan.yaml";
+    auto topo = vdsim::mb::SuspensionTopology::from_yaml(path);
+    auto dae = vdsim::mb::create_hard_joint_dae_model(topo);
+
+    vdsim::mb::HardJointCornerState st;
+    vdsim::mb::PrescribedCornerMotion mot;
+    dae->initialize(st, mot);                    // theta at the static ride height
+
+    const auto m = dae->travel_maps(st, 0.0);
+
+    // w(theta_static) == static wheel centre (left corner: +y track, ~hub height).
+    EXPECT_GT(m.w.y(), 0.5);
+    EXPECT_NEAR(m.w.z(), 0.305, 0.05);
+
+    // Travel direction: dominated by vertical motion ratio, but NON-trivial — and it
+    // has a lateral component, which is exactly what a vertical slider cannot model.
+    EXPECT_GT(m.w_dq.norm(), 0.1);
+    EXPECT_GT(std::abs(m.w_dq.z()), 0.2);        // real motion ratio
+    EXPECT_GT(std::abs(m.w_dq.y()), 1e-3);       // lateral travel -> roll-centre geometry
+
+    // Curvature is finite and physically bounded (not solver-noise garbage).
+    EXPECT_TRUE(std::isfinite(m.w_dqq.norm()));
+    EXPECT_LT(m.w_dqq.norm(), 5.0);
+
+    // Consistency: pose_at_theta at the same theta agrees with w.
+    const auto p = dae->pose_at_theta(st.q, 0.0, st.knuckle_aa);
+    EXPECT_NEAR((p.position_world - m.w).norm(), 0.0, 1e-9);
+}
+
 TEST(MultibodyTopology, MacPhersonGraph) {
     const std::string path = std::string(VDSIM_SOURCE_DIR)
         + "/configs/parts/susp_kinematics/kin/mp_front_sedan.yaml";
