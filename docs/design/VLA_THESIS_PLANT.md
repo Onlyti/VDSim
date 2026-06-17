@@ -141,6 +141,31 @@ for k in range(N):
 - **dt = 0.05 ZOH**: the MPC sample = plant.step dt; VDSim subdivides internally (substep_dt).
 - straight road ⇒ s≈x for the patch; fine for lane-change/DLC, revisit if the path curves a lot.
 
+## Product quality bar — THIS IS THE FIRST CLIENT (treat as a real sale)
+The thesis is VDSim's first external customer. Ship `vdsim_plant` as a first-class, SUPPORTED
+product surface, not a one-off test helper. Build to these bars (reviewed next session):
+- **Stable, documented contract**: the `step()` input `[delta_rad, Fx_total_N]` and the obs dict
+  (keys, units, frames: ISO 8855, contact-frame per-wheel F, FL0/FR1/RL2/RR3) are FIXED and
+  documented in the README + a docstring. Changing them later is a breaking change — pin it now.
+- **Boundary validation + clear errors** (this is a user-facing API = a real boundary): validate
+  on construction/step — finite `delta`/`Fx`; well-formed `friction_map` (x0<x1, 0<mu≤~1.2);
+  `state0` length/finiteness; `substep_dt>0`, `substep_dt` divides `control_dt`, `control_dt>0`.
+  Raise informative Python exceptions (e.g. `ValueError("friction_map[1]: x0>=x1")`), never
+  silent garbage or a C++ crash. (Trust internal core; validate only at this Python boundary.)
+- **Quickstart that runs in one command**: `examples/vla_plant_demo.py` — a self-contained
+  closed loop (trivial controller is fine) printing/saving a trajectory, so the client verifies
+  the install in <1 min. README with import path, the contract, the 5 acceptance results, and a
+  copy-paste snippet.
+- **Reproducibility guarantee**: deterministic, no RNG by default; document "same input ⇒ same
+  output" and the fixed-substep requirement. A determinism test is part of the smokes.
+- **Sensible defaults + discoverable preset**: `ioniq5_awd` resolvable like other presets
+  (via `vdsim_lab` config resolution); friction_map optional (uniform `base_mu` default).
+- **Drop-in proof**: demonstrate the `from vdsim_plant import VDSimPlant` import works from a
+  sibling project (path/install noted), and that it replaces `closed_loop_sim.py`'s plant with
+  no MPC change. Keep performance ≪1 s/traj (state it in the README).
+- **No rough edges**: no NaN at the grip limit / very low speed (VLOW), helpful failure on a
+  misconfigured yaml, obs always complete (all 4 wheels, all keys) every step.
+
 ## Guardrails
 wheel FL0/FR1/RL2/RR3, ISO 8855, YAML params, estimation noise = Q-process/R-meas (plant-
 irrelevant). No confidential/measured tyre data (Ioniq5 = public approx). No push/force/tag
