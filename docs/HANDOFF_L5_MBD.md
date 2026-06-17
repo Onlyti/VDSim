@@ -20,7 +20,14 @@ green**. main HEAD = `7d77754`. 태그 `v0.6.0` 푸시됨. **미push = `7d77754`
 - v0.6.0 tag, ROADMAP 갱신, superseded 설계문서 3개 배너.
 
 **미완 / 다음 할 일**:
-0. **[새 최우선 트랙 — VLA thesis plant, GO]** spec: `docs/design/VLA_THESIS_PLANT.md` (자립형).
+0. **[최우선 — VLA thesis plant = 첫 고객/제품, Cursor 위임 in-flight]** spec(최종·자립형):
+   `docs/design/VLA_THESIS_PLANT.md` (#0=Fx→torque physical κ 확정 + 2-tier dt + product
+   quality bar 포함). Cursor headless 위임함(background) — 출력 `/tmp/claude-1000/.../b8v49i1fc.output`.
+   **다음 세션 필수 = Cursor 산출물 검증·리뷰·폴리시 게이트** (Claude 책임): `git diff` 리뷰 +
+   빌드 + 3 smoke + 전체 ctest green(현 382) + **제품 품질 바**(boundary validation/clear errors,
+   README+quickstart `examples/vla_plant_demo.py`, 결정론, 안정 obs contract, NaN 없음) 충족 확인.
+   첫 고객이므로 "동작"이 아니라 "출하 가능 품질"까지 끌어올릴 것. headline #2(patch brake+turn
+   real-κ grip-loss)가 진짜 통과인지 직접 확인. (Cursor가 막히면 #0 torque 경로는 Claude 직접.)
    Ld2 7DOF를 thesis closed-loop plant로 swap. **6개**: (#0) Ld2 **direct-Fx force/torque 경로**
    (현 CmdL3은 Fx_total을 throttle로 매핑함 = thesis 금지 → 우회 필수, acceptance #2 crux) ·
    x-구간 friction-patch provider(per-wheel μ) · `wheel_mu()` getter · `ioniq5_awd.yaml`(Caf/Car는
