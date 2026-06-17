@@ -1709,6 +1709,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#v060-l5-high-fidelity-mbd-2026-06-on-main-untagged" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.6.0 — L5 high-fidelity MBD (2026-06, on main, untagged)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#v052-planned" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2965,6 +2976,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#v060-l5-high-fidelity-mbd-2026-06-on-main-untagged" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.6.0 — L5 high-fidelity MBD (2026-06, on main, untagged)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#v052-planned" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3023,7 +3045,7 @@
 
 
 <h1 id="vdsim-product-roadmap">VDSim product roadmap<a class="headerlink" href="#vdsim-product-roadmap" title="Permanent link">&para;</a></h1>
-<p><strong>Last updated:</strong> 2026-06-10 · <strong>Tests:</strong> 328/328 ctest green (<code>main</code>)</p>
+<p><strong>Last updated:</strong> 2026-06-17 · <strong>Tests:</strong> 381/381 ctest green (<code>main</code>)</p>
 <p>Living roadmap from early PoC through v0.3. Tracks what shipped in mainline vs what
 is planned. Detail specs link to <code>docs/design/*</code>; tire phases in
 <a href="../design/TIRE_ROADMAP/"><code>design/TIRE_ROADMAP.md</code></a>.</p>
@@ -3036,7 +3058,9 @@ is planned. Detail specs link to <code>docs/design/*</code>; tire phases in
 </ul>
 </div>
 <p><strong>Velocity (recent):</strong> v0.2 composable subsystems + GUI redesign → v0.3 parts
-catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week).</p>
+catalog + scene runtime → drivetrain inertia + LuGre tire tuning → v0.5 terrain + tire
+layers → <strong>L5 high-fidelity MBD: free-3D inertial unsprung, hardpoint-emergent
+anti-dive/squat/roll-centre + progressive coil rate (untagged, v0.6 candidate)</strong>.</p>
 <hr />
 <h2 id="at-a-glance">At a glance<a class="headerlink" href="#at-a-glance" title="Permanent link">&para;</a></h2>
 <table>
@@ -3050,8 +3074,8 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 <tbody>
 <tr>
 <td>Dynamics L1–L5</td>
-<td>L1–L3 planar/14-DOF; <strong>Ld4</strong> hard-joint; <strong>Ld5</strong> stunt + <strong>terrain (v0.5)</strong></td>
-<td><strong>Ld5 → full 6-DOF multibody</strong> (<a href="../design/L5_6DOF_MULTIBODY/">design</a>); GUI terrain Play (v0.5.2); V2V</td>
+<td>L1–L3 planar/14-DOF; <strong>Ld4</strong> hard-joint; <strong>Ld5</strong> stunt + terrain; <strong>Ld5 high-fidelity MBD: free-3D inertial unsprung, energy-consistent on any surface, hardpoint-emergent anti-dive/squat/roll-centre + progressive coil rate + gyroscopic wheel-spin</strong> (<a href="../design/L5_MBD_FREE3D_UNSPRUNG/">design</a>)</td>
+<td>KC compliance model; GUI terrain Play (v0.5.2); V2V</td>
 </tr>
 <tr>
 <td>Tire</td>
@@ -3080,7 +3104,7 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 </tr>
 <tr>
 <td>Validation</td>
-<td>ISO 7401/4138/3888 <strong>re-baselined + CI-gated</strong> (<code>IsoBaseline</code>), 328 ctest</td>
+<td>ISO 7401/4138/3888 <strong>re-baselined + CI-gated</strong> (<code>IsoBaseline</code>), 381 ctest</td>
 <td>Adams x-check rtol; commercial cross-val</td>
 </tr>
 </tbody>
@@ -3105,9 +3129,13 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
         Terrain + L5 driving : 2026-06
         Tire T1 MF2002 backend : 2026-06
         Tire T2 belt transient : 2026-06
+    section v0.6 (untagged)
+        L5 free-3D inertial unsprung MBD : 2026-06
+        Hardpoint anti-dive/roll-centre + progressive coil : 2026-06
+        Gyroscopic wheel-spin coupling : 2026-06
     section Next
         GUI terrain Play (v0.5.2) : planned
-        ISO re-baseline + Ld4 (v0.6) : planned</code></pre>
+        KC compliance + V2V : planned</code></pre>
 <hr />
 <h2 id="1-dynamics-ladder">1. Dynamics ladder<a class="headerlink" href="#1-dynamics-ladder" title="Permanent link">&para;</a></h2>
 <table>
@@ -3168,6 +3196,36 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 <td>[x] 3D contact / airborne / ramp jump</td>
 <td>Shipped v0.4</td>
 <td><a href="../design/V0.4_SLOPE_JUMP_DYNAMICS/"><code>V0.4_SLOPE_JUMP_DYNAMICS.md</code></a></td>
+</tr>
+<tr>
+<td>[x] <strong>Ld5 free-3D inertial unsprung MBD</strong> (per-corner world point mass + anisotropic 2-point bushing; energy-consistent on any surface; replaces the B1 lumped strut)</td>
+<td>Shipped v0.6 (untagged)</td>
+<td><a href="../design/L5_MBD_FREE3D_UNSPRUNG/"><code>L5_MBD_FREE3D_UNSPRUNG.md</code></a></td>
+</tr>
+<tr>
+<td>[x] <strong>Hardpoint-emergent anti-dive/squat + roll-centre migration</strong> (wheel follows the real DAE travel path; tyre Fx/Fy → vertical reaction)</td>
+<td>Shipped v0.6 (untagged)</td>
+<td>active when a corner DAE is attached</td>
+</tr>
+<tr>
+<td>[x] <strong>Progressive coil rate + damper</strong> (k_coil·(l−l_free)·MR from real spring eye-to-eye; bump/rebound asymmetric)</td>
+<td>Shipped v0.6 (untagged)</td>
+<td>wheel-rate fallback w/o spring hardpoints</td>
+</tr>
+<tr>
+<td>[x] <strong>Gyroscopic wheel-spin coupling</strong> (Σ I_wheel·ω_spin lateral momentum; yaw↔roll at speed)</td>
+<td>Shipped v0.6 (untagged)</td>
+<td><code>Stunt.GyroscopicWheelSpinCouplesYawToRoll</code></td>
+</tr>
+<tr>
+<td>[x] Per-substep contact re-query default in <code>SimSession</code> (exact on curved surfaces)</td>
+<td>Shipped v0.6 (untagged)</td>
+<td>no-op for non-free_3d</td>
+</tr>
+<tr>
+<td><del>Ld5 → full 6-DOF multibody</del> (superseded designs: <code>L5_6DOF_MULTIBODY</code>, <code>L5_MBD_DYNAMIC_COUPLING</code>, <code>L5_MBD_RIGOROUS</code>)</td>
+<td>Superseded by free-3D MBD above</td>
+<td>kept for history</td>
 </tr>
 <tr>
 <td>[x] <strong>Terrain + L5 general driving</strong> (heightmap hub contact, hill/cliff, inclined)</td>
@@ -3582,14 +3640,29 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <td>WS2-1</td>
 </tr>
 <tr>
-<td>[ ] Progressive / bump-stop spring curves</td>
+<td>[x] <strong>Progressive coil rate + bump/rebound stops</strong> (L5)</td>
+<td>Shipped v0.6 (untagged)</td>
+<td>MR(z_v) from real spring hardpoints; stops on wheel travel; <a href="../design/L5_MBD_FREE3D_UNSPRUNG/"><code>L5_MBD_FREE3D_UNSPRUNG.md</code></a></td>
+</tr>
+<tr>
+<td>[x] <strong>Genuine per-corner unsprung masses</strong> (L5 free-3D)</td>
+<td>Shipped v0.6 (untagged)</td>
+<td>inertial world particles, not body-relative DOF</td>
+</tr>
+<tr>
+<td>[ ] Progressive / bump-stop spring curves (L3 catalog)</td>
 <td>Planned</td>
-<td>v0.4 droop/bump</td>
+<td>L3 ride model (L5 done)</td>
 </tr>
 <tr>
 <td>[ ] Unsprung vs sprung damper split (L3)</td>
 <td>Planned</td>
 <td>PoC backlog</td>
+</tr>
+<tr>
+<td>[ ] KC compliance (bushing) under load — full model</td>
+<td>Planned</td>
+<td>L5 link is a stiff penalty today</td>
 </tr>
 <tr>
 <td>[ ] Dependent axle (twist-beam, solid beam)</td>
@@ -3872,9 +3945,9 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <td></td>
 </tr>
 <tr>
-<td>[x] <strong>328</strong> automated ctests</td>
+<td>[x] <strong>381</strong> automated ctests</td>
 <td>Shipped</td>
-<td>2026-06-10</td>
+<td>2026-06-17</td>
 </tr>
 <tr>
 <td>[x] ISO matrix re-baseline (post engine inertia + LuGre) + CI gate</td>
@@ -3882,9 +3955,24 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <td><code>IsoBaseline</code>; VALIDATION.md table 2026-06-10</td>
 </tr>
 <tr>
-<td>[ ] Stunt validation suite (<code>tests/stunt/*</code>)</td>
-<td>Planned v0.4</td>
-<td></td>
+<td>[x] Stunt / L5 validation suite</td>
+<td>Shipped</td>
+<td><code>test_stunt</code>, <code>test_l5_strut_validation</code> (loop critical, ballistic jump, camber=L4 DAE, gyro, energy)</td>
+</tr>
+<tr>
+<td>[x] <strong>KC geometry cross-validation</strong> (L5 DAE travel ≡ independent native kinematics, rtol-gated)</td>
+<td>Shipped</td>
+<td><code>MultibodyKcXval.DaeTravelMatchesNativeKinematics</code>; rules out engine bugs (internal consistency)</td>
+</tr>
+<tr>
+<td>[~] <strong>External Chrono KC cross-val</strong> (camber/toe vs travel vs Chrono::Vehicle <code>ChSuspensionTestRig</code>, same hardpoints)</td>
+<td>Harness scaffolded</td>
+<td><code>external/chrono_kc/</code> (gen skeleton + isolated build) + <code>ChronoKcParity</code> gate (skip-if-absent, mirrors the tyre Pac02 gate); needs an offline Chrono build to emit the reference CSV</td>
+</tr>
+<tr>
+<td>[ ] External Adams / physical KC-rig cross-val (absolute, third-party)</td>
+<td>Planned</td>
+<td>Chrono is an independent MBD but still a simulator; physical/commercial data remains the gap</td>
 </tr>
 <tr>
 <td>[ ] Published commercial cross-val (open data)</td>
@@ -3982,12 +4070,26 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Tire T2 belt transient (L2/L3/L5, MF+LuGre, validation, theory ch.21)</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> ISO re-baseline (flat, sedan L2 LuGre) + CI gate <code>IsoBaseline</code></li>
 </ul>
+<h3 id="v060-l5-high-fidelity-mbd-2026-06-on-main-untagged">v0.6.0 — L5 high-fidelity MBD (2026-06, on <code>main</code>, untagged)<a class="headerlink" href="#v060-l5-high-fidelity-mbd-2026-06-on-main-untagged" title="Permanent link">&para;</a></h3>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Ld5 free-3D inertial unsprung MBD (per-corner world point mass + anisotropic 2-point
+  bushing; energy-consistent on any surface; replaces the B1 lumped strut)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Hardpoint-emergent anti-dive/squat + roll-centre migration (wheel constrained to the
+  real DAE travel path; tyre Fx/Fy → vertical reaction)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Progressive coil rate + damper from the real spring eye-to-eye geometry (MR(z_v),
+  bump/rebound asymmetric); wheel-rate fallback without spring hardpoints</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Gyroscopic wheel-spin coupling (yaw↔roll at speed)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Per-substep contact re-query default in <code>SimSession</code>; contact sampled at the wheel
+  particle (exact on curved surfaces, no false contact leaving a loop/bank)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> 381/381 ctest; design <a href="../design/L5_MBD_FREE3D_UNSPRUNG/"><code>L5_MBD_FREE3D_UNSPRUNG.md</code></a></li>
+</ul>
 <h3 id="v052-planned">v0.5.2+ (planned)<a class="headerlink" href="#v052-planned" title="Permanent link">&para;</a></h3>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> GUI terrain Play (M4) + stunt authoring (M5c) + <code>.tir</code> import — browser-gated</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Tire: bicycle (L1) belt (MF+LuGre) + Chrono Pac02 parity gate — done</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Drivetrain torque–RPM + gearbox</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Brake/steer physics upgrade</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> L5 next cut: KC compliance model, gyro axis tilt + spin-up reaction</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> CARLA full bridge · open benchmark  </li>
 </ul>
 <hr />
@@ -3996,17 +4098,21 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <blockquote>
 <p>Open-core L1–L5 vehicle dynamics with Pacejka MF tire, optional LuGre brush + belt
 transient layers, opt-in MF2002 <code>.tir</code> backend and drivetrain v2 (engine map + gearbox),
-parts catalog, real-time UDP/FMI, and ISO-standard validation (328 ctests).</p>
+parts catalog, real-time UDP/FMI, and ISO-standard validation (381 ctests). The L5 model is
+a hardpoint-driven free-3D multibody: anti-dive/squat, roll-centre migration and a
+progressive coil rate emerge from the suspension geometry, energy-consistent on arbitrary
+surfaces (banks, loops, jumps).</p>
 </blockquote>
 <p><strong>In active development</strong></p>
 <blockquote>
-<p>Layered tire roadmap (MF2002 catalog, belt transient), v0.4 3D stunt dynamics,
-drivetrain torque maps, and workshop importers — default baselines frozen per phase.</p>
+<p>Adams/KC cross-validation of the hardpoint-emergent geometry, full bushing compliance,
+drivetrain torque maps, workshop importers, and GUI terrain play — default baselines frozen
+per phase.</p>
 </blockquote>
 <p><strong>Do not claim (yet)</strong></p>
 <blockquote>
-<p>MF-Tyre product parity, published real-vehicle cross-validation, or production
-sign-off.</p>
+<p>MF-Tyre product parity, published real-vehicle cross-validation, Adams-validated KC
+numbers, or production sign-off.</p>
 </blockquote>
 <hr />
 <h2 id="14-related-documents">14. Related documents<a class="headerlink" href="#14-related-documents" title="Permanent link">&para;</a></h2>
@@ -4029,6 +4135,14 @@ sign-off.</p>
 <tr>
 <td><a href="../design/V0.4_SLOPE_JUMP_DYNAMICS/"><code>design/V0.4_SLOPE_JUMP_DYNAMICS.md</code></a></td>
 <td>Grade, terrain, T23 jump path</td>
+</tr>
+<tr>
+<td><a href="../design/L5_MBD_FREE3D_UNSPRUNG/"><code>design/L5_MBD_FREE3D_UNSPRUNG.md</code></a></td>
+<td><strong>L5 free-3D MBD (shipped): unsprung, anti-dive/roll-centre, progressive coil, gyro</strong></td>
+</tr>
+<tr>
+<td><code>design/L5_6DOF_MULTIBODY.md</code>, <code>L5_MBD_DYNAMIC_COUPLING.md</code>, <code>L5_MBD_RIGOROUS.md</code></td>
+<td>Superseded L5 MBD designs (history)</td>
 </tr>
 <tr>
 <td><a href="../design/TIRE_ROADMAP/"><code>design/TIRE_ROADMAP.md</code></a></td>

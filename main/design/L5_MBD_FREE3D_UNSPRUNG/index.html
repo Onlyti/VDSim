@@ -2644,15 +2644,21 @@ not a constant wheel rate:
 <p>Each spinning wheel carries spin angular momentum <code>H_i = I_wheel*omega_spin</code> along the lateral
 (body-y) axis. A body rotating at <code>omega</code> must supply <code>omega x H</code>, so the wheels exert the
 reaction <code>-omega x H</code> on the body, added to <code>tau_body</code>. This couples yaw&lt;-&gt;roll at speed
-(yawing a fast-spinning wheel set produces a roll moment, and vice versa). Spin axis is
-approximated as body-y (steer/camber tilt is second order). Verified airborne (no tyre
-forces): a yaw rate + spinning wheels develops a roll rate; non-spinning does not
-(<code>Stunt.GyroscopicWheelSpinCouplesYawToRoll</code>).</p>
+(yawing a fast-spinning wheel set produces a roll moment, and vice versa). The spin axis is
+body-lateral, tilted by the steer angle (rotated about body-z, so a steered spinning wheel's
+momentum points partly fore-aft); camber tilt is omitted (smaller, sign-sensitive). Verified
+airborne (no tyre forces): a yaw rate + spinning wheels develops a roll rate; non-spinning
+does not (<code>Stunt.GyroscopicWheelSpinCouplesYawToRoll</code>).</p>
 <h2 id="open-next-cut">Open / next cut<a class="headerlink" href="#open-next-cut" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Gyro refinements: spin axis steer/camber tilt; the spin-up reaction torque (<code>I_wheel*domega</code>)
-  on the body — both second order.</li>
-<li>Bushing/link compliance (KC) under load is a stiff penalty, not a full compliance model.</li>
+<li>KC compliance under load (bushing deflection -&gt; compliance steer/camber). Attempted with the
+  existing lumped model (<code>compliance_targets_rad</code>) + default bushings, but it produced ~1.5
+  deg/g of compliance steer — ~5-10x too large and unvalidated — so it was reverted. Needs the
+  Adams/KC reference (Tier 1) to set the bushing rates and validate sign/magnitude before
+  shipping; tuning it blind is a guess.</li>
+<li>Gyro camber-axis tilt and the wheel spin-UP reaction. The spin-up reaction is really the
+  DRIVE-torque reaction routed through the drivetrain mounts (a free wheel's bearing carries no
+  spin-axis torque), so it belongs to the drivetrain model, not the unsprung.</li>
 </ul>
 
 

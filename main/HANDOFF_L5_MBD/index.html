@@ -2450,10 +2450,15 @@ normal). Direction set by user: discard world-z, keep arbitrary-surface contact.
   spin momentum H=I_wheel*omega_spin couples to the body via tau_body -= omega x H (yaw&lt;-&gt;roll
   at speed). Test: airborne yaw+spin develops roll, no-spin doesn't
   (Stunt.GyroscopicWheelSpinCouplesYawToRoll). 378/378 green.</li>
+<li>Follow-up DONE (2026-06-17): gyro spin-axis STEER tilt (a steered spinning wheel's momentum
+  tilts about body-z; camber tilt omitted). KC compliance ATTEMPTED then REVERTED: the lumped
+  compliance_targets_rad + default bushings gave ~1.5 deg/g compliance steer (~5-10x too big,
+  unvalidated) — it needs the Adams/KC reference (Tier 1) to set bushing rates before shipping.
+  Spin-up reaction reclassified as a drivetrain-mount effect (not unsprung). 378/378 green.</li>
 <li>L5 high-fidelity dynamics feature-complete: energy-consistent general-surface free-3D
   unsprung + hardpoint-emergent anti-dive/squat/roll-centre + progressive coil rate +
-  progressive damper + gyroscopic wheel-spin coupling. Remaining (out of scope): gyro
-  refinements (axis tilt, spin-up reaction), full KC compliance model.</li>
+  progressive damper + gyroscopic wheel-spin (steer-tilted). Remaining: KC compliance (blocked
+  on Tier-1 Adams validation), gyro camber tilt.</li>
 </ul>
 <p>Everything below is the prior (superseded) coupled-solve / world-z history.</p>
 <hr />
