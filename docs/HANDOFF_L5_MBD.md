@@ -5,6 +5,98 @@ landed). This handoff covers the move from the B1 lumped-1-DOF strut to a true c
 multibody solve (Option 2), which is DESIGNED + reviewed but whose first implementation
 has an unresolved roll-coupling instability. Repo is reverted to green (376/376).
 
+## 구현 갱신 2026-06-17 PM (Option A 완료 + jacking 직교 확정)
+
+세션에서 Option A(실제 링크 기하)를 구현하고, jacking이 geometry와 **직교**함을 확정했다.
+
+**커밋됨 (main, clean)**:
+- `fix(core)` camber thrust 부호(pacejka MF96, ISO 8855) + 박제 테스트 3곳 수정.
+- `refactor(core)` hard-joint DAE central-diff cleanup.
+- `feat/refactor(core)` DAE travel maps API: `pose_at_travel(z_v,steer,seed)` +
+  `travel_maps` → body-frame `w(z_v), w'(=dw/dz_v, z성분=1), w''` + toe/camber. 5개
+  서스펜션 타입 전부. 단위테스트 `TravelMapsRealLinkageGeometry`.
+
+**WIP (free_3d coupled+A2, 미커밋 — `docs/design/L5_MBD_COUPLED_WIP.patch`, clean)**:
+- L5 travel DOF = **실제 수직 wheel travel z_v[m]** (전 타입 균일; L2/L3 = 모션비 1 수직
+  특수케이스). `susp_compression = travel[m]` 계약 보존(getter/stop/검증테스트 정상).
+- DAE 부착 시 coupled solve가 `w(z_v),w',w''`로 실제 링키지 경로를 따름(r_wc=R(rb+dw),
+  s=R·w', abias에 R·w''·żv², penetration=pen_rigid−[R·dw]·n, spring은 z_i=dw.z·모션비
+  J_z=w'.z, RCPC 일관 contact patch). 미부착 시 vertical-slider fallback(z_v, 모션비 1).
+- 결과: **375/377 통과**. camber 테스트(`CornerCamberMatchesL4Dae`) 통과, 다른 회귀 없음.
+
+**jacking은 geometry가 아니다 (CONFIRMED)**: flatsteer threshold를 실제 DAE 기하 vs
+vertical fallback 직접 비교 — 둘 다 ~0.15–0.18g에서 jacking(DAE가 오히려 약간 나쁨). 즉
+**실제 링크 기하도 cornering jacking을 못 고친다.** 남은 2 실패(`FreeLoopCompletesLap`,
+`FlatCrossModelMatchesL2`)가 이 coupled-solve jacking 버그. Option A는 fidelity상 옳고
+완료됐으나 jacking과 직교.
+
+**남은 문제 = jacking (coupled-solve 정식화)**. leading 가설(미확정): 서스펜션 스프링/댐퍼의
+roll 모멘트가 body에 inertial M-커플링 경유로만 약하게 전달돼 roll restoring 부족 → jacking이
+이김(14DOF는 직접 모멘트 전달이라 안정). 다음 단계: 스프링력의 body-roll 전달을 정량 측정,
+혹은 14DOF식 직접전달(option B) 차용 검토. 진단 도구: `apps/jump_demo/strut_demo_dump`
+모드 `flatsteer`(+`VDSIM_DAE`/`VDSIM_STEER`)·`rolltest`·`airspin`.
+
+## 진단 갱신 2026-06-17 (CONFIRMED — 이전 가설 3건 정정)
+
+깊은 격리 디버깅으로 roll 발산의 성질을 재규정. **핸드오프 본문의 가설("static 부호/항 버그",
+"에너지 누수", isolation (a)의 inertial 의심)을 아래로 정정한다.** 재현·evidence는
+`apps/jump_demo/strut_demo_dump.cpp`의 신규 모드(`flatsteer`/`rolltest`/`airspin`)+env 토글.
+
+- **버그는 coupled 경로 한정** (CONFIRMED): 동일 tire/steer로 penalty(non-strut) 경로는
+  완벽 안정(roll 0.0043 rad 정착). `VDSIM_PENALTY=1 strut_demo_dump flatsteer`.
+- **inertial M/b 어셈블리는 옳다** (CONFIRMED, isolation (a) 무효화): 수식 증명 —
+  `comp_dot=0`인 강체 회전에서 `Σ m_u(r×abias)=ω×(I_u ω)` → `b_r=ω×(M_r ω)` →
+  `M_r·ω̇=-b_r`는 정확한 Euler 식. `airspin`의 omega 붕괴는 **airborne preload-pumping
+  오염**(무접촉 시 예열 스프링이 comp를 violent하게 펌핑)이지 inertial 버그 아님.
+- **에너지 주입 아님** (CONFIRMED, "누수" 가설 정정): 발산 중 E_total은 **감소**
+  (176k→95k J, speed 15→9 m/s). z(PE) 상승은 전진 KE로 지불. 즉 소산적이지만
+  **동역학적으로 불안정**(전진 KE가 roll 모드로 펌핑).
+- **순수 roll(lateral=0)은 안정** (CONFIRMED): roll rate 주입 시 감쇠 진동으로 복귀
+  (`rolltest`, steer=0). 불안정은 **lateral force 전용**.
+- **subcritical 전복** (CONFIRMED): steer=0.010(정상선회 안정)에서도 roll을 크게 교란하면
+  재성장. 임계 roll≈0.05 rad에서 eigenvalue zero-crossing. lateral threshold ~0.15g.
+- **진짜 메커니즘 = JACKING** (CONFIRMED): cornering+roll 시 **sumFz/W > 1**(상시 net
+  상향력 4~14%) → CG 상승(vz>0 성장) → overturning arm 증가 → roll restoring을 이김.
+  **penalty 경로는 sumFz/W=1.000 정확**(comp 동결) → jacking은 **coupled comp 동역학이
+  만드는 버그**. `rolltest`가 sumFz/W·sumComp·vz를 덤프.
+- **단일 항 아님 / 구조적** (CONFIRMED): jacking 토글(접선/법선), bias, M_rq, M_tr, M_z,
+  DAE toe/camber, strut축(world-z), rcp lever(±comp·ez), slip-vel comp_dot,
+  penetration tilt인자(ez·n) — **어느 것도 발산을 막지 못함**. NOTANG(접선 jacking 제거,
+  virtual-work 일관)은 늦추기만.
+- **stiffness/damping이 억제** (CONFIRMED): spring ×10 또는 damper ×30이면 안정.
+  destabilizer는 suspension-rate 독립(jacking, lateral 비례), restoring/damping은 rate
+  비례 → default soft 서스펜션에서 marginal.
+
+**root cause (HYPOTHESIS)**: body-roll(R)과 comp가 독립 DOF이고 tire(Fz)·inertial M로만 커플.
+서스펜션 spring+damper의 roll stiffness/damping이 body에 M 커플링 경유로만 간접 전달되어
+soft 서스펜션에서 marginal → roll mode가 jacking에 민감. 한 줄 부호버그가 아니라
+**coupled 정식화가 정상선회 vertical 평형(sumFz=weight)을 유지하지 못하는 구조 문제**.
+다음 단계: penalty처럼 정상선회에서 sumFz=weight가 되도록 vertical/comp 일관성 재정식화
+(혹은 suspension roll moment를 body에 직접 전달하되 M 커플링과 double-count 회피 검증).
+
+### 블록별 독립 물리검토 (5 subagent, 2026-06-17)
+
+coupled solve를 5블록으로 나눠 각각 설계문서 대비 독립 검토(편향 방지):
+- **Mass matrix M**: 정확 (전 블록 부호·frame·대칭·SPD 일치). HIGH.
+- **Bias b**: 정확 (`b_r=ω×(M_r ω)` 항등식 코드에서 성립, Coriolis 2배·gyro 부호 OK). HIGH.
+- **Integration/frame 변환**: 정확 (`a_body=Rᵀ v̇_w−ω×v_body`, `α_body=Rᵀ ω̇_w` exact). HIGH.
+- **Generalized force Q (타이어력)**: **virtual-work 불일치 CONFIRMED** — body torque는 지면
+  patch lever `sg_rcp`(comp 불변), comp jacking은 wheel-center 감도 `si=ez_world`(comp 가변).
+  단일 `x_c(q)`에서 유도 안 됨 → cornering 시 comp DOF에 spurious work.
+- **Penetration/strut축**: penetration식 자체는 정확. strut축(ez_world)이 body-tilted라
+  ground-normal n과 불일치 → rolled 평형에서 Σcomp≠0 → ΣFz≠weight. SUSPECTED HIGH.
+
+**부분 fix CONFIRMED (`VDSIM_RCPC`)**: contact patch를 comp-displaced wheel-center 바로 아래
+`x_c = r_wc − R0·n`로 일관 정의 → rcp와 si를 한 점에서 유도. flatsteer threshold ~0.017→0.025,
+steer=0.018 깨끗이 안정, jacking sumFz/W 감소. **단 0.03+ 잔여 발산** — strut축 body-tilt에 의한
+roll-center(≈wheel-center 높이) lateral jacking. 완전 해소는 DAE travel-path 기하(다음 phase의
+contact-patch 감도 `s_c=R·dw_c/dθ`, ground roll center)가 들어와야 할 듯. 코드는 `T_RCPC` 토글.
+
+**디버그 인프라**(working tree, WIP patch에 미포함 — env-gated, 기본 off):
+`strut_demo_dump` 모드 `rolltest`(roll 교란 eigenvalue)·`airspin [wx wy wz]`(자유회전)+
+`flatsteer`(energy/threshold). core env: `VDSIM_PENALTY/NOTANG/NOJACK/NOMRQ/NOMTR/NOBIAS/
+NOMZ/WORLDZ/RCPFIX/RCPC/NOVCOMP/NODAE/PEN1`. harness env: `VDSIM_STEER/STIFF/CDAMP`.
+
 ## 목표
 B1 strut(코너당 vertical 1-DOF 점질량 + one-way pseudo-force)은 루프(360° 회전·고-g)에서
 에너지 ~85kJ 비물리적 주입 — 모델이 아니라 **수치적으로 비일관**(원칙 위반: 모델은 근사 OK,
@@ -30,8 +122,9 @@ B1 strut(코너당 vertical 1-DOF 점질량 + one-way pseudo-force)은 루프(36
   19+컬럼 telemetry: pose, per-wheel comp/Fz, ax/ay, wheel spin) + python 에너지 budget.
 
 ## 미완 (다음 할 일)
-1. **roll 커플링 버그 수정** (블로커). coupled solve에서 평지 0.3g 선회가 roll 발산(전복) →
-   static 부호/항 버그. 격리 테스트 제안(아래 주의 참고).
+1. **roll JACKING 버그 수정** (블로커). cornering 시 sumFz>weight(net 상향력)로 CG가 jack-up →
+   subcritical 전복. **위 "진단 갱신 2026-06-17" 참조** — static 부호버그가 아니라 coupled
+   vertical 평형 구조 문제. 목표: 정상선회에서 sumFz=weight 회복(penalty 경로 기준).
 2. 수정 후 **에너지 audit 테스트**: 루프(throttle=0)에서 E_total(=KE+회전KE+중력PE+타이어스프링PE
    +서스펜션스프링PE)이 댐퍼·slip 외 보존(현재 누수). 단위테스트로 자유-부유 회전체 momentum/energy
    보존 체크부터.
