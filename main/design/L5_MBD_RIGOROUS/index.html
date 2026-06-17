@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/HANDOFF_L5_MBD/">
+        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/design/L5_MBD_RIGOROUS/">
       
       
       
@@ -18,19 +18,19 @@
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>Handoff — L5 dynamic MBD suspension (coupled solve): design done, impl WIP (roll bug) - VDSim</title>
+        <title>L5 — rigorous MBD formulation (14DOF structure lifted to a 6-DOF free body) - VDSim</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -49,7 +49,7 @@
       
     
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#handoff-l5-dynamic-mbd-suspension-coupled-solve-design-done-impl-wip-roll-bug" class="md-skip">
+        <a href="#l5-rigorous-mbd-formulation-14dof-structure-lifted-to-a-6-dof-free-body" class="md-skip">
           Skip to content
         </a>
       
@@ -92,7 +92,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="VDSim" class="md-header__button md-logo" aria-label="VDSim" data-md-component="logo">
+    <a href="../.." title="VDSim" class="md-header__button md-logo" aria-label="VDSim" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Handoff — L5 dynamic MBD suspension (coupled solve): design done, impl WIP (roll bug)
+              L5 — rigorous MBD formulation (14DOF structure lifted to a 6-DOF free body)
             
           </span>
         </div>
@@ -232,7 +232,7 @@
     
     
       <li class="md-tabs__item">
-        <a href=".." class="md-tabs__link">
+        <a href="../.." class="md-tabs__link">
           
   
   
@@ -254,7 +254,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../theory/" class="md-tabs__link">
+        <a href="../../theory/" class="md-tabs__link">
           
   
   
@@ -276,7 +276,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../ROADMAP/" class="md-tabs__link">
+        <a href="../../ROADMAP/" class="md-tabs__link">
           
   
   
@@ -298,7 +298,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../references/actuator_nonlinearity/" class="md-tabs__link">
+        <a href="../../references/actuator_nonlinearity/" class="md-tabs__link">
           
   
   
@@ -320,7 +320,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../tasks/T22_carla_bridge/REPORT/" class="md-tabs__link">
+        <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-tabs__link">
           
   
   
@@ -342,7 +342,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../tasks/" class="md-tabs__link">
+        <a href="../../tasks/" class="md-tabs__link">
           
   
   
@@ -364,7 +364,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../examples/" class="md-tabs__link">
+        <a href="../../examples/" class="md-tabs__link">
           
   
   
@@ -400,7 +400,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="VDSim" class="md-nav__button md-logo" aria-label="VDSim" data-md-component="logo">
+    <a href="../.." title="VDSim" class="md-nav__button md-logo" aria-label="VDSim" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -455,7 +455,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href=".." class="md-nav__link ">
+            <a href="../.." class="md-nav__link ">
               
   
   
@@ -576,7 +576,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../theory/" class="md-nav__link ">
+            <a href="../../theory/" class="md-nav__link ">
               
   
   
@@ -620,7 +620,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/01_frames_and_conventions/" class="md-nav__link">
+      <a href="../../theory/01_frames_and_conventions/" class="md-nav__link">
         
   
   
@@ -648,7 +648,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/02_rigid_body_dynamics/" class="md-nav__link">
+      <a href="../../theory/02_rigid_body_dynamics/" class="md-nav__link">
         
   
   
@@ -676,7 +676,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/03_tire_pacejka_mf96/" class="md-nav__link">
+      <a href="../../theory/03_tire_pacejka_mf96/" class="md-nav__link">
         
   
   
@@ -704,7 +704,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/19_lugre_dynamic_tire/" class="md-nav__link">
+      <a href="../../theory/19_lugre_dynamic_tire/" class="md-nav__link">
         
   
   
@@ -732,7 +732,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/21_belt_transient/" class="md-nav__link">
+      <a href="../../theory/21_belt_transient/" class="md-nav__link">
         
   
   
@@ -760,7 +760,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/25_tire_contact_interface/" class="md-nav__link">
+      <a href="../../theory/25_tire_contact_interface/" class="md-nav__link">
         
   
   
@@ -788,7 +788,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/04_ld1_bicycle/" class="md-nav__link">
+      <a href="../../theory/04_ld1_bicycle/" class="md-nav__link">
         
   
   
@@ -816,7 +816,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/05_ld2_seven_dof/" class="md-nav__link">
+      <a href="../../theory/05_ld2_seven_dof/" class="md-nav__link">
         
   
   
@@ -844,7 +844,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/06_ld3_fourteen_dof/" class="md-nav__link">
+      <a href="../../theory/06_ld3_fourteen_dof/" class="md-nav__link">
         
   
   
@@ -872,7 +872,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/20_ld5_stunt/" class="md-nav__link">
+      <a href="../../theory/20_ld5_stunt/" class="md-nav__link">
         
   
   
@@ -900,7 +900,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/07_control_ladder/" class="md-nav__link">
+      <a href="../../theory/07_control_ladder/" class="md-nav__link">
         
   
   
@@ -928,7 +928,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/08_pid_controllers/" class="md-nav__link">
+      <a href="../../theory/08_pid_controllers/" class="md-nav__link">
         
   
   
@@ -956,7 +956,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/09_pure_pursuit_path/" class="md-nav__link">
+      <a href="../../theory/09_pure_pursuit_path/" class="md-nav__link">
         
   
   
@@ -984,7 +984,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/10_driver_model/" class="md-nav__link">
+      <a href="../../theory/10_driver_model/" class="md-nav__link">
         
   
   
@@ -1012,7 +1012,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/11_numerical_integration/" class="md-nav__link">
+      <a href="../../theory/11_numerical_integration/" class="md-nav__link">
         
   
   
@@ -1040,7 +1040,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/12_software_architecture/" class="md-nav__link">
+      <a href="../../theory/12_software_architecture/" class="md-nav__link">
         
   
   
@@ -1068,7 +1068,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/13_multibody_outlook/" class="md-nav__link">
+      <a href="../../theory/13_multibody_outlook/" class="md-nav__link">
         
   
   
@@ -1096,7 +1096,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/14_hardpoint_kinematics/" class="md-nav__link">
+      <a href="../../theory/14_hardpoint_kinematics/" class="md-nav__link">
         
   
   
@@ -1124,7 +1124,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/15_validation_and_doe/" class="md-nav__link">
+      <a href="../../theory/15_validation_and_doe/" class="md-nav__link">
         
   
   
@@ -1152,7 +1152,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/16_fmi_integration/" class="md-nav__link">
+      <a href="../../theory/16_fmi_integration/" class="md-nav__link">
         
   
   
@@ -1180,7 +1180,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/17_actuator_and_sensing/" class="md-nav__link">
+      <a href="../../theory/17_actuator_and_sensing/" class="md-nav__link">
         
   
   
@@ -1208,7 +1208,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/18_runtime_and_cosim/" class="md-nav__link">
+      <a href="../../theory/18_runtime_and_cosim/" class="md-nav__link">
         
   
   
@@ -1236,7 +1236,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/22_drivetrain_v2/" class="md-nav__link">
+      <a href="../../theory/22_drivetrain_v2/" class="md-nav__link">
         
   
   
@@ -1264,7 +1264,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/23_user_modules/" class="md-nav__link">
+      <a href="../../theory/23_user_modules/" class="md-nav__link">
         
   
   
@@ -1292,7 +1292,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theory/24_module_plugins/" class="md-nav__link">
+      <a href="../../theory/24_module_plugins/" class="md-nav__link">
         
   
   
@@ -1391,7 +1391,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../ROADMAP/" class="md-nav__link">
+      <a href="../../ROADMAP/" class="md-nav__link">
         
   
   
@@ -1419,7 +1419,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../CATALOG_AND_PHYSICS/" class="md-nav__link">
+      <a href="../../CATALOG_AND_PHYSICS/" class="md-nav__link">
         
   
   
@@ -1447,7 +1447,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../RUNNING/" class="md-nav__link">
+      <a href="../../RUNNING/" class="md-nav__link">
         
   
   
@@ -1475,7 +1475,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../VALIDATION/" class="md-nav__link">
+      <a href="../../VALIDATION/" class="md-nav__link">
         
   
   
@@ -1574,7 +1574,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../references/actuator_nonlinearity/" class="md-nav__link">
+      <a href="../../references/actuator_nonlinearity/" class="md-nav__link">
         
   
   
@@ -1602,7 +1602,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../gui_architecture/" class="md-nav__link">
+      <a href="../../gui_architecture/" class="md-nav__link">
         
   
   
@@ -1630,7 +1630,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../vdsim_bridge_interface_requirements/" class="md-nav__link">
+      <a href="../../vdsim_bridge_interface_requirements/" class="md-nav__link">
         
   
   
@@ -1658,7 +1658,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../map_import_strategy/" class="md-nav__link">
+      <a href="../../map_import_strategy/" class="md-nav__link">
         
   
   
@@ -1761,7 +1761,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T22_carla_bridge/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-nav__link">
         
   
   
@@ -1789,7 +1789,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T23_jump_14dof/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T23_jump_14dof/REPORT/" class="md-nav__link">
         
   
   
@@ -1817,7 +1817,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T27_ld4_dw/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T27_ld4_dw/REPORT/" class="md-nav__link">
         
   
   
@@ -1845,7 +1845,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T28_ld4_mp/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T28_ld4_mp/REPORT/" class="md-nav__link">
         
   
   
@@ -1873,7 +1873,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T29_ld4_ta/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T29_ld4_ta/REPORT/" class="md-nav__link">
         
   
   
@@ -1901,7 +1901,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/T30_ld4_5link/REPORT/" class="md-nav__link">
+      <a href="../../tasks/T30_ld4_5link/REPORT/" class="md-nav__link">
         
   
   
@@ -1979,7 +1979,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../tasks/" class="md-nav__link ">
+            <a href="../../tasks/" class="md-nav__link ">
               
   
   
@@ -2023,7 +2023,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/68_poc_summary_v3/" class="md-nav__link">
+      <a href="../../tasks/68_poc_summary_v3/" class="md-nav__link">
         
   
   
@@ -2051,7 +2051,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/69_competitive_matrix/" class="md-nav__link">
+      <a href="../../tasks/69_competitive_matrix/" class="md-nav__link">
         
   
   
@@ -2079,7 +2079,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/62_cycles_overview/" class="md-nav__link">
+      <a href="../../tasks/62_cycles_overview/" class="md-nav__link">
         
   
   
@@ -2107,7 +2107,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/50_benchmark_matrix/" class="md-nav__link">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
         
   
   
@@ -2135,7 +2135,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/20_l1_l2_grid_sweep/" class="md-nav__link">
+      <a href="../../tasks/20_l1_l2_grid_sweep/" class="md-nav__link">
         
   
   
@@ -2163,7 +2163,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/30_l3_dynamic_suspension/" class="md-nav__link">
+      <a href="../../tasks/30_l3_dynamic_suspension/" class="md-nav__link">
         
   
   
@@ -2191,7 +2191,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/31_l6_l7_l8_control/" class="md-nav__link">
+      <a href="../../tasks/31_l6_l7_l8_control/" class="md-nav__link">
         
   
   
@@ -2219,7 +2219,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/57_58_59_driver_skidpad/" class="md-nav__link">
+      <a href="../../tasks/57_58_59_driver_skidpad/" class="md-nav__link">
         
   
   
@@ -2247,7 +2247,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/50_benchmark_matrix/" class="md-nav__link">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
         
   
   
@@ -2307,7 +2307,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../examples/" class="md-nav__link ">
+            <a href="../../examples/" class="md-nav__link ">
               
   
   
@@ -2373,10 +2373,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#2026-06-17-mbd" class="md-nav__link">
+  <a href="#why-the-current-10-dof-coupled-solve-is-wrong-root-cause" class="md-nav__link">
     <span class="md-ellipsis">
       
-        방향 전환 2026-06-17 저녁 (정식 MBD 재정식화 — 설계 완료)
+        Why the current 10-DOF coupled solve is wrong (root cause)
       
     </span>
   </a>
@@ -2384,10 +2384,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2026-06-17-pm-option-a-jacking" class="md-nav__link">
+  <a href="#system-and-state" class="md-nav__link">
     <span class="md-ellipsis">
       
-        구현 갱신 2026-06-17 PM (Option A 완료 + jacking 직교 확정)
+        System and state
       
     </span>
   </a>
@@ -2395,38 +2395,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2026-06-17-confirmed-3" class="md-nav__link">
+  <a href="#mass-matrix-block-diagonal-no-10x10-solve" class="md-nav__link">
     <span class="md-ellipsis">
       
-        진단 갱신 2026-06-17 (CONFIRMED — 이전 가설 3건 정정)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="진단 갱신 2026-06-17 (CONFIRMED — 이전 가설 3건 정정)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#5-subagent-2026-06-17" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        블록별 독립 물리검토 (5 subagent, 2026-06-17)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        목표
+        Mass matrix: BLOCK DIAGONAL (no 10x10 solve)
       
     </span>
   </a>
@@ -2434,10 +2406,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#repo-main-green-376376" class="md-nav__link">
+  <a href="#kinematics" class="md-nav__link">
     <span class="md-ellipsis">
       
-        현재 상태 (repo: main green, 376/376)
+        Kinematics
       
     </span>
   </a>
@@ -2445,10 +2417,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
+  <a href="#forces" class="md-nav__link">
     <span class="md-ellipsis">
       
-        완료
+        Forces
       
     </span>
   </a>
@@ -2456,10 +2428,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
+  <a href="#energy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        미완 (다음 할 일)
+        Energy
       
     </span>
   </a>
@@ -2467,10 +2439,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_4" class="md-nav__link">
+  <a href="#what-is-reused" class="md-nav__link">
     <span class="md-ellipsis">
       
-        주의 / 함정
+        What is reused
       
     </span>
   </a>
@@ -2478,10 +2450,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
+  <a href="#what-is-removedreplaced" class="md-nav__link">
     <span class="md-ellipsis">
       
-        관련 경로
+        What is removed/replaced
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#acceptance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Acceptance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#open-second-cut" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Open / second cut
       
     </span>
   </a>
@@ -2508,171 +2502,125 @@
   
 
 
-<h1 id="handoff-l5-dynamic-mbd-suspension-coupled-solve-design-done-impl-wip-roll-bug">Handoff — L5 dynamic MBD suspension (coupled solve): design done, impl WIP (roll bug)<a class="headerlink" href="#handoff-l5-dynamic-mbd-suspension-coupled-solve-design-done-impl-wip-roll-bug" title="Permanent link">&para;</a></h1>
-<p>Continuation of the L5 spatial-strut track (see <code>HANDOFF_TIRE_L5.md</code> for B1/B2/C, all
-landed). This handoff covers the move from the B1 lumped-1-DOF strut to a true coupled
-multibody solve (Option 2), which is DESIGNED + reviewed but whose first implementation
-has an unresolved roll-coupling instability. Repo is reverted to green (376/376).</p>
-<h2 id="2026-06-17-mbd">방향 전환 2026-06-17 저녁 (정식 MBD 재정식화 — 설계 완료)<a class="headerlink" href="#2026-06-17-mbd" title="Permanent link">&para;</a></h2>
-<p>jacking root-cause를 끝까지 추적하고(아래 "구현 갱신" 참조) Cursor MBD 리뷰로 교차검증한
-결과: <strong>현 10-DOF reduced-coordinate coupled solve는 Lagrangian적으로 self-consistent하나
-틀린 모델이다.</strong> unsprung를 body-상대좌표(<code>x_u=p+R(rb+w(θ))</code>)로 매립해 스프링 위치에너지
-<code>U=U(θ)</code>가 body pose에 무관 → 스프링이 body에 일반화력 0 → QS에서 roll restoring이 tire
-load transfer만 남아 ~5× 부족 → ~0.15g 전복.</p>
-<p><strong>fix = 정식 MBD: unsprung 수직을 inertial DOF <code>z_u</code>로</strong> (검증된 Ld3 14DOF 구조를 6-DOF
-free body로 lift). 설계: <strong><code>docs/design/L5_MBD_RIGOROUS.md</code></strong>. 핵심:
-- 질량행렬 분리 → <strong>10×10 solve 제거</strong>, body 6-DOF Euler + 4개 스칼라 <code>z_u</code> ODE.
-- <code>δ_i=z_corner,i(p,R)−z_u,i</code>가 body pose 의존 → 스프링이 <code>Σ(R·rb)_y·F_susp</code>로 roll 모멘트
-  직접 전달(14DOF의 그 항). 타이어 normal은 <code>z_u</code>에, tangential은 body patch lever에.
-- DAE <code>travel_maps</code>(committed)·Pacejka·contact·RCPC 재사용. 에너지 명시적 보존.
-- 합격: settle ΣFz=weight, cornering 안정(&gt;0.7g), roll stiffness ~26kN·m/rad, 전 L5 테스트.</p>
-<p>다음 세션 진입점 = 이 설계 문서로 구현. (Cursor 리뷰 전문은 이 세션 로그/요약 참조; Cursor의
-"10-DOF 유지+mount 반력 추가(B+)" 권고는 비엄밀[이중적용 위험]이라 채택 안 함 — 분리 z_u가 정답.)</p>
-<h2 id="2026-06-17-pm-option-a-jacking">구현 갱신 2026-06-17 PM (Option A 완료 + jacking 직교 확정)<a class="headerlink" href="#2026-06-17-pm-option-a-jacking" title="Permanent link">&para;</a></h2>
-<p>세션에서 Option A(실제 링크 기하)를 구현하고, jacking이 geometry와 <strong>직교</strong>함을 확정했다.</p>
-<p><strong>커밋됨 (main, clean)</strong>:
-- <code>fix(core)</code> camber thrust 부호(pacejka MF96, ISO 8855) + 박제 테스트 3곳 수정.
-- <code>refactor(core)</code> hard-joint DAE central-diff cleanup.
-- <code>feat/refactor(core)</code> DAE travel maps API: <code>pose_at_travel(z_v,steer,seed)</code> +
-  <code>travel_maps</code> → body-frame <code>w(z_v), w'(=dw/dz_v, z성분=1), w''</code> + toe/camber. 5개
-  서스펜션 타입 전부. 단위테스트 <code>TravelMapsRealLinkageGeometry</code>.</p>
-<p><strong>WIP (free_3d coupled+A2, 미커밋 — <code>docs/design/L5_MBD_COUPLED_WIP.patch</code>, clean)</strong>:
-- L5 travel DOF = <strong>실제 수직 wheel travel z_v[m]</strong> (전 타입 균일; L2/L3 = 모션비 1 수직
-  특수케이스). <code>susp_compression = travel[m]</code> 계약 보존(getter/stop/검증테스트 정상).
-- DAE 부착 시 coupled solve가 <code>w(z_v),w',w''</code>로 실제 링키지 경로를 따름(r_wc=R(rb+dw),
-  s=R·w', abias에 R·w''·żv², penetration=pen_rigid−[R·dw]·n, spring은 z_i=dw.z·모션비
-  J_z=w'.z, RCPC 일관 contact patch). 미부착 시 vertical-slider fallback(z_v, 모션비 1).
-- 결과: <strong>375/377 통과</strong>. camber 테스트(<code>CornerCamberMatchesL4Dae</code>) 통과, 다른 회귀 없음.</p>
-<p><strong>jacking은 geometry가 아니다 (CONFIRMED)</strong>: flatsteer threshold를 실제 DAE 기하 vs
-vertical fallback 직접 비교 — 둘 다 ~0.15–0.18g에서 jacking(DAE가 오히려 약간 나쁨). 즉
-<strong>실제 링크 기하도 cornering jacking을 못 고친다.</strong> 남은 2 실패(<code>FreeLoopCompletesLap</code>,
-<code>FlatCrossModelMatchesL2</code>)가 이 coupled-solve jacking 버그. Option A는 fidelity상 옳고
-완료됐으나 jacking과 직교.</p>
-<p><strong>남은 문제 = jacking (coupled-solve 정식화)</strong>. leading 가설(미확정): 서스펜션 스프링/댐퍼의
-roll 모멘트가 body에 inertial M-커플링 경유로만 약하게 전달돼 roll restoring 부족 → jacking이
-이김(14DOF는 직접 모멘트 전달이라 안정). 다음 단계: 스프링력의 body-roll 전달을 정량 측정,
-혹은 14DOF식 직접전달(option B) 차용 검토. 진단 도구: <code>apps/jump_demo/strut_demo_dump</code>
-모드 <code>flatsteer</code>(+<code>VDSIM_DAE</code>/<code>VDSIM_STEER</code>)·<code>rolltest</code>·<code>airspin</code>.</p>
-<h2 id="2026-06-17-confirmed-3">진단 갱신 2026-06-17 (CONFIRMED — 이전 가설 3건 정정)<a class="headerlink" href="#2026-06-17-confirmed-3" title="Permanent link">&para;</a></h2>
-<p>깊은 격리 디버깅으로 roll 발산의 성질을 재규정. <strong>핸드오프 본문의 가설("static 부호/항 버그",
-"에너지 누수", isolation (a)의 inertial 의심)을 아래로 정정한다.</strong> 재현·evidence는
-<code>apps/jump_demo/strut_demo_dump.cpp</code>의 신규 모드(<code>flatsteer</code>/<code>rolltest</code>/<code>airspin</code>)+env 토글.</p>
+<h1 id="l5-rigorous-mbd-formulation-14dof-structure-lifted-to-a-6-dof-free-body">L5 — rigorous MBD formulation (14DOF structure lifted to a 6-DOF free body)<a class="headerlink" href="#l5-rigorous-mbd-formulation-14dof-structure-lifted-to-a-6-dof-free-body" title="Permanent link">&para;</a></h1>
+<p>Status: DESIGN (to implement). Supersedes the reduced-coordinate 10-DOF coupled
+solve (<code>L5_MBD_DYNAMIC_COUPLING.md</code> + the WIP in <code>L5_MBD_COUPLED_WIP.patch</code>), whose
+root flaw is documented below and confirmed by Cursor's MBD review + our diagnosis.</p>
+<h2 id="why-the-current-10-dof-coupled-solve-is-wrong-root-cause">Why the current 10-DOF coupled solve is wrong (root cause)<a class="headerlink" href="#why-the-current-10-dof-coupled-solve-is-wrong-root-cause" title="Permanent link">&para;</a></h2>
+<p>The unsprung mass is parameterized as a body-RELATIVE coordinate:
+<code>x_u,i = p + R(rb_i + w_i(theta_i))</code>, and the suspension spring potential is
+<code>U = U(theta_i)</code> — a function of the travel coordinate ONLY. Therefore
+<code>dU/d(body p,R) = 0</code>: the spring exerts NO generalized force on the sprung body.
+The body only feels the spring through the inertial off-diagonal block
+<code>M_rq·thetä</code>, which VANISHES in the quasi-static limit (<code>thetä -&gt; 0</code>). Net effect:
+in steady cornering the spring's roll-restoring moment is never delivered to the
+body — the roll is held only by the tire vertical-load transfer (which the soft
+travel relieves), giving ~5x too little roll stiffness and rollover at ~0.15 g.</p>
+<p>The fix is a coordinate change: the unsprung vertical must be an INERTIAL
+(ground-referenced) coordinate <code>z_u,i</code>, so the spring deflection
+<code>delta_i = z_corner,i(p,R) - z_u,i</code> depends on the body pose and the spring
+delivers a direct roll/pitch/heave wrench to the body. This is exactly the
+(proven-stable) Ld3 14-DOF structure (<code>fourteen_dof_dynamics.cpp:356-422</code>) — here
+lifted from a small-angle planar body to a full 6-DOF free body.</p>
+<h2 id="system-and-state">System and state<a class="headerlink" href="#system-and-state" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>버그는 coupled 경로 한정</strong> (CONFIRMED): 동일 tire/steer로 penalty(non-strut) 경로는
-  완벽 안정(roll 0.0043 rad 정착). <code>VDSIM_PENALTY=1 strut_demo_dump flatsteer</code>.</li>
-<li><strong>inertial M/b 어셈블리는 옳다</strong> (CONFIRMED, isolation (a) 무효화): 수식 증명 —
-  <code>comp_dot=0</code>인 강체 회전에서 <code>Σ m_u(r×abias)=ω×(I_u ω)</code> → <code>b_r=ω×(M_r ω)</code> →
-  <code>M_r·ω̇=-b_r</code>는 정확한 Euler 식. <code>airspin</code>의 omega 붕괴는 <strong>airborne preload-pumping
-  오염</strong>(무접촉 시 예열 스프링이 comp를 violent하게 펌핑)이지 inertial 버그 아님.</li>
-<li><strong>에너지 주입 아님</strong> (CONFIRMED, "누수" 가설 정정): 발산 중 E_total은 <strong>감소</strong>
-  (176k→95k J, speed 15→9 m/s). z(PE) 상승은 전진 KE로 지불. 즉 소산적이지만
-  <strong>동역학적으로 불안정</strong>(전진 KE가 roll 모드로 펌핑).</li>
-<li><strong>순수 roll(lateral=0)은 안정</strong> (CONFIRMED): roll rate 주입 시 감쇠 진동으로 복귀
-  (<code>rolltest</code>, steer=0). 불안정은 <strong>lateral force 전용</strong>.</li>
-<li><strong>subcritical 전복</strong> (CONFIRMED): steer=0.010(정상선회 안정)에서도 roll을 크게 교란하면
-  재성장. 임계 roll≈0.05 rad에서 eigenvalue zero-crossing. lateral threshold ~0.15g.</li>
-<li><strong>진짜 메커니즘 = JACKING</strong> (CONFIRMED): cornering+roll 시 <strong>sumFz/W &gt; 1</strong>(상시 net
-  상향력 4~14%) → CG 상승(vz&gt;0 성장) → overturning arm 증가 → roll restoring을 이김.
-  <strong>penalty 경로는 sumFz/W=1.000 정확</strong>(comp 동결) → jacking은 <strong>coupled comp 동역학이
-  만드는 버그</strong>. <code>rolltest</code>가 sumFz/W·sumComp·vz를 덤프.</li>
-<li><strong>단일 항 아님 / 구조적</strong> (CONFIRMED): jacking 토글(접선/법선), bias, M_rq, M_tr, M_z,
-  DAE toe/camber, strut축(world-z), rcp lever(±comp·ez), slip-vel comp_dot,
-  penetration tilt인자(ez·n) — <strong>어느 것도 발산을 막지 못함</strong>. NOTANG(접선 jacking 제거,
-  virtual-work 일관)은 늦추기만.</li>
-<li><strong>stiffness/damping이 억제</strong> (CONFIRMED): spring ×10 또는 damper ×30이면 안정.
-  destabilizer는 suspension-rate 독립(jacking, lateral 비례), restoring/damping은 rate
-  비례 → default soft 서스펜션에서 marginal.</li>
+<li>Sprung body B: mass <code>m_s</code>, body-frame inertia <code>I_b</code>, pose <code>(p, R)</code>, velocity
+  <code>(v_body, omega_body)</code>. Full 6-DOF (no small-angle assumption).</li>
+<li>Per corner i (FL,FR,RL,RR): unsprung point mass <code>m_u,i</code> with ONE inertial
+  vertical DOF <code>z_u,i</code> (world z of the wheel centre). Its horizontal position is
+  carried rigidly by the body (the links are on the chassis); the linkage's
+  lateral/fore-aft wheel travel and the wheel orientation (toe/camber) come from
+  the DAE <code>travel_maps</code> as a function of the vertical travel — used for the tire
+  force DIRECTION and contact point, not for an extra unsprung DOF.</li>
+<li>Wheel spin: 4 DOF, integrated separately as today.</li>
 </ul>
-<p><strong>root cause (HYPOTHESIS)</strong>: body-roll(R)과 comp가 독립 DOF이고 tire(Fz)·inertial M로만 커플.
-서스펜션 spring+damper의 roll stiffness/damping이 body에 M 커플링 경유로만 간접 전달되어
-soft 서스펜션에서 marginal → roll mode가 jacking에 민감. 한 줄 부호버그가 아니라
-<strong>coupled 정식화가 정상선회 vertical 평형(sumFz=weight)을 유지하지 못하는 구조 문제</strong>.
-다음 단계: penalty처럼 정상선회에서 sumFz=weight가 되도록 vertical/comp 일관성 재정식화
-(혹은 suspension roll moment를 body에 직접 전달하되 M 커플링과 double-count 회피 검증).</p>
-<h3 id="5-subagent-2026-06-17">블록별 독립 물리검토 (5 subagent, 2026-06-17)<a class="headerlink" href="#5-subagent-2026-06-17" title="Permanent link">&para;</a></h3>
-<p>coupled solve를 5블록으로 나눠 각각 설계문서 대비 독립 검토(편향 방지):
-- <strong>Mass matrix M</strong>: 정확 (전 블록 부호·frame·대칭·SPD 일치). HIGH.
-- <strong>Bias b</strong>: 정확 (<code>b_r=ω×(M_r ω)</code> 항등식 코드에서 성립, Coriolis 2배·gyro 부호 OK). HIGH.
-- <strong>Integration/frame 변환</strong>: 정확 (<code>a_body=Rᵀ v̇_w−ω×v_body</code>, <code>α_body=Rᵀ ω̇_w</code> exact). HIGH.
-- <strong>Generalized force Q (타이어력)</strong>: <strong>virtual-work 불일치 CONFIRMED</strong> — body torque는 지면
-  patch lever <code>sg_rcp</code>(comp 불변), comp jacking은 wheel-center 감도 <code>si=ez_world</code>(comp 가변).
-  단일 <code>x_c(q)</code>에서 유도 안 됨 → cornering 시 comp DOF에 spurious work.
-- <strong>Penetration/strut축</strong>: penetration식 자체는 정확. strut축(ez_world)이 body-tilted라
-  ground-normal n과 불일치 → rolled 평형에서 Σcomp≠0 → ΣFz≠weight. SUSPECTED HIGH.</p>
-<p><strong>부분 fix CONFIRMED (<code>VDSIM_RCPC</code>)</strong>: contact patch를 comp-displaced wheel-center 바로 아래
-<code>x_c = r_wc − R0·n</code>로 일관 정의 → rcp와 si를 한 점에서 유도. flatsteer threshold ~0.017→0.025,
-steer=0.018 깨끗이 안정, jacking sumFz/W 감소. <strong>단 0.03+ 잔여 발산</strong> — strut축 body-tilt에 의한
-roll-center(≈wheel-center 높이) lateral jacking. 완전 해소는 DAE travel-path 기하(다음 phase의
-contact-patch 감도 <code>s_c=R·dw_c/dθ</code>, ground roll center)가 들어와야 할 듯. 코드는 <code>T_RCPC</code> 토글.</p>
-<p><strong>디버그 인프라</strong>(working tree, WIP patch에 미포함 — env-gated, 기본 off):
-<code>strut_demo_dump</code> 모드 <code>rolltest</code>(roll 교란 eigenvalue)·<code>airspin [wx wy wz]</code>(자유회전)+
-<code>flatsteer</code>(energy/threshold). core env: <code>VDSIM_PENALTY/NOTANG/NOJACK/NOMRQ/NOMTR/NOBIAS/
-NOMZ/WORLDZ/RCPFIX/RCPC/NOVCOMP/NODAE/PEN1</code>. harness env: <code>VDSIM_STEER/STIFF/CDAMP</code>.</p>
-<h2 id="_1">목표<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
-<p>B1 strut(코너당 vertical 1-DOF 점질량 + one-way pseudo-force)은 루프(360° 회전·고-g)에서
-에너지 ~85kJ 비물리적 주입 — 모델이 아니라 <strong>수치적으로 비일관</strong>(원칙 위반: 모델은 근사 OK,
-수치는 정확해야). 목표는 코너당 실제 링키지 travel 1-DOF를 6-DOF 차체와 <strong>완전 coupled</strong>로 정확히
-푸는 것(<code>M u̇ = Q − b</code>, 에너지 구조적 보존). high-fidelity MBD.</p>
-<h2 id="repo-main-green-376376">현재 상태 (repo: main green, 376/376)<a class="headerlink" href="#repo-main-green-376376" title="Permanent link">&para;</a></h2>
+<p>Integration state (per RK4 stage): <code>p, R(quat), v_body, omega_body, z_u_i, zu_dot_i</code>
+(+ wheel spins). NOTE: this REPLACES <code>susp_compression/velocity</code> semantics — those
+fields now hold <code>z_u</code> deviation from static and <code>zu_dot</code> (still metres, contract
+preserved: suspension travel is the real vertical wheel travel).</p>
+<h2 id="mass-matrix-block-diagonal-no-10x10-solve">Mass matrix: BLOCK DIAGONAL (no 10x10 solve)<a class="headerlink" href="#mass-matrix-block-diagonal-no-10x10-solve" title="Permanent link">&para;</a></h2>
+<p>Because the unsprung has only a vertical inertial DOF coupled to the body purely by
+the spring/damper FORCE (not by a shared coordinate), the mass matrix decouples:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>sprung body:   M_body * udot_body = F_body            (standard 6-DOF Newton-Euler)
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>unsprung i:    m_u,i * zu_ddot_i  = Fz_i - F_susp_i - m_u,i*g   (4 scalar ODEs)
+</span></code></pre></div>
+<p>The unsprung mass is small; its horizontal motion (rigid with the body) is folded
+into the body translational mass and inertia (parallel axis), matching how Ld3
+lumps the unsprung into the planar total. So: drop the LDLT 10x10 solve; the body
+uses the same explicit Euler integration as the penalty path.</p>
+<h2 id="kinematics">Kinematics<a class="headerlink" href="#kinematics" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>mount_i        = p + R*rb_i                 wheel/strut mount, world  [m]
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>z_corner_i     = mount_i . ez               world-vertical of the mount
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>v_corner_i     = (v_world + omega_w x (R rb_i)) . ez    its vertical velocity
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>delta_i        = z_corner_i - z_u_i         suspension deflection (compression&gt;0 when corner sinks toward wheel)
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>ddelta_i       = v_corner_i - zu_dot_i
+</span></code></pre></div>
+<p>Linkage (from DAE <code>travel_maps(z_v=travel_i)</code>, travel_i = z_u_i - z_u_static_i):
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>wheel lateral/fore-aft offset, toe_i, camber_i, motion ratio MR_i = dl_spring/dz_v
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>contact patch  x_c,i  (one rolling radius below the linkage wheel centre)
+</span></code></pre></div></p>
+<h2 id="forces">Forces<a class="headerlink" href="#forces" title="Permanent link">&para;</a></h2>
+<p>Spring + damper (wheel-rate; motion ratio MR folds in later, MR=1 first cut):
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>F_susp_i = F_preload_i + k_s,i*(delta_i) + c_s,i*ddelta_i + F_stop_i
+</span></code></pre></div>
+(<code>delta_i</code> measured from the static ride so <code>F_preload</code> balances the static load.)</p>
+<p>Tire NORMAL on the unsprung (vertical), tire TANGENTIAL on the body at the patch:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>Fz_i      = k_tire*(pen_i) + c_tire*pen_dot_i ,  pen_i = road_z_i - (z_u_i - R0)
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>F_tan_i   = Fx_i * t_long + Fy_i * t_lat        (from the inverted tire, dir from DAE toe/camber)
+</span></code></pre></div></p>
+<p>Body wrench (world):
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>F_body  = -m_sum*g*ez + aero + rolling
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>        + sum_i  F_susp_i * ez            (spring pushes the chassis up at each mount)
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>        + sum_i  F_tan_i                  (lateral/longitudinal tire force, rigid horizontal link)
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>tau_body= sum_i (R rb_i) x (F_susp_i*ez)  (-&gt; heave/ROLL/pitch: this is the missing term)
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>        + sum_i  rcp_i x F_tan_i          (yaw + the lateral overturning)
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>        + sum_i  mz_i * ez                (self-aligning)
+</span></code></pre></div>
+Roll moment from the springs <code>sum_i (R rb_i)_y * F_susp_i</code> is the direct restoring
+that the old solve lacked. Standard 6-DOF: <code>m_sum*vdot = F_body</code>,
+<code>I_w*omegadot + omega x (I_w omega) = tau_body</code>.</p>
+<p>Unsprung (each corner, scalar):
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>m_u,i * zu_ddot_i = Fz_i - F_susp_i - m_u,i*g
+</span></code></pre></div></p>
+<h2 id="energy">Energy<a class="headerlink" href="#energy" title="Permanent link">&para;</a></h2>
+<p><div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>d/dt ( T_body + T_unsprung + U_grav + U_spring ) = P_damper + P_tire_contact
+</span></code></pre></div>
+Springs/dampers are explicit two-point force elements (body mount &lt;-&gt; unsprung), so
+their virtual work depends only on the relative rate <code>ddelta_i</code> — energy-consistent
+by construction (the same property Ld3 has and the old reduced model lost).</p>
+<h2 id="what-is-reused">What is reused<a class="headerlink" href="#what-is-reused" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>설계·유도 완료·검토됨</strong>: <code>docs/design/L5_MBD_DYNAMIC_COUPLING.md</code> (커밋 <code>4c4bc26</code>). 가정 1~5
-  reviewed (점질량 unsprung now / link tensor inertia later; 1-DOF travel; spin은 tire side;
-  wheel-rate spring now / motion-ratio next; anti-dive는 contact-patch 기하로 emergent).</li>
-<li><strong>구현 = WIP, 미완</strong>: coupled 10-DOF solve를 free_3d strut 경로에 구현했으나 <strong>roll 커플링
-  버그</strong>로 평지 정상선회가 발산 → green 위해 free_3d revert. WIP 보존:
-  <code>docs/design/L5_MBD_COUPLED_WIP.patch</code> (e2d467d/4c4bc26 base의 free_3d diff; <code>git apply</code>로 복원).</li>
+<li>DAE <code>travel_maps</code> / <code>pose_at_travel</code> (committed) for the linkage wheel path,
+  toe/camber, motion ratio — the real link kinematics are kept.</li>
+<li>The Pacejka inverted-tire path, contact providers, RCPC contact-patch lever.</li>
+<li>The penalty-path body Euler integration (now used for the strut path too).</li>
 </ul>
-<h2 id="_2">완료<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<h2 id="what-is-removedreplaced">What is removed/replaced<a class="headerlink" href="#what-is-removedreplaced" title="Permanent link">&para;</a></h2>
 <ul>
-<li>B1의 에너지 버그 정량 진단: 루프 +85kJ 주입, dt-무관(2e-4=2e-5), 질량비등방 아님(테스트),
-  바퀴 flywheel 아님(~13kJ), normal/strut 경로 ~69kJ + 접선 ~15kJ.</li>
-<li>원칙 합의: 모델 단순화 OK, <strong>수치/EoM은 정확·에너지보존</strong> 必.</li>
-<li>Lagrangian 유도(질량행렬 M 블록, bias b, 일반화력 Q, contact-patch tire = anti-dive emergent).</li>
-<li>coupled solve 구현(WIP): <strong>자유낙하 깨끗</strong>(jump ballistic g 정확 — B1 누수 해결), heave/settle
-  정확, loop-critical/camber/slip-balance 통과. 루프 단조 +85kJ 주입 사라짐.</li>
-<li>디버그/audit 하니스: <code>apps/jump_demo/strut_demo_dump.cpp</code> (모드: jump/loop/loopfail/flatsteer,
-  19+컬럼 telemetry: pose, per-wheel comp/Fz, ax/ay, wheel spin) + python 에너지 budget.</li>
+<li>The 10x10 <code>M u̇ = Q - b</code> LDLT solve and the <code>M_tr/M_rq/M_tq</code> coupling blocks
+  (the reduced-coordinate inertial coupling) — replaced by block-diagonal body
+  Euler + 4 scalar <code>z_u</code> ODEs.</li>
+<li><code>Gamma_susp</code> on a body-relative travel DOF — replaced by the explicit two-point
+  spring wrench on body + unsprung.</li>
+<li>The penetration <code>pen = pen_rigid - comp*(ez.n)</code> correction — now <code>pen</code> is a plain
+  function of the inertial <code>z_u</code>.</li>
 </ul>
-<h2 id="_3">미완 (다음 할 일)<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
-<ol>
-<li><strong>roll JACKING 버그 수정</strong> (블로커). cornering 시 sumFz&gt;weight(net 상향력)로 CG가 jack-up →
-   subcritical 전복. <strong>위 "진단 갱신 2026-06-17" 참조</strong> — static 부호버그가 아니라 coupled
-   vertical 평형 구조 문제. 목표: 정상선회에서 sumFz=weight 회복(penalty 경로 기준).</li>
-<li>수정 후 <strong>에너지 audit 테스트</strong>: 루프(throttle=0)에서 E_total(=KE+회전KE+중력PE+타이어스프링PE
-   +서스펜션스프링PE)이 댐퍼·slip 외 보존(현재 누수). 단위테스트로 자유-부유 회전체 momentum/energy
-   보존 체크부터.</li>
-<li>전 테스트 재통과: settle/ride/cross-model/jump/loop-critical/camber/Stunt.* + FreeLoopCompletesLap
-   pitch 임계(현 coupled에서 0.25 vs 0.28, rebaseline 필요 가능).</li>
-<li>모델 refinement(후속): link tensor inertia(<code>I_u</code> 3×3), wheel rot inertia의 brake/accel
-   anti-dive 기여(caliper-torque-on-knuckle), spring <strong>motion ratio</strong>(다음 타겟), DAE travel-path
-   기하(w', w'')로 anti-dive/toe/camber emergent(현 WIP는 10a=vertical travel만).</li>
-</ol>
-<h2 id="_4">주의 / 함정<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<h2 id="acceptance">Acceptance<a class="headerlink" href="#acceptance" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>버그 국소화</strong>: heave/free-flight 정확(settle·jump 통과) → 병진/travel은 OK, <strong>회전(roll) 커플링
-  전용</strong> 버그. 10× 댐핑에도 발산 → anti-damping 아님, static 부호/항.</li>
-<li><strong>물리 통찰</strong>: B1은 stiff 타이어 위 강체(직접 penalty Fz at hub)라 roll stiff·안정. coupled는
-  차체가 <strong>soft 서스펜션</strong> 위 → roll restoring이 contact↔comp↔spring 경유 → jacking/부호
-  양성피드백에 민감. 0.3g 전복은 비물리 = 명백한 구현 버그.</li>
-<li><strong>격리 테스트 제안</strong>: (a) 자유-부유(no contact) 회전체로 momentum/energy 보존 단위테스트(M·b만);
-  (b) tire torque lever r_cp(contact patch)→r_wc(wheel center)로 바꿔 jacking 모멘트 격리;
-  &copy; <code>Gamma_i = s_i·F_tire</code>의 rolled-êz projection(jacking) 항 on/off; (d) M_tr/M_rq off-diagonal
-  on/off. flatsteer 모드(<code>strut_demo_dump flatsteer</code>)가 roll/z 발산을 바로 보여줌.</li>
-<li><strong>contact 동결</strong>: contacts는 step당 1회 query(RK4 stage 내 body roll에 rigid penetration 미반응,
-  comp만 갱신) — B1·penalty도 동일. roll restoring이 comp 경유라 더 민감할 수 있음.</li>
-<li>WIP patch 적용: <code>git apply docs/design/L5_MBD_COUPLED_WIP.patch</code> (free_3d만 변경). Eigen Dense
-  필요(이미 include). 10×10 LDLT solve.</li>
-<li>대외비/영상 규약 동일. 데모/audit 산출물(mp4/png/csv)은 git 금지(스크립트만 추적).</li>
+<li>Static settle: <code>z_u</code> and body settle, <code>sum Fz = weight</code>, zero accel.</li>
+<li>Flat steady cornering: stable to a physical limit (rollover threshold &gt; ~0.7 g),
+  <code>sum Fz/W -&gt; 1</code>, roll a few deg/g; roll stiffness ~ <code>axle_roll_stiffness()</code> series
+  value (~26 kN·m/rad), NOT ~5.7.</li>
+<li>Re-pass <code>FlatCrossModelMatchesL2</code>, <code>FreeLoopCompletesLap</code>, <code>CornerCamberMatchesL4Dae</code>,
+  ride/jump/loop-critical, all <code>L5Strut*</code>/<code>Stunt*</code> tests.</li>
+<li>Loop energy audit: <code>E_total</code> conserved (damper + slip only).</li>
 </ul>
-<h2 id="_5">관련 경로<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
+<h2 id="open-second-cut">Open / second cut<a class="headerlink" href="#open-second-cut" title="Permanent link">&para;</a></h2>
 <ul>
-<li>설계/유도: <code>docs/design/L5_MBD_DYNAMIC_COUPLING.md</code></li>
-<li>WIP 구현 diff: <code>docs/design/L5_MBD_COUPLED_WIP.patch</code></li>
-<li>대상 코드: <code>core/src/free_3d_dynamics.cpp</code> (strut 경로 derivatives())</li>
-<li>DAE 운동학(travel→pose, w'/w''/I_theta): <code>core/src/multibody_hard_dae.cpp</code>, <code>core/include/vdsim/multibody.hpp</code></li>
-<li>디버그/audit 하니스: <code>apps/jump_demo/strut_demo_dump.cpp</code> (+ animate_strut.py, plot_telemetry.py)</li>
-<li>B1/B2/C 핸드오프: <code>docs/HANDOFF_TIRE_L5.md</code>; 검증: <code>docs/evidence/l5/PHASE_C.md</code></li>
-<li>테스트: <code>tests/integration/test_l5_strut_validation.cpp</code>, <code>test_l5_driving.cpp</code>, <code>test_stunt.cpp</code></li>
+<li>Unsprung horizontal inertia coupling (folded into the body now) — make exact later.</li>
+<li>Spring along the real strut axis with motion ratio <code>MR(travel)</code> instead of
+  wheel-rate vertical.</li>
+<li><code>s_c</code> contact-patch travel sensitivity for anti-dive/squat (vs the <code>R*w'</code> approx).</li>
 </ul>
 
 
@@ -2742,12 +2690,12 @@ NOMZ/WORLDZ/RCPFIX/RCPC/NOVCOMP/NODAE/PEN1</code>. harness env: <code>VDSIM_STEE
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.expand", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.expand", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
-        <script src="../javascripts/mathjax.js"></script>
+        <script src="../../javascripts/mathjax.js"></script>
       
         <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
       

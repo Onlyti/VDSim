@@ -1,8 +1,8 @@
 diff --git a/core/src/free_3d_dynamics.cpp b/core/src/free_3d_dynamics.cpp
-index 99dbf6f..015f547 100644
+index 99dbf6f..e15f2cb 100644
 --- a/core/src/free_3d_dynamics.cpp
 +++ b/core/src/free_3d_dynamics.cpp
-@@ -7,6 +7,8 @@
+@@ -7,9 +7,12 @@
  
  #include <spdlog/spdlog.h>
  
@@ -11,15 +11,112 @@ index 99dbf6f..015f547 100644
  #include <algorithm>
  #include <array>
  #include <cmath>
-@@ -294,6 +296,7 @@ private:
++#include <cstdlib>
+ #include <memory>
+ #include <numeric>
+ #include <type_traits>
+@@ -133,15 +136,22 @@ public:
+         gamma_dae_.fill(0.0);
+         toe_dae_.fill(0.0);
+         const mb::PrescribedCornerMotion mot {};
++        auto init_corner = [&](mb::IHardJointDaeModel* dae, int i) {
++            mb_state_[i] = {};
++            dae->initialize(mb_state_[i], mot);
++            // The Ld5 travel DOF is the vertical wheel travel z_v [m], zero at static.
++            mb_wheel_static_[i] = dae->pose_at_travel(0.0, 0.0,
++                                                      mb_state_[i].knuckle_aa).position_world;
++            state_.susp_compression[i] = 0.0;
++            state_.susp_velocity[i]    = 0.0;
++        };
+         if (mb_dae_front_) {
+-            mb_state_[WHEEL_FL] = {}; mb_state_[WHEEL_FR] = {};
+-            mb_dae_front_->initialize(mb_state_[WHEEL_FL], mot);
+-            mb_dae_front_->initialize(mb_state_[WHEEL_FR], mot);
++            init_corner(mb_dae_front_.get(), WHEEL_FL);
++            init_corner(mb_dae_front_.get(), WHEEL_FR);
+         }
+         if (mb_dae_rear_) {
+-            mb_state_[WHEEL_RL] = {}; mb_state_[WHEEL_RR] = {};
+-            mb_dae_rear_->initialize(mb_state_[WHEEL_RL], mot);
+-            mb_dae_rear_->initialize(mb_state_[WHEEL_RR], mot);
++            init_corner(mb_dae_rear_.get(), WHEEL_RL);
++            init_corner(mb_dae_rear_.get(), WHEEL_RR);
+         }
+     }
+ 
+@@ -157,11 +167,8 @@ public:
+         brake_->begin_step(ctx, dt);
+         drivetrain_->begin_step(ctx, dt);
+         steering_->begin_step(ctx, dt);
+-
+-        // Advance the corner suspension kinematics once per outer step (toe/camber from
+-        // the prescribed strut travel), held constant through the substeps below — like
+-        // L4's once-per-step DAE update. No-op unless strut path + a corner DAE attached.
+-        update_corner_dae(cmd, dt);
++        // The corner-DAE travel maps (w, w', w'') are evaluated per RK4 stage inside
++        // derivatives(); there is no separate prescribed-travel DAE advance.
+ 
+         const int N = std::max(1,
+                        std::min(sp_.max_substeps,
+@@ -293,7 +300,36 @@ private:
+         // a general surface (LoopGround penalty contact), so there is no loop-specific cap.
          const double Fz_cap = 6.0 * m * kGravity / static_cast<double>(NUM_WHEELS);
          const double c_vert = 2.0 * std::sqrt(k_tire * m / static_cast<double>(NUM_WHEELS));
-         const Vec3 ez_world = R.col(2);   // body up axis in world (strut travel axis)
+-        const Vec3 ez_world = R.col(2);   // body up axis in world (strut travel axis)
 +        const Vec3 omega_w  = R * omega;  // body angular velocity in world
++        // Ld5 Option A: per-corner real-linkage travel kinematics. With a corner DAE
++        // attached the wheel follows w(theta) (body frame) with its actual motion ratio
++        // and lateral travel (roll-centre geometry); otherwise fall back to a vertical
++        // slider (dw=comp*ez, w'=ez, w''=0). theta is the travel DOF (susp_compression).
++        struct CornerKin { Vec3 dw, wprime, wpp; double z_i, Jz, toe, camber; bool dae; };
++        std::array<CornerKin, NUM_WHEELS> ck;
++        const double steer_rad_dae = strut ? steering_->apply(ctx).roadwheel_angle : 0.0;
++        for (int i = 0; i < NUM_WHEELS; ++i) {
++            const bool front = (i == WHEEL_FL || i == WHEEL_FR);
++            mb::IHardJointDaeModel* dae = front ? mb_dae_front_.get() : mb_dae_rear_.get();
++            const double zv = s.susp_compression[i];   // vertical wheel travel [m]
++            if (strut && dae) {
++                const double rack = front ? steer_rad_dae * kRackPerRad : 0.0;
++                const mb::CornerTravelMaps mp =
++                    dae->travel_maps(zv, rack, mb_state_[i].knuckle_aa);
++                Vec3 dw = mp.w - mb_wheel_static_[i], wp = mp.w_dq, wpp = mp.w_dqq;
++                double toe = mp.toe_rad, cam = mp.camber_rad;
++                if (i == WHEEL_FR || i == WHEEL_RR) {   // mirror left geometry to the right
++                    dw.y() = -dw.y(); wp.y() = -wp.y(); wpp.y() = -wpp.y();
++                    toe = -toe; cam = -cam;
++                }
++                ck[i] = {dw, wp, wpp, dw.z(), wp.z(), toe, cam, true};
++                gamma_dae_[i] = cam;     // reporting (wheel_camber/wheel_toe getters)
++                toe_dae_[i]   = toe;
++            } else {
++                ck[i] = {zv * Vec3::UnitZ(), Vec3::UnitZ(), Vec3::Zero(),
++                         zv, 1.0, 0.0, 0.0, false};
++            }
++        }
          std::array<double, NUM_WHEELS> Fz {};
          for (int i = 0; i < NUM_WHEELS; ++i) {
              if (!contacts[i].is_valid) { Fz[i] = 0.0; continue; }
-@@ -355,9 +358,13 @@ private:
+@@ -303,11 +339,15 @@ private:
+                 // Tire-spring on the unsprung: the wheel centre rides comp·ez above the
+                 // rigid hub the contact provider assumed, so the effective penetration is
+                 // the reported (rigid) penetration minus that travel along the normal.
+-                const double comp     = s.susp_compression[i];
+-                const double comp_dot = s.susp_velocity[i];
+-                const double pen = contacts[i].penetration - comp * ez_world.dot(n);
++                const double comp_dot = s.susp_velocity[i];   // thetadot
++                // Effective penetration: the wheel rides the real linkage travel dw above
++                // the rigid hub the contact provider assumed, so subtract that travel along
++                // the contact normal.
++                const Vec3 dw_world = R * ck[i].dw;
++                const double pen = contacts[i].penetration - dw_world.dot(n);
+                 if (pen <= 0.0) { Fz[i] = 0.0; continue; }
+-                const Vec3 v_wc = R * (v_body + omega.cross(rb)) + ez_world * comp_dot;
++                const Vec3 v_wc = R * (v_body + omega.cross(rb + ck[i].dw))
++                                + R * ck[i].wprime * comp_dot;
+                 const double vn = -v_wc.dot(n);
+                 const double m_u = std::max(1.0, vp_.unsprung_mass[i]);
+                 const double c_t = kTireDampRatio * 2.0 * std::sqrt(k_tire_strut * m_u);
+@@ -355,40 +395,48 @@ private:
          std::array<double, NUM_WHEELS> fx_kin {{0.0, 0.0, 0.0, 0.0}};
          std::array<double, NUM_WHEELS> dcomp {{0.0, 0.0, 0.0, 0.0}};
          std::array<double, NUM_WHEELS> dcomp_dot {{0.0, 0.0, 0.0, 0.0}};
@@ -36,12 +133,74 @@ index 99dbf6f..015f547 100644
  
          for (int i = 0; i < NUM_WHEELS; ++i) {
              if (strut) {
-@@ -423,22 +430,24 @@ private:
+                 const Vec3& rb = r_body_[i];
+-                const double comp     = s.susp_compression[i];
+-                const double comp_dot = s.susp_velocity[i];
++                const double comp_dot = s.susp_velocity[i];   // thetadot
+                 const double ks  = std::max(1.0, vp_.spring_stiffness[i]);
+                 const double cs  = std::max(0.0, vp_.damper_coefficient[i]);
+                 const double m_u = std::max(1.0, vp_.unsprung_mass[i]);
+-                // Strut force = coilover spring (preload so comp=0 is static; no tension)
+-                // + damper + bump/rebound stops. The stops are stiff FORCE elements (not a
+-                // position clamp), so when the suspension bottoms the large load transmits
+-                // to the body instead of being swallowed by a kinematic wall.
+-                double F_spring = F_preload_[i] + ks * comp;
+-                if (F_spring < 0.0) F_spring = 0.0;          // coilover cannot pull
++                // Wheel-rate spring + damper + bump/rebound stops act on the VERTICAL travel
++                // z_i = dw.z; the motion ratio J_z = w'.z maps them onto the travel DOF theta
++                // (generalized force Gamma_susp = -F_susp * J_z, applied in the assembly).
++                const double z_i = ck[i].z_i;
++                const double Jz  = ck[i].Jz;
++                const double zdot = Jz * comp_dot;            // vertical travel rate
++                double F_spring = F_preload_[i] + ks * z_i;
++                if (F_spring < 0.0) F_spring = 0.0;           // coilover cannot pull
+                 double F_stop = 0.0;
+-                if (comp > comp_max_[i])                     // bump stop (compression)
+-                    F_stop = kStopStiffness * (comp - comp_max_[i]);
+-                else if (comp < comp_min_[i])                // rebound stop (droop)
+-                    F_stop = kStopStiffness * (comp - comp_min_[i]);
+-                const double F_susp = F_spring + cs * comp_dot + F_stop;
++                if (z_i > comp_max_[i])                       // bump stop (compression)
++                    F_stop = kStopStiffness * (z_i - comp_max_[i]);
++                else if (z_i < comp_min_[i])                  // rebound stop (droop)
++                    F_stop = kStopStiffness * (z_i - comp_min_[i]);
++                const double F_susp = F_spring + cs * zdot + F_stop;
+ 
+                 Vec3 tire_total = Vec3::Zero();
+                 if (Fz[i] > 1.0) {
+                     const Vec3 v_hub_world =
+-                        R * (v_body + omega.cross(rb)) + ez_world * comp_dot;
++                        R * (v_body + omega.cross(rb + ck[i].dw))
++                        + R * ck[i].wprime * comp_dot;
+                     Vec3 n = contacts[i].normal.normalized();
+                     Vec3 t_lat;
++                    const double toe_i = ck[i].toe;
++                    const double gam_i = ck[i].camber;
+                     // DAE toe adds to the steer angle (bump-steer); camber flows via gamma.
+                     Vec3 t_long = wheel_tangent_frame(n, body_fwd,
+-                                                      d_wheel[i] + toe_dae_[i], t_lat);
++                                                      d_wheel[i] + toe_i, t_lat);
+                     // General contact-frame slip on any surface (flat / banked / loop) — no
+                     // loop-specific tangent fallback; the wheel-heading projection is the
+                     // longitudinal direction everywhere.
+@@ -396,7 +444,7 @@ private:
+                     const double v_lat    = v_hub_world.dot(t_lat);
+                     ITireModel::ContactInput ci;
+                     ci.Fz = Fz[i]; ci.Vx = v_long_k; ci.Vy = v_lat;
+-                    ci.omega = s.wheel_spin[i]; ci.gamma = gamma_dae_[i];
++                    ci.omega = s.wheel_spin[i]; ci.gamma = gam_i;
+                     ci.mu_long = contacts[i].mu_long; ci.mu_lat = contacts[i].mu_lat;
+                     ci.R0 = Rwh;
+                     ci_[i] = ci;
+@@ -423,22 +471,29 @@ private:
                          const double c = muFz / Fmag; Fx_w *= c; Fy_w *= c;
                      }
                      tire_total = Fx_w * t_long + Fy_w * t_lat + Fz[i] * n;
 +                    sg_n[i]   = n;
-+                    sg_rcp[i] = contacts[i].position - s.position;  // CG->patch (world)
++                    // Consistent contact patch: rigidly one tire radius below the
++                    // travel-displaced wheel centre, so the body torque lever sg_rcp and the
++                    // travel jacking sensitivity s = R*w' derive from ONE point x_c(theta).
++                    sg_rcp[i] = R * (rb + ck[i].dw) - vp_.wheel_radius_nominal * n;
 +                    F_body[i] = R.transpose() * tire_total;         // reporting only
                  } else {
                      ci_[i] = ITireModel::ContactInput{};   // neutral: no transient evolution
@@ -59,22 +218,24 @@ index 99dbf6f..015f547 100644
 -                // finished after the body acceleration is known (frame coupling, below).
 -                dcomp[i]  = comp_dot;
 -                fez_arr[i] = f_ez; fsusp_arr[i] = F_susp; mu_arr[i] = m_u;
-+                // Store the coupled-MBD ingredients (assembled + solved after the loop). The
-+                // travel is vertical (s = body-up) in this phase; the DAE travel-path geometry
-+                // (anti-dive/toe/camber) layers on later. No decomposition / pseudo-force here.
-+                const Vec3 r_wc = R * (rb + comp * Vec3::UnitZ());   // CG->wheel lever (world)
++                // Coupled-MBD ingredients on the REAL linkage travel path w(theta): the
++                // lever r_wc = R*(rb+dw), travel direction s = R*w', and the bias picks up
++                // the centripetal/Coriolis terms plus the path curvature R*w'' * thetadot^2.
++                const Vec3 r_wc = R * (rb + ck[i].dw);   // CG->wheel lever (world)
++                const Vec3 s_w  = R * ck[i].wprime;      // travel direction (world)
 +                sg_rwc[i]   = r_wc;
-+                sg_s[i]     = ez_world;
++                sg_s[i]     = s_w;
 +                sg_abias[i] = omega_w.cross(omega_w.cross(r_wc))
-+                            + 2.0 * omega_w.cross(ez_world * comp_dot);
++                            + 2.0 * omega_w.cross(s_w * comp_dot)
++                            + (R * ck[i].wpp) * (comp_dot * comp_dot);
 +                sg_Ftire[i] = tire_total;       // zero when airborne
-+                sg_Fsusp[i] = F_susp;
++                sg_Fsusp[i] = F_susp * ck[i].Jz;   // generalized spring force on theta
 +                sg_mu[i]    = m_u;
 +                dcomp[i]    = comp_dot;
                  continue;
              }
              if (!contacts[i].is_valid || contacts[i].penetration <= 0.0) {
-@@ -523,42 +532,84 @@ private:
+@@ -523,42 +578,85 @@ private:
          const SubsystemContext ctx_brake{s, cmd_residual, ctx.dt, ctx.Fz};
          const std::array<double, NUM_WHEELS> Tb = brake_->wheel_torque(ctx_brake);
  
@@ -124,19 +285,20 @@ index 99dbf6f..015f547 100644
 +                const double m_u = sg_mu[i];
 +                const Vec3 r = sg_rwc[i], si = sg_s[i], mab = m_u * sg_abias[i];
 +                m_sum += m_u;
-+                Mtr -= m_u * skew(r);
-+                Mr  -= m_u * skew(r) * skew(r);
-+                M.block<3, 1>(0, 6 + i) = m_u * si;
-+                M.block<3, 1>(3, 6 + i) = m_u * r.cross(si);
-+                M(6 + i, 6 + i) = m_u * si.dot(si);          // (+ J_lnk later)
-+                // generalized forces on this travel DOF + body force/torque contributions
++                Mtr -= m_u * skew(r);                        // M_tr
++                Mr  -= m_u * skew(r) * skew(r);              // M_r unsprung parallel axis
++                M.block<3, 1>(0, 6 + i) = m_u * si;          // M_tq
++                M.block<3, 1>(3, 6 + i) = Vec3(m_u * r.cross(si));   // M_rq
++                M(6 + i, 6 + i) = m_u * si.dot(si);          // M_q (+ J_lnk later)
++                // Generalized forces: gravity (body + unsprung), suspension on the travel
++                // DOF, and the tire force applied at the contact patch.
 +                Fw   += m_u * g_world;
 +                tauw += r.cross(m_u * g_world);
 +                double Gi = si.dot(m_u * g_world) - sg_Fsusp[i];
 +                if (Fz[i] > 1.0) {
 +                    Fw   += sg_Ftire[i];
 +                    tauw += sg_rcp[i].cross(sg_Ftire[i]) + mz_wheel[i] * sg_n[i];
-+                    Gi   += si.dot(sg_Ftire[i]);
++                    Gi   += si.dot(sg_Ftire[i]);             // travel-path jacking (s = R w')
 +                }
 +                bt += mab;
 +                br += r.cross(mab);
@@ -192,3 +354,55 @@ index 99dbf6f..015f547 100644
  
          Deriv d_out;
          d_out.dp_world = R * v_body;
+@@ -633,6 +731,9 @@ private:
+         for (int i = 0; i < NUM_WHEELS; ++i) {
+             s.susp_compression[i] = s0.susp_compression[i] + d.d_comp[i] * h;
+             s.susp_velocity[i]    = s0.susp_velocity[i]    + d.d_comp_dot[i] * h;
++            // Last-resort guard against numerical runaway (the bump/rebound stops are stiff
++            // force elements that normally limit travel). The DOF is the vertical wheel
++            // travel z_v [m] on every path, so this metre-based clamp applies uniformly.
+             const double hi = comp_max_[i] + 0.10, lo = comp_min_[i] - 0.10;
+             if (s.susp_compression[i] > hi) {
+                 s.susp_compression[i] = hi;
+@@ -645,33 +746,6 @@ private:
+         return s;
+     }
+ 
+-    // B2: advance each attached corner DAE with the prescribed strut travel (comp + rate)
+-    // and the last corner tire load, reading back per-wheel toe/camber (L/R sign flip).
+-    void update_corner_dae(const CmdL4& cmd, double dt) {
+-        if (!sp_.l5_spatial_suspension) return;
+-        if (!(mb_enabled_front_ || mb_enabled_rear_)) return;
+-        const DriverCmd dc{cmd.steer_angle_wheel, cmd.throttle, cmd.brake,
+-                           cmd.gear, cmd.handbrake};
+-        SubsystemContext ctx{state_, dc, 0.0};
+-        const double steer_rad = steering_->apply(ctx).roadwheel_angle;
+-        const Mat3 R = state_.orientation.toRotationMatrix();
+-        for (int i = 0; i < NUM_WHEELS; ++i) {
+-            const bool front = (i == WHEEL_FL || i == WHEEL_FR);
+-            mb::IHardJointDaeModel* dae = front ? mb_dae_front_.get() : mb_dae_rear_.get();
+-            if (!dae) continue;
+-            mb::PrescribedCornerMotion mot;
+-            mot.travel_z      = state_.susp_compression[i];
+-            mot.travel_z_dot  = state_.susp_velocity[i];
+-            mot.steer_rack_dy = front ? steer_rad * kRackPerRad : 0.0;
+-            mb::WheelLoad wl;
+-            wl.force_world = R * tire_F_[i];
+-            const mb::WheelPose wp = dae->step(mb_state_[i], mot, wl, dt);
+-            const double s = (i == WHEEL_FR || i == WHEEL_RR) ? -1.0 : 1.0;
+-            gamma_dae_[i] = s * wp.camber_rad;
+-            toe_dae_[i]   = s * wp.toe_rad;
+-        }
+-    }
+-
+     void substep(const CmdL4& cmd, const ContactArray& contacts, double h) {
+         const State s0 = state_;
+         const bool lugre_on = tp_.lugre.enabled;
+@@ -743,6 +817,7 @@ private:
+     mb::SuspensionTopology mb_topo_front_ {}, mb_topo_rear_ {};
+     std::unique_ptr<mb::IHardJointDaeModel> mb_dae_front_, mb_dae_rear_;
+     std::array<mb::HardJointCornerState, NUM_WHEELS> mb_state_ {};
++    std::array<Vec3, NUM_WHEELS> mb_wheel_static_ {};   // w(z_v=0), body frame [m]
+     bool mb_enabled_front_ {false}, mb_enabled_rear_ {false};
+     std::array<double, NUM_WHEELS> gamma_dae_ {};   // per-wheel camber [rad] from the DAE
+     std::array<double, NUM_WHEELS> toe_dae_ {};     // per-wheel toe [rad] from the DAE
