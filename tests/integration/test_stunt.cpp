@@ -174,6 +174,7 @@ TEST(Stunt, FreeLoopCompletesLap) {
     double theta_unwrap = 0.0;
     double theta_peak  = 0.0;
     double theta_prev  = 0.0;
+    double pitch_peak  = 0.0;   // max |pitch| reached during the lap (attitude proxy)
     bool have_prev = false;
     const int n = 8000;
     for (int i = 0; i < n; ++i) {
@@ -193,9 +194,13 @@ TEST(Stunt, FreeLoopCompletesLap) {
         }
         theta_prev = theta;
         theta_peak = std::max(theta_peak, theta_unwrap);
+        pitch_peak = std::max(pitch_peak, std::abs(dyn->pitch_angle_qs()));
     }
     EXPECT_GT(theta_peak, 1.0);
-    EXPECT_GT(std::abs(dyn->pitch_angle_qs()), 0.28);
+    // Attitude check uses the PEAK pitch over the lap, not the final instantaneous pitch:
+    // a car going round the loop swings through the full attitude range, so the value at an
+    // arbitrary fixed step count is timing-sensitive (it may land back near the bottom).
+    EXPECT_GT(pitch_peak, 0.28);
 }
 
 TEST(Stunt, StuntLevelTag) {

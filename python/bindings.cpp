@@ -341,6 +341,8 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("wheel_spin",       &vdsim::State::wheel_spin)
         .def_readwrite("susp_compression", &vdsim::State::susp_compression)
         .def_readwrite("susp_velocity",    &vdsim::State::susp_velocity)
+        .def_readwrite("unsprung_pos",     &vdsim::State::unsprung_pos)
+        .def_readwrite("unsprung_vel",     &vdsim::State::unsprung_vel)
         .def_readwrite("rack_travel",      &vdsim::State::rack_travel)
         .def_readwrite("rack_velocity",    &vdsim::State::rack_velocity)
         .def("yaw",        &vdsim::State::yaw)

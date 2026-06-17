@@ -25,6 +25,16 @@ struct State {
     std::array<double, NUM_WHEELS> susp_compression {{0.0, 0.0, 0.0, 0.0}};  // [m] +: compressed
     std::array<double, NUM_WHEELS> susp_velocity    {{0.0, 0.0, 0.0, 0.0}};  // [m/s]
 
+    // L5 free-3D unsprung point mass (Stunt strut path only; zero/unused elsewhere).
+    // Each wheel centre is a genuine inertial particle in world coordinates, connected
+    // to the body by an anisotropic two-point bushing (soft along the strut axis = the
+    // suspension spring, stiff perpendicular = the rigid links). susp_compression above
+    // is the DERIVED strut-axis travel (contract preserved for the DAE / FMI / cosim).
+    std::array<Vec3, NUM_WHEELS> unsprung_pos {{Vec3::Zero(), Vec3::Zero(),
+                                                Vec3::Zero(), Vec3::Zero()}};  // [m] world
+    std::array<Vec3, NUM_WHEELS> unsprung_vel {{Vec3::Zero(), Vec3::Zero(),
+                                                Vec3::Zero(), Vec3::Zero()}};  // [m/s] world
+
     // Steering rack (Dynamic steering mode, Ld3+).
     // rack_travel = rack displacement [m] from neutral; rack_velocity = dxr/dt [m/s].
     // Both are zero when ISteeringSystem uses Kinematic mode (rack position is a constraint).

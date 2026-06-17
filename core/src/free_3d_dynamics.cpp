@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdlib>
 #include <memory>
 #include <numeric>
 #include <type_traits>
@@ -58,6 +59,18 @@ constexpr double kWheelSpinDrag = 2.5;
 constexpr double kTireDampRatio = 0.08;   // tire-spring damping ratio (strut path)
 constexpr double kRackPerRad    = 0.08;   // tie-rod rack travel per roadwheel rad (mirrors L4)
 constexpr double kStopStiffness = 2.0e6;  // bump/rebound stop rate [N/m] (strut path)
+// Free-3D unsprung: stiff perpendicular bushing standing in for the rigid suspension
+// links (the wheel is located horizontally by the A-arms). Soft along the strut axis
+// (the coilover); stiff perpendicular so the link is effectively rigid. At 1e8 N/m the
+// cornering-load compliance is ~40 um (vs 0.4 mm at 1e7) — a hard link for all practical
+// purposes — while the unsprung natural frequency (~250 Hz on 40 kg, critically damped)
+// stays comfortably RK4-stable at 2e-4 s. A TRUE hard constraint is not used: in the
+// k->inf limit the wheel collapses onto the strut line (x_u = mount + s*u_hat), which
+// makes the spring deflection the independent coordinate again -> the reduced-coordinate
+// loss of quasi-static roll stiffness. The stiff penalty IS that limit minus a few um and
+// already delivers the link reaction to the body, so it keeps the roll stiffness. Verified
+// stable up to 1e9 (4 um); 1e10 is RK4-unstable (omega*dt > 2.8). Env: VDSIM_KLINK.
+constexpr double kLinkStiffness = 1.0e8;   // [N/m] perpendicular (rigid-link penalty)
 
 class Free3DDynamics final : public IVehicleDynamics {
 public:
@@ -110,6 +123,7 @@ public:
         drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
         brake_      = make_default_brake(vp_, vp_.brake_deadtime_s);
         steering_   = make_default_steering(vp_, vp_.steer_deadtime_s);
+        if (const char* kl = std::getenv("VDSIM_KLINK")) k_link_ = std::atof(kl);
         spdlog::debug("[L5 free-3D] init: mass={:.0f} kg, I=({:.0f},{:.0f},{:.0f})",
                       vp.mass, vp.inertia_diag.x(), vp.inertia_diag.y(), vp.inertia_diag.z());
     }
@@ -117,6 +131,21 @@ public:
     void reset(const State& s) noexcept override {
         state_ = s;
         state_.orientation.normalize();
+        // Seed the wheel-centre world position/velocity at the static mount (rides with the
+        // body). The strut path then integrates these as free-3D particles; the penalty path
+        // keeps them rigid. Maintained on every step (see apply), so always the true wheel
+        // centre — no path-dependent special-casing.
+        {
+            const Mat3 R = state_.orientation.toRotationMatrix();
+            for (int i = 0; i < NUM_WHEELS; ++i) {
+                state_.unsprung_pos[i] = state_.position + R * r_body_[i];
+                state_.unsprung_vel[i] =
+                    R * (state_.velocity + state_.angular_velocity.cross(r_body_[i]));
+                state_.susp_compression[i] = 0.0;
+                state_.susp_velocity[i]    = 0.0;
+                mount_query_[i] = state_.unsprung_pos[i];
+            }
+        }
         ax_prev_ = 0.0;
         ay_prev_ = 0.0;
         transient_.fill(ITireModel::Transient{});
@@ -157,6 +186,16 @@ public:
         brake_->begin_step(ctx, dt);
         drivetrain_->begin_step(ctx, dt);
         steering_->begin_step(ctx, dt);
+
+        // Free-3D strut: freeze the wheel-particle position the (once-per-step) contact
+        // query evaluated penetration at (the provider now samples the surface at the actual
+        // x_u, not the rigid hub), so the substep correction only tracks the SMALL wheel
+        // motion within the step — exact on curved surfaces, no planar-extrapolation false
+        // contact when the wheel leaves a loop/bank.
+        if (sp_.l5_spatial_suspension) {
+            for (int i = 0; i < NUM_WHEELS; ++i)
+                mount_query_[i] = state_.unsprung_pos[i];
+        }
 
         // Advance the corner suspension kinematics once per outer step (toe/camber from
         // the prescribed strut travel), held constant through the substeps below — like
@@ -215,6 +254,7 @@ public:
     bool mb_enabled(int axle) const noexcept {
         return axle == 0 ? mb_enabled_front_ : mb_enabled_rear_;
     }
+    void set_contact_provider(IContactProvider* p) noexcept { provider_ = p; }
     std::array<double, NUM_WHEELS> wheel_camber() const noexcept { return gamma_dae_; }
     std::array<double, NUM_WHEELS> wheel_toe()    const noexcept { return toe_dae_; }
 
@@ -243,9 +283,12 @@ private:
         double ax_body {0.0};
         double ay_body {0.0};
         std::array<double, NUM_WHEELS> domega {{0.0, 0.0, 0.0, 0.0}};
-        // Spatial-strut travel DOF (zero on the penalty path).
-        std::array<double, NUM_WHEELS> d_comp     {{0.0, 0.0, 0.0, 0.0}};
-        std::array<double, NUM_WHEELS> d_comp_dot {{0.0, 0.0, 0.0, 0.0}};
+        // Free-3D unsprung point-mass DOF (zero on the penalty path): d/dt of the
+        // world-frame wheel-centre position (= unsprung velocity) and velocity (= accel).
+        std::array<Vec3, NUM_WHEELS> d_u_pos {{Vec3::Zero(), Vec3::Zero(),
+                                               Vec3::Zero(), Vec3::Zero()}};
+        std::array<Vec3, NUM_WHEELS> d_u_vel {{Vec3::Zero(), Vec3::Zero(),
+                                               Vec3::Zero(), Vec3::Zero()}};
     };
 
     static Vec3 wheel_tangent_frame(const Vec3& n_in, const Vec3& body_fwd,
@@ -280,7 +323,12 @@ private:
         // stiffness acts on the per-corner unsprung mass. Penalty path leaves m_body==m,
         // so its arithmetic is byte-identical to before.
         const bool strut = sp_.l5_spatial_suspension;
-        const double m_body = strut ? (vp_.mass_sprung > 1.0 ? vp_.mass_sprung : vp_.mass) : m;
+        // Body = sprung mass only: total minus the four unsprung particles, so the whole
+        // vehicle sums back to the total mass (keeps flat handling matched to L2/L3).
+        double m_unsprung_sum = 0.0;
+        for (int i = 0; i < NUM_WHEELS; ++i)
+            m_unsprung_sum += std::max(1.0, vp_.unsprung_mass[i]);
+        const double m_body = strut ? std::max(1.0, m - m_unsprung_sum) : m;
         const double k_tire_strut = std::max(1.0, tp_.tire_vertical_stiffness);
         const double L = vp_.wheelbase;
         const double Tw_f = vp_.track_front;
@@ -300,20 +348,28 @@ private:
             const Vec3& rb = r_body_[i];
             const Vec3 n = contacts[i].normal.normalized();
             if (strut) {
-                // Tire-spring on the unsprung: the wheel centre rides comp·ez above the
-                // rigid hub the contact provider assumed, so the effective penetration is
-                // the reported (rigid) penetration minus that travel along the normal.
-                const double comp     = s.susp_compression[i];
-                const double comp_dot = s.susp_velocity[i];
-                const double pen = contacts[i].penetration - comp * ez_world.dot(n);
+                // Free-3D unsprung: the wheel centre is the inertial particle x_u. The
+                // contact provider reported penetration for the RIGID hub frozen at the
+                // step-start mount (mount_query_); the real penetration corrects for the
+                // wheel's displacement from that frozen hub along the contact normal.
+                const Vec3 x_u = s.unsprung_pos[i];
+                const Vec3 v_u = s.unsprung_vel[i];
+                // The provider sampled the surface AT the wheel particle (wheel_world_positions
+                // uses unsprung_pos), so penetration<=0 means the wheel is genuinely off the
+                // surface -> no force. (Don't let the within-step correction below manufacture
+                // contact from the clamped-to-zero gap, which gave false contact when the wheel
+                // left a loop/bank.) When in contact, the correction tracks the wheel's small
+                // within-step motion relative to the once-per-step contact query.
+                const double pen_rigid = contacts[i].penetration;
+                if (pen_rigid <= 0.0) { Fz[i] = 0.0; continue; }
+                const double pen = pen_rigid - (x_u - mount_query_[i]).dot(n);
                 if (pen <= 0.0) { Fz[i] = 0.0; continue; }
-                const Vec3 v_wc = R * (v_body + omega.cross(rb)) + ez_world * comp_dot;
-                const double vn = -v_wc.dot(n);
+                const double pen_dot = -v_u.dot(n);   // road frozen -> rate is wheel only
                 const double m_u = std::max(1.0, vp_.unsprung_mass[i]);
                 const double c_t = kTireDampRatio * 2.0 * std::sqrt(k_tire_strut * m_u);
                 // No artificial cap: the tire deforms, so Fz keeps rising with the
                 // (penetration) deformation. The stunt Fz_cap is a penalty-path-only hack.
-                Fz[i] = std::max(0.0, k_tire_strut * pen + c_t * vn);
+                Fz[i] = std::max(0.0, k_tire_strut * pen + c_t * pen_dot);
                 continue;
             }
             if (contacts[i].penetration <= 0.0) { Fz[i] = 0.0; continue; }
@@ -353,47 +409,61 @@ private:
         std::array<double, NUM_WHEELS> kappa {}, alpha {};
         std::array<double, NUM_WHEELS> mz_wheel {{0.0, 0.0, 0.0, 0.0}};
         std::array<double, NUM_WHEELS> fx_kin {{0.0, 0.0, 0.0, 0.0}};
-        std::array<double, NUM_WHEELS> dcomp {{0.0, 0.0, 0.0, 0.0}};
-        std::array<double, NUM_WHEELS> dcomp_dot {{0.0, 0.0, 0.0, 0.0}};
-        // Per-corner strut bookkeeping for the deferred unsprung accel (computed after
-        // the body acceleration is known — the relative travel needs the frame coupling).
-        std::array<double, NUM_WHEELS> fez_arr {}, fsusp_arr {}, mu_arr {{1, 1, 1, 1}};
+        // Free-3D unsprung derivatives (zero on the penalty path): d(x_u)/dt = v_u and
+        // d(v_u)/dt = a_u, both world frame.
+        std::array<Vec3, NUM_WHEELS> d_upos {{Vec3::Zero(), Vec3::Zero(),
+                                              Vec3::Zero(), Vec3::Zero()}};
+        std::array<Vec3, NUM_WHEELS> d_uvel {{Vec3::Zero(), Vec3::Zero(),
+                                              Vec3::Zero(), Vec3::Zero()}};
 
         for (int i = 0; i < NUM_WHEELS; ++i) {
             if (strut) {
+                // Free-3D unsprung point mass x_u, connected to the body mount by a
+                // two-point bushing: SOFT along the strut axis u_hat (= body up) is the
+                // coilover; STIFF perpendicular stands in for the rigid links. The tire
+                // force acts on the wheel (arbitrary-surface: Fz along the contact normal
+                // n, slip from the real wheel-centre velocity v_u). The body feels ONLY
+                // the connection reaction at the mount (+ its moment) — the tire reaches
+                // the chassis through the bushing, so every body<->wheel force is a genuine
+                // two-point element and the strut roll moment is delivered directly.
                 const Vec3& rb = r_body_[i];
-                const double comp     = s.susp_compression[i];
-                const double comp_dot = s.susp_velocity[i];
+                const Vec3 mount   = s.position + R * rb;             // current mount, world
+                const Vec3 v_mount = R * (v_body + omega.cross(rb));  // its world velocity
+                const Vec3 u_hat   = ez_world;                        // strut axis (body up)
+                const Vec3 x_u = s.unsprung_pos[i];
+                const Vec3 v_u = s.unsprung_vel[i];
+                const double m_u = std::max(1.0, vp_.unsprung_mass[i]);
+                const Vec3 rel  = x_u - mount;
+                const Vec3 vrel = v_u - v_mount;
+                const double comp     = rel.dot(u_hat);   // strut compression (+ toward body)
+                const double comp_dot = vrel.dot(u_hat);
                 const double ks  = std::max(1.0, vp_.spring_stiffness[i]);
                 const double cs  = std::max(0.0, vp_.damper_coefficient[i]);
-                const double m_u = std::max(1.0, vp_.unsprung_mass[i]);
-                // Strut force = coilover spring (preload so comp=0 is static; no tension)
-                // + damper + bump/rebound stops. The stops are stiff FORCE elements (not a
-                // position clamp), so when the suspension bottoms the large load transmits
-                // to the body instead of being swallowed by a kinematic wall.
+                // Strut force along +u_hat (preload so comp=0 is the static ride; no tension)
+                // + damper + bump/rebound stops as stiff FORCE elements.
                 double F_spring = F_preload_[i] + ks * comp;
                 if (F_spring < 0.0) F_spring = 0.0;          // coilover cannot pull
                 double F_stop = 0.0;
-                if (comp > comp_max_[i])                     // bump stop (compression)
+                if (comp > comp_max_[i])
                     F_stop = kStopStiffness * (comp - comp_max_[i]);
-                else if (comp < comp_min_[i])                // rebound stop (droop)
+                else if (comp < comp_min_[i])
                     F_stop = kStopStiffness * (comp - comp_min_[i]);
                 const double F_susp = F_spring + cs * comp_dot + F_stop;
+                // Perpendicular bushing (rigid-link penalty), critically damped.
+                const Vec3 rel_perp  = rel  - comp     * u_hat;
+                const Vec3 vrel_perp = vrel - comp_dot * u_hat;
+                const double cb = 2.0 * std::sqrt(k_link_ * m_u);
+                const Vec3 F_bush = -k_link_ * rel_perp - cb * vrel_perp;  // on wheel
 
                 Vec3 tire_total = Vec3::Zero();
                 if (Fz[i] > 1.0) {
-                    const Vec3 v_hub_world =
-                        R * (v_body + omega.cross(rb)) + ez_world * comp_dot;
                     Vec3 n = contacts[i].normal.normalized();
                     Vec3 t_lat;
                     // DAE toe adds to the steer angle (bump-steer); camber flows via gamma.
                     Vec3 t_long = wheel_tangent_frame(n, body_fwd,
                                                       d_wheel[i] + toe_dae_[i], t_lat);
-                    // General contact-frame slip on any surface (flat / banked / loop) — no
-                    // loop-specific tangent fallback; the wheel-heading projection is the
-                    // longitudinal direction everywhere.
-                    const double v_long_k = v_hub_world.dot(t_long);
-                    const double v_lat    = v_hub_world.dot(t_lat);
+                    const double v_long_k = v_u.dot(t_long);
+                    const double v_lat    = v_u.dot(t_lat);
                     ITireModel::ContactInput ci;
                     ci.Fz = Fz[i]; ci.Vx = v_long_k; ci.Vy = v_lat;
                     ci.omega = s.wheel_spin[i]; ci.gamma = gamma_dae_[i];
@@ -426,19 +496,19 @@ private:
                 } else {
                     ci_[i] = ITireModel::ContactInput{};   // neutral: no transient evolution
                 }
-                // The vertical coupling between body and wheel goes through the strut (along
-                // the body-up axis); the in-plane tire force is reacted rigidly by the body.
-                // So replace the strut-axis component of the tire force with the strut force.
-                const double f_ez = tire_total.dot(ez_world);
-                const Vec3 F_w_body = tire_total - (f_ez - F_susp) * ez_world;
-                F_total_world += F_w_body;
-                F_body[i] = R.transpose() * F_w_body;
+                // Unsprung Newton (world): tire + strut (-F_susp along u_hat) + bushing +
+                // gravity. No frame-coupling shortcut — x_u is a genuine inertial particle.
+                const Vec3 F_strut_on_u = -F_susp * u_hat;
+                const Vec3 a_u = (tire_total + F_strut_on_u + F_bush
+                                  + Vec3(0.0, 0.0, -m_u * kGravity)) / m_u;
+                d_upos[i] = v_u;
+                d_uvel[i] = a_u;
+                // Body feels the equal-opposite connection reaction at the mount.
+                const Vec3 F_conn = -(F_strut_on_u + F_bush);   // = F_susp*u_hat - F_bush
+                F_total_world += F_conn;
+                F_body[i] = R.transpose() * F_conn;
                 tau_body += rb.cross(F_body[i]);
                 tau_body.z() += mz_wheel[i];
-                // Unsprung travel DOF: store the strut-axis forces; the relative accel is
-                // finished after the body acceleration is known (frame coupling, below).
-                dcomp[i]  = comp_dot;
-                fez_arr[i] = f_ez; fsusp_arr[i] = F_susp; mu_arr[i] = m_u;
                 continue;
             }
             if (!contacts[i].is_valid || contacts[i].penetration <= 0.0) {
@@ -523,28 +593,12 @@ private:
         const SubsystemContext ctx_brake{s, cmd_residual, ctx.dt, ctx.Fz};
         const std::array<double, NUM_WHEELS> Tb = brake_->wheel_torque(ctx_brake);
 
-        // Strut path: the sprung body responds along the strut axis with m_sprung
-        // (the unsprung decouples there via the travel DOF), but in-plane the unsprung
-        // is rigidly carried, so the perpendicular response sees the total mass — this
-        // keeps flat-ground handling matched to the planar L2/L3 models. Penalty path
-        // divides by the single total mass (byte-identical to before).
-        Vec3 a_world;
-        if (strut) {
-            const double F_ez = F_total_world.dot(ez_world);
-            const Vec3 F_perp = F_total_world - F_ez * ez_world;
-            a_world = (F_ez / m_body) * ez_world + F_perp / m;
-            // Finish the per-corner unsprung travel accel now that the body accel is known.
-            // comp̈ = (Fz_tire - F_susp)/m_u - g·êz - a_body·êz : the last term is the frame
-            // coupling (the unsprung rides the accelerating body). Gravity then cancels in
-            // free flight (a_body·êz = -g·êz) so the body stays ballistic, and on the ground
-            // (a_body·êz ~ 0) it reduces to the static-correct balance.
-            const double az_body = a_world.dot(ez_world);
-            const double g_ez = kGravity * ez_world.z();
-            for (int i = 0; i < NUM_WHEELS; ++i)
-                dcomp_dot[i] = (fez_arr[i] - fsusp_arr[i]) / mu_arr[i] - g_ez - az_body;
-        } else {
-            a_world = F_total_world / m_body;
-        }
+        // Free-3D strut path: the body is purely the sprung mass (m_body = mass - sum
+        // unsprung); each unsprung is its own inertial particle, so there is no mass split
+        // and no frame-coupling shortcut — the body feels only the mount connection forces.
+        // The whole vehicle (body + 4 unsprung) sums to the total mass, so flat-ground
+        // handling still matches the planar L2/L3 models. Penalty path: m_body == mass.
+        const Vec3 a_world = F_total_world / m_body;
         const Vec3 a_body = R.transpose() * a_world - omega.cross(v_body);
         // Reported ax/ay are the body-frame specific force (gravity removed), matching
         // the planar L2/L3 convention (Fy/m) — the accelerometer/load-transfer signal,
@@ -566,8 +620,8 @@ private:
         d_out.d_omega  = alpha_body;
         d_out.ax_body  = accel_sf_body.x();
         d_out.ay_body  = accel_sf_body.y();
-        d_out.d_comp     = dcomp;
-        d_out.d_comp_dot = dcomp_dot;
+        d_out.d_u_pos = d_upos;
+        d_out.d_u_vel = d_uvel;
 
         const bool open_diff = vp_.differential == VehicleParams::Differential::Open;
         // Effective per-wheel reflected engine inertia: gear-dependent from the
@@ -627,19 +681,25 @@ private:
         }
         for (int i = 0; i < NUM_WHEELS; ++i)
             s.wheel_spin[i] = s0.wheel_spin[i] + d.domega[i] * h;
-        // Strut travel DOF (zero derivatives on the penalty path -> comp stays put). The
-        // bump/rebound stops are stiff force elements in the dynamics, so travel is limited
-        // there; this is only a wide last-resort guard against numerical runaway.
+        // Wheel-centre world position: ALWAYS maintained (the contact provider samples the
+        // surface there). Strut path: integrate the free-3D inertial particle and DERIVE the
+        // strut-axis travel (susp_compression/velocity) for the L4 DAE / FMI / cosim contract
+        // ("suspension travel is the real vertical wheel travel"). Penalty path: the wheel
+        // rides rigidly with the body. Either way unsprung_pos is the true wheel centre, so
+        // it never goes stale and needs no path-dependent guard elsewhere.
+        const Mat3 Rn = s.orientation.toRotationMatrix();
         for (int i = 0; i < NUM_WHEELS; ++i) {
-            s.susp_compression[i] = s0.susp_compression[i] + d.d_comp[i] * h;
-            s.susp_velocity[i]    = s0.susp_velocity[i]    + d.d_comp_dot[i] * h;
-            const double hi = comp_max_[i] + 0.10, lo = comp_min_[i] - 0.10;
-            if (s.susp_compression[i] > hi) {
-                s.susp_compression[i] = hi;
-                if (s.susp_velocity[i] > 0.0) s.susp_velocity[i] = 0.0;
-            } else if (s.susp_compression[i] < lo) {
-                s.susp_compression[i] = lo;
-                if (s.susp_velocity[i] < 0.0) s.susp_velocity[i] = 0.0;
+            const Vec3 mount   = s.position + Rn * r_body_[i];
+            const Vec3 v_mount = Rn * (s.velocity + s.angular_velocity.cross(r_body_[i]));
+            if (sp_.l5_spatial_suspension) {
+                s.unsprung_pos[i] = s0.unsprung_pos[i] + d.d_u_pos[i] * h;
+                s.unsprung_vel[i] = s0.unsprung_vel[i] + d.d_u_vel[i] * h;
+                const Vec3 u_hat = Rn.col(2);
+                s.susp_compression[i] = (s.unsprung_pos[i] - mount).dot(u_hat);
+                s.susp_velocity[i]    = (s.unsprung_vel[i] - v_mount).dot(u_hat);
+            } else {
+                s.unsprung_pos[i] = mount;       // rigid wheel centre rides with the body
+                s.unsprung_vel[i] = v_mount;
             }
         }
         return s;
@@ -672,8 +732,22 @@ private:
         }
     }
 
-    void substep(const CmdL4& cmd, const ContactArray& contacts, double h) {
+    void substep(const CmdL4& cmd, const ContactArray& contacts_in, double h) {
         const State s0 = state_;
+        // Per-substep contact re-query (free-3D only): if a provider is attached, refresh
+        // the contact (normal + penetration + the frozen rigid-hub reference) at this
+        // substep's pose instead of holding the once-per-outer-step query. Shrinks the
+        // frozen-contact O(dt) energy term on curved surfaces (loop / bank). Backward
+        // compatible: null provider -> use the ContactArray the caller passed in.
+        ContactArray local;
+        const ContactArray* cptr = &contacts_in;
+        if (provider_ && sp_.l5_spatial_suspension) {
+            provider_->query(s0, vp_, local);
+            cptr = &local;
+            for (int i = 0; i < NUM_WHEELS; ++i)
+                mount_query_[i] = s0.unsprung_pos[i];   // wheel particle the query sampled at
+        }
+        const ContactArray& contacts = *cptr;
         const bool lugre_on = tp_.lugre.enabled;
         const double hz = 0.25 * h;
         if (sp_.integrator == SolverParams::Integrator::Euler) {
@@ -700,9 +774,10 @@ private:
         k.ay_body  = (k1.ay_body  + 2*k2.ay_body  + 2*k3.ay_body  + k4.ay_body) / 6.0;
         for (int i = 0; i < NUM_WHEELS; ++i) {
             k.domega[i] = (k1.domega[i] + 2*k2.domega[i] + 2*k3.domega[i] + k4.domega[i]) / 6.0;
-            k.d_comp[i] = (k1.d_comp[i] + 2*k2.d_comp[i] + 2*k3.d_comp[i] + k4.d_comp[i]) / 6.0;
-            k.d_comp_dot[i] = (k1.d_comp_dot[i] + 2*k2.d_comp_dot[i]
-                             + 2*k3.d_comp_dot[i] + k4.d_comp_dot[i]) / 6.0;
+            k.d_u_pos[i] = (k1.d_u_pos[i] + 2*k2.d_u_pos[i]
+                          + 2*k3.d_u_pos[i] + k4.d_u_pos[i]) / 6.0;
+            k.d_u_vel[i] = (k1.d_u_vel[i] + 2*k2.d_u_vel[i]
+                          + 2*k3.d_u_vel[i] + k4.d_u_vel[i]) / 6.0;
         }
         state_ = apply(s0, k, h);
         ax_prev_ = k.ax_body;
@@ -737,6 +812,15 @@ private:
     std::array<double, NUM_WHEELS> F_preload_ {};
     std::array<double, NUM_WHEELS> comp_min_ {};   // droop limit [m] (spring topped out)
     std::array<double, NUM_WHEELS> comp_max_ {};   // bump limit [m]
+    // Free-3D: rigid-hub world position the step-start contact query assumed (frozen
+    // through the substeps so the tire penetration tracks the wheel particle vs the road).
+    std::array<Vec3, NUM_WHEELS> mount_query_ {{Vec3::Zero(), Vec3::Zero(),
+                                                Vec3::Zero(), Vec3::Zero()}};
+    // Perpendicular link bushing rate (env-overridable for the hard-constraint sweep).
+    double k_link_ {kLinkStiffness};
+    // Optional contact provider for per-substep re-query (shrinks the once-per-step
+    // frozen-contact O(dt) term). Non-owning; null -> use the frozen ContactArray passed in.
+    IContactProvider* provider_ {nullptr};
     // Per-corner L4 hard-joint corner DAE (B2): one model per axle (front/rear) shared by
     // its two corners, each with its own state, fed the corner strut travel. Produces the
     // per-wheel toe/camber applied to the tire. Inactive unless attached AND strut path on.
@@ -781,6 +865,13 @@ bool free_3d_mb_dynamics_enabled(const IVehicleDynamics& dyn, int axle) {
     const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);
     if (!p) return false;
     return p->mb_enabled(axle);
+}
+
+bool free_3d_attach_contact_provider(IVehicleDynamics& dyn, IContactProvider* provider) {
+    auto* p = dynamic_cast<Free3DDynamics*>(&dyn);
+    if (!p) return false;
+    p->set_contact_provider(provider);
+    return true;
 }
 
 std::array<double, NUM_WHEELS> free_3d_wheel_camber(const IVehicleDynamics& dyn) {

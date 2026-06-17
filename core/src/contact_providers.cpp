@@ -26,8 +26,16 @@ void wheel_world_positions(const State& vehicle, const VehicleParams& vp,
     const Vec3 body_offsets[NUM_WHEELS] = {
         Vec3(a, tf2, hz), Vec3(a, -tf2, hz),
         Vec3(-b, tr2, hz), Vec3(-b, -tr2, hz)};
-    for (int i = 0; i < NUM_WHEELS; ++i)
-        pw[i] = vehicle.position + vehicle.orientation * body_offsets[i];
+    for (int i = 0; i < NUM_WHEELS; ++i) {
+        // L5 free-3D: the wheel centre is a genuine inertial particle (unsprung_pos),
+        // which can deviate from the body-rigid mount. Evaluate the contact at the ACTUAL
+        // wheel position so penetration is exact on curved surfaces (no planar extrapolation
+        // from the rigid hub -> no false contact when the wheel leaves a loop/bank). Other
+        // levels leave unsprung_pos zero and use the rigid body-attached position.
+        pw[i] = (vehicle.unsprung_pos[i].squaredNorm() > 1e-12)
+                    ? vehicle.unsprung_pos[i]
+                    : vehicle.position + vehicle.orientation * body_offsets[i];
+    }
 }
 
 inline double hub_penetration(const Vec3& hub, const Vec3& n_unit,

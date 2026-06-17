@@ -1,3 +1,39 @@
+# Handoff — L5 dynamic MBD suspension
+
+## RESOLVED 2026-06-17 (free-3D inertial unsprung — IMPLEMENTED, 377/377 green)
+
+The B1 strut path is replaced by a free-3D inertial unsprung model. Design + reasoning +
+energy evidence: **`docs/design/L5_MBD_FREE3D_UNSPRUNG.md`**. Both prior designs are
+superseded (10-DOF coupled = QS roll bug; world-vertical z_u = breaks general-surface
+normal). Direction set by user: discard world-z, keep arbitrary-surface contact.
+
+- Each unsprung = free 3-D inertial point mass `x_u` (new `State::unsprung_pos/vel`); strut
+  = soft two-point spring along body-up, perpendicular = stiff link bushing (penalty 1e7).
+  Tire on the wheel (Fz along real normal -> general surface); body feels only the mount
+  connection reaction (two-point -> energy-consistent + direct QS roll moment).
+  `susp_compression/velocity` are now DERIVED strut travel (DAE/FMI/cosim contract kept).
+- Result: 377/377 (was 376). Structural energy leak gone — flat steer 0 injection; loop
+  residual is dt-CONVERGENT frozen-contact discretization (4811->641 J/turn as dt halves),
+  not structural (B1's ~85 kJ was dt-independent). `Stunt.FreeLoopCompletesLap` attitude
+  check rebaselined to peak (not final instantaneous) pitch.
+- Touched: `state.hpp` (+unsprung_pos/vel), `free_3d_dynamics.cpp` (strut path rewrite +
+  per-substep re-query + k_link), `interfaces.hpp`, `python/bindings.cpp`,
+  `tests/integration/test_stunt.cpp`, `apps/jump_demo/strut_demo_dump.cpp` (energy ledger +
+  env toggles). NOT committed yet.
+- Follow-ups DONE (2026-06-17): (1) per-substep contact re-query
+  (`free_3d_attach_contact_provider`, opt-in) — removes the loop frozen-contact energy
+  residual: coast loop goes from net +5 kJ injection (frozen) to net -18..-40 kJ dissipative
+  (re-query), peak ledger swing +18 kJ -> +0.9 kJ. (2) link "hard constraint" = stiffened the
+  penalty to 1e8 N/m (~40 um, effectively rigid); a true k=inf constraint is rejected (it
+  reverts to the reduced-coordinate roll loss) — penalty IS the limit and keeps roll
+  (gradient 2.73 deg/g). Verified stable to 1e9; 1e10 RK4-unstable. Details in the design doc.
+- Next cut: real strut axis + motion ratio from DAE `travel_maps`; wire the provider into
+  sim/cosim so re-query is default there.
+
+Everything below is the prior (superseded) coupled-solve / world-z history.
+
+---
+
 # Handoff — L5 dynamic MBD suspension (coupled solve): design done, impl WIP (roll bug)
 
 Continuation of the L5 spatial-strut track (see `HANDOFF_TIRE_L5.md` for B1/B2/C, all

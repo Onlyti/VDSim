@@ -125,6 +125,8 @@ bool fourteen_dof_attach_multibody(IVehicleDynamics& dyn,
                                    bool enable_dynamics);
 bool fourteen_dof_mb_dynamics_enabled(const IVehicleDynamics& dyn, int axle);
 std::unique_ptr<IVehicleDynamics> create_stunt_dof();
+class IContactProvider;   // defined below; needed by free_3d_attach_contact_provider
+
 // L5 (free_3d) spatial-strut corner DAE: per corner, feed the strut travel to the
 // L4 hard-joint corner DAE and apply the resulting toe/camber to the tire. Requires
 // SolverParams::l5_spatial_suspension (the DAE consumes the strut travel). front_axle
@@ -138,6 +140,11 @@ bool free_3d_mb_dynamics_enabled(const IVehicleDynamics& dyn, int axle);
 // Zero for any other model. For inspection / suspension-vs-L4 validation.
 std::array<double, NUM_WHEELS> free_3d_wheel_camber(const IVehicleDynamics& dyn);
 std::array<double, NUM_WHEELS> free_3d_wheel_toe(const IVehicleDynamics& dyn);
+// Attach a contact provider for per-substep contact re-query (free-3D strut path). The
+// dynamics then refreshes the contact at each internal substep pose, shrinking the
+// once-per-step frozen-contact discretization error on curved surfaces. Non-owning: the
+// provider must outlive the dynamics. Pass nullptr to revert to the frozen ContactArray.
+bool free_3d_attach_contact_provider(IVehicleDynamics& dyn, IContactProvider* provider);
 // Kinematic bicycle (no tire forces / no slip): yaw_rate = v*tan(delta)/L.
 // For path-planning / kinematic-MPC use and as the simplest ladder rung.
 std::unique_ptr<IVehicleDynamics> create_kinematic();

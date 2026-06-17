@@ -17,8 +17,10 @@ from matplotlib.patches import Circle, Rectangle
 
 
 def load(path):
-    # CSV header: t,x,z,pitch,vx,vz,fz_sum,fwd_x,fwd_z,[comp..,fz..,ax,ay]
+    # CSV: t,x,z,pitch,vx,vz,fz_sum,fwd_x,fwd_z,comp[4],fz[4],ax,ay,wspin,
+    #      then unsprung world x,z for FL,FR,RL,RR (cols 20..27) when present.
     rows = {k: [] for k in ("t", "x", "z", "pitch", "vx", "vz", "fz", "fwx", "fwz")}
+    rows["wheels"] = []   # per frame: [(x,z) FL, FR, RL, RR]
     with open(path) as f:
         r = csv.reader(f)
         next(r)
@@ -28,6 +30,11 @@ def load(path):
             rows["vx"].append(float(v[4])); rows["vz"].append(float(v[5]))
             rows["fz"].append(float(v[6])); rows["fwx"].append(float(v[7]))
             rows["fwz"].append(float(v[8]))
+            if len(v) >= 28:
+                rows["wheels"].append([(float(v[20 + 2 * k]), float(v[21 + 2 * k]))
+                                       for k in range(4)])
+            else:
+                rows["wheels"].append([])
     return rows
 
 
@@ -70,6 +77,15 @@ def main():
         poly = plt.Polygon(xs_pts, closed=True, fc=color, ec="#002060", lw=1.5, zorder=5)
         ax.add_patch(poly)
 
+    def draw_wheels(cx, cz, wheels):
+        # Side view (x-z): FL/FR overlap (front), RL/RR overlap (rear). Draw all four
+        # wheel-centre particles + the strut line from the body to each wheel.
+        labels = ("FL", "FR", "RL", "RR")
+        cols = ("#111111", "#444444", "#111111", "#444444")
+        for (wx, wz), c in zip(wheels, cols):
+            ax.plot([cx, wx], [cz, wz], color="#FFA000", lw=1.2, zorder=4)  # strut
+            ax.add_patch(Circle((wx, wz), 0.32, fc=c, ec="#000000", lw=0.8, zorder=6))
+
     def render(fi):
         ax.clear()
         kind, i = frames[fi]
@@ -89,6 +105,8 @@ def main():
             ax.plot(d["x"][trail:i + 1], d["z"][trail:i + 1],
                     color="#01A0E9", lw=1.2, zorder=2)
             draw_car(car_corners(x, z, d["fwx"][i], d["fwz"][i]), "#005195")
+            if d["wheels"][i]:
+                draw_wheels(x, z, d["wheels"][i])
             airborne = d["fz"][i] < 30.0
             ax.set_title(f"L5 spatial-strut  |  ramp jump  |  t={d['t'][i]:.2f}s  "
                          f"{'AIRBORNE' if airborne else 'on ground'}",
@@ -108,6 +126,8 @@ def main():
             on_track = d["fz"][i] > 50.0
             draw_car(car_corners(x, z, d["fwx"][i], d["fwz"][i]),
                      "#DC291E" if on_track else "#888888")
+            if d["wheels"][i]:
+                draw_wheels(x, z, d["wheels"][i])
             ax.set_title(f"L5 spatial-strut  |  {args.label}  |  t={d['t'][i]:.2f}s"
                          f"  {'' if on_track else '(detached — falling)'}", fontsize=11)
         ax.grid(True, color="#eceff1", zorder=-1)
