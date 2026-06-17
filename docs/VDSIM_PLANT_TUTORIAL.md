@@ -120,12 +120,30 @@ cd /path/to/VDSim && python3 examples/vla_plant_demo.py     # writes /tmp/vla_pl
 | `wheel[i].mu` | **road-surface** friction at this wheel (contact μ) | – |
 | `wheel[i].mu_peak` | **realized** tyre peak coefficient at this Fz (load-dependent) | – |
 
-Friction-circle check (on you, the analyst): use **`mu_peak`** in the denominator —
-`useGT = ‖[Fx,Fy]‖ / (mu_peak·Fz)` is bounded by 1 (≈1 at the grip limit). Do **not** use
-`mu` (the road μ): because the MF2002 peak coefficient *rises above* the nominal μ at low load
-(`PDY2<0`), a lightly loaded wheel can carry `‖F‖ > mu·Fz`, so `‖F‖/(mu·Fz)` can read >1 even
-though the tyre is inside its own load-dependent ellipse. `mu_peak` removes that ambiguity.
-The plant still exposes only raw ground truth, not a usage metric.
+Friction-circle check (on you, the analyst). Define the **friction saturation ratio**
+
+```
+sat = ‖[Fx,Fy]‖ / (mu_peak·Fz)          # use mu_peak, NOT the road mu
+```
+
+Use `mu_peak` in the denominator, **not** `mu` (the road μ): because the MF peak coefficient
+*rises above* the nominal μ at low load (`PDY2<0`), a lightly loaded wheel can carry
+`‖F‖ > mu·Fz`, so `‖F‖/(mu·Fz)` can read >1 even though the tyre is inside its own
+load-dependent ellipse. `mu_peak` removes that ambiguity, and `sat ≤ 1`.
+
+**`sat` is a saturation ratio, not a monotone "grip utilization".** The tyre force-slip curve
+peaks then falls (sliding tail), so `sat=1` only *at* the peak slip; both the rising side
+(reserve) and the sliding side (drift, past peak) read `sat<1`. A bare `sat=0.8` is therefore
+ambiguous. Disambiguate with the slip channel:
+
+| `sat` | slip angle | state |
+|---|---|---|
+| ≈1 | ≈ peak slip | at the grip limit |
+| <1 | small | genuine reserve (rising side) |
+| <1 | large | past peak — drift / departure (sliding tail) |
+
+This is also why the plant exposes only raw ground truth (force, slip, Fz, mu_peak) and leaves
+the metric to you: a single self-contained "grip-usage" scalar is ill-defined past the peak.
 
 ---
 

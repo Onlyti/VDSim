@@ -56,7 +56,7 @@ obs = plant.step([delta_roadwheel_rad, Fx_total_N])
 | `wheel[i].Fz` | N | normal load |
 | `wheel[i].alpha`, `kappa` | rad, - | slip |
 | `wheel[i].mu` | - | road-surface (contact) μ |
-| `wheel[i].mu_peak` | - | realized tyre peak coeff at this Fz (use for friction-circle: `‖F‖/(mu_peak·Fz)≤1`) |
+| `wheel[i].mu_peak` | - | realized tyre peak coeff at this Fz; friction saturation ratio `sat=‖F‖/(mu_peak·Fz)≤1` (not a monotone utilization — pair with slip; see tutorial §4) |
 
 No usage / violation metrics in the plant (thesis-side only).
 
