@@ -170,6 +170,9 @@ semantics 미묘 차(`mu`=contact vs `mu_peak`=realized)는 라운드 간 추적
 - **[docs]** 튜토리얼 §1: 외부 인터프리터(conda/venv) 재빌드 절 + `VDSIM_BUILD_PYTHON` default
   OFF 명시 (item 0).
 - thesis-side 확정: mu_peak-based friction-utilization이 P1 gate에 정합. main 병합 blocker 없음.
+- **[declined]** 고객 저우선 재요청 `wheel.grip_usage=‖F‖/(mu_peak·Fz)` obs 직접 노출 →
+  **미채택**. 사유: "plant=raw GT only, usage metric은 thesis-side 소유" 설계 원칙 유지
+  (튜토리얼 §4 명시). grip_usage는 obs로 1줄 파생 → 분석자 계산. (재논의 방지용 기록.)
 
 ### BETA #1 — 2026-06-18 (초기 인도)
 - Ld2 7DOF plant + MF2002 `.tir` (load-dependent Ca/peak μ), `VDSimPlant.step([delta,Fx])`
