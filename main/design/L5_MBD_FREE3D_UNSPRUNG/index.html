@@ -2461,6 +2461,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#done-minor-follow-ups-2026-06-17" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Done (minor follow-ups, 2026-06-17)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gyroscopic-wheel-spin-coupling-implemented" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gyroscopic wheel-spin coupling (implemented)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#open-next-cut" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2609,12 +2631,28 @@ not a constant wheel rate:
 - Verified (real hardpoints): MacPherson wheel rate -7.0% (rebound 60mm) .. +9.7% (bump);
   DoubleWishbone -6.9% .. +11.7%; DW MR0=-0.53 (inboard spring) -&gt; k_coil~3.6*ks. Static load
   matched, all 377 tests green.</p>
+<h2 id="done-minor-follow-ups-2026-06-17">Done (minor follow-ups, 2026-06-17)<a class="headerlink" href="#done-minor-follow-ups-2026-06-17" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Progressive damper: the coil damper scales with <code>MR^2</code> too (<code>c_eff = cs*(MR/MR0)^2</code>), matched
+  to <code>cs</code> at static. Bump/rebound stops stay on the wheel travel (comp) — they engage at the
+  real travel limit, so that is correct.</li>
+<li>Per-substep contact re-query is now the default in every <code>SimSession</code>-based run (cosim,
+  headless, batch): the session attaches its ground provider to the dynamics after init
+  (no-op for non-free_3d). Standalone acceptance tests still drive the frozen ContactArray.</li>
+</ul>
+<h2 id="gyroscopic-wheel-spin-coupling-implemented">Gyroscopic wheel-spin coupling (implemented)<a class="headerlink" href="#gyroscopic-wheel-spin-coupling-implemented" title="Permanent link">&para;</a></h2>
+<p>Each spinning wheel carries spin angular momentum <code>H_i = I_wheel*omega_spin</code> along the lateral
+(body-y) axis. A body rotating at <code>omega</code> must supply <code>omega x H</code>, so the wheels exert the
+reaction <code>-omega x H</code> on the body, added to <code>tau_body</code>. This couples yaw&lt;-&gt;roll at speed
+(yawing a fast-spinning wheel set produces a roll moment, and vice versa). Spin axis is
+approximated as body-y (steer/camber tilt is second order). Verified airborne (no tyre
+forces): a yaw rate + spinning wheels develops a roll rate; non-spinning does not
+(<code>Stunt.GyroscopicWheelSpinCouplesYawToRoll</code>).</p>
 <h2 id="open-next-cut">Open / next cut<a class="headerlink" href="#open-next-cut" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Damper and bump/rebound stops are still on the wheel-rate comp (not the progressive MR);
-  minor vs the spring rate.</li>
-<li>Wire the contact provider into the sim/cosim harness so per-substep re-query is on by
-  default there (acceptance tests intentionally stay on the frozen path).</li>
+<li>Gyro refinements: spin axis steer/camber tilt; the spin-up reaction torque (<code>I_wheel*domega</code>)
+  on the body — both second order.</li>
+<li>Bushing/link compliance (KC) under load is a stiff penalty, not a full compliance model.</li>
 </ul>
 
 
