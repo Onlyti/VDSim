@@ -63,12 +63,25 @@ commanded Fx_total is NOT delivered as-is (arbitrary 7500 N = full-throttle cali
 is exactly the pedal/throttle map the thesis forbids (P0.2). Steer (δ) IS clean.
 - Good side: the torque path runs wheel-spin → slip-ratio → MF96 combined, so longitudinal
   grip-loss and κ ARE physical (the friction circle works).
-- Required: a **direct-Fx force-input path in Ld2** that bypasses the throttle map and splits
-  `Fx_total` by `drive_split_front`. Decide how the longitudinal channel saturates:
-  (i) apply Fx as a force + clamp combined `‖[Fx,Fy]‖ ≤ μ·Fz` (grip-loss via clamp; κ becomes
-  diagnostic only), or (ii) convert Fx→wheel torque and keep the spin/slip dynamics (κ stays
-  physical — preferred, since the thesis wants κ as GT). This is deliverable #0 below and the
-  acceptance #2 crux.
+- **DECISION (FINAL) = (ii) Fx → per-wheel TORQUE, keep wheel-spin/slip dynamics** (physical κ).
+  Rationale: the ONLY reason to use VDSim over the Python clamp toy is native MF96 combined-slip
+  (α+κ) — a force+clamp would just re-implement that clamp in C++ for zero fidelity gain. (ii)
+  is what makes acceptance #2 (brake+turn grip-loss) a REAL tyre result (wheel lock/spin → κ →
+  saturation), and exposing κ as GT defends "full tyre physics". This is deliverable #0.
+- **Mapping (required)**: the MPC emits `Fx_total` as a force intent (its internal model has no
+  wheel dynamics). The plant converts `Fx_total` → per-wheel drive/brake torque, applied
+  DIRECTLY to the wheel-spin ODE, BYPASSING the throttle/drivetrain calibration:
+  - per-wheel `τ_i = split_axle/2 · Fx_total · R_eff`, front axle split = `drive_split_front`
+    (0.5), rear = `1 − drive_split_front`; braking (Fx_total<0) uses the SAME 0.5/0.5 split
+    (matches the MPC's `KF_DRIVE`). Fx_total>0 → drive torque, Fx_total<0 → brake torque.
+  - Normal regime: realised contact `ΣFx ≈ Fx_total` (small wheel inertia → transient
+    negligible → matches the MPC's instant-force assumption).
+  - Limit regime: wheel slips → κ↑ → MF96 saturates → realised `Fx < Fx_total` = the physical
+    grip loss we want to show. The normal↔limit mismatch is absorbed by the chance constraint
+    (intended plant-model mismatch = realism).
+  - Implementation hint: handle `CmdL1` (per-wheel motor_torque/brake_torque) NATIVELY in Ld2
+    (apply to the spin ODE, skip `lower_to_l4`'s throttle mapping); the wrapper builds CmdL1
+    from `Fx_total`. The MPC API stays single `Fx_total` (no per-axle exposure to the MPC).
 
 ## Deliverables (the job)
 0. **Direct-Fx force-input path in Ld2** (bypass the throttle map; split by `drive_split_front`;
@@ -84,15 +97,24 @@ is exactly the pedal/throttle map the thesis forbids (P0.2). Steer (δ) IS clean
    Ld2 SimSession + CmdL3 + the getters, on top of `vdsim_lab`. obs (per §API).
 5. **3 smoke tests** = acceptance §below. #2 MUST be brake+turn on the patch (combined).
 
+## Two-tier dt (REQUIRED — (ii) wheel-spin is stiff)
+`step()` advances one CONTROL period at ZOH, integrating internally at a fine fixed substep:
+- `control_dt` = MPC sample (the MPC solves at dt=0.1, Tf=4/N=40); the control is held ZOH.
+- `substep_dt` ≤ 1 ms (e.g. 0.5 ms) for the wheel-spin/slip ODE (coarse steps → inaccurate or
+  divergent with (ii)). Constraint: `substep_dt` divides `control_dt`; `control_dt ≤ MPC dt`.
+- Deterministic, FIXED substep (no adaptive) for figure reproducibility.
+
 ## Target API (drop-in)
 ```python
-plant = VDSimPlant(config="ioniq5_awd.yaml", friction_map=[(s0,s1,0.5)], base_mu=0.9, dt=0.05)
-plant.reset(state0=[X,Y,psi,vx,vy,r])
+plant = VDSimPlant(config="ioniq5_awd.yaml", friction_map=[(s0,s1,0.5)], base_mu=0.9,
+                   control_dt=0.05, substep_dt=5e-4)   # control_dt <= MPC dt (0.1); ZOH
+plant.reset(state0=[X,Y,psi,vx,vy,r])                  # seeds wheel_spin = vx/R internally
 for k in range(N):
-    u = mpc.solve(...)              # u = [delta_roadwheel_rad, Fx_N]
-    obs = plant.step(u)            # one fixed-dt step
+    u = mpc.solve(...)              # u = [delta_roadwheel_rad, Fx_total_N] (force intent)
+    obs = plant.step(u)            # ZOH-hold u over control_dt, integrate at substep_dt
     # obs: { X,Y,psi,vx,vy,r,ax,ay,beta,
-    #        wheel: [{Fx,Fy,Fz,alpha,kappa,mu}]*4 }   (mu = real μ used; no usage field)
+    #        wheel: [{Fx,Fy,Fz,alpha,kappa,mu}]*4 }   (Fx,Fy = contact frame; mu = real μ used;
+    #                                                   raw GT only — no usage field)
 ```
 
 ## Acceptance
