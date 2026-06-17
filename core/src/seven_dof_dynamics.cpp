@@ -607,9 +607,16 @@ private:
         // slip definition (energetically consistent: free roll → kappa=0 → Fx=0).
         std::array<double, NUM_WHEELS> T_net{};
         if (direct_l1_) {
-            for (int i = 0; i < NUM_WHEELS; ++i)
-                T_net[i] = cmd_l1_.motor_torque[i] - cmd_l1_.brake_torque[i]
-                           - fx_kin[i] * Re_w_[i];
+            // Brake opposes wheel rotation and must NOT drive it backwards (a friction brake
+            // can only resist, not propel). tanh(omega/eps) gives the signed, vanishing-at-rest
+            // brake direction, so a locked wheel settles at kappa~-1 instead of spinning
+            // backward to kappa->-inf under a constant over-brake torque.
+            constexpr double kBrakeOmegaEps = 2.0;  // [rad/s]
+            for (int i = 0; i < NUM_WHEELS; ++i) {
+                const double brake = cmd_l1_.brake_torque[i]
+                    * std::tanh(s.wheel_spin[i] / kBrakeOmegaEps);
+                T_net[i] = cmd_l1_.motor_torque[i] - brake - fx_kin[i] * Re_w_[i];
+            }
         } else {
             for (int i = 0; i < NUM_WHEELS; ++i)
                 T_net[i] = Td[i] + Tb[i] - fx_kin[i] * Re_w_[i];
