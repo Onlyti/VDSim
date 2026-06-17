@@ -103,6 +103,44 @@ private:
     double z_, mu_l_, mu_r_, by_;
 };
 
+// Piecewise-x friction on a flat plane: each patch [x0, x1) overrides base_mu.
+class FrictionPatchGround final : public IContactProvider {
+public:
+    FrictionPatchGround(double z, double base_mu,
+                        std::vector<std::tuple<double, double, double>> patches)
+        : z_(z), base_mu_(base_mu), patches_(std::move(patches)) {}
+
+    void query(const State& vehicle, const VehicleParams& vp,
+               ContactArray& out) override {
+        std::array<Vec3, NUM_WHEELS> pw{};
+        wheel_world_positions(vehicle, vp, pw);
+        const double r = vp.wheel_radius_nominal;
+        const Vec3 n = Vec3::UnitZ();
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            const double mu = mu_at_x(pw[i].x());
+            const Vec3 road_pt(pw[i].x(), pw[i].y(), z_);
+            out[i].is_valid    = true;
+            out[i].normal      = n;
+            out[i].mu_long     = mu;
+            out[i].mu_lat      = mu;
+            out[i].surface_id  = 0;
+            out[i].position    = road_pt;
+            out[i].penetration = hub_penetration(pw[i], n, road_pt, r);
+        }
+    }
+
+private:
+    double mu_at_x(double x) const {
+        for (const auto& [x0, x1, mu] : patches_) {
+            if (x >= x0 && x < x1) return mu;
+        }
+        return base_mu_;
+    }
+
+    double z_, base_mu_;
+    std::vector<std::tuple<double, double, double>> patches_;
+};
+
 // Inclined plane: height h = z0 + tan(grade)*x + tan(bank)*y, so the surface
 // normal is (-tan grade, -tan bank, 1) normalized. grade>0 rises toward +x
 // (uphill ahead -> decel), bank>0 rises toward +y (left). grade=bank=0 -> flat.
@@ -493,6 +531,12 @@ std::unique_ptr<IContactProvider> create_flat_ground(double z, double mu) {
 std::unique_ptr<IContactProvider> create_split_mu_ground(
     double z, double mu_left, double mu_right, double boundary_y) {
     return std::make_unique<SplitMuGround>(z, mu_left, mu_right, boundary_y);
+}
+
+std::unique_ptr<IContactProvider> create_friction_patch_ground(
+    double z, double base_mu,
+    const std::vector<std::tuple<double, double, double>>& patches) {
+    return std::make_unique<FrictionPatchGround>(z, base_mu, patches);
 }
 
 std::unique_ptr<IContactProvider> create_inclined_ground(

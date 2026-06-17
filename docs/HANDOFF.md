@@ -1,8 +1,24 @@
 # VDSim 핸드오프
 
-작성: **2026-06-14** · `main` @ `b9064c4` (pushed, ahead of `v0.5.1`) · **336/336 ctest green**
+작성: **2026-06-18** · `main` (local, VLA plant shipped) · **386/386 ctest green**
 
-## 0. 2026-06-14 세션 인수인계 (fresh 세션은 여기부터)
+## 0. 2026-06-18 VLA thesis plant (T-IV) — DONE
+
+**Shipped:** `vdsim_plant.VDSimPlant` — first external client plant API for closed-loop MPC.
+
+**Deliverables:**
+- **#0** Ld2 native `CmdL1` torque path (Fx→per-wheel τ, bypass throttle map) + `plant_path` kinematic-blend bypass
+- **#1** `create_friction_patch_ground(base_mu, [(x0,x1,mu)...])` + pybind
+- **#2** `wheel_mu()` on Ld2 + pybind
+- **#3** `configs/vehicles/ioniq5_awd.yaml` + `configs/parts/tire/ioniq5_pacejka.yaml`
+- **#4** `python/vdsim_plant.py` on `vdsim_lab` / `make_vla_plant_session` (direct CmdL1, ZOH two-tier dt)
+- **#5** smokes: `tests/scripts/test_vla_plant.py` + `examples/vla_plant_demo.py` + `python/VDSIM_PLANT_README.md`
+
+**Verify:** `cmake --build build -j && cd build && ctest -R vla_plant --output-on-failure` (headline #2 brake+turn on μ=0.5 patch).
+
+**Spec:** `docs/design/VLA_THESIS_PLANT.md`
+
+## 0b. 2026-06-14 세션 인수인계 (archive)
 
 **목표였던 것:** 멀티차량 비교(헤드리스+GUI) + 다나와식 차량조립 UI + 외부 AI 디자인 리뷰 반영. 완료.
 

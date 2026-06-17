@@ -2,6 +2,7 @@
 
 #include <array>
 #include <memory>
+#include <tuple>
 #include <vector>
 
 #include "vdsim/contact.hpp"
@@ -58,6 +59,10 @@ public:
     virtual std::array<double, NUM_WHEELS> tire_Fz()           const = 0;  // [N]
     virtual std::array<double, NUM_WHEELS> wheel_slip_ratio()  const = 0;  // [-]
     virtual std::array<double, NUM_WHEELS> wheel_slip_angle()  const = 0;  // [rad]
+    // Friction coefficient each wheel used this step (from the contact provider).
+    virtual std::array<double, NUM_WHEELS> wheel_mu() const {
+        return {{0.0, 0.0, 0.0, 0.0}};
+    }
     // Per-wheel overturning moment [N m] about the wheel-forward axis: tire carcass
     // Mx + camber contact-point migration (Fz * crown_radius * sin gamma). Feeds the
     // roll DOF on models that have one (L3/L5). Default 0 (no camber migration).
@@ -265,6 +270,11 @@ std::unique_ptr<IContactProvider> create_flat_ground(double z = 0.0,
 // Split-mu plane: per-wheel friction by world-y (y >= boundary -> mu_left).
 std::unique_ptr<IContactProvider> create_split_mu_ground(
     double z, double mu_left, double mu_right, double boundary_y = 0.0);
+
+// Piecewise-x friction patches on a flat road (straight road s≈x).
+std::unique_ptr<IContactProvider> create_friction_patch_ground(
+    double z, double base_mu,
+    const std::vector<std::tuple<double, double, double>>& patches);
 
 // Inclined plane: grade [rad] (uphill toward +x), bank [rad] (up toward +y).
 std::unique_ptr<IContactProvider> create_inclined_ground(

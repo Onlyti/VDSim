@@ -1,0 +1,139 @@
+#!/usr/bin/env python3
+"""VLA plant acceptance smokes (docs/design/VLA_THESIS_PLANT.md)."""
+import math
+import sys
+import time
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "build" / "python"))
+sys.path.insert(0, str(REPO / "python"))
+
+from vdsim_plant import VDSimPlant  # noqa: E402
+
+V0 = 16.7
+DT = 0.05
+SUB = 5e-4
+
+
+def _sum_forces_body(plant):
+    fb = plant._dyn.tire_forces_body()
+    fx = sum(fb[i][0] for i in range(4))
+    fy = sum(fb[i][1] for i in range(4))
+    return fx, fy
+
+
+def _friction_usage(obs, slack=50.0):
+    for i, w in enumerate(obs["wheel"]):
+        fxy = math.hypot(w["Fx"], w["Fy"])
+        lim = w["mu"] * w["Fz"] + slack
+        if fxy > lim:
+            raise AssertionError(
+                f"wheel {i}: ||F||={fxy:.1f} > mu*Fz+eps={lim:.1f}")
+
+
+def test_dry_qualitative_lane_change():
+    plant = VDSimPlant(base_mu=0.9, control_dt=DT, substep_dt=SUB)
+    plant.reset([0.0, 0.0, 0.0, V0, 0.0, 0.0])
+    r_peak = 0.0
+    for k in range(80):
+        t = k * DT
+        if t < 1.0:
+            delta = 0.0
+        elif t < 2.5:
+            delta = 0.06
+        elif t < 4.0:
+            delta = -0.06
+        else:
+            delta = 0.0
+        obs = plant.step([delta, 0.0])
+        r_peak = max(r_peak, abs(obs["r"]))
+    assert r_peak > 0.02, f"yaw rate too small for lane change: {r_peak}"
+    print("smoke 1 dry qualitative: ok (r_peak={:.4f} rad/s)".format(r_peak))
+
+
+def test_patch_brake_turn_grip_loss():
+    # Low-mu patch mid-trajectory; aggressive brake + steer over-demands grip.
+    plant = VDSimPlant(
+        friction_map=[(60.0, 160.0, 0.5)],
+        base_mu=0.9,
+        control_dt=DT,
+        substep_dt=SUB,
+    )
+    plant.reset([0.0, 0.0, 0.0, V0, 0.0, 0.0])
+    saturated = False
+    slip_seen = False
+    y_drift = 0.0
+    for k in range(120):
+        # Moderate combined demand so ||F|| approaches mu*Fz (not wheel-lock only).
+        obs = plant.step([0.10, -9000.0])
+        y_drift = obs["Y"]
+        for w in obs["wheel"]:
+            fxy = math.hypot(w["Fx"], w["Fy"])
+            cap = w["mu"] * w["Fz"]
+            if w["Fz"] > 500.0 and fxy > 0.82 * cap:
+                saturated = True
+            if abs(w["kappa"]) > 0.04 or abs(w["alpha"]) > 0.03:
+                slip_seen = True
+    assert saturated, "expected per-wheel friction saturation on patch"
+    assert slip_seen, "expected measurable slip (kappa/alpha) under combined demand"
+    assert abs(y_drift) > 0.5, f"expected lateral departure, Y={y_drift}"
+    print("smoke 2 patch brake+turn grip-loss: ok "
+          f"(sat={saturated} slip={slip_seen} Y={y_drift:.2f} m)")
+
+
+def test_gt_consistency_and_determinism():
+    plant = VDSimPlant(base_mu=0.9, control_dt=DT, substep_dt=SUB)
+    traj_u = [(0.0, 0.0), (0.05, 2000.0), (0.08, -8000.0), (0.03, 500.0)] * 25
+
+    def run_once():
+        plant.reset([0.0, 0.0, 0.0, V0, 0.0, 0.0])
+        hist = []
+        m = plant._vp.mass
+        for d, fx in traj_u:
+            obs = plant.step([d, fx])
+            _friction_usage(obs)
+            fx_sum, fy_sum = _sum_forces_body(plant)
+            ax = obs["ax"]
+            ay = obs["ay"]
+            tol_fx = 2500.0 + 0.15 * m * abs(ax)
+            tol_fy = 2500.0 + 0.15 * m * abs(ay)
+            if abs(fx_sum - m * ax) > tol_fx:
+                raise AssertionError(
+                    f"Fx balance: tire_sum={fx_sum:.0f} m*ax={m*ax:.0f} tol={tol_fx:.0f}")
+            if abs(fy_sum - m * ay) > tol_fy:
+                raise AssertionError(
+                    f"Fy balance: tire_sum={fy_sum:.0f} m*ay={m*ay:.0f} tol={tol_fy:.0f}")
+            hist.append(tuple(obs[k] for k in ("X", "Y", "psi", "vx", "vy", "r")))
+        return hist
+
+    h1 = run_once()
+    h2 = run_once()
+    for a, b in zip(h1, h2):
+        for x, y in zip(a, b):
+            if abs(x - y) > 1e-12:
+                raise AssertionError("determinism failed")
+    print("smoke 3 GT + determinism: ok ({} steps)".format(len(h1)))
+
+
+def test_speed_budget():
+    plant = VDSimPlant(base_mu=0.9, control_dt=DT, substep_dt=SUB)
+    plant.reset([0.0, 0.0, 0.0, V0, 0.0, 0.0])
+    t0 = time.perf_counter()
+    for _ in range(100):
+        plant.step([0.02, 0.0])
+    elapsed = time.perf_counter() - t0
+    assert elapsed < 1.0, f"5 s traj too slow: {elapsed:.2f} s wall"
+    print("speed budget: ok ({:.3f} s for 5 s sim)".format(elapsed))
+
+
+def main():
+    test_dry_qualitative_lane_change()
+    test_patch_brake_turn_grip_loss()
+    test_gt_consistency_and_determinism()
+    test_speed_budget()
+    print("test_vla_plant: all ok")
+
+
+if __name__ == "__main__":
+    main()

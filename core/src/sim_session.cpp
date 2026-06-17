@@ -7,7 +7,8 @@ SimSession::SimSession(std::unique_ptr<IVehicleDynamics> dyn,
                        std::unique_ptr<IContactProvider> ground,
                        const VehicleParams& vp, const TireParams& tp,
                        const SolverParams& sp, const SimConfig& cfg)
-    : dyn_(std::move(dyn)), ground_(std::move(ground)), vp_(vp) {
+    : dyn_(std::move(dyn)), ground_(std::move(ground)), vp_(vp),
+      direct_control_path_(cfg.direct_control_path) {
     dyn_->initialize(vp, tp, sp);
     // Give the L5 free-3D strut path the ground provider so it re-queries the contact at each
     // internal substep (exact on curved surfaces). No-op for other models. The non-owning
@@ -48,6 +49,27 @@ void SimSession::set_input(const ControlInput& u) {
     last_input_tp_ = std::chrono::steady_clock::now();
 }
 
+namespace {
+
+double steer_from_input(const ControlInput& u) {
+    return std::visit([](const auto& cmd) -> double {
+        using T = std::decay_t<decltype(cmd)>;
+        if constexpr (std::is_same_v<T, CmdSplit>) {
+            return std::visit([](const auto& lat) -> double {
+                using LT = std::decay_t<decltype(lat)>;
+                if constexpr (std::is_same_v<LT, LcLatL4>) return lat.steer_angle;
+                return 0.0;
+            }, cmd.lat);
+        } else if constexpr (std::is_same_v<T, CmdL7> || std::is_same_v<T, CmdL8>) {
+            return 0.0;
+        } else {
+            return cmd.steer_angle_wheel;
+        }
+    }, u);
+}
+
+}  // namespace
+
 void SimSession::tick(double dt) {
     if (!(dt > 0.0)) return;
 
@@ -61,6 +83,39 @@ void SimSession::tick(double dt) {
 
     ContactArray contacts;
     ground_->query(s, vp_, contacts);
+
+    if (direct_control_path_) {
+        dyn_->step(cmd, contacts, dt);
+        const State next = dyn_->state();
+        const State meas = sensor_.apply(next, dt);
+
+        const double ax = dyn_->ax_body_est();
+        const double ay = dyn_->ay_body_est();
+        const double roll = dyn_->roll_angle_qs();
+        const double pitch = dyn_->pitch_angle_qs();
+        const double rack = dyn_->steering_rack_torque();
+        const auto Fz = dyn_->tire_Fz();
+        const auto Ft = dyn_->tire_forces_body();
+        const auto kappa = dyn_->wheel_slip_ratio();
+        const auto alpha = dyn_->wheel_slip_angle();
+        const double steer_cmd = steer_from_input(cmd);
+        const SensorMeas sm = sensors_.apply(next, ax, ay, steer_cmd, dt);
+
+        {
+            std::lock_guard<std::mutex> lk(mtx_);
+            true_state_ = next;
+            meas_state_ = meas;
+            ax_ = ax; ay_ = ay; roll_ = roll; pitch_ = pitch; rack_ = rack;
+            steer_applied_ = steer_cmd;
+            throttle_applied_ = 0.0;
+            brake_applied_ = 0.0;
+            Fz_ = Fz; tire_forces_ = Ft;
+            slip_ratio_ = kappa; slip_angle_ = alpha;
+            sensors_meas_ = sm;
+            sim_time_  += dt;
+        }
+        return;
+    }
 
     // 1. CascadeController: any Lc level (L1..L8) → CmdL4 using measured-state feedback.
     //    This is the "controller" entity (ECU): converts high-level intent to pedals.

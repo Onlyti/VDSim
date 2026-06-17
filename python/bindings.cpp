@@ -137,6 +137,8 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("wheel_inertia",        &vdsim::VehicleParams::wheel_inertia)
         .def_readwrite("camber_per_roll",      &vdsim::VehicleParams::camber_per_roll)
         .def_readwrite("drive_type",           &vdsim::VehicleParams::drive_type)
+        .def_readwrite("drive_split_front",    &vdsim::VehicleParams::drive_split_front)
+        .def_readwrite("plant_path",           &vdsim::VehicleParams::plant_path)
         .def_readwrite("differential",         &vdsim::VehicleParams::differential)
         .def_readwrite("lsd_preload",          &vdsim::VehicleParams::lsd_preload)
         .def_readwrite("lsd_ramp",             &vdsim::VehicleParams::lsd_ramp)
@@ -381,6 +383,21 @@ PYBIND11_MODULE(vdsim, m) {
           py::arg("vp"), py::arg("tp"), py::arg("x") = 0.0, py::arg("y") = 0.0,
           py::arg("yaw") = 0.0, py::arg("v") = 0.0);
 
+    m.def("make_init_state_6dof",
+          [](const vdsim::VehicleParams& vp, const vdsim::TireParams& tp,
+             double x, double y, double yaw, double vx, double vy, double r) {
+              vdsim::State s;
+              s.position = vdsim::Vec3(x, y, 0.0);
+              s.orientation = vdsim::quat_from_euler(vdsim::Euler{0.0, 0.0, yaw});
+              s.velocity = vdsim::Vec3(vx, vy, 0.0);
+              s.angular_velocity = vdsim::Vec3(0.0, 0.0, r);
+              s.wheel_spin = vdsim::free_roll_wheel_spin(vp, tp, vx);
+              return s;
+          },
+          py::arg("vp"), py::arg("tp"),
+          py::arg("x") = 0.0, py::arg("y") = 0.0, py::arg("yaw") = 0.0,
+          py::arg("vx") = 0.0, py::arg("vy") = 0.0, py::arg("r") = 0.0);
+
     m.def("free_roll_wheel_spin",
           [](const vdsim::VehicleParams& vp, const vdsim::TireParams& tp, double vx) {
               const auto w = vdsim::free_roll_wheel_spin(vp, tp, vx);
@@ -462,6 +479,17 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("mu_long",   &vdsim::ContactPoint::mu_long)
         .def_readwrite("mu_lat",    &vdsim::ContactPoint::mu_lat)
         .def_readwrite("surface_id", &vdsim::ContactPoint::surface_id);
+
+    // -------- CmdL1 / CmdL3 (VLA plant direct torque path) --------
+    py::class_<vdsim::CmdL1>(m, "CmdL1")
+        .def(py::init<>())
+        .def_readwrite("motor_torque",      &vdsim::CmdL1::motor_torque)
+        .def_readwrite("brake_torque",      &vdsim::CmdL1::brake_torque)
+        .def_readwrite("steer_angle_wheel", &vdsim::CmdL1::steer_angle_wheel);
+    py::class_<vdsim::CmdL3>(m, "CmdL3")
+        .def(py::init<>())
+        .def_readwrite("Fx_total",          &vdsim::CmdL3::Fx_total)
+        .def_readwrite("steer_angle_wheel", &vdsim::CmdL3::steer_angle_wheel);
 
     // -------- CmdL4 (used by step()) --------
     py::class_<vdsim::CmdL4>(m, "CmdL4")
@@ -655,6 +683,7 @@ PYBIND11_MODULE(vdsim, m) {
              "Install a user AntiRollBarModule on axle 0=front/1=rear (L3 only).")
         .def("wheel_slip_ratio", &vdsim::IVehicleDynamics::wheel_slip_ratio)
         .def("wheel_slip_angle", &vdsim::IVehicleDynamics::wheel_slip_angle)
+        .def("wheel_mu",         &vdsim::IVehicleDynamics::wheel_mu)
         .def("wheel_overturning_moment", &vdsim::IVehicleDynamics::wheel_overturning_moment)
         .def("roll_angle_qs",  &vdsim::IVehicleDynamics::roll_angle_qs)
         .def("pitch_angle_qs", &vdsim::IVehicleDynamics::pitch_angle_qs)
@@ -678,6 +707,13 @@ PYBIND11_MODULE(vdsim, m) {
     m.def("create_split_mu_ground", &vdsim::create_split_mu_ground,
           py::arg("z") = 0.0, py::arg("mu_left") = 1.0, py::arg("mu_right") = 0.5,
           py::arg("boundary_y") = 0.0);
+    m.def("create_friction_patch_ground",
+          [](double z, double base_mu,
+             std::vector<std::tuple<double, double, double>> patches) {
+              return vdsim::create_friction_patch_ground(z, base_mu, patches);
+          },
+          py::arg("z") = 0.0, py::arg("base_mu") = 1.0,
+          py::arg("patches") = std::vector<std::tuple<double, double, double>>{});
     m.def("create_inclined_ground", &vdsim::create_inclined_ground,
           py::arg("z0") = 0.0, py::arg("grade") = 0.0, py::arg("bank") = 0.0,
           py::arg("mu") = 1.0);
@@ -984,4 +1020,23 @@ PYBIND11_MODULE(vdsim, m) {
           py::arg("n") = std::vector<double>{}, py::arg("gd") = std::vector<double>{},
           py::arg("nominal_dt") = 0.005, py::arg("solver") = vdsim::SolverParams{},
           py::arg("seed") = 1u);
+
+    m.def("make_vla_plant_session",
+          [](const vdsim::VehicleParams& vp, const vdsim::TireParams& tp,
+             double z, double base_mu,
+             std::vector<std::tuple<double, double, double>> patches,
+             const vdsim::SolverParams& solver, double nominal_dt) {
+              vdsim::SimConfig cfg;
+              cfg.nominal_dt = nominal_dt;
+              cfg.direct_control_path = true;
+              return std::make_unique<vdsim::SimSession>(
+                  vdsim::create_seven_dof(),
+                  vdsim::create_friction_patch_ground(z, base_mu, patches),
+                  vp, tp, solver, cfg);
+          },
+          py::arg("vehicle"), py::arg("tire"),
+          py::arg("z") = 0.0, py::arg("base_mu") = 1.0,
+          py::arg("patches") = std::vector<std::tuple<double, double, double>>{},
+          py::arg("solver") = vdsim::SolverParams{},
+          py::arg("nominal_dt") = 0.001);
 }

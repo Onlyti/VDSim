@@ -101,6 +101,18 @@ if(Python3_FOUND)
     set_tests_properties(experiment_api PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/build/python:${CMAKE_SOURCE_DIR}/python")
+    add_test(NAME vla_plant
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_vla_plant.py)
+    set_tests_properties(vla_plant PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/build/python:${CMAKE_SOURCE_DIR}/python")
+    add_test(NAME vla_plant_demo
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/examples/vla_plant_demo.py)
+    set_tests_properties(vla_plant_demo PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/build/python:${CMAKE_SOURCE_DIR}/python")
     add_test(NAME control_ladder
         COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_SOURCE_DIR}/examples/control_ladder_demo.py)

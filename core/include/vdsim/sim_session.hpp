@@ -35,6 +35,8 @@ struct SimConfig {
     VehNetworkParams  veh_network   {};      // ECU/CAN deadtime + drop (default: identity)
     double            sensor_delay_s {0.0}; // feedback transport delay (0 = none)
     double            nominal_dt    {0.005}; // for delay-buffer sizing
+    // Pass latched ControlInput (e.g. CmdL1) straight to dynamics — no L4 cascade.
+    bool              direct_control_path {false};
 };
 
 // Thread-safe snapshot of one tick's result (true + measured state plus the
@@ -107,6 +109,7 @@ private:
     std::array<double, NUM_WHEELS> slip_angle_ {{0,0,0,0}};
     SensorMeas sensors_meas_ {};
     double sim_time_ {0.0};
+    bool direct_control_path_ {false};
     std::chrono::steady_clock::time_point last_input_tp_ {std::chrono::steady_clock::now()};
 };
 

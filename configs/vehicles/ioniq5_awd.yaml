@@ -1,0 +1,22 @@
+# Ioniq5-class AWD parameters (public approximation — no measured tyre data).
+# Vehicle geometry + mass; tyre MF96 in configs/parts/tire/ioniq5_pacejka.yaml.
+mass: 2359.0
+mass_sprung: 2200.0
+inertia_diag: [1200.0, 4200.0, 3400.0]
+wheelbase: 2.97
+cg_to_front: 1.17
+cg_to_rear: 1.80
+track_front: 1.635
+track_rear: 1.635
+cg_height: 0.58
+wheel_radius_nominal: 0.338
+drive_type: AWD
+drive_split_front: 0.5
+plant_path: true
+differential: Open
+steering_ratio: 14.0
+max_steer_angle_wheel: 0.55
+ackerman_percent: 0.0
+aero_drag_coeff: 0.28
+frontal_area: 2.45
+tire_yaml: parts/tire/ioniq5_pacejka.yaml
