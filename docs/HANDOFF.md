@@ -1,8 +1,28 @@
 # VDSim 핸드오프
 
-작성: **2026-06-18** · `main` (local, VLA plant shipped) · **386/386 ctest green**
+작성: **2026-06-18** · `VDSim-Thesis` (local) · **394/394 ctest green**
 
-## 0. 2026-06-18 VLA thesis plant (T-IV) — DONE
+## 0. 2026-06-18 VLA plant tyre → MF2002 (T-IVb) — DONE
+
+**Shipped:** Ioniq5-class VLA plant now uses **MF2002** (load-dependent `PKY*` cornering stiffness +
+`PDY2` peak-μ load sensitivity) instead of MF96.
+
+**Deliverables:**
+- **`configs/parts/tire/ioniq5_pac2002.tir`** — public-synthetic Pacejka-2002 (gitignore-excepted)
+- **`configs/parts/tire/ioniq5_pac2002.yaml`** — `backend: mf2002` + `tir_path`
+- **`configs/vehicles/ioniq5_awd.yaml`** — `tire_yaml: parts/tire/ioniq5_pac2002.yaml`
+- MF96 yaml **`ioniq5_pacejka.yaml`** kept (not deleted)
+- **`python/vdsim_plant.py`** — resolves relative `tir_path` from configs root
+- **`python/bindings.cpp`** — exposes `TireParams.backend` / `tir_path` to Python
+- **Tests** (`test_vla_plant.cpp`): `DryHandlingMatchesLinearBicycleRealMf2002Tire`,
+  `Mf2002LoadSensitivityConcaveStiffnessAndMu`, `Mf2002FrictionPatchHalvesPeakGrip`,
+  `CombinedBrakeTurnGripLossOnPatchMf2002` (+ legacy MF96 inline tests unchanged)
+
+**Verify:** `cmake --build build -j && cd build && ctest -R VlaPlant --output-on-failure`
+
+**Spec:** `docs/design/VLA_THESIS_PLANT.md`
+
+## 0a. 2026-06-18 VLA thesis plant (T-IV) — DONE
 
 **Shipped:** `vdsim_plant.VDSimPlant` — first external client plant API for closed-loop MPC.
 

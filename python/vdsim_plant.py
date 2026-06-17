@@ -60,14 +60,31 @@ def _load_yaml_sidecar(path: Path, key: str) -> str | None:
     return None
 
 
+def _resolve_tir_path(tp_path: Path, tir_rel: str) -> str:
+    if not tir_rel:
+        return tir_rel
+    p = Path(tir_rel)
+    if p.is_absolute():
+        return str(p)
+    for base in (tp_path.parent, _conf_root()):
+        cand = (base / tir_rel).resolve()
+        if cand.is_file():
+            return str(cand)
+    return str((_conf_root() / tir_rel).resolve())
+
+
 def _load_tire_for_vehicle(vp_path: Path) -> vdsim.TireParams:
     rel = _load_yaml_sidecar(vp_path, "tire_yaml")
     if not rel:
-        return vdsim.TireParams.from_yaml(str(_conf_root() / "parts/tire/ioniq5_pacejka.yaml"))
-    tp_path = _conf_root() / rel
+        tp_path = _conf_root() / "parts/tire/ioniq5_pac2002.yaml"
+    else:
+        tp_path = _conf_root() / rel
     if not tp_path.is_file():
         raise FileNotFoundError(f"tire yaml '{rel}' not found (from {vp_path})")
-    return vdsim.TireParams.from_yaml(str(tp_path))
+    tp = vdsim.TireParams.from_yaml(str(tp_path))
+    if tp.tir_path:
+        tp.tir_path = _resolve_tir_path(tp_path, tp.tir_path)
+    return tp
 
 
 def _validate_friction_map(friction_map, base_mu: float):

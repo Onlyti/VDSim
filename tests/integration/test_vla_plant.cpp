@@ -1,7 +1,8 @@
-// VLA plant (Ld2 7DOF) acceptance: CmdL1 direct-torque (throttle bypass) + native MF96
+// VLA plant (Ld2 7DOF) acceptance: CmdL1 direct-torque (throttle bypass) + MF2002/MF96
 // combined-slip friction circle + friction-patch ground + GT consistency.
 #include "vdsim/control.hpp"
 #include "vdsim/interfaces.hpp"
+#include "vdsim/magic_formula.hpp"
 #include "vdsim/params.hpp"
 #include "vdsim/state.hpp"
 
@@ -10,22 +11,17 @@
 #include <chrono>
 #include <cmath>
 #include <memory>
+#include <string>
 
 namespace {
 
+const std::string kRepo = VDSIM_SOURCE_DIR;
+const std::string kIoniq5TirYaml = kRepo + "/configs/parts/tire/ioniq5_pac2002.yaml";
+const std::string kIoniq5Tir     = kRepo + "/configs/parts/tire/ioniq5_pac2002.tir";
+const std::string kIoniq5VpYaml  = kRepo + "/configs/vehicles/ioniq5_awd.yaml";
+
 vdsim::VehicleParams ioniq5_vp() {
-    vdsim::VehicleParams vp;
-    vp.mass = 2359.0;
-    vp.inertia_diag.z() = 3400.0;
-    vp.cg_to_front = 1.17;
-    vp.cg_to_rear = 1.80;
-    vp.track_front = vp.track_rear = 1.635;
-    vp.cg_height = 0.58;
-    vp.wheel_radius_nominal = 0.338;
-    vp.drive_type = vdsim::VehicleParams::Drive::AWD;
-    vp.drive_split_front = 0.5;
-    vp.plant_path = true;
-    return vp;
+    return vdsim::VehicleParams::from_yaml(kIoniq5VpYaml);
 }
 
 vdsim::TireParams plant_tp(double mu) {
@@ -34,6 +30,40 @@ vdsim::TireParams plant_tp(double mu) {
     tp.combined_slip_enabled = true;
     tp.mu_nominal = mu;
     return tp;
+}
+
+vdsim::TireParams ioniq5_plant_tp() {
+    vdsim::TireParams tp = vdsim::TireParams::from_yaml(kIoniq5TirYaml);
+    tp.tir_path = kIoniq5Tir;
+    tp.lugre.enabled = false;
+    return tp;
+}
+
+vdsim::ITireModel::Input slip_input(double kappa, double alpha, double Fz,
+                                    double mu_lat = 0.9, double mu_long = 0.9) {
+    vdsim::ITireModel::Input in;
+    in.Fz = Fz;
+    in.kappa = kappa;
+    in.alpha = alpha;
+    in.mu_long = mu_long;
+    in.mu_lat = mu_lat;
+    in.Vx_wheel = 16.0;
+    return in;
+}
+
+double finite_diff_kya(const vdsim::ITireModel& tire, double Fz, double dalpha = 0.01) {
+    const auto op = tire.compute(slip_input(0.0, dalpha, Fz));
+    const auto om = tire.compute(slip_input(0.0, -dalpha, Fz));
+    return (op.Fy - om.Fy) / (2.0 * dalpha);
+}
+
+double scan_peak_mu_lat(const vdsim::ITireModel& tire, double Fz, double mu_lat) {
+    double peak = 0.0;
+    for (double a = 0.02; a <= 0.30; a += 0.01) {
+        const auto o = tire.compute(slip_input(0.0, a, Fz, mu_lat, mu_lat));
+        peak = std::max(peak, std::abs(o.Fy) / Fz);
+    }
+    return peak;
 }
 
 vdsim::State rolling(double vx, double R) {
@@ -203,6 +233,110 @@ TEST(VlaPlant, DryHandlingMatchesLinearBicycle) {
     EXPECT_NEAR(r_vd, r_bicycle, 0.15 * r_bicycle)
         << "7DOF yaw rate must track the linear bicycle (ratio=" << r_vd / r_bicycle << ")";
     EXPECT_LT(std::abs(dyn->state().beta()), 0.05);   // modest sideslip in the linear regime
+}
+
+// Same acceptance as DryHandlingMatchesLinearBicycle but through the REAL plant tyre
+// (ioniq5 yaml -> MF2002 .tir). Self-correcting gate for PKY1/PKY2 calibration.
+TEST(VlaPlant, DryHandlingMatchesLinearBicycleRealMf2002Tire) {
+    auto vp = ioniq5_vp();
+    vp.plant_path = true;
+    auto tp = ioniq5_plant_tp();
+    vdsim::SolverParams sp;
+    const double R = vp.wheel_radius_nominal;
+    const double m = vp.mass, lf = vp.cg_to_front, lr = vp.cg_to_rear, L = lf + lr;
+    const double Caf = 2.2e5, Car = 1.6e5, V = 16.7, delta = 0.04;
+    const double K_us = m * (lr * Car - lf * Caf) / (L * Caf * Car);
+    const double r_bicycle = delta * V / (L + K_us * V * V);
+
+    auto dyn = vdsim::create_seven_dof();
+    dyn->initialize(vp, tp, sp);
+    auto flat = vdsim::create_flat_ground(0.0, 0.9);
+    dyn->reset(rolling(V, R));
+    vdsim::CmdL1 cmd{};
+    cmd.steer_angle_wheel = delta;
+    for (int k = 0; k < 400; ++k) {
+        vdsim::ContactArray c; flat->query(dyn->state(), vp, c);
+        dyn->step(vdsim::ControlInput{cmd}, c, 0.01);
+    }
+    const double r_vd = dyn->state().yaw_rate();
+    EXPECT_GT(r_vd, 0.0) << "+steer -> +yaw (ISO 8855)";
+    EXPECT_NEAR(r_vd, r_bicycle, 0.15 * r_bicycle)
+        << "MF2002 plant yaw rate must track the linear bicycle (ratio=" << r_vd / r_bicycle << ")";
+}
+
+// Load-sensitivity gate: concave cornering stiffness + peak mu_y falls with Fz (PDY2<0).
+TEST(VlaPlant, Mf2002LoadSensitivityConcaveStiffnessAndMu) {
+    auto tire = vdsim::create_magic_formula_tire_from_tir(kIoniq5Tir);
+    ASSERT_NE(tire, nullptr);
+    const double Fz0 = 5764.0;
+    const double K0 = finite_diff_kya(*tire, Fz0);
+    const double K2 = finite_diff_kya(*tire, 2.0 * Fz0);
+    EXPECT_LT(std::abs(K2), 2.0 * std::abs(K0))
+        << "cornering stiffness must be sub-linear in Fz (concave Kya)";
+    const double mu0 = scan_peak_mu_lat(*tire, Fz0, 0.9);
+    const double mu2 = scan_peak_mu_lat(*tire, 2.0 * Fz0, 0.9);
+    EXPECT_GT(mu0, 0.5);
+    EXPECT_LT(mu2, mu0) << "peak mu_y must decrease with load (PDY2<0)";
+}
+
+// MF2002 honours contact mu_lat (Lmuy scaling) — low-mu patch halves peak grip.
+TEST(VlaPlant, Mf2002FrictionPatchHalvesPeakGrip) {
+    auto tire = vdsim::create_magic_formula_tire_from_tir(kIoniq5Tir);
+    ASSERT_NE(tire, nullptr);
+    const double Fz = 5764.0;
+    const double peak_dry = scan_peak_mu_lat(*tire, Fz, 0.9);
+    const double peak_patch = scan_peak_mu_lat(*tire, Fz, 0.5);
+    EXPECT_GT(peak_dry, peak_patch);
+    EXPECT_NEAR(peak_patch, 0.5 * peak_dry, 0.12 * peak_dry);
+}
+
+// HEADLINE grip-loss with the REAL MF2002 plant tyre on the low-mu patch.
+TEST(VlaPlant, CombinedBrakeTurnGripLossOnPatchMf2002) {
+    auto vp = ioniq5_vp();
+    vp.plant_path = true;
+    auto tp = ioniq5_plant_tp();
+    vdsim::SolverParams sp;
+    const double R = vp.wheel_radius_nominal;
+    auto dyn = vdsim::create_seven_dof();
+    dyn->initialize(vp, tp, sp);
+    auto ground = vdsim::create_friction_patch_ground(0.0, 0.5, {{-1.0, 1e4, 0.5}});
+    dyn->reset(rolling(16.7, R));
+
+    vdsim::CmdL1 cmd{};
+    cmd.steer_angle_wheel = 0.12;
+    const double Fx_cmd = -15000.0;
+    const double tau = std::abs(wheel_torque(Fx_cmd, R));
+    for (int i = 0; i < vdsim::NUM_WHEELS; ++i) cmd.brake_torque[i] = tau;
+
+    bool engaged = false, slipped = false, vehicle_grip_loss = false;
+    bool circle_ok = true, locked_no_reverse = true;
+    for (int k = 0; k < 80; ++k) {
+        vdsim::ContactArray c; ground->query(dyn->state(), vp, c);
+        dyn->step(vdsim::ControlInput{cmd}, c, 0.05);
+        if (dyn->state().velocity.x() < 2.0) break;
+        const auto Fw = dyn->tire_forces_wheel();
+        const auto Fb = dyn->tire_forces_body();
+        const auto mu = dyn->wheel_mu();
+        const auto kappa = dyn->wheel_slip_ratio();
+        const auto Fz = dyn->tire_Fz();
+        double sumFx_body = 0.0;
+        for (int i = 0; i < vdsim::NUM_WHEELS; ++i) {
+            sumFx_body += Fb[i].x();
+            if (Fz[i] < 200.0) continue;
+            const double fxy = std::hypot(Fw[i].x(), Fw[i].y());
+            const double cap = mu[i] * Fz[i];
+            if (fxy > 1.08 * cap) circle_ok = false;
+            if (fxy >= 0.30 * cap) engaged = true;
+            if (std::abs(kappa[i]) > 0.1) slipped = true;
+            if (kappa[i] < -1.2) locked_no_reverse = false;
+        }
+        if (std::abs(sumFx_body) < 0.85 * std::abs(Fx_cmd)) vehicle_grip_loss = true;
+    }
+    EXPECT_TRUE(circle_ok);
+    EXPECT_TRUE(engaged);
+    EXPECT_TRUE(slipped);
+    EXPECT_TRUE(locked_no_reverse);
+    EXPECT_TRUE(vehicle_grip_loss);
 }
 
 // Speed (acceptance #5): a ~5 s trajectory at the fine plant substep must run far under

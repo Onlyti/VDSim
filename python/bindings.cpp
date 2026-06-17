@@ -204,6 +204,8 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("reff_dreff", &vdsim::TireParams::reff_dreff)
         .def_readwrite("reff_freff", &vdsim::TireParams::reff_freff)
         .def_readwrite("crown_radius", &vdsim::TireParams::crown_radius)
+        .def_readwrite("backend", &vdsim::TireParams::backend)
+        .def_readwrite("tir_path", &vdsim::TireParams::tir_path)
         .def_readwrite("lugre", &vdsim::TireParams::lugre)
         .def_static("from_yaml", &vdsim::TireParams::from_yaml)
         .def("to_yaml",          &vdsim::TireParams::to_yaml);
