@@ -94,6 +94,8 @@ public:
         out.Fy = Fy + Fy_camber;
         out.Mz = -trail * Fy + Mz_camber;
         out.mu_peak = std::max(tp_.D_long * mu_x, tp_.D_lat * mu_y);
+        out.alpha_peak = mf_peak_slip(tp_.B_lat, tp_.C_lat, tp_.E_lat);
+        out.kappa_peak = mf_peak_slip(tp_.B_long, tp_.C_long, tp_.E_long);
         return out;
     }
 };

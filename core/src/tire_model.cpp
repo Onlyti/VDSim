@@ -51,7 +51,10 @@ ITireModel::Wrench ITireModel::evaluate(const ContactInput& ci, const Transient&
         w.Fx = l.Fx;
         w.Fy = l.Fy;
         w.Mz = l.Mz;
-        w.mu_peak = compute(in).mu_peak;
+        const auto mfp = compute(in);
+        w.mu_peak = mfp.mu_peak;
+        w.alpha_peak = mfp.alpha_peak;
+        w.kappa_peak = mfp.kappa_peak;
     } else {
         const auto out = compute(in);
         w.Fx = out.Fx;
@@ -59,6 +62,8 @@ ITireModel::Wrench ITireModel::evaluate(const ContactInput& ci, const Transient&
         w.Mz = out.Mz;
         w.Mx += out.Mx;   // carcass Mx from the force law (0 for the simple laws), plus camber Mx
         w.mu_peak = out.mu_peak;
+        w.alpha_peak = out.alpha_peak;
+        w.kappa_peak = out.kappa_peak;
     }
     return w;
 }

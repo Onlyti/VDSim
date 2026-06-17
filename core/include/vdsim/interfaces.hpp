@@ -1,6 +1,8 @@
 #pragma once
 
 #include <array>
+#include <cmath>
+#include <limits>
 #include <memory>
 #include <tuple>
 #include <vector>
@@ -13,6 +15,23 @@
 #include "vdsim/types.hpp"
 
 namespace vdsim {
+
+inline double mf_peak_slip(double B, double C, double E) {
+    constexpr double kPi = 3.14159265358979323846;
+    if (!(C > 1.0) || std::abs(B) < 1e-12)
+        return std::numeric_limits<double>::infinity();
+    const double phi_star = std::tan(kPi / (2.0 * C));
+    double u = phi_star;
+    for (int it = 0; it < 30; ++it) {
+        const double g  = (1.0 - E) * u + E * std::atan(u) - phi_star;
+        const double gp = (1.0 - E) + E / (1.0 + u * u);
+        if (std::abs(gp) < 1e-12) break;
+        const double du = g / gp;
+        u -= du;
+        if (std::abs(du) < 1e-12) break;
+    }
+    return std::abs(u / B);
+}
 
 namespace mb {
 struct SuspensionTopology;
@@ -65,6 +84,8 @@ public:
     }
     // Realized load-dependent peak friction coefficient (force/Fz) per wheel.
     virtual std::array<double, NUM_WHEELS> wheel_mu_peak() const { return wheel_mu(); }
+    virtual std::array<double, NUM_WHEELS> wheel_alpha_peak() const { return {{0, 0, 0, 0}}; }
+    virtual std::array<double, NUM_WHEELS> wheel_kappa_peak() const { return {{0, 0, 0, 0}}; }
     // Per-wheel overturning moment [N m] about the wheel-forward axis: tire carcass
     // Mx + camber contact-point migration (Fz * crown_radius * sin gamma). Feeds the
     // roll DOF on models that have one (L3/L5). Default 0 (no camber migration).
@@ -176,6 +197,8 @@ public:
         double Mz {0.0};          // [N m] aligning moment (about contact normal)
         double Mx {0.0};          // [N m] overturning moment (about wheel-forward axis)
         double mu_peak {0.0};     // realized resultant peak coefficient (force/Fz)
+        double alpha_peak {0.0};
+        double kappa_peak {0.0};
     };
 
     // ----- Inverted ("kinematics-in -> wrench-out") interface (Phase 2) -----
@@ -211,6 +234,8 @@ public:
         double kappa {0.0}, alpha {0.0};
         double contact_dy {0.0};
         double mu_peak {0.0};
+        double alpha_peak {0.0};
+        double kappa_peak {0.0};
     };
 
     virtual ~ITireModel() = default;

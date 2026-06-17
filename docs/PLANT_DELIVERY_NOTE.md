@@ -159,6 +159,20 @@ inner-front, dfz≈-0.8 → Fz≈0.2·Fz0)에서 `muy ≈ 1.08·mu_contact`. 그
 
 semantics 미묘 차(`mu`=contact vs `mu_peak`=realized)는 라운드 간 추적 필요 → durable 기록.
 
+### BETA #2 — 2026-06-18 (peak-slip 노출, sat 대체)
+- **[obs additive]** `wheel[i].alpha_peak`(lateral peak slip angle [rad]) +
+  `wheel[i].kappa_peak`(longitudinal peak slip ratio [-]) 추가 = 현재 Fz·μ에서 force가 peak에
+  도달하는 slip 위치(load+μ 반영, MF 곡선에서 Newton 해). linear는 peak 없음→`inf`.
+  - **설계 전환**: `sat`(파생 ratio)을 권하는 대신 **operating-point raw 특성**을 줌 — 용량
+    (`mu_peak`) + peak 위치(`alpha_peak`/`kappa_peak`) + 현재 위치(`alpha`/`kappa`). 분석자가
+    `|alpha| vs alpha_peak`로 rising/peak/sliding(드리프트)을 **모호함 없이** 판정 → `sat`
+    단독 비단조 문제 해소. plant는 metric 미탑재(raw GT only) 원칙 강화.
+  - 코어: `mf_peak_slip(B,C,E)` (interfaces.hpp, 공용), Output/Wrench + `wheel_alpha_peak()`/
+    `wheel_kappa_peak()`, backend별 채움, evaluate() 전파.
+  - test: `VlaPlant.PeakSlipMatchesNumericalArgmax` (model vs Fy/Fx argmax, Fz 3종, 5%). 396 green.
+  - 검증(plant probe): gentle turn |α|0.011<α_peak0.140=reserve; brake+turn μ0.4
+    |α|0.162>α_peak0.065=drift. dry α_peak≈8.0°가 det slip 8.3°(=peak)와 일치.
+
 ### BETA #2 — 2026-06-18 (피드백 #1 반영)
 - **[obs additive, NOT breaking]** `wheel[i].mu_peak` 추가 = realized load-dependent peak 계수
   (force/Fz). friction-circle GT는 이걸 분모로: `useGT=‖[Fx,Fy]‖/(mu_peak·Fz) ≤ 1`. 기존

@@ -119,31 +119,29 @@ cd /path/to/VDSim && python3 examples/vla_plant_demo.py     # writes /tmp/vla_pl
 | `wheel[i].kappa` | slip ratio | – |
 | `wheel[i].mu` | **road-surface** friction at this wheel (contact μ) | – |
 | `wheel[i].mu_peak` | **realized** tyre peak coefficient at this Fz (load-dependent) | – |
+| `wheel[i].alpha_peak` | slip **angle at the lateral force peak**, this Fz/μ (`inf`=no peak) | rad |
+| `wheel[i].kappa_peak` | slip **ratio at the longitudinal force peak**, this Fz/μ (`inf`=no peak) | – |
 
-Friction-circle check (on you, the analyst). Define the **friction saturation ratio**
+The plant gives you the tyre's local **operating-point characteristics** as raw ground truth
+and leaves any metric to you. Per wheel you get the **capacity** (`mu_peak`), **where the peak
+is** (`alpha_peak`, `kappa_peak`), and **where you are** (`alpha`, `kappa`). From those:
 
-```
-sat = ‖[Fx,Fy]‖ / (mu_peak·Fz)          # use mu_peak, NOT the road mu
-```
+- friction saturation ratio (if you want one): `sat = ‖[Fx,Fy]‖ / (mu_peak·Fz)`, bounded by 1.
+  Use `mu_peak`, **not** `mu` (the road μ): the MF peak coefficient rises above nominal μ at
+  low load (`PDY2<0`), so `‖F‖/(mu·Fz)` can read >1 while the tyre is inside its own ellipse.
+- which side of the curve you are on — compare current slip to peak slip. This is the clean
+  signal, because the force-slip curve peaks then falls, so `sat` alone is non-monotone (both
+  reserve and drift read `sat<1`):
 
-Use `mu_peak` in the denominator, **not** `mu` (the road μ): because the MF peak coefficient
-*rises above* the nominal μ at low load (`PDY2<0`), a lightly loaded wheel can carry
-`‖F‖ > mu·Fz`, so `‖F‖/(mu·Fz)` can read >1 even though the tyre is inside its own
-load-dependent ellipse. `mu_peak` removes that ambiguity, and `sat ≤ 1`.
+| `|alpha|` vs `alpha_peak` | state |
+|---|---|
+| `< alpha_peak` | rising side — grip in reserve |
+| `≈ alpha_peak` | at the lateral grip limit |
+| `> alpha_peak` | past peak — drift / departure (sliding tail) |
 
-**`sat` is a saturation ratio, not a monotone "grip utilization".** The tyre force-slip curve
-peaks then falls (sliding tail), so `sat=1` only *at* the peak slip; both the rising side
-(reserve) and the sliding side (drift, past peak) read `sat<1`. A bare `sat=0.8` is therefore
-ambiguous. Disambiguate with the slip channel:
-
-| `sat` | slip angle | state |
-|---|---|---|
-| ≈1 | ≈ peak slip | at the grip limit |
-| <1 | small | genuine reserve (rising side) |
-| <1 | large | past peak — drift / departure (sliding tail) |
-
-This is also why the plant exposes only raw ground truth (force, slip, Fz, mu_peak) and leaves
-the metric to you: a single self-contained "grip-usage" scalar is ill-defined past the peak.
+(same for `|kappa|` vs `kappa_peak` longitudinally). A single self-contained "grip-usage"
+scalar is ill-defined past the peak, which is why the plant exposes the raw characteristics
+instead of a derived metric.
 
 ---
 

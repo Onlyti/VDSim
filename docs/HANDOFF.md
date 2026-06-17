@@ -1,8 +1,22 @@
 # VDSim 핸드오프
 
-작성: **2026-06-18** · `VDSim-Thesis` (local) · **395/395 ctest green**
+작성: **2026-06-18** · `VDSim-Thesis` (local) · **396/396 ctest green**
 
-## 0. 2026-06-18 VLA plant realized peak mu (useGT option A) — DONE
+## 0. 2026-06-18 VLA plant per-wheel peak slip (alpha_peak, kappa_peak) — DONE
+
+**Shipped:** per-wheel MF pure-slip peak positions (`alpha_peak` [rad], `kappa_peak` [-]) at
+current Fz/load — raw GT for rising/peak/sliding (drift) classification vs current slip.
+
+**Deliverables:**
+- **`mf_peak_slip(B,C,E)`** in `interfaces.hpp` (Newton on MF peak equation)
+- **`ITireModel::Output/Wrench::alpha_peak/kappa_peak`** + `IVehicleDynamics::wheel_alpha_peak/kappa_peak()` (Ld2)
+- MF2002 / MF96 / linear `compute()` fill; `evaluate()` + Ld2 step propagate
+- **`python/bindings.cpp`** + **`python/vdsim_plant.py`** `wheel[i]["alpha_peak"]`, `["kappa_peak"]`
+- **Test** `VlaPlant.PeakSlipMatchesNumericalArgmax`
+
+**Verify:** `cmake --build build -j && cd build && ctest -R VlaPlant --output-on-failure`
+
+## 0a. 2026-06-18 VLA plant realized peak mu (useGT option A) — DONE
 
 **Shipped:** per-wheel `mu_peak` (load-dependent MF realized peak coefficient, force/Fz) exposed
 alongside existing contact `wheel.mu`. Friction-circle GT metric

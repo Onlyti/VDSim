@@ -394,6 +394,42 @@ TEST(VlaPlant, RealizedPeakMuBoundsFrictionCircle) {
         << "document ||F|| > contact_mu*Fz while mu_peak bounds the friction circle";
 }
 
+TEST(VlaPlant, PeakSlipMatchesNumericalArgmax) {
+    auto tire = vdsim::create_magic_formula_tire_from_tir(kIoniq5Tir);
+    const double fz_vals[] = {3000.0, 5764.0, 9000.0};
+    for (double Fz : fz_vals) {
+        double alpha_argmax = 0.0;
+        double peak_fy = 0.0;
+        for (double a = 0.0; a <= 0.4; a += 0.001) {
+            const double fy = std::abs(tire->compute(slip_input(0.0, a, Fz)).Fy);
+            if (fy > peak_fy) {
+                peak_fy = fy;
+                alpha_argmax = a;
+            }
+        }
+        const double alpha_peak = tire->compute(slip_input(0.0, 0.0, Fz)).alpha_peak;
+        EXPECT_GT(alpha_peak, 0.0);
+        EXPECT_TRUE(std::isfinite(alpha_peak));
+        EXPECT_NEAR(alpha_argmax, alpha_peak, 0.05 * alpha_peak)
+            << "Fz=" << Fz << " lateral peak slip";
+
+        double kappa_argmax = 0.0;
+        double peak_fx = 0.0;
+        for (double k = 0.0; k <= 0.3; k += 0.001) {
+            const double fx = std::abs(tire->compute(slip_input(k, 0.0, Fz)).Fx);
+            if (fx > peak_fx) {
+                peak_fx = fx;
+                kappa_argmax = k;
+            }
+        }
+        const double kappa_peak = tire->compute(slip_input(0.0, 0.0, Fz)).kappa_peak;
+        EXPECT_GT(kappa_peak, 0.0);
+        EXPECT_TRUE(std::isfinite(kappa_peak));
+        EXPECT_NEAR(kappa_argmax, kappa_peak, 0.05 * kappa_peak)
+            << "Fz=" << Fz << " longitudinal peak slip";
+    }
+}
+
 // Speed (acceptance #5): a ~5 s trajectory at the fine plant substep must run far under
 // real time so velocity / patch sweeps are cheap. Generous bound (measured ~25 ms here).
 TEST(VlaPlant, FasterThanRealtime) {
