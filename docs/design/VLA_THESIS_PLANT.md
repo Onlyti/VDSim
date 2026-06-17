@@ -37,23 +37,43 @@ the plant is swapped. Reference behaviour: `~/vla_design/sim/closed_loop_sim.py`
    roadmap T3 "VLOW-class unified low speed".)
 
 ## ioniq5_awd.yaml (values FINAL)
-`m=2359, Iz=3400, lf=1.17, lr=1.80, mu_nom=0.9, drive_split_front=0.5`. MF96 per axle:
-`D=mu·Fz, C=1.3, B=Ca/(C·D)` with `Ca_f=2.2e5, Ca_r=1.6e5 N/rad`. track / h_cg = public
-Ioniq5-class (NO confidential/measured data). Static Fz per axle from m, lf, lr for the B calc.
+`m=2359, Iz=3400, lf=1.17, lr=1.80, mu_nom=0.9, drive_split_front=0.5`. track / h_cg = public
+Ioniq5-class (NO confidential/measured data). MF96 BCD `D=mu·Fz, C=1.3, B=Ca/(C·D)`.
+**TRAP: `Ca_f=2.2e5 / Ca_r=1.6e5` are AXLE values** (the thesis bicycle is single-track), but
+7DOF has 4 wheels with PER-WHEEL MF. So per front wheel use `Ca=Ca_f/2` and
+`D=mu·Fz_front_wheel` (`Fz_front_wheel = m·g·lr/L / 2`); likewise rear. Calibrate B at the
+static per-wheel Fz. (Get this wrong ⇒ each axle 2× too stiff.)
 
 ## Already in VDSim — REUSE, do not reimplement
 - Lockstep step API: `vdsim` pybind `SimSession` — `sess.reset(make_init_state(...))`,
   `sess.set_input(cmd)`, step, state get. Pattern: `examples/estimator_in_loop.py`.
-- Control: `vdsim.CmdL3 = {Fx_total[N], steer_angle_wheel[rad]}` (road-wheel δ + Fx, no pedal map).
 - Tyre saturation: Pacejka MF96 combined slip (`model_provides_combined_slip`) — saturates at μFz.
-- Per-wheel GT getters: `tire_forces_body`(Fx,Fy) · `tire_Fz` · `wheel_slip_ratio`(κ) ·
+- Per-wheel GT getters: `tire_forces_wheel`(Fx,Fy in the CONTACT/wheel frame — USE THIS for the
+  friction circle, not `tire_forces_body`) · `tire_Fz` · `wheel_slip_ratio`(κ) ·
   `wheel_slip_angle`(α). Vehicle: State X,Y,ψ,vx,vy,r + `ax/ay_body_est` + `beta()`.
 - Load transfer: Ld2 7DOF (`WeightTransfer` tests). YAML params: `VehicleParams` / `Vehicle.preset`.
 - Per-wheel μ contact: `create_split_mu_ground` (y-based; the new provider is the x-based analog).
 - High-level Python: `python/vdsim_lab.py` (build session + step loop + per-wheel GT CSV) —
   build the wrapper ON this, don't duplicate.
 
-## Deliverables (the 5 — this is the whole job)
+## CORRECTION — Fx is NOT a clean drop-in (the main coordination item)
+`vdsim.CmdL3 = {Fx_total[N], steer_angle_wheel[rad]}` LOOKS right, but **Ld2's `lower_to_l4`
+THROTTLE-MAPS it**: `throttle = Fx_total/(1500·5)` → drivetrain → wheel torque → slip. So the
+commanded Fx_total is NOT delivered as-is (arbitrary 7500 N = full-throttle calibration) — this
+is exactly the pedal/throttle map the thesis forbids (P0.2). Steer (δ) IS clean.
+- Good side: the torque path runs wheel-spin → slip-ratio → MF96 combined, so longitudinal
+  grip-loss and κ ARE physical (the friction circle works).
+- Required: a **direct-Fx force-input path in Ld2** that bypasses the throttle map and splits
+  `Fx_total` by `drive_split_front`. Decide how the longitudinal channel saturates:
+  (i) apply Fx as a force + clamp combined `‖[Fx,Fy]‖ ≤ μ·Fz` (grip-loss via clamp; κ becomes
+  diagnostic only), or (ii) convert Fx→wheel torque and keep the spin/slip dynamics (κ stays
+  physical — preferred, since the thesis wants κ as GT). This is deliverable #0 below and the
+  acceptance #2 crux.
+
+## Deliverables (the job)
+0. **Direct-Fx force-input path in Ld2** (bypass the throttle map; split by `drive_split_front`;
+   decide force+clamp vs Fx→torque per the CORRECTION above). Without this, acceptance #2 fails
+   and Fx_commanded ≠ Fx_delivered.
 1. **`create_friction_patch_ground(base_mu, [(x0,x1,mu)...])`** — per-wheel contact-point μ by
    wheel world-x (front-before-rear lag). C++ provider + pybind. (μ(x,y) general = bonus.)
 2. **`wheel_mu()` getter** on the dynamics (the real μ each wheel used this step) + pybind.
@@ -83,16 +103,21 @@ for k in range(N):
    slips/departs. This is where a throttle-mapped Fx (wrong) would show up.
 3. **GT consistency**: per-wheel `‖[Fx,Fy]‖ ≤ μ·Fz` (+ numeric eps) always; `ΣFx,ΣFy ↔ m·ax,ay`.
 4. **determinism**: same input twice ⇒ bit/near-equal.
-5. **speed**: one 14DOF traj (≈5 s, dt=0.05) ≪ 1 s wall-clock.
+5. **speed**: one Ld2 7DOF traj (≈5 s, dt=0.05) ≪ 1 s wall-clock.
 
-## Verify before claiming done (open risks)
-- **Ld2 `Fx_total` application path**: confirm it is applied as a FORCE split by
-  `drive_split_front` and that LONGITUDINAL over-demand → combined saturation → slip (not a
-  pedal/torque map). This is the crux of acceptance #2; if it doesn't grip-loss, route Fx via
-  the combined clamp or per-wheel torque. (Lateral grip loss via MF96 is already certain.)
-- **Vehicle kinematic-blend bypass** on the plant path (decision 8).
-- **`drive_split_front`**: either read VDSim's existing Ld2 Fx_total split and report it, or add
-  the param (default 0.5) and split by it.
+## Verify / coordinate before claiming done (open risks)
+- **deliverable #0 (direct-Fx path)** is the crux — see CORRECTION. Ld2 currently throttle-maps
+  Fx_total; acceptance #2 fails until a direct force/torque path delivers the commanded Fx and
+  grip-loses on over-demand. (Lateral grip loss via MF96 is already certain.)
+- **wheel_spin seed at reset = `vx / wheel_radius`** (7DOF integrates spin; unseeded ⇒ a huge
+  first-step κ transient / spurious longitudinal force). `make_init_state` already does this —
+  confirm the wrapper uses it, not a raw State.
+- **plant obs = TRUE state** (P1 has no sensor noise): use SimSession's `true_state`, not the
+  measured/noisy state.
+- **friction circle frame**: use `tire_forces_wheel()` (contact frame), not `tire_forces_body()`.
+- **vehicle kinematic-blend bypass** on the plant path (decision 8; rely on tyre VLOW).
+- **dt = 0.05 ZOH**: the MPC sample = plant.step dt; VDSim subdivides internally (substep_dt).
+- straight road ⇒ s≈x for the patch; fine for lane-change/DLC, revisit if the path curves a lot.
 
 ## Guardrails
 wheel FL0/FR1/RL2/RR3, ISO 8855, YAML params, estimation noise = Q-process/R-meas (plant-
