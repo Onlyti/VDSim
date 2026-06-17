@@ -61,14 +61,15 @@ No usage / violation metrics in the plant (thesis-side only).
 
 ## Preset: `ioniq5_awd`
 
-`configs/vehicles/ioniq5_awd.yaml` + `configs/parts/tire/ioniq5_pacejka.yaml`  
+`configs/vehicles/ioniq5_awd.yaml` + `configs/parts/tire/ioniq5_pac2002.yaml` (+ `.tir`)  
 m=2359 kg, Iz=3400, lf=1.17 m, lr=1.80 m, μ_nom=0.9, AWD 50/50
-(`drive_split_front=0.5`). MF96 B from axle Ca_f/Ca_r with per-wheel Fz trap
-documented in the tire yaml.
+(`drive_split_front=0.5`). MF2002 `.tir` with load-dependent coefficients: a single tyre
+recovers axle `Ca_f≈218k / Ca_r≈159k` from each axle's static Fz (`PKY1=-24.6, PKY2=2.56`),
+cornering stiffness concave in load, peak μ falls with load (`PDY2=-0.10`).
 
 ## Physics path
 
-- **Ld2 7DOF** (`create_seven_dof`), LuGre OFF, MF96 combined slip.
+- **Ld2 7DOF** (`create_seven_dof`), LuGre OFF, MF2002 `.tir` combined slip (load-dependent).
 - **Fx_total → per-wheel torque** (CmdL1), bypassing throttle / drivetrain map.
 - **Friction patches** via `create_friction_patch_ground` (per-wheel μ by contact x).
 - **Plant path** bypasses vehicle kinematic low-speed blend (tyre VLOW only).

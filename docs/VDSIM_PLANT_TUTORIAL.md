@@ -2,8 +2,9 @@
 
 A step-by-step guide to using **VDSim as the vehicle-dynamics plant** for a closed-loop
 controller (e.g. an MPC). You call `step()`; VDSim integrates one control period and returns
-ground-truth state + per-wheel tyre forces. Mid-fidelity (7-DOF + Pacejka MF96 + load
-transfer), deterministic, sub-real-time — a drop-in upgrade from a single-track bicycle plant.
+ground-truth state + per-wheel tyre forces. Mid-fidelity (7-DOF + Pacejka MF2002 `.tir` with
+load-dependent coefficients + load transfer), deterministic, sub-real-time — a drop-in upgrade
+from a single-track bicycle plant.
 
 > Status: **BETA** (first release). The API below is stable for use; expect refinements from
 > early feedback. Branch `VDSim-Thesis`.
@@ -178,39 +179,46 @@ differential: Open
 steering_ratio: 14.0
 aero_drag_coeff: 0.28
 frontal_area: 2.45
-tire_yaml: parts/tire/ioniq5_pacejka.yaml # the tyre sidecar (below)
+tire_yaml: parts/tire/ioniq5_pac2002.yaml  # the tyre sidecar (below)
 ```
 
-Tyre `configs/parts/tire/ioniq5_pacejka.yaml` (MF96, LuGre OFF, combined-slip ON):
+Tyre `configs/parts/tire/ioniq5_pac2002.yaml` (MF2002 `.tir` backend, LuGre OFF, combined-slip
+ON). Unlike the old MF96 (constant B/C/E), the MF2002 coefficients are **load-dependent**, so
+cornering stiffness and peak μ change with Fz — the load-transfer / limit behaviour an MPC
+robustness study needs:
 
 ```yaml
-B_lat: 14.24      # stiffness factor (sets cornering stiffness)
-C_lat: 1.3        # shape
-D_lat: 1.0        # peak factor (peak force = D * mu * Fz)
-E_lat: -1.0       # curvature
-B_long: 14.24
-C_long: 1.65
-D_long: 1.0
-E_long: 0.97
+backend: mf2002
+tir_path: ioniq5_pac2002.tir   # Pacejka-2002 coefficient file (next to this yaml)
 mu_nominal: 0.9
 Fz_nominal: 5764.0
 combined_slip_enabled: true
 lugre: { enabled: false }
 ```
 
+The `.tir` (`configs/parts/tire/ioniq5_pac2002.tir`, public-synthetic — no measured data) holds
+the Pacejka-2002 coefficients. The load-shaping ones:
+
+| coeff | role |
+|---|---|
+| `PKY1`, `PKY2` | cornering-stiffness magnitude + its **saturation with load** (Ca concave in Fz) |
+| `PDY1`, `PDY2` | lateral peak factor + **peak-μ fall with load** (`μ_peak ↓` as Fz↑) |
+| `PCY1`, `PEY1` | lateral shape / curvature |
+| `PKX1`, `PDX1`, `PDX2`, `PCX1` | longitudinal stiffness, peak, load sensitivity, shape |
+
 ### Making your own vehicle
 
-Copy `ioniq5_awd.yaml`, edit mass/geometry. To match a known axle cornering stiffness `Ca`
-[N/rad], the small-slip tyre gives `Ca_wheel ≈ B_lat · C_lat · mu_nominal · Fz_nominal`, and
-`Ca_axle = 2 · Ca_wheel`. So:
+Copy `ioniq5_awd.yaml`, edit mass/geometry. The MF2002 cornering stiffness per wheel is
+`Kya(Fz) = PKY1 · FNOMIN · sin( 2·atan( Fz / (PKY2·FNOMIN) ) ) · LKY` — load-dependent, so a
+**single** `.tir` reproduces different front/rear axle stiffness automatically from each axle's
+static Fz (no per-axle file needed). To target known axle stiffnesses, pick `PKY1` (overall
+magnitude) and `PKY2` (where it saturates) so that `2·Kya(Fz_front)=Ca_f` and
+`2·Kya(Fz_rear)=Ca_r`.
 
-```
-B_lat = Ca_axle / (2 · C_lat · mu_nominal · Fz_nominal)
-```
-
-Worked example (Ioniq5): with `Ca_f=2.2e5, Ca_r=1.6e5` (axle), the per-wheel values give
-`B_lat ≈ 13.4` (front) and `≈ 15.0` (rear); the preset uses the mean `14.24` (single B for
-both axles). For per-axle fidelity, split front/rear into separate tyre files — advanced.
+Worked example (Ioniq5, this preset): `PKY1=-24.6, PKY2=2.56` give
+`Kya(7011 N)=109.3k` → axle `Ca_f≈218k` and `Kya(4558 N)=79.5k` → axle `Ca_r≈159k`
+(targets 220k / 160k, ~1 %). Because `Kya` is concave, `Kya(2·Fz0)/Kya(Fz0)=1.435` (< 2 =
+saturating, not linear), and `PDY2=-0.10` drops peak μ from 0.90 to 0.81 at 2·Fz0.
 
 ---
 
@@ -233,9 +241,13 @@ Inputs are validated; bad ones raise a clear `ValueError`/`TypeError` (see Troub
 
 ## 10. What's validated (so you can trust it)
 
-Gated by `ctest -R VlaPlant` (390/390 suite green):
+Gated by `ctest -R VlaPlant` (394/394 suite green):
 - **Dry handling = linear bicycle within ~4 %** (steady yaw-rate gain vs the single-track model
-  with the same `Caf/Car`) — your bicycle results carry over.
+  with the same `Caf/Car`) — your bicycle results carry over. Checked for both the analytic-B
+  tyre and the real MF2002 `.tir`.
+- **Load-dependent tyre (MF2002)**: cornering stiffness concave in Fz
+  (`Kya(2Fz0)/Kya(Fz0)=1.435 < 2`) and peak μ falls with load (`0.90→0.81` at 2·Fz0) — the
+  load-transfer limit behaviour MF96 could not represent.
 - **Friction circle held**: `‖[Fx,Fy]‖ ≤ mu·Fz` every step; over-command ⇒ real slip + the
   vehicle cannot deliver the commanded Fx (grip loss), and a brake never spins a wheel
   backwards.
@@ -243,8 +255,10 @@ Gated by `ctest -R VlaPlant` (390/390 suite green):
 - **Throttle bypass**: `Fx` is applied as torque to the wheel spin, not a pedal map.
 - **Speed**: a 5 s trajectory runs in ~25 ms (≫ real time → cheap sweeps).
 
-This is an independent-of-the-controller mid-fidelity plant; the MF96 ≠ your bicycle internal
-model is an *intended* plant–model mismatch (a stronger robustness story than a matched plant).
+This is an independent-of-the-controller mid-fidelity plant; the MF2002 load-dependent tyre ≠
+your bicycle internal (linear-Ca) model is an *intended* plant–model mismatch — a stronger
+robustness story than a matched plant, and exactly the Fz-driven nonlinearity a σ_Fz /
+chance-constraint study wants to stress.
 
 ---
 
