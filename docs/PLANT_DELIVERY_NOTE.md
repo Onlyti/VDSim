@@ -102,3 +102,53 @@ plant(load-dependent)의 mismatch는 의도된 robustness stress — matched pla
 
 - 현재 VDSim-Thesis 브랜치. main은 보호 중(아직 미병합).
 - tyre 계수는 전부 public-synthetic Ioniq5급 근사 — 실측/대외비 데이터 아님.
+
+---
+
+## BETA #1 결과 로그 (2026-06-18, thesis-side rhdusal22)
+
+결론: **통합 성공.** drop-in 잘 맞물림, 첫 closed-loop 결과가 bicycle plant보다 깨끗.
+핵심 evidence — slip-angle 단조분리: det(σ=0) 8.3° (슬립/이탈, useGT 1.08) vs frozen 3.2° vs
+antic 2° (planted, useGT 0.91). load-dependent MF2002가 anticipatory vs deterministic 분리를
+bicycle(soft clamp)보다 선명하게 만듦.
+
+피드백 5항목: API 마찰 거의 없음 / tyre 거동 기대대로(load transfer 확인: FzFR 8631>FzFL 5503
+좌선회) / 누락 채널 없음 / 성능·결정론 충분 / 파라미터 정합(Caf 218k·Car 159k ~1%). 부호 +δ→+r→+Y ✓.
+
+조치 (main 병합 전 정리):
+- [x] **item 0 — 외부 인터프리터 재빌드 문서**: shipped `.so`가 cpython-38, thesis MPC는 conda
+  py3.11 → ABI 불일치 import 불가. 튜토리얼 §1에 conda/venv 재빌드 절 + `VDSIM_BUILD_PYTHON`
+  default OFF 명시 추가 완료.
+- [ ] **useGT max=1.08>1 정의 확정** (아래 §7). friction-circle 위반 아님 — 보고 μ 정의 문제.
+  fix 방향 사용자 승인 대기.
+
+useDem proxy 오해유발 건은 thesis-side 이슈(plant 책임 아님): VDSim에선 plant GT(slip angle·
+useGT)를 headline metric으로 쓰는 게 맞음.
+
+---
+
+## 7. useGT > 1 해명 (검증 완료) + fix 옵션
+
+증상: `useGT = ‖[Fx,Fy]‖ / (wheel.mu · Fz)` 가 det 모드 최대 1.08 (>1).
+
+원인 (코드 확인): **friction-circle 위반이 아니다.** `wheel.mu`는 `wheel_mu()` =
+`min(contact.mu_long, contact.mu_lat)` = **노면(contact) μ** (base 0.9 또는 patch), MF2002가
+실제로 쓴 load-dependent peak 계수가 아님. MF2002 lateral peak (`magic_formula_tire.cpp:65,87`):
+
+```
+muy(Fz) = (PDY1 + PDY2*dfz) * (LMUY * mu_contact),   dfz = (Fz - Fz0)/Fz0
+Dy      = muy * Fz                                    # 실제 한계 force
+```
+
+PDY2 = -0.10 < 0 → 저하중(dfz<0)에서 `muy > mu_contact`. 가벼운 휠(예: combined brake+turn 시
+inner-front, dfz≈-0.8 → Fz≈0.2·Fz0)에서 `muy ≈ 1.08·mu_contact`. 그래서 ‖F‖가
+1.08·(mu_contact·Fz)까지 도달 → useGT=1.08. **타이어는 자기 자신의 load-dependent ellipse
+안에 있음**; metric이 분모에 nominal μ를 써서 생긴 정의 불일치. (이건 peak μ가 하중↓에서 nominal
+위로 올라가는 MF2002의 의도된 거동 — MF96엔 없던 것.)
+
+fix 옵션 (승인 대기):
+- (A, 권장) obs에 **realized peak 계수** 노출 — `wheel.mu_peak` = `Dresultant/Fz` (또는
+  `mu_x_peak`/`mu_y_peak`). 그러면 `useGT = ‖F‖/(mu_peak·Fz) ≤ 1` 정의상 보장. `wheel.mu`
+  (노면 μ)는 보존. ITireModel 출력 + obs schema 소폭 확장.
+- (B, 문서만) `wheel.mu`를 "노면 μ"로 명시하고, friction-circle GT는 분석자가 load-dependent
+  peak을 적용하도록 안내. 코드 무변경.

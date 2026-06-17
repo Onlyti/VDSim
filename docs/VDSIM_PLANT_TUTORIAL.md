@@ -27,11 +27,31 @@ from a single-track bicycle plant.
 
 ```bash
 cd /path/to/VDSim
-cmake -B build -DCMAKE_BUILD_TYPE=Release      # first time
-cmake --build build -j                         # builds libvdsim_core + the python module
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DVDSIM_BUILD_PYTHON=ON   # first time
+cmake --build build -j                                              # core + python module
 ```
 
-This produces the `vdsim` pybind module under `build/python/`. No extra install needed.
+`VDSIM_BUILD_PYTHON` defaults **OFF** — you must pass `-DVDSIM_BUILD_PYTHON=ON` to get the
+`vdsim` pybind module under `build/python/`.
+
+### Building for an external interpreter (conda / venv) — important
+
+The pybind module is **ABI-locked to one Python**. A shipped `vdsim.cpython-38-*.so` will **not
+import** under a different interpreter (e.g. a conda env on 3.11 — the typical acados / cvxpy
+MPC setup). If your controller runs in its own env, rebuild the module **with that
+interpreter**:
+
+```bash
+conda activate vla                       # your MPC env (e.g. python 3.11)
+pip install pybind11                      # into that env
+cmake -B build_vla -DCMAKE_BUILD_TYPE=Release -DVDSIM_BUILD_PYTHON=ON \
+      -DPython3_EXECUTABLE="$(which python)" \
+      -Dpybind11_DIR="$(python -m pybind11 --cmakedir)"
+cmake --build build_vla -j
+```
+
+Then point `sys.path` at `build_vla/python` (not `build/python`). Symptom of a mismatch:
+`ImportError: ... undefined symbol` or `module compiled against a different Python`.
 
 ---
 
