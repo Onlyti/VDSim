@@ -5,6 +5,25 @@ landed). This handoff covers the move from the B1 lumped-1-DOF strut to a true c
 multibody solve (Option 2), which is DESIGNED + reviewed but whose first implementation
 has an unresolved roll-coupling instability. Repo is reverted to green (376/376).
 
+## 방향 전환 2026-06-17 저녁 (정식 MBD 재정식화 — 설계 완료)
+
+jacking root-cause를 끝까지 추적하고(아래 "구현 갱신" 참조) Cursor MBD 리뷰로 교차검증한
+결과: **현 10-DOF reduced-coordinate coupled solve는 Lagrangian적으로 self-consistent하나
+틀린 모델이다.** unsprung를 body-상대좌표(`x_u=p+R(rb+w(θ))`)로 매립해 스프링 위치에너지
+`U=U(θ)`가 body pose에 무관 → 스프링이 body에 일반화력 0 → QS에서 roll restoring이 tire
+load transfer만 남아 ~5× 부족 → ~0.15g 전복.
+
+**fix = 정식 MBD: unsprung 수직을 inertial DOF `z_u`로** (검증된 Ld3 14DOF 구조를 6-DOF
+free body로 lift). 설계: **`docs/design/L5_MBD_RIGOROUS.md`**. 핵심:
+- 질량행렬 분리 → **10×10 solve 제거**, body 6-DOF Euler + 4개 스칼라 `z_u` ODE.
+- `δ_i=z_corner,i(p,R)−z_u,i`가 body pose 의존 → 스프링이 `Σ(R·rb)_y·F_susp`로 roll 모멘트
+  직접 전달(14DOF의 그 항). 타이어 normal은 `z_u`에, tangential은 body patch lever에.
+- DAE `travel_maps`(committed)·Pacejka·contact·RCPC 재사용. 에너지 명시적 보존.
+- 합격: settle ΣFz=weight, cornering 안정(>0.7g), roll stiffness ~26kN·m/rad, 전 L5 테스트.
+
+다음 세션 진입점 = 이 설계 문서로 구현. (Cursor 리뷰 전문은 이 세션 로그/요약 참조; Cursor의
+"10-DOF 유지+mount 반력 추가(B+)" 권고는 비엄밀[이중적용 위험]이라 채택 안 함 — 분리 z_u가 정답.)
+
 ## 구현 갱신 2026-06-17 PM (Option A 완료 + jacking 직교 확정)
 
 세션에서 Option A(실제 링크 기하)를 구현하고, jacking이 geometry와 **직교**함을 확정했다.
