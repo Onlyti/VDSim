@@ -1,8 +1,22 @@
 # VDSim 핸드오프
 
-작성: **2026-06-18** · `VDSim-Thesis` (local) · **394/394 ctest green**
+작성: **2026-06-18** · `VDSim-Thesis` (local) · **395/395 ctest green**
 
-## 0. 2026-06-18 VLA plant tyre → MF2002 (T-IVb) — DONE
+## 0. 2026-06-18 VLA plant realized peak mu (useGT option A) — DONE
+
+**Shipped:** per-wheel `mu_peak` (load-dependent MF realized peak coefficient, force/Fz) exposed
+alongside existing contact `wheel.mu`. Friction-circle GT metric
+`useGT = ||[Fx,Fy]|| / (mu_peak*Fz)` is now <= 1 by construction; contact `mu` preserved.
+
+**Deliverables:**
+- **`ITireModel::Output/Wrench::mu_peak`** + `IVehicleDynamics::wheel_mu_peak()` (Ld2)
+- MF2002 / MF96 / linear `compute()` fill `mu_peak`; `evaluate()` propagates to wrench
+- **`python/bindings.cpp`** + **`python/vdsim_plant.py`** `wheel[i]["mu_peak"]`
+- **Test** `VlaPlant.RealizedPeakMuBoundsFrictionCircle`
+
+**Verify:** `cmake --build build -j && cd build && ctest -R VlaPlant --output-on-failure`
+
+## 0b. 2026-06-18 VLA plant tyre → MF2002 (T-IVb) — DONE
 
 **Shipped:** Ioniq5-class VLA plant now uses **MF2002** (load-dependent `PKY*` cornering stiffness +
 `PDY2` peak-μ load sensitivity) instead of MF96.
@@ -22,7 +36,7 @@
 
 **Spec:** `docs/design/VLA_THESIS_PLANT.md`
 
-## 0a. 2026-06-18 VLA thesis plant (T-IV) — DONE
+## 0c. 2026-06-18 VLA thesis plant (T-IV) — DONE
 
 **Shipped:** `vdsim_plant.VDSimPlant` — first external client plant API for closed-loop MPC.
 
@@ -38,7 +52,7 @@
 
 **Spec:** `docs/design/VLA_THESIS_PLANT.md`
 
-## 0b. 2026-06-14 세션 인수인계 (archive)
+## 0d. 2026-06-14 세션 인수인계 (archive)
 
 **목표였던 것:** 멀티차량 비교(헤드리스+GUI) + 다나와식 차량조립 UI + 외부 AI 디자인 리뷰 반영. 완료.
 

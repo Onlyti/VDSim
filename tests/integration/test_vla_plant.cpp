@@ -339,6 +339,61 @@ TEST(VlaPlant, CombinedBrakeTurnGripLossOnPatchMf2002) {
     EXPECT_TRUE(vehicle_grip_loss);
 }
 
+// Realized peak mu (useGT>1 fix): ||[Fx,Fy]||/(mu_peak*Fz) <= 1 with load-dependent MF peak.
+// Documents that mu_peak can exceed contact mu on unloaded/low-load wheels (PDY2<0).
+TEST(VlaPlant, RealizedPeakMuBoundsFrictionCircle) {
+    auto vp = ioniq5_vp();
+    vp.plant_path = true;
+    auto tp = ioniq5_plant_tp();
+    vdsim::SolverParams sp;
+    const double R = vp.wheel_radius_nominal;
+    auto dyn = vdsim::create_seven_dof();
+    dyn->initialize(vp, tp, sp);
+    auto ground = vdsim::create_friction_patch_ground(0.0, 0.5, {{-1.0, 1e4, 0.5}});
+    dyn->reset(rolling(16.7, R));
+
+    vdsim::CmdL1 cmd{};
+    cmd.steer_angle_wheel = 0.12;
+    const double Fx_cmd = -15000.0;
+    const double tau = std::abs(wheel_torque(Fx_cmd, R));
+    for (int i = 0; i < vdsim::NUM_WHEELS; ++i) cmd.brake_torque[i] = tau;
+
+    bool peak_circle_ok = true;
+    bool old_metric_exceeds_contact = false;
+    for (int k = 0; k < 80; ++k) {
+        vdsim::ContactArray c; ground->query(dyn->state(), vp, c);
+        dyn->step(vdsim::ControlInput{cmd}, c, 0.05);
+        if (dyn->state().velocity.x() < 2.0) break;
+        const auto Fw = dyn->tire_forces_wheel();
+        const auto mu = dyn->wheel_mu();
+        const auto mu_peak = dyn->wheel_mu_peak();
+        const auto Fz = dyn->tire_Fz();
+        for (int i = 0; i < vdsim::NUM_WHEELS; ++i) {
+            if (Fz[i] <= 0.0) continue;
+            const double fxy = std::hypot(Fw[i].x(), Fw[i].y());
+            const double cap_peak = mu_peak[i] * Fz[i];
+            if (fxy > cap_peak * (1.0 + 1e-3)) peak_circle_ok = false;
+            if (fxy > mu[i] * Fz[i]) old_metric_exceeds_contact = true;
+        }
+    }
+    EXPECT_TRUE(peak_circle_ok)
+        << "||F|| must stay inside mu_peak*Fz (realized peak friction circle)";
+    if (!old_metric_exceeds_contact) {
+        // Locked-wheel braking sits on the MF sliding tail (below peak); document the
+        // old-metric violation on a lightly loaded combined-slip tyre point instead.
+        auto tire = vdsim::create_magic_formula_tire_from_tir(kIoniq5Tir);
+        const auto o = tire->compute(slip_input(-0.18, 0.04, 300.0, 0.5, 0.5));
+        const double fxy = std::hypot(o.Fx, o.Fy);
+        EXPECT_GT(o.mu_peak, 0.5);
+        EXPECT_GT(fxy, 0.5 * 300.0)
+            << "old useGT=||F||/(contact_mu*Fz) can read >1 when mu_peak > contact mu";
+        EXPECT_LE(fxy, o.mu_peak * 300.0 * (1.0 + 1e-3));
+        old_metric_exceeds_contact = fxy > 0.5 * 300.0;
+    }
+    EXPECT_TRUE(old_metric_exceeds_contact)
+        << "document ||F|| > contact_mu*Fz while mu_peak bounds the friction circle";
+}
+
 // Speed (acceptance #5): a ~5 s trajectory at the fine plant substep must run far under
 // real time so velocity / patch sweeps are cheap. Generous bound (measured ~25 ms here).
 TEST(VlaPlant, FasterThanRealtime) {

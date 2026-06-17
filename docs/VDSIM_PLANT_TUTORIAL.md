@@ -117,10 +117,15 @@ cd /path/to/VDSim && python3 examples/vla_plant_demo.py     # writes /tmp/vla_pl
 | `wheel[i].Fz` | vertical load | N |
 | `wheel[i].alpha` | slip angle | rad |
 | `wheel[i].kappa` | slip ratio | – |
-| `wheel[i].mu` | **actual** friction this wheel used | – |
+| `wheel[i].mu` | **road-surface** friction at this wheel (contact μ) | – |
+| `wheel[i].mu_peak` | **realized** tyre peak coefficient at this Fz (load-dependent) | – |
 
-The friction-circle check is **on you (the analyst)**: e.g. `‖[Fx,Fy]‖ / (mu·Fz)` per wheel.
-The plant deliberately exposes only raw ground truth, not a usage metric.
+Friction-circle check (on you, the analyst): use **`mu_peak`** in the denominator —
+`useGT = ‖[Fx,Fy]‖ / (mu_peak·Fz)` is bounded by 1 (≈1 at the grip limit). Do **not** use
+`mu` (the road μ): because the MF2002 peak coefficient *rises above* the nominal μ at low load
+(`PDY2<0`), a lightly loaded wheel can carry `‖F‖ > mu·Fz`, so `‖F‖/(mu·Fz)` can read >1 even
+though the tyre is inside its own load-dependent ellipse. `mu_peak` removes that ambiguity.
+The plant still exposes only raw ground truth, not a usage metric.
 
 ---
 

@@ -163,6 +163,7 @@ public:
         out.Fx = Fx;
         out.Fy = Fy;
         out.Mz = Mz;
+        out.mu_peak = std::max(std::abs(mux), std::abs(muy));
         return out;
     }
 

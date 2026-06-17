@@ -127,6 +127,7 @@ timeline
 |-------|------|--------|
 | T1 | `.tir` / MF2002 as **catalog** tire backend (`TireParams.backend`) | [x] merged |
 | T1 | MF2002 combined slip bypasses host friction ellipse | [x] merged |
+| T1 | **Tire model selectable per-part** via `backend: mf96 \| mf2002 \| linear` — all three live in `create_tire_from_params` (mf96 default, mf2002→.tir, linear→`create_linear_tire`), routed by every dynamics (L1/L2/L5). | [x] infra present; TODO: formalize `linear` (catalog preset + tests + docs), confirm L1/L5 parity. Requested 2026-06-18 |
 | T1 | GUI tire import + public sample `.tir` | [ ] (v0.5.2 GUI) |
 | T1 | Chrono Pac02 parity gate (`ctest -R ChronoPac02Parity`) | [x] pure-long ~2% + pure-lat ~1% gated |
 | T1 | LuGre $g()$ from MF2002 $F_{x0},F_{y0}$ (optional) | [ ] |

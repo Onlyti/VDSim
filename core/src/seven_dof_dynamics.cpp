@@ -137,6 +137,7 @@ public:
         slip_ratio_.fill(0.0);
         slip_angle_.fill(0.0);
         wheel_mu_.fill(0.0);
+        wheel_mu_peak_.fill(0.0);
         mz_front_sum_ = 0.0;
         direct_l1_ = false;
     }
@@ -210,6 +211,7 @@ public:
     std::array<double, NUM_WHEELS> wheel_slip_ratio()  const override { return slip_ratio_; }
     std::array<double, NUM_WHEELS> wheel_slip_angle()  const override { return slip_angle_; }
     std::array<double, NUM_WHEELS> wheel_mu()          const override { return wheel_mu_; }
+    std::array<double, NUM_WHEELS> wheel_mu_peak()     const override { return wheel_mu_peak_; }
     std::array<double, NUM_WHEELS> wheel_overturning_moment() const override { return mx_w_; }
 
     // Quasi-static roll/pitch incl. the CG-migration (jacking) feedback —
@@ -443,7 +445,8 @@ private:
                 mx_w_[i]       = 0.0;   // airborne: no overturning (don't leak stale Mx to roll)
                 contact_dy_[i] = 0.0;
                 fx_kin[i]      = 0.0;
-                wheel_mu_[i]   = 0.0;
+                wheel_mu_[i]       = 0.0;
+                wheel_mu_peak_[i]  = 0.0;
                 ci_[i]         = ITireModel::ContactInput{};  // neutral: no bristle/relax evolution
                 continue;
             }
@@ -476,6 +479,7 @@ private:
             // the tire now. The transient_ state is held frozen within the stage and
             // advanced between stages/substeps below.
             const ITireModel::Wrench w = tire_->evaluate(ci, transient_[i]);
+            wheel_mu_peak_[i] = w.mu_peak;
             Re_w_[i]       = w.Re;
             contact_dy_[i] = w.contact_dy;
             mx_w_[i]       = w.Mx;        // camber migration (+ carcass Mx if any)
@@ -767,7 +771,8 @@ private:
     std::array<double, NUM_WHEELS> tire_Fz_    {};
     std::array<double, NUM_WHEELS> slip_ratio_ {};
     std::array<double, NUM_WHEELS> slip_angle_ {};
-    std::array<double, NUM_WHEELS> wheel_mu_    {};
+    std::array<double, NUM_WHEELS> wheel_mu_       {};
+    std::array<double, NUM_WHEELS> wheel_mu_peak_ {};
     CmdL4 cmd_l4_ {};
     CmdL1 cmd_l1_ {};
     bool  direct_l1_ {false};

@@ -63,6 +63,8 @@ public:
     virtual std::array<double, NUM_WHEELS> wheel_mu() const {
         return {{0.0, 0.0, 0.0, 0.0}};
     }
+    // Realized load-dependent peak friction coefficient (force/Fz) per wheel.
+    virtual std::array<double, NUM_WHEELS> wheel_mu_peak() const { return wheel_mu(); }
     // Per-wheel overturning moment [N m] about the wheel-forward axis: tire carcass
     // Mx + camber contact-point migration (Fz * crown_radius * sin gamma). Feeds the
     // roll DOF on models that have one (L3/L5). Default 0 (no camber migration).
@@ -173,6 +175,7 @@ public:
         double Fy {0.0};          // [N] lateral
         double Mz {0.0};          // [N m] aligning moment (about contact normal)
         double Mx {0.0};          // [N m] overturning moment (about wheel-forward axis)
+        double mu_peak {0.0};     // realized resultant peak coefficient (force/Fz)
     };
 
     // ----- Inverted ("kinematics-in -> wrench-out") interface (Phase 2) -----
@@ -207,6 +210,7 @@ public:
         double Re {0.0};
         double kappa {0.0}, alpha {0.0};
         double contact_dy {0.0};
+        double mu_peak {0.0};
     };
 
     virtual ~ITireModel() = default;

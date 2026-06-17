@@ -55,7 +55,8 @@ obs = plant.step([delta_roadwheel_rad, Fx_total_N])
 | `wheel[i].Fx`, `Fy` | N | **contact / wheel frame** |
 | `wheel[i].Fz` | N | normal load |
 | `wheel[i].alpha`, `kappa` | rad, - | slip |
-| `wheel[i].mu` | - | friction used this step |
+| `wheel[i].mu` | - | road-surface (contact) μ |
+| `wheel[i].mu_peak` | - | realized tyre peak coeff at this Fz (use for friction-circle: `‖F‖/(mu_peak·Fz)≤1`) |
 
 No usage / violation metrics in the plant (thesis-side only).
 

@@ -146,9 +146,8 @@ inner-front, dfz≈-0.8 → Fz≈0.2·Fz0)에서 `muy ≈ 1.08·mu_contact`. 그
 안에 있음**; metric이 분모에 nominal μ를 써서 생긴 정의 불일치. (이건 peak μ가 하중↓에서 nominal
 위로 올라가는 MF2002의 의도된 거동 — MF96엔 없던 것.)
 
-fix 옵션 (승인 대기):
-- (A, 권장) obs에 **realized peak 계수** 노출 — `wheel.mu_peak` = `Dresultant/Fz` (또는
-  `mu_x_peak`/`mu_y_peak`). 그러면 `useGT = ‖F‖/(mu_peak·Fz) ≤ 1` 정의상 보장. `wheel.mu`
-  (노면 μ)는 보존. ITireModel 출력 + obs schema 소폭 확장.
-- (B, 문서만) `wheel.mu`를 "노면 μ"로 명시하고, friction-circle GT는 분석자가 load-dependent
-  peak을 적용하도록 안내. 코드 무변경.
+**결정: (A) 채택** (2026-06-18). obs에 **realized peak 계수** 노출 — `wheel.mu_peak` =
+`max(mu_x, mu_y)` (load-dependent, force/Fz). `useGT = ‖F‖/(mu_peak·Fz) ≤ 1` 정의상 보장.
+`wheel.mu`(노면 μ)는 보존. ITireModel::Output/Wrench + `wheel_mu_peak()` + obs schema 확장.
+이 .tir는 PDX==PDY라 mu_x==mu_y → mu_peak가 한계영역에서 정확히 useGT==1.
+검증: combined brake+turn on patch 시나리오에서 모든 wheel·step `‖F‖ ≤ mu_peak·Fz`.

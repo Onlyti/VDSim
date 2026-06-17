@@ -93,6 +93,7 @@ public:
         out.Fx = Fx;
         out.Fy = Fy + Fy_camber;
         out.Mz = -trail * Fy + Mz_camber;
+        out.mu_peak = std::max(tp_.D_long * mu_x, tp_.D_lat * mu_y);
         return out;
     }
 };

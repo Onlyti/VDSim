@@ -686,6 +686,7 @@ PYBIND11_MODULE(vdsim, m) {
         .def("wheel_slip_ratio", &vdsim::IVehicleDynamics::wheel_slip_ratio)
         .def("wheel_slip_angle", &vdsim::IVehicleDynamics::wheel_slip_angle)
         .def("wheel_mu",         &vdsim::IVehicleDynamics::wheel_mu)
+        .def("wheel_mu_peak",    &vdsim::IVehicleDynamics::wheel_mu_peak)
         .def("wheel_overturning_moment", &vdsim::IVehicleDynamics::wheel_overturning_moment)
         .def("roll_angle_qs",  &vdsim::IVehicleDynamics::roll_angle_qs)
         .def("pitch_angle_qs", &vdsim::IVehicleDynamics::pitch_angle_qs)

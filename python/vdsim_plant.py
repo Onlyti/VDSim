@@ -5,9 +5,10 @@ Contract (stable):
   Observation dict each step (true state, contact-frame tyre forces, FL0..RR3):
 
     X, Y, psi, vx, vy, r, ax, ay, beta   — vehicle [m, rad, m/s, m/s²]
-    wheel: list[4] of {Fx, Fy, Fz, alpha, kappa, mu}
+    wheel: list[4] of {Fx, Fy, Fz, alpha, kappa, mu, mu_peak}
       Fx, Fy — tyre contact / wheel frame [N]  (+Fx drive, +Fy left)
-      Fz [N], alpha [rad], kappa [-], mu [-] actual friction used this step
+      Fz [N], alpha [rad], kappa [-], mu [-] contact friction used this step
+      mu_peak [-] realized load-dependent peak coefficient (force/Fz)
 
 Built on vdsim_lab config resolution + SimSession (direct CmdL1 torque path).
 """
@@ -207,6 +208,7 @@ class VDSimPlant:
       alpha = dyn.wheel_slip_angle()
       kappa = dyn.wheel_slip_ratio()
       mu_w = dyn.wheel_mu()
+      mu_peak_w = dyn.wheel_mu_peak()
       wheels = []
       for i in range(4):
           wheels.append({
@@ -216,6 +218,7 @@ class VDSimPlant:
               "alpha": float(alpha[i]),
               "kappa": float(kappa[i]),
               "mu": float(mu_w[i]),
+              "mu_peak": float(mu_peak_w[i]),
           })
       return {
           "X": float(st.position[0]),

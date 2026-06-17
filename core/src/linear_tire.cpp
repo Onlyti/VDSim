@@ -5,6 +5,7 @@
 
 #include "vdsim/interfaces.hpp"
 
+#include <algorithm>
 #include <memory>
 
 namespace vdsim {
@@ -25,6 +26,7 @@ public:
         out.Fx = C_kappa_ * in.kappa * in.mu_long;
         out.Fy = -C_alpha_ * in.alpha * in.mu_lat;
         out.Mz = 0.0;
+        out.mu_peak = std::max(in.mu_long, in.mu_lat);
         return out;
     }
 
