@@ -1,5 +1,9 @@
 # L5 — dynamic MBD suspension coupled to the 6-DOF body (EoM derivation)
 
+> **SUPERSEDED (2026-06-17)** — the reduced-coordinate 10-DOF coupled solve here gave no
+> quasi-static roll stiffness (dU/d(body)=0) and was abandoned. The shipped L5 model is
+> [`L5_MBD_FREE3D_UNSPRUNG.md`](L5_MBD_FREE3D_UNSPRUNG.md). Kept for the EoM derivation.
+
 Status: DESIGN / derivation for review (not yet implemented). Supersedes the B1
 "spatial strut" (lumped 1-DOF vertical unsprung + one-way pseudo-force coupling),
 whose semi-coupled solve injected energy in the loop (~85 kJ; see below).

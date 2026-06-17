@@ -1,5 +1,9 @@
 # L5 — re-found as the full 6-DOF multibody model (design + roadmap)
 
+> **SUPERSEDED (2026-06-17)** — not the shipped L5 model. The implemented design is
+> [`L5_MBD_FREE3D_UNSPRUNG.md`](L5_MBD_FREE3D_UNSPRUNG.md) (free-3D inertial unsprung MBD,
+> general-surface + hardpoint-emergent geometry). Kept for history.
+
 Status: DESIGN (not implemented). This supersedes the earlier "remove L5" option.
 
 ## Why

@@ -1,5 +1,10 @@
 # L5 — rigorous MBD formulation (14DOF structure lifted to a 6-DOF free body)
 
+> **SUPERSEDED (2026-06-17)** — the world-vertical z_u formulation here breaks the contact
+> normal on non-flat surfaces (no body centripetal on loops/banks), so it was not shipped.
+> The implemented L5 model is [`L5_MBD_FREE3D_UNSPRUNG.md`](L5_MBD_FREE3D_UNSPRUNG.md)
+> (free-3D inertial unsprung, general-surface). Kept for history.
+
 Status: DESIGN (to implement). Supersedes the reduced-coordinate 10-DOF coupled
 solve (`L5_MBD_DYNAMIC_COUPLING.md` + the WIP in `L5_MBD_COUPLED_WIP.patch`), whose
 root flaw is documented below and confirmed by Cursor's MBD review + our diagnosis.
