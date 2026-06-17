@@ -209,6 +209,12 @@ struct CornerTravelMaps {
     double toe_rad    {0.0};
     double camber_rad {0.0};
     double caster_rad {0.0};
+    // Spring eye-to-eye length and motion ratio vs the vertical wheel travel z_v, from the
+    // real spring hardpoints (top on body, bottom on the moving link). spring_len < 0 means
+    // the topology exposes no spring geometry -> the caller uses a constant wheel rate.
+    // motion_ratio = d(spring length)/d(z_v); progressive + bump/rebound-asymmetric.
+    double spring_len    {-1.0};   // [m]
+    double motion_ratio  {0.0};    // [-] dl/dz_v
 };
 
 class IHardJointDaeModel {
@@ -226,6 +232,12 @@ public:
     // the inner knuckle solve. position_world holds the body-frame wheel centre.
     virtual WheelPose pose_at_travel(double travel_z, double steer_rad,
                                      const Vec3& seed) const = 0;
+
+    // Spring eye-to-eye length [m] at a vertical wheel travel z_v, from the real spring
+    // hardpoints (top on body, bottom on the moving link). Default <0 = topology exposes no
+    // spring geometry (caller uses a constant wheel rate). Overridden where hardpoints exist.
+    virtual double spring_length(double /*travel_z*/, double /*steer_rad*/,
+                                 const Vec3& /*seed*/) const { return -1.0; }
 
     // w(z_v), w'(z_v), w''(z_v) + orientation, by central finite difference of
     // pose_at_travel. Drives the Ld5 coupled solve along the real linkage path.

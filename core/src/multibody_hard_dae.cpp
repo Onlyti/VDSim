@@ -345,6 +345,14 @@ private:
         return pose_from_spin(g.wheel, g.spin, wheel_static_, side_, g.sk, strut_top_);
     }
 
+    // MacPherson spring/strut = eye-to-eye from the body top mount to the knuckle strut
+    // point (g.sk), which swings on the linkage -> nonlinear, asymmetric motion ratio.
+    double spring_length(double travel_z, double steer, const Vec3& seed) const override {
+        Vec3 aa = seed;
+        const double th = solve_theta_for_travel(travel_z, steer, aa);
+        return (geometry_at(th, steer, aa).sk - strut_top_).norm();
+    }
+
     std::string side_;
     Vec3 wheel_static_, wheel_spin_axis_;
     Vec3 lca_cf_, lca_cr_, lca_axis_, lca_pivot_, lca_knuckle_static_;
@@ -389,6 +397,11 @@ public:
         R0_.col(2) = az0;
         wheel_off_local_ = R0_.transpose() * (wheel_static_ - lca_knuckle_static_);
         I_theta_ = corner_inertia_about_axis(topo.bodies, lca_axis_, lca_pivot_);
+        if (root["spring_damper"]) {       // coil-over: top on chassis, bottom on the LCA
+            sd_chassis_     = yaml_vec3(root["spring_damper"]["chassis"]);
+            sd_lca_static_  = yaml_vec3(root["spring_damper"]["lca"]);
+            has_spring_     = true;
+        }
     }
 
     void initialize(HardJointCornerState& st,
@@ -396,6 +409,15 @@ public:
         st.q = solve_theta_for_travel(mot.travel_z, mot.steer_rack_dy);
         st.qd = 0.0;
         st.knuckle_aa.setZero();
+    }
+
+    // DW coil-over = eye-to-eye from the chassis top to the LCA-mounted bottom (which
+    // swings with the LCA rotation theta) -> nonlinear, asymmetric motion ratio.
+    double spring_length(double travel_z, double steer, const Vec3&) const override {
+        if (!has_spring_) return -1.0;
+        const double th = solve_theta_for_travel(travel_z, steer);
+        const Vec3 sd_lca = lca_pivot_ + rodrigues(lca_axis_, th) * (sd_lca_static_ - lca_pivot_);
+        return (sd_chassis_ - sd_lca).norm();
     }
 
     WheelPose step(HardJointCornerState& st, const PrescribedCornerMotion& mot,
@@ -527,6 +549,8 @@ private:
     double L_LU_ {0}, L_LT_ {0}, L_UT_ {0}, L_tr_ {0};
     Mat3 R0_;
     Vec3 wheel_off_local_;
+    Vec3 sd_chassis_ {Vec3::Zero()}, sd_lca_static_ {Vec3::Zero()};
+    bool has_spring_ {false};
     double I_theta_ {1.0};
 };
 
@@ -731,6 +755,15 @@ CornerTravelMaps IHardJointDaeModel::travel_maps(double travel_z, double steer_r
     m.toe_rad    = p0.toe_rad;
     m.camber_rad = p0.camber_rad;
     m.caster_rad = p0.caster_rad;
+    // Spring length + motion ratio dl/dz_v (central diff), when the topology exposes the
+    // spring geometry. <0 -> unavailable, caller falls back to a constant wheel rate.
+    const double l0 = spring_length(travel_z, steer_rad, seed);
+    if (l0 >= 0.0) {
+        const double lp = spring_length(travel_z + dz, steer_rad, seed);
+        const double lm = spring_length(travel_z - dz, steer_rad, seed);
+        m.spring_len   = l0;
+        m.motion_ratio = (lp - lm) / (2.0 * dz);
+    }
     return m;
 }
 

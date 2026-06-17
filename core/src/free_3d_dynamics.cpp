@@ -161,6 +161,10 @@ public:
         mz_front_sum_ = 0.0;
         gamma_dae_.fill(0.0);
         toe_dae_.fill(0.0);
+        path_valid_.fill(false);
+        path_off_.fill(Vec3::Zero());
+        path_tan_.fill(Vec3::UnitZ());
+        spring_valid_.fill(false);
         const mb::PrescribedCornerMotion mot {};
         if (mb_dae_front_) {
             mb_state_[WHEEL_FL] = {}; mb_state_[WHEEL_FR] = {};
@@ -240,6 +244,9 @@ public:
             if (mb_dae_front_) {
                 mb_dae_front_->initialize(mb_state_[WHEEL_FL], mot);
                 mb_dae_front_->initialize(mb_state_[WHEEL_FR], mot);
+                const mb::CornerTravelMaps t0 = mb_dae_front_->travel_maps(0.0, 0.0, Vec3::Zero());
+                w0_[WHEEL_FL] = t0.w; w0_[WHEEL_FR] = t0.w;
+                cache_coil(WHEEL_FL, t0); cache_coil(WHEEL_FR, t0);
             }
         } else {
             mb_topo_rear_   = std::move(topo);
@@ -248,8 +255,21 @@ public:
             if (mb_dae_rear_) {
                 mb_dae_rear_->initialize(mb_state_[WHEEL_RL], mot);
                 mb_dae_rear_->initialize(mb_state_[WHEEL_RR], mot);
+                const mb::CornerTravelMaps t0 = mb_dae_rear_->travel_maps(0.0, 0.0, Vec3::Zero());
+                w0_[WHEEL_RL] = t0.w; w0_[WHEEL_RR] = t0.w;
+                cache_coil(WHEEL_RL, t0); cache_coil(WHEEL_RR, t0);
             }
         }
+    }
+    // Cache the coil rate / free length at attach so the coil-spring (k_coil*(l-l_free)*MR)
+    // reproduces the wheel-rate model's STATIC load and rate (k_coil = ks/MR0^2), then turns
+    // progressive away from static. Needs F_preload_ already set (initialize runs first).
+    void cache_coil(int i, const mb::CornerTravelMaps& t0) {
+        if (t0.spring_len < 0.0 || std::abs(t0.motion_ratio) < 1e-4) return;
+        const double MR0 = t0.motion_ratio;
+        const double ks  = std::max(1.0, vp_.spring_stiffness[i]);
+        k_coil_[i] = ks / std::max(MR0 * MR0, 1e-6);
+        l_free_[i] = t0.spring_len - F_preload_[i] / (k_coil_[i] * MR0);
     }
     bool mb_enabled(int axle) const noexcept {
         return axle == 0 ? mb_enabled_front_ : mb_enabled_rear_;
@@ -439,9 +459,19 @@ private:
                 const double comp_dot = vrel.dot(u_hat);
                 const double ks  = std::max(1.0, vp_.spring_stiffness[i]);
                 const double cs  = std::max(0.0, vp_.damper_coefficient[i]);
-                // Strut force along +u_hat (preload so comp=0 is the static ride; no tension)
-                // + damper + bump/rebound stops as stiff FORCE elements.
-                double F_spring = F_preload_[i] + ks * comp;
+                // Strut spring force (body-up, +up when compressed). With a DAE exposing the
+                // real spring geometry: coil rate via eye-to-eye length and motion ratio,
+                // F = k_coil*(l-l_free)*MR, linearised in comp within the step (slope =
+                // k_coil*MR^2 = local wheel rate) -> progressive + bump/rebound asymmetric.
+                // Otherwise: constant wheel rate (preload + ks*comp).
+                double F_spring;
+                if (spring_valid_[i]) {
+                    const double MR = motion_ratio_[i];
+                    const double l_local = spring_len_[i] + MR * (comp - comp_held_[i]);
+                    F_spring = k_coil_[i] * (l_local - l_free_[i]) * MR;
+                } else {
+                    F_spring = F_preload_[i] + ks * comp;
+                }
                 if (F_spring < 0.0) F_spring = 0.0;          // coilover cannot pull
                 double F_stop = 0.0;
                 if (comp > comp_max_[i])
@@ -449,9 +479,25 @@ private:
                 else if (comp < comp_min_[i])
                     F_stop = kStopStiffness * (comp - comp_min_[i]);
                 const double F_susp = F_spring + cs * comp_dot + F_stop;
-                // Perpendicular bushing (rigid-link penalty), critically damped.
-                const Vec3 rel_perp  = rel  - comp     * u_hat;
-                const Vec3 vrel_perp = vrel - comp_dot * u_hat;
+                // Perpendicular bushing (rigid-link penalty), critically damped. With a corner
+                // DAE attached it constrains the wheel to the REAL hardpoint travel path
+                // (target = mount + R*migration, perpendicular to the path tangent), so the
+                // tangent's fore-aft/lateral slope turns tyre Fx/Fy into a vertical reaction
+                // -> anti-dive/squat and roll-centre migration emerge from geometry. Without a
+                // DAE it falls back to a straight body-up strut (constant motion ratio).
+                Vec3 rel_perp, vrel_perp;
+                if (path_valid_[i]) {
+                    const Vec3 target = mount + R * path_off_[i];
+                    Vec3 t_hat = R * path_tan_[i];
+                    const double tn = t_hat.norm();
+                    t_hat = tn > 1e-9 ? (t_hat / tn) : u_hat;
+                    const Vec3 dev = x_u - target;
+                    rel_perp  = dev  - dev.dot(t_hat)  * t_hat;
+                    vrel_perp = vrel - vrel.dot(t_hat) * t_hat;
+                } else {
+                    rel_perp  = rel  - comp     * u_hat;
+                    vrel_perp = vrel - comp_dot * u_hat;
+                }
                 const double cb = 2.0 * std::sqrt(k_link_ * m_u);
                 const Vec3 F_bush = -k_link_ * rel_perp - cb * vrel_perp;  // on wheel
 
@@ -729,6 +775,24 @@ private:
             const double s = (i == WHEEL_FR || i == WHEEL_RR) ? -1.0 : 1.0;
             gamma_dae_[i] = s * wp.camber_rad;
             toe_dae_[i]   = s * wp.toe_rad;
+            // Real linkage travel geometry at the current vertical travel: the wheel-centre
+            // migration (vs static) and the path tangent, so the strut bushing follows the
+            // hardpoint path instead of a straight line -> anti-dive/squat + roll-centre
+            // migration emerge from geometry. y mirrored on the right side (kin yaml is left).
+            const mb::CornerTravelMaps tm =
+                dae->travel_maps(mot.travel_z, mot.steer_rack_dy, mb_state_[i].knuckle_aa);
+            const Vec3 dwr = tm.w - w0_[i];
+            path_off_[i] = Vec3(dwr.x(), s * dwr.y(), dwr.z());
+            path_tan_[i] = Vec3(tm.w_dq.x(), s * tm.w_dq.y(), tm.w_dq.z());
+            path_valid_[i] = true;
+            // Coil spring: hold l(z_v), MR(z_v) and the travel they were sampled at (the
+            // strut force is linearised in comp around this point within the substeps).
+            if (tm.spring_len >= 0.0 && k_coil_[i] > 0.0) {
+                spring_len_[i]   = tm.spring_len;
+                motion_ratio_[i] = tm.motion_ratio;
+                comp_held_[i]    = mot.travel_z;
+                spring_valid_[i] = true;
+            }
         }
     }
 
@@ -830,6 +894,29 @@ private:
     bool mb_enabled_front_ {false}, mb_enabled_rear_ {false};
     std::array<double, NUM_WHEELS> gamma_dae_ {};   // per-wheel camber [rad] from the DAE
     std::array<double, NUM_WHEELS> toe_dae_ {};     // per-wheel toe [rad] from the DAE
+    // High-fidelity linkage geometry (when a corner DAE is attached): the real wheel-centre
+    // travel path from the hardpoints, so anti-dive/squat and roll-centre migration emerge
+    // from geometry instead of a straight body-up strut. w0_ = static path point (body, DAE
+    // frame); path_off_ = wheel migration w(z_v)-w(0) in free_3d body axes (y flipped R);
+    // path_tan_ = path tangent dw/dz_v (y flipped R). Held once per outer step. valid only
+    // for corners whose axle DAE is attached (else the straight body-up strut is used).
+    std::array<Vec3, NUM_WHEELS> w0_ {};
+    std::array<Vec3, NUM_WHEELS> path_off_ {};
+    std::array<Vec3, NUM_WHEELS> path_tan_ {{Vec3::UnitZ(), Vec3::UnitZ(),
+                                             Vec3::UnitZ(), Vec3::UnitZ()}};
+    std::array<bool, NUM_WHEELS> path_valid_ {{false, false, false, false}};
+    // Coil-rate spring via the real eye-to-eye length l(z_v) and motion ratio MR=dl/dz_v
+    // (from travel_maps): F_susp = k_coil*(l-l_free)*MR -> progressive + bump/rebound
+    // asymmetric. k_coil and l_free are cached at attach so the STATIC load and rate match
+    // the wheel-rate model (k_coil = ks/MR0^2), then the rate varies away from static.
+    // spring_len_/motion_ratio_/comp_held_ are refreshed once per step; spring force is
+    // linearised in comp within the step. Invalid -> wheel-rate fallback (F_preload+ks*comp).
+    std::array<bool,   NUM_WHEELS> spring_valid_ {{false, false, false, false}};
+    std::array<double, NUM_WHEELS> spring_len_ {};
+    std::array<double, NUM_WHEELS> motion_ratio_ {};
+    std::array<double, NUM_WHEELS> comp_held_ {};
+    std::array<double, NUM_WHEELS> k_coil_ {};
+    std::array<double, NUM_WHEELS> l_free_ {};
     State state_;
     double ax_prev_ {0.0};
     double ay_prev_ {0.0};

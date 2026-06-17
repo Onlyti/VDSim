@@ -102,9 +102,43 @@ reaction to the body, so roll stiffness is preserved. Swept stable to 1e9 (4 um,
 green); 1e10 is RK4-unstable (`omega*dt > 2.8`). Env override `VDSIM_KLINK`. Measured roll
 gradient 2.73 deg/g (realistic), settled (std 1e-4).
 
+## High-fidelity linkage geometry (implemented when a corner DAE is attached)
+
+The strut bushing constrains the wheel particle to the REAL hardpoint travel path from the
+committed DAE `travel_maps`, not a straight body-up line:
+- Per corner (once per outer step, like the toe/camber update): query `travel_maps(z_v)` for
+  the wheel-centre migration `Δw = w(z_v) - w(0)` and the path tangent `w'(z_v)` (y mirrored
+  on the right side). `w0` is cached at attach; the absolute DAE/free_3d frame origins differ
+  but the axes align, so only the migration (frame-independent) is used.
+- Bushing target = `mount + R*Δw`, penalised PERPENDICULAR to the tangent `R*w'`. Because the
+  tangent carries the linkage's fore-aft/lateral slope, tyre Fx/Fy produce a vertical
+  reaction through the constraint -> anti-dive/squat and roll-centre migration emerge from the
+  geometry (generalized force on travel = `F_tyre . tangent`). toe/camber already flow from
+  the DAE. No hardpoints attached -> straight body-up strut (constant motion ratio).
+- Verified: static (no brake) DAE == straight (no spurious coupling); MacPherson front
+  (w'.x~0) shows no fore-aft coupling; trailing-arm rear (w'.x=0.19) shows strong travel
+  coupling under braking, magnitude ~ `Fx*w'.x/k_wheel` — emergent from the hardpoints, scales
+  with the real path slope. All 377 tests green.
+
+## Progressive coil rate from spring hardpoints (implemented)
+
+When the DAE exposes the spring eye-to-eye geometry, the strut spring is a real coil-over,
+not a constant wheel rate:
+- `IHardJointDaeModel::spring_length(z_v)` returns the eye-to-eye length from the spring
+  hardpoints (MacPherson strut top->knuckle `sk`; DoubleWishbone `spring_damper` chassis->LCA
+  point, which swings with the LCA). `travel_maps` finite-diffs it -> `spring_len` and
+  `motion_ratio = dl/dz_v`. Topologies without spring hardpoints return <0 (fallback).
+- free_3d: `F_susp = k_coil*(l - l_free)*MR`, linearised in comp within the step (local wheel
+  rate = `k_coil*MR^2`). `k_coil = ks/MR0^2` and `l_free` are cached at attach so the STATIC
+  load and rate match the wheel-rate model, then the rate turns progressive + bump/rebound
+  asymmetric. No spring geometry -> wheel-rate fallback (`F_preload + ks*comp`).
+- Verified (real hardpoints): MacPherson wheel rate -7.0% (rebound 60mm) .. +9.7% (bump);
+  DoubleWishbone -6.9% .. +11.7%; DW MR0=-0.53 (inboard spring) -> k_coil~3.6*ks. Static load
+  matched, all 377 tests green.
+
 ## Open / next cut
 
-- Real strut axis + motion ratio from the committed DAE `travel_maps` (currently u_hat =
-  body up, MR = 1) — anti-dive/squat, roll-centre migration.
+- Damper and bump/rebound stops are still on the wheel-rate comp (not the progressive MR);
+  minor vs the spring rate.
 - Wire the contact provider into the sim/cosim harness so per-substep re-query is on by
   default there (acceptance tests intentionally stay on the frozen path).

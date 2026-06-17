@@ -27,8 +27,20 @@ normal). Direction set by user: discard world-z, keep arbitrary-surface contact.
   penalty to 1e8 N/m (~40 um, effectively rigid); a true k=inf constraint is rejected (it
   reverts to the reduced-coordinate roll loss) — penalty IS the limit and keeps roll
   (gradient 2.73 deg/g). Verified stable to 1e9; 1e10 RK4-unstable. Details in the design doc.
-- Next cut: real strut axis + motion ratio from DAE `travel_maps`; wire the provider into
-  sim/cosim so re-query is default there.
+- Follow-up DONE (2026-06-17): high-fidelity linkage geometry now drives the strut dynamics
+  when a corner DAE is attached — the bushing constrains the wheel to the REAL hardpoint
+  travel path (travel_maps Δw + tangent), so anti-dive/squat + roll-centre migration emerge
+  from geometry (verified: static no-coupling; front w'.x~0 inert; rear w'.x=0.19 strong,
+  magnitude ~Fx*w'.x/k). Active only with hardpoints; straight body-up fallback otherwise.
+  This is the core L5 (Adams-class hardpoint -> behaviour) value prop. Design doc updated.
+- Follow-up DONE (2026-06-17): progressive coil rate from spring hardpoints. DAE exposes
+  spring eye-to-eye length l(z_v) (MacPherson strut, DW spring_damper); travel_maps gives
+  spring_len + motion_ratio=dl/dz_v; free_3d uses F=k_coil*(l-l_free)*MR with k_coil=ks/MR0^2
+  cached at attach so static load/rate match the wheel-rate model, then progressive +
+  bump/rebound asymmetric (verified MacPherson -7%/+10%, DW -7%/+12% over +-60mm; DW MR0=-0.53
+  -> stiff inboard coil). No spring hardpoints -> wheel-rate fallback. 377/377 green.
+- Next cut: progressive damper/stops (still wheel-rate comp); wire the provider into
+  sim/cosim so re-query is default.
 
 Everything below is the prior (superseded) coupled-solve / world-z history.
 
