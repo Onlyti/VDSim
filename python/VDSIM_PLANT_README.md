@@ -1,5 +1,9 @@
 # vdsim_plant — VLA thesis closed-loop plant
 
+> **Full step-by-step tutorial:** [`docs/VDSIM_PLANT_TUTORIAL.md`](../docs/VDSIM_PLANT_TUTORIAL.md)
+> (build → import → quickstart → obs schema → low-μ patches → closed-loop → YAML params →
+> API → troubleshooting). This file is the terse quick-reference.
+
 Supported Python API for swapping VDSim in place of a dynamic-bicycle plant
 (`from vdsim_plant import VDSimPlant`). MPC stays unchanged; only the plant is
 replaced.
