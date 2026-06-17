@@ -242,11 +242,20 @@ TEST_F(PacejkaCombinedFixture, CamberAddsLateralForce) {
     auto m2 = vdsim::create_pacejka_mf96();
     m2->initialize(tp2);
 
+    // ISO 8855 (y = left): positive inclination (top of tire toward +y) makes the
+    // tire roll toward +y, so the camber thrust is +y, i.e. a POSITIVE Fy. The
+    // magnitude is the linear camber stiffness term C_gamma * gamma * Fz * mu_lat.
     auto in = make_input(4000, 0.0, 0.0);   // pure camber
     in.gamma = 0.05;
     const auto out = m2->compute(in);
-    EXPECT_LT(out.Fy, 0.0);                  // camber > 0 -> -y direction Fy
-    EXPECT_NEAR(out.Fy, -1.5 * 0.05 * 4000.0, 1.0);
+    EXPECT_GT(out.Fy, 0.0);                  // camber > 0 -> +y direction Fy
+    EXPECT_NEAR(out.Fy, 1.5 * 0.05 * 4000.0, 1.0);
+
+    // Negative camber -> -y thrust, antisymmetric.
+    in.gamma = -0.05;
+    const auto out_n = m2->compute(in);
+    EXPECT_LT(out_n.Fy, 0.0);
+    EXPECT_NEAR(out.Fy, -out_n.Fy, 1e-6);
 }
 
 TEST_F(PacejkaCombinedFixture, CamberZeroByDefault) {

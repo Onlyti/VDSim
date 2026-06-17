@@ -153,7 +153,8 @@ struct TireParams {
     double pneumatic_trail       {0.05};        // [m] t_p_0, Mz = -t_p * Fy
     double trail_falloff_alpha   {0.20};        // [rad] t_p decay scale
 
-    // Camber thrust: extra Fy_camber = -camber_stiffness * gamma * Fz * mu
+    // Camber thrust: extra Fy_camber = +camber_stiffness * gamma * Fz * mu
+    // (ISO 8855, y=left: positive inclination -> +y thrust).
     double camber_stiffness      {0.0};         // [1/rad]  default off
 
     // Tread crown radius (transverse curvature). A cambered tire contacts on the

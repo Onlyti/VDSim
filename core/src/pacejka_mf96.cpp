@@ -78,14 +78,17 @@ public:
                              ? tp_.trail_falloff_alpha : 1e-6;
         const double trail = tp0 / std::sqrt(1.0 + (in.alpha / a_fo) *
                                                     (in.alpha / a_fo));
-        // Camber thrust (linear): Fy_camber = -C_gamma · gamma · Fz · mu_lat
-        // Sign: positive camber (top of tire leans into +y) generates +y force
-        //       which conventionally is negative Fy (toward wheel forward).
-        const double Fy_camber = -tp_.camber_stiffness * in.gamma * Fz * mu_y;
-        // Camber aligning moment contribution (small, linear).  The arm is
-        // typically ~ pneumatic_trail / 4 — captured as camber_mz_factor.  We
-        // re-use the same camber_stiffness with a fixed fraction for now.
-        const double Mz_camber = -tp_.pneumatic_trail * 0.25 *
+        // Camber thrust (linear): Fy_camber = +C_gamma · gamma · Fz · mu_lat.
+        // Sign: ISO 8855 (y = left). Positive inclination (top of tire toward +y)
+        // makes the tire roll toward +y, so the camber thrust is +y, i.e. a POSITIVE
+        // Fy in this model's basis (where the slip force Fy_pure = -form(alpha) already
+        // puts a +y force at positive Fy). The previous leading minus contradicted that
+        // basis and pushed camber thrust the wrong way.
+        const double Fy_camber = tp_.camber_stiffness * in.gamma * Fz * mu_y;
+        // Camber aligning-moment contribution (small, linear), tied to the same
+        // stiffness with a fixed pneumatic-trail fraction. Sign kept consistent with
+        // the corrected camber thrust; magnitude is a placeholder pending K&C/test data.
+        const double Mz_camber = tp_.pneumatic_trail * 0.25 *
                                   tp_.camber_stiffness * in.gamma * Fz * mu_y;
         out.Fx = Fx;
         out.Fy = Fy + Fy_camber;

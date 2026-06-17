@@ -261,11 +261,13 @@ TEST(FourteenDOF, PoseEncodesRollAndPitch) {
 // L3 roll → per-wheel camber → tire Fy_camber path
 // =============================================================================
 TEST(FourteenDOF, RollFeedsPerWheelCamberWithCorrectSign) {
-    // Contract: ITireModel applies camber thrust = -k_cs · γ · Fz · μ.
-    // We verify (a) the Pacejka side enforces this sign rule, and (b) the L3
-    // body actually develops roll under sustained cornering — i.e. the
-    // upstream phi_ is non-zero and is forwarded each step via
-    // set_camber_per_wheel() (otherwise no roll → no camber thrust).
+    // Contract (ISO 8855, y = left): camber thrust = +k_cs · gamma · Fz · mu, i.e.
+    // positive inclination (top toward +y) gives a +y thrust. Combined with the L3
+    // roll->camber map (outer wheels get gamma of opposite sign to the lean), this
+    // makes roll-induced camber NET-REDUCE cornering grip (the physically correct,
+    // mild understeer effect). We verify (a) the Pacejka side enforces this sign, and
+    // (b) the L3 body develops roll under sustained cornering (phi_ non-zero, forwarded
+    // each step via set_camber_per_wheel()).
     {
         auto tire = vdsim::create_pacejka_mf96();
         vdsim::TireParams tp; tp.camber_stiffness = 2.0;
@@ -278,8 +280,8 @@ TEST(FourteenDOF, RollFeedsPerWheelCamberWithCorrectSign) {
         const auto o_pos = tire->compute(in);
         in.gamma = -0.05;
         const auto o_neg = tire->compute(in);
-        EXPECT_LT(o_pos.Fy, 0.0);
-        EXPECT_GT(o_neg.Fy, 0.0);
+        EXPECT_GT(o_pos.Fy, 0.0);   // +camber -> +y thrust (ISO 8855)
+        EXPECT_LT(o_neg.Fy, 0.0);
         EXPECT_NEAR(o_pos.Fy, -o_neg.Fy, 1e-6);
     }
 
