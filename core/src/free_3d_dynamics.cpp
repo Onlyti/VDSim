@@ -659,6 +659,15 @@ private:
         // not the body-velocity derivative (which is ~0 in a steady turn).
         const Vec3 accel_sf_body =
             R.transpose() * (a_world + Vec3(0.0, 0.0, kGravity));
+        // Gyroscopic coupling of the spinning wheels. Each wheel carries spin angular
+        // momentum H_i = I_wheel*omega_spin along the lateral (body-y) axis; a body rotating
+        // at omega must supply omega x H, so the wheels exert the reaction -omega x H on the
+        // body. This couples yaw<->roll (and roll->yaw) at speed: a fast-spinning set of
+        // wheels resists tilting the spin axis. Spin axis approximated as body-y (steer/camber
+        // tilt is second order). Applies on both the strut and penalty paths.
+        double H_spin = 0.0;
+        for (int i = 0; i < NUM_WHEELS; ++i) H_spin += I_wheel_[i] * s.wheel_spin[i];
+        tau_body -= omega.cross(Vec3(0.0, H_spin, 0.0));
         const Vec3 Iw(
             vp_.inertia_diag.x() * omega.x(),
             vp_.inertia_diag.y() * omega.y(),

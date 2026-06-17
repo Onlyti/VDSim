@@ -145,8 +145,18 @@ not a constant wheel rate:
   headless, batch): the session attaches its ground provider to the dynamics after init
   (no-op for non-free_3d). Standalone acceptance tests still drive the frozen ContactArray.
 
+## Gyroscopic wheel-spin coupling (implemented)
+
+Each spinning wheel carries spin angular momentum `H_i = I_wheel*omega_spin` along the lateral
+(body-y) axis. A body rotating at `omega` must supply `omega x H`, so the wheels exert the
+reaction `-omega x H` on the body, added to `tau_body`. This couples yaw<->roll at speed
+(yawing a fast-spinning wheel set produces a roll moment, and vice versa). Spin axis is
+approximated as body-y (steer/camber tilt is second order). Verified airborne (no tyre
+forces): a yaw rate + spinning wheels develops a roll rate; non-spinning does not
+(`Stunt.GyroscopicWheelSpinCouplesYawToRoll`).
+
 ## Open / next cut
 
+- Gyro refinements: spin axis steer/camber tilt; the spin-up reaction torque (`I_wheel*domega`)
+  on the body — both second order.
 - Bushing/link compliance (KC) under load is a stiff penalty, not a full compliance model.
-- Unsprung spin inertia coupling to the body beyond the strut connection (currently wheel
-  spin is a separate DOF).

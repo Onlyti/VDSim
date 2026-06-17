@@ -43,10 +43,14 @@ normal). Direction set by user: discard world-z, keep arbitrary-surface contact.
   the wheel travel, correct). (2) per-substep contact re-query is now default in all
   SimSession runs (session attaches its ground provider after init; no-op for non-free_3d;
   standalone tests still use the frozen ContactArray). 377/377 green.
-- L5 high-fidelity dynamics is now feature-complete: energy-consistent general-surface
-  free-3D unsprung + hardpoint-emergent anti-dive/squat/roll-centre + progressive coil rate +
-  progressive damper. Remaining = KC compliance model, unsprung spin-inertia coupling (both
-  out of the current scope).
+- Follow-up DONE (2026-06-17): gyroscopic wheel-spin coupling. Each spinning wheel's lateral
+  spin momentum H=I_wheel*omega_spin couples to the body via tau_body -= omega x H (yaw<->roll
+  at speed). Test: airborne yaw+spin develops roll, no-spin doesn't
+  (Stunt.GyroscopicWheelSpinCouplesYawToRoll). 378/378 green.
+- L5 high-fidelity dynamics feature-complete: energy-consistent general-surface free-3D
+  unsprung + hardpoint-emergent anti-dive/squat/roll-centre + progressive coil rate +
+  progressive damper + gyroscopic wheel-spin coupling. Remaining (out of scope): gyro
+  refinements (axis tilt, spin-up reaction), full KC compliance model.
 
 Everything below is the prior (superseded) coupled-solve / world-z history.
 

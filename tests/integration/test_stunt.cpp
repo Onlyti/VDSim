@@ -208,6 +208,47 @@ TEST(Stunt, StuntLevelTag) {
     EXPECT_EQ(dyn->level(), vdsim::IVehicleDynamics::Level::L5_Stunt);
 }
 
+// Gyroscopic coupling of the spinning wheels: airborne (no tyre forces), a yaw rate plus
+// fast-spinning wheels must produce a ROLL moment (omega x H, H along the lateral spin
+// axis). With the wheels not spinning there is no such coupling. Isolates the unsprung
+// spin-inertia -> body term from all contact/tyre effects.
+TEST(Stunt, GyroscopicWheelSpinCouplesYawToRoll) {
+    vdsim::VehicleParams vp;
+    vp.aero_drag_coeff = 0.0;
+    vdsim::TireParams tp;
+    tp.lugre.enabled = false;
+    vdsim::SolverParams sp;
+    sp.stunt_physics = true;
+    sp.l5_spatial_suspension = true;
+    sp.max_substep_dt = 2e-4;
+
+    auto make = [&](double spin) {
+        auto d = vdsim::create_stunt_dof();
+        d->initialize(vp, tp, sp);
+        vdsim::State s;
+        s.position.z() = 50.0;            // high above the ground -> airborne, no contact
+        s.velocity.x() = 30.0;
+        s.angular_velocity.z() = 1.0;     // injected yaw rate
+        s.wheel_spin = {{spin, spin, spin, spin}};
+        d->reset(s);
+        return d;
+    };
+    const double w_roll = 30.0 / vp.wheel_radius_nominal;   // ~94 rad/s (rolling at 30 m/s)
+    auto spun  = make(w_roll);
+    auto still = make(0.0);
+    auto air = vdsim::create_flat_ground(0.0, 1.0);         // far below; never contacts at z=50
+    vdsim::CmdL4 cmd;
+    run_steps(*spun,  *air, vp, cmd, 200, 0.001);
+    run_steps(*still, *air, vp, cmd, 200, 0.001);
+
+    const double roll_spun  = spun->state().angular_velocity.x();
+    const double roll_still = still->state().angular_velocity.x();
+    // yaw(+z) x H(+y) -> +x roll moment: the spinning case develops a clear roll rate; the
+    // non-spinning case (symmetric, no gyro) stays put.
+    EXPECT_GT(roll_spun, 0.02);
+    EXPECT_LT(std::abs(roll_still), 1e-4);
+}
+
 TEST(Stunt, LoopSlipAngleFrontRearBalanced) {
     const double R = 10.0;
     const double xc = 50.0;
