@@ -270,6 +270,7 @@ public:
         const double ks  = std::max(1.0, vp_.spring_stiffness[i]);
         k_coil_[i] = ks / std::max(MR0 * MR0, 1e-6);
         l_free_[i] = t0.spring_len - F_preload_[i] / (k_coil_[i] * MR0);
+        mr0_[i]    = MR0;
     }
     bool mb_enabled(int axle) const noexcept {
         return axle == 0 ? mb_enabled_front_ : mb_enabled_rear_;
@@ -474,11 +475,18 @@ private:
                 }
                 if (F_spring < 0.0) F_spring = 0.0;          // coilover cannot pull
                 double F_stop = 0.0;
-                if (comp > comp_max_[i])
-                    F_stop = kStopStiffness * (comp - comp_max_[i]);
-                else if (comp < comp_min_[i])
+                if (comp > comp_max_[i])                     // bump/rebound stops engage at
+                    F_stop = kStopStiffness * (comp - comp_max_[i]);   // the real wheel travel
+                else if (comp < comp_min_[i])                // (comp), so they stay on comp.
                     F_stop = kStopStiffness * (comp - comp_min_[i]);
-                const double F_susp = F_spring + cs * comp_dot + F_stop;
+                // Damper: coil-over rate scales with MR^2 too (force along the strut =
+                // c_coil*MR*comp_dot, generalized force = *MR), matched to cs at static.
+                double cs_eff = cs;
+                if (spring_valid_[i]) {
+                    const double r = motion_ratio_[i] / mr0_[i];
+                    cs_eff = cs * r * r;
+                }
+                const double F_susp = F_spring + cs_eff * comp_dot + F_stop;
                 // Perpendicular bushing (rigid-link penalty), critically damped. With a corner
                 // DAE attached it constrains the wheel to the REAL hardpoint travel path
                 // (target = mount + R*migration, perpendicular to the path tangent), so the
@@ -917,6 +925,7 @@ private:
     std::array<double, NUM_WHEELS> comp_held_ {};
     std::array<double, NUM_WHEELS> k_coil_ {};
     std::array<double, NUM_WHEELS> l_free_ {};
+    std::array<double, NUM_WHEELS> mr0_ {{1.0, 1.0, 1.0, 1.0}};  // static motion ratio
     State state_;
     double ax_prev_ {0.0};
     double ay_prev_ {0.0};

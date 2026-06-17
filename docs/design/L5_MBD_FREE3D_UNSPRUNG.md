@@ -136,9 +136,17 @@ not a constant wheel rate:
   DoubleWishbone -6.9% .. +11.7%; DW MR0=-0.53 (inboard spring) -> k_coil~3.6*ks. Static load
   matched, all 377 tests green.
 
+## Done (minor follow-ups, 2026-06-17)
+
+- Progressive damper: the coil damper scales with `MR^2` too (`c_eff = cs*(MR/MR0)^2`), matched
+  to `cs` at static. Bump/rebound stops stay on the wheel travel (comp) — they engage at the
+  real travel limit, so that is correct.
+- Per-substep contact re-query is now the default in every `SimSession`-based run (cosim,
+  headless, batch): the session attaches its ground provider to the dynamics after init
+  (no-op for non-free_3d). Standalone acceptance tests still drive the frozen ContactArray.
+
 ## Open / next cut
 
-- Damper and bump/rebound stops are still on the wheel-rate comp (not the progressive MR);
-  minor vs the spring rate.
-- Wire the contact provider into the sim/cosim harness so per-substep re-query is on by
-  default there (acceptance tests intentionally stay on the frozen path).
+- Bushing/link compliance (KC) under load is a stiff penalty, not a full compliance model.
+- Unsprung spin inertia coupling to the body beyond the strut connection (currently wheel
+  spin is a separate DOF).

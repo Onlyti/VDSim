@@ -39,8 +39,14 @@ normal). Direction set by user: discard world-z, keep arbitrary-surface contact.
   cached at attach so static load/rate match the wheel-rate model, then progressive +
   bump/rebound asymmetric (verified MacPherson -7%/+10%, DW -7%/+12% over +-60mm; DW MR0=-0.53
   -> stiff inboard coil). No spring hardpoints -> wheel-rate fallback. 377/377 green.
-- Next cut: progressive damper/stops (still wheel-rate comp); wire the provider into
-  sim/cosim so re-query is default.
+- Follow-up DONE (2026-06-17): (1) progressive damper (c_eff=cs*(MR/MR0)^2; stops stay on
+  the wheel travel, correct). (2) per-substep contact re-query is now default in all
+  SimSession runs (session attaches its ground provider after init; no-op for non-free_3d;
+  standalone tests still use the frozen ContactArray). 377/377 green.
+- L5 high-fidelity dynamics is now feature-complete: energy-consistent general-surface
+  free-3D unsprung + hardpoint-emergent anti-dive/squat/roll-centre + progressive coil rate +
+  progressive damper. Remaining = KC compliance model, unsprung spin-inertia coupling (both
+  out of the current scope).
 
 Everything below is the prior (superseded) coupled-solve / world-z history.
 

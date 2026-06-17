@@ -9,6 +9,11 @@ SimSession::SimSession(std::unique_ptr<IVehicleDynamics> dyn,
                        const SolverParams& sp, const SimConfig& cfg)
     : dyn_(std::move(dyn)), ground_(std::move(ground)), vp_(vp) {
     dyn_->initialize(vp, tp, sp);
+    // Give the L5 free-3D strut path the ground provider so it re-queries the contact at each
+    // internal substep (exact on curved surfaces). No-op for other models. The non-owning
+    // pointer is only dereferenced during step() (never at teardown), so member destruction
+    // order is irrelevant; both live for the whole session.
+    free_3d_attach_contact_provider(*dyn_, ground_.get());
     network_ = make_default_veh_network(cfg.veh_network);
     actuator_.initialize(cfg.actuator, cfg.nominal_dt);
     sensor_.initialize(cfg.sensor_delay_s, cfg.nominal_dt);
