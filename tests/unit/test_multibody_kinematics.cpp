@@ -358,6 +358,35 @@ TEST(MultibodyKcXcheck, PerturbedHardpointFails) {
     EXPECT_FALSE(rep.all_ok);
 }
 
+// Tier-1 cross-validation: the L5 hard-joint DAE travel geometry (travel_maps, which drives
+// the free-3D emergent anti-dive/roll-centre/MR) must match the INDEPENDENT native
+// ISuspensionKinematics solver for the same hardpoints. Two separate implementations of the
+// same deterministic linkage agreeing rules out a geometry-engine bug; since the L5 model
+// reads its geometry off the DAE, this validates the emergent geometry against an independent
+// reference (an external Adams cross-check remains a separate, tool-gated gap).
+TEST(MultibodyKcXval, DaeTravelMatchesNativeKinematics) {
+    struct Case { const char* yaml; vdsim::mb::TopologyKind kind; };
+    const Case cases[] = {
+        {"mp_front_sedan.yaml", vdsim::mb::TopologyKind::MacPherson},
+        {"dw_front_sports.yaml", vdsim::mb::TopologyKind::DoubleWishbone},
+        {"ta_rear_sedan.yaml",  vdsim::mb::TopologyKind::TrailingArm},
+    };
+    for (const auto& c : cases) {
+        const std::string path = std::string(VDSIM_SOURCE_DIR)
+            + "/configs/parts/susp_kinematics/kin/" + c.yaml;
+        auto topo = vdsim::mb::SuspensionTopology::from_yaml(path);
+        topo.kind = c.kind;
+        auto dae = vdsim::mb::create_hard_joint_dae_model(topo);
+        auto kin = vdsim::create_native_kinematics_from_yaml(topo.kin_yaml_path);
+        for (double zv : {-0.04, -0.02, 0.02, 0.04}) {
+            const auto o = kin->compute(zv, 0.0);
+            const auto tm = dae->travel_maps(zv, 0.0, vdsim::Vec3::Zero());
+            EXPECT_NEAR(tm.camber_rad, o.camber, 5e-4) << c.yaml << " camber @ " << zv;
+            EXPECT_NEAR(tm.toe_rad,    o.toe,    5e-4) << c.yaml << " toe @ " << zv;
+        }
+    }
+}
+
 TEST(MultibodyKcSweep, ComplianceToeVsFy) {
     const std::string path = std::string(VDSIM_SOURCE_DIR)
         + "/configs/parts/susp_kinematics/kin/mp_front_sedan.yaml";
