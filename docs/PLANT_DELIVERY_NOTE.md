@@ -119,8 +119,9 @@ bicycle(soft clamp)보다 선명하게 만듦.
 - [x] **item 0 — 외부 인터프리터 재빌드 문서**: shipped `.so`가 cpython-38, thesis MPC는 conda
   py3.11 → ABI 불일치 import 불가. 튜토리얼 §1에 conda/venv 재빌드 절 + `VDSIM_BUILD_PYTHON`
   default OFF 명시 추가 완료.
-- [ ] **useGT max=1.08>1 정의 확정** (아래 §7). friction-circle 위반 아님 — 보고 μ 정의 문제.
-  fix 방향 사용자 승인 대기.
+- [x] **useGT max=1.08>1 정의 확정** (아래 §7). friction-circle 위반 아님 — 보고 μ 정의 문제.
+  option A 채택: obs에 `mu_peak` 추가. thesis-side 독립 재현 일치(det 1.08→1.00, plant probe
+  1.046→0.998). 양쪽 sync 완료.
 
 useDem proxy 오해유발 건은 thesis-side 이슈(plant 책임 아님): VDSim에선 plant GT(slip angle·
 useGT)를 headline metric으로 쓰는 게 맞음.
@@ -151,3 +152,25 @@ inner-front, dfz≈-0.8 → Fz≈0.2·Fz0)에서 `muy ≈ 1.08·mu_contact`. 그
 `wheel.mu`(노면 μ)는 보존. ITireModel::Output/Wrench + `wheel_mu_peak()` + obs schema 확장.
 이 .tir는 PDX==PDY라 mu_x==mu_y → mu_peak가 한계영역에서 정확히 useGT==1.
 검증: combined brake+turn on patch 시나리오에서 모든 wheel·step `‖F‖ ≤ mu_peak·Fz`.
+
+---
+
+## Changelog (BETA iterate 기록)
+
+semantics 미묘 차(`mu`=contact vs `mu_peak`=realized)는 라운드 간 추적 필요 → durable 기록.
+
+### BETA #2 — 2026-06-18 (피드백 #1 반영)
+- **[obs additive, NOT breaking]** `wheel[i].mu_peak` 추가 = realized load-dependent peak 계수
+  (force/Fz). friction-circle GT는 이걸 분모로: `useGT=‖[Fx,Fy]‖/(mu_peak·Fz) ≤ 1`. 기존
+  `wheel[i].mu`(노면 contact μ)는 보존 — 의미 분리. (useGT>1 정의 문제 해소; §7.)
+  - 코어: `ITireModel::Output/Wrench::mu_peak`, `IVehicleDynamics::wheel_mu_peak()` (Ld2),
+    backend별 compute() 채움(MF2002/MF96/linear), `evaluate()` 전파.
+  - test: `VlaPlant.RealizedPeakMuBoundsFrictionCircle`. 395/395 green.
+  - thesis-side 독립 재현 일치 (det useGT 1.08→1.00).
+- **[docs]** 튜토리얼 §1: 외부 인터프리터(conda/venv) 재빌드 절 + `VDSIM_BUILD_PYTHON` default
+  OFF 명시 (item 0).
+- thesis-side 확정: mu_peak-based friction-utilization이 P1 gate에 정합. main 병합 blocker 없음.
+
+### BETA #1 — 2026-06-18 (초기 인도)
+- Ld2 7DOF plant + MF2002 `.tir` (load-dependent Ca/peak μ), `VDSimPlant.step([delta,Fx])`
+  lockstep, friction patch, per-wheel GT obs. 통합 성공 (§BETA #1 결과 로그).
