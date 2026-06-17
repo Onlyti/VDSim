@@ -20,6 +20,12 @@ green**. main HEAD = `7d77754`. 태그 `v0.6.0` 푸시됨. **미push = `7d77754`
 - v0.6.0 tag, ROADMAP 갱신, superseded 설계문서 3개 배너.
 
 **미완 / 다음 할 일**:
+0. **[새 최우선 트랙 — VLA thesis plant, GO 떨어짐]** spec: `docs/design/VLA_THESIS_PLANT.md`
+   (자립형). Ld2 7DOF를 thesis closed-loop plant로 swap. 5개만 구현: x-구간 friction-patch
+   provider(per-wheel μ) · `wheel_mu()` getter · `ioniq5_awd.yaml` · `VDSimPlant` python 래퍼
+   (vdsim_lab 위) · smoke 3종(#2=patch에서 brake+turn combined grip-loss). 대부분 이미 있음
+   (SimSession lockstep · CmdL3 δ+Fx · MF96 combined · per-wheel GT). 검증 포인트: Ld2가
+   Fx_total을 force로 적용해 종방향 grip-loss를 내는지 + 차량 kinematic-blend 우회 + VLOW.
 1. **`7d77754` + 핸드오프 push** (사용자 승인 시).
 2. **Chrono external KC** (오프라인, Chrono 빌드 필요): `gen_kc_reference.cpp` TODO 채움
    (PointId 철자·`ChSuspensionTestRig` API·spring/damper getter) → 실행 → reference CSV 커밋
