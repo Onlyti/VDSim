@@ -7,6 +7,7 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
 #include <cmath>
 #include <memory>
 
@@ -171,6 +172,62 @@ TEST(VlaPlant, GroundTruthConsistency) {
     const double m_ay = vp.mass * dyn->ay_body_est();
     EXPECT_NEAR(sumFy, m_ay, 0.05 * std::abs(m_ay) + 200.0)
         << "sum Fy_body must match m*ay (force<->accel consistency)";
+}
+
+// Dry qualitative match (acceptance #1): in the linear regime the 7DOF plant's steady-state
+// yaw rate must track the linear single-track (bicycle) model with the SAME axle cornering
+// stiffness — confirms the plant reproduces the controller's bicycle handling AND that the
+// MF96 B=Ca/(C*D) calibration recovered the intended Caf/Car (per-wheel B=Ca/2).
+TEST(VlaPlant, DryHandlingMatchesLinearBicycle) {
+    auto vp = ioniq5_vp();
+    auto tp = plant_tp(0.9);
+    vdsim::SolverParams sp;
+    const double R = vp.wheel_radius_nominal;
+    const double m = vp.mass, lf = vp.cg_to_front, lr = vp.cg_to_rear, L = lf + lr;
+    const double Caf = 2.2e5, Car = 1.6e5, V = 16.7, delta = 0.04;
+    const double K_us = m * (lr * Car - lf * Caf) / (L * Caf * Car);
+    const double r_bicycle = delta * V / (L + K_us * V * V);   // linear single-track yaw gain
+
+    auto dyn = vdsim::create_seven_dof();
+    dyn->initialize(vp, tp, sp);
+    auto flat = vdsim::create_flat_ground(0.0, 0.9);
+    dyn->reset(rolling(V, R));
+    vdsim::CmdL1 cmd{};
+    cmd.steer_angle_wheel = delta;
+    for (int k = 0; k < 400; ++k) {
+        vdsim::ContactArray c; flat->query(dyn->state(), vp, c);
+        dyn->step(vdsim::ControlInput{cmd}, c, 0.01);
+    }
+    const double r_vd = dyn->state().yaw_rate();
+    EXPECT_GT(r_vd, 0.0) << "+steer -> +yaw (ISO 8855)";
+    EXPECT_NEAR(r_vd, r_bicycle, 0.15 * r_bicycle)
+        << "7DOF yaw rate must track the linear bicycle (ratio=" << r_vd / r_bicycle << ")";
+    EXPECT_LT(std::abs(dyn->state().beta()), 0.05);   // modest sideslip in the linear regime
+}
+
+// Speed (acceptance #5): a ~5 s trajectory at the fine plant substep must run far under
+// real time so velocity / patch sweeps are cheap. Generous bound (measured ~25 ms here).
+TEST(VlaPlant, FasterThanRealtime) {
+    auto vp = ioniq5_vp();
+    auto tp = plant_tp(0.9);
+    vdsim::SolverParams sp;
+    sp.max_substep_dt = 5e-4;
+    sp.max_substeps = 256;
+    const double R = vp.wheel_radius_nominal;
+    auto dyn = vdsim::create_seven_dof();
+    dyn->initialize(vp, tp, sp);
+    auto flat = vdsim::create_flat_ground(0.0, 0.9);
+    dyn->reset(rolling(16.7, R));
+    vdsim::CmdL1 cmd{};
+    cmd.steer_angle_wheel = 0.03;
+    const auto t0 = std::chrono::steady_clock::now();
+    for (int k = 0; k < 100; ++k) {            // 100 * 0.05 s = 5 s sim, 10000 substeps
+        vdsim::ContactArray c; flat->query(dyn->state(), vp, c);
+        dyn->step(vdsim::ControlInput{cmd}, c, 0.05);
+    }
+    const double ms = std::chrono::duration<double, std::milli>(
+        std::chrono::steady_clock::now() - t0).count();
+    EXPECT_LT(ms, 500.0) << "5 s plant traj took " << ms << " ms (want << 1 s real time)";
 }
 
 TEST(VlaPlant, FrictionPatchPerWheelMu) {
