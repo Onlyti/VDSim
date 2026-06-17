@@ -1,0 +1,27 @@
+# Analytic KC anchor: a PURE trailing arm whose pivot axis is exactly body-lateral (+y)
+# — the two chassis pivot points differ ONLY in y. The arm then rotates in the x-z plane
+# about y, so the wheel-centre traces a fore-aft/vertical arc while the spin axis stays +y.
+# Closed-form consequence: camber gain == 0 and toe gain == 0 at all travel (caster changes).
+# Used by MultibodyKcAnalytic.PureTrailingArmZeroCamberToe to validate the geometry engine
+# against math (not just self-consistency / another simulator).
+type: trailing_arm
+side: left
+wheel:
+  center:
+  - -1.35
+  - 0.78
+  - 0.305
+  spin_axis:
+  - 0.0
+  - 1.0
+  - 0.0
+  static_radius: 0.305
+arm_pivot:
+  chassis_inboard:
+  - -0.80
+  - 0.42
+  - 0.22
+  chassis_outboard:
+  - -0.80
+  - 0.62
+  - 0.22

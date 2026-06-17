@@ -387,6 +387,33 @@ TEST(MultibodyKcXval, DaeTravelMatchesNativeKinematics) {
     }
 }
 
+// Analytic anchor (closed form, not self-consistency): a PURE trailing arm whose pivot axis
+// is exactly body-lateral rotates the wheel in the x-z plane, keeping the spin axis along +y
+// -> camber gain == 0 and toe gain == 0 at all travel. The geometry engine must reproduce
+// that exactly; the wheel must still articulate (fore-aft/vertical arc), so this is not a
+// degenerate "everything zero" case. Rules out a shared modelling error the native==DAE
+// cross-check could miss.
+TEST(MultibodyKcAnalytic, PureTrailingArmZeroCamberToe) {
+    const std::string path = std::string(VDSIM_SOURCE_DIR)
+        + "/tests/fixtures/ta_pure_lateral.yaml";
+    auto topo = vdsim::mb::SuspensionTopology::from_yaml(path);
+    topo.kind = vdsim::mb::TopologyKind::TrailingArm;
+    auto dae = vdsim::mb::create_hard_joint_dae_model(topo);
+    auto kin = vdsim::create_native_kinematics_from_yaml(topo.kin_yaml_path);
+    double x_lo = 0.0, x_hi = 0.0;
+    for (double zv : {-0.05, -0.025, 0.0, 0.025, 0.05}) {
+        const auto tm = dae->travel_maps(zv, 0.0, vdsim::Vec3::Zero());
+        const auto o  = kin->compute(zv, 0.0);
+        EXPECT_NEAR(tm.camber_rad, 0.0, 1e-4) << "DAE camber @ " << zv;
+        EXPECT_NEAR(tm.toe_rad,    0.0, 1e-4) << "DAE toe @ " << zv;
+        EXPECT_NEAR(o.camber,      0.0, 1e-4) << "native camber @ " << zv;
+        EXPECT_NEAR(o.toe,         0.0, 1e-4) << "native toe @ " << zv;
+        if (zv == -0.05) x_lo = tm.w.x();
+        if (zv ==  0.05) x_hi = tm.w.x();
+    }
+    EXPECT_GT(std::abs(x_hi - x_lo), 1e-3) << "the arm must actually articulate (x-z arc)";
+}
+
 TEST(MultibodyKcSweep, ComplianceToeVsFy) {
     const std::string path = std::string(VDSIM_SOURCE_DIR)
         + "/configs/parts/susp_kinematics/kin/mp_front_sedan.yaml";

@@ -1,6 +1,6 @@
 # VDSim product roadmap
 
-**Last updated:** 2026-06-17 · **Tests:** 381/381 ctest green (`main`)
+**Last updated:** 2026-06-17 · **Tests:** 382/382 ctest green (`main`)
 
 Living roadmap from early PoC through v0.3. Tracks what shipped in mainline vs what
 is planned. Detail specs link to `docs/design/*`; tire phases in
@@ -28,7 +28,7 @@ anti-dive/squat/roll-centre + progressive coil rate (untagged, v0.6 candidate)**
 | Brake / steer | Pluggable modules + deadtime; **user-defined modules (C++/Python subclass)** | Booster/MDPS physics |
 | Catalog / runtime | `--scene=`, fleet, FMI | External part packs, VDS1 v4 |
 | GUI | 3-tab scene UI, catalog API, workshops | Tire `.tir` import UI; **expose user-defined modules (decide: C++ `.so` plugin / Python path / GUI authoring)** |
-| Validation | ISO 7401/4138/3888 **re-baselined + CI-gated** (`IsoBaseline`), 381 ctest | Adams x-check rtol; commercial cross-val |
+| Validation | ISO 7401/4138/3888 **re-baselined + CI-gated** (`IsoBaseline`), 382 ctest | Adams x-check rtol; commercial cross-val |
 
 ```mermaid
 timeline
@@ -279,10 +279,11 @@ LuGre (contact bristle, presliding). See [`TIRE_ROADMAP.md`](design/TIRE_ROADMAP
 | [x] ISO 4138 understeer gradient | Shipped | |
 | [x] ISO 3888-2 DLC metric | Shipped | |
 | [x] ISO 8608 road PSD classes | Shipped | |
-| [x] **381** automated ctests | Shipped | 2026-06-17 |
+| [x] **382** automated ctests | Shipped | 2026-06-17 |
 | [x] ISO matrix re-baseline (post engine inertia + LuGre) + CI gate | Shipped | `IsoBaseline`; VALIDATION.md table 2026-06-10 |
 | [x] Stunt / L5 validation suite | Shipped | `test_stunt`, `test_l5_strut_validation` (loop critical, ballistic jump, camber=L4 DAE, gyro, energy) |
 | [x] **KC geometry cross-validation** (L5 DAE travel ≡ independent native kinematics, rtol-gated) | Shipped | `MultibodyKcXval.DaeTravelMatchesNativeKinematics`; rules out engine bugs (internal consistency) |
+| [x] **KC analytic anchor** (pure-lateral trailing arm ⇒ camber/toe gain = 0, closed form) | Shipped | `MultibodyKcAnalytic.PureTrailingArmZeroCamberToe`; validates the engine vs math, not just itself |
 | [~] **External Chrono KC cross-val** (camber/toe vs travel vs Chrono::Vehicle `ChSuspensionTestRig`, same hardpoints) | Harness scaffolded | `external/chrono_kc/` (gen skeleton + isolated build) + `ChronoKcParity` gate (skip-if-absent, mirrors the tyre Pac02 gate); needs an offline Chrono build to emit the reference CSV |
 | [ ] External Adams / physical KC-rig cross-val (absolute, third-party) | Planned | Chrono is an independent MBD but still a simulator; physical/commercial data remains the gap |
 | [ ] Published commercial cross-val (open data) | Planned | Honest gap today |
@@ -361,7 +362,7 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 - [x] Gyroscopic wheel-spin coupling (yaw↔roll at speed)
 - [x] Per-substep contact re-query default in `SimSession`; contact sampled at the wheel
   particle (exact on curved surfaces, no false contact leaving a loop/bank)
-- [x] 381/381 ctest; design [`L5_MBD_FREE3D_UNSPRUNG.md`](design/L5_MBD_FREE3D_UNSPRUNG.md)
+- [x] 382/382 ctest; design [`L5_MBD_FREE3D_UNSPRUNG.md`](design/L5_MBD_FREE3D_UNSPRUNG.md)
 
 ### v0.5.2+ (planned)
 
@@ -380,7 +381,7 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 
 > Open-core L1–L5 vehicle dynamics with Pacejka MF tire, optional LuGre brush + belt
 > transient layers, opt-in MF2002 `.tir` backend and drivetrain v2 (engine map + gearbox),
-> parts catalog, real-time UDP/FMI, and ISO-standard validation (381 ctests). The L5 model is
+> parts catalog, real-time UDP/FMI, and ISO-standard validation (382 ctests). The L5 model is
 > a hardpoint-driven free-3D multibody: anti-dive/squat, roll-centre migration and a
 > progressive coil rate emerge from the suspension geometry, energy-consistent on arbitrary
 > surfaces (banks, loops, jumps).
