@@ -1,0 +1,4242 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Open-core vehicle dynamics simulator — theory + PoC reports">
+      
+      
+      
+        <link rel="canonical" href="https://onlyti.github.io/VDSim/v0.6.0/ROADMAP/">
+      
+      
+        <link rel="prev" href="../theory/24_module_plugins/">
+      
+      
+        <link rel="next" href="../CATALOG_AND_PHYSICS/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Product roadmap - VDSim</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#vdsim-product-roadmap" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="VDSim" class="md-header__button md-logo" aria-label="VDSim" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            VDSim
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Product roadmap
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Onlyti/VDSim" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Onlyti/VDSim
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href=".." class="md-tabs__link">
+          
+  
+  
+    
+  
+  Home
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../theory/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Theory
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
+  
+  
+    
+  
+  User guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../references/actuator_nonlinearity/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  References
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../tasks/T22_carla_bridge/REPORT/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Phase 2 — Multibody & Integration
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../tasks/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  PoC Reports
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../examples/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Examples
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="VDSim" class="md-nav__button md-logo" aria-label="VDSim" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    VDSim
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Onlyti/VDSim" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Onlyti/VDSim
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href=".." class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Home
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../theory/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Theory
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Theory
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/01_frames_and_conventions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    01 — Frames & conventions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/02_rigid_body_dynamics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    02 — Rigid-body dynamics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/03_tire_pacejka_mf96/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    03 — Tire (Pacejka MF96)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/19_lugre_dynamic_tire/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    19 — Tire (LuGre / brush)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/21_belt_transient/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    21 — Tire (belt transient)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/25_tire_contact_interface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    25 — Tire contact & interface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/04_ld1_bicycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    04 — Ld1-Bicycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/05_ld2_seven_dof/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    05 — Ld2-SevenDOF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/06_ld3_fourteen_dof/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    06 — Ld3-FourteenDOF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/20_ld5_stunt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    20 — Ld5-Stunt (jump/loop)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/07_control_ladder/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    07 — Control ladder Lc1-Lc8
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/08_pid_controllers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    08 — PID controllers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/09_pure_pursuit_path/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    09 — Pure Pursuit / path
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/10_driver_model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10 — Driver model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/11_numerical_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11 — Numerical integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/12_software_architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12 — Software architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/13_multibody_outlook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13 — Multibody (Ld4) overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/14_hardpoint_kinematics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    14 — Hardpoint kinematics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/15_validation_and_doe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    15 — Validation & DOE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/16_fmi_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16 — FMI 2.0 integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/17_actuator_and_sensing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    17 — Actuator dynamics & sensing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/18_runtime_and_cosim/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18 — Runtime kernel & co-simulation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/22_drivetrain_v2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    22 — Drivetrain v2 (engine/gearbox)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/23_user_modules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    23 — User-defined subsystem modules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/24_module_plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    24 — User module plugins (build/check/register)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Product roadmap
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Product roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#at-a-glance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        At a glance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-dynamics-ladder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Dynamics ladder
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-tire" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Tire
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Tire">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-shipped" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 Shipped
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-planned-tire" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 Planned (tire)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-belt-transient-planned-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 Belt transient (planned — summary)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-drivetrain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Drivetrain
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-brake-steering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Brake &amp; steering
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-suspension-anti-roll" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Suspension &amp; anti-roll
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-actuator-driver-control-ladder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Actuator, driver &amp; control ladder
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-catalog-scenes-runtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Catalog, scenes &amp; runtime
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-gui-workshops" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. GUI &amp; workshops
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-co-simulation-fmi-integrations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Co-simulation, FMI &amp; integrations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-validation-credibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Validation &amp; credibility
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-v04-stunt-physics-planned-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. v0.4 — stunt physics (planned release)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-version-history-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. Version history (checklist)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="12. Version history (checklist)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#poc-v01-2025" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PoC → v0.1 (2025)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v02-composable-vehicle-2026-06" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.2 — composable vehicle (2026-06)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v03-parts-catalog-2026-06" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.3 — parts catalog (2026-06)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v04-stunt-ld5-2026-06-tagged" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.4 — stunt / Ld5 (2026-06, tagged)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v050-terrain-l5-2026-06-tagged" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.5.0 — terrain + L5 (2026-06, tagged)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v051-tire-layers-2026-06-tagged" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.5.1 — tire layers (2026-06, tagged)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v060-l5-high-fidelity-mbd-2026-06-on-main-untagged" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.6.0 — L5 high-fidelity MBD (2026-06, on main, untagged)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v052-planned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.5.2+ (planned)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-external-messaging-approved" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. External messaging (approved)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-related-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14. Related documents
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CATALOG_AND_PHYSICS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalog, scenes & physics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RUNNING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running VDSim
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../VALIDATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    References
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    References
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../references/actuator_nonlinearity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Actuator/sensor nonlinearity & delay
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gui_architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GUI architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vdsim_bridge_interface_requirements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Co-sim bridge interface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../map_import_strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Map import strategy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase 2 — Multibody & Integration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Phase 2 — Multibody & Integration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tasks/T22_carla_bridge/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T22 — CARLA Python bridge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tasks/T23_jump_14dof/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T23 — Jump 14-DOF (world-z)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tasks/T27_ld4_dw/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T27 — Ld4 double wishbone
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tasks/T28_ld4_mp/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T28 — Ld4 MacPherson
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tasks/T29_ld4_ta/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T29 — Ld4 trailing arm
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tasks/T30_ld4_5link/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T30 — Ld4 5-link rear
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../tasks/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PoC Reports
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    PoC Reports
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tasks/68_poc_summary_v3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PoC Summary v3 (95%)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tasks/69_competitive_matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Competitive matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tasks/62_cycles_overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cycles overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tasks/50_benchmark_matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmark matrix (4 vehicles)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tasks/20_l1_l2_grid_sweep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    L1 vs L2 grid sweep
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tasks/30_l3_dynamic_suspension/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    L3 dynamic suspension
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tasks/31_l6_l7_l8_control/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    L5-L8 control cascade
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tasks/57_58_59_driver_skidpad/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Driver / skidpad / brake-in-turn
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tasks/50_benchmark_matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmark matrix (4 vehicles)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../examples/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#at-a-glance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        At a glance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-dynamics-ladder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Dynamics ladder
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-tire" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Tire
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Tire">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-shipped" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 Shipped
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-planned-tire" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 Planned (tire)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-belt-transient-planned-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 Belt transient (planned — summary)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-drivetrain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Drivetrain
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-brake-steering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Brake &amp; steering
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-suspension-anti-roll" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Suspension &amp; anti-roll
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-actuator-driver-control-ladder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Actuator, driver &amp; control ladder
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-catalog-scenes-runtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Catalog, scenes &amp; runtime
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-gui-workshops" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. GUI &amp; workshops
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-co-simulation-fmi-integrations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Co-simulation, FMI &amp; integrations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-validation-credibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Validation &amp; credibility
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-v04-stunt-physics-planned-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. v0.4 — stunt physics (planned release)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-version-history-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. Version history (checklist)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="12. Version history (checklist)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#poc-v01-2025" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PoC → v0.1 (2025)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v02-composable-vehicle-2026-06" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.2 — composable vehicle (2026-06)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v03-parts-catalog-2026-06" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.3 — parts catalog (2026-06)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v04-stunt-ld5-2026-06-tagged" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.4 — stunt / Ld5 (2026-06, tagged)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v050-terrain-l5-2026-06-tagged" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.5.0 — terrain + L5 (2026-06, tagged)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v051-tire-layers-2026-06-tagged" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.5.1 — tire layers (2026-06, tagged)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v060-l5-high-fidelity-mbd-2026-06-on-main-untagged" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.6.0 — L5 high-fidelity MBD (2026-06, on main, untagged)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v052-planned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.5.2+ (planned)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-external-messaging-approved" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. External messaging (approved)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-related-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14. Related documents
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="vdsim-product-roadmap">VDSim product roadmap<a class="headerlink" href="#vdsim-product-roadmap" title="Permanent link">&para;</a></h1>
+<p><strong>Last updated:</strong> 2026-06-17 · <strong>Tests:</strong> 378/378 ctest green (<code>main</code>)</p>
+<p>Living roadmap from early PoC through v0.3. Tracks what shipped in mainline vs what
+is planned. Detail specs link to <code>docs/design/*</code>; tire phases in
+<a href="../design/TIRE_ROADMAP/"><code>design/TIRE_ROADMAP.md</code></a>.</p>
+<div class="admonition note">
+<p class="admonition-title">How to read</p>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <strong>Shipped</strong> — in repo, default or opt-in, covered by ctest where applicable  </li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <strong>Planned</strong> — scoped in design docs; not yet implemented  </li>
+<li><strong>Opt-in</strong> — implemented but not default catalog (baseline frozen)</li>
+</ul>
+</div>
+<p><strong>Velocity (recent):</strong> v0.2 composable subsystems + GUI redesign → v0.3 parts
+catalog + scene runtime → drivetrain inertia + LuGre tire tuning → v0.5 terrain + tire
+layers → <strong>L5 high-fidelity MBD: free-3D inertial unsprung, hardpoint-emergent
+anti-dive/squat/roll-centre + progressive coil rate (untagged, v0.6 candidate)</strong>.</p>
+<hr />
+<h2 id="at-a-glance">At a glance<a class="headerlink" href="#at-a-glance" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Shipped (high level)</th>
+<th>Next</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dynamics L1–L5</td>
+<td>L1–L3 planar/14-DOF; <strong>Ld4</strong> hard-joint; <strong>Ld5</strong> stunt + terrain; <strong>Ld5 high-fidelity MBD: free-3D inertial unsprung, energy-consistent on any surface, hardpoint-emergent anti-dive/squat/roll-centre + progressive coil rate + gyroscopic wheel-spin</strong> (<a href="../design/L5_MBD_FREE3D_UNSPRUNG/">design</a>)</td>
+<td>KC compliance model; GUI terrain Play (v0.5.2); V2V</td>
+</tr>
+<tr>
+<td>Tire</td>
+<td>MF96 + LuGre <strong>default</strong>; <strong>MF2002 <code>.tir</code> backend (T1, Chrono-cross-checked)</strong>; <strong>belt transient (T2)</strong></td>
+<td>bicycle belt; combined-slip vs Pac02; GUI <code>.tir</code></td>
+</tr>
+<tr>
+<td>Drivetrain</td>
+<td>Engine inertia + open-diff; <strong>2D torque map + gearbox + shift policy (v2, opt-in)</strong>; <strong>catalog <code>drivetrain_v2</code> part</strong></td>
+<td>Engine-map workshop (UI); L1 powertrain</td>
+</tr>
+<tr>
+<td>Brake / steer</td>
+<td>Pluggable modules + deadtime; <strong>user-defined modules (C++/Python subclass)</strong></td>
+<td>Booster/MDPS physics</td>
+</tr>
+<tr>
+<td>Catalog / runtime</td>
+<td><code>--scene=</code>, fleet, FMI</td>
+<td>External part packs, VDS1 v4</td>
+</tr>
+<tr>
+<td>GUI</td>
+<td>3-tab scene UI, catalog API, workshops</td>
+<td>Tire <code>.tir</code> import UI; <strong>expose user-defined modules (decide: C++ <code>.so</code> plugin / Python path / GUI authoring)</strong></td>
+</tr>
+<tr>
+<td>Validation</td>
+<td>ISO 7401/4138/3888 <strong>re-baselined + CI-gated</strong> (<code>IsoBaseline</code>), 378 ctest</td>
+<td>Adams x-check rtol; commercial cross-val</td>
+</tr>
+</tbody>
+</table>
+<pre class="mermaid"><code>timeline
+    title Shipped milestones
+    section PoC
+        L1-L3 + MF96 + FMI : 2025
+        ISO maneuvers + driver L5-L8 : 2025
+    section v0.2
+        Subsystem modules + deadtime : 2026-06
+        GUI redesign + multi-vehicle : 2026-06
+        Workshops shell : 2026-06
+    section v0.3
+        Parts catalog M1-M5 : 2026-06
+        Drivetrain inertia : 2026-06
+        LuGre tire tuned : 2026-06
+    section v0.4
+        Ld5 stunt jump loop : 2026-06
+        Ld4 multibody M1-M7 : 2026-06
+    section v0.5
+        Terrain + L5 driving : 2026-06
+        Tire T1 MF2002 backend : 2026-06
+        Tire T2 belt transient : 2026-06
+    section v0.6 (untagged)
+        L5 free-3D inertial unsprung MBD : 2026-06
+        Hardpoint anti-dive/roll-centre + progressive coil : 2026-06
+        Gyroscopic wheel-spin coupling : 2026-06
+    section Next
+        GUI terrain Play (v0.5.2) : planned
+        KC compliance + V2V : planned</code></pre>
+<hr />
+<h2 id="1-dynamics-ladder">1. Dynamics ladder<a class="headerlink" href="#1-dynamics-ladder" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[x] Ld1 bicycle (5 state)</td>
+<td>Shipped</td>
+<td><code>bicycle_dynamics.cpp</code></td>
+</tr>
+<tr>
+<td>[x] Ld2 seven-DOF planar</td>
+<td>Shipped</td>
+<td>Per-wheel Pacejka, Ackermann</td>
+</tr>
+<tr>
+<td>[x] Ld3 fourteen-DOF (sprung + unsprung)</td>
+<td>Shipped</td>
+<td>Ride/heave/roll; L2 planar inner</td>
+</tr>
+<tr>
+<td>[x] L1↔L2↔L3 cross-model consistency</td>
+<td>Shipped</td>
+<td><code>PlanarMotionMatchesL2</code>, grid sweeps</td>
+</tr>
+<tr>
+<td>[x] Low-speed kinematic blend (default tire)</td>
+<td>Shipped</td>
+<td><a href="../design/LOW_SPEED_HANDLING/"><code>LOW_SPEED_HANDLING.md</code></a></td>
+</tr>
+<tr>
+<td>[x] LuGre path skips blend</td>
+<td>Shipped opt-in</td>
+<td>Full dynamic EOM at all speeds</td>
+</tr>
+<tr>
+<td>[x] Ld4 hardpoint kinematics (attach)</td>
+<td>Shipped</td>
+<td>Native kin YAML; <code>level=L4</code></td>
+</tr>
+<tr>
+<td>[x] Ld4 multibody M1–M7</td>
+<td>Shipped</td>
+<td><a href="../design/LD4_MULTIBODY/"><code>LD4_MULTIBODY.md</code></a>; M4 runtime, M7 offline</td>
+</tr>
+<tr>
+<td>[x] Ld5 6-DOF 3D body + quaternion</td>
+<td>Shipped v0.4 (stunt)</td>
+<td><code>free_3d_dynamics.cpp</code>; terrain → v0.5</td>
+</tr>
+<tr>
+<td>[x] 3D contact / airborne / ramp jump</td>
+<td>Shipped v0.4</td>
+<td><a href="../design/V0.4_SLOPE_JUMP_DYNAMICS/"><code>V0.4_SLOPE_JUMP_DYNAMICS.md</code></a></td>
+</tr>
+<tr>
+<td>[x] <strong>Ld5 free-3D inertial unsprung MBD</strong> (per-corner world point mass + anisotropic 2-point bushing; energy-consistent on any surface; replaces the B1 lumped strut)</td>
+<td>Shipped v0.6 (untagged)</td>
+<td><a href="../design/L5_MBD_FREE3D_UNSPRUNG/"><code>L5_MBD_FREE3D_UNSPRUNG.md</code></a></td>
+</tr>
+<tr>
+<td>[x] <strong>Hardpoint-emergent anti-dive/squat + roll-centre migration</strong> (wheel follows the real DAE travel path; tyre Fx/Fy → vertical reaction)</td>
+<td>Shipped v0.6 (untagged)</td>
+<td>active when a corner DAE is attached</td>
+</tr>
+<tr>
+<td>[x] <strong>Progressive coil rate + damper</strong> (k_coil·(l−l_free)·MR from real spring eye-to-eye; bump/rebound asymmetric)</td>
+<td>Shipped v0.6 (untagged)</td>
+<td>wheel-rate fallback w/o spring hardpoints</td>
+</tr>
+<tr>
+<td>[x] <strong>Gyroscopic wheel-spin coupling</strong> (Σ I_wheel·ω_spin lateral momentum; yaw↔roll at speed)</td>
+<td>Shipped v0.6 (untagged)</td>
+<td><code>Stunt.GyroscopicWheelSpinCouplesYawToRoll</code></td>
+</tr>
+<tr>
+<td>[x] Per-substep contact re-query default in <code>SimSession</code> (exact on curved surfaces)</td>
+<td>Shipped v0.6 (untagged)</td>
+<td>no-op for non-free_3d</td>
+</tr>
+<tr>
+<td><del>Ld5 → full 6-DOF multibody</del> (superseded designs: <code>L5_6DOF_MULTIBODY</code>, <code>L5_MBD_DYNAMIC_COUPLING</code>, <code>L5_MBD_RIGOROUS</code>)</td>
+<td>Superseded by free-3D MBD above</td>
+<td>kept for history</td>
+</tr>
+<tr>
+<td>[x] <strong>Terrain + L5 general driving</strong> (heightmap hub contact, hill/cliff, inclined)</td>
+<td>Shipped v0.5 (headless/batch/cosim; GUI → v0.5.2)</td>
+<td><a href="../design/V0.5_TERRAIN_L5/"><code>V0.5_TERRAIN_L5.md</code></a></td>
+</tr>
+<tr>
+<td>[x] Curved banked track (<code>CurvedGround</code> + banked oval)</td>
+<td>Shipped v0.5 (was v0.4 M3)</td>
+<td><code>V0.5_TERRAIN_L5.md</code> M5b</td>
+</tr>
+<tr>
+<td>[ ] V2V collision</td>
+<td>Planned</td>
+<td><a href="../design/V0.2_MULTIVEHICLE/"><code>V0.2_MULTIVEHICLE.md</code></a></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2-tire">2. Tire<a class="headerlink" href="#2-tire" title="Permanent link">&para;</a></h2>
+<p><strong>Today:</strong> empirical Pacejka MF96 (default) + library MF2002 evaluator + opt-in LuGre brush.</p>
+<p><strong>Future layers:</strong> <a href="../design/TIRE_ROADMAP/"><code>design/TIRE_ROADMAP.md</code></a> (belt transient, catalog MF, …).</p>
+<h3 id="21-shipped">2.1 Shipped<a class="headerlink" href="#21-shipped" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Status</th>
+<th>Reference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[x] Pacejka MF96 BCDE long/lat</td>
+<td>Shipped</td>
+<td><code>pacejka_mf96.cpp</code></td>
+</tr>
+<tr>
+<td>[x] Combined slip (friction ellipse)</td>
+<td>Shipped</td>
+<td>Ch.03 §3.5</td>
+</tr>
+<tr>
+<td>[x] Aligning moment <span class="arithmatex">\(M_z\)</span> + trail falloff</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] Load sensitivity <span class="arithmatex">\(\mu_{\mathrm{eff}}(F_z)\)</span></td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] Lateral relaxation length → <code>alpha_dyn_</code></td>
+<td>Shipped</td>
+<td>Off when LuGre on</td>
+</tr>
+<tr>
+<td>[x] Camber thrust (linear API)</td>
+<td>Shipped</td>
+<td>Ld4 forward</td>
+</tr>
+<tr>
+<td>[x] Full Magic Formula <code>.tir</code> evaluator</td>
+<td>Shipped lib</td>
+<td><code>magic_formula_tire.cpp</code>; not default catalog</td>
+</tr>
+<tr>
+<td>[x] <code>python/tir_to_yaml.py</code></td>
+<td>Shipped</td>
+<td>Workshop wire-up open</td>
+</tr>
+<tr>
+<td>[x] LuGre decoupled <span class="arithmatex">\(z_{\mathrm{long}}, z_{\mathrm{lat}}\)</span></td>
+<td>Shipped <strong>default</strong></td>
+<td><a href="../design/V0.2_TIRE_LUGRE/"><code>V0.2_TIRE_LUGRE.md</code></a></td>
+</tr>
+<tr>
+<td>[x] <code>tire.kinematic_fallback</code> (LuGre off)</td>
+<td>Shipped</td>
+<td>ISO / legacy baseline</td>
+</tr>
+<tr>
+<td>[x] MF96 as breakaway <span class="arithmatex">\(g(\cdot)\)</span></td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] Asymmetric <span class="arithmatex">\(g\)</span> floors (no long <span class="arithmatex">\(\mu F_z\)</span>; α-gated lat)</td>
+<td>Shipped</td>
+<td>2026-06 tuning</td>
+</tr>
+<tr>
+<td>[x] ISO <span class="arithmatex">\(F_y\)</span> sign (<span class="arithmatex">\(F_y = -F_{\mathrm{raw}}\)</span>)</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] Peak-axis combined ellipse (LuGre path)</td>
+<td>Shipped</td>
+<td>Skip triple circular clip</td>
+</tr>
+<tr>
+<td>[x] RK4: <span class="arithmatex">\(z\)</span> advanced 4× per substep (<span class="arithmatex">\(h/4\)</span>)</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] <code>fx_kin</code> = clipped LuGre <span class="arithmatex">\(F_x\)</span> for wheel spin</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] Catalog preset <code>tire.lugre_on</code></td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] CLI <code>--lugre</code> / <code>--no-lugre</code></td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] GUI LuGre toggle + <code>fleet_overrides</code> persist</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] Scene <code>lugre_grade_demo.yaml</code></td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] <code>LuGreTire/*</code> integration tests</td>
+<td>Shipped</td>
+<td>209 ctest suite</td>
+</tr>
+<tr>
+<td>[x] Theory ch.19 + user docs synced</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="22-planned-tire">2.2 Planned (tire)<a class="headerlink" href="#22-planned-tire" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Item</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T1</td>
+<td><code>.tir</code> / MF2002 as <strong>catalog</strong> tire backend (<code>TireParams.backend</code>)</td>
+<td>[x] merged</td>
+</tr>
+<tr>
+<td>T1</td>
+<td>MF2002 combined slip bypasses host friction ellipse</td>
+<td>[x] merged</td>
+</tr>
+<tr>
+<td>T1</td>
+<td>GUI tire import + public sample <code>.tir</code></td>
+<td>[ ] (v0.5.2 GUI)</td>
+</tr>
+<tr>
+<td>T1</td>
+<td>Chrono Pac02 parity gate (<code>ctest -R ChronoPac02Parity</code>)</td>
+<td>[x] pure-long ~2% + pure-lat ~1% gated</td>
+</tr>
+<tr>
+<td>T1</td>
+<td>LuGre <span class="arithmatex">\(g()\)</span> from MF2002 <span class="arithmatex">\(F_{x0},F_{y0}\)</span> (optional)</td>
+<td>[ ]</td>
+</tr>
+<tr>
+<td>T2</td>
+<td><strong>Belt transient</strong> (<code>belt_relax</code>, σ/|Vx| first-order)</td>
+<td>[x] merged</td>
+</tr>
+<tr>
+<td>T2</td>
+<td>Filtered slip → MF96/MF2002 + LuGre (L2/L3/L5)</td>
+<td>[x] merged</td>
+</tr>
+<tr>
+<td>T2</td>
+<td>bicycle (L1) belt wiring (MF + LuGre)</td>
+<td>[x] merged</td>
+</tr>
+<tr>
+<td>T3</td>
+<td>VLOW-class unified low speed (reduce blend reliance)</td>
+<td>[ ]</td>
+</tr>
+<tr>
+<td>T4</td>
+<td>MF2002 <span class="arithmatex">\(G_{x\alpha}, G_{y\kappa}\)</span> on dynamic path</td>
+<td>[ ]</td>
+</tr>
+<tr>
+<td>T5</td>
+<td>Turn-slip, inflation, temperature</td>
+<td>[ ]</td>
+</tr>
+<tr>
+<td>T6</td>
+<td>External tire FMU co-sim; public benchmark report</td>
+<td>[ ]</td>
+</tr>
+</tbody>
+</table>
+<h3 id="23-belt-transient-planned-summary">2.3 Belt transient (planned — summary)<a class="headerlink" href="#23-belt-transient-planned-summary" title="Permanent link">&para;</a></h3>
+<p>Steady MF maps slip → force <strong>instantly</strong>. Real tires lag because the <strong>carcass/belt</strong>
+deflects first. Belt transient adds states (e.g. <span class="arithmatex">\(q_y\)</span> or <span class="arithmatex">\(\alpha_{\mathrm{eff}}\)</span>)
+with <span class="arithmatex">\(\tau \approx \sigma_y / |V_x|\)</span> before the constitutive law — complementary to
+LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code>TIRE_ROADMAP.md</code></a> §3.</p>
+<hr />
+<h2 id="3-drivetrain">3. Drivetrain<a class="headerlink" href="#3-drivetrain" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Status</th>
+<th>Reference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[x] Pluggable <code>IDrivetrain</code> module</td>
+<td>Shipped</td>
+<td>WS1 #159–162</td>
+</tr>
+<tr>
+<td>[x] Open / locked / LSD split</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] <code>engine_rotational_inertia</code> reflected (<span class="arithmatex">\(I \cdot N_f^2\)</span>)</td>
+<td>Shipped</td>
+<td><a href="../design/V0.2_DRIVETRAIN/"><code>V0.2_DRIVETRAIN.md</code></a></td>
+</tr>
+<tr>
+<td>[x] Open-diff coupled 2x2 axle inertia (<code>open_axle_spin_accel</code>)</td>
+<td>Shipped</td>
+<td>engine inertia felt under symmetric accel, free under wheel-diff</td>
+</tr>
+<tr>
+<td>[x] Legacy mode (<code>I_engine = 0</code>)</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] Catalog <code>drivetrain_v1</code> part type</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] <strong>Engine 2D torque map</strong> <span class="arithmatex">\(T(\mathrm{rpm},\theta)\)</span> (Drivetrain v2, opt-in)</td>
+<td>Shipped</td>
+<td>theory ch.22; <code>powertrain:</code> block</td>
+</tr>
+<tr>
+<td>[x] <strong>Multi-ratio gearbox</strong> + RPM coupling + gear-dependent reflected inertia</td>
+<td>Shipped</td>
+<td><code>EngineGearbox</code></td>
+</tr>
+<tr>
+<td>[x] <strong>Shift policy</strong> (manual / auto-RPM / <strong>user-defined function</strong>, pybind callback)</td>
+<td>Shipped</td>
+<td><code>set_shift_policy</code></td>
+</tr>
+<tr>
+<td>[x] Engine speed + gear in output (<code>engine_rpm()</code>, <code>current_gear()</code>)</td>
+<td>Shipped</td>
+<td>+ pybind</td>
+</tr>
+<tr>
+<td>[x] Idle-floor + slipping launch clutch</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] Catalog <code>drivetrain_v2</code> part (materialize powertrain into chassis)</td>
+<td>Shipped</td>
+<td><code>drivetrain.sedan_v2</code> part + <code>vehicle.sedan_powertrain</code> blueprint</td>
+</tr>
+<tr>
+<td>[ ] Workshop engine map editor (WS2-6)</td>
+<td>Planned</td>
+<td>Stub in GUI</td>
+</tr>
+<tr>
+<td>[x] ISO baseline unaffected (powertrain opt-in, default flat)</td>
+<td>Shipped</td>
+<td><code>IsoBaseline</code> green</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-brake-steering">4. Brake &amp; steering<a class="headerlink" href="#4-brake-steering" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Status</th>
+<th>Reference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[x] <code>IBrakeSystem</code> / <code>ISteeringSystem</code> interfaces</td>
+<td>Shipped</td>
+<td><a href="../design/V0.2_SUBSYSTEMS/"><code>V0.2_SUBSYSTEMS.md</code></a></td>
+</tr>
+<tr>
+<td>[x] Proportional brake + front/rear bias</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] EBD by <span class="arithmatex">\(F_z\)</span></td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] Ratio steering + rack travel</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] Actuator deadtime (throttle/brake/steer)</td>
+<td>Shipped</td>
+<td>WS2-0</td>
+</tr>
+<tr>
+<td>[x] Steering rack torque in STATE</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] LuGre column friction (separate module)</td>
+<td>Shipped</td>
+<td>Theory ch.17</td>
+</tr>
+<tr>
+<td>[ ] Booster → line pressure → pad <span class="arithmatex">\(\mu\)</span></td>
+<td>Planned</td>
+<td></td>
+</tr>
+<tr>
+<td>[ ] Brake thermal fade</td>
+<td>Planned</td>
+<td></td>
+</tr>
+<tr>
+<td>[ ] ABS / ESC interface</td>
+<td>Planned</td>
+<td></td>
+</tr>
+<tr>
+<td>[ ] MDPS assist, variable ratio</td>
+<td>Planned</td>
+<td></td>
+</tr>
+<tr>
+<td>[ ] Column compliance model</td>
+<td>Planned</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="5-suspension-anti-roll">5. Suspension &amp; anti-roll<a class="headerlink" href="#5-suspension-anti-roll" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Status</th>
+<th>Reference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[x] Linear spring/damper per corner (L3)</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] <code>IAntiRollBar</code> per-wheel force (#162)</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] Ld4 hardpoint toe/camber into dynamics</td>
+<td>Shipped</td>
+<td>Fleet <code>susp_kinematics</code></td>
+</tr>
+<tr>
+<td>[x] Catalog <code>susp_ride</code>, <code>susp_kinematics</code> parts</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] Workshops: suspension tab</td>
+<td>Shipped</td>
+<td>WS2-1</td>
+</tr>
+<tr>
+<td>[x] <strong>Progressive coil rate + bump/rebound stops</strong> (L5)</td>
+<td>Shipped v0.6 (untagged)</td>
+<td>MR(z_v) from real spring hardpoints; stops on wheel travel; <a href="../design/L5_MBD_FREE3D_UNSPRUNG/"><code>L5_MBD_FREE3D_UNSPRUNG.md</code></a></td>
+</tr>
+<tr>
+<td>[x] <strong>Genuine per-corner unsprung masses</strong> (L5 free-3D)</td>
+<td>Shipped v0.6 (untagged)</td>
+<td>inertial world particles, not body-relative DOF</td>
+</tr>
+<tr>
+<td>[ ] Progressive / bump-stop spring curves (L3 catalog)</td>
+<td>Planned</td>
+<td>L3 ride model (L5 done)</td>
+</tr>
+<tr>
+<td>[ ] Unsprung vs sprung damper split (L3)</td>
+<td>Planned</td>
+<td>PoC backlog</td>
+</tr>
+<tr>
+<td>[ ] KC compliance (bushing) under load — full model</td>
+<td>Planned</td>
+<td>L5 link is a stiff penalty today</td>
+</tr>
+<tr>
+<td>[ ] Dependent axle (twist-beam, solid beam)</td>
+<td>Planned</td>
+<td>Config stubs only</td>
+</tr>
+<tr>
+<td>[x] Ld4 multibody M1–M7</td>
+<td>Shipped</td>
+<td><a href="../design/LD4_MULTIBODY/"><code>LD4_MULTIBODY.md</code></a>; bushing step off in L4</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-actuator-driver-control-ladder">6. Actuator, driver &amp; control ladder<a class="headerlink" href="#6-actuator-driver-control-ladder" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Status</th>
+<th>Reference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[x] Lc4 pedal (throttle/brake/steer) primary</td>
+<td>Shipped</td>
+<td>CARLA-compatible</td>
+</tr>
+<tr>
+<td>[x] Lc5–Lc8 cascade (PI, PP, waypoint)</td>
+<td>Shipped</td>
+<td>Demos + theory ch.07–10</td>
+</tr>
+<tr>
+<td>[x] Driver latency + noise</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] First-order actuator lag</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[ ] LQR / MPC (HPIPM)</td>
+<td>Planned</td>
+<td>PoC Phase 2</td>
+</tr>
+<tr>
+<td>[ ] Per-channel actuator nonlinearities (beyond deadtime)</td>
+<td>Planned</td>
+<td><code>references/actuator_nonlinearity.md</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7-catalog-scenes-runtime">7. Catalog, scenes &amp; runtime<a class="headerlink" href="#7-catalog-scenes-runtime" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Status</th>
+<th>Reference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[x] <code>configs/catalog/</code> manifest + parts + blueprints</td>
+<td>Shipped</td>
+<td>v0.3 M1</td>
+</tr>
+<tr>
+<td>[x] Legacy flat <code>vehicles/</code> / <code>tires/</code> removed</td>
+<td>Shipped</td>
+<td>M2</td>
+</tr>
+<tr>
+<td>[x] <code>vdsim_realtime --scene=</code> only</td>
+<td>Shipped</td>
+<td>M3</td>
+</tr>
+<tr>
+<td>[x] GUI <code>/api/catalog</code>, <code>/api/scene</code>, simconfig v3</td>
+<td>Shipped</td>
+<td>M4</td>
+</tr>
+<tr>
+<td>[x] <code>fleet[]</code> + part overrides materialization</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] Maneuvers <code>configs/maneuvers/</code></td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] Python <code>Vehicle.preset()</code> / <code>Tire.preset()</code></td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] <code>tools/import_part_pack.py</code> stub</td>
+<td>Shipped</td>
+<td>M5</td>
+</tr>
+<tr>
+<td>[ ] C++ in-process catalog resolver</td>
+<td>Planned</td>
+<td>PARTS_CATALOG §12</td>
+</tr>
+<tr>
+<td>[ ] External catalog zip import (full)</td>
+<td>Planned</td>
+<td></td>
+</tr>
+<tr>
+<td>[ ] VDS1 protocol v4 (<code>vehicle_id</code> field)</td>
+<td>Planned</td>
+<td>Multi-vehicle I/O</td>
+</tr>
+<tr>
+<td>[ ] In-engine V2V collision</td>
+<td>Planned</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="8-gui-workshops">8. GUI &amp; workshops<a class="headerlink" href="#8-gui-workshops" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Status</th>
+<th>Reference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[x] Full-screen <code>app.html</code> (3D + telemetry)</td>
+<td>Shipped</td>
+<td>v0.2 redesign</td>
+</tr>
+<tr>
+<td>[x] 3-tab setup (vehicle / env / simulator)</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] Multi-vehicle fleet tree + viz</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] Data-comms panel (UDP targets)</td>
+<td>Shipped</td>
+<td>2026-06 week</td>
+</tr>
+<tr>
+<td>[x] Scene save/load (simconfig v3)</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] Workshops window (susp/brake/steer/drivetrain)</td>
+<td>Shipped</td>
+<td>WS2</td>
+</tr>
+<tr>
+<td>[x] Live tire/vehicle edit → plant</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] Catalog part picker in GUI</td>
+<td>Shipped</td>
+<td>v0.3 M4</td>
+</tr>
+<tr>
+<td>[ ] Tire workshop: <code>.tir</code> import button</td>
+<td>Planned</td>
+<td>WS2-5</td>
+</tr>
+<tr>
+<td>[ ] Engine map workshop (curves)</td>
+<td>Planned</td>
+<td>WS2-6</td>
+</tr>
+<tr>
+<td>[ ] Stunt <em>authoring</em> preset panel (ramp / loop / banked)</td>
+<td>Planned <strong>v0.5</strong> (render-only today)</td>
+<td><code>V0.5_TERRAIN_L5.md</code> M5c</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="9-co-simulation-fmi-integrations">9. Co-simulation, FMI &amp; integrations<a class="headerlink" href="#9-co-simulation-fmi-integrations" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Status</th>
+<th>Reference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[x] VDS1 UDP CMD/STATE (<code>vdsim_realtime</code>)</td>
+<td>Shipped</td>
+<td>200 Hz class</td>
+</tr>
+<tr>
+<td>[x] FMI 2.0 export + round-trip Δ=0</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] Multi-vehicle single process</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] CARLA raycast ABI skeleton</td>
+<td>Shipped</td>
+<td>PoC ~45%</td>
+</tr>
+<tr>
+<td>[ ] CARLA UE5 full sensor bridge</td>
+<td>Planned</td>
+<td>PoC backlog</td>
+</tr>
+<tr>
+<td>[ ] External MF-Tyre / tire FMU co-sim</td>
+<td>Planned</td>
+<td>Tire T6</td>
+</tr>
+<tr>
+<td>[ ] CarMaker ERG cross-validation</td>
+<td>Planned</td>
+<td>License + confidential data</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="10-validation-credibility">10. Validation &amp; credibility<a class="headerlink" href="#10-validation-credibility" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Status</th>
+<th>Reference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[x] Analytic benchmarks (bicycle, coast, weight transfer)</td>
+<td>Shipped</td>
+<td><a href="../VALIDATION/"><code>VALIDATION.md</code></a></td>
+</tr>
+<tr>
+<td>[x] ISO 7401 step-steer runner</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] ISO 4138 understeer gradient</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] ISO 3888-2 DLC metric</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] ISO 8608 road PSD classes</td>
+<td>Shipped</td>
+<td></td>
+</tr>
+<tr>
+<td>[x] <strong>378</strong> automated ctests</td>
+<td>Shipped</td>
+<td>2026-06-17</td>
+</tr>
+<tr>
+<td>[x] ISO matrix re-baseline (post engine inertia + LuGre) + CI gate</td>
+<td>Shipped</td>
+<td><code>IsoBaseline</code>; VALIDATION.md table 2026-06-10</td>
+</tr>
+<tr>
+<td>[x] Stunt / L5 validation suite</td>
+<td>Shipped</td>
+<td><code>test_stunt</code>, <code>test_l5_strut_validation</code> (loop critical, ballistic jump, camber=L4 DAE, gyro, energy)</td>
+</tr>
+<tr>
+<td>[ ] Adams / KC cross-check on the hardpoint-emergent geometry (rtol gate)</td>
+<td>Planned</td>
+<td>anti-dive/roll-centre/MR vs Adams</td>
+</tr>
+<tr>
+<td>[ ] Published commercial cross-val (open data)</td>
+<td>Planned</td>
+<td>Honest gap today</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="11-v04-stunt-physics-planned-release">11. v0.4 — stunt physics (planned release)<a class="headerlink" href="#11-v04-stunt-physics-planned-release" title="Permanent link">&para;</a></h2>
+<p>Single tag <strong>v0.4.0</strong> per <a href="../design/V0.4_PLAN/"><code>V0.4_PLAN.md</code></a>. Does not block tire T1/T2.</p>
+<table>
+<thead>
+<tr>
+<th>Milestone</th>
+<th>Item</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M1</td>
+<td>T23 jump C++ + contact <code>is_valid</code></td>
+<td>[x]</td>
+</tr>
+<tr>
+<td>M2</td>
+<td>RampGround + ramp scene + GUI render</td>
+<td>[x]</td>
+</tr>
+<tr>
+<td>M3</td>
+<td>CurvedGround + banked scenario</td>
+<td>→ <strong>v0.5</strong> (M5b)</td>
+</tr>
+<tr>
+<td>M4</td>
+<td>Ld5 core + jump on Ld5</td>
+<td>[x]</td>
+</tr>
+<tr>
+<td>M5</td>
+<td>LoopGround + <code>vertical_loop_demo.yaml</code></td>
+<td>[x]</td>
+</tr>
+<tr>
+<td>M6</td>
+<td>Loop validation (✓) + theory <code>20_ld5_stunt</code></td>
+<td>[x]</td>
+</tr>
+</tbody>
+</table>
+<p><strong>v0.4.0 tagged.</strong> Descoped to v0.5 (now shipped): banked curve
+(<code>CurvedGround</code>/<code>banked_oval</code>, M5b). Still deferred to v0.5.2 GUI: stunt
+<em>authoring</em> panel (render-only today).</p>
+<hr />
+<h2 id="12-version-history-checklist">12. Version history (checklist)<a class="headerlink" href="#12-version-history-checklist" title="Permanent link">&para;</a></h2>
+<h3 id="poc-v01-2025">PoC → v0.1 (2025)<a class="headerlink" href="#poc-v01-2025" title="Permanent link">&para;</a></h3>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> L1–L3 dynamics + MF96 tire  </li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Combined slip, <span class="arithmatex">\(M_z\)</span>, diff, EBD, aero  </li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> FMI 2.0, Python bindings, ISO runners  </li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Driver L5–L8, scenarios (step, DLC, skidpad, …)</li>
+</ul>
+<h3 id="v02-composable-vehicle-2026-06">v0.2 — composable vehicle (2026-06)<a class="headerlink" href="#v02-composable-vehicle-2026-06" title="Permanent link">&para;</a></h3>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> WS1 subsystem modules (brake, steer, drivetrain, susp, ARB)  </li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> WS2 workshops shell + deadtime bridge  </li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> WS3 scene UI redesign + data-comms  </li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> WS4 part registry + fleet assembly  </li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Multi-vehicle runtime (single process)</li>
+</ul>
+<h3 id="v03-parts-catalog-2026-06">v0.3 — parts catalog (2026-06)<a class="headerlink" href="#v03-parts-catalog-2026-06" title="Permanent link">&para;</a></h3>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> M1 catalog resolver + manifest  </li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> M2 migrate configs, delete legacy trees  </li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> M3 <code>--scene=</code> CLI  </li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> M4 GUI catalog API + simconfig v3  </li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> M5 docs sweep + import stub  </li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Drivetrain <code>engine_rotational_inertia</code>  </li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> LuGre tire default on + <code>kinematic_fallback</code> part + tests + docs  </li>
+</ul>
+<h3 id="v04-stunt-ld5-2026-06-tagged">v0.4 — stunt / Ld5 (2026-06, tagged)<a class="headerlink" href="#v04-stunt-ld5-2026-06-tagged" title="Permanent link">&para;</a></h3>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Stunt / Ld5 / 3D contact (this doc §11)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Ld4 multibody M1–M7</li>
+</ul>
+<h3 id="v050-terrain-l5-2026-06-tagged">v0.5.0 — terrain + L5 (2026-06, tagged)<a class="headerlink" href="#v050-terrain-l5-2026-06-tagged" title="Permanent link">&para;</a></h3>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Terrain + L5 general driving (heightmap hub contact, hill/cliff/inclined, banked)</li>
+</ul>
+<h3 id="v051-tire-layers-2026-06-tagged">v0.5.1 — tire layers (2026-06, tagged)<a class="headerlink" href="#v051-tire-layers-2026-06-tagged" title="Permanent link">&para;</a></h3>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Tire T1 MF2002 <code>.tir</code> backend + combined-slip ellipse bypass</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Tire T2 belt transient (L2/L3/L5, MF+LuGre, validation, theory ch.21)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> ISO re-baseline (flat, sedan L2 LuGre) + CI gate <code>IsoBaseline</code></li>
+</ul>
+<h3 id="v060-l5-high-fidelity-mbd-2026-06-on-main-untagged">v0.6.0 — L5 high-fidelity MBD (2026-06, on <code>main</code>, untagged)<a class="headerlink" href="#v060-l5-high-fidelity-mbd-2026-06-on-main-untagged" title="Permanent link">&para;</a></h3>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Ld5 free-3D inertial unsprung MBD (per-corner world point mass + anisotropic 2-point
+  bushing; energy-consistent on any surface; replaces the B1 lumped strut)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Hardpoint-emergent anti-dive/squat + roll-centre migration (wheel constrained to the
+  real DAE travel path; tyre Fx/Fy → vertical reaction)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Progressive coil rate + damper from the real spring eye-to-eye geometry (MR(z_v),
+  bump/rebound asymmetric); wheel-rate fallback without spring hardpoints</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Gyroscopic wheel-spin coupling (yaw↔roll at speed)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Per-substep contact re-query default in <code>SimSession</code>; contact sampled at the wheel
+  particle (exact on curved surfaces, no false contact leaving a loop/bank)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> 378/378 ctest; design <a href="../design/L5_MBD_FREE3D_UNSPRUNG/"><code>L5_MBD_FREE3D_UNSPRUNG.md</code></a></li>
+</ul>
+<h3 id="v052-planned">v0.5.2+ (planned)<a class="headerlink" href="#v052-planned" title="Permanent link">&para;</a></h3>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> GUI terrain Play (M4) + stunt authoring (M5c) + <code>.tir</code> import — browser-gated</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Tire: bicycle (L1) belt (MF+LuGre) + Chrono Pac02 parity gate — done</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Drivetrain torque–RPM + gearbox</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Brake/steer physics upgrade</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> L5 next cut: KC compliance model, gyro axis tilt + spin-up reaction</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> CARLA full bridge · open benchmark  </li>
+</ul>
+<hr />
+<h2 id="13-external-messaging-approved">13. External messaging (approved)<a class="headerlink" href="#13-external-messaging-approved" title="Permanent link">&para;</a></h2>
+<p><strong>Shipped today</strong></p>
+<blockquote>
+<p>Open-core L1–L5 vehicle dynamics with Pacejka MF tire, optional LuGre brush + belt
+transient layers, opt-in MF2002 <code>.tir</code> backend and drivetrain v2 (engine map + gearbox),
+parts catalog, real-time UDP/FMI, and ISO-standard validation (378 ctests). The L5 model is
+a hardpoint-driven free-3D multibody: anti-dive/squat, roll-centre migration and a
+progressive coil rate emerge from the suspension geometry, energy-consistent on arbitrary
+surfaces (banks, loops, jumps).</p>
+</blockquote>
+<p><strong>In active development</strong></p>
+<blockquote>
+<p>Adams/KC cross-validation of the hardpoint-emergent geometry, full bushing compliance,
+drivetrain torque maps, workshop importers, and GUI terrain play — default baselines frozen
+per phase.</p>
+</blockquote>
+<p><strong>Do not claim (yet)</strong></p>
+<blockquote>
+<p>MF-Tyre product parity, published real-vehicle cross-validation, Adams-validated KC
+numbers, or production sign-off.</p>
+</blockquote>
+<hr />
+<h2 id="14-related-documents">14. Related documents<a class="headerlink" href="#14-related-documents" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Doc</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="../design/V0.2_PLAN/"><code>design/V0.2_PLAN.md</code></a></td>
+<td>v0.2 workstreams (historical + status)</td>
+</tr>
+<tr>
+<td><a href="../design/V0.4_PLAN/"><code>design/V0.4_PLAN.md</code></a></td>
+<td>Stunt / Ld5</td>
+</tr>
+<tr>
+<td><a href="../design/V0.4_SLOPE_JUMP_DYNAMICS/"><code>design/V0.4_SLOPE_JUMP_DYNAMICS.md</code></a></td>
+<td>Grade, terrain, T23 jump path</td>
+</tr>
+<tr>
+<td><a href="../design/L5_MBD_FREE3D_UNSPRUNG/"><code>design/L5_MBD_FREE3D_UNSPRUNG.md</code></a></td>
+<td><strong>L5 free-3D MBD (shipped): unsprung, anti-dive/roll-centre, progressive coil, gyro</strong></td>
+</tr>
+<tr>
+<td><code>design/L5_6DOF_MULTIBODY.md</code>, <code>L5_MBD_DYNAMIC_COUPLING.md</code>, <code>L5_MBD_RIGOROUS.md</code></td>
+<td>Superseded L5 MBD designs (history)</td>
+</tr>
+<tr>
+<td><a href="../design/TIRE_ROADMAP/"><code>design/TIRE_ROADMAP.md</code></a></td>
+<td>Tire phases T1–T6 detail</td>
+</tr>
+<tr>
+<td><a href="../design/V0.2_DRIVETRAIN/"><code>design/V0.2_DRIVETRAIN.md</code></a></td>
+<td>Engine inertia</td>
+</tr>
+<tr>
+<td><a href="../design/V0.2_TIRE_LUGRE/"><code>design/V0.2_TIRE_LUGRE.md</code></a></td>
+<td>LuGre shipped spec</td>
+</tr>
+<tr>
+<td><a href="../design/PARTS_CATALOG/"><code>design/PARTS_CATALOG.md</code></a></td>
+<td>Catalog M1–M5</td>
+</tr>
+<tr>
+<td><a href="../VALIDATION/"><code>VALIDATION.md</code></a></td>
+<td>Evidence matrix</td>
+</tr>
+<tr>
+<td><a href="../HANDOFF/"><code>HANDOFF.md</code></a></td>
+<td>Agent handoff / current sprint</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/Onlyti/VDSim" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.expand", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
