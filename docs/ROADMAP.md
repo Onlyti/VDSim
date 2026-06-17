@@ -1,6 +1,6 @@
 # VDSim product roadmap
 
-**Last updated:** 2026-06-10 · **Tests:** 328/328 ctest green (`main`)
+**Last updated:** 2026-06-17 · **Tests:** 378/378 ctest green (`main`)
 
 Living roadmap from early PoC through v0.3. Tracks what shipped in mainline vs what
 is planned. Detail specs link to `docs/design/*`; tire phases in
@@ -12,7 +12,9 @@ is planned. Detail specs link to `docs/design/*`; tire phases in
     - **Opt-in** — implemented but not default catalog (baseline frozen)
 
 **Velocity (recent):** v0.2 composable subsystems + GUI redesign → v0.3 parts
-catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week).
+catalog + scene runtime → drivetrain inertia + LuGre tire tuning → v0.5 terrain + tire
+layers → **L5 high-fidelity MBD: free-3D inertial unsprung, hardpoint-emergent
+anti-dive/squat/roll-centre + progressive coil rate (untagged, v0.6 candidate)**.
 
 ---
 
@@ -20,13 +22,13 @@ catalog + scene runtime → drivetrain inertia + LuGre tire tuning (2026-06 week
 
 | Area | Shipped (high level) | Next |
 |------|----------------------|------|
-| Dynamics L1–L5 | L1–L3 planar/14-DOF; **Ld4** hard-joint; **Ld5** stunt + **terrain (v0.5)** | **Ld5 → full 6-DOF multibody** ([design](design/L5_6DOF_MULTIBODY.md)); GUI terrain Play (v0.5.2); V2V |
+| Dynamics L1–L5 | L1–L3 planar/14-DOF; **Ld4** hard-joint; **Ld5** stunt + terrain; **Ld5 high-fidelity MBD: free-3D inertial unsprung, energy-consistent on any surface, hardpoint-emergent anti-dive/squat/roll-centre + progressive coil rate + gyroscopic wheel-spin** ([design](design/L5_MBD_FREE3D_UNSPRUNG.md)) | KC compliance model; GUI terrain Play (v0.5.2); V2V |
 | Tire | MF96 + LuGre **default**; **MF2002 `.tir` backend (T1, Chrono-cross-checked)**; **belt transient (T2)** | bicycle belt; combined-slip vs Pac02; GUI `.tir` |
 | Drivetrain | Engine inertia + open-diff; **2D torque map + gearbox + shift policy (v2, opt-in)**; **catalog `drivetrain_v2` part** | Engine-map workshop (UI); L1 powertrain |
 | Brake / steer | Pluggable modules + deadtime; **user-defined modules (C++/Python subclass)** | Booster/MDPS physics |
 | Catalog / runtime | `--scene=`, fleet, FMI | External part packs, VDS1 v4 |
 | GUI | 3-tab scene UI, catalog API, workshops | Tire `.tir` import UI; **expose user-defined modules (decide: C++ `.so` plugin / Python path / GUI authoring)** |
-| Validation | ISO 7401/4138/3888 **re-baselined + CI-gated** (`IsoBaseline`), 328 ctest | Adams x-check rtol; commercial cross-val |
+| Validation | ISO 7401/4138/3888 **re-baselined + CI-gated** (`IsoBaseline`), 378 ctest | Adams x-check rtol; commercial cross-val |
 
 ```mermaid
 timeline
@@ -49,9 +51,13 @@ timeline
         Terrain + L5 driving : 2026-06
         Tire T1 MF2002 backend : 2026-06
         Tire T2 belt transient : 2026-06
+    section v0.6 (untagged)
+        L5 free-3D inertial unsprung MBD : 2026-06
+        Hardpoint anti-dive/roll-centre + progressive coil : 2026-06
+        Gyroscopic wheel-spin coupling : 2026-06
     section Next
         GUI terrain Play (v0.5.2) : planned
-        ISO re-baseline + Ld4 (v0.6) : planned
+        KC compliance + V2V : planned
 ```
 
 ---
@@ -70,6 +76,12 @@ timeline
 | [x] Ld4 multibody M1–M7 | Shipped | [`LD4_MULTIBODY.md`](design/LD4_MULTIBODY.md); M4 runtime, M7 offline |
 | [x] Ld5 6-DOF 3D body + quaternion | Shipped v0.4 (stunt) | `free_3d_dynamics.cpp`; terrain → v0.5 |
 | [x] 3D contact / airborne / ramp jump | Shipped v0.4 | [`V0.4_SLOPE_JUMP_DYNAMICS.md`](design/V0.4_SLOPE_JUMP_DYNAMICS.md) |
+| [x] **Ld5 free-3D inertial unsprung MBD** (per-corner world point mass + anisotropic 2-point bushing; energy-consistent on any surface; replaces the B1 lumped strut) | Shipped v0.6 (untagged) | [`L5_MBD_FREE3D_UNSPRUNG.md`](design/L5_MBD_FREE3D_UNSPRUNG.md) |
+| [x] **Hardpoint-emergent anti-dive/squat + roll-centre migration** (wheel follows the real DAE travel path; tyre Fx/Fy → vertical reaction) | Shipped v0.6 (untagged) | active when a corner DAE is attached |
+| [x] **Progressive coil rate + damper** (k_coil·(l−l_free)·MR from real spring eye-to-eye; bump/rebound asymmetric) | Shipped v0.6 (untagged) | wheel-rate fallback w/o spring hardpoints |
+| [x] **Gyroscopic wheel-spin coupling** (Σ I_wheel·ω_spin lateral momentum; yaw↔roll at speed) | Shipped v0.6 (untagged) | `Stunt.GyroscopicWheelSpinCouplesYawToRoll` |
+| [x] Per-substep contact re-query default in `SimSession` (exact on curved surfaces) | Shipped v0.6 (untagged) | no-op for non-free_3d |
+| ~~Ld5 → full 6-DOF multibody~~ (superseded designs: `L5_6DOF_MULTIBODY`, `L5_MBD_DYNAMIC_COUPLING`, `L5_MBD_RIGOROUS`) | Superseded by free-3D MBD above | kept for history |
 | [x] **Terrain + L5 general driving** (heightmap hub contact, hill/cliff, inclined) | Shipped v0.5 (headless/batch/cosim; GUI → v0.5.2) | [`V0.5_TERRAIN_L5.md`](design/V0.5_TERRAIN_L5.md) |
 | [x] Curved banked track (`CurvedGround` + banked oval) | Shipped v0.5 (was v0.4 M3) | `V0.5_TERRAIN_L5.md` M5b |
 | [ ] V2V collision | Planned | [`V0.2_MULTIVEHICLE.md`](design/V0.2_MULTIVEHICLE.md) |
@@ -184,8 +196,11 @@ LuGre (contact bristle, presliding). See [`TIRE_ROADMAP.md`](design/TIRE_ROADMAP
 | [x] Ld4 hardpoint toe/camber into dynamics | Shipped | Fleet `susp_kinematics` |
 | [x] Catalog `susp_ride`, `susp_kinematics` parts | Shipped | |
 | [x] Workshops: suspension tab | Shipped | WS2-1 |
-| [ ] Progressive / bump-stop spring curves | Planned | v0.4 droop/bump |
+| [x] **Progressive coil rate + bump/rebound stops** (L5) | Shipped v0.6 (untagged) | MR(z_v) from real spring hardpoints; stops on wheel travel; [`L5_MBD_FREE3D_UNSPRUNG.md`](design/L5_MBD_FREE3D_UNSPRUNG.md) |
+| [x] **Genuine per-corner unsprung masses** (L5 free-3D) | Shipped v0.6 (untagged) | inertial world particles, not body-relative DOF |
+| [ ] Progressive / bump-stop spring curves (L3 catalog) | Planned | L3 ride model (L5 done) |
 | [ ] Unsprung vs sprung damper split (L3) | Planned | PoC backlog |
+| [ ] KC compliance (bushing) under load — full model | Planned | L5 link is a stiff penalty today |
 | [ ] Dependent axle (twist-beam, solid beam) | Planned | Config stubs only |
 | [x] Ld4 multibody M1–M7 | Shipped | [`LD4_MULTIBODY.md`](design/LD4_MULTIBODY.md); bushing step off in L4 |
 
@@ -264,9 +279,10 @@ LuGre (contact bristle, presliding). See [`TIRE_ROADMAP.md`](design/TIRE_ROADMAP
 | [x] ISO 4138 understeer gradient | Shipped | |
 | [x] ISO 3888-2 DLC metric | Shipped | |
 | [x] ISO 8608 road PSD classes | Shipped | |
-| [x] **328** automated ctests | Shipped | 2026-06-10 |
+| [x] **378** automated ctests | Shipped | 2026-06-17 |
 | [x] ISO matrix re-baseline (post engine inertia + LuGre) + CI gate | Shipped | `IsoBaseline`; VALIDATION.md table 2026-06-10 |
-| [ ] Stunt validation suite (`tests/stunt/*`) | Planned v0.4 | |
+| [x] Stunt / L5 validation suite | Shipped | `test_stunt`, `test_l5_strut_validation` (loop critical, ballistic jump, camber=L4 DAE, gyro, energy) |
+| [ ] Adams / KC cross-check on the hardpoint-emergent geometry (rtol gate) | Planned | anti-dive/roll-centre/MR vs Adams |
 | [ ] Published commercial cross-val (open data) | Planned | Honest gap today |
 
 ---
@@ -332,12 +348,26 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 - [x] Tire T2 belt transient (L2/L3/L5, MF+LuGre, validation, theory ch.21)
 - [x] ISO re-baseline (flat, sedan L2 LuGre) + CI gate `IsoBaseline`
 
+### v0.6.0 — L5 high-fidelity MBD (2026-06, on `main`, untagged)
+
+- [x] Ld5 free-3D inertial unsprung MBD (per-corner world point mass + anisotropic 2-point
+  bushing; energy-consistent on any surface; replaces the B1 lumped strut)
+- [x] Hardpoint-emergent anti-dive/squat + roll-centre migration (wheel constrained to the
+  real DAE travel path; tyre Fx/Fy → vertical reaction)
+- [x] Progressive coil rate + damper from the real spring eye-to-eye geometry (MR(z_v),
+  bump/rebound asymmetric); wheel-rate fallback without spring hardpoints
+- [x] Gyroscopic wheel-spin coupling (yaw↔roll at speed)
+- [x] Per-substep contact re-query default in `SimSession`; contact sampled at the wheel
+  particle (exact on curved surfaces, no false contact leaving a loop/bank)
+- [x] 378/378 ctest; design [`L5_MBD_FREE3D_UNSPRUNG.md`](design/L5_MBD_FREE3D_UNSPRUNG.md)
+
 ### v0.5.2+ (planned)
 
 - [ ] GUI terrain Play (M4) + stunt authoring (M5c) + `.tir` import — browser-gated
 - [x] Tire: bicycle (L1) belt (MF+LuGre) + Chrono Pac02 parity gate — done
 - [ ] Drivetrain torque–RPM + gearbox
 - [ ] Brake/steer physics upgrade
+- [ ] L5 next cut: KC compliance model, gyro axis tilt + spin-up reaction
 - [ ] CARLA full bridge · open benchmark  
 
 ---
@@ -348,17 +378,21 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 
 > Open-core L1–L5 vehicle dynamics with Pacejka MF tire, optional LuGre brush + belt
 > transient layers, opt-in MF2002 `.tir` backend and drivetrain v2 (engine map + gearbox),
-> parts catalog, real-time UDP/FMI, and ISO-standard validation (328 ctests).
+> parts catalog, real-time UDP/FMI, and ISO-standard validation (378 ctests). The L5 model is
+> a hardpoint-driven free-3D multibody: anti-dive/squat, roll-centre migration and a
+> progressive coil rate emerge from the suspension geometry, energy-consistent on arbitrary
+> surfaces (banks, loops, jumps).
 
 **In active development**
 
-> Layered tire roadmap (MF2002 catalog, belt transient), v0.4 3D stunt dynamics,
-> drivetrain torque maps, and workshop importers — default baselines frozen per phase.
+> Adams/KC cross-validation of the hardpoint-emergent geometry, full bushing compliance,
+> drivetrain torque maps, workshop importers, and GUI terrain play — default baselines frozen
+> per phase.
 
 **Do not claim (yet)**
 
-> MF-Tyre product parity, published real-vehicle cross-validation, or production
-> sign-off.
+> MF-Tyre product parity, published real-vehicle cross-validation, Adams-validated KC
+> numbers, or production sign-off.
 
 ---
 
@@ -369,6 +403,8 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 | [`design/V0.2_PLAN.md`](design/V0.2_PLAN.md) | v0.2 workstreams (historical + status) |
 | [`design/V0.4_PLAN.md`](design/V0.4_PLAN.md) | Stunt / Ld5 |
 | [`design/V0.4_SLOPE_JUMP_DYNAMICS.md`](design/V0.4_SLOPE_JUMP_DYNAMICS.md) | Grade, terrain, T23 jump path |
+| [`design/L5_MBD_FREE3D_UNSPRUNG.md`](design/L5_MBD_FREE3D_UNSPRUNG.md) | **L5 free-3D MBD (shipped): unsprung, anti-dive/roll-centre, progressive coil, gyro** |
+| `design/L5_6DOF_MULTIBODY.md`, `L5_MBD_DYNAMIC_COUPLING.md`, `L5_MBD_RIGOROUS.md` | Superseded L5 MBD designs (history) |
 | [`design/TIRE_ROADMAP.md`](design/TIRE_ROADMAP.md) | Tire phases T1–T6 detail |
 | [`design/V0.2_DRIVETRAIN.md`](design/V0.2_DRIVETRAIN.md) | Engine inertia |
 | [`design/V0.2_TIRE_LUGRE.md`](design/V0.2_TIRE_LUGRE.md) | LuGre shipped spec |
