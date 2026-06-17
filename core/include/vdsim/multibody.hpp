@@ -196,14 +196,16 @@ struct CornerDynamicsState {
     double q_camber_dot   {0.0};
 };
 
-// Travel-path kinematic maps for the coupled MBD solve (Ld5): the body-frame
-// wheel-centre path w(theta) and its derivatives wrt the travel coordinate, plus
-// the wheel orientation. theta is the DAE's own travel coordinate (q); for the
-// kinematic-fallback model theta is simply the vertical travel.
+// Travel-path kinematic maps for the coupled MBD solve (Ld5). The travel DOF is the
+// REAL vertical wheel travel z_v [m] (uniform across suspension types; L2/L3 are the
+// special case of a vertical strut with motion ratio 1). The maps give the body-frame
+// wheel-centre path w(z_v) and its derivatives wrt z_v, plus the wheel orientation.
+// By construction w.z = w_static.z + z_v, so w_dq.z == 1; the lateral/fore-aft
+// components of w_dq are the suspension's real travel geometry (roll centre, etc.).
 struct CornerTravelMaps {
     Vec3   w     {Vec3::Zero()};   // wheel-centre, body frame [m]
-    Vec3   w_dq  {Vec3::Zero()};   // dw/dtheta [m/rad]
-    Vec3   w_dqq {Vec3::Zero()};   // d2w/dtheta2 [m/rad^2]
+    Vec3   w_dq  {Vec3::Zero()};   // dw/dz_v [-] (z-component ~1)
+    Vec3   w_dqq {Vec3::Zero()};   // d2w/dz_v2 [1/m]
     double toe_rad    {0.0};
     double camber_rad {0.0};
     double caster_rad {0.0};
@@ -219,17 +221,16 @@ public:
                            const WheelLoad& load,
                            double dt) const = 0;
 
-    // Body-frame wheel pose at an arbitrary travel coordinate theta, with a
-    // warm-start seed for the inner knuckle solve (pass the corner state's
-    // knuckle_aa). position_world holds the body-frame wheel centre.
-    virtual WheelPose pose_at_theta(double theta, double steer_rad,
-                                    const Vec3& seed) const = 0;
+    // Body-frame wheel pose at a vertical wheel travel z_v [m] (the model inverts
+    // z_v -> its internal coordinate). steer_rad is the rack input; seed warm-starts
+    // the inner knuckle solve. position_world holds the body-frame wheel centre.
+    virtual WheelPose pose_at_travel(double travel_z, double steer_rad,
+                                     const Vec3& seed) const = 0;
 
-    // w(theta), w'(theta), w''(theta) + orientation, by central finite difference
-    // of pose_at_theta. Used by the Ld5 coupled solve to drive the real linkage
-    // travel path instead of a vertical slider.
-    CornerTravelMaps travel_maps(const HardJointCornerState& st,
-                                 double steer_rad) const;
+    // w(z_v), w'(z_v), w''(z_v) + orientation, by central finite difference of
+    // pose_at_travel. Drives the Ld5 coupled solve along the real linkage path.
+    CornerTravelMaps travel_maps(double travel_z, double steer_rad,
+                                 const Vec3& seed) const;
 };
 
 class IMultibodySolver {

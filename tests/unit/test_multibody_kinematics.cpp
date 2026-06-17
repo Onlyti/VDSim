@@ -44,26 +44,30 @@ TEST(MultibodyKinematics, TravelMapsRealLinkageGeometry) {
 
     vdsim::mb::HardJointCornerState st;
     vdsim::mb::PrescribedCornerMotion mot;
-    dae->initialize(st, mot);                    // theta at the static ride height
+    dae->initialize(st, mot);                    // seed the knuckle warm start
 
-    const auto m = dae->travel_maps(st, 0.0);
+    // Maps parameterised by the REAL vertical wheel travel z_v [m]; query at static.
+    const auto m = dae->travel_maps(0.0, 0.0, st.knuckle_aa);
 
-    // w(theta_static) == static wheel centre (left corner: +y track, ~hub height).
+    // w(0) == static wheel centre (left corner: +y track, ~hub height).
     EXPECT_GT(m.w.y(), 0.5);
     EXPECT_NEAR(m.w.z(), 0.305, 0.05);
 
-    // Travel direction: dominated by vertical motion ratio, but NON-trivial — and it
-    // has a lateral component, which is exactly what a vertical slider cannot model.
-    EXPECT_GT(m.w_dq.norm(), 0.1);
-    EXPECT_GT(std::abs(m.w_dq.z()), 0.2);        // real motion ratio
+    // dw/dz_v: z-component ~1 by construction (z_v IS the vertical travel), and it has
+    // a lateral component — the roll-centre geometry a vertical slider cannot model.
+    EXPECT_NEAR(m.w_dq.z(), 1.0, 0.05);
     EXPECT_GT(std::abs(m.w_dq.y()), 1e-3);       // lateral travel -> roll-centre geometry
 
     // Curvature is finite and physically bounded (not solver-noise garbage).
     EXPECT_TRUE(std::isfinite(m.w_dqq.norm()));
     EXPECT_LT(m.w_dqq.norm(), 5.0);
 
-    // Consistency: pose_at_theta at the same theta agrees with w.
-    const auto p = dae->pose_at_theta(st.q, 0.0, st.knuckle_aa);
+    // A 20 mm jounce raises the wheel centre ~20 mm (vertical-travel parameterisation).
+    const auto bump = dae->travel_maps(0.020, 0.0, st.knuckle_aa);
+    EXPECT_NEAR(bump.w.z() - m.w.z(), 0.020, 2e-3);
+
+    // Consistency: pose_at_travel at the same z_v agrees with w.
+    const auto p = dae->pose_at_travel(0.0, 0.0, st.knuckle_aa);
     EXPECT_NEAR((p.position_world - m.w).norm(), 0.0, 1e-9);
 }
 

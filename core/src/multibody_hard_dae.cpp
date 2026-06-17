@@ -190,8 +190,8 @@ private:
         return theta;
     }
 
-    WheelPose pose_at_theta(double theta, double steer, const Vec3&) const override {
-        return pose_at(theta, steer);
+    WheelPose pose_at_travel(double travel_z, double steer, const Vec3&) const override {
+        return pose_at(solve_theta_for_travel(travel_z), steer);
     }
 
     WheelPose pose_at(double theta, double /*steer*/) const {
@@ -334,8 +334,10 @@ private:
         return theta;
     }
 
-    WheelPose pose_at_theta(double theta, double steer, const Vec3& seed) const override {
-        return pose_at(theta, steer, seed);
+    WheelPose pose_at_travel(double travel_z, double steer, const Vec3& seed) const override {
+        Vec3 aa = seed;
+        const double th = solve_theta_for_travel(travel_z, steer, aa);
+        return pose_at(th, steer, aa);
     }
 
     WheelPose pose_at(double theta, double steer_dy, const Vec3& aa) const {
@@ -505,8 +507,8 @@ private:
         return theta;
     }
 
-    WheelPose pose_at_theta(double theta, double steer, const Vec3&) const override {
-        return pose_at(theta, steer);
+    WheelPose pose_at_travel(double travel_z, double steer, const Vec3&) const override {
+        return pose_at(solve_theta_for_travel(travel_z, steer), steer);
     }
 
     WheelPose pose_at(double theta, double steer_dy) const {
@@ -638,8 +640,8 @@ private:
         return g;
     }
 
-    WheelPose pose_at_theta(double theta, double /*steer*/, const Vec3& seed) const override {
-        const Geom g = driven_pose_at(theta, seed);
+    WheelPose pose_at_travel(double travel_z, double /*steer*/, const Vec3& seed) const override {
+        const Geom g = full_pose_at(travel_z, seed);
         return pose_from_spin(g.wheel, g.spin, wheel_static_, side_);
     }
 
@@ -701,8 +703,8 @@ public:
         return kin_->forward_kinematics(topo_, mot.travel_z, mot.steer_rack_dy);
     }
 
-    WheelPose pose_at_theta(double theta, double steer, const Vec3&) const override {
-        return kin_->forward_kinematics(topo_, theta, steer);
+    WheelPose pose_at_travel(double travel_z, double steer, const Vec3&) const override {
+        return kin_->forward_kinematics(topo_, travel_z, steer);
     }
 
 private:
@@ -712,21 +714,20 @@ private:
 
 }  // namespace
 
-CornerTravelMaps IHardJointDaeModel::travel_maps(const HardJointCornerState& st,
-                                                 double steer_rad) const {
-    // Central finite difference of the body-frame wheel path vs the travel
-    // coordinate. dth=1e-3 keeps w'' clear of the inner-solver noise floor (the
-    // pose comes from an LM/Newton solve). The corner state's knuckle_aa warm-
-    // starts the inner solve at all three sample points.
-    constexpr double dth = 1e-3;
-    const WheelPose p0 = pose_at_theta(st.q,        steer_rad, st.knuckle_aa);
-    const WheelPose pp = pose_at_theta(st.q + dth,  steer_rad, st.knuckle_aa);
-    const WheelPose pm = pose_at_theta(st.q - dth,  steer_rad, st.knuckle_aa);
+CornerTravelMaps IHardJointDaeModel::travel_maps(double travel_z, double steer_rad,
+                                                 const Vec3& seed) const {
+    // Central finite difference of the body-frame wheel path vs the vertical travel
+    // z_v. dz=1e-3 m keeps w'' clear of the inner-solver noise floor (each pose comes
+    // from an LM/Newton solve). seed warm-starts the inner solve at all three points.
+    constexpr double dz = 1e-3;
+    const WheelPose p0 = pose_at_travel(travel_z,      steer_rad, seed);
+    const WheelPose pp = pose_at_travel(travel_z + dz, steer_rad, seed);
+    const WheelPose pm = pose_at_travel(travel_z - dz, steer_rad, seed);
     CornerTravelMaps m;
     m.w     = p0.position_world;
-    m.w_dq  = (pp.position_world - pm.position_world) / (2.0 * dth);
+    m.w_dq  = (pp.position_world - pm.position_world) / (2.0 * dz);
     m.w_dqq = (pp.position_world - 2.0 * p0.position_world + pm.position_world)
-              / (dth * dth);
+              / (dz * dz);
     m.toe_rad    = p0.toe_rad;
     m.camber_rad = p0.camber_rad;
     m.caster_rad = p0.caster_rad;
