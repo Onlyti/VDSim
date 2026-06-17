@@ -79,6 +79,7 @@ apps/jump_demo/*/frames/
 # Chrono parity build artifacts (the reference CSV IS committed; these are not)
 external/chrono_parity/build/
 external/chrono_parity/_pac02_chrono.json
+external/chrono_kc/build/
 configs/tires/measured/
 *_private/
 
