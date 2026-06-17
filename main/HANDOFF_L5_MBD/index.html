@@ -2373,6 +2373,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#next-session-handoff-2026-06-17-token-limit-wrap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NEXT-SESSION HANDOFF — 2026-06-17 (token-limit wrap)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#resolved-2026-06-17-free-3d-inertial-unsprung-implemented-377377-green" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2404,6 +2415,46 @@
 
 
 <h1 id="handoff-l5-dynamic-mbd-suspension">Handoff — L5 dynamic MBD suspension<a class="headerlink" href="#handoff-l5-dynamic-mbd-suspension" title="Permanent link">&para;</a></h1>
+<h2 id="next-session-handoff-2026-06-17-token-limit-wrap">NEXT-SESSION HANDOFF — 2026-06-17 (token-limit wrap)<a class="headerlink" href="#next-session-handoff-2026-06-17-token-limit-wrap" title="Permanent link">&para;</a></h2>
+<p><strong>목표</strong>: VDSim L5 고충실도 차량동역학 = hardpoint-driven(Adams급) free-3D MBD를 구현하고
+독립/해석 검증까지. 차별점 "hardpoint→거동 emergent"를 동역학에서 실현 + 검증.</p>
+<p><strong>현재 상태</strong>: L5 high-fidelity MBD <strong>feature-complete + 내부/해석 검증 완료</strong>. <strong>382/382 ctest
+green</strong>. main HEAD = <code>7d77754</code>. 태그 <code>v0.6.0</code> 푸시됨. <strong>미push = <code>7d77754</code> 1개 + 이 핸드오프
+커밋</strong> (push는 사용자 명시 승인 필요 — classifier가 막음).</p>
+<p><strong>완료</strong>:
+- free-3D inertial unsprung MBD (State <code>unsprung_pos/vel</code>; 에너지일관; 임의노면) — B1 lumped strut 대체.
+- hardpoint-emergent anti-dive/squat + roll-centre migration (DAE travel path).
+- progressive coil rate + damper (spring eye-to-eye <code>l(z_v)</code>, <code>MR=dl/dz_v</code>; MacPherson/DW).
+- gyroscopic wheel-spin coupling (<code>-ω×H</code>, steer-tilt 포함).
+- per-substep contact re-query (SimSession 기본; contact를 실제 wheel 입자 x_u에서 평가 → loop/bank false-contact 제거).
+- KC 검증: 내부 cross-val(native≡DAE) + analytic anchor(순수 trailing arm camber/toe=0).
+- Chrono KC parity 하니스 scaffold (<code>external/chrono_kc/</code>, skip-if-absent gate).
+- v0.6.0 tag, ROADMAP 갱신, superseded 설계문서 3개 배너.</p>
+<p><strong>미완 / 다음 할 일</strong>:
+1. <strong><code>7d77754</code> + 핸드오프 push</strong> (사용자 승인 시).
+2. <strong>Chrono external KC</strong> (오프라인, Chrono 빌드 필요): <code>gen_kc_reference.cpp</code> TODO 채움
+   (PointId 철자·<code>ChSuspensionTestRig</code> API·spring/damper getter) → 실행 → reference CSV 커밋
+   → <code>ChronoKcParity</code> 게이트 활성. 이 환경엔 Chrono 없음.
+3. <strong>KC compliance (Tier 2) — 보류</strong>: lumped 모델+default bushing이 ~1.5 deg/g (실제 5~10배).
+   <strong>external reference(Chrono/Adams) 확보 후</strong> bushing rate 맞춰 넣을 것. 지금 넣으면 핸들링 악화.
+4. <strong>Tier 3 (in-env 권고 다음)</strong>: hardpoint authoring/viz UI — <code>builder/suspension_editor.html</code>
+   ↔ free-3D 연결 점검부터. 검증된 기하를 사용자가 만질 수 있게 = 제품화.
+5. 잔여 2차: gyro camber-axis tilt. (spin-up reaction은 drivetrain mount 효과라 drivetrain 트랙.)</p>
+<p><strong>주의 / 함정</strong>:
+- KC compliance default-bushing magnitude <strong>틀림(5~10배)</strong> — external 검증 없이 ship 금지.
+- spin-up reaction은 unsprung 아님(free wheel 베어링은 스핀축 토크 미전달) — drivetrain.
+- Chrono <code>gen_kc_reference.cpp</code>는 <strong>스켈레톤</strong> — API TODO + ISO frame·z_v abscissa 검증 필요.
+- per-substep re-query는 SimSession 경로만 활성; acceptance 테스트는 frozen contact 사용.
+- <code>susp_compression</code>=derived 상대 travel(계약); inertial DOF=State <code>unsprung_pos/vel</code>.
+- git commit 전 <strong>repo root로 cd</strong> (build/에 있으면 pathspec 실패).
+- diagnostic harness <code>apps/jump_demo/strut_demo_dump.cpp</code>는 수동 컴파일 (env: VDSIM_EDUMP/THR/V0/DT/STEER/KLINK/REQ/SUBDT). 빌드: build/에서 <code>c++ ... ../apps/jump_demo/strut_demo_dump.cpp -o bin/strut_demo_dump lib/libvdsim_core.a lib/libspdlog.a lib/libyaml-cpp.a -pthread</code>.</p>
+<p><strong>관련 경로</strong>:
+- 모델: <code>core/src/free_3d_dynamics.cpp</code> · <code>core/src/multibody_hard_dae.cpp</code>(travel_maps + spring_length) · <code>core/include/vdsim/state.hpp</code>(unsprung_pos/vel) · <code>core/src/sim_session.cpp</code>(provider attach).
+- 설계(shipped): <code>docs/design/L5_MBD_FREE3D_UNSPRUNG.md</code>. (superseded: <code>_DYNAMIC_COUPLING</code>/<code>_RIGOROUS</code>/<code>L5_6DOF_MULTIBODY</code>.)
+- 테스트: <code>tests/integration/test_stunt.cpp</code> · <code>test_l5_strut_validation.cpp</code> · <code>tests/unit/test_multibody_kinematics.cpp</code>(KcXval + KcAnalytic) · <code>tests/parity/test_chrono_kc_parity.cpp</code>.
+- Chrono 하니스: <code>external/chrono_kc/</code> (+ README 절차). tire 참고: <code>external/chrono_parity/</code>.
+- 로드맵: <code>docs/ROADMAP.md</code> (v0.6 untagged 반영, validation 섹션).</p>
+<hr />
 <h2 id="resolved-2026-06-17-free-3d-inertial-unsprung-implemented-377377-green">RESOLVED 2026-06-17 (free-3D inertial unsprung — IMPLEMENTED, 377/377 green)<a class="headerlink" href="#resolved-2026-06-17-free-3d-inertial-unsprung-implemented-377377-green" title="Permanent link">&para;</a></h2>
 <p>The B1 strut path is replaced by a free-3D inertial unsprung model. Design + reasoning +
 energy evidence: <strong><code>docs/design/L5_MBD_FREE3D_UNSPRUNG.md</code></strong>. Both prior designs are

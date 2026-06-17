@@ -3045,7 +3045,7 @@
 
 
 <h1 id="vdsim-product-roadmap">VDSim product roadmap<a class="headerlink" href="#vdsim-product-roadmap" title="Permanent link">&para;</a></h1>
-<p><strong>Last updated:</strong> 2026-06-17 · <strong>Tests:</strong> 381/381 ctest green (<code>main</code>)</p>
+<p><strong>Last updated:</strong> 2026-06-17 · <strong>Tests:</strong> 382/382 ctest green (<code>main</code>)</p>
 <p>Living roadmap from early PoC through v0.3. Tracks what shipped in mainline vs what
 is planned. Detail specs link to <code>docs/design/*</code>; tire phases in
 <a href="../design/TIRE_ROADMAP/"><code>design/TIRE_ROADMAP.md</code></a>.</p>
@@ -3104,7 +3104,7 @@ anti-dive/squat/roll-centre + progressive coil rate (untagged, v0.6 candidate)</
 </tr>
 <tr>
 <td>Validation</td>
-<td>ISO 7401/4138/3888 <strong>re-baselined + CI-gated</strong> (<code>IsoBaseline</code>), 381 ctest</td>
+<td>ISO 7401/4138/3888 <strong>re-baselined + CI-gated</strong> (<code>IsoBaseline</code>), 382 ctest</td>
 <td>Adams x-check rtol; commercial cross-val</td>
 </tr>
 </tbody>
@@ -3945,7 +3945,7 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <td></td>
 </tr>
 <tr>
-<td>[x] <strong>381</strong> automated ctests</td>
+<td>[x] <strong>382</strong> automated ctests</td>
 <td>Shipped</td>
 <td>2026-06-17</td>
 </tr>
@@ -3963,6 +3963,11 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <td>[x] <strong>KC geometry cross-validation</strong> (L5 DAE travel ≡ independent native kinematics, rtol-gated)</td>
 <td>Shipped</td>
 <td><code>MultibodyKcXval.DaeTravelMatchesNativeKinematics</code>; rules out engine bugs (internal consistency)</td>
+</tr>
+<tr>
+<td>[x] <strong>KC analytic anchor</strong> (pure-lateral trailing arm ⇒ camber/toe gain = 0, closed form)</td>
+<td>Shipped</td>
+<td><code>MultibodyKcAnalytic.PureTrailingArmZeroCamberToe</code>; validates the engine vs math, not just itself</td>
 </tr>
 <tr>
 <td>[~] <strong>External Chrono KC cross-val</strong> (camber/toe vs travel vs Chrono::Vehicle <code>ChSuspensionTestRig</code>, same hardpoints)</td>
@@ -4081,7 +4086,7 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Gyroscopic wheel-spin coupling (yaw↔roll at speed)</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Per-substep contact re-query default in <code>SimSession</code>; contact sampled at the wheel
   particle (exact on curved surfaces, no false contact leaving a loop/bank)</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> 381/381 ctest; design <a href="../design/L5_MBD_FREE3D_UNSPRUNG/"><code>L5_MBD_FREE3D_UNSPRUNG.md</code></a></li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> 382/382 ctest; design <a href="../design/L5_MBD_FREE3D_UNSPRUNG/"><code>L5_MBD_FREE3D_UNSPRUNG.md</code></a></li>
 </ul>
 <h3 id="v052-planned">v0.5.2+ (planned)<a class="headerlink" href="#v052-planned" title="Permanent link">&para;</a></h3>
 <ul class="task-list">
@@ -4098,7 +4103,7 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <blockquote>
 <p>Open-core L1–L5 vehicle dynamics with Pacejka MF tire, optional LuGre brush + belt
 transient layers, opt-in MF2002 <code>.tir</code> backend and drivetrain v2 (engine map + gearbox),
-parts catalog, real-time UDP/FMI, and ISO-standard validation (381 ctests). The L5 model is
+parts catalog, real-time UDP/FMI, and ISO-standard validation (382 ctests). The L5 model is
 a hardpoint-driven free-3D multibody: anti-dive/squat, roll-centre migration and a
 progressive coil rate emerge from the suspension geometry, energy-consistent on arbitrary
 surfaces (banks, loops, jumps).</p>
