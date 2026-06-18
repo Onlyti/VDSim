@@ -161,6 +161,15 @@ class _VehicleView:
 
     The simulation runtime is flat (VehicleParams + a tyre model in the dynamics);
     this is only a hierarchical *view* over those handles, added for user data access.
+
+    TODO(parts): expose the other parts on this path — brake / steering / drivetrain /
+    suspension / anti-roll-bar — as `plant.vehicle.<part>.model` / `.params`.
+    Why: only the tyre has a live model handle today; the rest are either pluggable
+    modules (IBrakeSystem etc., set via set_*_module with no getter) or flat fields under
+    VehicleParams, so there is no per-part object to surface yet.
+    Generalization path: add const getters on IVehicleDynamics for the installed modules
+    (mirror tire()), bind them, then add a _PartView per subsystem here. Their params can
+    already be read today via `plant.vehicle.params` (flat VehicleParams).
     """
     def __init__(self, vp, tire_view):
         self._vp = vp

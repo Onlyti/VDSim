@@ -231,6 +231,8 @@ LuGre (contact bristle, presliding). See [`TIRE_ROADMAP.md`](design/TIRE_ROADMAP
 | [x] `fleet[]` + part overrides materialization | Shipped | |
 | [x] Maneuvers `configs/maneuvers/` | Shipped | |
 | [x] Python `Vehicle.preset()` / `Tire.preset()` | Shipped | |
+| [x] Plant data-access view `plant.vehicle.tire.{model,params}` (vehicle→part→physics, read-only) | Shipped 2026-06-18 | tyre only |
+| [ ] Extend the data-access view to brake/steering/drivetrain/suspension/ARB parts | TODO | needs const module getters on IVehicleDynamics (only set_*_module exists); tyre is the only part with a live model handle today |
 | [x] `tools/import_part_pack.py` stub | Shipped | M5 |
 | [ ] C++ in-process catalog resolver | Planned | PARTS_CATALOG §12 |
 | [ ] External catalog zip import (full) | Planned | |
