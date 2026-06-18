@@ -139,6 +139,39 @@ def _fx_to_cmdl1(vp: vdsim.VehicleParams, delta: float, fx: float) -> vdsim.CmdL
     return cmd
 
 
+class _TireView:
+    """Read-only data-access view of the tyre part (not used by the integrator)."""
+    def __init__(self, model, params):
+        self._model = model
+        self._params = params
+
+    @property
+    def model(self):
+        """The live ITireModel the plant runs (.compute(TireInput), peak queries)."""
+        return self._model
+
+    @property
+    def params(self):
+        """TireParams (backend, coefficients, lugre/belt sub-params)."""
+        return self._params
+
+
+class _VehicleView:
+    """Read-only vehicle -> part -> physics access path for data delivery.
+
+    The simulation runtime is flat (VehicleParams + a tyre model in the dynamics);
+    this is only a hierarchical *view* over those handles, added for user data access.
+    """
+    def __init__(self, vp, tire_view):
+        self._vp = vp
+        self.tire = tire_view
+
+    @property
+    def params(self):
+        """VehicleParams (mass/geometry/drivetrain/steering/brake/aero/suspension)."""
+        return self._vp
+
+
 class VDSimPlant:
   """Ld2 7DOF Pacejka plant with direct Fx→torque path (no throttle map)."""
 
@@ -202,10 +235,17 @@ class VDSimPlant:
       return self._obs()
 
   @property
+  def vehicle(self):
+      """Hierarchical data-access view: vehicle -> part -> physics.
+      `plant.vehicle.tire.model` (live ITireModel), `plant.vehicle.tire.params`
+      (TireParams), `plant.vehicle.params` (VehicleParams). Read-only facade over the
+      flat runtime — for user data delivery, not used by the integrator."""
+      return _VehicleView(self._vp, _TireView(self._dyn.tire(), self._tp))
+
+  @property
   def tire_model(self):
-      """The live tire model this plant runs (ITireModel). Single source of truth for
-      offline queries — friction ellipse / combined-slip peak via .compute(TireInput).
-      Same instance the integrator uses; no re-load from the .tir."""
+      """Shortcut for `plant.vehicle.tire.model` — the live ITireModel the plant runs
+      (friction ellipse / combined-slip peak via .compute(TireInput); no .tir re-load)."""
       return self._dyn.tire()
 
   def _obs(self) -> dict:

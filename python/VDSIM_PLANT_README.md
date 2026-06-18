@@ -62,6 +62,9 @@ obs = plant.step([delta_roadwheel_rad, Fx_total_N])
 
 Compare current `alpha`/`kappa` to `alpha_peak`/`kappa_peak` for rising vs sliding (drift) — see tutorial §4.
 
+Data-access path (read-only view, vehicle → part → physics): `plant.vehicle.params`,
+`plant.vehicle.tire.params`, `plant.vehicle.tire.model` (live ITireModel; `plant.tire_model` is a shortcut).
+
 No usage / violation metrics in the plant (thesis-side only).
 
 ## Preset: `ioniq5_awd`

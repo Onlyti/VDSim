@@ -152,10 +152,19 @@ Rather than bake that in, the plant exposes the **tyre evaluator itself**, so yo
 the exact combined force surface and find the peak in any direction yourself (same model the
 plant runs — no coefficient dump, nothing to re-implement):
 
+Data access mirrors **vehicle → part → physics** (a read-only view for data delivery; the
+runtime itself stays flat):
+
+```python
+plant.vehicle.params            # VehicleParams (mass/geometry/drivetrain/steering/brake/aero)
+plant.vehicle.tire.params       # TireParams (backend, coefficients, lugre/belt)
+plant.vehicle.tire.model        # live ITireModel  (== plant.tire_model shortcut)
+```
+
 ```python
 import vdsim, math
 # Preferred: the LIVE tyre the plant runs (single source of truth, no .tir re-load):
-tire = plant.tire_model
+tire = plant.vehicle.tire.model            # or the shortcut plant.tire_model
 # Or load a standalone instance from a .tir:
 # tire = vdsim.create_magic_formula_tire_from_tir("configs/parts/tire/ioniq5_pac2002.tir")
 
