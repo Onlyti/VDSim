@@ -30,6 +30,34 @@ sys.path += ["/home/ailab-12/git/VDSim/build/python",
 from vdsim_plant import VDSimPlant
 ```
 
+### ⚠️ 중요: Python 버전 호환성
+
+위의 default build는 **시스템 Python 3.8**로 pybind11 모듈을 빌드합니다. 당신의 MPC 환경
+(예: `conda vla`, py3.11)이 다르면 **import vdsim 실패** (`undefined symbol` 에러).
+
+**당신의 Python 환경에서 재빌드하세요:**
+
+```bash
+conda activate vla                       # 당신의 MPC 환경 (py3.11 등)
+pip install pybind11                     # 그 환경에 설치
+cd /home/ailab-12/git/VDSim
+cmake -B build_vla -DCMAKE_BUILD_TYPE=Release -DVDSIM_BUILD_PYTHON=ON \
+      -DPython3_EXECUTABLE="$(which python)" \
+      -Dpybind11_DIR="$(python -m pybind11 --cmakedir)"
+cmake --build build_vla -j
+```
+
+그 다음 Python code에서:
+
+```python
+import sys
+sys.path += ["/home/ailab-12/git/VDSim/build_vla/python",  # ← build_vla 사용
+             "/home/ailab-12/git/VDSim/python"]
+from vdsim_plant import VDSimPlant
+```
+
+**생략하면 안 됩니다.** MPC env와 plant pybind ABI가 일치해야 import 성공.
+
 ## 2. 교체 레시피 (closed_loop_sim.py)
 
 기존 bicycle plant의 `plant_deriv`/`rk4`를 아래로 교체. MPC는 손대지 않음.
