@@ -233,6 +233,10 @@ LuGre (contact bristle, presliding). See [`TIRE_ROADMAP.md`](design/TIRE_ROADMAP
 | [x] Python `Vehicle.preset()` / `Tire.preset()` | Shipped | |
 | [x] Plant data-access view `plant.vehicle.tire.{model,params}` (vehicle→part→physics, read-only) | Shipped 2026-06-18 | tyre only |
 | [ ] Extend the data-access view to brake/steering/drivetrain/suspension/ARB parts | TODO | needs const module getters on IVehicleDynamics (only set_*_module exists); tyre is the only part with a live model handle today |
+| [ ] **VLA Thesis Plant API P1:** roll angle in obs (`obs["roll"]`, `obs["pitch"]`) | Planned | BETA #1 customer request; already computed in L2–L5 |
+| [ ] **VLA Thesis Plant API P1:** split-μ friction map (left/right different grip) | Planned | `create_split_mu_ground` exists in C++; needs Python API surface |
+| [ ] **VLA Thesis Plant API P2:** steering actuator lag option (selectable 1st-order LPF) | Planned | `VehicleParams.steer_deadtime_s` implemented; needs API convenience + docs |
+| [ ] **VLA Thesis Plant API P2:** smooth friction patch transition (tanh vs step μ) | Planned | Reduces numerical jitter at patch boundaries |
 | [x] `tools/import_part_pack.py` stub | Shipped | M5 |
 | [ ] C++ in-process catalog resolver | Planned | PARTS_CATALOG §12 |
 | [ ] External catalog zip import (full) | Planned | |
@@ -406,6 +410,10 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 
 | Doc | Role |
 |-----|------|
+| **[`PLANT_CUSTOMER_FEEDBACK.md`](PLANT_CUSTOMER_FEEDBACK.md)** | **BETA #1 customer feedback (VLA thesis); P1/P2 feature requests** |
+| [`VDSIM_PLANT_TUTORIAL.md`](VDSIM_PLANT_TUTORIAL.md) | External closed-loop plant user guide |
+| [`PLANT_DELIVERY_NOTE.md`](PLANT_DELIVERY_NOTE.md) | Thesis-side handoff (setup, API, validation) |
+| [`design/VLA_THESIS_PLANT.md`](design/VLA_THESIS_PLANT.md) | Plant specification |
 | [`design/V0.2_PLAN.md`](design/V0.2_PLAN.md) | v0.2 workstreams (historical + status) |
 | [`design/V0.4_PLAN.md`](design/V0.4_PLAN.md) | Stunt / Ld5 |
 | [`design/V0.4_SLOPE_JUMP_DYNAMICS.md`](design/V0.4_SLOPE_JUMP_DYNAMICS.md) | Grade, terrain, T23 jump path |
