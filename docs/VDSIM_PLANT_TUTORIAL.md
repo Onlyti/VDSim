@@ -34,12 +34,14 @@ cmake --build build -j                                              # core + pyt
 `VDSIM_BUILD_PYTHON` defaults **OFF** — you must pass `-DVDSIM_BUILD_PYTHON=ON` to get the
 `vdsim` pybind module under `build/python/`.
 
-### Building for an external interpreter (conda / venv) — important
+### ⚠️ Critical: Building for your Python environment (conda / venv)
 
-The pybind module is **ABI-locked to one Python**. A shipped `vdsim.cpython-38-*.so` will **not
-import** under a different interpreter (e.g. a conda env on 3.11 — the typical acados / cvxpy
-MPC setup). If your controller runs in its own env, rebuild the module **with that
-interpreter**:
+The pybind module is **ABI-locked to one Python interpreter**. A shipped `vdsim.cpython-38-*.so`
+will **not import** under a different interpreter (e.g. a conda env on 3.11 — the typical
+acados / cvxpy MPC setup).
+
+**If your controller runs in its own environment (recommended), you MUST rebuild the module
+with that interpreter:**
 
 ```bash
 conda activate vla                       # your MPC env (e.g. python 3.11)
@@ -50,8 +52,11 @@ cmake -B build_vla -DCMAKE_BUILD_TYPE=Release -DVDSIM_BUILD_PYTHON=ON \
 cmake --build build_vla -j
 ```
 
-Then point `sys.path` at `build_vla/python` (not `build/python`). Symptom of a mismatch:
-`ImportError: ... undefined symbol` or `module compiled against a different Python`.
+Then point `sys.path` at `build_vla/python` (not `build/python`).
+
+**Symptom of a mismatch:** `ImportError: ... undefined symbol` or `module compiled against a
+different Python`. See the command above — do not skip the `-DPython3_EXECUTABLE` / `-Dpybind11_DIR`
+flags.
 
 ---
 
@@ -123,25 +128,36 @@ cd /path/to/VDSim && python3 examples/vla_plant_demo.py     # writes /tmp/vla_pl
 | `wheel[i].kappa_peak` | slip **ratio at the longitudinal force peak**, this Fz/μ (`inf`=no peak) | – |
 
 The plant gives you the tyre's local **operating-point characteristics** as raw ground truth
-and leaves any metric to you. Per wheel you get the **capacity** (`mu_peak`), **where the peak
-is** (`alpha_peak`, `kappa_peak`), and **where you are** (`alpha`, `kappa`). From those:
+and leaves any metric to you. Per wheel you get:
 
-- friction saturation ratio (if you want one): `sat = ‖[Fx,Fy]‖ / (mu_peak·Fz)`, bounded by 1.
-  Use `mu_peak`, **not** `mu` (the road μ): the MF peak coefficient rises above nominal μ at
-  low load (`PDY2<0`), so `‖F‖/(mu·Fz)` can read >1 while the tyre is inside its own ellipse.
-- which side of the curve you are on — compare current slip to peak slip. This is the clean
-  signal, because the force-slip curve peaks then falls, so `sat` alone is non-monotone (both
-  reserve and drift read `sat<1`):
+- **`mu_peak`** — realized tyre peak coefficient at this Fz/μ (load-dependent). Rises above
+  contact μ at low load (`MF2002 PDY2 load sensitivity`).
+- **`alpha_peak`, `kappa_peak`** — slip position of the pure-axis force peak. This is the
+  **recommended core safety metric for limit-handling evaluation**:
 
-| `|alpha|` vs `alpha_peak` | state |
+### Recommended safety metric: slip-position classification
+
+Compare **current slip to peak slip** per wheel. The force-slip curve peaks then falls, making
+a single "grip-usage" scalar ill-defined past the peak. Instead, expose the raw positions and
+classify directly:
+
+| `|alpha|` vs `alpha_peak` | interpretation |
 |---|---|
-| `< alpha_peak` | rising side — grip in reserve |
-| `≈ alpha_peak` | at the lateral grip limit |
-| `> alpha_peak` | past peak — drift / departure (sliding tail) |
+| `< alpha_peak` | **rising side** — grip in reserve (understeer control room) |
+| `≈ alpha_peak` | **at peak** — grip limit reached |
+| `> alpha_peak` | **past peak** — drift / departure (sliding tail, no control recovery) |
 
-(same for `|kappa|` vs `kappa_peak` longitudinally). A single self-contained "grip-usage"
-scalar is ill-defined past the peak, which is why the plant exposes the raw characteristics
-instead of a derived metric.
+**Same logic for `|kappa|` vs `kappa_peak` longitudinally.** Why this works:
+- **Unambiguous:** Slip position directly tells you which side of the peak you are on (future grip
+  available vs exhausted).
+- **Load-dependent:** Both `alpha_peak` and `mu_peak` account for vertical load transfer and
+  MF2002 load sensitivity.
+- **Control-relevant:** Control laws can use `reserve = (alpha_peak - |alpha|) / alpha_peak` to
+  detect margin loss before a slip event.
+
+(For a friction-saturation ratio if you want one: `sat = ‖[Fx,Fy]‖ / (mu_peak·Fz)`, bounded by
+1. Use `mu_peak`, **not** `mu`: the realized peak rises above nominal at low load, so
+`‖F‖/(mu·Fz)` can read >1 while the tyre is inside its own ellipse.)
 
 ### Offline tyre query — combined-slip peak / friction ellipse
 
@@ -372,3 +388,30 @@ chance-constraint study wants to stress.
 | `FileNotFoundError: ... config` | use a bundled name (`ioniq5_awd`) or an absolute YAML path |
 | `import vdsim` fails | build first (`cmake --build build -j`) and add `build/python` to `sys.path` |
 | car won't slow under braking | `Fx` is a force intent; on low μ the realised brake force is capped at grip — expected |
+
+---
+
+## 13. Planned features (P1 — next release)
+
+Based on BETA #1 customer feedback (`docs/PLANT_CUSTOMER_FEEDBACK.md`):
+
+### Roll angle in observation dict
+**`obs["roll"]` + `obs["pitch"]` (rad)**
+- Computed today: L2/L3/L4/L5 already calculate quasi-static roll; L1 would return 0.
+- Use case: control law feedforward and load-transfer / σ_Fz verification.
+- Status: implementation ready; awaiting merge gate.
+
+### Split-μ friction map (left/right different grip)
+**`friction_map_left=[(x0, x1, mu), ...], friction_map_right=[...]` or unified 2D map**
+- C++ backend exists (`create_split_mu_ground`); not yet exposed to Python plant API.
+- Use case: ABS/ESC algorithm testing, split-μ braking scenarios.
+- Status: design phase (API surface TBD).
+
+---
+
+## 14. Related documents
+
+- Customer feedback and validation: [`docs/PLANT_CUSTOMER_FEEDBACK.md`](PLANT_CUSTOMER_FEEDBACK.md)
+- Full spec and design decisions: [`docs/design/VLA_THESIS_PLANT.md`](design/VLA_THESIS_PLANT.md)
+- Computational cost per dynamics level: [`docs/CATALOG_AND_PHYSICS.md`](CATALOG_AND_PHYSICS.md#computational-cost-per-step)
+- Bundled example: `examples/vla_plant_demo.py`
