@@ -223,7 +223,10 @@ PYBIND11_MODULE(vdsim, m) {
     py::class_<vdsim::ITireModel::Output>(m, "TireOutput")
         .def_readonly("Fx", &vdsim::ITireModel::Output::Fx)
         .def_readonly("Fy", &vdsim::ITireModel::Output::Fy)
-        .def_readonly("Mz", &vdsim::ITireModel::Output::Mz);
+        .def_readonly("Mz", &vdsim::ITireModel::Output::Mz)
+        .def_readonly("mu_peak",    &vdsim::ITireModel::Output::mu_peak)
+        .def_readonly("alpha_peak", &vdsim::ITireModel::Output::alpha_peak)
+        .def_readonly("kappa_peak", &vdsim::ITireModel::Output::kappa_peak);
     py::class_<vdsim::ITireModel>(m, "ITireModel")
         .def("initialize", &vdsim::ITireModel::initialize)
         .def("compute",    &vdsim::ITireModel::compute);

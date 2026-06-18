@@ -143,6 +143,38 @@ is** (`alpha_peak`, `kappa_peak`), and **where you are** (`alpha`, `kappa`). Fro
 scalar is ill-defined past the peak, which is why the plant exposes the raw characteristics
 instead of a derived metric.
 
+### Offline tyre query — combined-slip peak / friction ellipse
+
+`alpha_peak`/`kappa_peak` in the obs are the **pure-axis** peaks (lateral peak at κ=0, long
+peak at α=0). Under **combined** slip the true peak shifts (lower slip, and the resultant grows
+toward the ellipse) — there is no single combined peak slip; it depends on the slip direction.
+Rather than bake that in, the plant exposes the **tyre evaluator itself**, so you reconstruct
+the exact combined force surface and find the peak in any direction yourself (same model the
+plant runs — no coefficient dump, nothing to re-implement):
+
+```python
+import vdsim, math
+tire = vdsim.create_magic_formula_tire_from_tir("configs/parts/tire/ioniq5_pac2002.tir")
+
+def F(kappa, alpha, Fz=5764.0, mu=0.9):
+    i = vdsim.TireInput(); i.Fz=Fz; i.kappa=kappa; i.alpha=alpha; i.mu_long=mu; i.mu_lat=mu
+    o = tire.compute(i)            # also exposes o.mu_peak / o.alpha_peak / o.kappa_peak
+    return o.Fx, o.Fy
+
+# combined peak along a fixed slip direction (kappa:alpha ratio): 1-D search
+def combined_peak(ratio, Fz=5764.0, mu=0.9):
+    best, bestm = (0.0, 0.0), 0.0
+    s = 0.0
+    while s <= 0.5:
+        fx, fy = F(ratio*s, s, Fz, mu); m = math.hypot(fx, fy)
+        if m > bestm: bestm, best = m, (ratio*s, s)
+        s += 0.001
+    return best, bestm                # ((kappa*, alpha*), |F|*)
+```
+
+E.g. for this `.tir` at Fz=5764, μ=0.9: pure-lat peak α≈0.130; at κ:α=1 the combined peak is at
+α≈0.079 with a larger resultant — the load-dependent shift the pure `alpha_peak` cannot show.
+
 ---
 
 ## 5. Control input `u = [delta, Fx_total]`
