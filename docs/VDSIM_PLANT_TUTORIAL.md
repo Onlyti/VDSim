@@ -117,6 +117,7 @@ cd /path/to/VDSim && python3 examples/vla_plant_demo.py     # writes /tmp/vla_pl
 | `r` | yaw rate | rad/s (+ = left turn) |
 | `ax`, `ay` | body specific force (accelerometer) | m/s² |
 | `beta` | side-slip `atan2(vy,vx)` | rad |
+| `roll`, `pitch` | quasi-static roll / pitch (L2–L5; L1 → 0) | rad |
 | `wheel[i]` | per wheel `i` (FL0,FR1,RL2,RR3) | dict below |
 | `wheel[i].Fx`, `.Fy` | tyre force, **contact/wheel frame** | N (+Fx drive, +Fy left) |
 | `wheel[i].Fz` | vertical load | N |
@@ -218,9 +219,13 @@ E.g. for this `.tir` at Fz=5764, μ=0.9: pure-lat peak α≈0.130; at κ:α=1 th
 
 ## 6. Low-μ patches (spatially varying friction)
 
+### 6a. 1-D bands along the road (`friction_map`)
+
 Pass `friction_map` as a list of `(x_start, x_end, mu)` along the road (world-x; straight road
-⇒ s=x). Outside the patches, `base_mu` applies. Friction is per-wheel by contact x, so the
-front axle enters a patch before the rear (real time lag).
+⇒ s=x). Outside the patches, `base_mu` applies. At each patch boundary the grip transitions
+linearly over **1.0 m** (entry and exit); `x < x0 − 1` or `x > x1 + 1` uses `base_mu`.
+Overlapping patches take the **minimum** μ. Friction is per-wheel by contact x, so the front
+axle enters a patch before the rear (real time lag).
 
 ```python
 plant = VDSimPlant(
@@ -231,9 +236,88 @@ plant = VDSimPlant(
 )
 ```
 
+### 6b. 2-D polygon patches (`friction_map_2d`)
+
+For arbitrary regions in the ground plane (e.g. a localized ice spot offset from the lane centre),
+pass `friction_map_2d` — a list of `{"polygon": [(x0,y0), ...], "mu": 0.5}` entries (world
+frame, ISO 8855). Each polygon needs ≥3 vertices; edges close implicitly (last → first).
+
+Per-wheel μ is evaluated at the wheel contact `(x, y)`. Inside a polygon: patch μ. Outside:
+linear blend to `base_mu` over **1.0 m** from the polygon boundary (global `blend_distance`).
+Overlapping patches take the **minimum** μ (most restrictive grip). Mutually exclusive with
+`friction_map` (pass one or the other).
+
+```python
+plant = VDSimPlant(
+    config="ioniq5_awd",
+    base_mu=0.9,
+    friction_map_2d=[{
+        "polygon": [(80.0, -2.0), (120.0, -2.0), (120.0, 2.0), (80.0, 2.0)],
+        "mu": 0.5,
+    }],
+    control_dt=0.05, substep_dt=5e-4,
+)
+```
+
+Low-level access: `vdsim.create_polygon_friction_ground(z, base_mu, patches, blend_distance=1.0)`.
+
 ---
 
-## 7. Closed-loop with your controller (drop-in)
+## 7. Steering actuator lag (optional)
+
+By default the plant applies your road-wheel steer command **instantaneously** (ZOH at
+`control_dt`) — the right baseline for MPC. For robustness studies you can add a **first-order
+lag** on the realized steer angle using `VehicleParams.steer_deadtime_s` [s] as the time
+constant τ:
+
+\[
+\tau \dot\delta_\text{real} + \delta_\text{real} = \delta_\text{cmd}
+\]
+
+(discretized with an exact exponential step each `substep_dt`). Set `steer_deadtime_s = 0`
+(default) to recover the instantaneous path.
+
+`VDSimPlant` does not expose `steer_deadtime_s` in its constructor yet. Use one of these
+manual workflows **before** the session is created:
+
+**A — add to the vehicle YAML** (simplest):
+
+```yaml
+steer_deadtime_s: 0.05    # [s] 1st-order steer lag (τ)
+```
+
+**B — load, patch, write a temp config:**
+
+```python
+import tempfile
+import vdsim
+from vdsim_plant import VDSimPlant, resolve_vehicle_config
+
+vp_path = resolve_vehicle_config("ioniq5_awd")
+vp = vdsim.VehicleParams.from_yaml(str(vp_path))
+vp.steer_deadtime_s = 0.05
+with tempfile.NamedTemporaryFile(suffix=".yaml", delete=False) as f:
+    tmp = f.name
+vp.to_yaml(tmp)
+plant = VDSimPlant(config=tmp, control_dt=0.05, substep_dt=5e-4)
+```
+
+**Observe the delay** — step response after a steer step:
+
+```python
+obs = plant.reset(state0=[0, 0, 0, 16.7, 0, 0])
+r0 = obs["r"]
+for _ in range(20):
+    obs = plant.step([0.05, 0.0])   # δ_cmd = 0.05 rad
+print(obs["r"] - r0)              # yaw rate builds more slowly than with τ=0
+```
+
+Compare against `steer_deadtime_s: 0` (or default) on the same manoeuvre; larger τ ⇒ slower
+`obs["r"]` / lateral response for the same `delta` command.
+
+---
+
+## 8. Closed-loop with your controller (drop-in)
 
 The plant replaces a Python bicycle plant with no controller change. Pattern:
 
@@ -258,7 +342,7 @@ must divide `control_dt` evenly. The MPC at dt=0.1 with `control_dt=0.1, substep
 
 ---
 
-## 8. Parameter file — `ioniq5_awd.yaml`
+## 9. Parameter file — `ioniq5_awd.yaml`
 
 The bundled vehicle preset (`configs/vehicles/ioniq5_awd.yaml`), public Ioniq5-class:
 
@@ -323,11 +407,12 @@ saturating, not linear), and `PDY2=-0.10` drops peak μ from 0.90 to 0.81 at 2·
 
 ---
 
-## 9. API reference
+## 10. API reference
 
 ```python
 VDSimPlant(config="ioniq5_awd",   # vehicle preset name or path
-           friction_map=None,     # [(x0, x1, mu), ...] or None (uniform base_mu)
+           friction_map=None,     # [(x0, x1, mu), ...] 1-D bands along x
+           friction_map_2d=None,  # [{"polygon": [(x,y),...], "mu": ...}, ...]
            base_mu=0.9,           # (0, 1.2]
            control_dt=0.05,       # s, one step() period (ZOH); >= substep_dt
            substep_dt=5e-4)       # s, internal fixed integration step; divides control_dt
@@ -340,7 +425,7 @@ Inputs are validated; bad ones raise a clear `ValueError`/`TypeError` (see Troub
 
 ---
 
-## 10. What's validated (so you can trust it)
+## 11. What's validated (so you can trust it)
 
 Gated by `ctest -R VlaPlant` (394/394 suite green):
 - **Dry handling = linear bicycle within ~4 %** (steady yaw-rate gain vs the single-track model
@@ -363,7 +448,7 @@ chance-constraint study wants to stress.
 
 ---
 
-## 11. Tips & gotchas
+## 12. Tips & gotchas
 
 - **Determinism**: no RNG; identical inputs ⇒ identical outputs. Keep `substep_dt` fixed for
   reproducible figures.
@@ -377,7 +462,7 @@ chance-constraint study wants to stress.
 
 ---
 
-## 12. Troubleshooting
+## 13. Troubleshooting
 
 | symptom | cause / fix |
 |---|---|
@@ -391,25 +476,18 @@ chance-constraint study wants to stress.
 
 ---
 
-## 13. Planned features (P1 — next release)
+## 14. Planned features (P2 — next release)
 
 Based on BETA #1 customer feedback (`docs/PLANT_CUSTOMER_FEEDBACK.md`):
 
-### Roll angle in observation dict
-**`obs["roll"]` + `obs["pitch"]` (rad)**
-- Computed today: L2/L3/L4/L5 already calculate quasi-static roll; L1 would return 0.
-- Use case: control law feedforward and load-transfer / σ_Fz verification.
-- Status: implementation ready; awaiting merge gate.
-
 ### Split-μ friction map (left/right different grip)
-**`friction_map_left=[(x0, x1, mu), ...], friction_map_right=[...]` or unified 2D map**
+**`friction_map_left=[(x0, x1, mu), ...], friction_map_right=[...]`**
 - C++ backend exists (`create_split_mu_ground`); not yet exposed to Python plant API.
 - Use case: ABS/ESC algorithm testing, split-μ braking scenarios.
-- Status: design phase (API surface TBD).
 
 ---
 
-## 14. Related documents
+## 15. Related documents
 
 - Customer feedback and validation: [`docs/PLANT_CUSTOMER_FEEDBACK.md`](PLANT_CUSTOMER_FEEDBACK.md)
 - Full spec and design decisions: [`docs/design/VLA_THESIS_PLANT.md`](design/VLA_THESIS_PLANT.md)

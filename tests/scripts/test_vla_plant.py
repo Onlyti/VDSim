@@ -52,6 +52,41 @@ def test_dry_qualitative_lane_change():
     print("smoke 1 dry qualitative: ok (r_peak={:.4f} rad/s)".format(r_peak))
 
 
+def test_roll_pitch_in_obs():
+    plant = VDSimPlant(base_mu=0.9, control_dt=DT, substep_dt=SUB)
+    obs = plant.reset([0.0, 0.0, 0.0, V0, 0.0, 0.0])
+    assert "roll" in obs and "pitch" in obs
+    roll_peak = 0.0
+    for k in range(80):
+        t = k * DT
+        delta = 0.06 if 1.0 <= t < 3.0 else 0.0
+        obs = plant.step([delta, 0.0])
+        roll_peak = max(roll_peak, abs(obs["roll"]))
+    assert roll_peak > 0.002, f"expected roll under steer, peak={roll_peak}"
+    print("smoke roll/pitch obs: ok (roll_peak={:.4f} rad)".format(roll_peak))
+
+
+def test_polygon_friction_map_2d():
+    plant = VDSimPlant(
+        friction_map_2d=[{
+            "polygon": [(60.0, -3.0), (140.0, -3.0), (140.0, 3.0), (60.0, 3.0)],
+            "mu": 0.5,
+        }],
+        base_mu=0.9,
+        control_dt=DT,
+        substep_dt=SUB,
+    )
+    obs = plant.reset([100.0, 0.0, 0.0, V0, 0.0, 0.0])
+    low_mu = all(w["mu"] <= 0.51 for w in obs["wheel"])
+    assert low_mu, "inside polygon should see patch mu"
+    for _ in range(100):
+        obs = plant.step([0.0, 0.0])
+    assert obs["X"] > 145.0, f"expected to leave polygon, X={obs['X']}"
+    high_mu = all(w["mu"] >= 0.85 for w in obs["wheel"])
+    assert high_mu, "outside polygon should see base_mu"
+    print("smoke polygon friction_map_2d: ok")
+
+
 def test_patch_brake_turn_grip_loss():
     # Low-mu patch mid-trajectory; aggressive brake + steer over-demands grip.
     plant = VDSimPlant(
@@ -129,6 +164,8 @@ def test_speed_budget():
 
 def main():
     test_dry_qualitative_lane_change()
+    test_roll_pitch_in_obs()
+    test_polygon_friction_map_2d()
     test_patch_brake_turn_grip_loss()
     test_gt_consistency_and_determinism()
     test_speed_budget()

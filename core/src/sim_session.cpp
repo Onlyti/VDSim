@@ -1,6 +1,8 @@
 // SimSession implementation. See sim_session.hpp.
 #include "vdsim/sim_session.hpp"
 
+#include <cmath>
+
 namespace vdsim {
 
 SimSession::SimSession(std::unique_ptr<IVehicleDynamics> dyn,
@@ -30,6 +32,7 @@ void SimSession::reset(const State& s0) {
     sensor_.reset(s0);
     sensors_.reset();
     cascade_.reset();
+    direct_steer_lag_ = 0.0;
     true_state_ = s0;
     meas_state_ = s0;
     latched_    = ControlInput{CmdL4{}};
@@ -68,6 +71,21 @@ double steer_from_input(const ControlInput& u) {
     }, u);
 }
 
+ControlInput with_steer_angle(const ControlInput& u, double steer) {
+    return std::visit([&](const auto& cmd) -> ControlInput {
+        using T = std::decay_t<decltype(cmd)>;
+        if constexpr (std::is_same_v<T, CmdSplit>) {
+            return u;
+        } else if constexpr (std::is_same_v<T, CmdL7> || std::is_same_v<T, CmdL8>) {
+            return u;
+        } else {
+            auto c = cmd;
+            c.steer_angle_wheel = steer;
+            return ControlInput{c};
+        }
+    }, u);
+}
+
 }  // namespace
 
 void SimSession::tick(double dt) {
@@ -85,7 +103,16 @@ void SimSession::tick(double dt) {
     ground_->query(s, vp_, contacts);
 
     if (direct_control_path_) {
-        dyn_->step(cmd, contacts, dt);
+        ControlInput dyn_cmd = cmd;
+        double steer_realized = steer_from_input(cmd);
+        if (vp_.steer_deadtime_s > 1e-9) {
+            const double tau = vp_.steer_deadtime_s;
+            const double a = std::exp(-dt / tau);
+            direct_steer_lag_ = a * direct_steer_lag_ + (1.0 - a) * steer_realized;
+            steer_realized = direct_steer_lag_;
+            dyn_cmd = with_steer_angle(cmd, steer_realized);
+        }
+        dyn_->step(dyn_cmd, contacts, dt);
         const State next = dyn_->state();
         const State meas = sensor_.apply(next, dt);
 
@@ -98,7 +125,7 @@ void SimSession::tick(double dt) {
         const auto Ft = dyn_->tire_forces_body();
         const auto kappa = dyn_->wheel_slip_ratio();
         const auto alpha = dyn_->wheel_slip_angle();
-        const double steer_cmd = steer_from_input(cmd);
+        const double steer_cmd = steer_realized;
         const SensorMeas sm = sensors_.apply(next, ax, ay, steer_cmd, dt);
 
         {
@@ -106,7 +133,7 @@ void SimSession::tick(double dt) {
             true_state_ = next;
             meas_state_ = meas;
             ax_ = ax; ay_ = ay; roll_ = roll; pitch_ = pitch; rack_ = rack;
-            steer_applied_ = steer_cmd;
+            steer_applied_ = steer_realized;
             throttle_applied_ = 0.0;
             brake_applied_ = 0.0;
             Fz_ = Fz; tire_forces_ = Ft;

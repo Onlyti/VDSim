@@ -110,6 +110,7 @@ private:
     SensorMeas sensors_meas_ {};
     double sim_time_ {0.0};
     bool direct_control_path_ {false};
+    double direct_steer_lag_ {0.0};
     std::chrono::steady_clock::time_point last_input_tp_ {std::chrono::steady_clock::now()};
 };
 

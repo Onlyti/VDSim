@@ -466,3 +466,58 @@ TEST(VlaPlant, FrictionPatchPerWheelMu) {
     EXPECT_NEAR(c[vdsim::WHEEL_FL].mu_long, 0.5, 1e-9);
     EXPECT_NEAR(c[vdsim::WHEEL_RL].mu_long, 0.5, 1e-9);
 }
+
+TEST(VlaPlant, FrictionPatchSmoothTransition) {
+    auto vp = ioniq5_vp();
+    auto ground = vdsim::create_friction_patch_ground(0.0, 0.9, {{10.0, 30.0, 0.5}});
+    vdsim::State s;
+    s.position.y() = 0.0;
+    vdsim::ContactArray c{};
+
+    const double lf = vp.cg_to_front;
+    auto mu_at_fl_x = [&](double x_fl) {
+        s.position.x() = x_fl - lf;
+        ground->query(s, vp, c);
+        return c[vdsim::WHEEL_FL].mu_long;
+    };
+
+    EXPECT_NEAR(mu_at_fl_x(9.0), 0.9, 1e-9);
+    EXPECT_NEAR(mu_at_fl_x(9.5), 0.7, 1e-9);
+    EXPECT_NEAR(mu_at_fl_x(20.0), 0.5, 1e-9);
+    EXPECT_NEAR(mu_at_fl_x(30.5), 0.7, 1e-9);
+    EXPECT_NEAR(mu_at_fl_x(31.0), 0.9, 1e-9);
+}
+
+TEST(VlaPlant, PolygonFrictionInsideAndOutside) {
+    auto vp = ioniq5_vp();
+    vdsim::PolygonMuPatch patch;
+    patch.polygon = {{10.0, -2.0}, {30.0, -2.0}, {30.0, 2.0}, {10.0, 2.0}};
+    patch.mu = 0.5;
+    auto ground = vdsim::create_polygon_friction_ground(0.0, 0.9, {patch}, 1.0);
+    vdsim::ContactArray c{};
+    vdsim::State inside;
+    inside.position.x() = 20.0;
+    inside.position.y() = 0.0;
+    ground->query(inside, vp, c);
+    EXPECT_NEAR(c[vdsim::WHEEL_FL].mu_long, 0.5, 1e-9);
+    vdsim::State outside;
+    outside.position.x() = 50.0;
+    outside.position.y() = 0.0;
+    ground->query(outside, vp, c);
+    EXPECT_NEAR(c[vdsim::WHEEL_FL].mu_long, 0.9, 1e-9);
+}
+
+TEST(VlaPlant, PolygonFrictionBlendZone) {
+    auto vp = ioniq5_vp();
+    vdsim::PolygonMuPatch patch;
+    patch.polygon = {{0.0, -5.0}, {20.0, -5.0}, {20.0, 5.0}, {0.0, 5.0}};
+    patch.mu = 0.5;
+    auto ground = vdsim::create_polygon_friction_ground(0.0, 0.9, {patch}, 1.0);
+    vdsim::State s;
+    s.position.x() = 20.0 - vp.cg_to_front + 0.5;
+    s.position.y() = 0.0;
+    vdsim::ContactArray c{};
+    ground->query(s, vp, c);
+    const double mu_exp = 0.5 + 0.5 * (0.9 - 0.5);
+    EXPECT_NEAR(c[vdsim::WHEEL_FL].mu_long, mu_exp, 1e-9);
+}

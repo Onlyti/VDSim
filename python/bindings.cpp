@@ -725,6 +725,20 @@ PYBIND11_MODULE(vdsim, m) {
           },
           py::arg("z") = 0.0, py::arg("base_mu") = 1.0,
           py::arg("patches") = std::vector<std::tuple<double, double, double>>{});
+    py::class_<vdsim::PolygonMuPatch>(m, "PolygonMuPatch")
+        .def(py::init<>())
+        .def_readwrite("polygon", &vdsim::PolygonMuPatch::polygon)
+        .def_readwrite("mu", &vdsim::PolygonMuPatch::mu);
+    m.def("create_polygon_friction_ground",
+          [](double z, double base_mu,
+             std::vector<vdsim::PolygonMuPatch> patches,
+             double blend_distance) {
+              return vdsim::create_polygon_friction_ground(
+                  z, base_mu, patches, blend_distance);
+          },
+          py::arg("z") = 0.0, py::arg("base_mu") = 1.0,
+          py::arg("patches") = std::vector<vdsim::PolygonMuPatch>{},
+          py::arg("blend_distance") = 1.0);
     m.def("create_inclined_ground", &vdsim::create_inclined_ground,
           py::arg("z0") = 0.0, py::arg("grade") = 0.0, py::arg("bank") = 0.0,
           py::arg("mu") = 1.0);
@@ -1036,18 +1050,26 @@ PYBIND11_MODULE(vdsim, m) {
           [](const vdsim::VehicleParams& vp, const vdsim::TireParams& tp,
              double z, double base_mu,
              std::vector<std::tuple<double, double, double>> patches,
+             std::vector<vdsim::PolygonMuPatch> poly_patches,
+             double blend_distance,
              const vdsim::SolverParams& solver, double nominal_dt) {
               vdsim::SimConfig cfg;
               cfg.nominal_dt = nominal_dt;
               cfg.direct_control_path = true;
+              std::unique_ptr<vdsim::IContactProvider> ground =
+                  poly_patches.empty()
+                  ? vdsim::create_friction_patch_ground(z, base_mu, patches)
+                  : vdsim::create_polygon_friction_ground(
+                        z, base_mu, poly_patches, blend_distance);
               return std::make_unique<vdsim::SimSession>(
-                  vdsim::create_seven_dof(),
-                  vdsim::create_friction_patch_ground(z, base_mu, patches),
+                  vdsim::create_seven_dof(), std::move(ground),
                   vp, tp, solver, cfg);
           },
           py::arg("vehicle"), py::arg("tire"),
           py::arg("z") = 0.0, py::arg("base_mu") = 1.0,
           py::arg("patches") = std::vector<std::tuple<double, double, double>>{},
+          py::arg("poly_patches") = std::vector<vdsim::PolygonMuPatch>{},
+          py::arg("blend_distance") = 1.0,
           py::arg("solver") = vdsim::SolverParams{},
           py::arg("nominal_dt") = 0.001);
 }

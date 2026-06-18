@@ -4,7 +4,7 @@ Contract (stable):
   Control u = [delta_roadwheel_rad, Fx_total_N]  (ISO 8855, force intent at CG).
   Observation dict each step (true state, contact-frame tyre forces, FL0..RR3):
 
-    X, Y, psi, vx, vy, r, ax, ay, beta   — vehicle [m, rad, m/s, m/s²]
+    X, Y, psi, vx, vy, r, ax, ay, beta, roll, pitch   — vehicle [m, rad, m/s, m/s²]
     wheel: list[4] of {Fx, Fy, Fz, alpha, kappa, mu, mu_peak, alpha_peak, kappa_peak}
       Fx, Fy — tyre contact / wheel frame [N]  (+Fx drive, +Fy left)
       Fz [N], alpha [rad], kappa [-], mu [-] contact friction used this step
@@ -105,6 +105,39 @@ def _validate_friction_map(friction_map, base_mu: float):
         if not (0.0 < mu <= 1.2):
             raise ValueError(f"friction_map[{i}]: mu={mu} outside (0, 1.2]")
 
+def _validate_friction_map_2d(friction_map_2d, base_mu: float):
+    if friction_map_2d is None:
+        return
+    if not isinstance(friction_map_2d, (list, tuple)):
+        raise TypeError("friction_map_2d must be a list of {polygon, mu} dicts")
+    for i, entry in enumerate(friction_map_2d):
+        if not isinstance(entry, dict):
+            raise ValueError(f"friction_map_2d[{i}]: expected dict with polygon, mu")
+        if "polygon" not in entry or "mu" not in entry:
+            raise ValueError(f"friction_map_2d[{i}]: keys 'polygon' and 'mu' required")
+        poly = entry["polygon"]
+        mu = float(entry["mu"])
+        if not isinstance(poly, (list, tuple)) or len(poly) < 3:
+            raise ValueError(f"friction_map_2d[{i}]: polygon needs >= 3 vertices")
+        for j, vtx in enumerate(poly):
+            if not isinstance(vtx, (list, tuple)) or len(vtx) != 2:
+                raise ValueError(f"friction_map_2d[{i}].polygon[{j}]: expected (x, y)")
+            x, y = float(vtx[0]), float(vtx[1])
+            if not (math.isfinite(x) and math.isfinite(y)):
+                raise ValueError(f"friction_map_2d[{i}].polygon[{j}]: non-finite vertex")
+        if not math.isfinite(mu) or not (0.0 < mu <= 1.2):
+            raise ValueError(f"friction_map_2d[{i}]: mu={mu} outside (0, 1.2]")
+
+
+def _poly_patches_from_map_2d(friction_map_2d):
+    out = []
+    for entry in friction_map_2d:
+        p = vdsim.PolygonMuPatch()
+        p.polygon = [(float(x), float(y)) for x, y in entry["polygon"]]
+        p.mu = float(entry["mu"])
+        out.append(p)
+    return out
+
 
 def _validate_dt(control_dt: float, substep_dt: float):
     if not (control_dt > 0.0):
@@ -188,13 +221,17 @@ class VDSimPlant:
       self,
       config: str = "ioniq5_awd.yaml",
       friction_map=None,
+      friction_map_2d=None,
       base_mu: float = 0.9,
       control_dt: float = 0.05,
       substep_dt: float = 5e-4,
   ):
       if not math.isfinite(base_mu) or not (0.0 < base_mu <= 1.2):
           raise ValueError(f"base_mu={base_mu} outside (0, 1.2]")
+      if friction_map is not None and friction_map_2d is not None:
+          raise ValueError("pass friction_map or friction_map_2d, not both")
       _validate_friction_map(friction_map, base_mu)
+      _validate_friction_map_2d(friction_map_2d, base_mu)
       _validate_dt(control_dt, substep_dt)
 
       vp_path = resolve_vehicle_config(config)
@@ -204,6 +241,7 @@ class VDSimPlant:
       self._tp.lugre.enabled = False
 
       patches = [(float(a), float(b), float(m)) for a, b, m in (friction_map or [])]
+      poly_patches = _poly_patches_from_map_2d(friction_map_2d or [])
 
       sp = vdsim.SolverParams()
       sp.integrator = vdsim.Integrator.RK4
@@ -213,7 +251,8 @@ class VDSimPlant:
       self.substep_dt = float(substep_dt)
       self._n_sub = int(round(control_dt / substep_dt))
       self._sess = vdsim.make_vla_plant_session(
-          self._vp, self._tp, 0.0, float(base_mu), patches, sp, substep_dt)
+          self._vp, self._tp, 0.0, float(base_mu), patches, poly_patches, 1.0,
+          sp, substep_dt)
       self._dyn = self._sess.dynamics()
 
   def reset(self, state0=None):
@@ -291,5 +330,7 @@ class VDSimPlant:
           "ax": float(dyn.ax_body_est()),
           "ay": float(dyn.ay_body_est()),
           "beta": float(st.beta()),
+          "roll": float(dyn.roll_angle_qs()),
+          "pitch": float(dyn.pitch_angle_qs()),
           "wheel": wheels,
       }

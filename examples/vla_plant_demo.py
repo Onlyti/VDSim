@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Quickstart: closed-loop VDSimPlant (trivial P controller, no MPC)."""
+"""Quickstart: closed-loop VDSimPlant (trivial P controller, no MPC).
+
+1-D patch: friction_map=[(x0, x1, mu)]
+2-D patch: friction_map_2d=[{"polygon": [(x,y),...], "mu": 0.5}, ...]  (see tutorial §6b)
+"""
 import csv
 import sys
 from pathlib import Path

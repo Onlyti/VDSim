@@ -1,6 +1,66 @@
 # VDSim 핸드오프
 
-작성: **2026-06-18** · `VDSim-Thesis` (local) · **396/396 ctest green**
+작성: **2026-06-18** · `VDSim-Thesis` (local) · **399/399 ctest green**
+
+## 0. 2026-06-18 VLA plant P2 — smooth 1-D friction blend + steer lag docs — DONE
+
+**Shipped (customer P2, `docs/PLANT_CUSTOMER_FEEDBACK.md`):**
+- **1-D `friction_map` smooth transition** — `FrictionPatchGround` linear blend over **1.0 m**
+  before `x0` and after `x1`; outside `x < x0−1` / `x > x1+1` → `base_mu`; overlapping
+  patches → min μ (same rule as 2-D polygon).
+- **`VehicleParams.steer_deadtime_s`** — 1st-order steer lag (τ) on VLA direct-control path
+  (`SimSession::tick` when `direct_control_path`); default 0 = instantaneous ZOH δ.
+- **Docs:** `docs/VDSIM_PLANT_TUTORIAL.md` §6a (1-D blend), §7 (steer lag manual workflow).
+
+**Deliverables:**
+- `core/src/contact_providers.cpp` — `FrictionPatchGround` blend
+- `core/src/sim_session.cpp` — direct-path steer lag from `vp.steer_deadtime_s`
+- **Test:** `VlaPlant.FrictionPatchSmoothTransition`
+
+**Verify:** `cmake --build build -j && cd build && ctest -R VlaPlant --output-on-failure`
+
+## 0. 2026-06-18 VLA plant P1 — roll/pitch obs + 2D polygon friction map — DONE
+
+**Shipped (customer P1, `docs/PLANT_CUSTOMER_FEEDBACK.md`):**
+- **`obs["roll"]`, `obs["pitch"]`** [rad] — quasi-static angles from `roll_angle_qs()` /
+  `pitch_angle_qs()` (L2–L5; L1→0). Already on `IVehicleDynamics` + pybind; wired in
+  `python/vdsim_plant.py` `_obs()`.
+- **`friction_map_2d`** — `[{"polygon": [(x,y),...], "mu": 0.5}, ...]` on `VDSimPlant`
+  (mutually exclusive with 1-D `friction_map`). C++ `PolygonFrictionGround` +
+  `create_polygon_friction_ground()` in `contact_providers.cpp`: per-wheel world (x,y),
+  point-to-polygon boundary distance, linear blend to `base_mu` over **1.0 m** global;
+  overlapping patches → min μ.
+
+**Deliverables:**
+- `core/include/vdsim/interfaces.hpp` — `PolygonMuPatch`, factory decl
+- `core/src/contact_providers.cpp` — `PolygonFrictionGround`
+- `python/bindings.cpp` — `PolygonMuPatch`, `create_polygon_friction_ground`,
+  `make_vla_plant_session(..., poly_patches, blend_distance)`
+- `python/vdsim_plant.py` — `friction_map_2d`, roll/pitch in obs
+- **Tests:** `VlaPlant.PolygonFrictionInsideAndOutside`, `PolygonFrictionBlendZone`;
+  Python `test_roll_pitch_in_obs`, `test_polygon_friction_map_2d`
+- **Docs:** `docs/VDSIM_PLANT_TUTORIAL.md` §6b (2D polygon), §4 roll/pitch
+
+**Verify:** `cmake --build build -j && cd build && ctest -R VlaPlant --output-on-failure &&
+python3 tests/scripts/test_vla_plant.py`
+
+## 0. 2026-06-18 Dynamics ladder bench L0–L5 — DONE
+
+**Shipped:** `tools/bench_dynamics_levels.py` + `examples/bench_dynamics_levels.cpp`
+(`vdsim_bench_levels`) — ioniq5_awd, dt=5e-4, 500 step, SimSession.tick() ms/step.
+
+| level | ms/step (AILAB-12, Release) |
+|-------|----------------------------:|
+| L0 kinematic | 0.0005 |
+| L1 bicycle | 0.0162 |
+| L2 seven_dof | 0.0313 |
+| L3 fourteen_dof | 0.0317 |
+| L4 fourteen_dof_kinematic | 0.0321 |
+| L5 Free3D stunt | 0.0354 |
+
+L0–L4 via pybind `make_sim_session`; L5 via C++ binary (not in pybind session factory).
+
+**Run:** `cmake --build build -j && python3 tools/bench_dynamics_levels.py`
 
 ## 0. 2026-06-18 VLA plant per-wheel peak slip (alpha_peak, kappa_peak) — DONE
 

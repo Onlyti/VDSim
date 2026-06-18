@@ -306,10 +306,23 @@ std::unique_ptr<IContactProvider> create_flat_ground(double z = 0.0,
 std::unique_ptr<IContactProvider> create_split_mu_ground(
     double z, double mu_left, double mu_right, double boundary_y = 0.0);
 
-// Piecewise-x friction patches on a flat road (straight road s≈x).
+// Piecewise-x friction patches on a flat road (straight road s≈x). Linear blend
+// over 1.0 m before x0 and after x1; overlapping patches -> min mu.
 std::unique_ptr<IContactProvider> create_friction_patch_ground(
     double z, double base_mu,
     const std::vector<std::tuple<double, double, double>>& patches);
+
+struct PolygonMuPatch {
+    std::vector<std::pair<double, double>> polygon;
+    double mu;
+};
+
+// 2-D polygon friction on a flat plane: per-wheel mu from world (x,y) vs polygon
+// boundaries with linear blend over blend_distance [m] outside each patch.
+std::unique_ptr<IContactProvider> create_polygon_friction_ground(
+    double z, double base_mu,
+    const std::vector<PolygonMuPatch>& patches,
+    double blend_distance = 1.0);
 
 // Inclined plane: grade [rad] (uphill toward +x), bank [rad] (up toward +y).
 std::unique_ptr<IContactProvider> create_inclined_ground(
