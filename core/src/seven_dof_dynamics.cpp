@@ -216,6 +216,7 @@ public:
     std::array<double, NUM_WHEELS> wheel_mu_peak()     const override { return wheel_mu_peak_; }
     std::array<double, NUM_WHEELS> wheel_alpha_peak()  const override { return wheel_alpha_peak_; }
     std::array<double, NUM_WHEELS> wheel_kappa_peak()  const override { return wheel_kappa_peak_; }
+    const ITireModel* tire() const override { return tire_.get(); }
     std::array<double, NUM_WHEELS> wheel_overturning_moment() const override { return mx_w_; }
 
     // Quasi-static roll/pitch incl. the CG-migration (jacking) feedback —

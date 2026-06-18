@@ -692,6 +692,9 @@ PYBIND11_MODULE(vdsim, m) {
         .def("wheel_mu_peak",    &vdsim::IVehicleDynamics::wheel_mu_peak)
         .def("wheel_alpha_peak", &vdsim::IVehicleDynamics::wheel_alpha_peak)
         .def("wheel_kappa_peak", &vdsim::IVehicleDynamics::wheel_kappa_peak)
+        .def("tire", &vdsim::IVehicleDynamics::tire,
+             py::return_value_policy::reference_internal,
+             "The live tire model this dynamics runs (ITireModel; valid while the dynamics is).")
         .def("wheel_overturning_moment", &vdsim::IVehicleDynamics::wheel_overturning_moment)
         .def("roll_angle_qs",  &vdsim::IVehicleDynamics::roll_angle_qs)
         .def("pitch_angle_qs", &vdsim::IVehicleDynamics::pitch_angle_qs)

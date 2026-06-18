@@ -154,7 +154,10 @@ plant runs — no coefficient dump, nothing to re-implement):
 
 ```python
 import vdsim, math
-tire = vdsim.create_magic_formula_tire_from_tir("configs/parts/tire/ioniq5_pac2002.tir")
+# Preferred: the LIVE tyre the plant runs (single source of truth, no .tir re-load):
+tire = plant.tire_model
+# Or load a standalone instance from a .tir:
+# tire = vdsim.create_magic_formula_tire_from_tir("configs/parts/tire/ioniq5_pac2002.tir")
 
 def F(kappa, alpha, Fz=5764.0, mu=0.9):
     i = vdsim.TireInput(); i.Fz=Fz; i.kappa=kappa; i.alpha=alpha; i.mu_long=mu; i.mu_lat=mu

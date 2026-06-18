@@ -201,6 +201,13 @@ class VDSimPlant:
           self._sess.tick(self.substep_dt)
       return self._obs()
 
+  @property
+  def tire_model(self):
+      """The live tire model this plant runs (ITireModel). Single source of truth for
+      offline queries — friction ellipse / combined-slip peak via .compute(TireInput).
+      Same instance the integrator uses; no re-load from the .tir."""
+      return self._dyn.tire()
+
   def _obs(self) -> dict:
       st = self._sess.state()
       dyn = self._dyn

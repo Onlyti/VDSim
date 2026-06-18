@@ -37,6 +37,8 @@ namespace mb {
 struct SuspensionTopology;
 }
 
+class ITireModel;  // defined below; IVehicleDynamics::tire() returns a pointer to it
+
 // =============================================================================
 // IVehicleDynamics — top-level vehicle dynamics interface
 // =============================================================================
@@ -86,6 +88,10 @@ public:
     virtual std::array<double, NUM_WHEELS> wheel_mu_peak() const { return wheel_mu(); }
     virtual std::array<double, NUM_WHEELS> wheel_alpha_peak() const { return {{0, 0, 0, 0}}; }
     virtual std::array<double, NUM_WHEELS> wheel_kappa_peak() const { return {{0, 0, 0, 0}}; }
+    // The live tire model this dynamics runs (single source of truth for offline queries —
+    // friction ellipse / combined-slip peak via ITireModel::compute). Owned by the dynamics;
+    // the pointer must not outlive it. Default nullptr (level has no single tire instance).
+    virtual const ITireModel* tire() const { return nullptr; }
     // Per-wheel overturning moment [N m] about the wheel-forward axis: tire carcass
     // Mx + camber contact-point migration (Fz * crown_radius * sin gamma). Feeds the
     // roll DOF on models that have one (L3/L5). Default 0 (no camber migration).
