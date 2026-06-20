@@ -40,7 +40,7 @@
 
 **다음 할 일 후보 (우선순위 순):** see [`ROADMAP.md`](ROADMAP.md) §15.
 
-1. **P0** — tag **v0.6.1** (core port @ `5cdca4e`) + **v0.6.2** (this session) when ready.
+1. **P0** — ~~tag **v0.6.1**~~ / ~~**v0.6.2**~~ **done** (`v0.6.1` @ `5cdca4e`, `v0.6.2` @ `9a40c1b`).
 2. **P1** — **#1 Fx→τ** C++ contract, **#6 drive_split** / brake bias design.
 3. **P2** — Chrono KC `gen_kc_reference` API fill-in.
 4. **P3** — v0.5.2 GUI: terrain Play **or** `.tir` import; **GUI v2** framework decision.
