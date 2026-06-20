@@ -54,6 +54,10 @@ struct VehicleSpawn {
     uint32_t    id {0};
     std::string vehicle_yaml;
     std::string tire_yaml;
+    std::string tire_rear_yaml;
+    std::string tire_fr_yaml;
+    std::string tire_rl_yaml;
+    std::string tire_rr_yaml;
     std::string level {"L2"};
     std::string front_susp;
     std::string rear_susp;

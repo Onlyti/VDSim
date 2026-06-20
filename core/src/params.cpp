@@ -381,6 +381,24 @@ TireParams TireParams::from_tir(const std::string& /*path*/) {
                              "(AVL .tir importer is Phase 2)");
 }
 
+TireSetup TireSetup::from_yaml_paths(const std::string& front_path,
+                                     const std::string& rear_path) {
+    const TireParams fl = TireParams::from_yaml(front_path);
+    const TireParams rl = rear_path.empty() ? fl : TireParams::from_yaml(rear_path);
+    return TireSetup(fl, rl);
+}
+
+TireSetup TireSetup::from_corner_yaml_paths(const std::string& fl_path,
+                                            const std::string& fr_path,
+                                            const std::string& rl_path,
+                                            const std::string& rr_path) {
+    const TireParams fl = TireParams::from_yaml(fl_path);
+    const TireParams fr = fr_path.empty() ? fl : TireParams::from_yaml(fr_path);
+    const TireParams rl = rl_path.empty() ? fl : TireParams::from_yaml(rl_path);
+    const TireParams rr = rr_path.empty() ? rl : TireParams::from_yaml(rr_path);
+    return TireSetup(fl, fr, rl, rr);
+}
+
 // =============================================================================
 // SolverParams
 // =============================================================================

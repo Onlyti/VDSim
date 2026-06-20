@@ -17,6 +17,7 @@
 #include "vdsim/coordinate.hpp"
 #include "vdsim/drivetrain_inertia.hpp"
 #include "vdsim/interfaces.hpp"
+#include "vdsim/ladder_lowering.hpp"
 #include "vdsim/low_speed.hpp"
 #include "vdsim/powertrain.hpp"
 
@@ -45,18 +46,14 @@ inline CmdL4 lower_to_l4(const ControlInput& u) {
                                                     cmd.motor_torque.end(), 0.0);
             const double T_brake = std::accumulate(cmd.brake_torque.begin(),
                                                     cmd.brake_torque.end(), 0.0);
-            // Normalize against typical max sums (300 Nm motor * 1 axle, etc.)
-            out.throttle = std::clamp(T_drive / 600.0, -1.0, 1.0);
-            out.brake    = std::clamp(T_brake / 4000.0, 0.0, 1.0);
-            if (out.throttle < 0.0) { out.brake = std::max(out.brake, -out.throttle); out.throttle = 0.0; }
+            motor_brake_torque_to_pedal_bicycle(T_drive, T_brake, out.throttle, out.brake);
             out.steer_angle_wheel = cmd.steer_angle_wheel;
         } else if constexpr (std::is_same_v<T, CmdL2>) {
-            out.throttle = std::clamp(cmd.drive_torque / 600.0, -1.0, 1.0);
-            out.brake    = std::clamp(cmd.brake_torque / 4000.0, 0.0, 1.0);
-            if (out.throttle < 0.0) { out.brake = std::max(out.brake, -out.throttle); out.throttle = 0.0; }
+            axle_torque_to_pedal_bicycle(cmd.drive_torque, cmd.brake_torque,
+                                         out.throttle, out.brake);
             out.steer_angle_wheel = cmd.steer_angle_wheel;
         } else if constexpr (std::is_same_v<T, CmdL3>) {
-            const double scale = cmd.Fx_total / (1500.0 * 5.0);   // m * a_ref
+            const double scale = fx_total_pedal_scale(cmd.Fx_total);
             out.throttle = std::clamp(scale, 0.0, 1.0);
             out.brake    = std::clamp(-scale, 0.0, 1.0);
             out.steer_angle_wheel = cmd.steer_angle_wheel;
@@ -78,19 +75,19 @@ inline double smooth_sign(double x, double width) {
 
 class BicycleDynamics final : public IVehicleDynamics {
 public:
-    explicit BicycleDynamics(std::unique_ptr<ITireModel> tire) : tire_(std::move(tire)) {}
+    BicycleDynamics() = default;
+    explicit BicycleDynamics(std::unique_ptr<ITireModel> tire)
+        : inj_tire_(std::move(tire)) {}
 
     Level level() const noexcept override { return Level::L1_Bicycle; }
 
     void initialize(const VehicleParams& vp,
-                    const TireParams& tp,
+                    const TireSetup& ts,
                     const SolverParams& sp) override {
         vp_ = vp;
-        tp_ = tp;
+        ts_ = ts;
         sp_ = sp;
-        if (tp.backend != "mf96" && !tp.backend.empty())
-            tire_ = create_tire_from_params(tp);
-        tire_->initialize(tp);
+        init_wheel_tire_models(tire_, ts_, &inj_tire_);
         spdlog::debug("[L1 Bicycle] init: mass={:.0f} kg, L={:.2f} m, wr={:.3f} m, "
                       "RWD={}, ackerman={:.0f}%",
                       vp.mass, vp.wheelbase, vp.wheel_radius_nominal,
@@ -171,6 +168,10 @@ public:
     std::array<double, NUM_WHEELS> tire_Fz()           const override { return tire_Fz_; }
     std::array<double, NUM_WHEELS> wheel_slip_ratio()  const override { return slip_ratio_; }
     std::array<double, NUM_WHEELS> wheel_slip_angle()  const override { return slip_angle_; }
+    const ITireModel* tire(int wheel) const override {
+        if (wheel < 0 || wheel >= NUM_WHEELS) return nullptr;
+        return tire_[wheel].get();
+    }
 
     double engine_rpm()   const override { return has_powertrain_ ? engine_gb_.engine_rpm() : 0.0; }
     int    current_gear() const override { return has_powertrain_ ? engine_gb_.current_gear() : 0; }
@@ -261,14 +262,12 @@ private:
         const double v_fy_wheel = -v_fx_body * sd + v_fy_body * cd;
         // Rear wheel: no steering, wheel frame == body frame.
 
-        const bool lugre_on = tp_.lugre.enabled;
+        const bool lugre_f = ts_.for_wheel(WHEEL_FL).lugre.enabled
+                          || ts_.for_wheel(WHEEL_FR).lugre.enabled;
+        const bool lugre_r = ts_.for_wheel(WHEEL_RL).lugre.enabled
+                          || ts_.for_wheel(WHEEL_RR).lugre.enabled;
 
-        // Per-tire individual contact: each axle is two identical tires (single-track,
-        // no lateral transfer) at half the axle load. Evaluate ONE tire at the per-wheel
-        // load (ci.Fz = 0.5*Fz, so the force law AND Re see a consistent load -- the
-        // load-sensitive mu is applied at the true per-tire load) and double the wrench
-        // for the axle. The tire owns slip / Re / transient (advanced per stage/substep
-        // below); only the integrator stabilization stays here.
+        // Per-tire at half the axle load; sum both corners (identical or staggered).
         ITireModel::ContactInput ci_f;
         ci_f.Fz = 0.5 * Fz_f; ci_f.Vx = v_fx_wheel; ci_f.Vy = v_fy_wheel;
         ci_f.omega = of; ci_f.gamma = 0.0;
@@ -277,21 +276,34 @@ private:
         ci_r.Fz = 0.5 * Fz_r; ci_r.Vx = v_rx_body; ci_r.Vy = v_ry_body;
         ci_r.omega = or_; ci_r.gamma = 0.0;
         ci_r.mu_long = mu_long_r; ci_r.mu_lat = mu_lat_r; ci_r.R0 = R;
-        ci_[0] = ci_f; ci_[1] = ci_r;
+        ci_[WHEEL_FL] = ci_[WHEEL_FR] = ci_f;
+        ci_[WHEEL_RL] = ci_[WHEEL_RR] = ci_r;
 
-        const ITireModel::Wrench wf = tire_->evaluate(ci_f, transient_[0]);
-        const ITireModel::Wrench wr = tire_->evaluate(ci_r, transient_[1]);
+        const ITireModel::Wrench wfl = tire_[WHEEL_FL]->evaluate(ci_f, transient_[WHEEL_FL]);
+        const ITireModel::Wrench wfr = tire_[WHEEL_FR]->evaluate(ci_f, transient_[WHEEL_FR]);
+        const ITireModel::Wrench wrl = tire_[WHEEL_RL]->evaluate(ci_r, transient_[WHEEL_RL]);
+        const ITireModel::Wrench wrr = tire_[WHEEL_RR]->evaluate(ci_r, transient_[WHEEL_RR]);
+        ITireModel::Wrench wf = wfl;
+        wf.Fx += wfr.Fx; wf.Fy += wfr.Fy; wf.Mz += wfr.Mz;
+        wf.Re = 0.5 * (wfl.Re + wfr.Re);
+        const ITireModel::Wrench wr = [&]() {
+            ITireModel::Wrench w = wrl;
+            w.Fx += wrr.Fx; w.Fy += wrr.Fy; w.Mz += wrr.Mz;
+            w.Re = 0.5 * (wrl.Re + wrr.Re);
+            return w;
+        }();
         const double Re_f = wf.Re, Re_r = wr.Re;
         const double kappa_f = wf.kappa, kappa_r = wr.kappa;
         const double alpha_f = wf.alpha, alpha_r = wr.alpha;
-        // Axle force = two per-tire wrenches.
         ITireModel::Output F_f, F_r;
-        F_f.Fx = 2.0 * wf.Fx; F_f.Fy = 2.0 * wf.Fy; F_f.Mz = 2.0 * wf.Mz;
-        F_r.Fx = 2.0 * wr.Fx; F_r.Fy = 2.0 * wr.Fy; F_r.Mz = 2.0 * wr.Mz;
+        F_f.Fx = wf.Fx; F_f.Fy = wf.Fy; F_f.Mz = wf.Mz;
+        F_r.Fx = wr.Fx; F_r.Fy = wr.Fy; F_r.Mz = wr.Mz;
 
         const double speed = std::hypot(vx, vy);
-        double lambda = lugre_on ? 1.0 : std::clamp(speed / kStickBlend, 0.0, 1.0);
-        if (!lugre_on) lambda = lambda * lambda * (3.0 - 2.0 * lambda);
+        double lambda_f = lugre_f ? 1.0 : std::clamp(speed / kStickBlend, 0.0, 1.0);
+        double lambda_r = lugre_r ? 1.0 : std::clamp(speed / kStickBlend, 0.0, 1.0);
+        if (!lugre_f) lambda_f = lambda_f * lambda_f * (3.0 - 2.0 * lambda_f);
+        if (!lugre_r) lambda_r = lambda_r * lambda_r * (3.0 - 2.0 * lambda_r);
 
         const double muFz_f = std::min(mu_long_f, mu_lat_f) * std::max(0.0, Fz_f);
         const double muFz_r = std::min(mu_long_r, mu_lat_r) * std::max(0.0, Fz_r);
@@ -300,30 +312,42 @@ private:
         double Fx_f_wheel = 0.0, Fy_f_wheel = 0.0;
         double Fx_r_axle = 0.0, Fy_r_axle = 0.0;
         double fx_kin_f = 0.0, fx_kin_r = 0.0;
-        if (lugre_on) {
+        if (lugre_f) {
             Fx_f_wheel = F_f.Fx; Fy_f_wheel = F_f.Fy;
-            Fx_r_axle  = F_r.Fx; Fy_r_axle  = F_r.Fy;
         } else {
-            const double hold_gate = (1.0 - lambda) *
+            const double hold_gate = (1.0 - lambda_f) *
                 std::clamp(cmd.brake - cmd.throttle, 0.0, 1.0);
             const double c_hold = 2.0 * kStickC;
             Fxh_f = -c_hold * v_fx_body * hold_gate;
-            Fxh_r = -c_hold * v_rx_body * hold_gate;
             if (std::abs(Fxh_f) > muFz_f) Fxh_f = std::copysign(muFz_f, Fxh_f);
+            Fx_f_wheel = F_f.Fx + Fxh_f; Fy_f_wheel = lambda_f * F_f.Fy;
+            fx_kin_f = F_f.Fx;
+        }
+        if (lugre_r) {
+            Fx_r_axle = F_r.Fx; Fy_r_axle = F_r.Fy;
+        } else {
+            const double hold_gate = (1.0 - lambda_r) *
+                std::clamp(cmd.brake - cmd.throttle, 0.0, 1.0);
+            const double c_hold = 2.0 * kStickC;
+            Fxh_r = -c_hold * v_rx_body * hold_gate;
             if (std::abs(Fxh_r) > muFz_r) Fxh_r = std::copysign(muFz_r, Fxh_r);
-            Fx_f_wheel = F_f.Fx + Fxh_f; Fy_f_wheel = lambda * F_f.Fy;
-            Fx_r_axle  = F_r.Fx + Fxh_r; Fy_r_axle  = lambda * F_r.Fy;
-            fx_kin_f = F_f.Fx; fx_kin_r = F_r.Fx;
+            Fx_r_axle = F_r.Fx + Fxh_r; Fy_r_axle = lambda_r * F_r.Fy;
+            fx_kin_r = F_r.Fx;
         }
         const double Fmag_f = std::hypot(Fx_f_wheel, Fy_f_wheel);
-        if (!tp_.model_provides_combined_slip() && Fmag_f > muFz_f && Fmag_f > 1e-9) {
+        if (!ts_.for_wheel(WHEEL_FL).model_provides_combined_slip()
+            && !ts_.for_wheel(WHEEL_FR).model_provides_combined_slip()
+            && Fmag_f > muFz_f && Fmag_f > 1e-9) {
             const double c = muFz_f / Fmag_f; Fx_f_wheel *= c; Fy_f_wheel *= c;
         }
         const double Fmag_r = std::hypot(Fx_r_axle, Fy_r_axle);
-        if (!tp_.model_provides_combined_slip() && Fmag_r > muFz_r && Fmag_r > 1e-9) {
+        if (!ts_.for_wheel(WHEEL_RL).model_provides_combined_slip()
+            && !ts_.for_wheel(WHEEL_RR).model_provides_combined_slip()
+            && Fmag_r > muFz_r && Fmag_r > 1e-9) {
             const double c = muFz_r / Fmag_r; Fx_r_axle *= c; Fy_r_axle *= c;
         }
-        if (lugre_on) { fx_kin_f = Fx_f_wheel; fx_kin_r = Fx_r_axle; }
+        if (lugre_f) { fx_kin_f = Fx_f_wheel; }
+        if (lugre_r) { fx_kin_r = Fx_r_axle; }
         // Rotate wheel-frame front forces back into body frame; rear is body frame.
         const double Fx_body_f = Fx_f_wheel * cd - Fy_f_wheel * sd;
         const double Fy_body_f = Fx_f_wheel * sd + Fy_f_wheel * cd;
@@ -334,8 +358,12 @@ private:
         const double F_aero = 0.5 * kAirDensity * vp_.aero_drag_coeff *
                               vp_.frontal_area * vx * std::abs(vx);
         // Rolling resistance: f_rr * (Fz_f + Fz_r) * tanh(vx / 0.5)
-        const double F_rr = tp_.rolling_resistance * (Fz_f + Fz_r) *
-                            std::tanh(vx / 0.5);
+        double F_rr = 0.0;
+        F_rr += ts_.for_wheel(WHEEL_FL).rolling_resistance * 0.5 * Fz_f;
+        F_rr += ts_.for_wheel(WHEEL_FR).rolling_resistance * 0.5 * Fz_f;
+        F_rr += ts_.for_wheel(WHEEL_RL).rolling_resistance * 0.5 * Fz_r;
+        F_rr += ts_.for_wheel(WHEEL_RR).rolling_resistance * 0.5 * Fz_r;
+        F_rr *= std::tanh(vx / 0.5);
 
         // ---- Drive / brake torques ----
         double Td_f = 0.0, Td_r = 0.0;
@@ -378,8 +406,12 @@ private:
         const double Fx_total = Fx_body_f + Fx_body_r - F_aero - F_rr + m * gx_b;
         const double Fy_total = Fy_body_f + Fy_body_r + m * gy_b;
         // Wheel-z and body-z are parallel (camber=0 assumed); Mz adds directly.
-        const double mz_scale = lugre_on ? 1.0 : lambda;
-        const double Mz_total = a * Fy_body_f - b * Fy_body_r + mz_scale * (F_f.Mz + F_r.Mz);
+        const double mz_scale_f = lugre_f ? 1.0 : lambda_f;
+        const double mz_scale_r = lugre_r ? 1.0 : lambda_r;
+        const bool lugre_on = lugre_f && lugre_r;
+        const double lambda = std::min(lambda_f, lambda_r);
+        const double Mz_total = a * Fy_body_f - b * Fy_body_r
+                              + mz_scale_f * F_f.Mz + mz_scale_r * F_r.Mz;
 
         Deriv d_out;
         d_out.dx_world = vx * std::cos(yaw) - vy * std::sin(yaw);
@@ -420,13 +452,16 @@ private:
             bx = fx * cd_ - fy * sd_; by = fx * sd_ + fy * cd_;
         };
         double dfxf, dfyf, dfxr, dfyr;
-        if (lugre_on) {
+        if (lugre_f) {
             dfxf = Fx_f_wheel * cd - Fy_f_wheel * sd;
             dfyf = Fx_f_wheel * sd + Fy_f_wheel * cd;
+        } else {
+            disp(F_f.Fx, Fxh_f, F_f.Fy, lambda_f, muFz_f, cd, sd, dfxf, dfyf);
+        }
+        if (lugre_r) {
             dfxr = Fx_r_axle; dfyr = Fy_r_axle;
         } else {
-            disp(F_f.Fx, Fxh_f, F_f.Fy, lambda, muFz_f, cd, sd, dfxf, dfyf);
-            disp(F_r.Fx, Fxh_r, F_r.Fy, lambda, muFz_r, 1.0, 0.0, dfxr, dfyr);
+            disp(F_r.Fx, Fxh_r, F_r.Fy, lambda_r, muFz_r, 1.0, 0.0, dfxr, dfyr);
         }
         // Split axle force evenly across the two co-axial tires.
         tire_F_[WHEEL_FL] = tire_F_[WHEEL_FR] = Vec3(0.5 * dfxf, 0.5 * dfyf, 0.0);
@@ -458,14 +493,14 @@ private:
 
     // LuGre bristle z — per RK4 stage (per-axle: front=index 0, rear=index 1).
     void advance_bristle_(double dt) {
-        if (!tp_.lugre.enabled) return;
-        transient_[0] = tire_->advance_bristle(ci_[0], transient_[0], dt);
-        transient_[1] = tire_->advance_bristle(ci_[1], transient_[1], dt);
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            if (!ts_.for_wheel(i).lugre.enabled) continue;
+            transient_[i] = tire_[i]->advance_bristle(ci_[i], transient_[i], dt);
+        }
     }
-    // Carcass/belt + relaxation-length lag — once per substep.
     void advance_relaxation_(double dt) {
-        transient_[0] = tire_->advance_relaxation(ci_[0], transient_[0], dt);
-        transient_[1] = tire_->advance_relaxation(ci_[1], transient_[1], dt);
+        for (int i = 0; i < NUM_WHEELS; ++i)
+            transient_[i] = tire_[i]->advance_relaxation(ci_[i], transient_[i], dt);
     }
 
     void substep(const CmdL4& cmd, const ContactArray& contacts, double h) {
@@ -500,7 +535,11 @@ private:
                     pt_I_axle_f_ = 0.5 * Iax; pt_I_axle_r_ = 0.5 * Iax; break;
             }
         }
-        const bool lugre_on = tp_.lugre.enabled;
+        const bool lugre_on = [&]() {
+            for (int i = 0; i < NUM_WHEELS; ++i)
+                if (ts_.for_wheel(i).lugre.enabled) return true;
+            return false;
+        }();
         const double hz = 0.25 * h;
         if (sp_.integrator == SolverParams::Integrator::Euler) {
             const Deriv k = derivatives(s0, cmd, contacts);
@@ -536,9 +575,10 @@ private:
     }
 
     VehicleParams vp_;
-    TireParams    tp_;
+    TireSetup     ts_;
     SolverParams  sp_;
-    std::unique_ptr<ITireModel> tire_;
+    std::unique_ptr<ITireModel> inj_tire_;
+    std::array<std::unique_ptr<ITireModel>, NUM_WHEELS> tire_ {};
     double I_wheel_f_ {1.0};
     double I_wheel_r_ {1.0};
     double I_spin_f_  {1.0};
@@ -562,14 +602,14 @@ private:
     std::array<double, NUM_WHEELS> slip_angle_ {};
     // Per-axle (index 0 = front, 1 = rear) tire transient + the contact kinematics the
     // tire was last evaluated at, feeding the per-stage / per-substep advance calls.
-    std::array<ITireModel::Transient, 2> transient_ {};
-    std::array<ITireModel::ContactInput, 2> ci_ {};
+    std::array<ITireModel::Transient, NUM_WHEELS> transient_ {};
+    std::array<ITireModel::ContactInput, NUM_WHEELS> ci_ {};
 };
 
 }  // namespace
 
 std::unique_ptr<IVehicleDynamics> create_bicycle() {
-    return std::make_unique<BicycleDynamics>(create_pacejka_mf96());
+    return std::make_unique<BicycleDynamics>();
 }
 
 std::unique_ptr<IVehicleDynamics> create_bicycle(std::unique_ptr<ITireModel> tire) {

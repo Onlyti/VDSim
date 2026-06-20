@@ -212,6 +212,36 @@ struct TireParams {
     void              to_yaml (const std::string& path) const;
 };
 
+// Per-wheel tire setup (FL/FR/RL/RR). Unified and per-axle constructors duplicate
+// params across corners; optional per-corner YAML/catalog slots override individually.
+struct TireSetup {
+    std::array<TireParams, NUM_WHEELS> wheel {};
+
+    TireSetup() = default;
+    explicit TireSetup(const TireParams& unified) { wheel.fill(unified); }
+    TireSetup(const TireParams& front_axle, const TireParams& rear_axle) {
+        wheel[WHEEL_FL] = wheel[WHEEL_FR] = front_axle;
+        wheel[WHEEL_RL] = wheel[WHEEL_RR] = rear_axle;
+    }
+    TireSetup(const TireParams& fl, const TireParams& fr,
+              const TireParams& rl, const TireParams& rr) {
+        wheel = {{fl, fr, rl, rr}};
+    }
+    explicit TireSetup(std::array<TireParams, NUM_WHEELS> w) : wheel(w) {}
+
+    const TireParams& for_wheel(int w) const { return wheel[w]; }
+    const TireParams& for_axle(int axle) const {
+        return axle ? wheel[WHEEL_RL] : wheel[WHEEL_FL];
+    }
+
+    static TireSetup from_yaml_paths(const std::string& front_path,
+                                     const std::string& rear_path = {});
+    static TireSetup from_corner_yaml_paths(const std::string& fl_path,
+                                            const std::string& fr_path = {},
+                                            const std::string& rl_path = {},
+                                            const std::string& rr_path = {});
+};
+
 struct SolverParams {
     enum class Integrator { Euler, RK4 };
     Integrator integrator   {Integrator::RK4};
@@ -263,15 +293,20 @@ inline std::array<double, NUM_WHEELS> static_wheel_loads(const VehicleParams& vp
 // Per-wheel because front/rear static load -> different Re. Falls back to vx/R0 when
 // the tire has no Re coefficients (reff_*=0).
 inline std::array<double, NUM_WHEELS> free_roll_wheel_spin(
-        const VehicleParams& vp, const TireParams& tp, double vx) {
+        const VehicleParams& vp, const TireSetup& ts, double vx) {
     const auto Fz = static_wheel_loads(vp);
     const double R0 = vp.wheel_radius_nominal > 1e-6 ? vp.wheel_radius_nominal : 0.32;
     std::array<double, NUM_WHEELS> w{};
     for (int i = 0; i < NUM_WHEELS; ++i) {
-        const double Re = effective_rolling_radius(tp, R0, Fz[i]);
+        const double Re = effective_rolling_radius(ts.for_wheel(i), R0, Fz[i]);
         w[i] = Re > 1e-6 ? vx / Re : 0.0;
     }
     return w;
+}
+
+inline std::array<double, NUM_WHEELS> free_roll_wheel_spin(
+        const VehicleParams& vp, const TireParams& tp, double vx) {
+    return free_roll_wheel_spin(vp, TireSetup(tp), vx);
 }
 
 }  // namespace vdsim

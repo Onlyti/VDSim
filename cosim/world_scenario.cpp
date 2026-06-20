@@ -135,6 +135,10 @@ WorldScenario load_world_scenario(const std::string& path) {
             throw std::runtime_error("world scenario: vehicle entry needs vehicle+tire paths");
         s.vehicle_yaml = v["vehicle"].as<std::string>();
         s.tire_yaml    = v["tire"].as<std::string>();
+        if (v["tire_rear"]) s.tire_rear_yaml = v["tire_rear"].as<std::string>();
+        if (v["tire_fr"])   s.tire_fr_yaml   = v["tire_fr"].as<std::string>();
+        if (v["tire_rl"])   s.tire_rl_yaml   = v["tire_rl"].as<std::string>();
+        if (v["tire_rr"])   s.tire_rr_yaml   = v["tire_rr"].as<std::string>();
         if (v["level"]) s.level = v["level"].as<std::string>();
         if (v["control"]) s.control = v["control"].as<std::string>();
         if (v["front_susp"]) s.front_susp = v["front_susp"].as<std::string>();

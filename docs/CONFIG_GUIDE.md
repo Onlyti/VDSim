@@ -128,6 +128,8 @@ fleet:
 
 - `blueprint` 가 차량=부품 조합(자세한 부품 taxonomy 는 PARTS_CATALOG.md).
 - `parts:` 로 그 에이전트만 슬롯 교체.
+- **타이어 슬롯 (고급):** `tire` = FL 기본(미지정 시 전체 fallback). `tire_rear` = RL+RR.
+  `tire_fr` / `tire_rl` / `tire_rr` 로 코너별 교체 가능 (materialize → `tire_fr.yaml` 등).
 - GUI 가 이 scene 을 materialize(blueprint→resolved vehicle.yaml/tire.yaml 경로)한 뒤 `vdsim_realtime` 에 넘긴다.
 
 ### 2.2 제어방법 — per-agent `control` 🟡 (이 가이드와 함께 추가)

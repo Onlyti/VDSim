@@ -16,6 +16,8 @@
 #include <chrono>
 #include <memory>
 #include <mutex>
+#include <tuple>
+#include <vector>
 
 #include "vdsim/actuator.hpp"
 #include "vdsim/contact.hpp"
@@ -35,6 +37,8 @@ struct SimConfig {
     VehNetworkParams  veh_network   {};      // ECU/CAN deadtime + drop (default: identity)
     double            sensor_delay_s {0.0}; // feedback transport delay (0 = none)
     double            nominal_dt    {0.005}; // for delay-buffer sizing
+    // Pass latched ControlInput (e.g. CmdL1) straight to dynamics — no L4 cascade.
+    bool              direct_control_path {false};
 };
 
 // Thread-safe snapshot of one tick's result (true + measured state plus the
@@ -46,9 +50,14 @@ struct SimOutput {
     double ax {0.0}, ay {0.0};           // body accel (ax_body_est / ay_body_est)
     double roll {0.0}, pitch {0.0};      // roll_angle_qs / pitch_angle_qs
     std::array<double, NUM_WHEELS> Fz {{0,0,0,0}};
-    std::array<Vec3, NUM_WHEELS>   tire_forces {};   // body-frame (Fx,Fy,*) per wheel [N]
-    std::array<double, NUM_WHEELS> slip_ratio {{0,0,0,0}};   // kappa per wheel
-    std::array<double, NUM_WHEELS> slip_angle {{0,0,0,0}};   // alpha per wheel [rad]
+    std::array<Vec3, NUM_WHEELS>   tire_forces {};       // body-frame per wheel [N]
+    std::array<Vec3, NUM_WHEELS>   tire_forces_wheel {}; // contact / wheel frame [N]
+    std::array<double, NUM_WHEELS> slip_ratio {{0,0,0,0}};
+    std::array<double, NUM_WHEELS> slip_angle {{0,0,0,0}};
+    std::array<double, NUM_WHEELS> wheel_mu {{0,0,0,0}};
+    std::array<double, NUM_WHEELS> wheel_mu_peak {{0,0,0,0}};
+    std::array<double, NUM_WHEELS> wheel_alpha_peak {{0,0,0,0}};
+    std::array<double, NUM_WHEELS> wheel_kappa_peak {{0,0,0,0}};
     double rack_torque {0.0};
     double steer_applied {0.0};     // realized steer after actuator [rad]
     double throttle_applied {0.0};  // realized throttle after actuator [0,1]
@@ -60,8 +69,13 @@ class SimSession {
 public:
     SimSession(std::unique_ptr<IVehicleDynamics> dyn,
                std::unique_ptr<IContactProvider> ground,
-               const VehicleParams& vp, const TireParams& tp,
+               const VehicleParams& vp, const TireSetup& ts,
                const SolverParams& sp, const SimConfig& cfg = {});
+    SimSession(std::unique_ptr<IVehicleDynamics> dyn,
+               std::unique_ptr<IContactProvider> ground,
+               const VehicleParams& vp, const TireParams& tp,
+               const SolverParams& sp, const SimConfig& cfg = {})
+        : SimSession(std::move(dyn), std::move(ground), vp, TireSetup(tp), sp, cfg) {}
 
     void reset(const State& s0);
 
@@ -103,11 +117,38 @@ private:
     double steer_applied_ {0.0}, throttle_applied_ {0.0}, brake_applied_ {0.0};
     std::array<double, NUM_WHEELS> Fz_ {{0,0,0,0}};
     std::array<Vec3, NUM_WHEELS>   tire_forces_ {};
+    std::array<Vec3, NUM_WHEELS>   tire_forces_wheel_ {};
     std::array<double, NUM_WHEELS> slip_ratio_ {{0,0,0,0}};
     std::array<double, NUM_WHEELS> slip_angle_ {{0,0,0,0}};
+    std::array<double, NUM_WHEELS> wheel_mu_ {{0,0,0,0}};
+    std::array<double, NUM_WHEELS> wheel_mu_peak_ {{0,0,0,0}};
+    std::array<double, NUM_WHEELS> wheel_alpha_peak_ {{0,0,0,0}};
+    std::array<double, NUM_WHEELS> wheel_kappa_peak_ {{0,0,0,0}};
     SensorMeas sensors_meas_ {};
     double sim_time_ {0.0};
+    bool direct_control_path_ {false};
     std::chrono::steady_clock::time_point last_input_tp_ {std::chrono::steady_clock::now()};
 };
+
+struct FrictionMapConfig {
+    double z {0.0};
+    double base_mu {1.0};
+    std::vector<std::tuple<double, double, double>> x_bands;
+    std::vector<PolygonMuPatch> polygons;
+    double blend_distance {1.0};
+};
+
+std::unique_ptr<IContactProvider> make_friction_ground(const FrictionMapConfig& cfg);
+
+struct DirectControlSessionOptions {
+    FrictionMapConfig friction;
+    double nominal_dt {0.001};
+};
+
+std::unique_ptr<SimSession> make_direct_control_session(
+    const VehicleParams& vp,
+    const TireSetup& ts,
+    const SolverParams& sp,
+    const DirectControlSessionOptions& opts = {});
 
 }  // namespace vdsim

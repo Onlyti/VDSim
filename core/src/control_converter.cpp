@@ -1,4 +1,5 @@
 #include "vdsim/control_converter.hpp"
+#include "vdsim/ladder_lowering.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -202,13 +203,11 @@ void CascadeController::lon_to_pedals(const LcLonCmd& lon, const State& meas,
         if constexpr (std::is_same_v<T, LcLonL1>) {
             const double Td = c.wheel_torque[0] + c.wheel_torque[1]
                             + c.wheel_torque[2] + c.wheel_torque[3];
-            out.throttle = std::clamp(Td / 600.0, 0.0, 1.0);
-            out.brake    = std::clamp(-Td / 4000.0, 0.0, 1.0);
+            net_torque_to_pedal(Td, out.throttle, out.brake);
         } else if constexpr (std::is_same_v<T, LcLonL2>) {
-            out.throttle = std::clamp(c.axle_torque / 600.0, 0.0, 1.0);
-            out.brake    = std::clamp(-c.axle_torque / 4000.0, 0.0, 1.0);
+            net_torque_to_pedal(c.axle_torque, out.throttle, out.brake);
         } else if constexpr (std::is_same_v<T, LcLonL3>) {
-            const double s = c.Fx_total / (1500.0 * 5.0);
+            const double s = fx_total_pedal_scale(c.Fx_total);
             out.throttle = std::clamp(s, 0.0, 1.0);
             out.brake    = std::clamp(-s, 0.0, 1.0);
         } else if constexpr (std::is_same_v<T, LcLonL4>) {
@@ -285,17 +284,14 @@ CmdL4 CascadeController::to_l4(const ControlInput& u, const State& meas,
                                  + cmd.motor_torque[2] + cmd.motor_torque[3];
             const double T_brake = cmd.brake_torque[0] + cmd.brake_torque[1]
                                  + cmd.brake_torque[2] + cmd.brake_torque[3];
-            out.throttle = std::clamp(T_drive / 600.0, 0.0, 1.0);
-            out.brake    = std::clamp(T_brake / 4000.0 - std::min(0.0, T_drive) / 4000.0,
-                                       0.0, 1.0);
+            motor_brake_torque_to_pedal(T_drive, T_brake, out.throttle, out.brake);
             out.steer_angle_wheel = cmd.steer_angle_wheel;
         } else if constexpr (std::is_same_v<T, CmdL2>) {
-            out.throttle = std::clamp(cmd.drive_torque / 600.0, 0.0, 1.0);
-            out.brake    = std::clamp(cmd.brake_torque / 4000.0
-                                       - std::min(0.0, cmd.drive_torque) / 4000.0, 0.0, 1.0);
+            axle_torque_to_pedal(cmd.drive_torque, cmd.brake_torque,
+                                 out.throttle, out.brake);
             out.steer_angle_wheel = cmd.steer_angle_wheel;
         } else if constexpr (std::is_same_v<T, CmdL3>) {
-            const double scale = cmd.Fx_total / (1500.0 * 5.0);
+            const double scale = fx_total_pedal_scale(cmd.Fx_total);
             out.throttle = std::clamp(scale, 0.0, 1.0);
             out.brake    = std::clamp(-scale, 0.0, 1.0);
             out.steer_angle_wheel = cmd.steer_angle_wheel;

@@ -19,6 +19,7 @@
 #include "vdsim/drivetrain_inertia.hpp"
 #include "vdsim/steering_kinematics.hpp"
 #include "vdsim/interfaces.hpp"
+#include "vdsim/ladder_lowering.hpp"
 #include "vdsim/low_speed.hpp"
 #include "vdsim/subsystems.hpp"
 
@@ -45,19 +46,14 @@ inline CmdL4 lower_to_l4(const ControlInput& u) {
                                                     cmd.motor_torque.end(), 0.0);
             const double T_brake = std::accumulate(cmd.brake_torque.begin(),
                                                     cmd.brake_torque.end(), 0.0);
-            // Negative aggregate drive (regen/engine braking) maps to brake.
-            out.throttle = std::clamp(T_drive / 600.0, 0.0, 1.0);
-            out.brake    = std::clamp(T_brake / 4000.0 - std::min(0.0, T_drive) / 4000.0,
-                                       0.0, 1.0);
+            motor_brake_torque_to_pedal(T_drive, T_brake, out.throttle, out.brake);
             out.steer_angle_wheel = cmd.steer_angle_wheel;
         } else if constexpr (std::is_same_v<T, CmdL2>) {
-            out.throttle = std::clamp(cmd.drive_torque / 600.0, 0.0, 1.0);
-            out.brake    = std::clamp(cmd.brake_torque / 4000.0
-                                       - std::min(0.0, cmd.drive_torque) / 4000.0,
-                                       0.0, 1.0);
+            axle_torque_to_pedal(cmd.drive_torque, cmd.brake_torque,
+                                 out.throttle, out.brake);
             out.steer_angle_wheel = cmd.steer_angle_wheel;
         } else if constexpr (std::is_same_v<T, CmdL3>) {
-            const double scale = cmd.Fx_total / (1500.0 * 5.0);
+            const double scale = fx_total_pedal_scale(cmd.Fx_total);
             out.throttle = std::clamp(scale, 0.0, 1.0);
             out.brake    = std::clamp(-scale, 0.0, 1.0);
             out.steer_angle_wheel = cmd.steer_angle_wheel;
@@ -74,20 +70,19 @@ constexpr double kGravity    = 9.80665;
 
 class SevenDOFDynamics final : public IVehicleDynamics {
 public:
+    SevenDOFDynamics() = default;
     explicit SevenDOFDynamics(std::unique_ptr<ITireModel> tire)
-        : tire_(std::move(tire)) {}
+        : inj_tire_(std::move(tire)) {}
 
     Level level() const noexcept override { return Level::L2_SevenDOF; }
 
     void initialize(const VehicleParams& vp,
-                    const TireParams& tp,
+                    const TireSetup& ts,
                     const SolverParams& sp) override {
         vp_ = vp;
-        tp_ = tp;
+        ts_ = ts;
         sp_ = sp;
-        if (tp.backend != "mf96" && !tp.backend.empty())
-            tire_ = create_tire_from_params(tp);
-        tire_->initialize(tp);
+        init_wheel_tire_models(tire_, ts_, &inj_tire_);
         const double R = vp.wheel_radius_nominal;
         Re_w_.fill(R);   // until the first force loop writes Re(Fz); keeps the
                          // first-substep LuGre slip velocity on the nominal radius.
@@ -136,34 +131,54 @@ public:
         tire_Fz_.fill(0.0);
         slip_ratio_.fill(0.0);
         slip_angle_.fill(0.0);
+        wheel_mu_.fill(0.0);
+        wheel_mu_peak_.fill(0.0);
+        wheel_alpha_peak_.fill(0.0);
+        wheel_kappa_peak_.fill(0.0);
         mz_front_sum_ = 0.0;
+        direct_l1_ = false;
     }
 
     void step(const ControlInput& u,
               const ContactArray& contacts,
               double dt) noexcept override {
-        const CmdL4 cmd = lower_to_l4(u);
+        direct_l1_ = false;
+        if (std::holds_alternative<CmdL1>(u)) {
+            direct_l1_ = true;
+            cmd_l1_    = std::get<CmdL1>(u);
+        } else {
+            cmd_l4_ = lower_to_l4(u);
+        }
         if (!(dt > 0.0)) return;
 
-        const DriverCmd driver_cmd{
-            cmd.steer_angle_wheel,
-            cmd.throttle,
-            cmd.brake,
-            cmd.gear,
-            cmd.handbrake,
-            cmd.steer_mode,
-            cmd.steer_actuator,
-        };
-        SubsystemContext ctx{state_, driver_cmd, dt};
-        brake_->begin_step(ctx, dt);
-        drivetrain_->begin_step(ctx, dt);
-        steering_->begin_step(ctx, dt);
+        if (!direct_l1_) {
+            const DriverCmd driver_cmd{
+                cmd_l4_.steer_angle_wheel,
+                cmd_l4_.throttle,
+                cmd_l4_.brake,
+                cmd_l4_.gear,
+                cmd_l4_.handbrake,
+                cmd_l4_.steer_mode,
+                cmd_l4_.steer_actuator,
+            };
+            SubsystemContext ctx{state_, driver_cmd, dt};
+            brake_->begin_step(ctx, dt);
+            drivetrain_->begin_step(ctx, dt);
+            steering_->begin_step(ctx, dt);
+        } else {
+            const DriverCmd driver_cmd{
+                cmd_l1_.steer_angle_wheel, 0.0, 0.0, 1, false,
+                SteerMode::Angle, 0.0,
+            };
+            SubsystemContext ctx{state_, driver_cmd, dt};
+            steering_->begin_step(ctx, dt);
+        }
 
         const int N = std::max(1,
                        std::min(sp_.max_substeps,
                                 static_cast<int>(std::ceil(dt / sp_.max_substep_dt))));
         const double h = dt / static_cast<double>(N);
-        for (int i = 0; i < N; ++i) substep(cmd, contacts, h);
+        for (int i = 0; i < N; ++i) substep(contacts, h);
     }
 
     const State& state() const noexcept override { return state_; }
@@ -192,6 +207,14 @@ public:
     std::array<double, NUM_WHEELS> tire_Fz()           const override { return tire_Fz_; }
     std::array<double, NUM_WHEELS> wheel_slip_ratio()  const override { return slip_ratio_; }
     std::array<double, NUM_WHEELS> wheel_slip_angle()  const override { return slip_angle_; }
+    std::array<double, NUM_WHEELS> wheel_mu()          const override { return wheel_mu_; }
+    std::array<double, NUM_WHEELS> wheel_mu_peak()     const override { return wheel_mu_peak_; }
+    std::array<double, NUM_WHEELS> wheel_alpha_peak()  const override { return wheel_alpha_peak_; }
+    std::array<double, NUM_WHEELS> wheel_kappa_peak()  const override { return wheel_kappa_peak_; }
+    const ITireModel* tire(int wheel) const override {
+        if (wheel < 0 || wheel >= NUM_WHEELS) return nullptr;
+        return tire_[wheel].get();
+    }
     std::array<double, NUM_WHEELS> wheel_overturning_moment() const override { return mx_w_; }
 
     // Quasi-static roll/pitch incl. the CG-migration (jacking) feedback —
@@ -243,8 +266,10 @@ private:
     static int side_of(int i) { return i % 2; }              // 0 = left (FL/RL), 1 = right (FR/RR)
 
     Deriv derivatives(const State& s,
-                      const CmdL4& cmd,
                       const ContactArray& contacts) {
+        const CmdL4& cmd = cmd_l4_;
+        const double steer_cmd = direct_l1_ ? cmd_l1_.steer_angle_wheel
+                                            : cmd.steer_angle_wheel;
         const double vx  = s.velocity.x();
         const double vy  = s.velocity.y();
         const double r   = s.angular_velocity.z();
@@ -343,13 +368,13 @@ private:
         if (use_ext_fz_) { Fz = ext_fz_; use_ext_fz_ = false; }
 
         const DriverCmd driver_cmd{
-            cmd.steer_angle_wheel,
-            cmd.throttle,
-            cmd.brake,
-            cmd.gear,
-            cmd.handbrake,
-            cmd.steer_mode,
-            cmd.steer_actuator,
+            steer_cmd,
+            direct_l1_ ? 0.0 : cmd.throttle,
+            direct_l1_ ? 0.0 : cmd.brake,
+            direct_l1_ ? 1   : cmd.gear,
+            direct_l1_ ? false : cmd.handbrake,
+            direct_l1_ ? SteerMode::Angle : cmd.steer_mode,
+            direct_l1_ ? 0.0 : cmd.steer_actuator,
         };
         SubsystemContext ctx{s, driver_cmd, 0.0};
         ctx.Fz = Fz;
@@ -402,13 +427,19 @@ private:
             0.0  + toe_ext_[WHEEL_RR],
         }};
 
-        const bool lugre_on = tp_.lugre.enabled;
-        // Low-speed blend factor: 0 at rest (stick + kinematic govern) -> 1 above
-        // kStickBlend (validated dynamic model). Skipped when LuGre is active.
+        const bool plant    = vp_.plant_path;
         const double speed = std::hypot(vx, vy);
-        double lambda = lugre_on ? 1.0
-            : std::clamp(speed / kStickBlend, 0.0, 1.0);
-        if (!lugre_on) lambda = lambda * lambda * (3.0 - 2.0 * lambda);
+        double lambda_body = 1.0;
+        if (!plant) {
+            double lam_min = 1.0;
+            for (int wi = 0; wi < NUM_WHEELS; ++wi) {
+                if (ts_.for_wheel(wi).lugre.enabled) continue;
+                double lam = std::clamp(speed / kStickBlend, 0.0, 1.0);
+                lam = lam * lam * (3.0 - 2.0 * lam);
+                lam_min = std::min(lam_min, lam);
+            }
+            lambda_body = lam_min;
+        }
         std::array<double, NUM_WHEELS> fx_kin {{0.0, 0.0, 0.0, 0.0}};
 
         for (int i = 0; i < NUM_WHEELS; ++i) {
@@ -422,6 +453,10 @@ private:
                 mx_w_[i]       = 0.0;   // airborne: no overturning (don't leak stale Mx to roll)
                 contact_dy_[i] = 0.0;
                 fx_kin[i]      = 0.0;
+                wheel_mu_[i]       = 0.0;
+                wheel_mu_peak_[i]  = 0.0;
+                wheel_alpha_peak_[i] = 0.0;
+                wheel_kappa_peak_[i] = 0.0;
                 ci_[i]         = ITireModel::ContactInput{};  // neutral: no bristle/relax evolution
                 continue;
             }
@@ -438,6 +473,10 @@ private:
 
             const double mu_long_i = contacts[i].mu_long;
             const double mu_lat_i  = contacts[i].mu_lat;
+            wheel_mu_[i] = std::min(mu_long_i, mu_lat_i);
+
+            const bool lugre_i = ts_.for_wheel(i).lugre.enabled;
+            const double lambda_i = (lugre_i || plant) ? 1.0 : lambda_body;
 
             // Raw contact kinematics + load handed to the tire; the tire owns slip /
             // Re / camber migration / transient. Stored per wheel so the per-stage
@@ -452,7 +491,11 @@ private:
             // Frozen per-RK4-stage force: slip / Re / camber / transient all live in
             // the tire now. The transient_ state is held frozen within the stage and
             // advanced between stages/substeps below.
-            const ITireModel::Wrench w = tire_->evaluate(ci, transient_[i]);
+            const ITireModel::Wrench w = wheel_tire_model(tire_, i)
+                                             .evaluate(ci, transient_[i]);
+            wheel_mu_peak_[i] = w.mu_peak;
+            wheel_alpha_peak_[i] = w.alpha_peak;
+            wheel_kappa_peak_[i] = w.kappa_peak;
             Re_w_[i]       = w.Re;
             contact_dy_[i] = w.contact_dy;
             mx_w_[i]       = w.Mx;        // camber migration (+ carcass Mx if any)
@@ -465,36 +508,36 @@ private:
             // tire physics): stick-blend lambda, Fx_hold creep, combined-slip clamp.
             double Fx_w = 0.0, Fy_w = 0.0;
             double Fxd = 0.0, Fyd = 0.0;
-            if (lugre_on) {
+            if (lugre_i) {
                 Fx_w = w.Fx;
                 Fy_w = w.Fy;
                 mz_wheel[i] = w.Mz;
                 Fxd = Fx_w;
                 Fyd = Fy_w;
             } else {
-                const double hold_gate = (1.0 - lambda) *
-                    std::clamp(cmd.brake - cmd.throttle, 0.0, 1.0);
+                const double hold_gate = plant ? 0.0
+                    : (1.0 - lambda_i) * std::clamp(cmd.brake - cmd.throttle, 0.0, 1.0);
                 double Fx_hold = -kStickC * v_x_body * hold_gate;
                 if (std::abs(Fx_hold) > muFz) Fx_hold = std::copysign(muFz, Fx_hold);
                 Fx_w = w.Fx + Fx_hold;
-                Fy_w = lambda * w.Fy;
+                Fy_w = lambda_i * w.Fy;
                 fx_kin[i] = w.Fx;
-                mz_wheel[i] = w.Mz * lambda;
-                Fxd = lambda * w.Fx + Fx_hold;
+                mz_wheel[i] = w.Mz * lambda_i;
+                Fxd = lambda_i * w.Fx + Fx_hold;
                 Fyd = Fy_w;
             }
             const double Fmag = std::hypot(Fx_w, Fy_w);
-            if (!tp_.model_provides_combined_slip() && Fmag > muFz && Fmag > 1e-9) {
+            if (!ts_.for_wheel(i).model_provides_combined_slip() && Fmag > muFz && Fmag > 1e-9) {
                 const double c = muFz / Fmag;
                 Fx_w *= c;
                 Fy_w *= c;
             }
-            if (lugre_on) fx_kin[i] = Fx_w;
+            if (lugre_i) fx_kin[i] = Fx_w;
             const double Fx_b = Fx_w * cd_i - Fy_w * sd_i;
             const double Fy_b = Fx_w * sd_i + Fy_w * cd_i;
             F_body[i] = Vec3(Fx_b, Fy_b, 0.0);
             const double Fdm = std::hypot(Fxd, Fyd);
-            if (!tp_.model_provides_combined_slip() && Fdm > muFz && Fdm > 1e-9) {
+            if (!ts_.for_wheel(i).model_provides_combined_slip() && Fdm > muFz && Fdm > 1e-9) {
                 const double c = muFz / Fdm;
                 Fxd *= c;
                 Fyd *= c;
@@ -505,18 +548,19 @@ private:
             alpha[i]  = a_slip;
         }
 
-        const auto dt_out = drivetrain_->apply(ctx);
+        const auto dt_out = direct_l1_ ? DrivetrainOutput{}
+                                       : drivetrain_->apply(ctx);
         const std::array<double, NUM_WHEELS> Td = dt_out.wheel_torque;
-        // Sequential drive/brake: IDrivetrain absorbs regen first, IBrakeSystem gets residual.
-        // brake_absorbed [0,1]: fraction of brake demand handled by drivetrain (EV regen etc.).
-        // Default ICE = 0.0 → IBrakeSystem receives full brake demand unchanged.
-        const double effective_brake = driver_cmd.brake
-                                       * (1.0 - std::clamp(dt_out.brake_absorbed, 0.0, 1.0));
-        const DriverCmd cmd_residual{driver_cmd.handwheel_angle,
-                                     driver_cmd.throttle, effective_brake,
-                                     driver_cmd.gear, driver_cmd.handbrake};
-        const SubsystemContext ctx_brake{s, cmd_residual, ctx.dt, ctx.Fz};
-        const std::array<double, NUM_WHEELS> Tb = brake_->wheel_torque(ctx_brake);
+        std::array<double, NUM_WHEELS> Tb {{0.0, 0.0, 0.0, 0.0}};
+        if (!direct_l1_) {
+            const double effective_brake = driver_cmd.brake
+                                           * (1.0 - std::clamp(dt_out.brake_absorbed, 0.0, 1.0));
+            const DriverCmd cmd_residual{driver_cmd.handwheel_angle,
+                                         driver_cmd.throttle, effective_brake,
+                                         driver_cmd.gear, driver_cmd.handbrake};
+            const SubsystemContext ctx_brake{s, cmd_residual, ctx.dt, ctx.Fz};
+            Tb = brake_->wheel_torque(ctx_brake);
+        }
 
         // ---- Body equations ----
         double Fx_total = 0.0, Fy_total = 0.0, Mz_total = 0.0;
@@ -530,9 +574,10 @@ private:
         mz_front_sum_ = mz_wheel[WHEEL_FL] + mz_wheel[WHEEL_FR];
         const double F_aero = 0.5 * kAirDensity * vp_.aero_drag_coeff *
                               vp_.frontal_area * vx * std::abs(vx);
-        const double Fz_total_now = Fz[0] + Fz[1] + Fz[2] + Fz[3];
-        const double F_rr = tp_.rolling_resistance * Fz_total_now *
-                            std::tanh(vx / 0.5);
+        double F_rr = 0.0;
+        for (int wi = 0; wi < NUM_WHEELS; ++wi)
+            F_rr += ts_.for_wheel(wi).rolling_resistance * Fz[wi];
+        F_rr *= std::tanh(vx / 0.5);
         Fx_total -= F_aero;
         Fx_total -= F_rr;
         Fx_total += m * gx_b;   // gravity tangential to the road (0 on flat)
@@ -556,12 +601,15 @@ private:
         const double delta_f = 0.5 * (d_wheel[WHEEL_FL] + d_wheel[WHEEL_FR]);
         const double r_kin   = (L > 1e-6) ? vx * std::tan(delta_f) / L : 0.0;
         const double vy_kin  = r_kin * b;
-        if (lugre_on) {
+        bool lugre_all = true;
+        for (int wi = 0; wi < NUM_WHEELS; ++wi)
+            lugre_all = lugre_all && ts_.for_wheel(wi).lugre.enabled;
+        if (lugre_all || plant) {
             d_out.dvy = dvy_dyn;
             d_out.dr  = dr_dyn;
         } else {
-            d_out.dvy = dvy_dyn + (1.0 - lambda) * (vy_kin - vy) / kKinTau;
-            d_out.dr  = dr_dyn  + (1.0 - lambda) * (r_kin  - r ) / kKinTau;
+            d_out.dvy = dvy_dyn + (1.0 - lambda_body) * (vy_kin - vy) / kKinTau;
+            d_out.dr  = dr_dyn  + (1.0 - lambda_body) * (r_kin  - r ) / kKinTau;
         }
         d_out.ax_body  = Fx_total / m;
         d_out.ay_body  = Fy_total / m;
@@ -582,7 +630,21 @@ private:
         // Tire-force reaction torque uses the same effective rolling radius as the
         // slip definition (energetically consistent: free roll → kappa=0 → Fx=0).
         std::array<double, NUM_WHEELS> T_net{};
-        for (int i = 0; i < NUM_WHEELS; ++i) T_net[i] = Td[i] + Tb[i] - fx_kin[i] * Re_w_[i];
+        if (direct_l1_) {
+            // Brake opposes wheel rotation and must NOT drive it backwards (a friction brake
+            // can only resist, not propel). tanh(omega/eps) gives the signed, vanishing-at-rest
+            // brake direction, so a locked wheel settles at kappa~-1 instead of spinning
+            // backward to kappa->-inf under a constant over-brake torque.
+            constexpr double kBrakeOmegaEps = 2.0;  // [rad/s]
+            for (int i = 0; i < NUM_WHEELS; ++i) {
+                const double brake = cmd_l1_.brake_torque[i]
+                    * std::tanh(s.wheel_spin[i] / kBrakeOmegaEps);
+                T_net[i] = cmd_l1_.motor_torque[i] - brake - fx_kin[i] * Re_w_[i];
+            }
+        } else {
+            for (int i = 0; i < NUM_WHEELS; ++i)
+                T_net[i] = Td[i] + Tb[i] - fx_kin[i] * Re_w_[i];
+        }
         if (open_diff) {
             // Open diff: each axle's engine/carrier inertia couples its wheel pair
             // (felt under symmetric accel, transparent to wheel-to-wheel differences).
@@ -651,36 +713,42 @@ private:
     // LuGre bristle z — advanced once per RK4 stage at the sub-substep dt, against the
     // kinematics of the stage just evaluated (stored in ci_).
     void advance_bristle_(double dt) {
-        if (!tp_.lugre.enabled) return;
-        for (int i = 0; i < NUM_WHEELS; ++i)
-            transient_[i] = tire_->advance_bristle(ci_[i], transient_[i], dt);
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            if (!ts_.for_wheel(i).lugre.enabled) continue;
+            transient_[i] = wheel_tire_model(tire_, i)
+                                .advance_bristle(ci_[i], transient_[i], dt);
+        }
     }
     // Carcass/belt + relaxation-length lag — advanced once per substep at the full dt,
-    // against the final stage's geometric slip (ci_ from the last derivatives() call).
     void advance_relaxation_(double dt) {
         for (int i = 0; i < NUM_WHEELS; ++i)
-            transient_[i] = tire_->advance_relaxation(ci_[i], transient_[i], dt);
+            transient_[i] = wheel_tire_model(tire_, i)
+                                .advance_relaxation(ci_[i], transient_[i], dt);
     }
 
-    void substep(const CmdL4& cmd, const ContactArray& contacts, double h) {
+    void substep(const ContactArray& contacts, double h) {
         const State s0 = state_;
-        const bool lugre_on = tp_.lugre.enabled;
+        const bool lugre_on = [&]() {
+            for (int wi = 0; wi < NUM_WHEELS; ++wi)
+                if (ts_.for_wheel(wi).lugre.enabled) return true;
+            return false;
+        }();
         const double hz = 0.25 * h;
         if (sp_.integrator == SolverParams::Integrator::Euler) {
-            const Deriv k = derivatives(s0, cmd, contacts);
+            const Deriv k = derivatives(s0, contacts);
             state_   = apply(s0, k, h);
             ax_prev_ = k.ax_body;
             ay_prev_ = k.ay_body;
             if (lugre_on) advance_bristle_(h);
             return;
         }
-        const Deriv k1 = derivatives(s0,                       cmd, contacts);
+        const Deriv k1 = derivatives(s0,                       contacts);
         if (lugre_on) advance_bristle_(hz);
-        const Deriv k2 = derivatives(apply(s0, k1, 0.5 * h),  cmd, contacts);
+        const Deriv k2 = derivatives(apply(s0, k1, 0.5 * h),  contacts);
         if (lugre_on) advance_bristle_(hz);
-        const Deriv k3 = derivatives(apply(s0, k2, 0.5 * h),  cmd, contacts);
+        const Deriv k3 = derivatives(apply(s0, k2, 0.5 * h),  contacts);
         if (lugre_on) advance_bristle_(hz);
-        const Deriv k4 = derivatives(apply(s0, k3, h),        cmd, contacts);
+        const Deriv k4 = derivatives(apply(s0, k3, h),        contacts);
         if (lugre_on) advance_bristle_(hz);
 
         Deriv k;
@@ -707,9 +775,10 @@ private:
     }
 
     VehicleParams vp_;
-    TireParams    tp_;
+    TireSetup     ts_;
     SolverParams  sp_;
-    std::unique_ptr<ITireModel> tire_;
+    std::unique_ptr<ITireModel> inj_tire_;
+    std::array<std::unique_ptr<ITireModel>, NUM_WHEELS> tire_ {};
     std::shared_ptr<IDrivetrain>         drivetrain_;
     std::shared_ptr<IBrakeSystem>        brake_;
     std::shared_ptr<ISteeringSystem>     steering_;
@@ -729,6 +798,13 @@ private:
     std::array<double, NUM_WHEELS> tire_Fz_    {};
     std::array<double, NUM_WHEELS> slip_ratio_ {};
     std::array<double, NUM_WHEELS> slip_angle_ {};
+    std::array<double, NUM_WHEELS> wheel_mu_       {};
+    std::array<double, NUM_WHEELS> wheel_mu_peak_ {};
+    std::array<double, NUM_WHEELS> wheel_alpha_peak_ {};
+    std::array<double, NUM_WHEELS> wheel_kappa_peak_ {};
+    CmdL4 cmd_l4_ {};
+    CmdL1 cmd_l1_ {};
+    bool  direct_l1_ {false};
     // Per-wheel tire transient (belt / relaxation / LuGre bristle z), OWNED here so the
     // RK4 integrator can freeze/advance it; the tire backend integrates it via
     // advance_bristle()/advance_relaxation(). ci_ holds the contact kinematics the tire
@@ -750,7 +826,7 @@ private:
 }  // namespace
 
 std::unique_ptr<IVehicleDynamics> create_seven_dof() {
-    return std::make_unique<SevenDOFDynamics>(create_pacejka_mf96());
+    return std::make_unique<SevenDOFDynamics>();
 }
 
 std::unique_ptr<IVehicleDynamics> create_seven_dof(std::unique_ptr<ITireModel> tire) {
