@@ -38,7 +38,7 @@ SimSession::SimSession(std::unique_ptr<IVehicleDynamics> dyn,
                        const VehicleParams& vp, const TireSetup& ts,
                        const SolverParams& sp, const SimConfig& cfg)
     : dyn_(std::move(dyn)), ground_(std::move(ground)), vp_(vp),
-      direct_control_path_(cfg.direct_control_path) {
+      session_kind_(cfg.session_kind) {
     dyn_->initialize(vp, ts, sp);
     free_3d_attach_contact_provider(*dyn_, ground_.get());
     network_ = make_default_veh_network(cfg.veh_network);
@@ -127,7 +127,7 @@ void SimSession::tick(double dt) {
     ContactArray contacts;
     ground_->query(s, vp_, contacts);
 
-    if (direct_control_path_) {
+    if (session_kind_ == SessionKind::DirectControl) {
         const double speed = s.speed_xy();
         CmdL4 steer_desired{};
         steer_desired.steer_angle_wheel = steer_from_input(cmd);
@@ -269,12 +269,14 @@ std::unique_ptr<SimSession> make_direct_control_session(
     const SolverParams& sp,
     const DirectControlSessionOptions& opts) {
     SimConfig cfg;
-    cfg.direct_control_path = true;
+    cfg.session_kind = SessionKind::DirectControl;
     cfg.nominal_dt = opts.nominal_dt;
     apply_vehicle_steer_deadtime(cfg, vp);
+    VehicleParams vp_dc = vp;
+    vp_dc.plant_path = true;
     auto ground = make_friction_ground(opts.friction);
     return std::make_unique<SimSession>(
-        create_seven_dof(), std::move(ground), vp, ts, sp, cfg);
+        create_seven_dof(), std::move(ground), vp_dc, ts, sp, cfg);
 }
 
 }  // namespace vdsim

@@ -176,6 +176,10 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("sigma2",  &vdsim::LuGreTireParams::sigma2)
         .def_readwrite("m_eff",   &vdsim::LuGreTireParams::m_eff);
 
+    py::enum_<vdsim::LowSpeedMode>(m, "LowSpeedMode")
+        .value("KinematicBlend", vdsim::LowSpeedMode::KinematicBlend)
+        .value("TireVlowOnly", vdsim::LowSpeedMode::TireVlowOnly);
+
     // -------- TireParams --------
     py::class_<vdsim::TireParams>(m, "TireParams")
         .def(py::init<>())
@@ -206,6 +210,8 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("backend", &vdsim::TireParams::backend)
         .def_readwrite("tir_path", &vdsim::TireParams::tir_path)
         .def_readwrite("lugre", &vdsim::TireParams::lugre)
+        .def_readwrite("vlow_speed_eps", &vdsim::TireParams::vlow_speed_eps)
+        .def_readwrite("low_speed_mode", &vdsim::TireParams::low_speed_mode)
         .def_static("from_yaml", &vdsim::TireParams::from_yaml)
         .def("to_yaml",          &vdsim::TireParams::to_yaml);
 

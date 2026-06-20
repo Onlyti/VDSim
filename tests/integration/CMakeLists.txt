@@ -24,6 +24,7 @@ add_executable(vdsim_integration_tests
     test_multi_vehicle.cpp
     test_per_axle_tire.cpp
     test_per_wheel_tire.cpp
+    test_low_speed_t3.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../cosim/scene_loader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../cosim/world_scenario.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../parity/test_chrono_pac02_parity.cpp

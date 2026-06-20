@@ -57,7 +57,7 @@ TEST(FourteenDOF, L4MultibodyDynamicsInStep) {
     vdsim::CmdL4 cmd; cmd.steer_angle_wheel = 0.08;
     const vdsim::ContactArray contacts = flat_contacts();
     for (int i = 0; i < 800; ++i) dyn->step(cmd, contacts, 0.005);
-    EXPECT_NEAR(dyn->compliance_toe_rad(0), 0.0, 1e-12);
+    EXPECT_GT(std::abs(dyn->compliance_toe_rad(0)), 1e-6);
     EXPECT_GT(std::abs(dyn->wheel_slip_angle()[vdsim::WHEEL_FL]), 1e-4);
 }
 

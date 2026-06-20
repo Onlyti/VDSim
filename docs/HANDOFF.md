@@ -1,6 +1,16 @@
 # VDSim 핸드오프
 
-작성: **2026-06-20** · `main` (local) · **385/385 ctest green**
+작성: **2026-06-20** · `main` (local) · **388/388 ctest green**
+
+## 0. 2026-06-20 core quality + T3 VLOW — DONE
+
+**Shipped:**
+- **`SessionKind`** — `Standard` / `DirectControl` on `SimConfig` (replaces `direct_control_path`)
+- **KC compliance** — bushing toe/camber under lateral tire load in L3/L4 hard-joint step
+- **T3 VLOW** — `TireParams.low_speed_mode` + `vlow_speed_eps`; tests `TireVlow.*`
+- **Chrono KC** — `external/chrono_kc` builds (`gen_kc_reference`); API TODOs remain (gate still SKIP)
+
+**Verify:** `cmake --build build -j && cd build && ctest --output-on-failure`
 
 ## 0. 2026-06-20 thesis → main core port (partial cherry-pick) — DONE
 
@@ -20,7 +30,7 @@
 
 **목표였던 것:** 멀티차량 비교(헤드리스+GUI) + 다나와식 차량조립 UI + 외부 AI 디자인 리뷰 반영. 완료.
 
-**현재 상태:** `main` 에 feature 머지+push 완료(`b9064c4`), 336/336 green, 작업 트리 clean, 이번 세션 브랜치 삭제(로컬+원격). **미완 작업 없음 — 깨끗한 중단점.**
+**현재 상태:** `main` local (ahead of origin) · **385/385 green** · thesis core port done · VLA on `VDSim-Thesis` only.
 
 **이번 세션 main 에 들어간 것:**
 - **헤드리스 멀티차량 비교** `tools/vdsim_compare.py` — preset N대에 같은 ISO maneuver(step-steer/skidpad/DLC) 돌려 지표 나란히 표 + bar-chart(compare.csv/png). `examples/maneuvers.py` 함수에 optional `veh=(vp,tp)` + `trace=True`(step_steer yaw-rate 시계열).
@@ -28,11 +38,13 @@
 - **GUI Compare 대시보드** — VEHICLES 패널 ⊟ → blueprint 체크박스 → `/api/compare`(routes.py, `vdsim_compare` 래핑) → **step-steer yaw-rate overlay SVG 차트** + **Δ%(baseline 대비) 표**(유효숫자 통일, 정성/정량 분리). `tests/scripts/test_compare.py`(ctest `multi_vehicle_compare`).
 - **GUI 폴리싱**(디자인 리뷰 반영) — RESOLVED STATS 단위, active 행 회색+좌측 accent, 3D 프리뷰 우측, Sync-draft 표준 크기.
 
-**다음 할 일 후보 (우선순위 순):**
-1. **#1 Fx→τ / #6 brake bias / #2 SessionKind** — interface discussion (thesis deferred).
-2. **GUI 재아키텍처 (전략 결정 후)** — 외부 AI 리뷰 4/10 "프로토타입" 판정. 큰 항목: dockable/resizable 패널 + 모달 제거(분할화면), 글로벌 모드 nav(Setup-Sim-Analyze), 전사 디자인 시스템. **stdlib http.server + 손코딩 app.js 의 한계 — React/Svelte + 디자인 패스(Figma) 결정이 선행.** 지금 찔끔 하지 말 것.
-3. **#158 GUI 멀티차량 3D render** — preset picker 로 spawn 은 됨, 3D 뷰 N대 동시 표시(VDS1 vehicle_id demux) 남음.
-4. cosmetic — part 라벨 "Fsk Formula chassis body" 잔재, Session tune 탭 라벨.
+**다음 할 일 후보 (우선순위 순):** see [`ROADMAP.md`](ROADMAP.md) §15.
+
+1. **P0** — tag **v0.6.1** (core port @ `5cdca4e`) + **v0.6.2** (this session) when ready.
+2. **P1** — **#1 Fx→τ** C++ contract, **#6 drive_split** / brake bias design.
+3. **P2** — Chrono KC `gen_kc_reference` API fill-in.
+4. **P3** — v0.5.2 GUI: terrain Play **or** `.tir` import; **GUI v2** framework decision.
+5. **Thesis** — VLA hotfix only on `VDSim-Thesis`; plant → main PR after client sign-off.
 
 **주의·함정:**
 - retax2 **breaking** — 옛 `chassis.*`/`susp.*` part id, `front_susp_kin` 슬롯 제거됨.
@@ -100,19 +112,21 @@
 
 ```bash
 cmake --build build -j
-cd build && ctest --output-on-failure   # 328/328
+cd build && ctest --output-on-failure   # 388/388 (main)
 python3 gui/server.py                   # http://127.0.0.1:8080
 ```
 
 ## 4. 다음 작업
 
-**Shipped:** v0.4.0 (stunt Ld5 + Ld4 multibody + theory ch.20) and **v0.5.0**
-(terrain + L5, headless/batch/cosim) are tagged on `main`. v0.5.0 work landed on
-`feat/v0.5-terrain-m1`: M0 hub contact · M1 heightmap (no-sink/climb/flank) · M2 cliff
-airborne · M3 terrain scene+bake · M5 inclined/banked · M5b CurvedGround banked turn ·
-M6 docs. 273 ctest. Scenes: `terrain_hill_demo`, `banked_grade_demo`, `banked_oval`.
+**Current sprint:** [`ROADMAP.md`](ROADMAP.md) §15 (development priorities).
 
-**Tire stack (this session — T1 + T2, merged to `main`):** see
+**Shipped on `main` (2026-06-20):** SessionKind, KC compliance, T3 VLOW. **388/388 ctest.**
+
+**Deferred (v0.5.2, browser):** GUI terrain Play, stunt authoring, `.tir` import;
+tire-force arrows in wheel frame in 3D view.
+
+<details>
+<summary>Historical archive (v0.4–v0.5 tire stack)</summary>
 [`design/TIRE_ROADMAP.md`](design/TIRE_ROADMAP.md) §0/§4 + theory ch.21.
 - **T1 MF2002**: `TireParams.backend` ("mf96" default | "magic_formula" | "linear")
   + `tir_path`; `create_tire_from_params` dispatch in every dynamics `initialize()`;
@@ -179,6 +193,8 @@ module workshop; L1 has no subsystem objects (out of scope).
    engine-map workshop (UI) remaining.
 3. Tire: T2 belt is **complete** (L1–L5); higher belt eigenmodes (rigid-ring/FTire) out of scope.
 
+</details>
+
 ## 5. 주의
 
 - Hyundai (TUR) `.tir` **confidential** — 커밋 금지
@@ -189,58 +205,12 @@ module workshop; L1 has no subsystem objects (out of scope).
 
 ## 6. Git
 
-- `main` @ `f6b1d71`, **all pushed**, 328/328 ctest. Last tag **`v0.5.1`**; main is ahead
-  of it (post-0.5.1, **untagged**): tire tail (L1 belt, `tire_forces_wheel`, Chrono parity)
-  + ISO re-baseline/`IsoBaseline` + **Drivetrain v2** (D1–D5). Tag a release when the next
-  milestone closes (suggest `v0.6.0` once catalog `drivetrain_v2` or Ld4 v0.6 lands).
-- Tags: v0.1.0 / v0.2.0 / v0.2.4 / v0.4.0 / v0.5.0 / **v0.5.1**.
-- All feature work committed straight on `main` this session (no branches/rewrite).
-  push/merge/tag는 명시 요청 시에만.
+- `main` local, **ahead of origin** · **388/388 ctest** · tags **`v0.6.0`** (MBD) ·
+  **v0.6.1** (core port) + **v0.6.2** (quality/T3) after commit/tag.
 - **External build (not in repo):** Chrono 8.0.0 source at `~/build_ext/chrono_src`
   (vehicle module only) — only needed to *regenerate* the parity CSV, not to run the gate.
 - Next: new feature branch off `main`.
 
 ## 7. Next pickups (fresh session)
 
-1. **(DONE)** Catalog `drivetrain_v2` part — `drivetrain.sedan_v2` carries a `powertrain:`
-   block through the resolver into the vehicle config; blueprint `vehicle.sedan_powertrain`.
-   **(DONE)** L1 powertrain — the engine map + gearbox + shift policy now runs on the
-   bicycle (opt-in, advanced once per substep, gear-dependent reflected inertia; flat path
-   default-off keeps ISO green). Tests `DrivetrainV2.L1*`. Remaining drivetrain: engine-map
-   workshop (GUI).
-2. **Ld4 v0.6** — shared inertia helpers; full loop dynamics; Featherstone in step (optional).
-3. **v0.5.2 GUI (browser, user-verified):** terrain Play (M4), stunt authoring (M5c),
-   `.tir` import, tire-force arrows in wheel frame (`tire_forces_wheel()` ready).
-4. Brake/steer physics (booster/MDPS/ABS); V2V collision + VDS1 multi-vehicle I/O.
-5. **User module plugins — DECIDED = C++ `.so`; toolchain shipped, consumption pending.**
-   Decision: C++ only (no Python authoring). Built: plugin ABI `vdsim/module_plugin.hpp`
-   (`VDSIM_REGISTER_*_MODULE`), `dlopen` loader `load_module_plugin()`/`install_module()`,
-   `templates/modules/*`, checker `vdsim_module_check`, `tools/module_workshop.py`
-   (build/check/register → `module_plugin_v1` part under `gui_custom`). Tests `ModulePlugin.*`
-   + `module_workshop`. Theory ch.24. **Consumption DONE:** a blueprint `module_plugins:`
-   list resolves into the vehicle config and `install_module_plugins_from_yaml()` loads +
-   installs after `initialize()` (wired into `vdsim_realtime`); `ModulePlugin.InstallFromYaml`
-   proves register→blueprint→resolve→install→effect. **GUI (MW7) DONE** (server-verified;
-   browser pass pending): setup "Modules" tab + `/api/module/{template,build_check,register}`
-   wrapping `tools/module_workshop.py` (`gui/app.html` + `gui/static/app.js`). Module-plugin
-   feature complete end-to-end.
-6. **(FIXED `c6b2476`) open-diff engine inertia under symmetric accel.** The old
-   `couple_open_axle_spin` carrier blend was a no-op when both wheels turned equally, so
-   straight-line accel felt no reflected engine inertia. Replaced with the coupled 2x2 axle
-   mass matrix (`open_axle_spin_accel`): symmetric accel now feels `I_e/2` per wheel,
-   differential motion still doesn't. The tight gates stayed green (traction-locked spin), so
-   no numeric re-baseline. Test `OpenDiffInertia.EngineInertiaSlowsSymmetricLaunch`.
-8. **Part re-taxonomy (agreed; step 1 DONE).** Target: vehicle = body (mass/inertia) +
-   chassis (suspension links/hardpoints/knuckle, = today's susp_kinematics) + powertrain
-   (engine) + drivetrain (transmission+diff) + tire/brake/steering. **Step 1 shipped:**
-   powertrain/drivetrain split — `powertrain` part type (`powertrain_v1`) + `drivetrain_v3`
-   (gearbox+diff); resolver deep-merges the `powertrain:` block; `vehicle.sedan_split_powertrain`.
-   **Remaining:** split `body` (mass/inertia) out of the `chassis` part; rename/reframe
-   `susp_kinematics` → `chassis` (links + hardpoints + knuckle/knuckle-arm points); migrate
-   existing blueprints. These are breaking renames — do with the user (slot names + migration).
-9. **Repo hygiene (low priority, needs a call):** the two `sweep_runner.py`
-   (`python/` catalog-binary sweep vs `apps/doe/` config DoE) are different tools with
-   different YAML schemas, not a dead duplicate — decide which is canonical before merging.
-   Demo `*.mp4` (~5.4M) are linked from `docs/tasks/T22/T23` reports; move to LFS/releases
-   only with the report links updated. Cosmetic: rename `gui/runner/draft.py` (live code,
-   misleading name); merge the two `builder/` servers.
+See [`ROADMAP.md`](ROADMAP.md) §15. Summary: tag v0.6 → Fx→τ contract → KC compliance → GUI v0.5.2 pick-one.

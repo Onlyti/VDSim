@@ -1,20 +1,20 @@
 # VDSim product roadmap
 
-**Last updated:** 2026-06-17 · **Tests:** 382/382 ctest green (`main`)
+**Last updated:** 2026-06-20 · **Tests:** 388/388 ctest green (`main`) · 402 on `VDSim-Thesis` (+ VLA plant)
 
-Living roadmap from early PoC through v0.3. Tracks what shipped in mainline vs what
-is planned. Detail specs link to `docs/design/*`; tire phases in
-[`design/TIRE_ROADMAP.md`](design/TIRE_ROADMAP.md).
+Living roadmap from early PoC through v0.6. Tracks what shipped in **`main`** vs what
+is planned. The **VLA thesis closed-loop plant** (`python/vdsim_plant.py`) ships on
+`VDSim-Thesis` only (tag `vdsim-thesis-beta`); core APIs it depends on are on `main`.
+Detail specs: `docs/design/*`; tire phases in [`design/TIRE_ROADMAP.md`](design/TIRE_ROADMAP.md).
 
 !!! note "How to read"
     - [x] **Shipped** — in repo, default or opt-in, covered by ctest where applicable  
     - [ ] **Planned** — scoped in design docs; not yet implemented  
     - **Opt-in** — implemented but not default catalog (baseline frozen)
+    - **Thesis-only** — on `VDSim-Thesis`; not merged to `main` yet
 
-**Velocity (recent):** v0.2 composable subsystems + GUI redesign → v0.3 parts
-catalog + scene runtime → drivetrain inertia + LuGre tire tuning → v0.5 terrain + tire
-layers → **L5 high-fidelity MBD: free-3D inertial unsprung, hardpoint-emergent
-anti-dive/squat/roll-centre + progressive coil rate (untagged, v0.6 candidate)**.
+**Velocity (recent):** v0.5 terrain + tire T1/T2 → **v0.6 L5 MBD** (untagged) → **per-wheel
+tire + direct-control session factory** on `main` → **VLA plant beta** on thesis branch.
 
 ---
 
@@ -22,13 +22,14 @@ anti-dive/squat/roll-centre + progressive coil rate (untagged, v0.6 candidate)**
 
 | Area | Shipped (high level) | Next |
 |------|----------------------|------|
-| Dynamics L1–L5 | L1–L3 planar/14-DOF; **Ld4** hard-joint; **Ld5** stunt + terrain; **Ld5 high-fidelity MBD: free-3D inertial unsprung, energy-consistent on any surface, hardpoint-emergent anti-dive/squat/roll-centre + progressive coil rate + gyroscopic wheel-spin** ([design](design/L5_MBD_FREE3D_UNSPRUNG.md)) | KC compliance model; GUI terrain Play (v0.5.2); V2V |
-| Tire | MF96 + LuGre **default**; **MF2002 `.tir` backend (T1, Chrono-cross-checked)**; **belt transient (T2)** | bicycle belt; combined-slip vs Pac02; GUI `.tir` |
+| Dynamics L1–L5 | L1–L3 planar/14-DOF; **Ld4** hard-joint; **Ld5** stunt + terrain; **Ld5 high-fidelity MBD** ([design](design/L5_MBD_FREE3D_UNSPRUNG.md)) | **v0.6.0 tag**; KC compliance; GUI terrain Play (v0.5.2); V2V |
+| Tire | MF96 + LuGre **default**; **MF2002 `.tir` (T1)**; **belt transient (T2)**; **per-axle/per-wheel `TireSetup`** | GUI `.tir` import; T3 VLOW unified low-speed |
 | Drivetrain | Engine inertia + open-diff; **2D torque map + gearbox + shift policy (v2, opt-in)**; **catalog `drivetrain_v2` part** | Engine-map workshop (UI); L1 powertrain |
 | Brake / steer | Pluggable modules + deadtime; **user-defined modules (C++/Python subclass)** | Booster/MDPS physics |
-| Catalog / runtime | `--scene=`, fleet, FMI | External part packs, VDS1 v4 |
-| GUI | 3-tab scene UI, catalog API, workshops | Tire `.tir` import UI; **expose user-defined modules (decide: C++ `.so` plugin / Python path / GUI authoring)** |
-| Validation | ISO 7401/4138/3888 **re-baselined + CI-gated** (`IsoBaseline`), 382 ctest | Adams x-check rtol; commercial cross-val |
+| Catalog / runtime | `--scene=`, fleet, FMI; **`make_direct_control_session`**, `FrictionMapConfig`, `SimOutput` wheel GT | External part packs; VDS1 v4; **Fx→τ contract (#1)** |
+| Closed-loop plant | Core session API on `main` | **VLA `VDSimPlant`** thesis-only → main PR when client done |
+| GUI | 3-tab scene UI, catalog API, workshops, multi-vehicle compare | **GUI v2** (framework decision); terrain Play; `.tir` import |
+| Validation | ISO 7401/4138/3888 **re-baselined + CI-gated** (`IsoBaseline`), **385** ctest | Chrono KC offline build; Adams x-check |
 
 ```mermaid
 timeline
@@ -55,8 +56,11 @@ timeline
         L5 free-3D inertial unsprung MBD : 2026-06
         Hardpoint anti-dive/roll-centre + progressive coil : 2026-06
         Gyroscopic wheel-spin coupling : 2026-06
+        Per-wheel tire + direct_control session : 2026-06
     section Next
+        v0.6.0 tag : planned
         GUI terrain Play (v0.5.2) : planned
+        VLA plant main merge : thesis channel
         KC compliance + V2V : planned
 ```
 
@@ -120,6 +124,8 @@ timeline
 | [x] Scene `lugre_grade_demo.yaml` | Shipped | |
 | [x] `LuGreTire/*` integration tests | Shipped | 209 ctest suite |
 | [x] Theory ch.19 + user docs synced | Shipped | |
+| [x] **Per-axle `TireSetup`** (front/rear yaml, L1/L2/L3/L5) | Shipped 2026-06-20 | `PerAxleTire.*`; catalog `tire_rear` slot |
+| [x] **Per-wheel `TireSetup`** (FL/FR/RL/RR corner yaml) | Shipped 2026-06-20 | `PerWheelTire.*`; catalog `tire_fr`/`tire_rl`/`tire_rr` |
 
 ### 2.2 Planned (tire)
 
@@ -230,7 +236,20 @@ LuGre (contact bristle, presliding). See [`TIRE_ROADMAP.md`](design/TIRE_ROADMAP
 | [x] `fleet[]` + part overrides materialization | Shipped | |
 | [x] Maneuvers `configs/maneuvers/` | Shipped | |
 | [x] Python `Vehicle.preset()` / `Tire.preset()` | Shipped | |
+| [x] **`TireSetup` pybind** + `initialize_setup` | Shipped 2026-06-20 | per-axle / per-wheel |
+| [x] **`IVehicleDynamics::tire(wheel)`** | Shipped 2026-06-20 | L1/L2/L5 |
+| [x] **`make_direct_control_session`** + `FrictionMapConfig` | Shipped 2026-06-20 | CmdL1 direct path; `make_friction_ground()` |
+| [x] **`SimOutput` wheel GT** (μ, μ_peak, α/κ peak, `tire_forces_wheel`) | Shipped 2026-06-20 | `SimSession::output()` |
+| [x] **`ladder_lowering.hpp`** (ISO-frozen L1–L3→L4 calib) | Shipped 2026-06-20 | was duplicated in dynamics |
+| [x] Steer deadtime via **ActuatorModel** (not ad-hoc lag) | Shipped 2026-06-20 | `vp.steer_deadtime_s` on direct path |
 | [x] `tools/import_part_pack.py` stub | Shipped | M5 |
+| [x] **VLA plant beta** (`VDSimPlant`, friction patch, obs contract) | **Thesis-only** | tag `vdsim-thesis-beta`; [`design/VLA_THESIS_PLANT.md`](design/VLA_THESIS_PLANT.md) |
+| [x] VLA P1: `obs["roll"]`, `obs["pitch"]` | **Thesis-only** | L2–L5 qs angles |
+| [x] VLA P1: 1-D + **2-D polygon** friction map | **Thesis-only** | `PolygonFrictionGround` |
+| [x] VLA P2: smooth patch blend (1 m) + steer lag docs | **Thesis-only** | [`VDSIM_PLANT_TUTORIAL.md`](VDSIM_PLANT_TUTORIAL.md) |
+| [x] VLA: **`mu_peak`** per wheel (realized friction circle) | **Thesis-only** | fixes useGT>1 artifact |
+| [ ] VLA **#0 Fx→τ** C++ contract + **`drive_split_front`** (#6) | Planned | spec in `VLA_THESIS_PLANT.md`; thesis uses CmdL1 shim |
+| [ ] VLA plant merge to `main` | Planned | after client delivery; single PR |
 | [ ] C++ in-process catalog resolver | Planned | PARTS_CATALOG §12 |
 | [ ] External catalog zip import (full) | Planned | |
 | [ ] VDS1 protocol v4 (`vehicle_id` field) | Planned | Multi-vehicle I/O |
@@ -280,6 +299,9 @@ LuGre (contact bristle, presliding). See [`TIRE_ROADMAP.md`](design/TIRE_ROADMAP
 | [x] ISO 3888-2 DLC metric | Shipped | |
 | [x] ISO 8608 road PSD classes | Shipped | |
 | [x] **382** automated ctests | Shipped | 2026-06-17 |
+| [x] **385** automated ctests (`main`, post core port) | Shipped | 2026-06-20 |
+| [x] **388** automated ctests (`main`, SessionKind + KC + T3) | Shipped | 2026-06-20 |
+| [x] **402** on `VDSim-Thesis` (+ VLA plant suite) | Shipped thesis | 2026-06-20 |
 | [x] ISO matrix re-baseline (post engine inertia + LuGre) + CI gate | Shipped | `IsoBaseline`; VALIDATION.md table 2026-06-10 |
 | [x] Stunt / L5 validation suite | Shipped | `test_stunt`, `test_l5_strut_validation` (loop critical, ballistic jump, camber=L4 DAE, gyro, energy) |
 | [x] **KC geometry cross-validation** (L5 DAE travel ≡ independent native kinematics, rtol-gated) | Shipped | `MultibodyKcXval.DaeTravelMatchesNativeKinematics`; rules out engine bugs (internal consistency) |
@@ -362,16 +384,32 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 - [x] Gyroscopic wheel-spin coupling (yaw↔roll at speed)
 - [x] Per-substep contact re-query default in `SimSession`; contact sampled at the wheel
   particle (exact on curved surfaces, no false contact leaving a loop/bank)
-- [x] 382/382 ctest; design [`L5_MBD_FREE3D_UNSPRUNG.md`](design/L5_MBD_FREE3D_UNSPRUNG.md)
+- [x] 385/385 ctest; design [`L5_MBD_FREE3D_UNSPRUNG.md`](design/L5_MBD_FREE3D_UNSPRUNG.md)
+
+### v0.6.1 — core port from thesis (2026-06-20, on `main`)
+
+- [x] `TireSetup` per-axle / per-wheel + catalog cosim slots + `PerAxleTire` / `PerWheelTire` tests
+- [x] `make_direct_control_session`, `FrictionMapConfig`, polygon friction canonical path
+- [x] `IVehicleDynamics::tire(wheel)`, `SimOutput` wheel GT fields
+- [x] `ladder_lowering.hpp`; steer deadtime via actuator on direct-control path
+- [ ] **v0.6.2 tag** — SessionKind + KC compliance + T3 VLOW (code ready)
+
+### v0.6.2 — core quality + tire T3 (2026-06-20, on `main`)
+
+- [x] `SessionKind` (`Standard` / `DirectControl`) replaces `SimConfig.direct_control_path`
+- [x] KC bushing compliance in L3/L4 hard-joint step (`compliance_targets_rad` under tire load)
+- [x] T3: `TireParams.low_speed_mode` (`kinematic_blend` | `tire_vlow`) + `vlow_speed_eps`
+- [x] 388/388 ctest
 
 ### v0.5.2+ (planned)
 
 - [ ] GUI terrain Play (M4) + stunt authoring (M5c) + `.tir` import — browser-gated
 - [x] Tire: bicycle (L1) belt (MF+LuGre) + Chrono Pac02 parity gate — done
-- [ ] Drivetrain torque–RPM + gearbox
+- [ ] Engine-map workshop UI (drivetrain v2 already in core)
 - [ ] Brake/steer physics upgrade
 - [ ] L5 next cut: KC compliance model, gyro axis tilt + spin-up reaction
-- [ ] CARLA full bridge · open benchmark  
+- [ ] GUI v2 (framework + design system — see HANDOFF)
+- [ ] CARLA full bridge · open benchmark
 
 ---
 
@@ -380,17 +418,17 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 **Shipped today**
 
 > Open-core L1–L5 vehicle dynamics with Pacejka MF tire, optional LuGre brush + belt
-> transient layers, opt-in MF2002 `.tir` backend and drivetrain v2 (engine map + gearbox),
-> parts catalog, real-time UDP/FMI, and ISO-standard validation (382 ctests). The L5 model is
-> a hardpoint-driven free-3D multibody: anti-dive/squat, roll-centre migration and a
-> progressive coil rate emerge from the suspension geometry, energy-consistent on arbitrary
-> surfaces (banks, loops, jumps).
+> transient layers, opt-in MF2002 `.tir` backend, per-wheel tire setup, drivetrain v2
+> (engine map + gearbox), parts catalog, real-time UDP/FMI, and ISO-standard validation
+> (385 ctests on `main`). The L5 model is a hardpoint-driven free-3D multibody:
+> anti-dive/squat, roll-centre migration and a progressive coil rate emerge from the
+> suspension geometry, energy-consistent on arbitrary surfaces (banks, loops, jumps).
 
 **In active development**
 
-> Adams/KC cross-validation of the hardpoint-emergent geometry, full bushing compliance,
-> drivetrain torque maps, workshop importers, and GUI terrain play — default baselines frozen
-> per phase.
+> v0.6 release tag; Adams/KC cross-validation of hardpoint-emergent geometry; full bushing
+> compliance; workshop importers; GUI terrain play; VLA closed-loop plant (thesis channel,
+> merge to main after client sign-off) — default baselines frozen per phase.
 
 **Do not claim (yet)**
 
@@ -414,3 +452,28 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 | [`design/PARTS_CATALOG.md`](design/PARTS_CATALOG.md) | Catalog M1–M5 |
 | [`VALIDATION.md`](VALIDATION.md) | Evidence matrix |
 | [`HANDOFF.md`](HANDOFF.md) | Agent handoff / current sprint |
+| [`design/VLA_THESIS_PLANT.md`](design/VLA_THESIS_PLANT.md) | VLA closed-loop plant spec (thesis channel) |
+| [`VDSIM_PLANT_TUTORIAL.md`](VDSIM_PLANT_TUTORIAL.md) | VLA plant user guide (thesis branch) |
+
+---
+
+## 15. Development priorities (`main`, 2026-06-20)
+
+Ordered for **implementation** (not doc-only). ISO / default subsystem numbers stay frozen
+unless an explicit re-baseline is agreed.
+
+| P | Track | Task | Why now |
+|---|-------|------|---------|
+| **P0** | Release | **Tag v0.6.1** (core port) + **v0.6.2** (quality/T3) | v0.6.0 already tagged |
+| **P1** | Contract | **#1 Fx→τ C++ path** + force-intent API (`VLA_THESIS_PLANT.md` §#0) | Blocks clean plant merge; thesis uses CmdL1 shim |
+| **P1** | Contract | **#6 `drive_split_front`** vs brake bias semantics | AWD thesis acceptance; design conflict with `brake_bias_front` |
+| **P2** | API | **#2 `SessionKind`** generalisation (`plant_path` / direct control) | [x] 2026-06-20 |
+| **P2** | L5 | **KC compliance** (bushing under load) | [x] 2026-06-20 (L3/L4 step; quasi-static bushing) |
+| **P2** | Validation | **Chrono KC offline build** → un-skip `ChronoKcParity` | [~] gen builds; API TODOs in `gen_kc_reference.cpp` |
+| **P4** | Tire | **T3 VLOW** unified low-speed (reduce kinematic blend reliance) | [x] 2026-06-20 (`low_speed_mode`, `vlow_speed_eps`) |
+| **P3** | GUI | **v0.5.2:** terrain Play **or** `.tir` import (pick one) | Browser-gated; no headless path |
+| **P3** | GUI | **Framework decision** (React/Svelte + Figma) before more `app.js` polish | HANDOFF: external review 4/10 |
+| **—** | Thesis | **VLA hotfix only** on `VDSim-Thesis`; merge plant PR when client done | `vdsim-thesis-beta` frozen baseline |
+
+**Explicitly not now:** V2V collision, GUI full rearchitecture without framework choice,
+MF-Tyre parity claims, ISO number re-baselining.

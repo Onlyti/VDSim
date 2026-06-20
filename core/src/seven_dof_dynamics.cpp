@@ -427,7 +427,7 @@ private:
             0.0  + toe_ext_[WHEEL_RR],
         }};
 
-        const bool plant    = vp_.plant_path;
+        const bool plant    = skip_kinematic_blend(vp_, ts_);
         const double speed = std::hypot(vx, vy);
         double lambda_body = 1.0;
         if (!plant) {

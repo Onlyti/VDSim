@@ -127,6 +127,11 @@ struct BeltTireParams {
     double sigma_long {0.5};   // longitudinal relaxation length sigma_x [m]
 };
 
+enum class LowSpeedMode {
+    KinematicBlend,  // vehicle kinematic-dynamic blend (ISO default)
+    TireVlowOnly,    // skip blend; tire vlow_speed_eps governs slip (T3)
+};
+
 struct TireParams {
     // Pacejka MF96 simple form:
     //   F = D * sin(C * atan(B*s - E*(B*s - atan(B*s))))
@@ -198,6 +203,9 @@ struct TireParams {
 
     LuGreTireParams lugre;
     BeltTireParams  belt;
+
+    LowSpeedMode low_speed_mode {LowSpeedMode::KinematicBlend};
+    double vlow_speed_eps       {0.15};   // [m/s] slip denominator floor (T3 VLOW)
 
     // True when the tire model itself produces combined-slip forces (so the host
     // must NOT re-clip them with its circular friction ellipse): LuGre (combined)
@@ -308,6 +316,14 @@ inline std::array<double, NUM_WHEELS> free_roll_wheel_spin(
 inline std::array<double, NUM_WHEELS> free_roll_wheel_spin(
         const VehicleParams& vp, const TireParams& tp, double vx) {
     return free_roll_wheel_spin(vp, TireSetup(tp), vx);
+}
+
+inline bool skip_kinematic_blend(const VehicleParams& vp, const TireSetup& ts) {
+    if (vp.plant_path) return true;
+    for (int i = 0; i < NUM_WHEELS; ++i)
+        if (ts.for_wheel(i).low_speed_mode == LowSpeedMode::TireVlowOnly)
+            return true;
+    return false;
 }
 
 }  // namespace vdsim

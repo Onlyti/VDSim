@@ -8,7 +8,7 @@
 #   ./build/gen_kc_reference "$(pwd)/../.."   # writes reference/kc_dw_front_reference.csv
 #
 # See README.md (hardpoint mapping + CSV format).
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.16)
 project(chrono_kc_gen CXX)
 
 set(CMAKE_CXX_STANDARD 17)

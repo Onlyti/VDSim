@@ -231,12 +231,14 @@ public:
         mb::PrescribedCornerMotion mot {};
         if (front) {
             mb_topo_front_ = std::move(topo);
+            mb::ensure_default_bushings(mb_topo_front_);
             mb_dyn_front_  = enable;
             mb_state_front_ = {};
             mb_dae_front_ = enable ? mb::create_hard_joint_dae_model(mb_topo_front_) : nullptr;
             if (mb_dae_front_) mb_dae_front_->initialize(mb_state_front_, mot);
         } else {
             mb_topo_rear_ = std::move(topo);
+            mb::ensure_default_bushings(mb_topo_rear_);
             mb_dyn_rear_  = enable;
             mb_state_rear_ = {};
             mb_dae_rear_ = enable ? mb::create_hard_joint_dae_model(mb_topo_rear_) : nullptr;
@@ -244,7 +246,10 @@ public:
         }
     }
 
-    double compliance_toe_rad(int /*axle*/) const noexcept override { return 0.0; }
+    double compliance_toe_rad(int axle) const noexcept override {
+        if (axle < 0 || axle > 1) return 0.0;
+        return mb_compliance_toe_rad_[axle];
+    }
 
     mb::PrescribedCornerMotion axle_prescribed_motion(int wheel_base,
                                                       double steer_rad) const {
@@ -273,16 +278,23 @@ public:
                                                         : mb_dae_rear_.get();
         mb::HardJointCornerState* st = (wheel_base == 0) ? &mb_state_front_
                                                          : &mb_state_rear_;
-        if (!dae || !st) return;
-        mb::WheelLoad zl {};
+        mb::SuspensionTopology* topo = (wheel_base == 0) ? &mb_topo_front_
+                                                        : &mb_topo_rear_;
+        if (!dae || !st || !topo) return;
+        mb::WheelLoad wl {};
+        const auto F = inner_->tire_forces_body();
+        wl.force_world = 0.5 * (F[wheel_base] + F[wheel_base + 1]);
         const auto mot = axle_prescribed_motion(wheel_base, steer_rad);
-        const auto wp = dae->step(*st, mot, zl, 0.0);
+        const auto wp = dae->step(*st, mot, wl, 0.0);
+        double toe_comp = 0.0, camber_comp = 0.0;
+        mb::compliance_targets_rad(*topo, wl, toe_comp, camber_comp);
+        mb_compliance_toe_rad_[wheel_base == 0 ? 0 : 1] = toe_comp;
         for (int j = 0; j < 2; ++j) {
             const int i = wheel_base + j;
             const bool right = (i == WHEEL_FR || i == WHEEL_RR);
             const double s = right ? -1.0 : 1.0;
-            gamma[i] = s * wp.camber_rad;
-            toe[i]   = s * wp.toe_rad;
+            gamma[i] = s * (wp.camber_rad + camber_comp);
+            toe[i]   = s * (wp.toe_rad + toe_comp);
         }
     }
 
@@ -533,6 +545,7 @@ private:
     std::unique_ptr<mb::IMultibodySolver> mb_solver_;
     bool mb_dyn_front_ {false};
     bool mb_dyn_rear_  {false};
+    std::array<double, 2> mb_compliance_toe_rad_ {{0.0, 0.0}};
     mb::SuspensionTopology mb_topo_front_;
     mb::SuspensionTopology mb_topo_rear_;
     mb::HardJointCornerState mb_state_front_;
