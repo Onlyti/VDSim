@@ -96,6 +96,27 @@ void apply_lugre_cli(vdsim::TireParams& tp, int c, char** v) {
     if (const auto ov = lugre_cli_override(c, v))
         tp.lugre.enabled = *ov;
 }
+
+void apply_lugre_cli_setup(vdsim::TireSetup& ts, int c, char** v) {
+    for (int i = 0; i < vdsim::NUM_WHEELS; ++i)
+        apply_lugre_cli(ts.wheel[i], c, v);
+}
+
+vdsim::TireSetup load_tire_setup(const vdsim::cosim::VehicleSpawn& spn) {
+    const bool per_corner = !spn.tire_fr_yaml.empty() || !spn.tire_rl_yaml.empty()
+                         || !spn.tire_rr_yaml.empty();
+    if (per_corner) {
+        std::string rl = spn.tire_rl_yaml;
+        std::string rr = spn.tire_rr_yaml;
+        if (rl.empty() && !spn.tire_rear_yaml.empty()) rl = spn.tire_rear_yaml;
+        if (rr.empty() && !spn.tire_rear_yaml.empty()) rr = spn.tire_rear_yaml;
+        return vdsim::TireSetup::from_corner_yaml_paths(
+            spn.tire_yaml, spn.tire_fr_yaml, rl, rr);
+    }
+    if (!spn.tire_rear_yaml.empty())
+        return vdsim::TireSetup::from_yaml_paths(spn.tire_yaml, spn.tire_rear_yaml);
+    return vdsim::TireSetup(vdsim::TireParams::from_yaml(spn.tire_yaml));
+}
 std::unique_ptr<vdsim::IVehicleDynamics> make_dyn(const std::string& lvl) {
     if (lvl == "L1") return vdsim::create_bicycle();
     if (lvl == "L3") return vdsim::create_fourteen_dof();
@@ -492,8 +513,8 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
         wv.path_v = spn.vx0;                    // default speed = spawn speed
         wv.path_lookahead = spn.path_lookahead;
         wv.vp = vdsim::VehicleParams::from_yaml(spn.vehicle_yaml);
-        auto tp = vdsim::TireParams::from_yaml(spn.tire_yaml);
-        apply_lugre_cli(tp, argc, argv);
+        auto ts = load_tire_setup(spn);
+        apply_lugre_cli_setup(ts, argc, argv);
         vdsim::SolverParams sp_v = sp;
         if (spn.level == "L5" && !stunt_world) {
             sp_v.stunt_physics = true;
@@ -506,7 +527,7 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
         s0.position = vdsim::Vec3(spn.x0, spn.y0, spn.z0);
         s0.orientation = vdsim::quat_from_euler(vdsim::Euler{0.0, 0.0, spn.yaw0});
         s0.velocity.x() = spn.vx0;
-        s0.wheel_spin = vdsim::free_roll_wheel_spin(wv.vp, tp, spn.vx0);
+        s0.wheel_spin = vdsim::free_roll_wheel_spin(wv.vp, ts, spn.vx0);
         settle_spawn_on_ground(*gnd, wv.vp, s0);
         // Load path waypoints for internal path-follow controller.
         if (!spn.path_yaml.empty()) {
@@ -523,7 +544,7 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
         vdsim::SimConfig cfg_v = cfg;
         if (spn.sensors) cfg_v.sensors = *spn.sensors;
         wv.sim = std::make_unique<vdsim::SimSession>(
-            std::move(dyn), std::move(gnd), wv.vp, tp, sp_v, cfg_v);
+            std::move(dyn), std::move(gnd), wv.vp, ts, sp_v, cfg_v);
         // Install any user C++ subsystem-module plugins the resolved vehicle declares.
         vdsim::install_module_plugins_from_yaml(wv.sim->dynamics(), spn.vehicle_yaml);
         wv.sim->reset(s0);

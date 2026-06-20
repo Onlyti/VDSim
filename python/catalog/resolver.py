@@ -58,6 +58,10 @@ class ResolvedVehicle:
     part_ids: Dict[str, str]
     vehicle_yaml: Path
     tire_yaml: Path
+    tire_rear_yaml: Optional[Path] = None
+    tire_fr_yaml: Optional[Path] = None
+    tire_rl_yaml: Optional[Path] = None
+    tire_rr_yaml: Optional[Path] = None
     susp_front: Optional[Path] = None
     susp_rear: Optional[Path] = None
 
@@ -241,7 +245,11 @@ class CatalogResolver:
         self._validate_blueprint_slots(level, merged_parts)
 
         vehicle_body: Dict[str, Any] = {}
-        tire_body: Optional[Dict[str, Any]] = None
+        tire_fl_body: Optional[Dict[str, Any]] = None
+        tire_fr_body: Optional[Dict[str, Any]] = None
+        tire_rl_body: Optional[Dict[str, Any]] = None
+        tire_rr_body: Optional[Dict[str, Any]] = None
+        tire_rear_body: Optional[Dict[str, Any]] = None
         part_ids: Dict[str, str] = {}
         susp_front: Optional[Path] = None
         susp_rear: Optional[Path] = None
@@ -253,7 +261,15 @@ class CatalogResolver:
             if slot in ("body", "aero", "ride"):
                 _merge_part_body(vehicle_body, body)
             elif slot == "tire":
-                tire_body = body
+                tire_fl_body = body
+            elif slot == "tire_fr":
+                tire_fr_body = body
+            elif slot == "tire_rl":
+                tire_rl_body = body
+            elif slot == "tire_rr":
+                tire_rr_body = body
+            elif slot == "tire_rear":
+                tire_rear_body = body
             elif slot in ("brake", "steering", "drivetrain", "powertrain"):
                 _merge_part_body(vehicle_body, body)
             elif slot == "front_chassis":
@@ -263,7 +279,7 @@ class CatalogResolver:
             elif slot in ("front_susp_ride", "rear_susp_ride"):
                 _merge_part_body(vehicle_body, body)
 
-        if tire_body is None:
+        if tire_fl_body is None:
             raise CatalogError(f"blueprint {blueprint_id} has no tire part")
 
         for slot, dotted in (bp.get("overrides") or {}).items():
@@ -289,10 +305,30 @@ class CatalogResolver:
         root.mkdir(parents=True, exist_ok=True)
         vehicle_yaml = root / "vehicle.yaml"
         tire_yaml = root / "tire.yaml"
+        tire_rear_yaml: Optional[Path] = None
+        tire_fr_yaml: Optional[Path] = None
+        tire_rl_yaml: Optional[Path] = None
+        tire_rr_yaml: Optional[Path] = None
         with open(vehicle_yaml, "w", encoding="utf-8") as f:
             yaml.safe_dump(vehicle_body, f, sort_keys=False)
         with open(tire_yaml, "w", encoding="utf-8") as f:
-            yaml.safe_dump(tire_body, f, sort_keys=False)
+            yaml.safe_dump(tire_fl_body, f, sort_keys=False)
+        if tire_rear_body is not None and tire_rl_body is None and tire_rr_body is None:
+            tire_rear_yaml = root / "tire_rear.yaml"
+            with open(tire_rear_yaml, "w", encoding="utf-8") as f:
+                yaml.safe_dump(tire_rear_body, f, sort_keys=False)
+        if tire_fr_body is not None:
+            tire_fr_yaml = root / "tire_fr.yaml"
+            with open(tire_fr_yaml, "w", encoding="utf-8") as f:
+                yaml.safe_dump(tire_fr_body, f, sort_keys=False)
+        if tire_rl_body is not None:
+            tire_rl_yaml = root / "tire_rl.yaml"
+            with open(tire_rl_yaml, "w", encoding="utf-8") as f:
+                yaml.safe_dump(tire_rl_body, f, sort_keys=False)
+        if tire_rr_body is not None:
+            tire_rr_yaml = root / "tire_rr.yaml"
+            with open(tire_rr_yaml, "w", encoding="utf-8") as f:
+                yaml.safe_dump(tire_rr_body, f, sort_keys=False)
 
         return ResolvedVehicle(
             blueprint_id=blueprint_id,
@@ -300,6 +336,10 @@ class CatalogResolver:
             part_ids=part_ids,
             vehicle_yaml=vehicle_yaml,
             tire_yaml=tire_yaml,
+            tire_rear_yaml=tire_rear_yaml,
+            tire_fr_yaml=tire_fr_yaml,
+            tire_rl_yaml=tire_rl_yaml,
+            tire_rr_yaml=tire_rr_yaml,
             susp_front=susp_front,
             susp_rear=susp_rear,
         )

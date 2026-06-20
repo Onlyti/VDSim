@@ -210,6 +210,33 @@ PYBIND11_MODULE(vdsim, m) {
         .def_static("from_yaml", &vdsim::TireParams::from_yaml)
         .def("to_yaml",          &vdsim::TireParams::to_yaml);
 
+    py::class_<vdsim::TireSetup>(m, "TireSetup")
+        .def(py::init<>())
+        .def(py::init<const vdsim::TireParams&>())
+        .def(py::init<const vdsim::TireParams&, const vdsim::TireParams&>())
+        .def(py::init<const vdsim::TireParams&, const vdsim::TireParams&,
+                      const vdsim::TireParams&, const vdsim::TireParams&>())
+        .def_readwrite("wheel", &vdsim::TireSetup::wheel)
+        .def("for_wheel", &vdsim::TireSetup::for_wheel, py::arg("wheel"))
+        .def("for_axle", &vdsim::TireSetup::for_axle, py::arg("axle"))
+        .def_property(
+            "front",
+            [](const vdsim::TireSetup& ts) { return ts.for_axle(0); },
+            [](vdsim::TireSetup& ts, const vdsim::TireParams& p) {
+                ts.wheel[vdsim::WHEEL_FL] = ts.wheel[vdsim::WHEEL_FR] = p;
+            })
+        .def_property(
+            "rear",
+            [](const vdsim::TireSetup& ts) { return ts.for_axle(1); },
+            [](vdsim::TireSetup& ts, const vdsim::TireParams& p) {
+                ts.wheel[vdsim::WHEEL_RL] = ts.wheel[vdsim::WHEEL_RR] = p;
+            })
+        .def_static("from_yaml_paths", &vdsim::TireSetup::from_yaml_paths,
+                    py::arg("front_path"), py::arg("rear_path") = std::string{})
+        .def_static("from_corner_yaml_paths", &vdsim::TireSetup::from_corner_yaml_paths,
+                    py::arg("fl_path"), py::arg("fr_path") = std::string{},
+                    py::arg("rl_path") = std::string{}, py::arg("rr_path") = std::string{});
+
     // -------- ITireModel (stand-alone tire query) --------
     py::class_<vdsim::ITireModel::Input>(m, "TireInput")
         .def(py::init<>())
@@ -657,7 +684,16 @@ PYBIND11_MODULE(vdsim, m) {
 
     py::class_<vdsim::IVehicleDynamics>(m, "IVehicleDynamics")
         .def("level", &vdsim::IVehicleDynamics::level)
-        .def("initialize", &vdsim::IVehicleDynamics::initialize)
+        .def("initialize",
+             [](vdsim::IVehicleDynamics& self, const vdsim::VehicleParams& vp,
+                const vdsim::TireParams& tp, const vdsim::SolverParams& sp) {
+                 self.initialize(vp, tp, sp);
+             })
+        .def("initialize_setup",
+             [](vdsim::IVehicleDynamics& self, const vdsim::VehicleParams& vp,
+                const vdsim::TireSetup& ts, const vdsim::SolverParams& sp) {
+                 self.initialize(vp, ts, sp);
+             })
         .def("reset", &vdsim::IVehicleDynamics::reset)
         .def("step",
              [](vdsim::IVehicleDynamics& self,
@@ -692,9 +728,11 @@ PYBIND11_MODULE(vdsim, m) {
         .def("wheel_mu_peak",    &vdsim::IVehicleDynamics::wheel_mu_peak)
         .def("wheel_alpha_peak", &vdsim::IVehicleDynamics::wheel_alpha_peak)
         .def("wheel_kappa_peak", &vdsim::IVehicleDynamics::wheel_kappa_peak)
-        .def("tire", &vdsim::IVehicleDynamics::tire,
+        .def("tire",
+             [](vdsim::IVehicleDynamics& d, int wheel) { return d.tire(wheel); },
+             py::arg("wheel") = 0,
              py::return_value_policy::reference_internal,
-             "The live tire model this dynamics runs (ITireModel; valid while the dynamics is).")
+             "Live ITireModel for wheel FL0..RR3 (valid while dynamics lives).")
         .def("wheel_overturning_moment", &vdsim::IVehicleDynamics::wheel_overturning_moment)
         .def("roll_angle_qs",  &vdsim::IVehicleDynamics::roll_angle_qs)
         .def("pitch_angle_qs", &vdsim::IVehicleDynamics::pitch_angle_qs)
@@ -910,9 +948,14 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readonly("roll",          &vdsim::SimOutput::roll)
         .def_readonly("pitch",         &vdsim::SimOutput::pitch)
         .def_readonly("Fz",            &vdsim::SimOutput::Fz)
-        .def_readonly("tire_forces",   &vdsim::SimOutput::tire_forces)
-        .def_readonly("slip_ratio",    &vdsim::SimOutput::slip_ratio)
-        .def_readonly("slip_angle",    &vdsim::SimOutput::slip_angle)
+        .def_readonly("tire_forces",       &vdsim::SimOutput::tire_forces)
+        .def_readonly("tire_forces_wheel", &vdsim::SimOutput::tire_forces_wheel)
+        .def_readonly("slip_ratio",        &vdsim::SimOutput::slip_ratio)
+        .def_readonly("slip_angle",        &vdsim::SimOutput::slip_angle)
+        .def_readonly("wheel_mu",          &vdsim::SimOutput::wheel_mu)
+        .def_readonly("wheel_mu_peak",     &vdsim::SimOutput::wheel_mu_peak)
+        .def_readonly("wheel_alpha_peak",  &vdsim::SimOutput::wheel_alpha_peak)
+        .def_readonly("wheel_kappa_peak",  &vdsim::SimOutput::wheel_kappa_peak)
         .def_readonly("steer_applied",     &vdsim::SimOutput::steer_applied)
         .def_readonly("throttle_applied",  &vdsim::SimOutput::throttle_applied)
         .def_readonly("brake_applied",     &vdsim::SimOutput::brake_applied)
@@ -1046,6 +1089,29 @@ PYBIND11_MODULE(vdsim, m) {
           py::arg("nominal_dt") = 0.005, py::arg("solver") = vdsim::SolverParams{},
           py::arg("seed") = 1u);
 
+    py::class_<vdsim::FrictionMapConfig>(m, "FrictionMapConfig")
+        .def(py::init<>())
+        .def_readwrite("z", &vdsim::FrictionMapConfig::z)
+        .def_readwrite("base_mu", &vdsim::FrictionMapConfig::base_mu)
+        .def_readwrite("x_bands", &vdsim::FrictionMapConfig::x_bands)
+        .def_readwrite("polygons", &vdsim::FrictionMapConfig::polygons)
+        .def_readwrite("blend_distance", &vdsim::FrictionMapConfig::blend_distance);
+
+    py::class_<vdsim::DirectControlSessionOptions>(m, "DirectControlSessionOptions")
+        .def(py::init<>())
+        .def_readwrite("friction", &vdsim::DirectControlSessionOptions::friction)
+        .def_readwrite("nominal_dt", &vdsim::DirectControlSessionOptions::nominal_dt);
+
+    m.def("make_direct_control_session",
+          [](const vdsim::VehicleParams& vp, const vdsim::TireSetup& ts,
+             const vdsim::SolverParams& solver,
+             const vdsim::DirectControlSessionOptions& opts) {
+              return vdsim::make_direct_control_session(vp, ts, solver, opts);
+          },
+          py::arg("vehicle"), py::arg("tire_setup"),
+          py::arg("solver") = vdsim::SolverParams{},
+          py::arg("options") = vdsim::DirectControlSessionOptions{});
+
     m.def("make_vla_plant_session",
           [](const vdsim::VehicleParams& vp, const vdsim::TireParams& tp,
              double z, double base_mu,
@@ -1053,17 +1119,15 @@ PYBIND11_MODULE(vdsim, m) {
              std::vector<vdsim::PolygonMuPatch> poly_patches,
              double blend_distance,
              const vdsim::SolverParams& solver, double nominal_dt) {
-              vdsim::SimConfig cfg;
-              cfg.nominal_dt = nominal_dt;
-              cfg.direct_control_path = true;
-              std::unique_ptr<vdsim::IContactProvider> ground =
-                  poly_patches.empty()
-                  ? vdsim::create_friction_patch_ground(z, base_mu, patches)
-                  : vdsim::create_polygon_friction_ground(
-                        z, base_mu, poly_patches, blend_distance);
-              return std::make_unique<vdsim::SimSession>(
-                  vdsim::create_seven_dof(), std::move(ground),
-                  vp, tp, solver, cfg);
+              vdsim::DirectControlSessionOptions opts;
+              opts.nominal_dt = nominal_dt;
+              opts.friction.z = z;
+              opts.friction.base_mu = base_mu;
+              opts.friction.x_bands = std::move(patches);
+              opts.friction.polygons = std::move(poly_patches);
+              opts.friction.blend_distance = blend_distance;
+              return vdsim::make_direct_control_session(
+                  vp, vdsim::TireSetup(tp), solver, opts);
           },
           py::arg("vehicle"), py::arg("tire"),
           py::arg("z") = 0.0, py::arg("base_mu") = 1.0,

@@ -130,6 +130,9 @@ Rules:
 - **Required keys by level**
   - L1/L2: `body`, `aero`, `ride`, `tire`, `brake`, `steering`, `drivetrain`
   - L3: above + `front_chassis`, `rear_chassis` (suspension linkage parts)
+- **Optional tire slots (advanced):** `tire_rear` (rear axle default), `tire_fr`, `tire_rl`,
+  `tire_rr` (per-corner). Resolver fallback: FR←`tire_fr`??`tire`; RL←`tire_rl`??`tire_rear`??`tire`;
+  RR←`tire_rr`??`tire_rear`??RL.
 - **No inline physics** in blueprints — only `parts` + `overrides`.
 - Fleet **instances** in a scene may override individual part refs (see §6).
 

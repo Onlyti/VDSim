@@ -142,6 +142,14 @@ def resolve_fleet_entry(
             row["front_susp"] = str(resolved.susp_front)
         if resolved.susp_rear:
             row["rear_susp"] = str(resolved.susp_rear)
+    if resolved.tire_rear_yaml:
+        row["tire_rear"] = str(resolved.tire_rear_yaml)
+    if resolved.tire_fr_yaml:
+        row["tire_fr"] = str(resolved.tire_fr_yaml)
+    if resolved.tire_rl_yaml:
+        row["tire_rl"] = str(resolved.tire_rl_yaml)
+    if resolved.tire_rr_yaml:
+        row["tire_rr"] = str(resolved.tire_rr_yaml)
     # per-vehicle sensors: propagate inline list or yaml-path string as-is
     sensors = spec.get("sensors")
     if sensors is not None:

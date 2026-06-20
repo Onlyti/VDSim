@@ -56,8 +56,11 @@ public:
     virtual Level level() const noexcept = 0;
 
     // Setup (throw on invalid input)
+    void initialize(const VehicleParams& vp, const TireParams& tp, const SolverParams& sp) {
+        initialize(vp, TireSetup(tp), sp);
+    }
     virtual void initialize(const VehicleParams&,
-                            const TireParams&,
+                            const TireSetup&,
                             const SolverParams&) = 0;
 
     // Set internal state (no error: caller's responsibility)
@@ -91,7 +94,11 @@ public:
     // The live tire model this dynamics runs (single source of truth for offline queries —
     // friction ellipse / combined-slip peak via ITireModel::compute). Owned by the dynamics;
     // the pointer must not outlive it. Default nullptr (level has no single tire instance).
-    virtual const ITireModel* tire() const { return nullptr; }
+    virtual const ITireModel* tire(int wheel) const {
+        (void)wheel;
+        return nullptr;
+    }
+    const ITireModel* tire() const { return tire(WHEEL_FL); }
     // Per-wheel overturning moment [N m] about the wheel-forward axis: tire carcass
     // Mx + camber contact-point migration (Fz * crown_radius * sin gamma). Feeds the
     // roll DOF on models that have one (L3/L5). Default 0 (no camber migration).
@@ -280,6 +287,36 @@ std::unique_ptr<ITireModel> create_linear_tire();
 //   "mf96" (default) -> create_pacejka_mf96; "linear" -> create_linear_tire;
 //   "magic_formula" / "mf2002" -> MF2002 from tp.tir_path (throws if path empty).
 std::unique_ptr<ITireModel> create_tire_from_params(const TireParams& tp);
+
+inline int tire_axle_index(int wheel) {
+    return (wheel == WHEEL_RL || wheel == WHEEL_RR) ? 1 : 0;
+}
+
+inline std::unique_ptr<ITireModel> make_tire_model(const TireParams& tp) {
+    if (tp.backend != "mf96" && !tp.backend.empty())
+        return create_tire_from_params(tp);
+    return create_pacejka_mf96();
+}
+
+inline void init_wheel_tire_models(
+        std::array<std::unique_ptr<ITireModel>, NUM_WHEELS>& tires,
+        const TireSetup& ts,
+        std::unique_ptr<ITireModel>* injected = nullptr) {
+    for (int i = 0; i < NUM_WHEELS; ++i) {
+        if (i == WHEEL_FL && injected && *injected) {
+            tires[i] = std::move(*injected);
+            injected->reset();
+        } else {
+            tires[i] = make_tire_model(ts.for_wheel(i));
+        }
+        tires[i]->initialize(ts.for_wheel(i));
+    }
+}
+
+inline ITireModel& wheel_tire_model(
+        std::array<std::unique_ptr<ITireModel>, NUM_WHEELS>& tires, int wheel) {
+    return *tires[wheel];
+}
 
 // Dynamics factories that inject a custom tire model (e.g. full Magic Formula
 // from a .tir).  Ownership transfers to the dynamics; for Ld3 the tire is

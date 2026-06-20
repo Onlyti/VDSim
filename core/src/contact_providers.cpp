@@ -103,57 +103,24 @@ private:
     double z_, mu_l_, mu_r_, by_;
 };
 
-// Piecewise-x friction on a flat plane: each patch [x0, x1] with linear blend
-// over blend_dist_ before x0 and after x1; overlapping patches -> min mu.
-class FrictionPatchGround final : public IContactProvider {
-public:
-    FrictionPatchGround(double z, double base_mu,
-                        std::vector<std::tuple<double, double, double>> patches)
-        : z_(z), base_mu_(base_mu), blend_dist_(1.0), patches_(std::move(patches)) {}
+// Piecewise-x friction bands are represented as wide y-span polygons (canonical 2-D path).
+constexpr double kFrictionBandYHalf = 1.0e4;
 
-    void query(const State& vehicle, const VehicleParams& vp,
-               ContactArray& out) override {
-        std::array<Vec3, NUM_WHEELS> pw{};
-        wheel_world_positions(vehicle, vp, pw);
-        const double r = vp.wheel_radius_nominal;
-        const Vec3 n = Vec3::UnitZ();
-        for (int i = 0; i < NUM_WHEELS; ++i) {
-            const double mu = mu_at_x(pw[i].x());
-            const Vec3 road_pt(pw[i].x(), pw[i].y(), z_);
-            out[i].is_valid    = true;
-            out[i].normal      = n;
-            out[i].mu_long     = mu;
-            out[i].mu_lat      = mu;
-            out[i].surface_id  = 0;
-            out[i].position    = road_pt;
-            out[i].penetration = hub_penetration(pw[i], n, road_pt, r);
-        }
+std::vector<PolygonMuPatch> x_bands_to_polygons(
+    const std::vector<std::tuple<double, double, double>>& bands) {
+    std::vector<PolygonMuPatch> out;
+    out.reserve(bands.size());
+    for (const auto& [x0, x1, mu] : bands) {
+        PolygonMuPatch p;
+        p.polygon = {{x0, -kFrictionBandYHalf},
+                     {x1, -kFrictionBandYHalf},
+                     {x1,  kFrictionBandYHalf},
+                     {x0,  kFrictionBandYHalf}};
+        p.mu = mu;
+        out.push_back(std::move(p));
     }
-
-private:
-    double mu_at_x(double x) const {
-        double mu = base_mu_;
-        for (const auto& [x0, x1, mu_p] : patches_) {
-            double mu_here;
-            if (x >= x0 && x <= x1) {
-                mu_here = mu_p;
-            } else if (x >= x0 - blend_dist_ && x < x0) {
-                const double t = (x - (x0 - blend_dist_)) / blend_dist_;
-                mu_here = base_mu_ + t * (mu_p - base_mu_);
-            } else if (x > x1 && x <= x1 + blend_dist_) {
-                const double t = (x - x1) / blend_dist_;
-                mu_here = mu_p + t * (base_mu_ - mu_p);
-            } else {
-                mu_here = base_mu_;
-            }
-            mu = std::min(mu, mu_here);
-        }
-        return mu;
-    }
-
-    double z_, base_mu_, blend_dist_;
-    std::vector<std::tuple<double, double, double>> patches_;
-};
+    return out;
+}
 
 bool point_in_polygon(double px, double py,
                       const std::vector<std::pair<double, double>>& poly) {
@@ -641,7 +608,10 @@ std::unique_ptr<IContactProvider> create_split_mu_ground(
 std::unique_ptr<IContactProvider> create_friction_patch_ground(
     double z, double base_mu,
     const std::vector<std::tuple<double, double, double>>& patches) {
-    return std::make_unique<FrictionPatchGround>(z, base_mu, patches);
+    auto poly = x_bands_to_polygons(patches);
+    if (poly.empty())
+        return std::make_unique<FlatGround>(z, base_mu);
+    return std::make_unique<PolygonFrictionGround>(z, base_mu, std::move(poly), 1.0);
 }
 
 std::unique_ptr<IContactProvider> create_polygon_friction_ground(

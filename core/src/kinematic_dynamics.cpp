@@ -43,7 +43,7 @@ class KinematicBicycle final : public IVehicleDynamics {
 public:
     Level level() const noexcept override { return Level::Lk_Kinematic; }
 
-    void initialize(const VehicleParams& vp, const TireParams&,
+    void initialize(const VehicleParams& vp, const TireSetup&,
                     const SolverParams& sp) override {
         vp_ = vp; sp_ = sp;
     }

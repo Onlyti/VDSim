@@ -78,10 +78,10 @@ public:
     Level level() const noexcept override { return Level::L3_FourteenDOF; }
 
     void initialize(const VehicleParams& vp,
-                    const TireParams& tp,
+                    const TireSetup& ts,
                     const SolverParams& sp) override {
-        vp_ = vp; tp_ = tp; sp_ = sp;
-        inner_->initialize(vp, tp, sp);
+        vp_ = vp; ts_ = ts; sp_ = sp;
+        inner_->initialize(vp, ts, sp);
         suspension_ = make_default_suspension(vp);
         arb_front_  = make_default_antirollbar(vp, 0);
         arb_rear_   = make_default_antirollbar(vp, 1);
@@ -106,7 +106,7 @@ public:
                       axle_roll_stiffness(vp, 0) + axle_roll_stiffness(vp, 1)
                           - vp.arb_stiffness_front - vp.arb_stiffness_rear,
                       vp.arb_stiffness_front + vp.arb_stiffness_rear,
-                      tp.tire_vertical_stiffness, vp.anti_dive_front);
+                      ts_.for_wheel(WHEEL_FL).tire_vertical_stiffness, vp.anti_dive_front);
     }
 
     void reset(const State& s) noexcept override {
@@ -176,7 +176,7 @@ public:
 
         {
             constexpr double kAirDensity = 1.225;
-            const double k_tire = std::max(1.0, tp_.tire_vertical_stiffness);
+            const double k_tire = std::max(1.0, ts_.for_wheel(WHEEL_FL).tire_vertical_stiffness);
             const double Lwb  = vp_.wheelbase;
             const double vx   = state_.velocity.x();
             const double q_aero = 0.5 * kAirDensity * vp_.frontal_area * vx * std::abs(vx);
@@ -414,9 +414,9 @@ private:
         // Unsprung mass per corner: m_u · z̈_u = -F_susp(on sprung) - k_tire · z_u
         // = +F_susp_on_unsprung - k_tire · z_u
         // F_susp_on_unsprung = -F_susp(on sprung) (Newton III)
-        const double k_tire = std::max(1.0, tp_.tire_vertical_stiffness);
         for (int i = 0; i < NUM_WHEELS; ++i) {
             const double m_u = std::max(1.0, vp_.unsprung_mass[i]);
+            const double k_tire = std::max(1.0, ts_.for_wheel(i).tire_vertical_stiffness);
             d.dz_u[i] = zu_dot[i];
             d.dz_u_dot[i] = (-F_susp[i] - k_tire * (zu[i] - road_dz_[i])) / m_u;
         }
@@ -504,7 +504,7 @@ private:
     }
 
     VehicleParams vp_;
-    TireParams    tp_;
+    TireSetup     ts_;
     SolverParams  sp_;
     std::unique_ptr<IVehicleDynamics> inner_;
     std::shared_ptr<ISuspension> suspension_;
