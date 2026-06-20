@@ -1,6 +1,16 @@
 # VDSim 핸드오프
 
-작성: **2026-06-18** · `VDSim-Thesis` (local) · **402/402 ctest green**
+작성: **2026-06-20** · `VDSim-Thesis` (local) · **402/402 ctest green**
+
+## 0. 2026-06-20 thesis freeze + core → main port — DONE
+
+**Tag:** `vdsim-thesis-beta` @ `6623f55` (VLA plant beta before core commits).
+
+**Commits on thesis (not all on main):**
+- `c4b5c0a` — core (#3–9, per-wheel tire) → **cherry-picked to `main`** (`38b1955` + `5cdca4e`)
+- `e5fb2c6` — VDSimPlant wiring → **thesis-only**
+
+**Develop on `main` going forward;** thesis = VLA delivery / hotfix only.
 
 ## 0. 2026-06-18 pre-main cleanup (agreed items 3–5,7–9) — DONE
 
