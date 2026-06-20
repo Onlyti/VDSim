@@ -1,6 +1,20 @@
 # VDSim 핸드오프
 
-작성: **2026-06-14** · `main` @ `b9064c4` (pushed, ahead of `v0.5.1`) · **336/336 ctest green**
+작성: **2026-06-20** · `main` (local) · **385/385 ctest green**
+
+## 0. 2026-06-20 thesis → main core port (partial cherry-pick) — DONE
+
+**Tagged:** `vdsim-thesis-beta` @ `6623f55` — VLA plant beta delivery freeze on `VDSim-Thesis`.
+
+**Cherry-picked to `main`:** `c4b5c0a` (+ fixup) — core only, **no** `python/vdsim_plant.py` / VLA integration tests.
+- TireSetup per-axle/per-wheel + catalog/cosim/pybind + PerAxle/PerWheel tests
+- `IVehicleDynamics::tire(wheel)`, `make_direct_control_session`, `FrictionMapConfig`
+- steer_deadtime via ActuatorModel; `ladder_lowering.hpp`; SimOutput wheel GT fields
+- `VehicleParams.plant_path` (default false; required by L2 plant-path branch)
+
+**Still thesis-only:** VLA plant wrapper (24 commits + `e5fb2c6`), `drive_split_front` (#6 deferred).
+
+**Verify:** `cmake --build build -j && cd build && ctest --output-on-failure`
 
 ## 0. 2026-06-14 세션 인수인계 (fresh 세션은 여기부터)
 
@@ -15,7 +29,7 @@
 - **GUI 폴리싱**(디자인 리뷰 반영) — RESOLVED STATS 단위, active 행 회색+좌측 accent, 3D 프리뷰 우측, Sync-draft 표준 크기.
 
 **다음 할 일 후보 (우선순위 순):**
-1. **per-axle tire (코어)** — 현재 단일 TireParams. 앞/뒤 다른 타이어 = L1/L2/L3/L5 force loop + LuGre/belt + resolver + tire_front/rear 슬롯. 사용자 요청 보류분.
+1. **#1 Fx→τ / #6 brake bias / #2 SessionKind** — interface discussion (thesis deferred).
 2. **GUI 재아키텍처 (전략 결정 후)** — 외부 AI 리뷰 4/10 "프로토타입" 판정. 큰 항목: dockable/resizable 패널 + 모달 제거(분할화면), 글로벌 모드 nav(Setup-Sim-Analyze), 전사 디자인 시스템. **stdlib http.server + 손코딩 app.js 의 한계 — React/Svelte + 디자인 패스(Figma) 결정이 선행.** 지금 찔끔 하지 말 것.
 3. **#158 GUI 멀티차량 3D render** — preset picker 로 spawn 은 됨, 3D 뷰 N대 동시 표시(VDS1 vehicle_id demux) 남음.
 4. cosmetic — part 라벨 "Fsk Formula chassis body" 잔재, Session tune 탭 라벨.

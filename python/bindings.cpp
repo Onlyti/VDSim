@@ -137,7 +137,6 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("wheel_inertia",        &vdsim::VehicleParams::wheel_inertia)
         .def_readwrite("camber_per_roll",      &vdsim::VehicleParams::camber_per_roll)
         .def_readwrite("drive_type",           &vdsim::VehicleParams::drive_type)
-        .def_readwrite("drive_split_front",    &vdsim::VehicleParams::drive_split_front)
         .def_readwrite("plant_path",           &vdsim::VehicleParams::plant_path)
         .def_readwrite("differential",         &vdsim::VehicleParams::differential)
         .def_readwrite("lsd_preload",          &vdsim::VehicleParams::lsd_preload)

@@ -22,7 +22,6 @@ add_executable(vdsim_integration_tests
     test_user_modules.cpp
     test_module_plugin.cpp
     test_multi_vehicle.cpp
-    test_vla_plant.cpp
     test_per_axle_tire.cpp
     test_per_wheel_tire.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../cosim/scene_loader.cpp

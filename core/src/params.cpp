@@ -189,6 +189,7 @@ VehicleParams VehicleParams::from_yaml(const std::string& path) {
     if (const auto n = root["drive_type"]; n && !n.IsNull()) {
         p.drive_type = parse_drive(n.as<std::string>());
     }
+    pull(root, "plant_path", p.plant_path);
     if (const auto n = root["differential"]; n && !n.IsNull()) {
         p.differential = parse_diff(n.as<std::string>());
     }
@@ -258,6 +259,7 @@ void VehicleParams::to_yaml(const std::string& path) const {
     out << YAML::Key << "camber_per_roll"      << YAML::Value << camber_per_roll;
 
     out << YAML::Key << "drive_type"        << YAML::Value << drive_to_string(drive_type);
+    out << YAML::Key << "plant_path"        << YAML::Value << plant_path;
     out << YAML::Key << "differential"      << YAML::Value << diff_to_string(differential);
     out << YAML::Key << "lsd_preload"       << YAML::Value << lsd_preload;
     out << YAML::Key << "lsd_ramp"          << YAML::Value << lsd_ramp;
