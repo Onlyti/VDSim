@@ -1,6 +1,53 @@
 # VDSim 핸드오프
 
-작성: **2026-06-18** · `VDSim-Thesis` (local) · **399/399 ctest green**
+작성: **2026-06-18** · `VDSim-Thesis` (local) · **402/402 ctest green**
+
+## 0. 2026-06-18 pre-main cleanup (agreed items 3–5,7–9) — DONE
+
+**Shipped (1/6/2 deferred — interface discussion pending):**
+- **#4 `tire(wheel)`** — `IVehicleDynamics::tire(int)` on L1/L2/L5; pybind `dyn.tire(wheel=0)`
+- **#5 steer lag** — `vp.steer_deadtime_s` → `ActuatorModel` (direct path uses actuator, removed `direct_steer_lag_`)
+- **#8 ladder lowering** — `ladder_lowering.hpp` centralises 1500×5 / 600 / 4000 (ISO frozen)
+- **#7 friction canonical** — `create_friction_patch_ground` → wide-y polygon + `PolygonFrictionGround`; `make_friction_ground()` + `FrictionMapConfig`
+- **#3 session factory** — `make_direct_control_session(vp, TireSetup, sp, opts)`; `make_vla_plant_session` = shim
+- **#9 thin plant** — `SimOutput` wheel GT fields; `vdsim_plant._obs_from_output(sess.output())`
+
+**Verify:** `cmake --build build -j && cd build && ctest --output-on-failure &&
+python3 tests/scripts/test_vla_plant.py`
+
+## 0. 2026-06-18 per-wheel tire (advanced) — DONE
+
+**Shipped:** FL/FR/RL/RR can each use different `TireParams` on L1/L2/L3/L5 force loops.
+Unified (one `TireParams`) and per-axle `(front, rear)` constructors remain backward
+compatible. Catalog optional slots: `tire_rear` (RL+RR when no corner slot),
+`tire_fr` / `tire_rl` / `tire_rr` → resolved `tire_*.yaml` in fleet row.
+
+**Deliverables:**
+- **`TireSetup`** (`params.hpp`) — `wheel[4]` + `for_wheel` / `for_axle`; corner ctor +
+  `from_corner_yaml_paths`
+- **Dynamics:** 4× `ITireModel` via `init_wheel_tire_models` (was per-axle)
+- **Resolver / materialize:** corner yaml paths on `ResolvedVehicle` + fleet row keys
+- **Cosim:** `VehicleSpawn.tire_{fr,rl,rr}_yaml` + `load_tire_setup`
+- **pybind:** `wheel`, `front`/`rear` properties, `from_corner_yaml_paths`
+- **Tests:** `PerWheelTire.L2FrontLeftRightDifferentGrip` (+ existing `PerAxleTire`)
+
+**Verify:** `cmake --build build -j && cd build && ctest -R 'PerAxleTire|PerWheelTire' --output-on-failure`
+
+## 0. 2026-06-18 per-axle tire (core) — DONE
+
+**Shipped:** front/rear axle can use different `TireParams` (MF96/MF2002/LuGre/belt) on
+L1/L2/L3/L5 force loops. Single `TireParams` still duplicates to all corners (backward
+compatible). Catalog optional `tire_rear` slot → `tire_rear.yaml` in resolved fleet.
+
+**Deliverables:**
+- **`TireSetup`** — per-axle ctor / `from_yaml_paths`; shim `initialize(vp, TireParams, sp)`
+- **Dynamics:** per-wheel `ITireModel` routing (same axle shares params unless corner slot set)
+- **Resolver:** `tire_rear` optional blueprint slot; `ResolvedVehicle.tire_rear_yaml`
+- **Cosim:** `VehicleSpawn.tire_rear_yaml` → `TireSetup::from_yaml_paths`
+- **pybind:** `TireSetup`, `initialize_setup`
+- **Tests:** `PerAxleTire.L2FrontRearDifferentGrip`, `PerAxleTire.L1UnifiedMatchesSingleTireParam`
+
+**Verify:** `ctest -R PerAxleTire --output-on-failure`
 
 ## 0. 2026-06-18 VLA plant P2 — smooth 1-D friction blend + steer lag docs — DONE
 
@@ -139,10 +186,9 @@ alongside existing contact `wheel.mu`. Friction-circle GT metric
 - **GUI 폴리싱**(디자인 리뷰 반영) — RESOLVED STATS 단위, active 행 회색+좌측 accent, 3D 프리뷰 우측, Sync-draft 표준 크기.
 
 **다음 할 일 후보 (우선순위 순):**
-1. **per-axle tire (코어)** — 현재 단일 TireParams. 앞/뒤 다른 타이어 = L1/L2/L3/L5 force loop + LuGre/belt + resolver + tire_front/rear 슬롯. 사용자 요청 보류분.
-2. **GUI 재아키텍처 (전략 결정 후)** — 외부 AI 리뷰 4/10 "프로토타입" 판정. 큰 항목: dockable/resizable 패널 + 모달 제거(분할화면), 글로벌 모드 nav(Setup-Sim-Analyze), 전사 디자인 시스템. **stdlib http.server + 손코딩 app.js 의 한계 — React/Svelte + 디자인 패스(Figma) 결정이 선행.** 지금 찔끔 하지 말 것.
-3. **#158 GUI 멀티차량 3D render** — preset picker 로 spawn 은 됨, 3D 뷰 N대 동시 표시(VDS1 vehicle_id demux) 남음.
-4. cosmetic — part 라벨 "Fsk Formula chassis body" 잔재, Session tune 탭 라벨.
+1. **GUI 재아키텍처 (전략 결정 후)** — 외부 AI 리뷰 4/10 "프로토타입" 판정. 큰 항목: dockable/resizable 패널 + 모달 제거(분할화면), 글로벌 모드 nav(Setup-Sim-Analyze), 전사 디자인 시스템. **stdlib http.server + 손코딩 app.js 의 한계 — React/Svelte + 디자인 패스(Figma) 결정이 선행.** 지금 찔끔 하지 말 것.
+2. **#158 GUI 멀티차량 3D render** — preset picker 로 spawn 은 됨, 3D 뷰 N대 동시 표시(VDS1 vehicle_id demux) 남음.
+3. cosmetic — part 라벨 "Fsk Formula chassis body" 잔재, Session tune 탭 라벨.
 
 **주의·함정:**
 - retax2 **breaking** — 옛 `chassis.*`/`susp.*` part id, `front_susp_kin` 슬롯 제거됨.

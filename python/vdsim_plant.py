@@ -5,11 +5,12 @@ Contract (stable):
   Observation dict each step (true state, contact-frame tyre forces, FL0..RR3):
 
     X, Y, psi, vx, vy, r, ax, ay, beta, roll, pitch   — vehicle [m, rad, m/s, m/s²]
-    wheel: list[4] of {Fx, Fy, Fz, alpha, kappa, mu, mu_peak, alpha_peak, kappa_peak}
+    wheel: list[4] of {Fx, Fy, Fz, alpha, kappa, mu, mu_peak, alpha_peak, kappa_peak, Mz}
       Fx, Fy — tyre contact / wheel frame [N]  (+Fx drive, +Fy left)
       Fz [N], alpha [rad], kappa [-], mu [-] contact friction used this step
       mu_peak [-] realized load-dependent peak coefficient (force/Fz)
       alpha_peak [rad], kappa_peak [-] MF pure-slip peak slip at this Fz
+      Mz [N·m] aligning moment (ITireModel::Output::Mz sign)
 
 Built on vdsim_lab config resolution + SimSession (direct CmdL1 torque path).
 """
@@ -75,7 +76,7 @@ def _resolve_tir_path(tp_path: Path, tir_rel: str) -> str:
     return str((_conf_root() / tir_rel).resolve())
 
 
-def _load_tire_for_vehicle(vp_path: Path) -> vdsim.TireParams:
+def _load_tire_setup_for_vehicle(vp_path: Path) -> vdsim.TireSetup:
     rel = _load_yaml_sidecar(vp_path, "tire_yaml")
     if not rel:
         tp_path = _conf_root() / "parts/tire/ioniq5_pac2002.yaml"
@@ -86,7 +87,39 @@ def _load_tire_for_vehicle(vp_path: Path) -> vdsim.TireParams:
     tp = vdsim.TireParams.from_yaml(str(tp_path))
     if tp.tir_path:
         tp.tir_path = _resolve_tir_path(tp_path, tp.tir_path)
-    return tp
+    return vdsim.TireSetup(tp)
+
+
+def _obs_from_output(o: vdsim.SimOutput) -> dict:
+    st = o.state
+    wheels = []
+    for i in range(4):
+        fw = o.tire_forces_wheel[i]
+        wheels.append({
+            "Fx": float(fw[0]),
+            "Fy": float(fw[1]),
+            "Fz": float(o.Fz[i]),
+            "alpha": float(o.slip_angle[i]),
+            "kappa": float(o.slip_ratio[i]),
+            "mu": float(o.wheel_mu[i]),
+            "mu_peak": float(o.wheel_mu_peak[i]),
+            "alpha_peak": float(o.wheel_alpha_peak[i]),
+            "kappa_peak": float(o.wheel_kappa_peak[i]),
+        })
+    return {
+        "X": float(st.position[0]),
+        "Y": float(st.position[1]),
+        "psi": float(st.yaw()),
+        "vx": float(st.vx()),
+        "vy": float(st.vy()),
+        "r": float(st.yaw_rate()),
+        "ax": float(o.ax),
+        "ay": float(o.ay),
+        "beta": float(st.beta()),
+        "roll": float(o.roll),
+        "pitch": float(o.pitch),
+        "wheel": wheels,
+    }
 
 
 def _validate_friction_map(friction_map, base_mu: float):
@@ -173,20 +206,18 @@ def _fx_to_cmdl1(vp: vdsim.VehicleParams, delta: float, fx: float) -> vdsim.CmdL
 
 
 class _TireView:
-    """Read-only data-access view of the tyre part (not used by the integrator)."""
-    def __init__(self, model, params):
-        self._model = model
-        self._params = params
+    def __init__(self, dyn, ts: vdsim.TireSetup, wheel: int = 0):
+        self._dyn = dyn
+        self._ts = ts
+        self._wheel = wheel
 
     @property
     def model(self):
-        """The live ITireModel the plant runs (.compute(TireInput), peak queries)."""
-        return self._model
+        return self._dyn.tire(self._wheel)
 
     @property
     def params(self):
-        """TireParams (backend, coefficients, lugre/belt sub-params)."""
-        return self._params
+        return self._ts.wheel[self._wheel]
 
 
 class _VehicleView:
@@ -237,8 +268,9 @@ class VDSimPlant:
       vp_path = resolve_vehicle_config(config)
       self._vp = vdsim.VehicleParams.from_yaml(str(vp_path))
       self._vp.plant_path = True
-      self._tp = _load_tire_for_vehicle(vp_path)
-      self._tp.lugre.enabled = False
+      self._ts = _load_tire_setup_for_vehicle(vp_path)
+      for i in range(4):
+          self._ts.wheel[i].lugre.enabled = False
 
       patches = [(float(a), float(b), float(m)) for a, b, m in (friction_map or [])]
       poly_patches = _poly_patches_from_map_2d(friction_map_2d or [])
@@ -247,12 +279,17 @@ class VDSimPlant:
       sp.integrator = vdsim.Integrator.RK4
       sp.max_substep_dt = min(substep_dt, sp.max_substep_dt)
 
+      opts = vdsim.DirectControlSessionOptions()
+      opts.nominal_dt = float(substep_dt)
+      opts.friction.base_mu = float(base_mu)
+      opts.friction.x_bands = patches
+      opts.friction.polygons = poly_patches
+      opts.friction.blend_distance = 1.0
+
       self.control_dt = float(control_dt)
       self.substep_dt = float(substep_dt)
       self._n_sub = int(round(control_dt / substep_dt))
-      self._sess = vdsim.make_vla_plant_session(
-          self._vp, self._tp, 0.0, float(base_mu), patches, poly_patches, 1.0,
-          sp, substep_dt)
+      self._sess = vdsim.make_direct_control_session(self._vp, self._ts, sp, opts)
       self._dyn = self._sess.dynamics()
 
   def reset(self, state0=None):
@@ -265,9 +302,9 @@ class VDSimPlant:
       if not all(math.isfinite(v) for v in (x, y, psi, vx, vy, r)):
           raise ValueError("state0 values must be finite")
       s0 = vdsim.make_init_state_6dof(
-          self._vp, self._tp, x=x, y=y, yaw=psi, vx=vx, vy=vy, r=r)
+          self._vp, self._ts.wheel[0], x=x, y=y, yaw=psi, vx=vx, vy=vy, r=r)
       self._sess.reset(s0)
-      return self._obs()
+      return _obs_from_output(self._sess.output())
 
   def step(self, u):
       """Advance one control period (ZOH); integrate internally at substep_dt."""
@@ -284,53 +321,11 @@ class VDSimPlant:
 
   @property
   def vehicle(self):
-      """Hierarchical data-access view: vehicle -> part -> physics.
-      `plant.vehicle.tire.model` (live ITireModel), `plant.vehicle.tire.params`
-      (TireParams), `plant.vehicle.params` (VehicleParams). Read-only facade over the
-      flat runtime — for user data delivery, not used by the integrator."""
-      return _VehicleView(self._vp, _TireView(self._dyn.tire(), self._tp))
+      return _VehicleView(self._vp, _TireView(self._dyn, self._ts))
 
   @property
   def tire_model(self):
-      """Shortcut for `plant.vehicle.tire.model` — the live ITireModel the plant runs
-      (friction ellipse / combined-slip peak via .compute(TireInput); no .tir re-load)."""
-      return self._dyn.tire()
+      return self._dyn.tire(0)
 
   def _obs(self) -> dict:
-      st = self._sess.state()
-      dyn = self._dyn
-      fw = dyn.tire_forces_wheel()
-      fz = dyn.tire_Fz()
-      alpha = dyn.wheel_slip_angle()
-      kappa = dyn.wheel_slip_ratio()
-      mu_w = dyn.wheel_mu()
-      mu_peak_w = dyn.wheel_mu_peak()
-      alpha_peak_w = dyn.wheel_alpha_peak()
-      kappa_peak_w = dyn.wheel_kappa_peak()
-      wheels = []
-      for i in range(4):
-          wheels.append({
-              "Fx": float(fw[i][0]),
-              "Fy": float(fw[i][1]),
-              "Fz": float(fz[i]),
-              "alpha": float(alpha[i]),
-              "kappa": float(kappa[i]),
-              "mu": float(mu_w[i]),
-              "mu_peak": float(mu_peak_w[i]),
-              "alpha_peak": float(alpha_peak_w[i]),
-              "kappa_peak": float(kappa_peak_w[i]),
-          })
-      return {
-          "X": float(st.position[0]),
-          "Y": float(st.position[1]),
-          "psi": float(st.yaw()),
-          "vx": float(st.vx()),
-          "vy": float(st.vy()),
-          "r": float(st.yaw_rate()),
-          "ax": float(dyn.ax_body_est()),
-          "ay": float(dyn.ay_body_est()),
-          "beta": float(st.beta()),
-          "roll": float(dyn.roll_angle_qs()),
-          "pitch": float(dyn.pitch_angle_qs()),
-          "wheel": wheels,
-      }
+      return _obs_from_output(self._sess.output())
