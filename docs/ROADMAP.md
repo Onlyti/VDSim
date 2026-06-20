@@ -29,7 +29,7 @@ tire + direct-control session factory** on `main` → **VLA plant beta** on thes
 | Catalog / runtime | `--scene=`, fleet, FMI; **`make_direct_control_session`**, `FrictionMapConfig`, `SimOutput` wheel GT | External part packs; VDS1 v4; **Fx→τ contract (#1)** |
 | Closed-loop plant | Core session API on `main` | **VLA `VDSimPlant`** thesis-only → main PR when client done |
 | GUI | 3-tab scene UI, catalog API, workshops, multi-vehicle compare | **GUI v2** (framework decision); terrain Play; `.tir` import |
-| Validation | ISO 7401/4138/3888 **re-baselined + CI-gated** (`IsoBaseline`), **385** ctest | Chrono KC offline build; Adams x-check |
+| Validation | ISO 7401/4138/3888 **re-baselined + CI-gated** (`IsoBaseline`), **388** ctest | Adams x-check |
 
 ```mermaid
 timeline
@@ -306,7 +306,7 @@ LuGre (contact bristle, presliding). See [`TIRE_ROADMAP.md`](design/TIRE_ROADMAP
 | [x] Stunt / L5 validation suite | Shipped | `test_stunt`, `test_l5_strut_validation` (loop critical, ballistic jump, camber=L4 DAE, gyro, energy) |
 | [x] **KC geometry cross-validation** (L5 DAE travel ≡ independent native kinematics, rtol-gated) | Shipped | `MultibodyKcXval.DaeTravelMatchesNativeKinematics`; rules out engine bugs (internal consistency) |
 | [x] **KC analytic anchor** (pure-lateral trailing arm ⇒ camber/toe gain = 0, closed form) | Shipped | `MultibodyKcAnalytic.PureTrailingArmZeroCamberToe`; validates the engine vs math, not just itself |
-| [~] **External Chrono KC cross-val** (camber/toe vs travel vs Chrono::Vehicle `ChSuspensionTestRig`, same hardpoints) | Harness scaffolded | `external/chrono_kc/` (gen skeleton + isolated build) + `ChronoKcParity` gate (skip-if-absent, mirrors the tyre Pac02 gate); needs an offline Chrono build to emit the reference CSV |
+| [x] **External Chrono KC cross-val** (camber/toe vs travel vs Chrono::Vehicle `ChSuspensionTestRig`, same hardpoints) | Reference CSV + gate green | `external/chrono_kc/` + `ChronoKcParity` (8 % / 0.1° bands; rebound reach ~−14 mm) |
 | [ ] External Adams / physical KC-rig cross-val (absolute, third-party) | Planned | Chrono is an independent MBD but still a simulator; physical/commercial data remains the gap |
 | [ ] Published commercial cross-val (open data) | Planned | Honest gap today |
 
@@ -469,7 +469,7 @@ unless an explicit re-baseline is agreed.
 | **P1** | Contract | **#6 `drive_split_front`** vs brake bias semantics | AWD thesis acceptance; design conflict with `brake_bias_front` |
 | **P2** | API | **#2 `SessionKind`** generalisation (`plant_path` / direct control) | [x] 2026-06-20 |
 | **P2** | L5 | **KC compliance** (bushing under load) | [x] 2026-06-20 (L3/L4 step; quasi-static bushing) |
-| **P2** | Validation | **Chrono KC offline build** → un-skip `ChronoKcParity` | [~] gen builds; API TODOs in `gen_kc_reference.cpp` |
+| **P2** | Validation | **Chrono KC offline build** → un-skip `ChronoKcParity` | [x] 2026-06-20 (reference CSV + gate green) |
 | **P4** | Tire | **T3 VLOW** unified low-speed (reduce kinematic blend reliance) | [x] 2026-06-20 (`low_speed_mode`, `vlow_speed_eps`) |
 | **P3** | GUI | **v0.5.2:** terrain Play **or** `.tir` import (pick one) | Browser-gated; no headless path |
 | **P3** | GUI | **Framework decision** (React/Svelte + Figma) before more `app.js` polish | HANDOFF: external review 4/10 |

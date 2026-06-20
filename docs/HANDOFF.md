@@ -8,7 +8,7 @@
 - **`SessionKind`** — `Standard` / `DirectControl` on `SimConfig` (replaces `direct_control_path`)
 - **KC compliance** — bushing toe/camber under lateral tire load in L3/L4 hard-joint step
 - **T3 VLOW** — `TireParams.low_speed_mode` + `vlow_speed_eps`; tests `TireVlow.*`
-- **Chrono KC** — `external/chrono_kc` builds (`gen_kc_reference`); API TODOs remain (gate still SKIP)
+- **Chrono KC** — `gen_kc_reference` fills reference CSV; `ChronoKcParity` **active** (rebound reach ~−14 mm)
 
 **Verify:** `cmake --build build -j && cd build && ctest --output-on-failure`
 
@@ -42,7 +42,7 @@
 
 1. **P0** — ~~tag **v0.6.1**~~ / ~~**v0.6.2**~~ **done** (`v0.6.1` @ `5cdca4e`, `v0.6.2` @ `9a40c1b`).
 2. **P1** — **#1 Fx→τ** C++ contract, **#6 drive_split** / brake bias design.
-3. **P2** — Chrono KC `gen_kc_reference` API fill-in.
+3. **P2** — ~~Chrono KC `gen_kc_reference` API fill-in~~ **done** — CSV committed, `ChronoKcParity` active.
 4. **P3** — v0.5.2 GUI: terrain Play **or** `.tir` import; **GUI v2** framework decision.
 5. **Thesis** — VLA hotfix only on `VDSim-Thesis`; plant → main PR after client sign-off.
 
