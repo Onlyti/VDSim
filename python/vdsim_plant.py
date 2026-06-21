@@ -5,12 +5,11 @@ Contract (stable):
   Observation dict each step (true state, contact-frame tyre forces, FL0..RR3):
 
     X, Y, psi, vx, vy, r, ax, ay, beta, roll, pitch   — vehicle [m, rad, m/s, m/s²]
-    wheel: list[4] of {Fx, Fy, Fz, alpha, kappa, mu, mu_peak, alpha_peak, kappa_peak, Mz}
+    wheel: list[4] of {Fx, Fy, Fz, alpha, kappa, mu, mu_peak, alpha_peak, kappa_peak}
       Fx, Fy — tyre contact / wheel frame [N]  (+Fx drive, +Fy left)
       Fz [N], alpha [rad], kappa [-], mu [-] contact friction used this step
       mu_peak [-] realized load-dependent peak coefficient (force/Fz)
       alpha_peak [rad], kappa_peak [-] MF pure-slip peak slip at this Fz
-      Mz [N·m] aligning moment (ITireModel::Output::Mz sign)
 
 Built on vdsim_lab config resolution + SimSession (direct CmdL1 torque path).
 """
@@ -26,10 +25,6 @@ try:
 except ImportError:
     sys.path.insert(0, str(REPO / "build" / "python"))
     import vdsim
-
-WHEEL_NAMES = ("FL", "FR", "RL", "RR")
-_EPS = 1e-9
-
 
 def _conf_root():
     for c in (REPO / "configs", Path.cwd() / "configs",
@@ -122,7 +117,7 @@ def _obs_from_output(o: vdsim.SimOutput) -> dict:
     }
 
 
-def _validate_friction_map(friction_map, base_mu: float):
+def _validate_friction_map(friction_map):
     if friction_map is None:
         return
     if not isinstance(friction_map, (list, tuple)):
@@ -138,7 +133,7 @@ def _validate_friction_map(friction_map, base_mu: float):
         if not (0.0 < mu <= 1.2):
             raise ValueError(f"friction_map[{i}]: mu={mu} outside (0, 1.2]")
 
-def _validate_friction_map_2d(friction_map_2d, base_mu: float):
+def _validate_friction_map_2d(friction_map_2d):
     if friction_map_2d is None:
         return
     if not isinstance(friction_map_2d, (list, tuple)):
@@ -261,8 +256,8 @@ class VDSimPlant:
           raise ValueError(f"base_mu={base_mu} outside (0, 1.2]")
       if friction_map is not None and friction_map_2d is not None:
           raise ValueError("pass friction_map or friction_map_2d, not both")
-      _validate_friction_map(friction_map, base_mu)
-      _validate_friction_map_2d(friction_map_2d, base_mu)
+      _validate_friction_map(friction_map)
+      _validate_friction_map_2d(friction_map_2d)
       _validate_dt(control_dt, substep_dt)
 
       vp_path = resolve_vehicle_config(config)

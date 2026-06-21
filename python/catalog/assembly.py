@@ -5,9 +5,11 @@ from typing import Any, Dict, List, Mapping, Optional
 
 from catalog.ids import part_suffix
 from catalog.materialize import resolve_fleet_entry
-from catalog.part_cards import level_rank, part_card_stats, part_compat
+from catalog.part_cards import part_card_stats, part_compat
 from catalog.resolver import CatalogResolver
-from catalog.slots import slots_for_level
+from catalog.slots import OPTIONAL_SLOTS, slots_for_level
+
+_OPTIONAL_SLOT_KEYS = {s[0] for s in OPTIONAL_SLOTS}
 
 _RECOMMENDED_BLUEPRINTS = (
     "vehicle.sedan_comfort",
@@ -197,6 +199,7 @@ def fleet_assembly_view(
         if bid in bp_ids
     ]
 
+    required = {s[0] for s in slots_for_level(level)} - _OPTIONAL_SLOT_KEYS
     out: Dict[str, Any] = {
         "blueprint": {
             "id": blueprint_id,
@@ -214,7 +217,7 @@ def fleet_assembly_view(
         "slots": slots_out,
         "summary": summary,
         "build_complete": not summary.get("error") and all(
-            bool(s["part_id"]) for s in slots_out),
+            bool(s["part_id"]) for s in slots_out if s["slot"] in required),
     }
 
     if preview_slot and preview_candidate:

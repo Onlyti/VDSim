@@ -273,8 +273,10 @@ std::unique_ptr<SimSession> make_direct_control_session(
     cfg.nominal_dt = opts.nominal_dt;
     apply_vehicle_steer_deadtime(cfg, vp);
     auto ground = make_friction_ground(opts.friction);
+    VehicleParams vp_plant = vp;
+    vp_plant.plant_path = true;
     return std::make_unique<SimSession>(
-        create_seven_dof(), std::move(ground), vp, ts, sp, cfg);
+        create_seven_dof(), std::move(ground), vp_plant, ts, sp, cfg);
 }
 
 }  // namespace vdsim

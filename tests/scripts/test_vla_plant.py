@@ -99,10 +99,14 @@ def test_patch_brake_turn_grip_loss():
     saturated = False
     slip_seen = False
     y_drift = 0.0
+    fx_cmd = -15000.0
+    grip_ratio_min = 1.0
     for k in range(120):
-        # Moderate combined demand so ||F|| approaches mu*Fz (not wheel-lock only).
-        obs = plant.step([0.10, -9000.0])
+        obs = plant.step([0.12, fx_cmd])
         y_drift = obs["Y"]
+        fx_body, _ = _sum_forces_body(plant)
+        if obs["vx"] > 2.0:
+            grip_ratio_min = min(grip_ratio_min, abs(fx_body) / abs(fx_cmd))
         for w in obs["wheel"]:
             fxy = math.hypot(w["Fx"], w["Fy"])
             cap = w["mu"] * w["Fz"]
@@ -113,6 +117,8 @@ def test_patch_brake_turn_grip_loss():
     assert saturated, "expected per-wheel friction saturation on patch"
     assert slip_seen, "expected measurable slip (kappa/alpha) under combined demand"
     assert abs(y_drift) > 0.5, f"expected lateral departure, Y={y_drift}"
+    assert grip_ratio_min < 0.85, (
+        f"expected vehicle-level grip loss on patch, |ΣFx|/|Fx_cmd|={grip_ratio_min:.3f}")
     print("smoke 2 patch brake+turn grip-loss: ok "
           f"(sat={saturated} slip={slip_seen} Y={y_drift:.2f} m)")
 

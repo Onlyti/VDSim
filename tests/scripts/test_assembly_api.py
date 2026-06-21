@@ -25,6 +25,24 @@ def test_sedan_assembly_slots():
     assert "body" in slots and "tire" in slots
     assert "front_chassis" not in slots
     assert asm["summary"]["mass_kg"] > 500
+    assert asm["build_complete"] is True
+
+
+def test_build_complete_ignores_optional_tire_slots():
+    spec = {
+        "id": 0,
+        "blueprint": DEFAULT_BLUEPRINT,
+        "level": "L2",
+        "parts": {},
+        "vehicle": "sedan",
+        "tire": "default_pacejka",
+    }
+    asm = fleet_assembly_view(spec, out_dir=ROOT / "build" / "_asm_test")
+    optional = {"tire_rear", "tire_fr", "tire_rl", "tire_rr"}
+    for s in asm["slots"]:
+        if s["slot"] in optional:
+            assert not s["part_id"]
+    assert asm["build_complete"] is True
 
 
 def test_l3_has_susp_slots():
@@ -77,6 +95,7 @@ def test_assembly_preview_delta():
 
 if __name__ == "__main__":
     test_sedan_assembly_slots()
+    test_build_complete_ignores_optional_tire_slots()
     test_l3_has_susp_slots()
     test_assembly_garage_meta()
     test_assembly_preview_delta()

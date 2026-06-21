@@ -22,7 +22,7 @@ def part_card_stats(doc: Mapping[str, Any]) -> Dict[str, Any]:
     t = str(doc.get("type", ""))
     body = doc.get("body") or {}
     lines: List[str] = []
-    if t == "chassis":
+    if t == "body":
         if "mass" in body:
             lines.append(f"{float(body['mass']):.0f} kg")
         if "cg_height" in body:
@@ -32,6 +32,11 @@ def part_card_stats(doc: Mapping[str, Any]) -> Dict[str, Any]:
         elif "cg_to_front" in body and "cg_to_rear" in body:
             wb = float(body["cg_to_front"]) + float(body["cg_to_rear"])
             lines.append(f"WB {wb:.2f} m")
+    elif t == "chassis":
+        path = str(body.get("path", ""))
+        stem = path.rsplit("/", 1)[-1].replace(".yaml", "") if path else "—"
+        lines.append(stem)
+        lines.append(str(doc.get("schema", "")).replace("_v1", ""))
     elif t == "tire":
         if "mu_nominal" in body:
             lines.append(f"μ {float(body['mu_nominal']):.2f}")
@@ -77,13 +82,19 @@ def part_compat(
 ) -> List[Dict[str, str]]:
     issues: List[Dict[str, str]] = []
     schema = str(doc.get("schema", ""))
-    if slot in ("front_susp_kin", "rear_susp_kin"):
+    kin_slots = ("front_susp_kin", "rear_susp_kin", "front_chassis", "rear_chassis")
+    if slot in kin_slots:
         if level not in ("L3", "L4"):
             issues.append({"level": "error", "msg": "Requires L3 or L4"})
         if schema == "topology_preview_v1":
             issues.append({"level": "error", "msg": "Preview-only topology"})
         elif schema != "kinematics_l3_native_v1":
             issues.append({"level": "error", "msg": f"Bad schema: {schema}"})
+        pid = str(doc.get("id", "")).lower()
+        if slot == "front_chassis" and "rear" in pid and "front" not in pid:
+            issues.append({"level": "warn", "msg": "Rear axle part on front slot"})
+        if slot == "rear_chassis" and "front" in pid and "rear" not in pid:
+            issues.append({"level": "warn", "msg": "Front axle part on rear slot"})
     ui = doc.get("ui") or {}
     compat = ui.get("compat") or {}
     min_level = compat.get("min_level")

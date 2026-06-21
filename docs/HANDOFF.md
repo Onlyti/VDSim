@@ -1,6 +1,10 @@
 # VDSim 핸드오프
 
-작성: **2026-06-20** · `VDSim-Thesis` (local) · **402/402 ctest green**
+작성: **2026-06-21** · **`VDSim-Thesis`** (active) · **402/402 ctest green**
+
+> **Structured review (2026-06-21):** 3-lane agent review + fixes — see
+> [`docs/evidence/review/REVIEW_2026-06-21.md`](evidence/review/REVIEW_2026-06-21.md) and
+> [`docs/design/STRUCTURED_REVIEW.md`](design/STRUCTURED_REVIEW.md).
 
 ## 0. 2026-06-20 thesis freeze + core → main port — DONE
 

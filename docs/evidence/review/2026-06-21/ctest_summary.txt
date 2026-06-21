@@ -1,0 +1,24 @@
+# Review evidence — 2026-06-21
+
+Tag: `thesis-review-2026-06-21`
+
+## Lane: plant — PASS
+- `VlaPlant`: 1 passed, 0 failed (exit 0)
+- `vla_plant`: 1 passed, 0 failed (exit 0)
+
+## Lane: core_session — PASS
+- `PerWheel`: 1 passed, 0 failed (exit 0)
+- `PerAxle`: 1 passed, 0 failed (exit 0)
+- `SimSession.CmdL1`: 0 passed, 0 failed (exit 0)
+- `DragCoast`: 1 passed, 0 failed (exit 0)
+
+## Lane: catalog — PASS
+- `catalog`: 1 passed, 0 failed (exit 0)
+- `assembly`: 1 passed, 0 failed (exit 0)
+- `blueprint`: 1 passed, 0 failed (exit 0)
+- `multi_vehicle`: 1 passed, 0 failed (exit 0)
+
+## Full ctest
+- passed=1 failed=0 exit=0
+
+Regenerate: `python3 tools/review_evidence_bundle.py`

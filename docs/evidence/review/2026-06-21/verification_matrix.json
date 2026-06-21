@@ -1,0 +1,89 @@
+{
+  "tag": "thesis-review-2026-06-21",
+  "date": "2026-06-21",
+  "lanes": {
+    "plant": [
+      {
+        "regex": "VlaPlant",
+        "exit_code": 0,
+        "passed": 1,
+        "failed": 0,
+        "log_tail": "      Start 370: VlaPlant.FrictionPatchPerWheelMu\n12/15 Test #370: VlaPlant.FrictionPatchPerWheelMu .........................   Passed    0.00 sec\n      Start 371: VlaPlant.FrictionPatchSmoothTransition\n13/15 Test #371: VlaPlant.FrictionPatchSmoothTransition ...................   Passed    0.00 sec\n      Start 372: VlaPlant.PolygonFrictionInsideAndOutside\n14/15 Test #372: VlaPlant.PolygonFrictionInsideAndOutside .................   Passed    0.00 sec\n      Start 373: VlaPlant.PolygonFrictionBlendZone\n15/15 Test #373: VlaPlant.PolygonFrictionBlendZone ........................   Passed    0.00 sec\n\n100% tests passed, 0 tests failed out of 15\n\nTotal Test time (real) =   0.33 sec"
+      },
+      {
+        "regex": "vla_plant",
+        "exit_code": 0,
+        "passed": 1,
+        "failed": 0,
+        "log_tail": "Test project /home/ailab-12/git/VDSim/build\n    Start 400: vla_plant\n1/2 Test #400: vla_plant ........................   Passed    2.31 sec\n    Start 401: vla_plant_demo\n2/2 Test #401: vla_plant_demo ...................   Passed    0.43 sec\n\n100% tests passed, 0 tests failed out of 2\n\nTotal Test time (real) =   2.74 sec"
+      }
+    ],
+    "core_session": [
+      {
+        "regex": "PerWheel",
+        "exit_code": 0,
+        "passed": 1,
+        "failed": 0,
+        "log_tail": "    Start 260: ControlDispatch.SevenDOFHandlesCmdL1PerWheelTorque\n2/5 Test #260: ControlDispatch.SevenDOFHandlesCmdL1PerWheelTorque ..........   Passed    0.02 sec\n    Start 322: EffectiveRollingRadius.FreeRollSpinIsPerWheelAndAxleSplit\n3/5 Test #322: EffectiveRollingRadius.FreeRollSpinIsPerWheelAndAxleSplit ...   Passed    0.00 sec\n    Start 370: VlaPlant.FrictionPatchPerWheelMu\n4/5 Test #370: VlaPlant.FrictionPatchPerWheelMu ............................   Passed    0.00 sec\n    Start 376: PerWheelTire.L2FrontLeftRightDifferentGrip\n5/5 Test #376: PerWheelTire.L2FrontLeftRightDifferentGrip ..................   Passed    0.01 sec\n\n100% tests passed, 0 tests failed out of 5\n\nTotal Test time (real) =   0.06 sec"
+      },
+      {
+        "regex": "PerAxle",
+        "exit_code": 0,
+        "passed": 1,
+        "failed": 0,
+        "log_tail": "Test project /home/ailab-12/git/VDSim/build\n    Start 374: PerAxleTire.L2FrontRearDifferentGrip\n1/2 Test #374: PerAxleTire.L2FrontRearDifferentGrip ..........   Passed    0.01 sec\n    Start 375: PerAxleTire.L1UnifiedMatchesSingleTireParam\n2/2 Test #375: PerAxleTire.L1UnifiedMatchesSingleTireParam ...   Passed    0.01 sec\n\n100% tests passed, 0 tests failed out of 2\n\nTotal Test time (real) =   0.03 sec"
+      },
+      {
+        "regex": "SimSession.CmdL1",
+        "exit_code": 0,
+        "passed": 0,
+        "failed": 0,
+        "log_tail": "Test project /home/ailab-12/git/VDSim/build\nNo tests were found!!!"
+      },
+      {
+        "regex": "DragCoast",
+        "exit_code": 0,
+        "passed": 1,
+        "failed": 0,
+        "log_tail": "Test project /home/ailab-12/git/VDSim/build\n    Start 209: LongScenarios.DragCoastMatchesAnalytical\n1/1 Test #209: LongScenarios.DragCoastMatchesAnalytical ...   Passed    0.14 sec\n\n100% tests passed, 0 tests failed out of 1\n\nTotal Test time (real) =   0.15 sec"
+      }
+    ],
+    "catalog": [
+      {
+        "regex": "catalog",
+        "exit_code": 0,
+        "passed": 1,
+        "failed": 0,
+        "log_tail": "Test project /home/ailab-12/git/VDSim/build\n    Start 389: catalog_resolver\n1/2 Test #389: catalog_resolver .................   Passed    0.15 sec\n    Start 391: catalog_api\n2/2 Test #391: catalog_api ......................   Passed    0.27 sec\n\n100% tests passed, 0 tests failed out of 2\n\nTotal Test time (real) =   0.42 sec"
+      },
+      {
+        "regex": "assembly",
+        "exit_code": 0,
+        "passed": 1,
+        "failed": 0,
+        "log_tail": "Test project /home/ailab-12/git/VDSim/build\n    Start 395: assembly_api\n1/1 Test #395: assembly_api .....................   Passed    1.07 sec\n\n100% tests passed, 0 tests failed out of 1\n\nTotal Test time (real) =   1.08 sec"
+      },
+      {
+        "regex": "blueprint",
+        "exit_code": 0,
+        "passed": 1,
+        "failed": 0,
+        "log_tail": "Test project /home/ailab-12/git/VDSim/build\n    Start 397: blueprint_roundtrip\n1/1 Test #397: blueprint_roundtrip ..............   Passed    0.29 sec\n\n100% tests passed, 0 tests failed out of 1\n\nTotal Test time (real) =   0.30 sec"
+      },
+      {
+        "regex": "multi_vehicle",
+        "exit_code": 0,
+        "passed": 1,
+        "failed": 0,
+        "log_tail": "Test project /home/ailab-12/git/VDSim/build\n    Start 386: cosim_multi_vehicle\n1/2 Test #386: cosim_multi_vehicle ..............   Passed    3.40 sec\n    Start 398: multi_vehicle_compare\n2/2 Test #398: multi_vehicle_compare ............   Passed    0.87 sec\n\n100% tests passed, 0 tests failed out of 2\n\nTotal Test time (real) =   4.28 sec"
+      }
+    ]
+  },
+  "full_ctest": {
+    "regex": ".",
+    "exit_code": 0,
+    "passed": 1,
+    "failed": 0,
+    "log_tail": "        Start 399: experiment_api\n399/402 Test #399: experiment_api ..................................................................................................................   Passed    1.09 sec\n        Start 400: vla_plant\n400/402 Test #400: vla_plant .......................................................................................................................   Passed    2.47 sec\n        Start 401: vla_plant_demo\n401/402 Test #401: vla_plant_demo ..................................................................................................................   Passed    0.46 sec\n        Start 402: control_ladder\n402/402 Test #402: control_ladder ..................................................................................................................   Passed    0.71 sec\n\n100% tests passed, 0 tests failed out of 402\n\nTotal Test time (real) =  28.16 sec"
+  }
+}
