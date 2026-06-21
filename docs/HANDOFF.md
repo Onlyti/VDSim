@@ -1,6 +1,10 @@
 # VDSim 핸드오프
 
-작성: **2026-06-20** · `main` (local) · **388/388 ctest green**
+작성: **2026-06-21** · `main` (local) · **388/388 ctest green**
+
+> **Structured review (2026-06-21):** portable fixes on `main` worktree — see
+> [`docs/evidence/review/REVIEW_2026-06-21.md`](evidence/review/REVIEW_2026-06-21.md).
+> VLA plant lane lives on `VDSim-Thesis` only.
 
 ## 0. 2026-06-20 core quality + T3 VLOW — DONE
 
