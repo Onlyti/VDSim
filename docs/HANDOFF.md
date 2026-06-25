@@ -1,10 +1,84 @@
 # VDSim 핸드오프
 
-작성: **2026-06-21** · **`VDSim-Thesis`** (active) · **402/402 ctest green**
+작성: **2026-06-25** · **`VDSim-Thesis`** (active) · **404/404 ctest green**
 
-> **Structured review (2026-06-21):** 3-lane agent review + fixes — see
-> [`docs/evidence/review/REVIEW_2026-06-21.md`](evidence/review/REVIEW_2026-06-21.md) and
-> [`docs/design/STRUCTURED_REVIEW.md`](design/STRUCTURED_REVIEW.md).
+> **Governance (2026-06-25):** demand-gate active — new fidelity PRs need VDSim-PO named puller (`CLAUDE.md`).
+
+## 0. 2026-06-25 Product freeze boundary — ACTIVE
+
+**GUI v3:** preserved @ P0 parity gap 0 (commit `feat(gui): v3 preserve`).  
+**FROZEN** — no further GUI polish/features until ≥2 scenario-authoring segment adoption failures cite GUI absence.
+
+**Plant API (P1 wedge):** open — thesis / external MPC (`vdsim_plant`, CmdL1 path).
+
+**Wheel CI (P0-1):** `.github/workflows/wheels.yml` — tag `v*` → cibuildwheel + PyPI (trusted publisher).  
+Pre-publish: `python3 tools/verify_wheel_packaging.py wheelhouse/*.whl` (1 public `.tir`, 0 measured).
+
+## 0. 2026-06-23 CmdL1 per-wheel torque binding fix — DONE
+
+**Bug:** `def_readwrite` on `std::array<double,4>` returned a copy — `cmd.motor_torque[i]=x` was silent no-op.  
+**Fix:** `MutableWheelArray` in-place view (`__getitem__`/`__setitem__`) + `vdsim_plant._fx_to_cmdl1` whole-array assign.  
+**Tests:** `test_cmdl1_element_torque_assign`, `test_longitudinal_fx_accel` in `test_vla_plant.py`.
+
+## 0. 2026-06-23 CO-00 scenario template gallery — DONE
+
+**Templates:** Empty · Figure-8 · Straight · Skidpad (R=40 circle)  
+**API:** `POST /api/setup/template` · Scenario inspector 2×2 chip gallery  
+**E2E:** template chip `button.tpl` locator (accessible name includes hint text)
+
+## 0. 2026-06-23 GUI v3 sim time + RN-02 + SH-05 — DONE
+
+**Sim time:** stream `t` = plant timestamp − first frame (not wall epoch)  
+**RN-02:** Run Autopilot/Manual + manbar (↑↓←→ + touch) → `/api/fleet` + `/api/manual`  
+**SH-05:** `HelpLink` → mkdocs theory pages (Scenario road/path, Run pose/tire)
+
+## 0. 2026-06-22 GUI v3 Run/Scenario polish — DONE
+
+**RN-06:** per-wheel force triad (Fx/Fy/Fz arrows) in `RunViewport` · Forces toggle  
+**Run telemetry:** sim time `t` · per-wheel Fz/Fx/Fy/κ/α table  
+**CO-06:** waypoint summary table (downsampled) in Scenario inspector  
+**Docs:** concept art README — require live capture pairing for thesis figures
+
+## 0. 2026-06-22 GUI v3 visual P0 — DONE
+
+**P0 fixes (vs concept art review):**
+- Scenario map: path from `setup.path_pts` (no 0-point race) · grid axis labels (m) · waypoint # in edit mode
+- Run idle: preview vehicle mesh + path at fleet spawn (`RunViewport` setup_mode)
+- Play → Run navigation hardened · capture flow waits sync+start · `06-run-sim-*.png`
+
+**Review:** [`docs/evidence/review/GUI_V3_VISUAL_REVIEW.md`](evidence/review/GUI_V3_VISUAL_REVIEW.md) · captures `docs/evidence/review/gui-captures/`
+
+Regenerate: `python3 tools/gui_v3_capture.py` · eval: `python3 tools/gui_v3_eval_bundle.py`
+
+## 0. 2026-06-22 GUI v3 scaffold + Scenario API — DONE
+
+**Concept art:** [`docs/design/assets/`](design/assets/) (6 PNG + README).
+
+**Scaffold:** `gui/v3/` — Svelte 5 + Vite · `#/scenario` default.
+
+**Scenario mode (wired):** `GET/POST /api/setup`, `/api/path`, `/api/fleet` (load scenario),
+`/api/scenario/save`, map canvas (path + fleet drag), road μ/grade/bank, path preset, ▶ Play → `/api/run/start`.
+
+**Still placeholder:** — (L4 hardpoint editor shipped in Build mode).
+
+**Scenario path edit (CO-07):** map toolbar **Edit path** · drag ● · click add · Del · Esc.
+
+**Analyze mode (v3.0-beta):** `/api/compare` · ISO maneuvers · yaw-rate overlay · Δ% table · CSV export.
+
+**Build mode (v3.0-beta):** assembly · blueprint **Export/Register** · **Parts library** · Δ stats · linkage SVG · **L4 hardpoint editor** (pick/drag y–z, K&C preview, save to gui_custom).
+
+**Run mode (v3.0-beta):** `/api/stream` SSE · Three.js fleet mesh · chase/orbit/top · telemetry · Stop/Reset.
+
+```bash
+python3 gui/server.py --port 8095
+cd gui/v3 && npm run build   # or npm run dev
+python3 tools/gui_v3_eval_bundle.py   # headless eval → docs/evidence/review/
+# http://localhost:8095/v3/#/scenario
+```
+
+## 0. 2026-06-21 GUI v3 planning — DONE (superseded by scaffold above)
+
+Direction locked: Scenario-first · Run-second · Svelte 5 + Vite ([`GUI_V3_ADR.md`](design/GUI_V3_ADR.md)).
 
 ## 0. 2026-06-20 thesis freeze + core → main port — DONE
 

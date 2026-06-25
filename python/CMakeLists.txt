@@ -34,7 +34,9 @@ if(pybind11_FOUND)
             ${CMAKE_SOURCE_DIR}/configs/roads
             ${CMAKE_SOURCE_DIR}/configs/vehicles
             DESTINATION "vdsim_configs"
-            FILES_MATCHING PATTERN "*.yaml")
+            FILES_MATCHING
+            PATTERN "*.yaml"
+            PATTERN "ioniq5_pac2002.tir")
     endif()
     message(STATUS "Python bindings: ENABLED")
 else()
