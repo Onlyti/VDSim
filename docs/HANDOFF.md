@@ -6,6 +6,12 @@
 > [`docs/evidence/review/REVIEW_2026-06-21.md`](evidence/review/REVIEW_2026-06-21.md).
 > VLA plant lane lives on `VDSim-Thesis` only.
 
+## 0. 2026-06-23 CmdL1 per-wheel torque binding fix — DONE
+
+**Bug:** `def_readwrite` on `std::array<double,4>` returned a copy — `cmd.motor_torque[i]=x` was silent no-op.  
+**Fix:** `MutableWheelArray` in-place view (`__getitem__`/`__setitem__`) on `CmdL1.motor_torque` / `brake_torque`.  
+**Test:** `tests/scripts/test_cmdl1_binding.py` (ctest `cmdl1_binding`).
+
 ## 0. 2026-06-20 core quality + T3 VLOW — DONE
 
 **Shipped:**
