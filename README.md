@@ -5,6 +5,13 @@
 [![build](https://github.com/Onlyti/VDSim/actions/workflows/build.yml/badge.svg)](https://github.com/Onlyti/VDSim/actions/workflows/build.yml)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 ![status](https://img.shields.io/badge/status-experimental%20pre--release-orange.svg)
+![tests](https://img.shields.io/badge/ctest-404%2F404-green.svg)
+
+> **Experimental / pre-release — not for production.** Evidence and limits:
+> [VALIDATION.md](docs/VALIDATION.md) (v0.5.1+).
+> **Validated:** analytic + ISO maneuvers + L1↔L3 self-consistency + pure-slip same-`.tir`
+> cross-check (CarMaker &lt;0.1%, Chrono Pac02 ~0.8%) — not MF-Tyre product parity.
+> **NOT yet:** full-vehicle commercial cross-val, real-vehicle data, production sign-off.
 
 ![Grip-loss demo](docs/assets/demo_grip_loss.gif)
 
@@ -17,9 +24,6 @@ L1–L5 dynamics with real Pacejka MF / LuGre / belt-transient tires, hardpoint
 suspension kinematics you can design against, and bidirectional FMI 2.0 — and
 delegates rendering/sensors to tools like CARLA. It is the chassis-accurate half
 that perception stacks lack.
-
-> v0.5.1+ — experimental / pre-release. Validated on analytic + ISO + cross-model
-> (Chrono Pac02) self-consistency (see [VALIDATION](docs/VALIDATION.md)); not for production use.
 
 Docs (theory + reports): **https://onlyti.github.io/VDSim/** · all run modes
 (API / batch / FMI): [docs/RUNNING.md](docs/RUNNING.md) · catalog & physics options:

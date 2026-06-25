@@ -6,13 +6,14 @@
 > [`docs/evidence/review/REVIEW_2026-06-21.md`](evidence/review/REVIEW_2026-06-21.md).
 > GUI v3 frozen on `VDSim-Thesis` only (`a44b593`). VLA plant API on main via cherry-pick.
 
-## 0. 2026-06-25 launch pre-flight P0 on main — IN PROGRESS
+## 0. 2026-06-25 launch pre-flight P0 on main — DONE (publish HOLD)
 
 **Wheel CI (P0-1):** `.github/workflows/wheels.yml` — cibuildwheel + `verify_wheel_packaging.py`.  
 **HOLD:** no `v0.7.0` tag / PyPI publish until PO GO.  
 **Plant:** `python/vdsim_plant.py` + `test_vla_plant.py` cherry-picked from thesis (`4f948a5`).  
 **P0-2 quickstart:** `examples/quickstart.py` + `vdsim-quickstart`; README ~6 s cold (measured).  
-**P0-3 demo:** `examples/demo_grip_loss.py` → `docs/assets/demo_grip_loss.gif` (headless, pillow).
+**P0-3 demo:** `examples/demo_grip_loss.py` → `docs/assets/demo_grip_loss.gif` (headless, pillow).  
+**P0-4 VALIDATION:** currency v0.5.1+, **404/404 ctest**; README validation summary; tire cross-check wording (not product parity).
 
 ## 0. 2026-06-23 CmdL1 per-wheel torque binding fix — DONE
 
