@@ -6,6 +6,12 @@
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 ![status](https://img.shields.io/badge/status-experimental%20pre--release-orange.svg)
 
+![Grip-loss demo](docs/assets/demo_grip_loss.gif)
+
+*결정론적 VDSim plant: 컨트롤러가 사전에 모르는 저-μ patch를 통과하며 타이어가 peak
+너머 포화(drift>1) — soft-clamp가 아닌 실제 grip loss.* 재현:
+`python examples/demo_grip_loss.py` (`pip install vdsim[plot]` 또는 로컬 wheel).
+
 Open-core 차량동역학 시뮬레이터. VDSim 은 **차량 그 자체**를 담당합니다 — 검증된
 L1–L5 동역학 + 실제 Pacejka MF / LuGre / belt-transient 타이어 + 설계검증 가능한
 hardpoint 서스펜션 운동학 + 양방향 FMI 2.0. 렌더링·센서는 CARLA 같은 도구에
@@ -27,9 +33,9 @@ pip install "./vdsim-*.whl[plot]"
 vdsim-quickstart          # cwd 에 run.csv + run.png 생성
 ```
 
-측정 (clean conda, Python 3.11, Linux x86_64, 2026-06-25): **pip install `[plot]` +
-`vdsim-quickstart` → `run.csv` + `run.png`까지 ~6 s wall-clock** (lab 네트워크,
-matplotlib wheel 포함). 재실행 ~1.5 s.
+측정 (clean conda, Python 3.11, Linux x86_64, 2026-06-25): **첫 결과까지 수 초** —
+pip install `[plot]` + `vdsim-quickstart` → `run.csv` + `run.png` **~6 s wall-clock**
+(cold; lab 네트워크, matplotlib wheel 포함). 재실행 ~1.5 s.
 
 설치 확인:
 
@@ -38,8 +44,6 @@ python -c "import vdsim; from vdsim_lab import Sim; Sim(vehicle='sedan', level='
 ```
 
 스크립트: [`examples/quickstart.py`](examples/quickstart.py) — `from vdsim_lab import Sim, Road` 만 사용.
-
-## 소스 빌드
 
 ## 소스 빌드
 

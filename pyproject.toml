@@ -14,7 +14,7 @@ keywords = ["vehicle-dynamics", "simulation", "pacejka", "fmi", "autonomous-driv
 dependencies = ["numpy", "pyyaml"]
 
 [project.optional-dependencies]
-plot = ["matplotlib"]
+plot = ["matplotlib", "pillow"]
 
 [project.scripts]
 vdsim-quickstart = "quickstart:main"
