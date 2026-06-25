@@ -190,13 +190,12 @@ def _fx_to_cmdl1(vp: vdsim.VehicleParams, delta: float, fx: float) -> vdsim.CmdL
     )
     cmd = vdsim.CmdL1()
     cmd.steer_angle_wheel = delta
-    for i in range(4):
-        if fx >= 0.0:
-            cmd.motor_torque[i] = taus[i]
-            cmd.brake_torque[i] = 0.0
-        else:
-            cmd.motor_torque[i] = 0.0
-            cmd.brake_torque[i] = abs(taus[i])
+    if fx >= 0.0:
+        cmd.motor_torque = [float(t) for t in taus]
+        cmd.brake_torque = [0.0, 0.0, 0.0, 0.0]
+    else:
+        cmd.motor_torque = [0.0, 0.0, 0.0, 0.0]
+        cmd.brake_torque = [abs(float(t)) for t in taus]
     return cmd
 
 

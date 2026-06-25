@@ -77,10 +77,70 @@ struct PyAntiRollBar : vdsim::IAntiRollBar {
     }
     void reset() override { PYBIND11_OVERRIDE(void, vdsim::IAntiRollBar, reset, ); }
 };
+
+// std::array<double,4> via def_readwrite copies on read — element __setitem__ is a no-op.
+class MutableWheelArray {
+public:
+    explicit MutableWheelArray(WheelArray* data) : data_(data) {}
+
+    double get_item(int i) const {
+        if (i < 0) i += vdsim::NUM_WHEELS;
+        if (i < 0 || i >= vdsim::NUM_WHEELS) throw py::index_error();
+        return (*data_)[static_cast<size_t>(i)];
+    }
+
+    void set_item(int i, double v) {
+        if (i < 0) i += vdsim::NUM_WHEELS;
+        if (i < 0 || i >= vdsim::NUM_WHEELS) throw py::index_error();
+        (*data_)[static_cast<size_t>(i)] = v;
+    }
+
+    WheelArray::iterator begin() { return data_->begin(); }
+    WheelArray::iterator end() { return data_->end(); }
+
+private:
+    WheelArray* data_;
+};
+
+void assign_wheel_array(WheelArray& arr, const py::object& seq) {
+    if (!py::isinstance<py::sequence>(seq))
+        throw py::type_error("expected a sequence of length 4");
+    if (py::len(seq) != vdsim::NUM_WHEELS)
+        throw py::value_error("wheel array must have length 4");
+    for (py::ssize_t i = 0; i < vdsim::NUM_WHEELS; ++i)
+        arr[static_cast<size_t>(i)] = seq[py::cast(i)].cast<double>();
+}
+
+template <typename T>
+void def_wheel_array_rw(py::class_<T>& c, const char* name, WheelArray T::*member) {
+    c.def_property(
+        name,
+        [member](T& self) { return MutableWheelArray(&(self.*member)); },
+        [member](T& self, py::object seq) { assign_wheel_array(self.*member, seq); },
+        py::return_value_policy::reference_internal);
+}
+
+void bind_wheel_array_type(py::module& m) {
+    py::class_<MutableWheelArray>(m, "WheelTorqueArray", py::module_local())
+        .def("__len__", [](const MutableWheelArray&) { return vdsim::NUM_WHEELS; })
+        .def("__getitem__", &MutableWheelArray::get_item)
+        .def("__setitem__", &MutableWheelArray::set_item)
+        .def("__iter__", [](MutableWheelArray& self) {
+            return py::make_iterator(self.begin(), self.end());
+        })
+        .def("__repr__", [](MutableWheelArray& self) {
+            py::list vals;
+            for (auto it = self.begin(); it != self.end(); ++it) vals.append(*it);
+            return py::repr(vals);
+        });
+}
+
 }  // namespace
 
 PYBIND11_MODULE(vdsim, m) {
     m.doc() = "VDSim core Python bindings";
+
+    bind_wheel_array_type(m);
 
     // -------- Types --------
     py::enum_<vdsim::VehicleParams::Drive>(m, "Drive")
@@ -513,11 +573,11 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("surface_id", &vdsim::ContactPoint::surface_id);
 
     // -------- CmdL1 / CmdL3 (VLA plant direct torque path) --------
-    py::class_<vdsim::CmdL1>(m, "CmdL1")
-        .def(py::init<>())
-        .def_readwrite("motor_torque",      &vdsim::CmdL1::motor_torque)
-        .def_readwrite("brake_torque",      &vdsim::CmdL1::brake_torque)
-        .def_readwrite("steer_angle_wheel", &vdsim::CmdL1::steer_angle_wheel);
+    py::class_<vdsim::CmdL1> cmd_l1(m, "CmdL1");
+    cmd_l1.def(py::init<>());
+    def_wheel_array_rw(cmd_l1, "motor_torque", &vdsim::CmdL1::motor_torque);
+    def_wheel_array_rw(cmd_l1, "brake_torque", &vdsim::CmdL1::brake_torque);
+    cmd_l1.def_readwrite("steer_angle_wheel", &vdsim::CmdL1::steer_angle_wheel);
     py::class_<vdsim::CmdL3>(m, "CmdL3")
         .def(py::init<>())
         .def_readwrite("Fx_total",          &vdsim::CmdL3::Fx_total)

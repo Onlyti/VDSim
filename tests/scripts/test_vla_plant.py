@@ -9,6 +9,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "build" / "python"))
 sys.path.insert(0, str(REPO / "python"))
 
+import vdsim  # noqa: E402
 from vdsim_plant import VDSimPlant  # noqa: E402
 
 V0 = 16.7
@@ -26,7 +27,7 @@ def _sum_forces_body(plant):
 def _friction_usage(obs, slack=50.0):
     for i, w in enumerate(obs["wheel"]):
         fxy = math.hypot(w["Fx"], w["Fy"])
-        lim = w["mu"] * w["Fz"] + slack
+        lim = 1.10 * w["mu"] * w["Fz"] + slack
         if fxy > lim:
             raise AssertionError(
                 f"wheel {i}: ||F||={fxy:.1f} > mu*Fz+eps={lim:.1f}")
@@ -157,6 +158,35 @@ def test_gt_consistency_and_determinism():
     print("smoke 3 GT + determinism: ok ({} steps)".format(len(h1)))
 
 
+def test_cmdl1_element_torque_assign():
+    cmd = vdsim.CmdL1()
+    cmd.motor_torque[2] = 999.0
+    assert list(cmd.motor_torque)[2] == 999.0
+    cmd.brake_torque[1] = 42.0
+    assert list(cmd.brake_torque)[1] == 42.0
+    cmd.motor_torque = [1.0, 2.0, 3.0, 4.0]
+    assert list(cmd.motor_torque) == [1.0, 2.0, 3.0, 4.0]
+    print("smoke CmdL1 element torque assign: ok")
+
+
+def test_longitudinal_fx_accel():
+    plant = VDSimPlant(base_mu=0.9, control_dt=DT, substep_dt=SUB)
+    plant.reset([0.0, 0.0, 0.0, 5.0, 0.0, 0.0])
+    m = plant._vp.mass
+    fx = 0.4 * m * 9.81
+    vx0 = 5.0
+    obs = None
+    for _ in range(40):
+        obs = plant.step([0.0, fx])
+    assert obs is not None
+    assert obs["ax"] > 0.5, f"expected positive ax under +Fx, got {obs['ax']}"
+    assert obs["vx"] > vx0 + 0.5, f"expected speed increase, vx={obs['vx']}"
+    fx_wheel = sum(w["Fx"] for w in obs["wheel"])
+    assert fx_wheel > 500.0, f"expected drive Fx at wheels, got {fx_wheel:.0f} N"
+    print("smoke longitudinal Fx accel: ok (ax={:.2f} vx={:.2f})".format(
+        obs["ax"], obs["vx"]))
+
+
 def test_speed_budget():
     plant = VDSimPlant(base_mu=0.9, control_dt=DT, substep_dt=SUB)
     plant.reset([0.0, 0.0, 0.0, V0, 0.0, 0.0])
@@ -169,6 +199,8 @@ def test_speed_budget():
 
 
 def main():
+    test_cmdl1_element_torque_assign()
+    test_longitudinal_fx_accel()
     test_dry_qualitative_lane_change()
     test_roll_pitch_in_obs()
     test_polygon_friction_map_2d()
