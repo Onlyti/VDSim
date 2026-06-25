@@ -6,6 +6,12 @@
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 ![status](https://img.shields.io/badge/status-experimental%20pre--release-orange.svg)
 
+![Grip-loss demo](docs/assets/demo_grip_loss.gif)
+
+*Deterministic VDSim plant: controller hits an unseen low-μ patch, tyres saturate past
+peak (drift>1) — real grip loss, not a soft-clamp.* Reproduce:
+`python examples/demo_grip_loss.py` (`pip install vdsim[plot]` or local wheel).
+
 Open-core vehicle-dynamics simulator. VDSim owns the **vehicle** — validated
 L1–L5 dynamics with real Pacejka MF / LuGre / belt-transient tires, hardpoint
 suspension kinematics you can design against, and bidirectional FMI 2.0 — and
@@ -29,9 +35,9 @@ pip install "./vdsim-*.whl[plot]"
 vdsim-quickstart          # writes run.csv + run.png in the current directory
 ```
 
-Measured on a clean conda env (Python 3.11, Linux x86_64, 2026-06-25): **pip install
-`[plot]` + `vdsim-quickstart` → `run.csv` + `run.png` in ~6 s wall-clock** on a
-typical lab network (matplotlib wheel download included). Repeat runs ~1.5 s.
+Measured on a clean conda env (Python 3.11, Linux x86_64, 2026-06-25): **first result in
+seconds** — pip install `[plot]` + `vdsim-quickstart` → `run.csv` + `run.png` in **~6 s
+wall-clock** (cold; lab network, matplotlib wheel included). Repeat quickstart ~1.5 s.
 
 Verify the install:
 
@@ -41,8 +47,6 @@ python -c "import vdsim; from vdsim_lab import Sim; Sim(vehicle='sedan', level='
 
 Source for the script: [`examples/quickstart.py`](examples/quickstart.py) — uses only
 `from vdsim_lab import Sim, Road` (no repo paths).
-
-## From source
 
 ## From source
 

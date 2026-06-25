@@ -32,11 +32,15 @@ def verify_wheel(path: Path) -> None:
     raise SystemExit(f"FAIL {path.name}: missing ioniq5_awd.yaml preset")
   if not any(n.endswith("vdsim_lab.py") for n in names):
     raise SystemExit(f"FAIL {path.name}: missing vdsim_lab.py")
+  if not any(n.endswith("vdsim_plant.py") for n in names):
+    raise SystemExit(f"FAIL {path.name}: missing vdsim_plant.py")
   if not any(n.endswith("catalog/__init__.py") for n in names):
     raise SystemExit(f"FAIL {path.name}: missing catalog package")
   if not any(n.endswith("/quickstart.py") or n.endswith("quickstart.py") for n in names):
     raise SystemExit(f"FAIL {path.name}: missing quickstart.py")
-  print(f"OK {path.name}: yaml={ny} public_tir=1 measured_tir=0 vdsim_lab=yes quickstart=yes")
+  print(
+      f"OK {path.name}: yaml={ny} public_tir=1 measured_tir=0 "
+      f"vdsim_lab=yes vdsim_plant=yes quickstart=yes")
 
 
 def main(argv: list[str]) -> int:
