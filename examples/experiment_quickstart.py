@@ -5,6 +5,8 @@ A constant-speed + brake test on flat ground. Shows the four seam calls:
 state() -> set_input() -> run_core_dt(), then to_csv().
 
     PYTHONPATH=build/python:python python3 examples/experiment_quickstart.py
+
+Pip installs: use examples/quickstart.py or vdsim-quickstart instead.
 """
 import sys
 from pathlib import Path

@@ -77,7 +77,9 @@ class CatalogResolver:
     def __post_init__(self) -> None:
         self.repo_root = Path(self.repo_root).resolve()
         if self.manifest_path is None:
-            self.manifest_path = self.repo_root / "configs" / "catalog" / "manifest.yaml"
+            wheel = self.repo_root / "vdsim_configs" / "catalog" / "manifest.yaml"
+            dev = self.repo_root / "configs" / "catalog" / "manifest.yaml"
+            self.manifest_path = wheel if wheel.is_file() else dev
         else:
             self.manifest_path = Path(self.manifest_path).resolve()
         self.catalog_root = self.manifest_path.parent.parent

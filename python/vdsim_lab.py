@@ -82,6 +82,9 @@ def resolve_line(dl):
 # Vehicle / Tire
 # --------------------------------------------------------------------------- #
 def _catalog_root():
+    pkg = Path(__file__).resolve().parent
+    if (pkg / "vdsim_configs" / "catalog" / "manifest.yaml").is_file():
+        return pkg
     for c in (REPO, REPO.parent if (REPO / "configs").is_dir() else None):
         if c and (c / "configs" / "catalog" / "manifest.yaml").is_file():
             return c
@@ -89,7 +92,12 @@ def _catalog_root():
 
 
 def _resolve_preset(vehicle="sedan", tire="default_pacejka"):
-    sys.path.insert(0, str(_catalog_root() / "python"))
+    root = _catalog_root()
+    pkg = Path(__file__).resolve().parent
+    for extra in (root / "python", pkg):
+        sp = str(extra)
+        if extra.is_dir() and sp not in sys.path:
+            sys.path.insert(0, sp)
     from catalog import CatalogResolver
     from catalog.ids import blueprint_for_vehicle, tire_id_from_stem
     cache = _CONF / ".resolve_cache" / f"{vehicle}_{tire}"
@@ -133,7 +141,11 @@ class Tire:
 
     @classmethod
     def from_yaml(cls, path):
-        return cls(vdsim.TireParams.from_yaml(str(path)))
+        p = Path(path)
+        tp = vdsim.TireParams.from_yaml(str(p))
+        if tp.tir_path and not Path(tp.tir_path).is_absolute():
+            tp.tir_path = str((p.parent / tp.tir_path).resolve())
+        return cls(tp)
 
     def lugre(self, enabled=True, **kw):
         self.tp.lugre.enabled = bool(enabled)
@@ -701,7 +713,11 @@ def _as_vehicle(v):
         return v
     if isinstance(v, str) and v.endswith((".yaml", ".yml")):
         return Vehicle.from_yaml(v)
-    return Vehicle.preset(v or "sedan")
+    stem = Path(v or "sedan").stem
+    bundled = _CONF / "vehicles" / f"{stem}.yaml"
+    if bundled.is_file():
+        return Vehicle.from_yaml(bundled)
+    return Vehicle.preset(stem)
 
 
 def _as_tire(t):
@@ -709,7 +725,11 @@ def _as_tire(t):
         return t
     if isinstance(t, str) and t.endswith((".yaml", ".yml")):
         return Tire.from_yaml(t)
-    return Tire.preset(t or "default_pacejka")
+    stem = Path(t or "default_pacejka").stem
+    bundled = _CONF / "parts" / "tire" / f"{stem}.yaml"
+    if bundled.is_file():
+        return Tire.from_yaml(bundled)
+    return Tire.preset(stem)
 
 
 class Sim:

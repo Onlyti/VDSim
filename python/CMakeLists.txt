@@ -25,7 +25,12 @@ if(pybind11_FOUND)
             ${CMAKE_SOURCE_DIR}/cosim/protocol.py
             ${CMAKE_SOURCE_DIR}/examples/opendrive.py
             ${CMAKE_SOURCE_DIR}/examples/rd5_route.py
+            ${CMAKE_SOURCE_DIR}/examples/quickstart.py
             DESTINATION ".")
+        install(DIRECTORY
+            ${CMAKE_SOURCE_DIR}/python/catalog
+            DESTINATION "."
+            FILES_MATCHING PATTERN "*.py")
         install(DIRECTORY
             ${CMAKE_SOURCE_DIR}/configs/parts
             ${CMAKE_SOURCE_DIR}/configs/blueprints

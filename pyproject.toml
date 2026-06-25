@@ -16,6 +16,9 @@ dependencies = ["numpy", "pyyaml"]
 [project.optional-dependencies]
 plot = ["matplotlib"]
 
+[project.scripts]
+vdsim-quickstart = "quickstart:main"
+
 [project.urls]
 Homepage = "https://onlyti.github.io/VDSim/"
 
