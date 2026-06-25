@@ -1,0 +1,9 @@
+---
+description: 개인 규약 자동 주입 — agent_personalize.md (ADR-027). 모든 세션·모든 작업.
+alwaysApply: true
+---
+<!-- gen_context_hooks.py 생성 — 편집 금지, SoT=cursor_system/hosts/common/cursor-rules/ -->
+
+아래는 이 사용자의 개인 규약 전문이다 (SoT: agent_personalize.md). 세션 시작 시 자동 주입 — 별도 Read 불필요.
+
+@/home/ailab-12/cursor_system/agent_system/agent_personalize.md
