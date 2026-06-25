@@ -1,0 +1,348 @@
+{
+  "date": "2026-06-23",
+  "tool": "gui_v3_parity_audit.py",
+  "counts": {
+    "PASS": 42,
+    "PARTIAL": 2,
+    "GAP": 4
+  },
+  "p0_gaps": 0,
+  "checks": [
+    {
+      "id": "SH-01",
+      "group": "shell",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "hash routes scenario/run/build/analyze"
+    },
+    {
+      "id": "SH-02",
+      "group": "shell",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "scenario save/load in ScenarioMode"
+    },
+    {
+      "id": "SH-03",
+      "group": "shell",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "Play \u2192 run"
+    },
+    {
+      "id": "SH-04",
+      "group": "shell",
+      "prio": "P0",
+      "status": "PARTIAL",
+      "note": "kin warnings in Run status only"
+    },
+    {
+      "id": "SH-05",
+      "group": "shell",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "mkdocs help links"
+    },
+    {
+      "id": "SH-06",
+      "group": "shell",
+      "prio": "P1",
+      "status": "GAP",
+      "note": "panel resize persist"
+    },
+    {
+      "id": "CO-00",
+      "group": "scenario",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "template gallery"
+    },
+    {
+      "id": "CO-01",
+      "group": "scenario",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "road \u03bc/grade/bank"
+    },
+    {
+      "id": "CO-02",
+      "group": "scenario",
+      "prio": "P1",
+      "status": "GAP",
+      "note": "OpenDRIVE xodr"
+    },
+    {
+      "id": "CO-03",
+      "group": "scenario",
+      "prio": "P1",
+      "status": "GAP",
+      "note": "terrain obj"
+    },
+    {
+      "id": "CO-04",
+      "group": "scenario",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "fleet table"
+    },
+    {
+      "id": "CO-05",
+      "group": "scenario",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "map drag"
+    },
+    {
+      "id": "CO-06",
+      "group": "scenario",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "path preset + wp table"
+    },
+    {
+      "id": "CO-07",
+      "group": "scenario",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "path edit"
+    },
+    {
+      "id": "CO-08",
+      "group": "scenario",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "static map path; Run viewport separate"
+    },
+    {
+      "id": "CO-09",
+      "group": "scenario",
+      "prio": "P1",
+      "status": "GAP",
+      "note": "cosim attach UI"
+    },
+    {
+      "id": "CO-14",
+      "group": "scenario",
+      "prio": "P1",
+      "status": "PARTIAL",
+      "note": "scenario list from API"
+    },
+    {
+      "id": "CO-15",
+      "group": "scenario",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "build?vid="
+    },
+    {
+      "id": "CO-16",
+      "group": "scenario",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "save/load scenario"
+    },
+    {
+      "id": "BU-01",
+      "group": "build",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "blueprint presets"
+    },
+    {
+      "id": "BU-02",
+      "group": "build",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "categories"
+    },
+    {
+      "id": "BU-03",
+      "group": "build",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "preview \u0394 + install"
+    },
+    {
+      "id": "BU-04",
+      "group": "build",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "stats panel"
+    },
+    {
+      "id": "BU-05",
+      "group": "build",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "build_complete surfaced"
+    },
+    {
+      "id": "BU-06",
+      "group": "build",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "L1\u2013L5"
+    },
+    {
+      "id": "BU-07",
+      "group": "build",
+      "prio": "P1",
+      "status": "PASS",
+      "note": "compat badges"
+    },
+    {
+      "id": "BU-08",
+      "group": "build",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "blueprint confirm"
+    },
+    {
+      "id": "BU-09",
+      "group": "build",
+      "prio": "P1",
+      "status": "PASS",
+      "note": "export blueprint"
+    },
+    {
+      "id": "BU-10",
+      "group": "build",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "linkage SVG"
+    },
+    {
+      "id": "BU-11",
+      "group": "build",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "no Three.js in BuildMode"
+    },
+    {
+      "id": "BU-13",
+      "group": "build",
+      "prio": "P2",
+      "status": "PASS",
+      "note": "K&C in HardpointEditor"
+    },
+    {
+      "id": "BU-14",
+      "group": "build",
+      "prio": "P1",
+      "status": "PASS",
+      "note": "PartsLibrary"
+    },
+    {
+      "id": "BU-HP",
+      "group": "build",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "HardpointEditor"
+    },
+    {
+      "id": "RN-00",
+      "group": "run",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "Run mode route"
+    },
+    {
+      "id": "RN-01",
+      "group": "run",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "stop/reset"
+    },
+    {
+      "id": "RN-02",
+      "group": "run",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "autopilot/manual + manbar"
+    },
+    {
+      "id": "RN-03",
+      "group": "run",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "time scale"
+    },
+    {
+      "id": "RN-04",
+      "group": "run",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "cam modes"
+    },
+    {
+      "id": "RN-05",
+      "group": "run",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "SSE viewport"
+    },
+    {
+      "id": "RN-06",
+      "group": "run",
+      "prio": "P1",
+      "status": "PASS",
+      "note": "wheel force triad"
+    },
+    {
+      "id": "RN-07",
+      "group": "run",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "telemetry"
+    },
+    {
+      "id": "AN-01",
+      "group": "analyze",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "fleet/catalog picks"
+    },
+    {
+      "id": "AN-02",
+      "group": "analyze",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "maneuvers"
+    },
+    {
+      "id": "AN-03",
+      "group": "analyze",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "yaw chart"
+    },
+    {
+      "id": "AN-04",
+      "group": "analyze",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "delta table"
+    },
+    {
+      "id": "AN-05",
+      "group": "analyze",
+      "prio": "P1",
+      "status": "PASS",
+      "note": "CSV export"
+    },
+    {
+      "id": "AN-06",
+      "group": "analyze",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "separate Analyze mode route"
+    },
+    {
+      "id": "NF-BUILD",
+      "group": "nonfunctional",
+      "prio": "P0",
+      "status": "PASS",
+      "note": "v3 dist present"
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import tempfile
 from pathlib import Path
 
 import yaml
@@ -213,19 +214,8 @@ def _kc_series(samples, y_attr, label, color):
     }
 
 
-def suspension_kc_plots(name):
-    import vdsim
-
-    stem = susp_stem_from_ref(name)
-    path = kin_yaml_path(stem)
-    if path is None or not path.is_file():
-        raise ValueError(f"unknown suspension: {name}")
-    if not is_l3_kinematics_yaml(stem):
-        raise ValueError(f"suspension '{stem}' has no native kinematics YAML")
-    doc = yaml.safe_load(path.read_text()) or {}
-    typ = str(doc.get("type") or "unknown")
-    r = vdsim.run_kc_sweep(str(path))
-    plots = [
+def _kc_plots_from_sweep(r):
+    return [
         {
             "title": "Camber vs wheel travel",
             "xlabel": "wheel travel [mm]",
@@ -275,4 +265,118 @@ def suspension_kc_plots(name):
             ],
         },
     ]
-    return {"name": stem, "type": typ, "plots": plots}
+
+
+def kin_geometry_flat(doc):
+    out = {}
+
+    def walk(node, prefix=""):
+        if isinstance(node, dict):
+            for k, v in node.items():
+                walk(v, f"{prefix}.{k}" if prefix else k)
+        elif isinstance(node, list) and len(node) == 3:
+            if all(isinstance(x, (int, float)) for x in node):
+                out[prefix] = [float(node[0]), float(node[1]), float(node[2])]
+
+    walk(doc)
+    return out
+
+
+def update_kin_path(doc, path, value):
+    parts = str(path).split(".")
+    node = doc
+    for p in parts[:-1]:
+        node = node[p]
+    node[parts[-1]] = [float(value[0]), float(value[1]), float(value[2])]
+    return doc
+
+
+def resolve_kin_file_path(name=None, part_id=None):
+    from runner.catalog_bridge import catalog_resolver
+
+    if part_id:
+        part = catalog_resolver().load_part(part_id)
+        rel = str((part.get("body") or {}).get("path") or "")
+        if not rel:
+            raise ValueError(f"part {part_id} has no kinematics path")
+        path = Path(rel)
+        if not path.is_absolute():
+            path = (catalog_resolver().catalog_root / path).resolve()
+        if not path.is_file():
+            raise ValueError(f"kinematics file not found: {path}")
+        return path, susp_stem_from_ref(part_id), part
+    stem = susp_stem_from_ref(name)
+    path = kin_yaml_path(stem)
+    if path is None or not path.is_file():
+        raise ValueError(f"unknown suspension: {name}")
+    return path, stem, None
+
+
+def _kc_plots_from_path(yaml_path):
+    import vdsim
+
+    path = Path(yaml_path)
+    doc = yaml.safe_load(path.read_text()) or {}
+    if not doc.get("type"):
+        raise ValueError(f"{path.name} has no native kinematics type")
+    typ = str(doc.get("type") or "unknown")
+    r = vdsim.run_kc_sweep(str(path))
+    return {"type": typ, "plots": _kc_plots_from_sweep(r)}
+
+
+def load_suspension_kin(name=None, part_id=None):
+    path, stem, part = resolve_kin_file_path(name=name, part_id=part_id)
+    doc = yaml.safe_load(path.read_text()) or {}
+    if not doc.get("type"):
+        raise ValueError(f"'{stem}' is not L3-native kinematics")
+    links, pts = corner_kinematic_links(doc)
+    pid = part_id or (part["id"] if part else f"chassis.{stem}")
+    rel = str(path)
+    try:
+        rel = str(path.relative_to(REPO))
+    except ValueError:
+        pass
+    readonly = "gui_custom" not in str(path) and "gui_custom" not in str(pid)
+    return {
+        "ok": True,
+        "name": stem,
+        "part_id": pid,
+        "type": str(doc.get("type") or "unknown"),
+        "doc": doc,
+        "geometry": kin_geometry_flat(doc),
+        "schematic": {"links": links, "points": pts},
+        "path": rel,
+        "readonly": readonly,
+    }
+
+
+def preview_suspension_kin(doc):
+    if not isinstance(doc, dict) or not doc.get("type"):
+        raise ValueError("kin doc needs top-level type")
+    links, pts = corner_kinematic_links(doc)
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        yaml.safe_dump(doc, f, sort_keys=False)
+        tmp = f.name
+    try:
+        kc = _kc_plots_from_path(tmp)
+    finally:
+        Path(tmp).unlink(missing_ok=True)
+    return {
+        "ok": True,
+        "type": kc["type"],
+        "geometry": kin_geometry_flat(doc),
+        "schematic": {"links": links, "points": pts},
+        "plots": kc["plots"],
+    }
+
+
+def suspension_kc_plots(name):
+    stem = susp_stem_from_ref(name)
+    path = kin_yaml_path(stem)
+    if path is None or not path.is_file():
+        raise ValueError(f"unknown suspension: {name}")
+    if not is_l3_kinematics_yaml(stem):
+        raise ValueError(f"suspension '{stem}' has no native kinematics YAML")
+    out = _kc_plots_from_path(path)
+    out["name"] = stem
+    return out

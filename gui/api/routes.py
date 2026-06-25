@@ -183,11 +183,54 @@ GET_EXACT = {
 }
 
 
+def _v3_dist_root(ctx):
+    return (ctx.here / "v3" / "dist").resolve()
+
+
+def _serve_v3_file(h, ctx, rel, content_type):
+    root = _v3_dist_root(ctx)
+    fp = (root / rel).resolve()
+    if not str(fp).startswith(str(root)) or not fp.is_file():
+        return False
+    bytes_response(h, fp.read_bytes(), content_type,
+                   extra_headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
+    return True
+
+
+def _handle_v3_static(h, route, ctx):
+    if route in ("/v3", "/v3/"):
+        return _serve_v3_file(h, ctx, "index.html", "text/html; charset=utf-8")
+    if route == "/v3/index.html":
+        return _serve_v3_file(h, ctx, "index.html", "text/html; charset=utf-8")
+    if not route.startswith("/v3/"):
+        return False
+    rel = route[len("/v3/"):].split("?")[0]
+    if not rel:
+        return _serve_v3_file(h, ctx, "index.html", "text/html; charset=utf-8")
+    if rel.endswith(".js"):
+        ct = "application/javascript; charset=utf-8"
+    elif rel.endswith(".css"):
+        ct = "text/css; charset=utf-8"
+    elif rel.endswith(".svg"):
+        ct = "image/svg+xml"
+    elif rel.endswith(".map"):
+        ct = "application/json"
+    else:
+        ct = "application/octet-stream"
+    if _serve_v3_file(h, ctx, rel, ct):
+        return True
+    h.send_response(404)
+    h.end_headers()
+    return True
+
+
 def handle_get(h, route, qs, ctx):
     if route in ("/", "/app", "/app.html"):
         html = (ctx.here / "app.html").read_bytes()
         bytes_response(h, html, "text/html; charset=utf-8",
                        extra_headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
+        return True
+    if _handle_v3_static(h, route, ctx):
         return True
     if route == "/core.js":
         data = (ctx.here / "core.js").read_bytes()
@@ -318,6 +361,16 @@ def handle_get(h, route, qs, ctx):
         name = (qs.get("name") or [""])[0]
         try:
             json_response(h, ctx.suspension_kc_plots(name))
+        except ValueError as e:
+            json_response(h, {"ok": False, "error": str(e)}, 400)
+        return True
+    if route == "/api/suspension/kin":
+        from runner.suspension import load_suspension_kin
+        name = (qs.get("name") or [""])[0]
+        part_id = (qs.get("part_id") or [""])[0]
+        try:
+            json_response(h, load_suspension_kin(
+                name=name or None, part_id=part_id or None))
         except ValueError as e:
             json_response(h, {"ok": False, "error": str(e)}, 400)
         return True
@@ -522,6 +575,25 @@ def handle_post(h, path, body, ctx):
         except Exception as e:
             json_response(h, {"ok": False, "error": str(e)}, 400)
         return True
+    if path == "/api/suspension/kin/preview":
+        from runner.suspension import preview_suspension_kin
+        try:
+            json_response(h, preview_suspension_kin(body.get("doc") or {}))
+        except ValueError as e:
+            json_response(h, {"ok": False, "error": str(e)}, 400)
+        return True
+    if path == "/api/suspension/kin/save":
+        try:
+            out = r.save_catalog_kin(
+                body.get("doc") or {},
+                body.get("stem", "kin_edit"),
+                body.get("label", "Kin edit"),
+                base_part_id=body.get("base_part_id"),
+            )
+            json_response(h, {"ok": True, **out})
+        except Exception as e:
+            json_response(h, {"ok": False, "error": str(e)}, 400)
+        return True
     if path == "/api/catalog/parts/delete":
         try:
             out = r.delete_catalog_part(body.get("part_id", ""))
@@ -608,6 +680,16 @@ def handle_post(h, path, body, ctx):
             json_response(h, {"ok": False, "error": str(e)}, code=400)
             return True
         json_response(h, {"ok": True,
+                          "setup": r.get_setup(include_geom=False, include_scenarios=False)})
+        return True
+    if path == "/api/setup/template":
+        key = str(body.get("template") or body.get("name") or "")
+        try:
+            r.apply_scenario_template(key)
+        except ValueError as e:
+            json_response(h, {"ok": False, "error": str(e)}, code=400)
+            return True
+        json_response(h, {"ok": True, "template": key,
                           "setup": r.get_setup(include_geom=False, include_scenarios=False)})
         return True
     if path == "/api/run/start":

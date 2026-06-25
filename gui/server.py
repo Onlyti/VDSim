@@ -134,6 +134,7 @@ class Runner(DraftMixin):
         self.fleet_overrides = {}
         self.plant_error = None
         self._wait_since = None
+        self._sim_t0 = None
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.cosim = CosimBridge()         # binary co-sim server (configured + launched here)
         self.rec_on = False                # logging recorder
@@ -441,6 +442,14 @@ class Runner(DraftMixin):
             self.reload_catalog()
             return out
 
+    def save_catalog_kin(self, doc, stem, label, base_part_id=None):
+        from runner.catalog_api import catalog_kin_save
+        with self.lock:
+            out = catalog_kin_save(
+                doc, stem, label, base_part_id=base_part_id)
+            self.reload_catalog()
+            return out
+
     def delete_catalog_part(self, part_id):
         from runner.catalog_api import catalog_part_delete
         with self.lock:
@@ -575,6 +584,9 @@ class Runner(DraftMixin):
             self.path = FigureEight()
         elif name == "straight":
             self.path = WaypointPath([(-40.0, 0.0), (40.0, 0.0)])
+        elif name == "skidpad":
+            from runner.autopilot import circle_pts
+            self.path = WaypointPath(circle_pts(0.0, 0.0, 40.0, 64))
 
     def _default_fleet_spec(self, vid=0, offset_xy=(0.0, 0.0)):
         veh = str(self.cfg.get("vehicle", "sedan"))
@@ -736,6 +748,13 @@ class Runner(DraftMixin):
             "grade": self.cfg["road_grade"], "bank": self.cfg["road_bank"],
         }
 
+    def _plant_sim_t(self, t_raw):
+        t = float(t_raw or 0.0)
+        with self.lock:
+            if self._sim_t0 is None:
+                self._sim_t0 = t
+            return max(0.0, t - self._sim_t0)
+
     def control(self, action):
         start_req = False
         with self.lock:
@@ -745,11 +764,13 @@ class Runner(DraftMixin):
                 self.plant_error = None
                 self.cosim.stop()
                 self.prev_idx = 0
+                self._sim_t0 = None
             elif action == "stop":
                 self.cfg["running"] = False
                 self.cfg["paused"] = False
                 self.plant_error = None
                 self.cosim.stop()
+                self._sim_t0 = None
             elif action == "pause":
                 if self.cfg["running"]:
                     self.cfg["paused"] = True
@@ -763,6 +784,7 @@ class Runner(DraftMixin):
                 self._prune_cosim_states()
                 self.prev_idx = 0
                 self.plant_error = None
+                self._sim_t0 = None
                 self.cfg["paused"] = False
                 if not self.cfg.get("cosim_attach") and not self.cosim.available():
                     self.cfg["running"] = False
@@ -996,6 +1018,7 @@ class Runner(DraftMixin):
                 with self.lock:
                     self._wait_since = None
                     self._run_since = None
+                    self._sim_t0 = None
                 snap = self._setup_snapshot()
                 with self.lock:
                     self.latest = snap
@@ -1037,7 +1060,7 @@ class Runner(DraftMixin):
                     self._wait_since = None
                 live_spec = next((f for f in self.fleet_spec if int(f["id"]) == self.live_vid), {})
                 live_lv = str(live_spec.get("level", self.cfg["level"]))
-                snap = {"t": cs["t"], "running": run, "paused": paused, "setup_mode": False,
+                snap = {"t": self._plant_sim_t(cs["t"]), "running": run, "paused": paused, "setup_mode": False,
                         "driver": focus_driver,
                         "x": cs["x"], "y": cs["y"], "z": cs["z"],
                         "yaw": cs["yaw"], "roll": cs["roll"], "pitch": cs["pitch"],
@@ -1090,7 +1113,7 @@ class Runner(DraftMixin):
                 else:
                     hx, hy = self.cfg["init_x"], self.cfg["init_y"]
                     hyaw, hvx, ht = self.cfg["init_yaw"], 0.0, 0.0
-                snap = {"t": ht, "running": run, "paused": paused, "setup_mode": False,
+                snap = {"t": self._plant_sim_t(ht), "running": run, "paused": paused, "setup_mode": False,
                         "driver": focus_driver,
                         "x": hx, "y": hy, "z": 0.0,
                         "yaw": hyaw, "roll": 0.0, "pitch": 0.0,
