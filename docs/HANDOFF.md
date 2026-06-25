@@ -16,7 +16,8 @@
 Pre-publish: `python3 tools/verify_wheel_packaging.py wheelhouse/*.whl` (1 public `.tir`, 0 measured).
 
 **P0-2 quickstart:** `examples/quickstart.py` + `vdsim-quickstart`; README cites **~6 s cold** (measured, not "5 min").  
-**P0-3 demo:** `examples/demo_grip_loss.py` → `docs/assets/demo_grip_loss.gif` (headless, pillow).
+**P0-3 demo:** `examples/demo_grip_loss.py` → `docs/assets/demo_grip_loss.gif` (headless, pillow).  
+**P0-4 VALIDATION:** currency v0.5.1+, **404/404 ctest**; README validation summary; tire cross-check wording (not product parity). ISO numbers unchanged (IsoBaseline gated).
 
 ## 0. 2026-06-23 CmdL1 per-wheel torque binding fix — DONE
 

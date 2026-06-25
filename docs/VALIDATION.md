@@ -1,9 +1,11 @@
 # VDSim validation & credibility
 
-> **v0.1.0 experimental / pre-release.** The claims below rest on open evidence
+> **v0.5.1+ experimental / pre-release.** The claims below rest on open evidence
 > (analytic + ISO standard + cross-model/cross-tool self-consistency). There is
 > no published cross-validation against a commercial reference on real-vehicle
-> data — see "Honest limitations". Not for production use.
+> data — see "Honest limitations". Not for production use. Do **not** claim
+> MF-Tyre product parity, published real-vehicle cross-val, Adams-validated KC
+> numbers, or production sign-off (see `docs/ROADMAP.md` §13).
 
 What "validated dynamics" means here, and how to reproduce every claim. VDSim is
 validated on four layers that need no proprietary data; the honest limits are in
@@ -14,11 +16,11 @@ the last section.
 | Validated (open, reproducible) | NOT yet validated |
 |---|---|
 | L1–L3 dynamics vs analytic (linear-bicycle yaw, drag coast, weight transfer) | Full-vehicle cross-validation vs CarMaker/CarSim/Adams on real-vehicle data (data confidential, not redistributable) |
-| **Tire force vs CarMaker MF-Tyre/MF-Swift** (same MF6.2 `.tir`, steady-state pure slip): pure-long 0.00%, pure-lat 0.09% | Full-vehicle (suspension/transient) commercial cross-val |
-| ISO 7401 step-steer / 4138 understeer / 3888-2 DLC — run + measured | Tire thermal, wear, full transient beyond first-order relaxation |
+| **Pure-slip tire force** (same public `.tir`, steady-state pure slip only): vs CarMaker MF-Tyre under **0.1%** (Fx/Fy); vs Chrono Pac02 **~0.8%** — *not* full-vehicle/product parity | Full-vehicle commercial cross-val (CarMaker/CarSim/Adams on real-vehicle data); tire thermal/wear; transient beyond first-order relaxation |
+| ISO 7401 step-steer / 4138 understeer / 3888-2 DLC — run + measured | — |
 | L1↔L2↔L3 cross-model consistency where physics overlaps | Dependent axles (twist-beam / solid beam) — configs are stubs |
 | FMI round-trip Δ=0 (machine precision); ISO 8608 PSD RMS per class | L3 unsprung lateral-transfer term (small) |
-| Full suite: **345/345 ctest green** | — |
+| Full suite: **404/404 ctest green** (measured 2026-06-25) | — |
 | Drivetrain engine inertia (open-diff carrier coupling) | — |
 | **ISO step-steer signature gated in CI** (`ctest -R IsoBaseline`, sedan L2 LuGre) | DLC moose gate is a preset property, not a defect (see note) |
 
@@ -54,7 +56,7 @@ vehicle/controller property, not a sim defect (see "Notes on specific results").
 | 12 | ISO 8608 roughness | PSD Gd(n)=Gd(n0)(n/n0)⁻² | RMS doubles/class: A 3.5, B 7.0, C 14.1, D 28 mm | 15% | `ctest -R Iso8608` |
 | 13 | **MF2002 vs Chrono Pac02** (BSD-3, independent) | same public `.tir` | pure-long Fx ~0.8% + pure-lat Fy ~0.7% (Fz 2–6 kN, mean); combined cross-terms differ (rig-frame, reported) | 6% | `ctest -R ChronoPac02Parity` · `tools/tire_validation.py` |
 | 14 | Control ladder (Lc1–Lc8 + split) | each level reaches target band | cruise/ax/yaw-rate/curvature + EPS torque verified | gated | `examples/control_ladder_demo.py` (ctest `control_ladder`) |
-| 15 | **MF vs CarMaker MF-Tyre/MF-Swift** (commercial, independent) | same MF6.2 `.tir`, same Re-based slip | pure-long Fx **0.00%**, pure-lat Fy **0.09%** (machine precision, steady-state pure slip) | — | `external/carmaker_parity/compare_vdsim_carmaker.py` (needs a CarMaker license) |
+| 15 | **Pure-slip vs CarMaker MF-Tyre/MF-Swift** (commercial tool, same `.tir`) | steady-state pure slip, Re-based κ | pure-long Fx **0.00%**, pure-lat Fy **0.09%** — *cross-check only*, not product parity | — | `external/carmaker_parity/compare_vdsim_carmaker.py` (needs a CarMaker license) |
 | 16 | **Effective rolling radius (Re) consistency** | reff-enabled tire, free-roll init via `free_roll_wheel_spin` | first-step \|κ\|<5e-4, no phantom Fx (L1/L2/L3) | gated | `ctest -R "EffectiveRollingRadius\|NoPhantom"` |
 | 17 | **Camber contact migration -> overturning** | crown_radius-enabled tire, camber input | Mx = Fz·crown_radius·sin γ per wheel; feeds L3 roll DOF; crown=0 -> Mx=0 | gated | `ctest -R CamberMigration` |
 
@@ -76,7 +78,7 @@ matching MF-Tyre/CarMaker. Initial wheel spin is set per-wheel via `free_roll_wh
 (vx/Re at static load) so no phantom longitudinal force appears at t=0. Re is opt-in: tires
 without BREFF/DREFF/FREFF (reff_*=0) fall back to the unloaded radius R0 unchanged.
 
-Full automated suite: `cd build && ctest` — 354 checks, 100% green (measured 2026-06-16).
+Full automated suite: `cd build && ctest` — **404** checks, 100% green (measured 2026-06-25).
 One-command evidence bundle (ctests + tire parity table + ISO figures + summary.md):
 `python3 tools/validation_report.py`.
 
@@ -165,7 +167,7 @@ folded into the re-baselined table above.
 ## Reproducing the whole report
 
 ```sh
-cmake --build build -j && (cd build && ctest --output-on-failure)   # 345 checks
+cmake --build build -j && (cd build && ctest --output-on-failure)   # 404 checks
 python3 apps/validation/run_validation.py    # ISO 7401/4138/3888 -> REPORT.md
 python3 fmi_export/test_roundtrip.py          # FMU vs native
 ```
