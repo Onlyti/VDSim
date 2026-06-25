@@ -15,3 +15,6 @@
 ## 빌드
 - CMake (CMakeLists.txt). docs = mkdocs (github.io 배포)
 - 공통: ~/.claude/CLAUDE.md (wheel FL=0, ISO 8855)
+
+## 거버넌스 — demand-gate (2026-06-25)
+신규 fidelity/물리 기능 PR은 **VDSim-PO** demand-gate 승인 필요 — 그것을 당기는 named puller(고객 피드백·세그먼트 도입 실패 사례)가 명시될 때만 착수. puller 없는 fidelity = Frozen. 로드맵 SoT·tier·우선순위는 PO 소유(`VDSimMarketing/ROLE.md`, `04_roadmap_revision_proposal.md`). thesis 연구인프라(linearize/monte_carlo/estimator-in-loop/plant)는 thesis puller 존재 → gate 면제.
