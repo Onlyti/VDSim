@@ -2652,6 +2652,8 @@
 <ul>
 <li><code>blueprint</code> 가 차량=부품 조합(자세한 부품 taxonomy 는 PARTS_CATALOG.md).</li>
 <li><code>parts:</code> 로 그 에이전트만 슬롯 교체.</li>
+<li><strong>타이어 슬롯 (고급):</strong> <code>tire</code> = FL 기본(미지정 시 전체 fallback). <code>tire_rear</code> = RL+RR.
+  <code>tire_fr</code> / <code>tire_rl</code> / <code>tire_rr</code> 로 코너별 교체 가능 (materialize → <code>tire_fr.yaml</code> 등).</li>
 <li>GUI 가 이 scene 을 materialize(blueprint→resolved vehicle.yaml/tire.yaml 경로)한 뒤 <code>vdsim_realtime</code> 에 넘긴다.</li>
 </ul>
 <h3 id="22-per-agent-control">2.2 제어방법 — per-agent <code>control</code> 🟡 (이 가이드와 함께 추가)<a class="headerlink" href="#22-per-agent-control" title="Permanent link">&para;</a></h3>

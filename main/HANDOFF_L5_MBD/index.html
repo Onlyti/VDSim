@@ -2431,6 +2431,21 @@ green</strong>. main HEAD = <code>7d77754</code>. 태그 <code>v0.6.0</code> 푸
 - Chrono KC parity 하니스 scaffold (<code>external/chrono_kc/</code>, skip-if-absent gate).
 - v0.6.0 tag, ROADMAP 갱신, superseded 설계문서 3개 배너.</p>
 <p><strong>미완 / 다음 할 일</strong>:
+0. <strong>[최우선 — VLA thesis plant = 첫 고객/제품, Cursor 위임 in-flight]</strong> spec(최종·자립형):
+   <code>docs/design/VLA_THESIS_PLANT.md</code> (#0=Fx→torque physical κ 확정 + 2-tier dt + product
+   quality bar 포함). Cursor headless 위임함(background) — 출력 <code>/tmp/claude-1000/.../b8v49i1fc.output</code>.
+   <strong>다음 세션 필수 = Cursor 산출물 검증·리뷰·폴리시 게이트</strong> (Claude 책임): <code>git diff</code> 리뷰 +
+   빌드 + 3 smoke + 전체 ctest green(현 382) + <strong>제품 품질 바</strong>(boundary validation/clear errors,
+   README+quickstart <code>examples/vla_plant_demo.py</code>, 결정론, 안정 obs contract, NaN 없음) 충족 확인.
+   첫 고객이므로 "동작"이 아니라 "출하 가능 품질"까지 끌어올릴 것. headline #2(patch brake+turn
+   real-κ grip-loss)가 진짜 통과인지 직접 확인. (Cursor가 막히면 #0 torque 경로는 Claude 직접.)
+   Ld2 7DOF를 thesis closed-loop plant로 swap. <strong>6개</strong>: (#0) Ld2 <strong>direct-Fx force/torque 경로</strong>
+   (현 CmdL3은 Fx_total을 throttle로 매핑함 = thesis 금지 → 우회 필수, acceptance #2 crux) ·
+   x-구간 friction-patch provider(per-wheel μ) · <code>wheel_mu()</code> getter · <code>ioniq5_awd.yaml</code>(Caf/Car는
+   AXLE값→per-wheel B=Ca/2 주의) · <code>VDSimPlant</code> 래퍼(vdsim_lab 위) · smoke 3종(#2=patch
+   brake+turn combined grip-loss). 이미 있음: SimSession lockstep · MF96 combined ·
+   <code>tire_forces_wheel()</code>(마찰원용 contact-frame) · per-wheel GT. 함정: wheel_spin=vx/R seed,
+   plant obs=true_state, 차량 kinematic-blend 우회/VLOW.
 1. <strong><code>7d77754</code> + 핸드오프 push</strong> (사용자 승인 시).
 2. <strong>Chrono external KC</strong> (오프라인, Chrono 빌드 필요): <code>gen_kc_reference.cpp</code> TODO 채움
    (PointId 철자·<code>ChSuspensionTestRig</code> API·spring/damper getter) → 실행 → reference CSV 커밋

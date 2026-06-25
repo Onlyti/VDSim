@@ -2764,6 +2764,9 @@ parts into <code>VehicleParams</code>, tire models, kinematics attach paths, etc
 <li><strong>Required keys by level</strong></li>
 <li>L1/L2: <code>body</code>, <code>aero</code>, <code>ride</code>, <code>tire</code>, <code>brake</code>, <code>steering</code>, <code>drivetrain</code></li>
 <li>L3: above + <code>front_chassis</code>, <code>rear_chassis</code> (suspension linkage parts)</li>
+<li><strong>Optional tire slots (advanced):</strong> <code>tire_rear</code> (rear axle default), <code>tire_fr</code>, <code>tire_rl</code>,
+  <code>tire_rr</code> (per-corner). Resolver fallback: FR←<code>tire_fr</code>??<code>tire</code>; RL←<code>tire_rl</code>??<code>tire_rear</code>??<code>tire</code>;
+  RR←<code>tire_rr</code>??<code>tire_rear</code>??RL.</li>
 <li><strong>No inline physics</strong> in blueprints — only <code>parts</code> + <code>overrides</code>.</li>
 <li>Fleet <strong>instances</strong> in a scene may override individual part refs (see §6).</li>
 </ul>

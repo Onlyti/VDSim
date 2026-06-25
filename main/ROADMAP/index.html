@@ -1720,6 +1720,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#v061-core-port-from-thesis-2026-06-20-on-main" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.6.1 — core port from thesis (2026-06-20, on main)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v062-core-quality-tire-t3-2026-06-20-on-main" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.6.2 — core quality + tire T3 (2026-06-20, on main)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#v052-planned" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1751,6 +1773,17 @@
     <span class="md-ellipsis">
       
         14. Related documents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#15-development-priorities-main-2026-06-20" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15. Development priorities (main, 2026-06-20)
       
     </span>
   </a>
@@ -2987,6 +3020,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#v061-core-port-from-thesis-2026-06-20-on-main" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.6.1 — core port from thesis (2026-06-20, on main)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v062-core-quality-tire-t3-2026-06-20-on-main" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.6.2 — core quality + tire T3 (2026-06-20, on main)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#v052-planned" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3024,6 +3079,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#15-development-priorities-main-2026-06-20" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15. Development priorities (main, 2026-06-20)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -3045,22 +3111,22 @@
 
 
 <h1 id="vdsim-product-roadmap">VDSim product roadmap<a class="headerlink" href="#vdsim-product-roadmap" title="Permanent link">&para;</a></h1>
-<p><strong>Last updated:</strong> 2026-06-17 · <strong>Tests:</strong> 382/382 ctest green (<code>main</code>)</p>
-<p>Living roadmap from early PoC through v0.3. Tracks what shipped in mainline vs what
-is planned. Detail specs link to <code>docs/design/*</code>; tire phases in
-<a href="../design/TIRE_ROADMAP/"><code>design/TIRE_ROADMAP.md</code></a>.</p>
+<p><strong>Last updated:</strong> 2026-06-20 · <strong>Tests:</strong> 388/388 ctest green (<code>main</code>) · 402 on <code>VDSim-Thesis</code> (+ VLA plant)</p>
+<p>Living roadmap from early PoC through v0.6. Tracks what shipped in <strong><code>main</code></strong> vs what
+is planned. The <strong>VLA thesis closed-loop plant</strong> (<code>python/vdsim_plant.py</code>) ships on
+<code>VDSim-Thesis</code> only (tag <code>vdsim-thesis-beta</code>); core APIs it depends on are on <code>main</code>.
+Detail specs: <code>docs/design/*</code>; tire phases in <a href="../design/TIRE_ROADMAP/"><code>design/TIRE_ROADMAP.md</code></a>.</p>
 <div class="admonition note">
 <p class="admonition-title">How to read</p>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <strong>Shipped</strong> — in repo, default or opt-in, covered by ctest where applicable  </li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <strong>Planned</strong> — scoped in design docs; not yet implemented  </li>
 <li><strong>Opt-in</strong> — implemented but not default catalog (baseline frozen)</li>
+<li><strong>Thesis-only</strong> — on <code>VDSim-Thesis</code>; not merged to <code>main</code> yet</li>
 </ul>
 </div>
-<p><strong>Velocity (recent):</strong> v0.2 composable subsystems + GUI redesign → v0.3 parts
-catalog + scene runtime → drivetrain inertia + LuGre tire tuning → v0.5 terrain + tire
-layers → <strong>L5 high-fidelity MBD: free-3D inertial unsprung, hardpoint-emergent
-anti-dive/squat/roll-centre + progressive coil rate (untagged, v0.6 candidate)</strong>.</p>
+<p><strong>Velocity (recent):</strong> v0.5 terrain + tire T1/T2 → <strong>v0.6 L5 MBD</strong> (untagged) → <strong>per-wheel
+tire + direct-control session factory</strong> on <code>main</code> → <strong>VLA plant beta</strong> on thesis branch.</p>
 <hr />
 <h2 id="at-a-glance">At a glance<a class="headerlink" href="#at-a-glance" title="Permanent link">&para;</a></h2>
 <table>
@@ -3074,13 +3140,13 @@ anti-dive/squat/roll-centre + progressive coil rate (untagged, v0.6 candidate)</
 <tbody>
 <tr>
 <td>Dynamics L1–L5</td>
-<td>L1–L3 planar/14-DOF; <strong>Ld4</strong> hard-joint; <strong>Ld5</strong> stunt + terrain; <strong>Ld5 high-fidelity MBD: free-3D inertial unsprung, energy-consistent on any surface, hardpoint-emergent anti-dive/squat/roll-centre + progressive coil rate + gyroscopic wheel-spin</strong> (<a href="../design/L5_MBD_FREE3D_UNSPRUNG/">design</a>)</td>
-<td>KC compliance model; GUI terrain Play (v0.5.2); V2V</td>
+<td>L1–L3 planar/14-DOF; <strong>Ld4</strong> hard-joint; <strong>Ld5</strong> stunt + terrain; <strong>Ld5 high-fidelity MBD</strong> (<a href="../design/L5_MBD_FREE3D_UNSPRUNG/">design</a>)</td>
+<td><strong>v0.6.0 tag</strong>; KC compliance; GUI terrain Play (v0.5.2); V2V</td>
 </tr>
 <tr>
 <td>Tire</td>
-<td>MF96 + LuGre <strong>default</strong>; <strong>MF2002 <code>.tir</code> backend (T1, Chrono-cross-checked)</strong>; <strong>belt transient (T2)</strong></td>
-<td>bicycle belt; combined-slip vs Pac02; GUI <code>.tir</code></td>
+<td>MF96 + LuGre <strong>default</strong>; <strong>MF2002 <code>.tir</code> (T1)</strong>; <strong>belt transient (T2)</strong>; <strong>per-axle/per-wheel <code>TireSetup</code></strong></td>
+<td>GUI <code>.tir</code> import; T3 VLOW unified low-speed</td>
 </tr>
 <tr>
 <td>Drivetrain</td>
@@ -3094,18 +3160,23 @@ anti-dive/squat/roll-centre + progressive coil rate (untagged, v0.6 candidate)</
 </tr>
 <tr>
 <td>Catalog / runtime</td>
-<td><code>--scene=</code>, fleet, FMI</td>
-<td>External part packs, VDS1 v4</td>
+<td><code>--scene=</code>, fleet, FMI; <strong><code>make_direct_control_session</code></strong>, <code>FrictionMapConfig</code>, <code>SimOutput</code> wheel GT</td>
+<td>External part packs; VDS1 v4; <strong>Fx→τ contract (#1)</strong></td>
+</tr>
+<tr>
+<td>Closed-loop plant</td>
+<td>Core session API on <code>main</code></td>
+<td><strong>VLA <code>VDSimPlant</code></strong> thesis-only → main PR when client done</td>
 </tr>
 <tr>
 <td>GUI</td>
-<td>3-tab scene UI, catalog API, workshops</td>
-<td>Tire <code>.tir</code> import UI; <strong>expose user-defined modules (decide: C++ <code>.so</code> plugin / Python path / GUI authoring)</strong></td>
+<td>3-tab scene UI, catalog API, workshops, multi-vehicle compare</td>
+<td><strong>GUI v2</strong> (framework decision); terrain Play; <code>.tir</code> import</td>
 </tr>
 <tr>
 <td>Validation</td>
-<td>ISO 7401/4138/3888 <strong>re-baselined + CI-gated</strong> (<code>IsoBaseline</code>), 382 ctest</td>
-<td>Adams x-check rtol; commercial cross-val</td>
+<td>ISO 7401/4138/3888 <strong>re-baselined + CI-gated</strong> (<code>IsoBaseline</code>), <strong>388</strong> ctest</td>
+<td>Adams x-check</td>
 </tr>
 </tbody>
 </table>
@@ -3133,8 +3204,11 @@ anti-dive/squat/roll-centre + progressive coil rate (untagged, v0.6 candidate)</
         L5 free-3D inertial unsprung MBD : 2026-06
         Hardpoint anti-dive/roll-centre + progressive coil : 2026-06
         Gyroscopic wheel-spin coupling : 2026-06
+        Per-wheel tire + direct_control session : 2026-06
     section Next
+        v0.6.0 tag : planned
         GUI terrain Play (v0.5.2) : planned
+        VLA plant main merge : thesis channel
         KC compliance + V2V : planned</code></pre>
 <hr />
 <h2 id="1-dynamics-ladder">1. Dynamics ladder<a class="headerlink" href="#1-dynamics-ladder" title="Permanent link">&para;</a></h2>
@@ -3367,6 +3441,16 @@ anti-dive/squat/roll-centre + progressive coil rate (untagged, v0.6 candidate)</
 <td>[x] Theory ch.19 + user docs synced</td>
 <td>Shipped</td>
 <td></td>
+</tr>
+<tr>
+<td>[x] <strong>Per-axle <code>TireSetup</code></strong> (front/rear yaml, L1/L2/L3/L5)</td>
+<td>Shipped 2026-06-20</td>
+<td><code>PerAxleTire.*</code>; catalog <code>tire_rear</code> slot</td>
+</tr>
+<tr>
+<td>[x] <strong>Per-wheel <code>TireSetup</code></strong> (FL/FR/RL/RR corner yaml)</td>
+<td>Shipped 2026-06-20</td>
+<td><code>PerWheelTire.*</code>; catalog <code>tire_fr</code>/<code>tire_rl</code>/<code>tire_rr</code></td>
 </tr>
 </tbody>
 </table>
@@ -3766,9 +3850,74 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <td></td>
 </tr>
 <tr>
+<td>[x] <strong><code>TireSetup</code> pybind</strong> + <code>initialize_setup</code></td>
+<td>Shipped 2026-06-20</td>
+<td>per-axle / per-wheel</td>
+</tr>
+<tr>
+<td>[x] <strong><code>IVehicleDynamics::tire(wheel)</code></strong></td>
+<td>Shipped 2026-06-20</td>
+<td>L1/L2/L5</td>
+</tr>
+<tr>
+<td>[x] <strong><code>make_direct_control_session</code></strong> + <code>FrictionMapConfig</code></td>
+<td>Shipped 2026-06-20</td>
+<td>CmdL1 direct path; <code>make_friction_ground()</code></td>
+</tr>
+<tr>
+<td>[x] <strong><code>SimOutput</code> wheel GT</strong> (μ, μ_peak, α/κ peak, <code>tire_forces_wheel</code>)</td>
+<td>Shipped 2026-06-20</td>
+<td><code>SimSession::output()</code></td>
+</tr>
+<tr>
+<td>[x] <strong><code>ladder_lowering.hpp</code></strong> (ISO-frozen L1–L3→L4 calib)</td>
+<td>Shipped 2026-06-20</td>
+<td>was duplicated in dynamics</td>
+</tr>
+<tr>
+<td>[x] Steer deadtime via <strong>ActuatorModel</strong> (not ad-hoc lag)</td>
+<td>Shipped 2026-06-20</td>
+<td><code>vp.steer_deadtime_s</code> on direct path</td>
+</tr>
+<tr>
 <td>[x] <code>tools/import_part_pack.py</code> stub</td>
 <td>Shipped</td>
 <td>M5</td>
+</tr>
+<tr>
+<td>[x] <strong>VLA plant beta</strong> (<code>VDSimPlant</code>, friction patch, obs contract)</td>
+<td><strong>Thesis-only</strong></td>
+<td>tag <code>vdsim-thesis-beta</code>; <a href="../design/VLA_THESIS_PLANT/"><code>design/VLA_THESIS_PLANT.md</code></a></td>
+</tr>
+<tr>
+<td>[x] VLA P1: <code>obs["roll"]</code>, <code>obs["pitch"]</code></td>
+<td><strong>Thesis-only</strong></td>
+<td>L2–L5 qs angles</td>
+</tr>
+<tr>
+<td>[x] VLA P1: 1-D + <strong>2-D polygon</strong> friction map</td>
+<td><strong>Thesis-only</strong></td>
+<td><code>PolygonFrictionGround</code></td>
+</tr>
+<tr>
+<td>[x] VLA P2: smooth patch blend (1 m) + steer lag docs</td>
+<td><strong>Thesis-only</strong></td>
+<td><a href="VDSIM_PLANT_TUTORIAL.md"><code>VDSIM_PLANT_TUTORIAL.md</code></a></td>
+</tr>
+<tr>
+<td>[x] VLA: <strong><code>mu_peak</code></strong> per wheel (realized friction circle)</td>
+<td><strong>Thesis-only</strong></td>
+<td>fixes useGT&gt;1 artifact</td>
+</tr>
+<tr>
+<td>[ ] VLA <strong>#0 Fx→τ</strong> C++ contract + <strong><code>drive_split_front</code></strong> (#6)</td>
+<td>Planned</td>
+<td>spec in <code>VLA_THESIS_PLANT.md</code>; thesis uses CmdL1 shim</td>
+</tr>
+<tr>
+<td>[ ] VLA plant merge to <code>main</code></td>
+<td>Planned</td>
+<td>after client delivery; single PR</td>
 </tr>
 <tr>
 <td>[ ] C++ in-process catalog resolver</td>
@@ -3950,6 +4099,21 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <td>2026-06-17</td>
 </tr>
 <tr>
+<td>[x] <strong>385</strong> automated ctests (<code>main</code>, post core port)</td>
+<td>Shipped</td>
+<td>2026-06-20</td>
+</tr>
+<tr>
+<td>[x] <strong>388</strong> automated ctests (<code>main</code>, SessionKind + KC + T3)</td>
+<td>Shipped</td>
+<td>2026-06-20</td>
+</tr>
+<tr>
+<td>[x] <strong>402</strong> on <code>VDSim-Thesis</code> (+ VLA plant suite)</td>
+<td>Shipped thesis</td>
+<td>2026-06-20</td>
+</tr>
+<tr>
 <td>[x] ISO matrix re-baseline (post engine inertia + LuGre) + CI gate</td>
 <td>Shipped</td>
 <td><code>IsoBaseline</code>; VALIDATION.md table 2026-06-10</td>
@@ -3970,9 +4134,9 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <td><code>MultibodyKcAnalytic.PureTrailingArmZeroCamberToe</code>; validates the engine vs math, not just itself</td>
 </tr>
 <tr>
-<td>[~] <strong>External Chrono KC cross-val</strong> (camber/toe vs travel vs Chrono::Vehicle <code>ChSuspensionTestRig</code>, same hardpoints)</td>
-<td>Harness scaffolded</td>
-<td><code>external/chrono_kc/</code> (gen skeleton + isolated build) + <code>ChronoKcParity</code> gate (skip-if-absent, mirrors the tyre Pac02 gate); needs an offline Chrono build to emit the reference CSV</td>
+<td>[x] <strong>External Chrono KC cross-val</strong> (camber/toe vs travel vs Chrono::Vehicle <code>ChSuspensionTestRig</code>, same hardpoints)</td>
+<td>Reference CSV + gate green</td>
+<td><code>external/chrono_kc/</code> + <code>ChronoKcParity</code> (8 % / 0.1° bands; rebound reach ~−14 mm)</td>
 </tr>
 <tr>
 <td>[ ] External Adams / physical KC-rig cross-val (absolute, third-party)</td>
@@ -4086,33 +4250,49 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Gyroscopic wheel-spin coupling (yaw↔roll at speed)</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Per-substep contact re-query default in <code>SimSession</code>; contact sampled at the wheel
   particle (exact on curved surfaces, no false contact leaving a loop/bank)</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> 382/382 ctest; design <a href="../design/L5_MBD_FREE3D_UNSPRUNG/"><code>L5_MBD_FREE3D_UNSPRUNG.md</code></a></li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> 385/385 ctest; design <a href="../design/L5_MBD_FREE3D_UNSPRUNG/"><code>L5_MBD_FREE3D_UNSPRUNG.md</code></a></li>
+</ul>
+<h3 id="v061-core-port-from-thesis-2026-06-20-on-main">v0.6.1 — core port from thesis (2026-06-20, on <code>main</code>)<a class="headerlink" href="#v061-core-port-from-thesis-2026-06-20-on-main" title="Permanent link">&para;</a></h3>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <code>TireSetup</code> per-axle / per-wheel + catalog cosim slots + <code>PerAxleTire</code> / <code>PerWheelTire</code> tests</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <code>make_direct_control_session</code>, <code>FrictionMapConfig</code>, polygon friction canonical path</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <code>IVehicleDynamics::tire(wheel)</code>, <code>SimOutput</code> wheel GT fields</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <code>ladder_lowering.hpp</code>; steer deadtime via actuator on direct-control path</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <strong>v0.6.2 tag</strong> — SessionKind + KC compliance + T3 VLOW (code ready)</li>
+</ul>
+<h3 id="v062-core-quality-tire-t3-2026-06-20-on-main">v0.6.2 — core quality + tire T3 (2026-06-20, on <code>main</code>)<a class="headerlink" href="#v062-core-quality-tire-t3-2026-06-20-on-main" title="Permanent link">&para;</a></h3>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <code>SessionKind</code> (<code>Standard</code> / <code>DirectControl</code>) replaces <code>SimConfig.direct_control_path</code></li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> KC bushing compliance in L3/L4 hard-joint step (<code>compliance_targets_rad</code> under tire load)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> T3: <code>TireParams.low_speed_mode</code> (<code>kinematic_blend</code> | <code>tire_vlow</code>) + <code>vlow_speed_eps</code></li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> 388/388 ctest</li>
 </ul>
 <h3 id="v052-planned">v0.5.2+ (planned)<a class="headerlink" href="#v052-planned" title="Permanent link">&para;</a></h3>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> GUI terrain Play (M4) + stunt authoring (M5c) + <code>.tir</code> import — browser-gated</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Tire: bicycle (L1) belt (MF+LuGre) + Chrono Pac02 parity gate — done</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Drivetrain torque–RPM + gearbox</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Engine-map workshop UI (drivetrain v2 already in core)</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Brake/steer physics upgrade</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> L5 next cut: KC compliance model, gyro axis tilt + spin-up reaction</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> CARLA full bridge · open benchmark  </li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> GUI v2 (framework + design system — see HANDOFF)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> CARLA full bridge · open benchmark</li>
 </ul>
 <hr />
 <h2 id="13-external-messaging-approved">13. External messaging (approved)<a class="headerlink" href="#13-external-messaging-approved" title="Permanent link">&para;</a></h2>
 <p><strong>Shipped today</strong></p>
 <blockquote>
 <p>Open-core L1–L5 vehicle dynamics with Pacejka MF tire, optional LuGre brush + belt
-transient layers, opt-in MF2002 <code>.tir</code> backend and drivetrain v2 (engine map + gearbox),
-parts catalog, real-time UDP/FMI, and ISO-standard validation (382 ctests). The L5 model is
-a hardpoint-driven free-3D multibody: anti-dive/squat, roll-centre migration and a
-progressive coil rate emerge from the suspension geometry, energy-consistent on arbitrary
-surfaces (banks, loops, jumps).</p>
+transient layers, opt-in MF2002 <code>.tir</code> backend, per-wheel tire setup, drivetrain v2
+(engine map + gearbox), parts catalog, real-time UDP/FMI, and ISO-standard validation
+(385 ctests on <code>main</code>). The L5 model is a hardpoint-driven free-3D multibody:
+anti-dive/squat, roll-centre migration and a progressive coil rate emerge from the
+suspension geometry, energy-consistent on arbitrary surfaces (banks, loops, jumps).</p>
 </blockquote>
 <p><strong>In active development</strong></p>
 <blockquote>
-<p>Adams/KC cross-validation of the hardpoint-emergent geometry, full bushing compliance,
-drivetrain torque maps, workshop importers, and GUI terrain play — default baselines frozen
-per phase.</p>
+<p>v0.6 release tag; Adams/KC cross-validation of hardpoint-emergent geometry; full bushing
+compliance; workshop importers; GUI terrain play; VLA closed-loop plant (thesis channel,
+merge to main after client sign-off) — default baselines frozen per phase.</p>
 </blockquote>
 <p><strong>Do not claim (yet)</strong></p>
 <blockquote>
@@ -4173,8 +4353,94 @@ numbers, or production sign-off.</p>
 <td><a href="../HANDOFF/"><code>HANDOFF.md</code></a></td>
 <td>Agent handoff / current sprint</td>
 </tr>
+<tr>
+<td><a href="../design/VLA_THESIS_PLANT/"><code>design/VLA_THESIS_PLANT.md</code></a></td>
+<td>VLA closed-loop plant spec (thesis channel)</td>
+</tr>
+<tr>
+<td><a href="VDSIM_PLANT_TUTORIAL.md"><code>VDSIM_PLANT_TUTORIAL.md</code></a></td>
+<td>VLA plant user guide (thesis branch)</td>
+</tr>
 </tbody>
 </table>
+<hr />
+<h2 id="15-development-priorities-main-2026-06-20">15. Development priorities (<code>main</code>, 2026-06-20)<a class="headerlink" href="#15-development-priorities-main-2026-06-20" title="Permanent link">&para;</a></h2>
+<p>Ordered for <strong>implementation</strong> (not doc-only). ISO / default subsystem numbers stay frozen
+unless an explicit re-baseline is agreed.</p>
+<table>
+<thead>
+<tr>
+<th>P</th>
+<th>Track</th>
+<th>Task</th>
+<th>Why now</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>P0</strong></td>
+<td>Release</td>
+<td><strong>Tag v0.6.1</strong> (core port) + <strong>v0.6.2</strong> (quality/T3)</td>
+<td>v0.6.0 already tagged</td>
+</tr>
+<tr>
+<td><strong>P1</strong></td>
+<td>Contract</td>
+<td><strong>#1 Fx→τ C++ path</strong> + force-intent API (<code>VLA_THESIS_PLANT.md</code> §#0)</td>
+<td>Blocks clean plant merge; thesis uses CmdL1 shim</td>
+</tr>
+<tr>
+<td><strong>P1</strong></td>
+<td>Contract</td>
+<td><strong>#6 <code>drive_split_front</code></strong> vs brake bias semantics</td>
+<td>AWD thesis acceptance; design conflict with <code>brake_bias_front</code></td>
+</tr>
+<tr>
+<td><strong>P2</strong></td>
+<td>API</td>
+<td><strong>#2 <code>SessionKind</code></strong> generalisation (<code>plant_path</code> / direct control)</td>
+<td>[x] 2026-06-20</td>
+</tr>
+<tr>
+<td><strong>P2</strong></td>
+<td>L5</td>
+<td><strong>KC compliance</strong> (bushing under load)</td>
+<td>[x] 2026-06-20 (L3/L4 step; quasi-static bushing)</td>
+</tr>
+<tr>
+<td><strong>P2</strong></td>
+<td>Validation</td>
+<td><strong>Chrono KC offline build</strong> → un-skip <code>ChronoKcParity</code></td>
+<td>[x] 2026-06-20 (reference CSV + gate green)</td>
+</tr>
+<tr>
+<td><strong>P4</strong></td>
+<td>Tire</td>
+<td><strong>T3 VLOW</strong> unified low-speed (reduce kinematic blend reliance)</td>
+<td>[x] 2026-06-20 (<code>low_speed_mode</code>, <code>vlow_speed_eps</code>)</td>
+</tr>
+<tr>
+<td><strong>P3</strong></td>
+<td>GUI</td>
+<td><strong>v0.5.2:</strong> terrain Play <strong>or</strong> <code>.tir</code> import (pick one)</td>
+<td>Browser-gated; no headless path</td>
+</tr>
+<tr>
+<td><strong>P3</strong></td>
+<td>GUI</td>
+<td><strong>Framework decision</strong> (React/Svelte + Figma) before more <code>app.js</code> polish</td>
+<td>HANDOFF: external review 4/10</td>
+</tr>
+<tr>
+<td><strong>—</strong></td>
+<td>Thesis</td>
+<td><strong>VLA hotfix only</strong> on <code>VDSim-Thesis</code>; merge plant PR when client done</td>
+<td><code>vdsim-thesis-beta</code> frozen baseline</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Explicitly not now:</strong> V2V collision, GUI full rearchitecture without framework choice,
+MF-Tyre parity claims, ISO number re-baselining.</p>
 
 
 
