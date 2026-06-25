@@ -1,16 +1,22 @@
 # VDSim 핸드오프
 
-작성: **2026-06-21** · `main` (local) · **388/388 ctest green**
+작성: **2026-06-25** · `main` (local) · **404/404 ctest green** (target, post P0 cherry-pick)
 
 > **Structured review (2026-06-21):** portable fixes on `main` worktree — see
 > [`docs/evidence/review/REVIEW_2026-06-21.md`](evidence/review/REVIEW_2026-06-21.md).
-> VLA plant lane lives on `VDSim-Thesis` only.
+> GUI v3 frozen on `VDSim-Thesis` only (`a44b593`). VLA plant API on main via cherry-pick.
+
+## 0. 2026-06-25 launch pre-flight P0 on main — IN PROGRESS
+
+**Wheel CI (P0-1):** `.github/workflows/wheels.yml` — cibuildwheel + `verify_wheel_packaging.py`.  
+**HOLD:** no `v0.7.0` tag / PyPI publish until PO GO.  
+**Plant:** `python/vdsim_plant.py` + `test_vla_plant.py` cherry-picked from thesis (`4f948a5`).
 
 ## 0. 2026-06-23 CmdL1 per-wheel torque binding fix — DONE
 
 **Bug:** `def_readwrite` on `std::array<double,4>` returned a copy — `cmd.motor_torque[i]=x` was silent no-op.  
-**Fix:** `MutableWheelArray` in-place view (`__getitem__`/`__setitem__`) on `CmdL1.motor_torque` / `brake_torque`.  
-**Test:** `tests/scripts/test_cmdl1_binding.py` (ctest `cmdl1_binding`).
+**Fix:** `MutableWheelArray` in-place view + `vdsim_plant._fx_to_cmdl1` whole-array assign.  
+**Tests:** `test_cmdl1_binding.py`, `test_vla_plant.py`.
 
 ## 0. 2026-06-20 core quality + T3 VLOW — DONE
 
