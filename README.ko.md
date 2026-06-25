@@ -18,13 +18,36 @@ hardpoint 서스펜션 운동학 + 양방향 FMI 2.0. 렌더링·센서는 CARLA
 (API / batch / FMI): [docs/RUNNING.md](docs/RUNNING.md) · catalog·물리 옵션:
 [docs/CATALOG_AND_PHYSICS.md](docs/CATALOG_AND_PHYSICS.md)
 
-## 설치
+## Quickstart (pip wheel)
+
+전제: Python 3.10–3.12. 미리 빌드된 wheel 설치(로컬 빌드는 [소스](#소스-빌드) 참고).
+
+```bash
+pip install "./vdsim-*.whl[plot]"
+vdsim-quickstart          # cwd 에 run.csv + run.png 생성
+```
+
+측정 (clean conda, Python 3.11, Linux x86_64, 2026-06-25): **pip install `[plot]` +
+`vdsim-quickstart` → `run.csv` + `run.png`까지 ~6 s wall-clock** (lab 네트워크,
+matplotlib wheel 포함). 재실행 ~1.5 s.
+
+설치 확인:
+
+```bash
+python -c "import vdsim; from vdsim_lab import Sim; Sim(vehicle='sedan', level='L2')"
+```
+
+스크립트: [`examples/quickstart.py`](examples/quickstart.py) — `from vdsim_lab import Sim, Road` 만 사용.
+
+## 소스 빌드
+
+## 소스 빌드
 
 전제: C++17 컴파일러, CMake ≥ 3.20, Python ≥ 3.10.
 - Linux: `g++ ≥ 9` 또는 `clang ≥ 10`
 - Windows: Visual Studio 2019+ "C++ 데스크톱 개발"(MSVC)
 
-Python 패키지 (Linux + Windows 공통):
+Python 패키지 (editable / 로컬 wheel 빌드):
 ```bash
 pip install ".[plot]"
 python -c "import vdsim; print('ok')"
@@ -63,12 +86,13 @@ sim.metrics(["peak_ay", "cte_rms", "lap_time"])       # 스칼라 지표
 sim.plot("run.png", signals=("vx", "ay", "r", "xy"))  # 옵션 (matplotlib 필요)
 ```
 
-`templates/experiment_template.py` 를 복사해 `controller(...)` 만 채우고 실행:
+`templates/experiment_template.py` 를 복사해 `controller(...)` 만 채우고 클론 트리에서 실행:
 ```bash
 PYTHONPATH=build/python:python python3 templates/experiment_template.py
 ```
-예제: `examples/experiment_quickstart.py`, `examples/experiment_path_follow.py`
-(pure-pursuit + CTE). 전체 레퍼런스(seam, `Sim(...)` 옵션, evidence):
+예제 (클론+빌드 필요): `examples/experiment_quickstart.py`,
+`examples/experiment_path_follow.py` (pure-pursuit + CTE). pip 사용자는
+[`examples/quickstart.py`](examples/quickstart.py) / `vdsim-quickstart` 사용. 전체 레퍼런스(seam, `Sim(...)` 옵션, evidence):
 **[docs/EXPERIMENT_API.md](docs/EXPERIMENT_API.md)**. real-time 서버·batch 러너가
 쓰는 `set_input → tick` 과 동일한 seam — real-time 은 action 이 UDP 로, 여기선
 당신 함수에서 들어옵니다.

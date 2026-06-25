@@ -12,7 +12,11 @@
 **Plant API (P1 wedge):** open — thesis / external MPC (`vdsim_plant`, CmdL1 path).
 
 **Wheel CI (P0-1):** `.github/workflows/wheels.yml` — tag `v*` → cibuildwheel + PyPI (trusted publisher).  
+**HOLD:** no `v0.7.0` tag / PyPI publish / main merge until PO decision-4 gate (PO signal).  
 Pre-publish: `python3 tools/verify_wheel_packaging.py wheelhouse/*.whl` (1 public `.tir`, 0 measured).
+
+**P0-2 quickstart:** `examples/quickstart.py` + `vdsim-quickstart` entry point; wheel bundles `catalog/`, `vdsim_lab.py`, public configs.  
+Local DoD (py3.11): `pip install "./vdsim-*.whl[plot]"` → import + Sim×3 + quickstart (~6 s cold).
 
 ## 0. 2026-06-23 CmdL1 per-wheel torque binding fix — DONE
 

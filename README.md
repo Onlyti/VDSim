@@ -19,13 +19,38 @@ Docs (theory + reports): **https://onlyti.github.io/VDSim/** · all run modes
 (API / batch / FMI): [docs/RUNNING.md](docs/RUNNING.md) · catalog & physics options:
 [docs/CATALOG_AND_PHYSICS.md](docs/CATALOG_AND_PHYSICS.md)
 
-## Install
+## Quickstart (pip wheel)
+
+Prerequisites: Python 3.10–3.12. Install a pre-built wheel (or build locally — see
+[from source](#from-source) below).
+
+```bash
+pip install "./vdsim-*.whl[plot]"
+vdsim-quickstart          # writes run.csv + run.png in the current directory
+```
+
+Measured on a clean conda env (Python 3.11, Linux x86_64, 2026-06-25): **pip install
+`[plot]` + `vdsim-quickstart` → `run.csv` + `run.png` in ~6 s wall-clock** on a
+typical lab network (matplotlib wheel download included). Repeat runs ~1.5 s.
+
+Verify the install:
+
+```bash
+python -c "import vdsim; from vdsim_lab import Sim; Sim(vehicle='sedan', level='L2')"
+```
+
+Source for the script: [`examples/quickstart.py`](examples/quickstart.py) — uses only
+`from vdsim_lab import Sim, Road` (no repo paths).
+
+## From source
+
+## From source
 
 Prerequisites: a C++17 compiler, CMake ≥ 3.20, Python ≥ 3.10.
 - Linux: `g++ ≥ 9` or `clang ≥ 10`.
 - Windows: Visual Studio 2019+ with "Desktop development with C++" (MSVC).
 
-Python package (Linux + Windows):
+Python package (editable / local wheel build):
 ```bash
 pip install ".[plot]"
 python -c "import vdsim; print('ok')"
@@ -64,12 +89,14 @@ sim.metrics(["peak_ay", "cte_rms", "lap_time"])       # scalar reductions
 sim.plot("run.png", signals=("vx", "ay", "r", "xy"))  # optional (needs matplotlib)
 ```
 
-Copy `templates/experiment_template.py`, replace `controller(...)`, and run:
+Copy `templates/experiment_template.py`, replace `controller(...)`, and run from a
+cloned tree:
 ```bash
 PYTHONPATH=build/python:python python3 templates/experiment_template.py
 ```
-Runnable examples: `examples/experiment_quickstart.py`,
-`examples/experiment_path_follow.py` (pure-pursuit + CTE). Full reference (the
+Runnable examples (require clone + build): `examples/experiment_quickstart.py`,
+`examples/experiment_path_follow.py` (pure-pursuit + CTE). Pip users: use
+[`examples/quickstart.py`](examples/quickstart.py) / `vdsim-quickstart` instead. Full reference (the
 seam, `Sim(...)` options, evidence): **[docs/EXPERIMENT_API.md](docs/EXPERIMENT_API.md)**.
 This is the same `set_input → tick` seam the real-time server and batch runner use —
 in real-time mode the action arrives over UDP, here it comes from your function.
