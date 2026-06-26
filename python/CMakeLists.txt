@@ -22,6 +22,7 @@ if(pybind11_FOUND)
         install(TARGETS vdsim_py LIBRARY DESTINATION ".")
         install(FILES
             ${CMAKE_SOURCE_DIR}/python/vdsim_lab.py
+            ${CMAKE_SOURCE_DIR}/python/vdsim_plant.py
             ${CMAKE_SOURCE_DIR}/cosim/protocol.py
             ${CMAKE_SOURCE_DIR}/examples/opendrive.py
             ${CMAKE_SOURCE_DIR}/examples/rd5_route.py
@@ -36,6 +37,7 @@ if(pybind11_FOUND)
             ${CMAKE_SOURCE_DIR}/configs/blueprints
             ${CMAKE_SOURCE_DIR}/configs/catalog
             ${CMAKE_SOURCE_DIR}/configs/roads
+            ${CMAKE_SOURCE_DIR}/configs/vehicles
             DESTINATION "vdsim_configs"
             FILES_MATCHING
             PATTERN "*.yaml"
