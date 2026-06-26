@@ -1,10 +1,22 @@
 # VDSim 핸드오프
 
-작성: **2026-06-25** · `main` (local) · **391/391 ctest green** (post P0 cherry-pick)
+작성: **2026-06-26** · `main` @ `bfcc5cd` · **391/391 ctest green** · CI run **28213027035** green
 
 > **Structured review (2026-06-21):** portable fixes on `main` worktree — see
 > [`docs/evidence/review/REVIEW_2026-06-21.md`](evidence/review/REVIEW_2026-06-21.md).
 > GUI v3 frozen on `VDSim-Thesis` only (`a44b593`). VLA plant API on main via cherry-pick.
+
+## 0. 2026-06-26 launch pre-flight — DONE (publish HOLD)
+
+**A cherry-pick (thesis → main, GUI excluded):** `13b335c` wheels CI · `6360aee` quickstart ·
+`5eaee08` demo · `a54447a` VALIDATION · `024dc4b` plant (+ `d0dbf46` `drive_split_front`,
+`97c3d7a` Win32 plugin loader, `bfcc5cd` wheel `vehicles/` + `vdsim_plant.py`).  
+**C CI:** `workflow_dispatch` run [28213027035](https://github.com/Onlyti/VDSim/actions/runs/28213027035) —
+`wheels` cp310/311/312 × linux+win + `sdist` + `verify` green; **`publish` skipped** (no tag).  
+**Local conda (Linux):** clean py3.10/3.11/3.12 — import + Sim 3종 (sedan L2, ioniq5 L2, L1) +
+`vdsim-quickstart` + `demo_grip_loss.py` green on CI artifacts (`0.7.0.dev26`).  
+**D setuptools-scm:** `0.7.0.dev26` now; `SETUPTOOLS_SCM_PRETEND_VERSION=0.7.0` → `0.7.0` (> 0.0.0).  
+**HOLD:** no `v0.7.0` tag / PyPI / public release until PO GO.
 
 ## 0. 2026-06-25 launch pre-flight P0 on main — DONE (publish HOLD)
 
