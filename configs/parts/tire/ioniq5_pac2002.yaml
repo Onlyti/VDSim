@@ -1,0 +1,13 @@
+# MF2002 Pacejka for Ioniq5-class VLA plant (load-dependent Ca + peak-mu sensitivity).
+backend: mf2002
+tir_path: ioniq5_pac2002.tir
+mu_nominal: 0.9
+Fz_nominal: 5764.0
+combined_slip_enabled: true
+rolling_resistance: 0.012
+tire_vertical_stiffness: 300000.0
+reff_breff: 8.4
+reff_dreff: 0.27
+reff_freff: 0.07
+lugre:
+  enabled: false

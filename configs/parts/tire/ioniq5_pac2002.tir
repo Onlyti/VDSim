@@ -1,0 +1,168 @@
+$-----------------------------------------------------------------------------
+$ ioniq5_pac2002.tir — PUBLIC SYNTHETIC Pacejka-2002 coefficients.
+$
+$ NOT measured data. Hand-authored Ioniq5-class plant tyre for the VLA thesis
+$ (load-dependent cornering stiffness + peak-mu load sensitivity). Safe to commit.
+$-----------------------------------------------------------------------------
+[MDI_HEADER]
+FILE_TYPE          = 'tir'
+FILE_VERSION       = 3.0
+FILE_FORMAT        = 'ASCII'
+
+[UNITS]
+LENGTH             = 'meter'
+FORCE              = 'newton'
+ANGLE              = 'radians'
+MASS               = 'kg'
+TIME               = 'second'
+
+[MODEL]
+PROPERTY_FILE_FORMAT = 'MF_05'
+USE_MODE           = 14
+FITTYP             = 6
+TYRESIDE           = 'LEFT'
+LONGVL             = 16.0
+VXLOW              = 1.0
+
+[DIMENSION]
+UNLOADED_RADIUS    = 0.338
+WIDTH              = 0.255
+ASPECT_RATIO       = 0.55
+RIM_RADIUS         = 0.1905
+RIM_WIDTH          = 0.16
+
+[VERTICAL]
+FNOMIN             = 5764
+VERTICAL_STIFFNESS = 300000
+VERTICAL_DAMPING   = 8000
+BREFF              = 8.4
+DREFF              = 0.27
+FREFF              = 0.07
+
+[LONG_SLIP_RANGE]
+KPUMIN             = -1.5
+KPUMAX             = 1.5
+
+[SLIP_ANGLE_RANGE]
+ALPMIN             = -1.5
+ALPMAX             = 1.5
+
+[INCLINATION_ANGLE_RANGE]
+CAMMIN             = -0.175
+CAMMAX             = 0.175
+
+[VERTICAL_FORCE_RANGE]
+FZMIN              = 200
+FZMAX              = 12000
+
+[SCALING_COEFFICIENTS]
+LFZO               = 1.0
+LCX                = 1.0
+LMUX               = 1.0
+LEX                = 1.0
+LKX                = 1.0
+LHX                = 1.0
+LVX                = 1.0
+LCY                = 1.0
+LMUY               = 1.0
+LEY                = 1.0
+LKY                = 1.0
+LHY                = 1.0
+LVY                = 1.0
+LTR                = 1.0
+LRES               = 1.0
+LXAL               = 1.0
+LYKA               = 1.0
+LVYKA              = 1.0
+LS                 = 1.0
+LMX                = 1.0
+LMY                = 1.0
+
+[LONGITUDINAL_COEFFICIENTS]
+PCX1               = 1.65
+PDX1               = 1.0
+PDX2               = -0.10
+PDX3               = 0.0
+PEX1               = 0.0
+PEX2               = 0.0
+PEX3               = 0.0
+PEX4               = 0.0
+PKX1               = 20.0
+PKX2               = 0.0
+PKX3               = 0.0
+PHX1               = 0.0
+PHX2               = 0.0
+PVX1               = 0.0
+PVX2               = 0.0
+RBX1               = 13.0
+RBX2               = 9.0
+RCX1               = 1.0
+REX1               = 0.0
+REX2               = 0.0
+RHX1               = 0.0
+
+[LATERAL_COEFFICIENTS]
+PCY1               = 1.30
+PDY1               = 1.0
+PDY2               = -0.10
+PDY3               = 0.0
+PEY1               = -1.0
+PEY2               = 0.0
+PEY3               = 0.0
+PEY4               = 0.0
+PKY1               = -24.6
+PKY2               = 2.56
+PKY3               = 0.0
+PHY1               = 0.0
+PHY2               = 0.0
+PVY1               = 0.0
+PVY2               = 0.0
+PVY3               = 0.0
+PVY4               = 0.0
+RBY1               = 10.0
+RBY2               = 9.0
+RBY3               = 0.0
+RCY1               = 1.0
+REY1               = 0.0
+REY2               = 0.0
+RHY1               = 0.0
+RHY2               = 0.0
+RVY1               = 0.0
+RVY2               = 0.0
+RVY3               = 0.0
+RVY4               = 0.0
+RVY5               = 1.9
+RVY6               = 0.0
+
+[ROLLING_COEFFICIENTS]
+QSY1               = 0.01
+QSY2               = 0.0
+QSY3               = 0.0
+QSY4               = 0.0
+
+[ALIGNING_COEFFICIENTS]
+QBZ1               = 6.0
+QBZ2               = 0.0
+QBZ3               = 0.0
+QBZ4               = 0.0
+QBZ5               = 0.0
+QBZ9               = 0.0
+QBZ10              = 0.0
+QCZ1               = 1.05
+QDZ1               = 0.10
+QDZ2               = 0.0
+QDZ3               = 0.0
+QDZ4               = 0.0
+QDZ6               = 0.0
+QDZ7               = 0.0
+QDZ8               = 0.0
+QDZ9               = 0.0
+QEZ1               = 0.0
+QEZ2               = 0.0
+QEZ3               = 0.0
+QEZ4               = 0.0
+QEZ5               = 0.0
+QHZ1               = 0.0
+QHZ2               = 0.0
+QHZ3               = 0.0
+QHZ4               = 0.0
