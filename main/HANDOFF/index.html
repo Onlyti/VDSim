@@ -2373,6 +2373,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#0-2026-06-25-launch-pre-flight-p0-on-main-done-publish-hold" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0. 2026-06-25 launch pre-flight P0 on main — DONE (publish HOLD)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#0-2026-06-23-cmdl1-per-wheel-torque-binding-fix-done" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2575,16 +2586,23 @@
 
 
 <h1 id="vdsim">VDSim 핸드오프<a class="headerlink" href="#vdsim" title="Permanent link">&para;</a></h1>
-<p>작성: <strong>2026-06-21</strong> · <code>main</code> (local) · <strong>388/388 ctest green</strong></p>
+<p>작성: <strong>2026-06-25</strong> · <code>main</code> (local) · <strong>391/391 ctest green</strong> (post P0 cherry-pick)</p>
 <blockquote>
 <p><strong>Structured review (2026-06-21):</strong> portable fixes on <code>main</code> worktree — see
 <a href="../evidence/review/REVIEW_2026-06-21/"><code>docs/evidence/review/REVIEW_2026-06-21.md</code></a>.
-VLA plant lane lives on <code>VDSim-Thesis</code> only.</p>
+GUI v3 frozen on <code>VDSim-Thesis</code> only (<code>a44b593</code>). VLA plant API on main via cherry-pick.</p>
 </blockquote>
+<h2 id="0-2026-06-25-launch-pre-flight-p0-on-main-done-publish-hold">0. 2026-06-25 launch pre-flight P0 on main — DONE (publish HOLD)<a class="headerlink" href="#0-2026-06-25-launch-pre-flight-p0-on-main-done-publish-hold" title="Permanent link">&para;</a></h2>
+<p><strong>Wheel CI (P0-1):</strong> <code>.github/workflows/wheels.yml</code> — cibuildwheel + <code>verify_wheel_packaging.py</code>.<br />
+<strong>HOLD:</strong> no <code>v0.7.0</code> tag / PyPI publish until PO GO.<br />
+<strong>Plant:</strong> <code>python/vdsim_plant.py</code> + <code>test_vla_plant.py</code> cherry-picked from thesis (<code>4f948a5</code>).<br />
+<strong>P0-2 quickstart:</strong> <code>examples/quickstart.py</code> + <code>vdsim-quickstart</code>; README ~6 s cold (measured).<br />
+<strong>P0-3 demo:</strong> <code>examples/demo_grip_loss.py</code> → <code>docs/assets/demo_grip_loss.gif</code> (headless, pillow).<br />
+<strong>P0-4 VALIDATION:</strong> currency v0.5.1+, <strong>391/391 ctest</strong> on <code>main</code> (404 on thesis with GUI); README validation summary; tire cross-check wording (not product parity).</p>
 <h2 id="0-2026-06-23-cmdl1-per-wheel-torque-binding-fix-done">0. 2026-06-23 CmdL1 per-wheel torque binding fix — DONE<a class="headerlink" href="#0-2026-06-23-cmdl1-per-wheel-torque-binding-fix-done" title="Permanent link">&para;</a></h2>
 <p><strong>Bug:</strong> <code>def_readwrite</code> on <code>std::array&lt;double,4&gt;</code> returned a copy — <code>cmd.motor_torque[i]=x</code> was silent no-op.<br />
-<strong>Fix:</strong> <code>MutableWheelArray</code> in-place view (<code>__getitem__</code>/<code>__setitem__</code>) on <code>CmdL1.motor_torque</code> / <code>brake_torque</code>.<br />
-<strong>Test:</strong> <code>tests/scripts/test_cmdl1_binding.py</code> (ctest <code>cmdl1_binding</code>).</p>
+<strong>Fix:</strong> <code>MutableWheelArray</code> in-place view + <code>vdsim_plant._fx_to_cmdl1</code> whole-array assign.<br />
+<strong>Tests:</strong> <code>test_cmdl1_binding.py</code>, <code>test_vla_plant.py</code>.</p>
 <h2 id="0-2026-06-20-core-quality-t3-vlow-done">0. 2026-06-20 core quality + T3 VLOW — DONE<a class="headerlink" href="#0-2026-06-20-core-quality-t3-vlow-done" title="Permanent link">&para;</a></h2>
 <p><strong>Shipped:</strong>
 - <strong><code>SessionKind</code></strong> — <code>Standard</code> / <code>DirectControl</code> on <code>SimConfig</code> (replaces <code>direct_control_path</code>)

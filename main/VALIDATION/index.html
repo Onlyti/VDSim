@@ -2582,10 +2582,12 @@
 
 <h1 id="vdsim-validation-credibility">VDSim validation &amp; credibility<a class="headerlink" href="#vdsim-validation-credibility" title="Permanent link">&para;</a></h1>
 <blockquote>
-<p><strong>v0.1.0 experimental / pre-release.</strong> The claims below rest on open evidence
+<p><strong>v0.5.1+ experimental / pre-release.</strong> The claims below rest on open evidence
 (analytic + ISO standard + cross-model/cross-tool self-consistency). There is
 no published cross-validation against a commercial reference on real-vehicle
-data — see "Honest limitations". Not for production use.</p>
+data — see "Honest limitations". Not for production use. Do <strong>not</strong> claim
+MF-Tyre product parity, published real-vehicle cross-val, Adams-validated KC
+numbers, or production sign-off (see <code>docs/ROADMAP.md</code> §13).</p>
 </blockquote>
 <p>What "validated dynamics" means here, and how to reproduce every claim. VDSim is
 validated on four layers that need no proprietary data; the honest limits are in
@@ -2604,12 +2606,12 @@ the last section.</p>
 <td>Full-vehicle cross-validation vs CarMaker/CarSim/Adams on real-vehicle data (data confidential, not redistributable)</td>
 </tr>
 <tr>
-<td><strong>Tire force vs CarMaker MF-Tyre/MF-Swift</strong> (same MF6.2 <code>.tir</code>, steady-state pure slip): pure-long 0.00%, pure-lat 0.09%</td>
-<td>Full-vehicle (suspension/transient) commercial cross-val</td>
+<td><strong>Pure-slip tire force</strong> (same public <code>.tir</code>, steady-state pure slip only): vs CarMaker MF-Tyre under <strong>0.1%</strong> (Fx/Fy); vs Chrono Pac02 <strong>~0.8%</strong> — <em>not</em> full-vehicle/product parity</td>
+<td>Full-vehicle commercial cross-val (CarMaker/CarSim/Adams on real-vehicle data); tire thermal/wear; transient beyond first-order relaxation</td>
 </tr>
 <tr>
 <td>ISO 7401 step-steer / 4138 understeer / 3888-2 DLC — run + measured</td>
-<td>Tire thermal, wear, full transient beyond first-order relaxation</td>
+<td>—</td>
 </tr>
 <tr>
 <td>L1↔L2↔L3 cross-model consistency where physics overlaps</td>
@@ -2620,7 +2622,7 @@ the last section.</p>
 <td>L3 unsprung lateral-transfer term (small)</td>
 </tr>
 <tr>
-<td>Full suite: <strong>345/345 ctest green</strong></td>
+<td>Full suite: <strong>391/391 ctest green</strong> (measured 2026-06-25, <code>main</code>)</td>
 <td>—</td>
 </tr>
 <tr>
@@ -2773,9 +2775,9 @@ vehicle/controller property, not a sim defect (see "Notes on specific results").
 </tr>
 <tr>
 <td>15</td>
-<td><strong>MF vs CarMaker MF-Tyre/MF-Swift</strong> (commercial, independent)</td>
-<td>same MF6.2 <code>.tir</code>, same Re-based slip</td>
-<td>pure-long Fx <strong>0.00%</strong>, pure-lat Fy <strong>0.09%</strong> (machine precision, steady-state pure slip)</td>
+<td><strong>Pure-slip vs CarMaker MF-Tyre/MF-Swift</strong> (commercial tool, same <code>.tir</code>)</td>
+<td>steady-state pure slip, Re-based κ</td>
+<td>pure-long Fx <strong>0.00%</strong>, pure-lat Fy <strong>0.09%</strong> — <em>cross-check only</em>, not product parity</td>
 <td>—</td>
 <td><code>external/carmaker_parity/compare_vdsim_carmaker.py</code> (needs a CarMaker license)</td>
 </tr>
@@ -2812,7 +2814,7 @@ across L1/L2/L3/L5 — slip = (ω·Re − vx)/vx, so a free-rolling loaded tire 
 matching MF-Tyre/CarMaker. Initial wheel spin is set per-wheel via <code>free_roll_wheel_spin</code>
 (vx/Re at static load) so no phantom longitudinal force appears at t=0. Re is opt-in: tires
 without BREFF/DREFF/FREFF (reff_*=0) fall back to the unloaded radius R0 unchanged.</p>
-<p>Full automated suite: <code>cd build &amp;&amp; ctest</code> — 354 checks, 100% green (measured 2026-06-16).
+<p>Full automated suite: <code>cd build &amp;&amp; ctest</code> — <strong>391</strong> checks, 100% green (measured 2026-06-25, <code>main</code>; thesis GUI adds 13 more → 404).
 One-command evidence bundle (ctests + tire parity table + ISO figures + summary.md):
 <code>python3 tools/validation_report.py</code>.</p>
 <p><strong>LuGre baseline (re-baselined 2026-06-10, sedan L2, <code>default_pacejka</code> tire):</strong></p>
@@ -2909,7 +2911,7 @@ folded into the re-baselined table above.</p>
   <code>docs/design/L5_6DOF_MULTIBODY.md</code>.</li>
 </ul>
 <h2 id="reproducing-the-whole-report">Reproducing the whole report<a class="headerlink" href="#reproducing-the-whole-report" title="Permanent link">&para;</a></h2>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>cmake<span class="w"> </span>--build<span class="w"> </span>build<span class="w"> </span>-j<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">(</span><span class="nb">cd</span><span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ctest<span class="w"> </span>--output-on-failure<span class="o">)</span><span class="w">   </span><span class="c1"># 345 checks</span>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>cmake<span class="w"> </span>--build<span class="w"> </span>build<span class="w"> </span>-j<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">(</span><span class="nb">cd</span><span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ctest<span class="w"> </span>--output-on-failure<span class="o">)</span><span class="w">   </span><span class="c1"># 391 checks on main</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>python3<span class="w"> </span>apps/validation/run_validation.py<span class="w">    </span><span class="c1"># ISO 7401/4138/3888 -&gt; REPORT.md</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>python3<span class="w"> </span>fmi_export/test_roundtrip.py<span class="w">          </span><span class="c1"># FMU vs native</span>
 </span></code></pre></div>
