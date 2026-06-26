@@ -2373,6 +2373,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#0-2026-06-26-launch-pre-flight-done-publish-hold" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0. 2026-06-26 launch pre-flight — DONE (publish HOLD)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#0-2026-06-25-launch-pre-flight-p0-on-main-done-publish-hold" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2586,12 +2597,22 @@
 
 
 <h1 id="vdsim">VDSim 핸드오프<a class="headerlink" href="#vdsim" title="Permanent link">&para;</a></h1>
-<p>작성: <strong>2026-06-25</strong> · <code>main</code> (local) · <strong>391/391 ctest green</strong> (post P0 cherry-pick)</p>
+<p>작성: <strong>2026-06-26</strong> · <code>main</code> @ <code>bfcc5cd</code> · <strong>391/391 ctest green</strong> · CI run <strong>28213027035</strong> green</p>
 <blockquote>
 <p><strong>Structured review (2026-06-21):</strong> portable fixes on <code>main</code> worktree — see
 <a href="../evidence/review/REVIEW_2026-06-21/"><code>docs/evidence/review/REVIEW_2026-06-21.md</code></a>.
 GUI v3 frozen on <code>VDSim-Thesis</code> only (<code>a44b593</code>). VLA plant API on main via cherry-pick.</p>
 </blockquote>
+<h2 id="0-2026-06-26-launch-pre-flight-done-publish-hold">0. 2026-06-26 launch pre-flight — DONE (publish HOLD)<a class="headerlink" href="#0-2026-06-26-launch-pre-flight-done-publish-hold" title="Permanent link">&para;</a></h2>
+<p><strong>A cherry-pick (thesis → main, GUI excluded):</strong> <code>13b335c</code> wheels CI · <code>6360aee</code> quickstart ·
+<code>5eaee08</code> demo · <code>a54447a</code> VALIDATION · <code>024dc4b</code> plant (+ <code>d0dbf46</code> <code>drive_split_front</code>,
+<code>97c3d7a</code> Win32 plugin loader, <code>bfcc5cd</code> wheel <code>vehicles/</code> + <code>vdsim_plant.py</code>).<br />
+<strong>C CI:</strong> <code>workflow_dispatch</code> run <a href="https://github.com/Onlyti/VDSim/actions/runs/28213027035">28213027035</a> —
+<code>wheels</code> cp310/311/312 × linux+win + <code>sdist</code> + <code>verify</code> green; <strong><code>publish</code> skipped</strong> (no tag).<br />
+<strong>Local conda (Linux):</strong> clean py3.10/3.11/3.12 — import + Sim 3종 (sedan L2, ioniq5 L2, L1) +
+<code>vdsim-quickstart</code> + <code>demo_grip_loss.py</code> green on CI artifacts (<code>0.7.0.dev26</code>).<br />
+<strong>D setuptools-scm:</strong> <code>0.7.0.dev26</code> now; <code>SETUPTOOLS_SCM_PRETEND_VERSION=0.7.0</code> → <code>0.7.0</code> (&gt; 0.0.0).<br />
+<strong>HOLD:</strong> no <code>v0.7.0</code> tag / PyPI / public release until PO GO.</p>
 <h2 id="0-2026-06-25-launch-pre-flight-p0-on-main-done-publish-hold">0. 2026-06-25 launch pre-flight P0 on main — DONE (publish HOLD)<a class="headerlink" href="#0-2026-06-25-launch-pre-flight-p0-on-main-done-publish-hold" title="Permanent link">&para;</a></h2>
 <p><strong>Wheel CI (P0-1):</strong> <code>.github/workflows/wheels.yml</code> — cibuildwheel + <code>verify_wheel_packaging.py</code>.<br />
 <strong>HOLD:</strong> no <code>v0.7.0</code> tag / PyPI publish until PO GO.<br />
