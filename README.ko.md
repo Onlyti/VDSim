@@ -5,7 +5,7 @@
 [![build](https://github.com/Onlyti/VDSim/actions/workflows/build.yml/badge.svg)](https://github.com/Onlyti/VDSim/actions/workflows/build.yml)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 ![status](https://img.shields.io/badge/status-experimental%20pre--release-orange.svg)
-![tests](https://img.shields.io/badge/ctest-404%2F404-green.svg)
+![tests](https://img.shields.io/badge/ctest-391%2F391-green.svg)
 
 > **Experimental / pre-release — 양산용 아님.** 근거·한계:
 > [VALIDATION.md](docs/VALIDATION.md) (v0.5.1+).

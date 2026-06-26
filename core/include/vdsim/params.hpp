@@ -53,6 +53,7 @@ struct VehicleParams {
     enum class Drive { FWD, RWD, AWD };
     enum class Differential { Open, Locked, LSD };
     Drive  drive_type            {Drive::RWD};
+    double drive_split_front     {0.5};
     bool   plant_path            {false};
     Differential differential    {Differential::Open};
     double lsd_preload           {0.10};    // [-] 0..0.5, baseline bias magnitude

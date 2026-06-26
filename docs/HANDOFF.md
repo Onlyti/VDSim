@@ -1,6 +1,6 @@
 # VDSim 핸드오프
 
-작성: **2026-06-25** · `main` (local) · **404/404 ctest green** (target, post P0 cherry-pick)
+작성: **2026-06-25** · `main` (local) · **391/391 ctest green** (post P0 cherry-pick)
 
 > **Structured review (2026-06-21):** portable fixes on `main` worktree — see
 > [`docs/evidence/review/REVIEW_2026-06-21.md`](evidence/review/REVIEW_2026-06-21.md).
@@ -13,7 +13,7 @@
 **Plant:** `python/vdsim_plant.py` + `test_vla_plant.py` cherry-picked from thesis (`4f948a5`).  
 **P0-2 quickstart:** `examples/quickstart.py` + `vdsim-quickstart`; README ~6 s cold (measured).  
 **P0-3 demo:** `examples/demo_grip_loss.py` → `docs/assets/demo_grip_loss.gif` (headless, pillow).  
-**P0-4 VALIDATION:** currency v0.5.1+, **404/404 ctest**; README validation summary; tire cross-check wording (not product parity).
+**P0-4 VALIDATION:** currency v0.5.1+, **391/391 ctest** on `main` (404 on thesis with GUI); README validation summary; tire cross-check wording (not product parity).
 
 ## 0. 2026-06-23 CmdL1 per-wheel torque binding fix — DONE
 
