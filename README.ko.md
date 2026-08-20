@@ -173,6 +173,39 @@ PYTHONPATH=build/python:python python3 examples/demo_grip_loss.py \
     --out demo.gif --keep-trace
 ```
 
+### 여러 run 겹쳐 그리기
+
+trace 를 2개 이상 넘기면 하나의 화면에 겹쳐 그린다 — 카메라 하나, 시계 하나, run
+마다 다른 색, 주행 경로도 차량과 같은 색:
+
+```bash
+vdsim-render base.vdtrace tuned.vdtrace wet.vdtrace --out compare.gif \
+    --labels "base,tuned,wet" --alpha 0.5
+```
+
+- 정렬 기준은 샘플 인덱스가 아니라 **시간**이다. 프레임 시각에서 각 run 을 보간하므로
+  `dt` 가 다르거나 길이가 다른 trace 도 올바르게 겹친다. yaw 는 unwrap 후 보간하므로
+  ±π 부근 헤딩이 반대로 도는 일이 없다.
+- 먼저 끝난 run 은 마지막 자세를 유지하고 alpha 35 % 로 흐려지며, HUD 에 `(ended)`
+  로 표시되고 경로도 더 이상 늘어나지 않는다.
+- `--alpha`(차체 채움, 기본 0.55)와 `--path-alpha`(기본 0.9)로 겹친 차량이 얼마나
+  비쳐 보일지 조절한다. `--colors` 로 색을, `--labels` 로 범례를 지정한다(기본값은
+  manifest 의 `run_id`, 없으면 파일 이름).
+- 카메라: `--follow fit`(기본)은 모든 경로를 담는 고정 정사각 창, `--follow 1` 은 해당
+  run 을 geometry 기반 창으로 추적한다.
+- `--speed` 는 실시간 대비 재생 속도(`--stride` 는 단일 run 전용). 각 run 의 전체 경로가
+  옅게 깔리며 `--no-ghost` 로 끌 수 있다.
+- 차체 색을 run 식별에 쓰므로 그립은 바퀴로 옮겼다 — utilization 이 0.8 을 넘으면 해당
+  타이어 외곽선이 빨간색이 된다. 오른쪽 패널은 모든 run 의 `u_steer` / `u_fx` 와 최대
+  utilization 을 공통 시간축에 겹쳐 보여준다.
+- 미리보기 PNG 는 임의 시점이 아니라 run 들이 **가장 크게 벌어진** 프레임에서 뽑는다.
+
+전 과정 — 같은 조작을 마찰계수 3단계로 기록해 3개의 trace 를 겹쳐 그리기:
+
+```bash
+PYTHONPATH=build/python:python python3 examples/demo_compare_runs.py --out compare.gif
+```
+
 ## 설정 — parts catalog & scene (v0.3)
 
 차량 = `configs/parts/` 조합 **blueprint**, 실행 = `fleet[]`가 있는 **scene**

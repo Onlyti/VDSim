@@ -180,6 +180,42 @@ PYTHONPATH=build/python:python python3 examples/demo_grip_loss.py \
     --out demo.gif --keep-trace
 ```
 
+### Overlaying several runs
+
+Pass two or more traces and the renderer draws them in one view — one camera, one
+clock, a colour per run and the driven path in that same colour:
+
+```bash
+vdsim-render base.vdtrace tuned.vdtrace wet.vdtrace --out compare.gif \
+    --labels "base,tuned,wet" --alpha 0.5
+```
+
+- Runs are aligned by **time**, not by sample index: every run is interpolated at
+  the frame time, so traces recorded at different `dt`, or of different length,
+  still overlay correctly. Yaw is unwrapped first, so a heading near ±π does not
+  swing the long way round.
+- A run whose trace ends early holds its final pose, fades to 35 % alpha, is
+  marked `(ended)` in the HUD, and stops extending its path.
+- `--alpha` (body fill, default 0.55) and `--path-alpha` (default 0.9) set how
+  much of an overlapped vehicle shows through. `--colors` overrides the palette,
+  `--labels` the legend (default: manifest `run_id`, else the file stem).
+- Camera: `--follow fit` (default) is a static square window holding every route;
+  `--follow 1` tracks that run with the usual geometry-derived window.
+- `--speed` sets playback rate relative to wall-clock (`--stride` is single-run
+  only). Each run's whole route is drawn faintly underneath; `--no-ghost` removes it.
+- Body colour is spent on run identity, so grip moves to the wheels: a tyre
+  outline turns red once its utilization crosses 0.8. The right-hand panels
+  overlay every run's `u_steer` / `u_fx` and max utilization on one shared time axis.
+- The preview PNG is taken at the frame of **maximum divergence** between runs,
+  not at an arbitrary time.
+
+End to end — the same manoeuvre at three friction levels, recorded to three
+traces and overlaid from the files alone:
+
+```bash
+PYTHONPATH=build/python:python python3 examples/demo_compare_runs.py --out compare.gif
+```
+
 ## Config — parts catalog & scenes (v0.3)
 
 Vehicles are **blueprints** over `configs/parts/` (chassis, tire, drivetrain, …).
