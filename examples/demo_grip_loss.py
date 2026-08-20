@@ -20,19 +20,19 @@ Writes docs/assets/demo_grip_loss.gif (or --out) and the trace beside it.
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
-try:
-    from vdsim_plant import VDSimPlant
-except ImportError:
-    import sys
+# The in-tree copies win over anything installed. An older site-packages
+# vdsim_plant has no trace hook, and vdsim_render/vdsim_trace live only here,
+# so a partial install would otherwise half-resolve and fail at the second
+# import rather than at the first.
+_repo = Path(__file__).resolve().parents[1]
+sys.path[:0] = [str(_repo / "python"), str(_repo / "build" / "python")]
 
-    _repo = Path(__file__).resolve().parents[1]
-    sys.path[:0] = [str(_repo / "python"), str(_repo / "build" / "python")]
-    from vdsim_plant import VDSimPlant
-
-import vdsim_render
-import vdsim_trace
+from vdsim_plant import VDSimPlant  # noqa: E402  (path set above)
+import vdsim_render  # noqa: E402
+import vdsim_trace  # noqa: E402
 
 V0 = 16.7
 DT = 0.05
