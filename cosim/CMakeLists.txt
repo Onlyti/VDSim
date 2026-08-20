@@ -154,4 +154,17 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 300
         ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/python")
+    add_test(NAME trace_horizons
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_trace_horizons.py)
+    set_tests_properties(trace_horizons PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 300
+        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/python")
+    add_test(NAME cmrosif_compat
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_cmrosif_compat.py)
+    set_tests_properties(cmrosif_compat PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/cosim")
 endif()

@@ -17,6 +17,27 @@ Screen contents (contract §6.1):
 7. per-wheel friction-utilization colour
 8. command time series (``u_steer`` / ``u_fx``) with a current-time cursor
 
+Three curves, three different things
+------------------------------------
+They are routinely conflated under the word "reference"; they are not the
+same object and the renderer keeps them apart by name.
+
+* **waypoint** — the global route the run has to follow. Time-invariant,
+  one per scenario, carried by a ``path2d`` overlay. Drawn once, dashed grey.
+* **target** — the reference horizon handed to the controller at *this*
+  step (N+1 points). Time-varying: the point spacing follows the planned
+  speed, so it compresses under braking. Blue, with markers, so the
+  spacing is visible.
+* **prediction** — the horizon the controller solved for at this step
+  (N+1 points). Time-varying; on a failed solve it is whatever the solver
+  returned, recorded as-is. Orange, switching to thick red while the
+  reported solver status is non-zero.
+
+``target`` and ``prediction`` come from a *sidecar* ``<trace>.qp.npz``
+written next to the trace: they are ``(K, N+1, 2)`` and the trace
+container's channel table is a whitelist of scalar / fixed-width rows. The
+sidecar is optional — without it the renderer behaves exactly as before.
+
 Structure: :func:`frame_spec` is a pure function from (loaded trace, frame
 index) to a plain description of the frame, and :func:`draw_frame` renders that
 description. The split is what makes the view window testable — axis limits
@@ -81,6 +102,66 @@ UTIL_CMAP = LinearSegmentedColormap.from_list(
     "vdsim_util", ["#2c9c4c", "#9acd32", "#f5c542", "#e8752a", "#c02020"])
 UTIL_NORM = Normalize(vmin=0.0, vmax=UTIL_MAX)
 
+#: Suffix of the optional horizons sidecar, resolved from the trace path.
+SIDECAR_SUFFIX = ".qp.npz"
+#: Overlay names that mean *the global route*. Traces recorded before the
+#: waypoint / target / prediction split called it ``reference_path`` or
+#: ``ref_path``; the aliases keep them rendering with the right label.
+WAYPOINT_NAMES = ("waypoint", "reference_path", "ref_path")
+WAYPOINT_LABEL = "waypoint"
+#: Grey and dashed, so the two *horizon* curves own the saturated colours.
+WAYPOINT_COLOR = "#8c8c8c"
+#: MPC input horizon: markers on, so the point spacing (and its
+#: compression under braking) is readable.
+TARGET_COLOR = "#1e9de8"
+TARGET_LABEL = "target (MPC input)"
+#: MPC output horizon.
+PRED_COLOR = "#e8752a"
+PRED_LABEL = "prediction (MPC output)"
+#: Prediction styling once the solver reports a non-zero status.
+PRED_FAIL_COLOR = "#c02020"
+PRED_LW = 1.8
+PRED_FAIL_LW = 3.2
+#: Margin added to an explicitly requested view half-width.
+VIEW_MARGIN_FRAC = 0.05
+
+
+def load_sidecar(path, required: bool = False):
+    """Load the ``.qp.npz`` horizons sidecar that sits next to a trace.
+
+    :param path: the sidecar itself, or the ``.vdtrace`` it belongs to.
+    :param required: raise when it is missing instead of returning ``None``.
+    :returns: dict of arrays, or ``None`` when there is no sidecar.
+    """
+    p = Path(path)
+    if p.suffix != ".npz":
+        p = p.with_suffix(SIDECAR_SUFFIX)
+    if not p.is_file():
+        if required:
+            raise FileNotFoundError("sidecar not found: %s" % (p,))
+        return None
+    with np.load(str(p)) as z:
+        data = {k: np.asarray(z[k]) for k in z.files}
+    for key in ("t", "tgt_XY", "pred_XY", "status"):
+        if key not in data:
+            raise ValueError("sidecar %s is missing %r" % (p, key))
+    return data
+
+
+def nearest_time_index(t_query, t_ref):
+    """Index of the nearest ``t_ref`` sample for each ``t_query`` sample.
+
+    The control period and the trace decimation are independent, so the
+    sidecar and the trace are aligned on time rather than on index.
+    """
+    t_ref = np.asarray(t_ref, dtype=float)
+    t_query = np.asarray(t_query, dtype=float)
+    if t_ref.size <= 1:
+        return np.zeros(t_query.shape, dtype=int)
+    j = np.clip(np.searchsorted(t_ref, t_query), 1, t_ref.size - 1)
+    take_left = (t_query - t_ref[j - 1]) <= (t_ref[j] - t_query)
+    return np.where(take_left, j - 1, j).astype(int)
+
 
 class LoadedTrace:
     """Every array the renderer needs, loaded once from a ``.vdtrace``.
@@ -90,9 +171,12 @@ class LoadedTrace:
 
     :param path: ``.vdtrace`` path.
     :param stride: keep every ``stride``-th recorded sample as one output frame.
+    :param sidecar: explicit ``.qp.npz`` with the per-step target and
+        prediction horizons. ``None`` looks for ``<trace>.qp.npz`` and
+        accepts its absence.
     """
 
-    def __init__(self, path, stride: int = 1):
+    def __init__(self, path, stride: int = 1, sidecar=None):
         stride = max(1, int(stride))
         with TraceReader(path) as tr:
             self.manifest = tr.manifest
@@ -124,6 +208,16 @@ class LoadedTrace:
         self.steer = self._series_or_zeros("u_steer")
         self.body_l, self.body_w = body_size(self.geometry)
         self.view_half = view_half_m(self.geometry)
+        self.sidecar = load_sidecar(path if sidecar is None else sidecar,
+                                    required=sidecar is not None)
+        self.sc_map = (nearest_time_index(self.t, self.sidecar["t"])
+                       if self.sidecar is not None else None)
+        # How far the horizons reach. The default window is a function of
+        # manifest geometry only (that is what keeps the scale constant), so
+        # this is reported rather than silently applied.
+        self.horizon_reach = self._horizon_reach()
+        #: Window half-width actually used; ``render`` may override it.
+        self.view_half_used = self.view_half
 
     def _series_or_zeros(self, name):
         for n, _unit, arr in self.series:
@@ -150,6 +244,47 @@ class LoadedTrace:
         """Time markers for the command panel (overlay ``kind == "event"``)."""
         return [o for o in self.overlays
                 if isinstance(o, dict) and o.get("kind") == "event"]
+
+    def _horizon_reach(self) -> float:
+        """Farthest horizon point from the vehicle over the run [m].
+
+        0.0 without a sidecar. Failed steps can hold NaN or absurd values,
+        so only finite points count.
+        """
+        if self.sidecar is None:
+            return 0.0
+        if "ego_XY" in self.sidecar:
+            ego = np.asarray(self.sidecar["ego_XY"], dtype=float)
+        else:
+            # One pose per *sidecar step*. sc_map runs the other way (one
+            # entry per trace sample) and would be the wrong length here.
+            ego = self.pose[nearest_time_index(self.sidecar["t"], self.t), 0:2]
+        reach = 0.0
+        for key in ("tgt_XY", "pred_XY"):
+            xy = np.asarray(self.sidecar[key], dtype=float)
+            d = np.linalg.norm(xy - ego[:, None, :], axis=2)
+            d = d[np.isfinite(d)]
+            if d.size:
+                reach = max(reach, float(d.max()))
+        return reach
+
+    def has_sidecar(self) -> bool:
+        """Whether per-step target / prediction horizons were loaded."""
+        return self.sidecar is not None
+
+    def qp_fail_times(self):
+        """Times [s] whose solve reported a non-zero solver status."""
+        if self.sidecar is None:
+            return np.zeros(0)
+        t = np.asarray(self.sidecar["t"], dtype=float)
+        return t[np.asarray(self.sidecar["status"], dtype=float) != 0.0]
+
+    def first_fail_frame(self):
+        """Recorded-sample index of the first failed solve; ``None`` if none."""
+        if self.sidecar is None:
+            return None
+        bad = np.asarray(self.sidecar["status"], dtype=float)[self.sc_map] != 0.0
+        return int(np.argmax(bad)) if bad.any() else None
 
 
 # --------------------------------------------------------------------------
@@ -238,6 +373,20 @@ def velocity_arrow(geometry: dict, x: float, y: float, yaw: float,
     return (x, y, ax_ / norm * arrow_len, ay_ / norm * arrow_len)
 
 
+def _fmt_util(u: float) -> str:
+    """Format one utilization value for the HUD.
+
+    A wheel with mu*Fz = 0 (the sample recorded at reset, before the first
+    integration step) divides by zero, and printing the raw 1e94 that comes
+    back overran the HUD box. Out-of-range values are named, not shown.
+    """
+    if not np.isfinite(u):
+        return " n/a"
+    if abs(u) >= 100.0:
+        return ">>99"
+    return "%4.2f" % u
+
+
 def frame_spec(tr: LoadedTrace, i: int) -> dict:
     """Describe frame ``i`` — pure function, no matplotlib, no file access.
 
@@ -248,7 +397,7 @@ def frame_spec(tr: LoadedTrace, i: int) -> dict:
         ``arrow``, ``trail``, ``hud`` lines and the time cursor.
     """
     x, y, yaw = (float(v) for v in tr.pose[i])
-    half = tr.view_half
+    half = tr.view_half_used
     delta = float(tr.steer[i])
     body, wheels = body_and_wheels(tr.geometry, tr.body_l, tr.body_w,
                                    x, y, yaw, delta)
@@ -256,6 +405,36 @@ def frame_spec(tr: LoadedTrace, i: int) -> dict:
     vx, vy = (float(v) for v in tr.v_body[i])
     speed = math.hypot(vx, vy)
     util = [float(u) for u in tr.util[i]]
+
+    hud = [
+        "t = %6.2f s" % (float(tr.t[i]),),
+        "v = %5.2f m/s  (%5.1f km/h)" % (speed, speed * 3.6),
+        "beta = %+5.1f deg" % (math.degrees(math.atan2(vy, max(abs(vx), 1e-6))),),
+        "r = %+6.2f deg/s" % (math.degrees(float(tr.yaw_rate[i])),),
+        "delta = %+5.2f deg" % (math.degrees(delta),),
+        "util max = %s  [%s]" % (
+            _fmt_util(max(util) if util else 0.0),
+            " ".join("%s %s" % (w, _fmt_util(u))
+                     for w, u in zip(tr.wheels, util))),
+    ]
+
+    # Horizons, when a sidecar was found. Without one the two artists are
+    # never created and these stay None, which is what keeps old traces
+    # rendering unchanged.
+    tgt_xy = pred_xy = None
+    status = None
+    solve_ms = float("nan")
+    if tr.sidecar is not None:
+        j = int(tr.sc_map[i])
+        tgt_xy = np.asarray(tr.sidecar["tgt_XY"][j], dtype=float)
+        pred_xy = np.asarray(tr.sidecar["pred_XY"][j], dtype=float)
+        status = int(tr.sidecar["status"][j])
+        if "solve_ms" in tr.sidecar:
+            solve_ms = float(tr.sidecar["solve_ms"][j])
+        hud.append("solver = %-4s status %d%s"
+                   % ("OK" if status == 0 else "FAIL", status,
+                      "" if not np.isfinite(solve_ms)
+                      else "  %6.1f ms" % solve_ms))
 
     return {
         "index": int(i),
@@ -268,22 +447,36 @@ def frame_spec(tr: LoadedTrace, i: int) -> dict:
         "arrow": velocity_arrow(tr.geometry, x, y, yaw, vx, vy),
         "trail_x": tr.pose[: i + 1, 0],
         "trail_y": tr.pose[: i + 1, 1],
-        "hud": [
-            "t = %6.2f s" % (float(tr.t[i]),),
-            "v = %5.2f m/s  (%5.1f km/h)" % (speed, speed * 3.6),
-            "beta = %+5.1f deg" % (math.degrees(math.atan2(vy, max(abs(vx), 1e-6))),),
-            "r = %+6.2f deg/s" % (math.degrees(float(tr.yaw_rate[i])),),
-            "delta = %+5.2f deg" % (math.degrees(delta),),
-            "util max = %4.2f  [%s]" % (
-                max(util) if util else 0.0,
-                " ".join("%s %.2f" % (w, u) for w, u in zip(tr.wheels, util))),
-        ],
+        "tgt_xy": tgt_xy,
+        "pred_xy": pred_xy,
+        "status": status,
+        "solve_ms": solve_ms,
+        "hud": hud,
     }
 
 
 # --------------------------------------------------------------------------
 # drawing
 # --------------------------------------------------------------------------
+
+def merge_spans(times, dt: float):
+    """Group consecutive failure times into ``(t_start, t_end)`` spans.
+
+    A gap wider than 1.5 sampling periods starts a new span, so a run that
+    fails everywhere becomes one shaded band and a run that fails on three
+    scattered steps stays three marks.
+    """
+    t = np.asarray(times, dtype=float)
+    if t.size == 0:
+        return []
+    t = np.sort(t)
+    width = max(dt, 1e-9)
+    cut = np.nonzero(np.diff(t) > 1.5 * width)[0]
+    starts = np.concatenate(([0], cut + 1))
+    ends = np.concatenate((cut, [t.size - 1]))
+    return [(float(t[a] - width / 2), float(t[b] + width / 2))
+            for a, b in zip(starts, ends)]
+
 
 def _setup_axes(tr: LoadedTrace, figsize, dpi):
     fig = plt.figure(figsize=figsize, dpi=dpi)
@@ -311,11 +504,15 @@ def _draw_static(tr: LoadedTrace, ax_bev, ax_series):
     for ref in tr.path2d_overlays():
         xy = np.asarray(ref.get("xy") or [], dtype=float)
         if xy.size:
-            ax_bev.plot(xy[:, 0], xy[:, 1], ls="--", lw=1.2, color="#4c72b0",
-                        alpha=0.9, zorder=1, label=ref.get("name", "reference"))
-    if tr.path2d_overlays():
-        # Lower left: the HUD owns the top-left corner in screen coordinates.
-        ax_bev.legend(loc="lower left", fontsize=7, framealpha=0.6)
+            # The global route, drawn once. It is *not* the per-step target
+            # horizon, so it gets the muted style and the name to match.
+            is_wp = (str(ref.get("name", "")).lower() in WAYPOINT_NAMES
+                     or str(ref.get("alias", "")).lower() in WAYPOINT_NAMES)
+            ax_bev.plot(xy[:, 0], xy[:, 1], ls="--", lw=1.2,
+                        color=WAYPOINT_COLOR if is_wp else "#4c72b0",
+                        alpha=0.9, zorder=1,
+                        label=WAYPOINT_LABEL if is_wp
+                        else ref.get("name", "reference"))
 
     (trail,) = ax_bev.plot([], [], "-", lw=1.4, color="#333333", alpha=0.85, zorder=2)
     body = PolyCollection([], facecolors="#dfe6ee", edgecolors="#1b2733",
@@ -334,6 +531,29 @@ def _draw_static(tr: LoadedTrace, ax_bev, ax_series):
         fontsize=8, family="monospace", zorder=10,
         bbox=dict(boxstyle="round,pad=0.35", fc="white", ec="#8a97a5", alpha=0.85))
 
+    # Time-varying horizons. These are per-frame Line2D updates, not static
+    # draws: the target moves because the reference grid is re-sampled every
+    # step, the prediction because the OCP is re-solved every step.
+    target = prediction = qpfail = None
+    if tr.has_sidecar():
+        (target,) = ax_bev.plot([], [], ls="-", lw=1.0, color=TARGET_COLOR,
+                                marker="o", ms=2.6, mew=0.0, alpha=0.95,
+                                zorder=6, label=TARGET_LABEL)
+        (prediction,) = ax_bev.plot([], [], ls="-", lw=PRED_LW,
+                                    color=PRED_COLOR, alpha=0.95, zorder=7,
+                                    label=PRED_LABEL)
+        qpfail = ax_bev.text(
+            0.985, 0.015, "", transform=ax_bev.transAxes, va="bottom",
+            ha="right", fontsize=11, fontweight="bold", color="white",
+            zorder=11,
+            bbox=dict(boxstyle="round,pad=0.35", fc=PRED_FAIL_COLOR,
+                      ec="none", alpha=0.92))
+        qpfail.set_visible(False)
+
+    if ax_bev.get_legend_handles_labels()[0]:
+        # Lower left: the HUD owns the top-left corner in screen coordinates.
+        ax_bev.legend(loc="lower left", fontsize=7, framealpha=0.6)
+
     cbar = ax_bev.figure.colorbar(
         plt.cm.ScalarMappable(norm=UTIL_NORM, cmap=UTIL_CMAP),
         ax=ax_bev, fraction=0.035, pad=0.015)
@@ -343,6 +563,15 @@ def _draw_static(tr: LoadedTrace, ax_bev, ax_series):
 
     cursors = []
     events = tr.event_overlays()
+    # QP-failure marks: the recorded ``qp_fail`` event overlay when there is
+    # one, otherwise derived from the sidecar status so a trace recorded
+    # without the overlay still shows them.
+    qp_events = [ev for ev in events if str(ev.get("name", "")).lower() == "qp_fail"]
+    fail_t = (np.unique(np.concatenate(
+        [np.asarray(ev.get("t", []), dtype=float) for ev in qp_events]))
+        if qp_events else tr.qp_fail_times())
+    fail_spans = merge_spans(fail_t, float(np.median(np.diff(tr.t)))
+                             if len(tr.t) > 1 else 0.0)
     for ax, (name, unit, arr) in zip(ax_series, tr.series):
         ax.plot(tr.t, arr, lw=1.1, color="#4c72b0")
         ax.set_ylabel("%s [%s]" % (name, unit or "-"), fontsize=8)
@@ -350,13 +579,23 @@ def _draw_static(tr: LoadedTrace, ax_bev, ax_series):
         ax.grid(True, alpha=0.25, lw=0.5)
         ax.set_xlim(float(tr.t[0]), float(tr.t[-1]))
         for ev in events:
+            if ev in qp_events:
+                continue
             for et in ev.get("t", []):
                 ax.axvline(float(et), color="#c02020", lw=0.8, alpha=0.6)
+        for t0, t1 in fail_spans:
+            # Shaded spans, not one line per failed step: a run that fails
+            # on every step drew 500 lines and filled the panel solid red,
+            # which reads as a rendering artifact rather than as a result.
+            ax.axvspan(t0, t1, color=PRED_FAIL_COLOR, alpha=0.18, lw=0,
+                       zorder=0)
         cursors.append(ax.axvline(float(tr.t[0]), color="#111111", lw=1.0))
     if ax_series:
         ax_series[-1].set_xlabel("time [s]", fontsize=8)
     return dict(trail=trail, body=body, wheels=wheels, arrow=arrow,
-                hud=hud, cursors=cursors)
+                hud=hud, cursors=cursors, target=target,
+                prediction=prediction, qpfail=qpfail,
+                n_qp_fail=int(len(fail_t)))
 
 
 def draw_frame(artists, ax_bev, spec: dict):
@@ -371,8 +610,42 @@ def draw_frame(artists, ax_bev, spec: dict):
     artists["arrow"].set_position((x, y))
     artists["arrow"].xy = (x + dx, y + dy)
     artists["hud"].set_text("\n".join(spec["hud"]))
+    _draw_horizons(artists, spec)
     for cur in artists["cursors"]:
         cur.set_xdata([spec["t"], spec["t"]])
+
+
+def _draw_horizons(artists, spec: dict):
+    """Update the target / prediction lines and the QP-failure banner.
+
+    No-op for a trace without a sidecar: the artists were never created.
+    A failed step is drawn exactly as recorded — NaNs break the line into
+    gaps rather than being interpolated over, which is the honest picture
+    of a solver that returned nothing usable.
+    """
+    target, pred = artists.get("target"), artists.get("prediction")
+    if target is None or pred is None:
+        return
+    tgt = spec.get("tgt_xy")
+    if tgt is not None and len(tgt):
+        tgt = np.asarray(tgt, dtype=float)
+        target.set_data(tgt[:, 0], tgt[:, 1])
+    else:
+        target.set_data([], [])
+    pxy = spec.get("pred_xy")
+    if pxy is not None and len(pxy):
+        pxy = np.asarray(pxy, dtype=float)
+        pred.set_data(pxy[:, 0], pxy[:, 1])
+    else:
+        pred.set_data([], [])
+    failed = bool(spec.get("status"))  # 0 and None are both "not failed"
+    pred.set_color(PRED_FAIL_COLOR if failed else PRED_COLOR)
+    pred.set_linewidth(PRED_FAIL_LW if failed else PRED_LW)
+    banner = artists.get("qpfail")
+    if banner is not None:
+        banner.set_visible(failed)
+        if failed:
+            banner.set_text("QP FAIL (status=%d)" % int(spec["status"]))
 
 
 # --------------------------------------------------------------------------
@@ -881,7 +1154,8 @@ def _default_multi_title(scene: MultiScene) -> str:
 
 def render(trace_path, out=None, png=None, fps: int = 20, stride: int = None,
            dpi: int = 100, figsize=(11.0, 5.6), mp4: bool = False,
-           title: str = None, quiet: bool = False) -> dict:
+           title: str = None, quiet: bool = False, sidecar=None,
+           preview_frame: str = "util-peak", view_half: float = None) -> dict:
     """Render one trace to a GIF (+ preview PNG).
 
     :param trace_path: input ``.vdtrace``.
@@ -896,8 +1170,19 @@ def render(trace_path, out=None, png=None, fps: int = 20, stride: int = None,
         with a warning when it is unavailable.
     :param title: figure suptitle.
     :param quiet: suppress the progress line.
-    :returns: dict with ``gif``, ``png``, ``mp4``, ``frames`` and ``wall_s``.
+    :param sidecar: explicit horizons ``.qp.npz``; ``None`` auto-detects
+        ``<trace>.qp.npz`` and renders without horizons when absent.
+    :param preview_frame: ``"util-peak"`` (default, unchanged behaviour) or
+        ``"first-fail"`` to put the preview on the first failed solve.
+    :param view_half: BEV half-window [m]. ``None`` keeps the geometry-derived
+        tracking window, which is ~6 wheelbases and therefore much shorter
+        than a typical MPC horizon — widen it to put the horizons on screen.
+    :returns: dict with ``gif``, ``png``, ``mp4``, ``firstfail_png``,
+        ``n_qp_fail``, ``frames`` and ``wall_s``.
     """
+    if preview_frame not in ("util-peak", "first-fail"):
+        raise ValueError("preview_frame must be util-peak|first-fail, got %r"
+                         % (preview_frame,))
     t_start = time.time()
     trace_path = Path(trace_path)
     out = Path(out) if out else trace_path.with_suffix(".gif")
@@ -907,9 +1192,15 @@ def render(trace_path, out=None, png=None, fps: int = 20, stride: int = None,
         with TraceReader(trace_path) as probe:
             dt = float(probe.repro.get("dt_s") or 0.0)
         stride = max(1, int(round(1.0 / (fps * dt)))) if dt > 0 else 1
-    tr = LoadedTrace(trace_path, stride=stride)
+    tr = LoadedTrace(trace_path, stride=stride, sidecar=sidecar)
     if tr.n_frames == 0:
         raise ValueError("trace has no samples to render: %s" % (trace_path,))
+
+    if view_half is not None:
+        tr.view_half_used = float(view_half) * (1.0 + VIEW_MARGIN_FRAC)
+    elif tr.horizon_reach > tr.view_half and not quiet:
+        print("note: horizons reach %.0f m but the window is +-%.0f m; pass --view-half to widen"
+              % (tr.horizon_reach, tr.view_half))
 
     fig, ax_bev, ax_series = _setup_axes(tr, figsize, dpi)
     fig.suptitle(title or _default_title(tr), fontsize=9)
@@ -921,10 +1212,28 @@ def render(trace_path, out=None, png=None, fps: int = 20, stride: int = None,
 
     # Preview PNG at peak utilization: the frame where the 8 required screen
     # items are all actually exercised, rather than an arbitrary first frame.
+    # ``first-fail`` moves it to the first failed solve instead, which is the
+    # frame a QP-failure post-mortem actually wants.
     peak = int(tr.frames[int(np.argmax(tr.util[tr.frames].max(axis=1)))])
-    draw_frame(artists, ax_bev, frame_spec(tr, peak))
+    first_fail = tr.first_fail_frame()
+    chosen = peak
+    if preview_frame == "first-fail":
+        if first_fail is None:
+            if not quiet:
+                print("preview: no failed solve in this run; using util-peak")
+        else:
+            chosen = first_fail
+    draw_frame(artists, ax_bev, frame_spec(tr, chosen))
     png.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(str(png), dpi=dpi)
+
+    # The first failed solve always gets its own PNG when there is one, so
+    # the evidence frame does not depend on the preview mode asked for.
+    fail_png = None
+    if first_fail is not None:
+        fail_png = out.with_name(out.stem + "_firstfail.png")
+        draw_frame(artists, ax_bev, frame_spec(tr, first_fail))
+        fig.savefig(str(fail_png), dpi=dpi)
 
     anim = FuncAnimation(fig, _update, frames=tr.n_frames,
                          interval=1000 // max(fps, 1), blit=False, repeat=True)
@@ -948,6 +1257,10 @@ def render(trace_path, out=None, png=None, fps: int = 20, stride: int = None,
 
     wall = time.time() - t_start
     result = {"gif": out, "png": png, "mp4": mp4_path,
+              "firstfail_png": fail_png,
+              "view_half_m": float(tr.view_half_used),
+              "horizon_reach_m": float(tr.horizon_reach),
+              "n_qp_fail": int(artists.get("n_qp_fail", 0)),
               "frames": tr.n_frames, "wall_s": wall,
               "trace_duration_s": float(tr.t[-1] - tr.t[0])}
     if not quiet:
@@ -978,6 +1291,19 @@ def main(argv=None) -> int:
     ap.add_argument("--mp4", action="store_true",
                     help="also write MP4 (needs imageio-ffmpeg)")
     ap.add_argument("--title", default=None)
+    ap.add_argument("--sidecar", type=Path, default=None,
+                    help="single-run only: .qp.npz carrying the MPC target "
+                         "and prediction horizons "
+                         "(default: <trace>.qp.npz when it exists)")
+    ap.add_argument("--view-half", dest="view_half", type=float, default=None,
+                    help="single-run only: BEV half-window [m]. The default "
+                         "tracking window is ~6 wheelbases, far shorter than "
+                         "an MPC horizon, so widen it to see target/prediction")
+    ap.add_argument("--preview-frame", dest="preview_frame",
+                    default="util-peak",
+                    choices=("util-peak", "first-fail"),
+                    help="frame shown in the preview PNG "
+                         "(default: %(default)s)")
     grp = ap.add_argument_group("overlay mode (2+ traces)")
     grp.add_argument("--labels", default=None,
                      help="comma-separated legend labels, one per trace "
@@ -1000,7 +1326,9 @@ def main(argv=None) -> int:
 
     if len(args.trace) == 1:
         render(args.trace[0], out=args.out, png=args.png, fps=args.fps,
-               stride=args.stride, dpi=args.dpi, mp4=args.mp4, title=args.title)
+               stride=args.stride, dpi=args.dpi, mp4=args.mp4,
+               title=args.title, sidecar=args.sidecar,
+               preview_frame=args.preview_frame, view_half=args.view_half)
         return 0
 
     if args.stride is not None:
