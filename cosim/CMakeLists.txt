@@ -132,4 +132,19 @@ if(Python3_FOUND)
     set_tests_properties(control_ladder PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/build/python:${CMAKE_SOURCE_DIR}/python")
+    add_test(NAME trace_roundtrip
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_trace_roundtrip.py)
+    set_tests_properties(trace_roundtrip PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/python")
+    # The trace tests deliberately do NOT put build/python on the path: reading
+    # and rendering a trace must work where the compiled core cannot be built.
+    add_test(NAME trace_render
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_trace_render.py)
+    set_tests_properties(trace_render PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 180
+        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/python")
 endif()

@@ -6,6 +6,41 @@ All notable changes to VDSim are documented here. Format follows
 
 ## [Unreleased]
 
+### Added — `.vdtrace` run container + headless trace renderer
+- **`.vdtrace` container** (`python/vdsim_trace.py`): one zip per simulation run —
+  `manifest.json` + `channels/<name>.f64` (C-order little-endian float64, stored
+  uncompressed so loading is a `np.frombuffer` reshape) + `overlays/<name>.json`.
+  Ten channels (`t`, `pose`, `v_body`, `yaw_rate`, `u_steer`, `u_fx`, `wheel_F`,
+  `wheel_mu`, `wheel_kappa`, `wheel_alpha`); the channel table is self-describing,
+  so consumers select fields from the manifest instead of hardcoding a list.
+- **Opt-in recording** (`VDSimPlant.enable_trace(path, decimation=N)` /
+  `finalize_trace()`), default OFF. `decimation=None` targets a 100 Hz record rate,
+  so a 1 kHz control loop stores 1 sample in 10 and a 20 Hz loop stores all of them.
+- **Overlay pass-through** (`vdsim_trace.attach_overlay`): reference paths, lateral
+  error, events and regions are attached after the run and stored verbatim. VDSim
+  validates the `kind`/`name` envelope and never interprets the content, so
+  scenario concepts stay out of the plant.
+- **Reproduction metadata**: `repro` carries `vdsim_version`, `git_sha`, `param_hash`,
+  `seed`, `dt_s` and `run_id`. `param_hash` covers plant parameters only (vehicle,
+  tyre, road mu, dt) — runs of the same vehicle over different scenarios share a hash.
+- **Headless renderer** (`python/vdsim_render.py`, `vdsim-render` CLI): BEV tracking
+  camera with driven path, body rectangle, steered front wheels, velocity arrow,
+  fixed HUD, per-wheel friction-utilization colour and a command time-series panel
+  with a time cursor. GIF + preview PNG through the existing `[plot]` extra; MP4 only
+  when `imageio-ffmpeg` is present. No GUI, no node/npm/browser.
+- **Friction utilization is derived, not recorded**:
+  `sqrt((Fx/(k_lon*mu*Fz))^2 + (Fy/(k_lat*mu*Fz))^2)` with `k_*` from manifest
+  `tire.mu_aniso`, measured per tyre by `vdsim_plant.measure_mu_aniso()`. A trace
+  without a `tire` block is rejected rather than defaulted to `[1, 1]`, which would
+  under-report saturation on an elliptic tyre.
+- `examples/demo_grip_loss.py` now records a trace and renders it — the contract's
+  first consumer, and its self-check.
+- Tests `trace_roundtrip` / `trace_render` on a committed golden fixture
+  (`tests/fixtures/trace/golden_v0_1.vdtrace`); both run without the compiled core.
+  Recording OFF costs -0.4 % of `step()` vs. the pre-hook baseline (gate: <= 1 %),
+  ON at the default decimation +0.9 %; a 30 s trace renders in 51 s at 20 fps
+  (`tools/bench_trace_overhead.py`).
+
 ### Added — load-dependent Re, camber contact migration & inverted tire interface
 - **Effective rolling radius `Re(Fz)`** (Pacejka BREFF/DREFF/FREFF) across L1/L2/L3/L5:
   slip `= (omega*Re - vx)/vx`, so a free-rolling loaded tire reports `kappa = 0` (matches
