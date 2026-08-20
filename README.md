@@ -120,6 +120,66 @@ slip (κ, α) / tire-force vectors, and a telemetry HUD. Drive with the keyboard
 (↑↓ throttle/brake, ←→ steer) or a gamepad-wheel — force feedback via
 `python tools/wheel_ffb_sdl.py --server <host> --udp-port 8101`.
 
+## Visualization — headless trace render
+
+A run can be recorded to a single `.vdtrace` file and rendered later, with no GUI,
+no node/npm and no browser. Recording is opt-in and off unless enabled:
+
+```python
+plant.enable_trace("run.vdtrace", seed=0, run_id="demo")   # off unless called
+...                                                        # step() as usual
+path = plant.finalize_trace()
+```
+
+- `enable_trace(path, decimation=None, seed=None, run_id=None, producer=None, tags=None)` —
+  one sample is offered per `step()`, taken *before* the step is integrated, so the
+  pose is the state at `t` and `u_steer` / `u_fx` are the command held over
+  `[t, t+control_dt)`. Returns the resolved decimation.
+- `decimation=None` picks the smallest N whose record rate stays at or above 100 Hz
+  (1 kHz control → N=10; a 20 Hz loop stays at N=1 and loses nothing).
+- `finalize_trace()` flushes channels, freezes the manifest and closes the file;
+  it returns the written path (`None` when recording was never enabled).
+- The container is a zip: `manifest.json` + `channels/*.f64` + `overlays/*.json`.
+  That one file is enough to render — no re-simulation, no results file.
+
+Scenario knowledge is attached after the run as **overlays**. VDSim validates the
+`kind` / `name` envelope and stores the object without interpreting it, so a newer
+producer can write overlays that today's renderer ignores:
+
+```python
+import vdsim_trace
+vdsim_trace.attach_overlay(path, {"kind": "path2d", "name": "intended_path",
+                                  "xy": [[0.0, 0.0], [4.0, 0.0]]})
+vdsim_trace.attach_overlay(path, {"kind": "region", "name": "mu_patch", "mu": 0.35,
+                                  "polygon": [[40, -30], [60, -30], [60, 30], [40, 30]]})
+```
+
+The renderer takes one trace and writes a GIF plus a preview PNG (matplotlib +
+pillow, from the `[plot]` extra):
+
+```bash
+vdsim-render run.vdtrace --out run.gif --fps 20     # installed wheel
+PYTHONPATH=python python3 -m vdsim_render run.vdtrace --out run.gif   # cloned tree
+```
+
+Options: `--png` preview path · `--stride` frame stride · `--fps` · `--dpi` ·
+`--title` · `--mp4` (only when `imageio-ffmpeg` is installed).
+
+The bird's-eye frame shows the reference path (dashed, from a `path2d` overlay;
+omitted when absent), the driven path, a body rectangle sized from manifest
+`geometry`, front wheels turned by the recorded steering command, a velocity
+arrow, per-wheel friction-utilization colour, a HUD in fixed screen coordinates,
+and the `u_steer` / `u_fx` time series with a current-time cursor. Axis limits
+come from `geometry`, never from autoscale, so the scale never drifts between
+frames.
+
+End to end — record, attach overlays, render:
+
+```bash
+PYTHONPATH=build/python:python python3 examples/demo_grip_loss.py \
+    --out demo.gif --keep-trace
+```
+
 ## Config — parts catalog & scenes (v0.3)
 
 Vehicles are **blueprints** over `configs/parts/` (chassis, tire, drivetrain, …).

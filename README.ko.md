@@ -115,6 +115,64 @@ python3 gui/server.py --port 8100        # Windows: python gui\server.py --port 
 벡터, telemetry HUD. 키보드(↑↓ 가감속, ←→ 조향) 또는 게임패드-휠로 운전 —
 force feedback 은 `python tools/wheel_ffb_sdl.py --server <host> --udp-port 8101`.
 
+## 시각화 — 헤드리스 trace 렌더
+
+한 번의 실행을 `.vdtrace` 파일 하나로 기록해 두고, 나중에 GUI·node/npm·브라우저
+없이 렌더할 수 있다. 기록은 opt-in 이라 켜지 않으면 동작하지 않는다.
+
+```python
+plant.enable_trace("run.vdtrace", seed=0, run_id="demo")   # 켜야만 기록
+...                                                        # 평소처럼 step()
+path = plant.finalize_trace()
+```
+
+- `enable_trace(path, decimation=None, seed=None, run_id=None, producer=None, tags=None)` —
+  `step()` 마다 한 샘플을 적분 *이전* 시점에서 취한다. 따라서 pose 는 시각 `t` 의
+  상태이고 `u_steer` / `u_fx` 는 `[t, t+control_dt)` 구간에 유지된 명령이다.
+  반환값은 실제 적용된 decimation.
+- `decimation=None` 이면 기록률이 100 Hz 이상으로 유지되는 최소 N 을 고른다
+  (1 kHz 제어 → N=10, 20 Hz 루프는 N=1 로 손실 없음).
+- `finalize_trace()` 는 채널을 flush 하고 manifest 를 확정한 뒤 파일을 닫으며,
+  기록한 경로를 돌려준다(기록을 켠 적이 없으면 `None`).
+- 컨테이너는 zip: `manifest.json` + `channels/*.f64` + `overlays/*.json`.
+  이 파일 하나면 렌더가 되므로 재시뮬레이션도, 결과 파일 재파싱도 필요 없다.
+
+시나리오 지식은 실행이 끝난 뒤 **overlay** 로 붙인다. VDSim 은 `kind` / `name`
+봉투만 검증하고 내용은 해석하지 않으므로, 새 생산자가 쓴 미지의 overlay 를
+현재 렌더러가 무시하고 지나갈 수 있다.
+
+```python
+import vdsim_trace
+vdsim_trace.attach_overlay(path, {"kind": "path2d", "name": "intended_path",
+                                  "xy": [[0.0, 0.0], [4.0, 0.0]]})
+vdsim_trace.attach_overlay(path, {"kind": "region", "name": "mu_patch", "mu": 0.35,
+                                  "polygon": [[40, -30], [60, -30], [60, 30], [40, 30]]})
+```
+
+렌더러는 trace 하나를 입력받아 GIF 와 미리보기 PNG 를 쓴다(`[plot]` extra 의
+matplotlib + pillow 사용).
+
+```bash
+vdsim-render run.vdtrace --out run.gif --fps 20     # 설치된 wheel
+PYTHONPATH=python python3 -m vdsim_render run.vdtrace --out run.gif   # 클론 트리
+```
+
+옵션: `--png` 미리보기 경로 · `--stride` 프레임 간격 · `--fps` · `--dpi` ·
+`--title` · `--mp4`(`imageio-ffmpeg` 설치 시에만).
+
+BEV 화면에 그려지는 것: 기준 경로(점선, `path2d` overlay 가 있을 때만) · 주행
+궤적 · manifest `geometry` 로 크기를 잡은 차체 사각형 · 기록된 조향 명령만큼
+돌아간 앞바퀴 · 속도 화살표 · 바퀴별 마찰 이용률 색 · 화면 고정 좌표의 HUD ·
+현재 시각 커서가 붙은 `u_steer` / `u_fx` 시계열. 축 범위는 autoscale 이 아니라
+`geometry` 에서 계산하므로 프레임마다 스케일이 흔들리지 않는다.
+
+기록 → overlay → 렌더 전 과정 예시:
+
+```bash
+PYTHONPATH=build/python:python python3 examples/demo_grip_loss.py \
+    --out demo.gif --keep-trace
+```
+
 ## 설정 — parts catalog & scene (v0.3)
 
 차량 = `configs/parts/` 조합 **blueprint**, 실행 = `fleet[]`가 있는 **scene**
