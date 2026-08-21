@@ -158,7 +158,8 @@ PYTHONPATH=python python3 -m vdsim_render run.vdtrace --out run.gif   # 클론 �
 ```
 
 옵션: `--png` 미리보기 경로 · `--stride` 프레임 간격 · `--fps` · `--dpi` ·
-`--title` · `--mp4`(`imageio-ffmpeg` 설치 시에만).
+`--title` · `--mp4`(`imageio-ffmpeg` 설치 시에만). 제어기 호라이즌용으로
+`--sidecar` / `--view-half` / `--preview-frame` 이 추가된다(아래 참고).
 
 BEV 화면에 그려지는 것: 기준 경로(점선, `path2d` overlay 가 있을 때만) · 주행
 궤적 · manifest `geometry` 로 크기를 잡은 차체 사각형 · 기록된 조향 명령만큼
@@ -205,6 +206,73 @@ vdsim-render base.vdtrace tuned.vdtrace wet.vdtrace --out compare.gif \
 ```bash
 PYTHONPATH=build/python:python python3 examples/demo_compare_runs.py --out compare.gif
 ```
+
+### 제어기 호라이즌 — waypoint / target / prediction
+
+"reference" 라는 한 단어로 뭉뚱그려지곤 하는 세 곡선은 서로 다른 것이다. 렌더러는
+코드·사이드카 키·범례에서 이름을 구분해서 쓴다.
+
+- **waypoint** — 최종적으로 따라가야 할 전역 경로. 시간 불변, 시나리오당 1개이며
+  `path2d` overlay 로 들어와 회색 점선으로 한 번만 그려진다. overlay `name` 은
+  `waypoint` / `reference_path` / `ref_path` 를 모두 받는다(앞의 것이 권장,
+  나머지는 옛 trace 호환용).
+- **target (MPC input)** — *이번* 스텝에 제어기로 들어가는 레퍼런스 호라이즌
+  (N+1 점). 시간 가변이며 점 간격이 계획 속도를 따르므로 감속 구간에서 압축된다.
+  간격이 보이도록 마커가 있는 파란 선.
+- **prediction (MPC output)** — 제어기가 이번 스텝에 풀어낸 호라이즌(N+1 점).
+  시간 가변이고, 실패한 스텝에서는 솔버가 돌려준 값 그대로다. 주황색이며 솔버
+  status 가 0이 아닌 동안 굵은 빨강으로 바뀐다.
+
+`target` / `prediction` 은 `(K, N+1, 2)` 배열이고 trace 컨테이너의 채널 표는
+스칼라·고정폭 행의 화이트리스트라, 컨테이너 안이 아니라 trace 옆의 **사이드카**
+`.npz` 로 실어 나른다.
+
+```
+run.vdtrace          # trace 본체, 이것만으로도 렌더된다
+run.qp.npz           # 선택적 호라이즌 사이드카, 있으면 자동으로 붙는다
+```
+
+| 키 | 모양 | 의미 |
+| --- | --- | --- |
+| `t` | (K,) | 스텝 시각 [s] — 인덱스가 아니라 최근접 시간으로 trace 샘플과 맞춘다 |
+| `tgt_XY` | (K, N+1, 2) | target 호라이즌, world 좌표 [m] |
+| `pred_XY` | (K, N+1, 2) | prediction 호라이즌, world 좌표 [m] |
+| `status` | (K,) | 솔버 status, `0` = 성공 |
+| `solve_ms` | (K,) | solve 시간 [ms] — 선택, HUD 에 표시 |
+| `tgt_v` | (K, N+1) | target 을 따라가는 계획 속도 [m/s] — 선택 |
+| `ego_XY` | (K, 2) | 스텝별 후륜축 위치 — 선택, 화면 범위 산출에 쓰임 |
+
+필수는 앞의 4개뿐이고 사이드카 자체가 선택이다. 없으면 렌더러는 이전과 완전히
+동일하게 동작하며 호라이즌 artist 를 아예 만들지 않는다.
+
+- 호라이즌은 **world** 좌표로 저장할 것. ego / Frenet 프레임에서 푸는 제어기는
+  역변환을 먼저 적용해야 한다. 검수 기준은 `pred_XY[k, 0]` 이 그 스텝의 차량
+  후륜축 위치와 0.1 m 이내로 일치하는지다. 어긋나면 프레임이 틀린 것이다.
+- 실패한 스텝은 실패한 그대로 기록할 것. 직전 값으로 덮어쓰지 말고 그 스텝의
+  `pred_XY` 를 NaN 이면 NaN 째로 남긴다. 렌더러가 비유한값을 건너뛰며, 덮어쓰면
+  영상으로 보여주려던 실패 자체가 사라진다.
+
+```bash
+vdsim-render run.vdtrace --out run.gif --view-half 100 --preview-frame first-fail
+```
+
+- `--sidecar` 로 `.npz` 를 직접 지정한다. 기본값은 trace 경로의 확장자를 `.qp.npz`
+  로 바꾼 경로(`run.vdtrace` -> `run.qp.npz`)가 있으면 그것, 없으면 사이드카
+  없음이다. 플래그를 명시하면 파일이 없을 때 조용히 넘어가지 않고 오류가 난다.
+- `--view-half` 는 BEV 반창 크기 [m]. 기본 추적창은 축거에서 유도되어(축거 약 6배)
+  MPC 호라이즌보다 훨씬 짧으므로, 100 m 짜리 호라이즌은 창을 넓히지 않으면 화면
+  밖으로 나간다.
+- `--preview-frame util-peak`(기본, 기존 동작 유지)은 마찰 이용률 피크에서 미리보기
+  PNG 를 뽑고, `first-fail` 은 첫 실패 스텝에서 뽑는다. 실패가 한 번도 없으면
+  안내를 출력하고 util-peak 으로 되돌아간다.
+- 실패가 하나라도 있는 run 은 `--preview-frame` 값과 무관하게 GIF 옆에
+  `<out>_firstfail.png` 를 함께 쓰고, 실패가 이어지는 동안 BEV 에
+  `QP FAIL (status=N)` 배너를 띄운다.
+- 실패 시각은 커맨드 패널에 세로 구간으로 표시되며, 연속 실패 스텝은 하나로 병합된다.
+  생산자가 `qp_fail` 이라는 이름의 `event` overlay 를 붙였으면 그것을, 없으면
+  사이드카의 `status` 배열을 쓴다.
+
+세 옵션 모두 단일 run 전용이라 겹침 모드에서는 무시된다.
 
 ## 설정 — parts catalog & scene (v0.3)
 

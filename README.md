@@ -163,7 +163,8 @@ PYTHONPATH=python python3 -m vdsim_render run.vdtrace --out run.gif   # cloned t
 ```
 
 Options: `--png` preview path · `--stride` frame stride · `--fps` · `--dpi` ·
-`--title` · `--mp4` (only when `imageio-ffmpeg` is installed).
+`--title` · `--mp4` (only when `imageio-ffmpeg` is installed). Controller
+horizons add `--sidecar` / `--view-half` / `--preview-frame` (below).
 
 The bird's-eye frame shows the reference path (dashed, from a `path2d` overlay;
 omitted when absent), the driven path, a body rectangle sized from manifest
@@ -215,6 +216,79 @@ traces and overlaid from the files alone:
 ```bash
 PYTHONPATH=build/python:python python3 examples/demo_compare_runs.py --out compare.gif
 ```
+
+### Controller horizons — waypoint / target / prediction
+
+Three curves get routinely conflated under the word "reference". They are
+different objects, and the renderer keeps them apart by name — in the code, in
+the sidecar keys and in the legend:
+
+- **waypoint** — the global route the run has to follow. Time-invariant, one per
+  scenario, carried by a `path2d` overlay and drawn once as a dashed grey line.
+  The overlay `name` may be `waypoint`, `reference_path` or `ref_path`; the
+  first is preferred, the other two stay accepted for older traces.
+- **target (MPC input)** — the reference horizon handed to the controller at
+  *this* step (N+1 points). Time-varying: the point spacing follows the planned
+  speed, so it compresses under braking. Blue with markers, so the spacing is
+  readable.
+- **prediction (MPC output)** — the horizon the controller solved for at this
+  step (N+1 points). Time-varying; on a failed solve it is whatever the solver
+  returned. Orange, switching to thick red while the solver status is non-zero.
+
+`target` and `prediction` are `(K, N+1, 2)` arrays and the trace container's
+channel table is a whitelist of scalar / fixed-width rows, so they travel in a
+**sidecar** `.npz` beside the trace rather than inside the container:
+
+```
+run.vdtrace          # the trace, renderable on its own
+run.qp.npz           # optional horizons sidecar, picked up automatically
+```
+
+| key | shape | meaning |
+| --- | --- | --- |
+| `t` | (K,) | step time [s] — matched to trace samples by nearest time, not by index |
+| `tgt_XY` | (K, N+1, 2) | target horizon, world frame [m] |
+| `pred_XY` | (K, N+1, 2) | prediction horizon, world frame [m] |
+| `status` | (K,) | solver status, `0` = success |
+| `solve_ms` | (K,) | solve time [ms] — optional, shown in the HUD |
+| `tgt_v` | (K, N+1) | planned speed along the target [m/s] — optional |
+| `ego_XY` | (K, 2) | rear-axle position per step — optional, used to fit the view |
+
+Only the first four keys are required, and the sidecar as a whole is optional:
+without one the renderer behaves exactly as it did before, and the two horizon
+artists are never created.
+
+- Write the horizons in the **world** frame. A controller solving in an ego or
+  Frenet frame has to undo that transform first. The check is that
+  `pred_XY[k, 0]` lands within ~0.1 m of the vehicle's rear-axle position at
+  step `k` — if it does not, the frame is wrong.
+- Record a failed solve as it happened: keep that step's `pred_XY`, NaN
+  included, instead of holding the previous one. The renderer skips non-finite
+  points; overwriting them hides the failure the video is meant to show.
+
+```bash
+vdsim-render run.vdtrace --out run.gif --view-half 100 --preview-frame first-fail
+```
+
+- `--sidecar` names the `.npz` explicitly. The default is the trace path with
+  its suffix swapped for `.qp.npz` (`run.vdtrace` -> `run.qp.npz`) when that
+  file exists, and no sidecar otherwise; passing the flag turns a missing file
+  into an error instead of a silent skip.
+- `--view-half` sets the bird's-eye half-window [m]. The default window is
+  derived from the wheelbase (~6 wheelbases) and is far shorter than an MPC
+  horizon, so a 100 m horizon leaves the frame unless the window is widened.
+- `--preview-frame util-peak` (default, unchanged) puts the preview PNG at the
+  friction-utilization peak; `first-fail` puts it at the first non-zero solver
+  status, printing a note and falling back to the peak when the run never
+  failed.
+- A run containing any failed solve also gets `<out>_firstfail.png` written next
+  to the GIF, whatever `--preview-frame` says, and the BEV carries a
+  `QP FAIL (status=N)` banner for as long as the status is non-zero.
+- Failure times are marked on the command panel as vertical spans, merged over
+  consecutive failing steps. They come from an `event` overlay named `qp_fail`
+  when the producer attached one, and from the sidecar `status` array otherwise.
+
+All three flags are single-run only — overlay mode ignores them.
 
 ## Config — parts catalog & scenes (v0.3)
 
