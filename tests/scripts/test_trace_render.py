@@ -152,6 +152,43 @@ def test_series_selection_is_manifest_driven():
               "a trace without wheel channels renders with zero utilization, not a crash")
 
 
+def test_angular_series_are_displayed_in_degrees():
+    """Plot-facing angles use degrees without changing recorded SI arrays."""
+    raw = np.asarray([-math.pi, 0.0, 0.5 * math.pi])
+    unit, shown = vr.series_for_display("rad", raw)
+    check(unit == "deg" and np.allclose(shown, [-180.0, 0.0, 90.0]),
+          "angle series converts rad to deg")
+    check(np.allclose(raw, [-math.pi, 0.0, 0.5 * math.pi]),
+          "display conversion does not mutate recorded radians")
+
+    rate_unit, rate = vr.series_for_display("rad/s", [math.pi])
+    check(rate_unit == "deg/s" and np.allclose(rate, [180.0]),
+          "angular-rate series converts rad/s to deg/s")
+
+    linear_unit, linear = vr.series_for_display("N", [1.0, 2.0])
+    check(linear_unit == "N" and np.allclose(linear, [1.0, 2.0]),
+          "non-angular series keeps its unit and values")
+
+    tr = vr.LoadedTrace(FIXTURE)
+    fig, ax_bev, axes = vr._setup_axes(tr, (11.0, 5.6), 100)
+    vr._draw_static(tr, ax_bev, axes)
+    steer_axis = axes[[n for n, _u, _a in tr.series].index("u_steer")]
+    check(steer_axis.get_ylabel() == "u_steer [deg]"
+          and np.allclose(steer_axis.lines[0].get_ydata(), np.degrees(tr.steer)),
+          "single-run command panel plots steering in deg")
+    vr.plt.close(fig)
+
+    scene = vr.MultiScene([FIXTURE, FIXTURE], fps=10, labels=["a", "b"])
+    fig, ax_bev, axes = vr._setup_multi_axes(scene, (11.0, 5.6), 100)
+    vr._draw_multi_static(scene, ax_bev, axes, vr.BODY_ALPHA, vr.PATH_ALPHA)
+    steer_axis = axes[scene.series_names.index("u_steer")]
+    check(steer_axis.get_ylabel() == "u_steer [deg]"
+          and all(np.allclose(line.get_ydata(), np.degrees(run.steer))
+                  for line, run in zip(steer_axis.lines, scene.runs)),
+          "multi-run command panel plots every steering series in deg")
+    vr.plt.close(fig)
+
+
 def test_render_from_fixture_only():
     """DoD 5 + 7: fixture in, GIF + PNG out, wall-clock measured."""
     with tempfile.TemporaryDirectory() as td:
@@ -188,6 +225,7 @@ def main():
     test_frame_spec_is_pure()
     test_eight_screen_items()
     test_series_selection_is_manifest_driven()
+    test_angular_series_are_displayed_in_degrees()
     test_render_from_fixture_only()
     if FAILURES:
         print("\n%d check(s) failed" % len(FAILURES))

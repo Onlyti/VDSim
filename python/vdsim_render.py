@@ -387,6 +387,32 @@ def _fmt_util(u: float) -> str:
     return "%4.2f" % u
 
 
+def series_for_display(unit: str, values):
+    """Return ``(display_unit, values)`` for a plotted trace channel.
+
+    Trace channels keep their native SI representation. Matplotlib-facing
+    angular channels are converted here so every visible angle uses degrees,
+    while vehicle geometry and interpolation continue to operate in radians.
+
+    :param unit: channel unit from the trace manifest.
+    :param values: channel samples in their recorded unit.
+    :returns: display unit and a NumPy array of display values.
+    """
+    raw_unit = str(unit or "")
+    normalized = raw_unit.strip().lower()
+    for prefix in ("radians", "radian", "rad"):
+        if not normalized.startswith(prefix):
+            continue
+        suffix = normalized[len(prefix):]
+        # Accept an angle itself and compound angular units such as rad/s,
+        # rad s^-1 and rad/s^2. Reject unrelated words beginning with rad.
+        if suffix and suffix[0] not in "/ *":
+            continue
+        display_unit = "deg" + suffix
+        return display_unit, np.degrees(np.asarray(values, dtype=float))
+    return raw_unit, np.asarray(values)
+
+
 def frame_spec(tr: LoadedTrace, i: int) -> dict:
     """Describe frame ``i`` — pure function, no matplotlib, no file access.
 
@@ -573,8 +599,9 @@ def _draw_static(tr: LoadedTrace, ax_bev, ax_series):
     fail_spans = merge_spans(fail_t, float(np.median(np.diff(tr.t)))
                              if len(tr.t) > 1 else 0.0)
     for ax, (name, unit, arr) in zip(ax_series, tr.series):
-        ax.plot(tr.t, arr, lw=1.1, color="#4c72b0")
-        ax.set_ylabel("%s [%s]" % (name, unit or "-"), fontsize=8)
+        display_unit, display_arr = series_for_display(unit, arr)
+        ax.plot(tr.t, display_arr, lw=1.1, color="#4c72b0")
+        ax.set_ylabel("%s [%s]" % (name, display_unit or "-"), fontsize=8)
         ax.tick_params(labelsize=7)
         ax.grid(True, alpha=0.25, lw=0.5)
         ax.set_xlim(float(tr.t[0]), float(tr.t[-1]))
@@ -1000,12 +1027,16 @@ def _draw_multi_static(scene: MultiScene, ax_bev, ax_panels, alpha: float,
     ax_bev.legend(loc="lower left", fontsize=7, framealpha=0.6, ncol=1)
 
     for ax, name in zip(ax_panels, scene.series_names):
+        source_unit = scene.series_unit(name)
+        display_unit = source_unit
         for idx, run in enumerate(scene.runs):
             arr = scene.series_of(run, name)
             if arr is None:
                 continue
-            ax.plot(run.t, arr, lw=1.1, color=scene.colors[idx], alpha=0.9)
-        ax.set_ylabel("%s [%s]" % (name, scene.series_unit(name) or "-"), fontsize=8)
+            display_unit, display_arr = series_for_display(source_unit, arr)
+            ax.plot(run.t, display_arr, lw=1.1,
+                    color=scene.colors[idx], alpha=0.9)
+        ax.set_ylabel("%s [%s]" % (name, display_unit or "-"), fontsize=8)
     ax_util = ax_panels[-1]
     for idx, run in enumerate(scene.runs):
         ax_util.plot(run.t, run.util.max(axis=1), lw=1.1,
