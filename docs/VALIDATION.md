@@ -1,6 +1,6 @@
 # VDSim validation & credibility
 
-> **v0.5.1+ experimental / pre-release.** The claims below rest on open evidence
+> **v0.6.2+ experimental / pre-release.** The claims below rest on open evidence
 > (analytic + ISO standard + cross-model/cross-tool self-consistency). There is
 > no published cross-validation against a commercial reference on real-vehicle
 > data — see "Honest limitations". Not for production use. Do **not** claim
@@ -20,7 +20,7 @@ the last section.
 | ISO 7401 step-steer / 4138 understeer / 3888-2 DLC — run + measured | — |
 | L1↔L2↔L3 cross-model consistency where physics overlaps | Dependent axles (twist-beam / solid beam) — configs are stubs |
 | FMI round-trip Δ=0 (machine precision); ISO 8608 PSD RMS per class | L3 unsprung lateral-transfer term (small) |
-| Full suite: **404/404 ctest green** (measured 2026-06-25) | — |
+| Full suite: **409/409 ctest green** (as of 2026-09-01) | — |
 | Drivetrain engine inertia (open-diff carrier coupling) | — |
 | **ISO step-steer signature gated in CI** (`ctest -R IsoBaseline`, sedan L2 LuGre) | DLC moose gate is a preset property, not a defect (see note) |
 
@@ -78,7 +78,7 @@ matching MF-Tyre/CarMaker. Initial wheel spin is set per-wheel via `free_roll_wh
 (vx/Re at static load) so no phantom longitudinal force appears at t=0. Re is opt-in: tires
 without BREFF/DREFF/FREFF (reff_*=0) fall back to the unloaded radius R0 unchanged.
 
-Full automated suite: `cd build && ctest` — **404** checks, 100% green (measured 2026-06-25).
+Full automated suite: `cd build && ctest` — **409** checks, 100% green (as of 2026-09-01).
 One-command evidence bundle (ctests + tire parity table + ISO figures + summary.md):
 `python3 tools/validation_report.py`.
 
@@ -167,7 +167,7 @@ folded into the re-baselined table above.
 ## Reproducing the whole report
 
 ```sh
-cmake --build build -j && (cd build && ctest --output-on-failure)   # 404 checks
+cmake --build build -j && (cd build && ctest --output-on-failure)   # 409 checks
 python3 apps/validation/run_validation.py    # ISO 7401/4138/3888 -> REPORT.md
 python3 fmi_export/test_roundtrip.py          # FMU vs native
 ```

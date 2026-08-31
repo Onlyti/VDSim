@@ -5,13 +5,16 @@
 [![build](https://github.com/Onlyti/VDSim/actions/workflows/build.yml/badge.svg)](https://github.com/Onlyti/VDSim/actions/workflows/build.yml)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 ![status](https://img.shields.io/badge/status-experimental%20pre--release-orange.svg)
-![tests](https://img.shields.io/badge/ctest-404%2F404-green.svg)
 
-> **Experimental / pre-release — 양산용 아님.** 근거·한계:
-> [VALIDATION.md](docs/VALIDATION.md) (v0.5.1+).
-> **검증됨:** analytic + ISO 기동 + L1↔L3 self-consistency + 동일 `.tir` pure-slip
-> cross-check (CarMaker &lt;0.1%, Chrono Pac02 ~0.8%) — MF-Tyre 제품 parity 아님.
-> **미검증:** full-vehicle 상용 cross-val, 실차 데이터, production sign-off.
+> **Experimental / pre-release software — not for production use.**
+> What is verified, and what is *not yet*: see [docs/VALIDATION.md](docs/VALIDATION.md).
+
+**Verification scope.** VDSim's tire-force layer is cross-checked against two independent
+implementations driven by the same `.tir` parameter file: CarMaker MF-Tyre/MF-Swift
+(pure longitudinal 0.00%, pure lateral 0.09%) and Chrono Pac02 (BSD-3, ~0.8% / 0.7%).
+This is a pure-slip cross-check between implementations, not product parity.
+Full-vehicle behaviour (suspension, transient) and comparison against real-vehicle
+measurements are **not yet** covered.
 
 ![Grip-loss demo](docs/assets/demo_grip_loss.gif)
 
@@ -19,7 +22,7 @@
 너머 포화(drift>1) — soft-clamp가 아닌 실제 grip loss.* 재현:
 `python examples/demo_grip_loss.py` (`pip install vdsim[plot]` 또는 로컬 wheel).
 
-Open-core 차량동역학 시뮬레이터. VDSim 은 **차량 그 자체**를 담당합니다 — 검증된
+Open-core 차량동역학 시뮬레이터. VDSim 은 **차량 그 자체**를 담당합니다 — 구현된
 L1–L5 동역학 + 실제 Pacejka MF / LuGre / belt-transient 타이어 + 설계검증 가능한
 hardpoint 서스펜션 운동학 + 양방향 FMI 2.0. 렌더링·센서는 CARLA 같은 도구에
 위임합니다. perception 스택에 없는 "섀시 정확도" 절반을 채웁니다.
