@@ -5,6 +5,7 @@
 // against raw state, force and output samples.
 
 #include "vdsim/interfaces.hpp"
+#include "vdsim/multibody.hpp"
 
 #include <gtest/gtest.h>
 
@@ -133,15 +134,26 @@ vdsim::ControlInput command_at(int step) {
     return command;
 }
 
-/** Execute the representative L3 scenario on an explicit flat ContactArray. */
-Table run_scenario() {
+/** Execute the representative L3 or production-configured L4 flat-road path. */
+Table run_scenario(bool use_l4) {
     vdsim::VehicleParams vehicle;
     vehicle.aero_drag_coeff = 0.0;
     vdsim::TireParams tire;
     tire.lugre.enabled = false;
     vdsim::SolverParams solver;
-    auto dynamics = vdsim::create_fourteen_dof();
+    auto dynamics = use_l4
+        ? vdsim::create_fourteen_dof_kinematic()
+        : vdsim::create_fourteen_dof();
     dynamics->initialize(vehicle, tire, solver);
+    if (use_l4) {
+        const std::string topology_path = std::string(VDSIM_SOURCE_DIR)
+            + "/configs/parts/susp_kinematics/kin/mp_front_sedan.yaml";
+        const auto topology =
+            vdsim::mb::SuspensionTopology::from_yaml(topology_path);
+        if (!vdsim::mb::attach_topology_front(*dynamics, topology)) {
+            throw std::runtime_error("cannot attach production L4 front topology");
+        }
+    }
 
     vdsim::State initial;
     initial.velocity.x() = 15.0;
@@ -231,11 +243,14 @@ bool is_force_channel(const std::string& name) {
     return name.rfind("force_", 0) == 0;
 }
 
-}  // namespace
-
-TEST(D0FlatContactBaseline, RepresentativeScenarioMatchesFrozenFixture) {
-    const auto current = run_scenario();
-    const auto repeated = run_scenario();
+/** Compare one level's repeated run and frozen fixture within the D0 tolerances. */
+void verify_level(const char* label,
+                  bool use_l4,
+                  const char* fixture_name,
+                  const char* capture_env,
+                  bool allow_legacy_capture_env) {
+    const auto current = run_scenario(use_l4);
+    const auto repeated = run_scenario(use_l4);
     ASSERT_EQ(current.size(), repeated.size());
     double repeat_max_abs_diff = 0.0;
     bool bit_identical = true;
@@ -250,11 +265,15 @@ TEST(D0FlatContactBaseline, RepresentativeScenarioMatchesFrozenFixture) {
                 && bits(current[row][col]) == bits(repeated[row][col]);
         }
     }
-    EXPECT_TRUE(bit_identical);
+    EXPECT_TRUE(bit_identical) << "level=" << label;
 
-    if (const char* capture_path = std::getenv("VDSIM_D0_CAPTURE")) {
+    const char* capture_path = std::getenv(capture_env);
+    if (capture_path == nullptr && allow_legacy_capture_env) {
+        capture_path = std::getenv("VDSIM_D0_CAPTURE");
+    }
+    if (capture_path != nullptr) {
         ASSERT_NO_THROW(write_csv(capture_path, current));
-        std::cout << "[D0] captured=" << capture_path
+        std::cout << "[D0:" << label << "] captured=" << capture_path
                   << " rows=" << current.size()
                   << " bit_identical=" << std::boolalpha << bit_identical
                   << " repeat_max_abs_diff=" << repeat_max_abs_diff << '\n';
@@ -262,16 +281,17 @@ TEST(D0FlatContactBaseline, RepresentativeScenarioMatchesFrozenFixture) {
     }
 
     const std::string baseline_path = std::string(VDSIM_SOURCE_DIR)
-        + "/tests/fixtures/d0_flat_contact_l3_baseline.csv";
+        + "/tests/fixtures/" + fixture_name;
     const auto baseline = read_csv(baseline_path);
     const auto names = headers();
-    ASSERT_EQ(current.size(), baseline.size());
+    ASSERT_EQ(current.size(), baseline.size()) << "level=" << label;
     double state_output_max_abs_diff = 0.0;
     double force_max_abs_diff = 0.0;
     for (std::size_t row = 0; row < current.size(); ++row) {
         ASSERT_EQ(current[row].size(), baseline[row].size());
         for (std::size_t col = 0; col < current[row].size(); ++col) {
-            const double difference = std::abs(current[row][col] - baseline[row][col]);
+            const double difference =
+                std::abs(current[row][col] - baseline[row][col]);
             const bool force_channel = is_force_channel(names[col]);
             const double tolerance = force_channel
                 ? kForceToleranceN : kStateOutputTolerance;
@@ -282,15 +302,26 @@ TEST(D0FlatContactBaseline, RepresentativeScenarioMatchesFrozenFixture) {
                     state_output_max_abs_diff, difference);
             }
             EXPECT_LE(difference, tolerance)
-                << "row=" << row << " channel=" << names[col]
+                << "level=" << label << " row=" << row
+                << " channel=" << names[col]
                 << " current=" << std::setprecision(17) << current[row][col]
                 << " baseline=" << baseline[row][col];
         }
     }
-    std::cout << "[D0] bit_identical=" << std::boolalpha << bit_identical
+    std::cout << "[D0:" << label << "] bit_identical=" << std::boolalpha
+              << bit_identical
               << " repeat_max_abs_diff=" << repeat_max_abs_diff
               << " state_output_max_abs_diff=" << state_output_max_abs_diff
               << " force_max_abs_diff=" << force_max_abs_diff
               << " state_output_tolerance=" << kStateOutputTolerance
               << " force_tolerance_N=" << kForceToleranceN << '\n';
+}
+
+}  // namespace
+
+TEST(D0FlatContactBaseline, RepresentativeScenarioMatchesFrozenFixture) {
+    verify_level("L3", false, "d0_flat_contact_l3_baseline.csv",
+                 "VDSIM_D0_CAPTURE_L3", true);
+    verify_level("L4", true, "d0_flat_contact_l4_baseline.csv",
+                 "VDSIM_D0_CAPTURE_L4", false);
 }
