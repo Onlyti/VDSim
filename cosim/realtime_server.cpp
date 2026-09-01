@@ -3,6 +3,7 @@
 //   vdsim_realtime --scene=<scene.yaml|world.yaml> [options]
 #include "comms_templates.hpp"
 #include "cosim_protocol.hpp"
+#include "warn_throttle.hpp"
 #include "scene_loader.hpp"
 
 #include <yaml-cpp/yaml.h>
@@ -393,6 +394,9 @@ struct TxChannel {
     std::string templ {"vds1"};
     std::vector<sockaddr_in> dests;
     vdsim::cosim::GeodeticOrigin origin;   // datum for lat/lon templates (nmea_gga)
+    // Rate limiter for the per-tick encoder warnings below: without it a channel
+    // whose encoder keeps failing writes one stderr line per tick (200 Hz).
+    vdsim::cosim::WarnThrottle warn;
 };
 
 sockaddr_in make_addr(const std::string& ip, int port) {
@@ -718,7 +722,7 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
             g_run.store(false);
         }
         if (comms_mode) {
-            for (const auto& tc : tx_channels) {
+            for (auto& tc : tx_channels) {
                 const auto* wv = by_id[tc.id];
                 const auto o = wv->sim->output();
                 vdsim::cosim::StateFields s;
@@ -734,14 +738,20 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
                 else if (tc.templ == "vds1")
                     len = vdsim::cosim::encode_state(out, s);
                 else {
-                    std::fprintf(stderr, "[vdsim_realtime] skip unknown template %s\n", tc.templ.c_str());
+                    if (vdsim::cosim::warn_due(t, tc.warn))
+                        std::fprintf(stderr, "[vdsim_realtime] skip unknown template %s"
+                            " (%llu suppressed so far)\n", tc.templ.c_str(),
+                            static_cast<unsigned long long>(tc.warn.suppressed));
                     continue;
                 }
                 if (len < 0) {
                     // The text encoders never emit a truncated frame: a cut-short
                     // JSON object / NMEA sentence is unparseable at the consumer.
-                    std::fprintf(stderr, "[vdsim_realtime] comms: template %s does not fit"
-                        " the %zu B tx buffer, dropping frame\n", tc.templ.c_str(), sizeof(out));
+                    if (vdsim::cosim::warn_due(t, tc.warn))
+                        std::fprintf(stderr, "[vdsim_realtime] comms: template %s does not fit"
+                            " the %zu B tx buffer, dropping frame (%llu suppressed so far)\n",
+                            tc.templ.c_str(), sizeof(out),
+                            static_cast<unsigned long long>(tc.warn.suppressed));
                     continue;
                 }
                 if (len > 0) {

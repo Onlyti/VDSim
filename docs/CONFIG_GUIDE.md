@@ -222,10 +222,15 @@ channels:
 
 `nmea_gga` 세부(구현: `cosim/comms_templates.hpp`, 샘플: `configs/comms/json_nmea.yaml`):
 - **origin**: 채널별 선택 필드 `origin: {lat, lon, alt}`. 시뮬 ENU 미터(X east / Y north / Z up, `core/include/vdsim/coordinate.hpp`)의 측지 기준점. 미지정 시 (0, 0, 0).
-- **투영**: origin 접평면 등거리원통(equirectangular) 근사 — `lat = lat0 + north/M·(180/π)`, `lon = lon0 + east/(N·cos lat0)·(180/π)` (WGS84 M/N 곡률반경). WGS84 정밀 역해가 **아님**: 10 km 에서 ~0.1 m, 100 km 에서 ~100 m 수준 오차, 극지방에서는 무의미.
+- **변환**: WGS84 정밀 폐형해 — ENU → ECEF (origin ECEF + ENU 회전행렬) → geodetic (Bowring + Newton). 근사가 아니므로 **위도 의존성이 없다**: PROJ `+proj=topocentric` 기준 최대 편차 6e-8 m (극지방·날짜변경선 포함). lat∈[-90,90], lon∈(-180,180] 로 항상 정규화된다.
+  - 직전 버전은 등거리원통(equirectangular) 근사(`lon = lon0 + east/(N·cos lat0)`)로, 서울 datum(lat 37.5665) 기준 10 km 에서 6.75 m / 100 km 에서 678 m 오차였다 — 문서에는 0.1 m / 100 m 로 적혀 있었으나 그것은 적도 근처에서만 성립하는 값이다.
+  - 남은 오차는 구현이 아니라 ENU **정의** 자체다: 접평면이므로 수평 거리 d 에서 타원체 위로 ~d²/(2R) 만큼 뜨고(10 km 에서 7.8 m, GGA 고도에 반영됨), 진짜 측지선 대비 ~d³/(3R²) 차이가 남는다(10 km 에서 8 mm, 100 km 에서 8.2 m). 고도는 타원체고(HAE)이며 geoid 모델은 없다.
+- **비정상 상태 처리**: 솔버가 발산해 NaN/Inf 또는 비상식적으로 큰 ENU 오프셋(|offset| > 1e8 m)이 들어오면, 실제 수신기처럼 **no-fix 문장**(quality 0, 00 satellites, 99.9 HDOP, 빈 위치/고도 필드)을 내보낸다. 과거에는 `static_cast<int>(NaN)` UB 로 필드 안에 공백이 들어간 문장이 체크섬까지 맞은 채 전송됐다.
 - **위치 소스**: 측정 GNSS(`m_gnss_x/_y`). GGA 는 수신기 출력이므로 센서 노이즈가 그대로 반영된다. 노이즈 미설정 시에도 `SensorModel` 이 항등 경로로 truth 를 채우므로 값이 비지 않는다. 고도만 truth `z`(GNSS 고도 채널 모델 없음).
-- **UTC 필드**: 시스템 wall clock (STATE 의 `timestamp` 는 steady_clock 기반 monotonic 이라 UTC 가 아님).
+- **UTC 필드**: 시스템 wall clock (STATE 의 `timestamp` 는 steady_clock 기반 monotonic 이라 UTC 가 아님). 초는 출력 정밀도(1/100 s)로 **먼저 반올림한 뒤** 초→분→시→날 자리올림을 하므로 `125960.00` 같은 불법 시각은 나오지 않는다.
 - **satellites / HDOP / geoid separation**: 위성·DOP 모델이 없어 고정 placeholder(12 / 0.9 / 0.0).
+
+`json` 세부: 모든 숫자 필드는 유한값이 아니면 RFC 8259 의 `null` 로 출력된다(`nan`/`inf` 는 JSON 이 아니라 `json.loads`·`JSON.parse` 모두 거부한다). 발산 시 프레임을 버리지 않고 `null` 로 신호하는 이유는, 조용히 사라진 데이터그램은 단순 UDP 손실과 구분되지 않기 때문이다.
 
 ---
 
