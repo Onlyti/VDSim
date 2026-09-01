@@ -18,6 +18,8 @@ fleet:
   # the simulation today. No noise_std here on purpose: this scene stays
   # bit-identical to ground truth so the comms/GUI tests that read vehicle 0 keep
   # their exact expectations. Add noise_std/bias/bias_rw per entry to degrade it.
+  # A mount-only block like this one declares mounts and nothing else: it does not
+  # override a scenario-level `sensors:` file (CONFIG_GUIDE §2.3.1).
   sensors:
   - { id: gnss_roof, type: gnss,        mount: { pos: [0.20, 0.0, 1.42], rpy: [0, 0, 0] },     rate: 10 }
   - { id: imu_cg,    type: imu,         mount: { pos: [1.35, 0.0, 0.45], rpy: [0, 0, 0] },     rate: 200 }

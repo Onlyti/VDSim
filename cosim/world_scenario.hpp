@@ -56,6 +56,7 @@ struct StuntConfig {
 // One sensor exactly as the scene declares it (agents.vehicle.sensors[], see
 // docs/CONFIG_GUIDE.md §2.3):
 //   - { id: gnss, type: gnss, mount: { pos: [1.4,0,1.0], rpy: [0,0,0] }, rate: 10 }
+//   - { id: gnss, type: gnss, mount: [1.4,0,1.0], yaw: 0, rate: 10 }   (builder form)
 // This is the mounting half of the declaration. The measurement-noise half of the
 // same list entry (noise_std/bias/bias_rw) goes to VehicleSpawn::sensors instead,
 // because vdsim::SensorParams models noise per signal group, not per mounted device.
@@ -63,7 +64,9 @@ struct StuntConfig {
 // Nothing reads the mount pose or rate yet: they are parsed and stored for the
 // future render / sensor-frame coupling and do not affect the simulation.
 struct SceneSensor {
-    std::string id;      // scene-unique label ("gnss_roof"); defaults to `type` when omitted
+    std::string id;      // label ("gnss_roof"); defaults to `type` when omitted. Ids the
+                         // scene writes explicitly must be unique within a vehicle; a
+                         // defaulted one is a display label and may repeat.
     std::string type;    // gnss | imu | wheel_speed | steer | camera | lidar, plus the
                          // gnss_pos / gnss_vel / imu_accel / imu_gyro sub-signals
     std::array<double, 3> mount_pos {{0.0, 0.0, 0.0}};  // body frame [m]: x fwd, y left, z up
@@ -91,7 +94,11 @@ struct VehicleSpawn {
     // "internal": built-in controller (v1 = speed-hold cruise at vx0).
     std::string control {"external"};
     // Per-vehicle sensor noise spec (from agents.vehicle.sensors[] in the scene).
-    // When set, overrides the scenario-level RoadConfig.sensors file path.
+    // When set, overrides the scenario-level RoadConfig.sensors file path. Set only
+    // when the declaration actually specifies noise (a noise key on an entry that has
+    // a measurement model, an explicit enabled/seed, or the sensors-file form): a
+    // mount-only `sensors:` block leaves this empty so the vehicle keeps the
+    // scenario-level file rather than silently running clean beside its neighbours.
     std::optional<vdsim::SensorParams> sensors;
     // Mount/rate declarations from that same agents.vehicle.sensors[] list, one
     // entry per declared device. Empty when the vehicle uses the sensors-file form
