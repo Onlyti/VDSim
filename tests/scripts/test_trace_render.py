@@ -216,6 +216,50 @@ def test_t6_instrument_panel():
           "instrument readouts expose speed unit and steering ratio")
     vr.plt.close(fig)
 
+
+def test_t6_layout_non_overlap():
+    """T6 gauges have zero geometric overlap with the BEV, HUD and panels."""
+    tr = vr.LoadedTrace(FIXTURE)
+    layout = vr.single_layout_spec(len(tr.series))
+
+    def intersects(a, b):
+        return (min(a[0] + a[2], b[0] + b[2]) > max(a[0], b[0])
+                and min(a[1] + a[3], b[1] + b[3]) > max(a[1], b[1]))
+
+    instrument_rects = (layout["steering"], layout["speed"])
+    check(not intersects(*instrument_rects),
+          "steering-wheel and speedometer layout rectangles do not overlap")
+    for name, rect in (("BEV", layout["bev"]),
+                       *(('series-%d' % k, r)
+                         for k, r in enumerate(layout["series"]))):
+        check(all(not intersects(rect, gauge) for gauge in instrument_rects),
+              "instrument strip does not overlap %s rectangle" % name)
+
+    fig, ax_bev, axes = vr._setup_axes(tr, (11.0, 5.6), 100)
+    instrument_axes = fig._vdsim_instrument_axes
+    artists = vr._draw_static(tr, ax_bev, axes)
+    vr.draw_frame(artists, ax_bev, vr.frame_spec(tr, 0))
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    to_figure = fig.transFigure.inverted()
+    actual_bev = ax_bev.get_position().bounds
+    actual_panels = [ax.get_position().bounds for ax in axes]
+    actual_gauges = [ax.get_position().bounds for ax in instrument_axes.values()]
+    check(all(not intersects(gauge, actual_bev) for gauge in actual_gauges),
+          "actual instrument axes do not overlap the BEV/HUD axes")
+    check(all(not intersects(gauge, panel)
+              for gauge in actual_gauges for panel in actual_panels),
+          "actual instrument axes do not overlap command panels")
+    bev_tight = ax_bev.get_tightbbox(renderer).transformed(to_figure).bounds
+    gauge_tight = [ax.get_tightbbox(renderer).transformed(to_figure).bounds
+                   for ax in instrument_axes.values()]
+    check(all(not intersects(gauge, bev_tight) for gauge in gauge_tight),
+          "instrument decorations do not overlap BEV labels")
+    hud_bbox = artists["hud"].get_window_extent(renderer).transformed(to_figure).bounds
+    check(all(not intersects(gauge, hud_bbox) for gauge in gauge_tight),
+          "instrument decorations do not overlap HUD bbox")
+    vr.plt.close(fig)
+
 def test_render_from_fixture_only():
     """DoD 5 + 7: fixture in, GIF + PNG out, wall-clock measured."""
     with tempfile.TemporaryDirectory() as td:
@@ -254,6 +298,7 @@ def main():
     test_series_selection_is_manifest_driven()
     test_angular_series_are_displayed_in_degrees()
     test_t6_instrument_panel()
+    test_t6_layout_non_overlap()
     test_render_from_fixture_only()
     if FAILURES:
         print("\n%d check(s) failed" % len(FAILURES))

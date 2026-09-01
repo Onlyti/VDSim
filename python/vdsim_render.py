@@ -550,20 +550,55 @@ def merge_spans(times, dt: float):
             for a, b in zip(starts, ends)]
 
 
+def single_layout_spec(n_series: int) -> dict:
+    """Return non-overlapping normalized figure rectangles for one run.
+
+    The T6 instruments occupy a dedicated strip below the BEV instead of
+    inset axes inside it.  Keeping this geometry in a pure function makes the
+    fixed-screen contract testable without relying on artist draw order.
+
+    :param n_series: number of command/time-series panels on the right.
+    :returns: ``bev``, ``steering``, ``speed`` rectangles and a ``series``
+        tuple, each in Matplotlib ``[left, bottom, width, height]`` form.
+    """
+    if n_series < 1:
+        raise ValueError("single-run layout requires at least one series panel")
+    series_bottom = 0.10
+    series_top = 0.90
+    series_gap = 0.025
+    series_height = ((series_top - series_bottom)
+                     - series_gap * (n_series - 1)) / n_series
+    series = tuple(
+        (0.685,
+         series_top - (k + 1) * series_height - k * series_gap,
+         0.280, series_height)
+        for k in range(n_series)
+    )
+    return {
+        "bev": (0.07, 0.300, 0.525, 0.600),
+        "steering": (0.145, 0.020, 0.145, 0.140),
+        "speed": (0.365, 0.020, 0.145, 0.140),
+        "series": series,
+    }
+
+
 def _setup_axes(tr: LoadedTrace, figsize, dpi):
+    layout = single_layout_spec(len(tr.series))
     fig = plt.figure(figsize=figsize, dpi=dpi)
-    gs = GridSpec(len(tr.series), 2, figure=fig, width_ratios=[1.45, 1.0],
-                  hspace=0.32, wspace=0.24,
-                  left=0.07, right=0.965, top=0.90, bottom=0.10)
-    ax_bev = fig.add_subplot(gs[:, 0])
-    ax_series = [fig.add_subplot(gs[k, 1]) for k in range(len(tr.series))]
+    ax_bev = fig.add_axes(layout["bev"])
+    ax_series = [fig.add_axes(rect) for rect in layout["series"]]
+    ax_instruments = {
+        "steering": fig.add_axes(layout["steering"]),
+        "speed": fig.add_axes(layout["speed"]),
+    }
+    fig._vdsim_instrument_axes = ax_instruments
     return fig, ax_bev, ax_series
 
 
-def _instrument_artists(ax_bev, tr: LoadedTrace):
-    """Create the fixed-screen T6 steering-wheel and speedometer artists."""
-    steer_ax = ax_bev.inset_axes([0.64, 0.755, 0.155, 0.19], zorder=9)
-    speed_ax = ax_bev.inset_axes([0.81, 0.755, 0.175, 0.19], zorder=9)
+def _instrument_artists(ax_instruments, tr: LoadedTrace):
+    """Create T6 artists in dedicated, geometrically isolated axes."""
+    steer_ax = ax_instruments["steering"]
+    speed_ax = ax_instruments["speed"]
     for ax, title in ((steer_ax, "steering wheel"), (speed_ax, "speed")):
         ax.set_xlim(-1.15, 1.15)
         ax.set_ylim(-1.28, 1.12)
@@ -596,8 +631,10 @@ def _instrument_artists(ax_bev, tr: LoadedTrace):
                 speed_needle=speed_needle, speed_text=speed_text)
 
 
-def _draw_static(tr: LoadedTrace, ax_bev, ax_series):
+def _draw_static(tr: LoadedTrace, ax_bev, ax_series, ax_instruments=None):
     """Draw everything that does not change per frame, and build the artists."""
+    if ax_instruments is None:
+        ax_instruments = ax_bev.figure._vdsim_instrument_axes
     ax_bev.set_aspect("equal", adjustable="box")
     ax_bev.set_xlabel("X [m]")
     ax_bev.set_ylabel("Y [m]")
@@ -701,7 +738,7 @@ def _draw_static(tr: LoadedTrace, ax_bev, ax_series):
         cursors.append(ax.axvline(float(tr.t[0]), color="#111111", lw=1.0))
     if ax_series:
         ax_series[-1].set_xlabel("time [s]", fontsize=8)
-    instruments = _instrument_artists(ax_bev, tr)
+    instruments = _instrument_artists(ax_instruments, tr)
     return dict(trail=trail, body=body, wheels=wheels, arrow=arrow,
                 hud=hud, cursors=cursors, target=target,
                 prediction=prediction, qpfail=qpfail,
