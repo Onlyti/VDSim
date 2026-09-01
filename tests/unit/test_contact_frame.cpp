@@ -3,6 +3,8 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <iomanip>
+#include <iostream>
 #include <limits>
 
 namespace {
@@ -70,6 +72,32 @@ TEST(ContactFrame, FzIsTheInjectedNormalDirectionComponent) {
     EXPECT_NEAR(normal_force.dot(frame.z_c), Fz, 1e-12);
     EXPECT_NEAR(normal_force.dot(frame.x_c), 0.0, 1e-12);
     EXPECT_NEAR(normal_force.dot(frame.y_c), 0.0, 1e-12);
+}
+
+TEST(ContactFrame, FullContactWrenchMatchesIndependentVectorTheory) {
+    const double bank = 10.0 * kDegToRad;
+    const auto frame = vdsim::make_contact_frame(
+        bank_normal(bank), vdsim::Vec3::UnitX());
+    ASSERT_TRUE(frame.valid);
+
+    constexpr double Fx = 120.0;
+    constexpr double Fy = -240.0;
+    constexpr double Fz = 3200.0;
+    const vdsim::Vec3 lever(1.4, 0.8, -0.5);
+    const double s = std::sin(bank);
+    const double c = std::cos(bank);
+    const vdsim::Vec3 expected_force(
+        Fx, Fy * c - Fz * s, Fy * s + Fz * c);
+    const vdsim::Vec3 expected_moment = lever.cross(expected_force);
+
+    const auto actual_force = frame.contact_force(Fx, Fy, Fz);
+    const auto actual_moment = frame.contact_moment(lever, Fx, Fy, Fz);
+    EXPECT_NEAR((actual_force - expected_force).norm(), 0.0, 1e-12);
+    EXPECT_NEAR((actual_moment - expected_moment).norm(), 0.0, 2e-12);
+
+    std::cout << std::setprecision(17)
+              << "[D1:wrench] force=" << actual_force.transpose()
+              << " moment=" << actual_moment.transpose() << '\n';
 }
 
 TEST(ContactFrame, DegenerateInputsFailClosedWithoutPlanarFallback) {

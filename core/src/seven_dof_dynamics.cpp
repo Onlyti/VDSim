@@ -24,6 +24,8 @@
 #include "vdsim/low_speed.hpp"
 #include "vdsim/subsystems.hpp"
 
+#include "contact_frame_internal.hpp"
+
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
@@ -118,6 +120,9 @@ public:
         contact_dy_.fill(0.0);
         mx_w_.fill(0.0);
         transient_.fill(ITireModel::Transient{});
+        contact_active_.fill(false);
+        contact_moment_delta_.fill(Vec3::Zero());
+        l4_contact_kinematics_ = detail::L4ContactKinematics{};
         ci_.fill(ITireModel::ContactInput{});
         drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
         brake_      = make_default_brake(vp_, vp_.brake_deadtime_s);
@@ -190,6 +195,16 @@ public:
     int    current_gear() const override { return drivetrain_->current_gear(); }
     bool   set_shift_policy(ShiftPolicy fn) override {
         return drivetrain_->set_shift_policy(std::move(fn)); }
+
+    /** Set one-step L4 spatial kinematics without extending the public plant interface. */
+    void set_l4_contact_kinematics(const detail::L4ContactKinematics& context) noexcept {
+        l4_contact_kinematics_ = context;
+    }
+
+    /** Return contact-moment corrections not already represented by flat suspension/inertia. */
+    const std::array<Vec3, NUM_WHEELS>& contact_moment_delta() const noexcept {
+        return contact_moment_delta_;
+    }
     bool   set_brake_module(std::shared_ptr<IBrakeSystem> m) override {
         if (!m) return false;
         brake_ = std::move(m);
@@ -422,6 +437,7 @@ private:
 
         // ---- Per-tire velocity, slip, force ----
         std::array<Vec3,   NUM_WHEELS> F_body;
+        std::array<Vec3,   NUM_WHEELS> F_applied;
         std::array<Vec3,   NUM_WHEELS> tire_F_disp;   // reported force (lateral faded by lambda)
         std::array<Vec3,   NUM_WHEELS> tire_F_wheel_disp;  // same, wheel frame (pre steer rotation)
         std::array<double, NUM_WHEELS> kappa, alpha;
@@ -461,14 +477,22 @@ private:
             // the planar body frame, then construct one shared exact contact
             // basis for both L3 and L4 (which delegate through this path).
             const Vec3& nw = contacts[i].normal;
-            const Vec3 normal_body(
-                std::cos(yaw) * nw.x() + std::sin(yaw) * nw.y(),
-               -std::sin(yaw) * nw.x() + std::cos(yaw) * nw.y(),
-                nw.z());
+            const bool canonical_flat = nw.x() == 0.0 && nw.y() == 0.0
+                                      && nw.z() > 0.0;
+            Vec3 normal_body;
+            if (l4_contact_kinematics_.enabled && !canonical_flat) {
+                normal_body = l4_contact_kinematics_.body_to_world.conjugate() * nw;
+            } else {
+                normal_body = Vec3(
+                    std::cos(yaw) * nw.x() + std::sin(yaw) * nw.y(),
+                   -std::sin(yaw) * nw.x() + std::cos(yaw) * nw.y(),
+                    nw.z());
+            }
             const ContactFrame contact_frame = make_contact_frame(
                 normal_body, Vec3(cd_i, sd_i, 0.0));
             if (!contacts[i].is_valid || !contact_frame.valid) {
                 F_body[i]      = Vec3::Zero();
+                F_applied[i]   = Vec3::Zero();
                 tire_F_disp[i] = Vec3::Zero();
                 tire_F_wheel_disp[i] = Vec3::Zero();
                 kappa[i]       = 0.0;
@@ -482,12 +506,29 @@ private:
                 wheel_alpha_peak_[i] = 0.0;
                 wheel_kappa_peak_[i] = 0.0;
                 ci_[i]         = ITireModel::ContactInput{};  // neutral: no bristle/relax evolution
+                transient_[i]  = ITireModel::Transient{};
+                contact_active_[i] = false;
+                contact_moment_delta_[i] = Vec3::Zero();
                 continue;
             }
             const double v_x_body = vx - r * r_y[i];
             const double v_y_body = vy + r * r_x[i];
+            Vec3 wheel_velocity_body(v_x_body, v_y_body, 0.0);
+            if (l4_contact_kinematics_.enabled && !canonical_flat) {
+                const Vec3 lever(r_x[i], r_y[i], -h_cg);
+                const Vec3 rigid_velocity = s.velocity
+                    + l4_contact_kinematics_.angular_velocity_body.cross(lever);
+                Vec3 wheel_velocity_world =
+                    l4_contact_kinematics_.body_to_world * rigid_velocity;
+                wheel_velocity_world.z() =
+                    l4_contact_kinematics_.wheel_vertical_velocity_world[i];
+                wheel_velocity_body =
+                    l4_contact_kinematics_.body_to_world.conjugate()
+                    * wheel_velocity_world;
+            }
             const Vec3 contact_velocity = contact_frame.resolve_velocity(
-                Vec3(v_x_body, v_y_body, 0.0));
+                wheel_velocity_body);
+            contact_active_[i] = true;
 
             const double mu_long_i = contacts[i].mu_long;
             const double mu_lat_i  = contacts[i].mu_lat;
@@ -554,6 +595,25 @@ private:
             }
             if (lugre_i) fx_kin[i] = Fx_w;
             F_body[i] = contact_frame.tangential_force(Fx_w, Fy_w);
+            const Vec3 full_contact_force =
+                contact_frame.contact_force(Fx_w, Fy_w, Fz[i]);
+            // Flat vertical load is already carried by the L3/L4 suspension.
+            // Apply only the normal-vector delta here; this makes the total
+            // physical contact force full_contact_force without double-counting
+            // the legacy Fz*e_z path and is exactly zero on canonical flat road.
+            F_applied[i] = full_contact_force - Fz[i] * Vec3::UnitZ();
+            if (canonical_flat) {
+                contact_moment_delta_[i] = Vec3::Zero();
+            } else {
+                const double vertical_delta = full_contact_force.z() - Fz[i];
+                // The existing m*a*h terms already carry the horizontal-force
+                // lever arm, and suspension carries r_xy cross Fz*e_z.  Only
+                // the non-flat vertical correction remains for roll/pitch.
+                contact_moment_delta_[i] = Vec3(
+                    r_y[i] * vertical_delta,
+                   -r_x[i] * vertical_delta,
+                    0.0);
+            }
             const double Fdm = std::hypot(Fxd, Fyd);
             if (!ts_.for_wheel(i).model_provides_combined_slip() && Fdm > muFz && Fdm > 1e-9) {
                 const double c = muFz / Fdm;
@@ -583,9 +643,9 @@ private:
         // ---- Body equations ----
         double Fx_total = 0.0, Fy_total = 0.0, Mz_total = 0.0;
         for (int i = 0; i < NUM_WHEELS; ++i) {
-            Fx_total += F_body[i].x();
-            Fy_total += F_body[i].y();
-            Mz_total += r_x[i] * F_body[i].y() - r_y[i] * F_body[i].x();
+            Fx_total += F_applied[i].x();
+            Fy_total += F_applied[i].y();
+            Mz_total += r_x[i] * F_applied[i].y() - r_y[i] * F_applied[i].x();
         }
         // Per-tire Mz_wheel adds directly to body z (parallel axes, camber=0).
         for (int i = 0; i < NUM_WHEELS; ++i) Mz_total += mz_wheel[i];
@@ -732,6 +792,7 @@ private:
     // kinematics of the stage just evaluated (stored in ci_).
     void advance_bristle_(double dt) {
         for (int i = 0; i < NUM_WHEELS; ++i) {
+            if (!contact_active_[i]) continue;
             if (!ts_.for_wheel(i).lugre.enabled) continue;
             transient_[i] = wheel_tire_model(tire_, i)
                                 .advance_bristle(ci_[i], transient_[i], dt);
@@ -739,9 +800,12 @@ private:
     }
     // Carcass/belt + relaxation-length lag — advanced once per substep at the full dt,
     void advance_relaxation_(double dt) {
-        for (int i = 0; i < NUM_WHEELS; ++i)
-            transient_[i] = wheel_tire_model(tire_, i)
-                                .advance_relaxation(ci_[i], transient_[i], dt);
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            if (contact_active_[i]) {
+                transient_[i] = wheel_tire_model(tire_, i)
+                                    .advance_relaxation(ci_[i], transient_[i], dt);
+            }
+        }
     }
 
     void substep(const ContactArray& contacts, double h) {
@@ -828,6 +892,9 @@ private:
     // advance_bristle()/advance_relaxation(). ci_ holds the contact kinematics the tire
     // was last evaluated at (per stage), feeding those advance calls.
     std::array<ITireModel::Transient, NUM_WHEELS> transient_ {};
+    std::array<bool, NUM_WHEELS> contact_active_ {{false, false, false, false}};
+    detail::L4ContactKinematics l4_contact_kinematics_ {};
+    std::array<Vec3, NUM_WHEELS> contact_moment_delta_ {};
     mutable std::array<ITireModel::ContactInput, NUM_WHEELS> ci_ {};
     mutable std::array<double, NUM_WHEELS> Re_w_ {{0.31, 0.31, 0.31, 0.31}};  // effective rolling radius per wheel
     mutable std::array<double, NUM_WHEELS> contact_dy_ {{0.0, 0.0, 0.0, 0.0}};  // camber lateral contact offset
@@ -849,6 +916,22 @@ std::unique_ptr<IVehicleDynamics> create_seven_dof() {
 
 std::unique_ptr<IVehicleDynamics> create_seven_dof(std::unique_ptr<ITireModel> tire) {
     return std::make_unique<SevenDOFDynamics>(std::move(tire));
+}
+
+bool detail::set_l4_contact_kinematics(
+    IVehicleDynamics& dynamics,
+    const detail::L4ContactKinematics& context) noexcept {
+    auto* seven = dynamic_cast<SevenDOFDynamics*>(&dynamics);
+    if (seven == nullptr) return false;
+    seven->set_l4_contact_kinematics(context);
+    return true;
+}
+
+std::array<Vec3, NUM_WHEELS> detail::contact_moment_delta(
+    const IVehicleDynamics& dynamics) noexcept {
+    const auto* seven = dynamic_cast<const SevenDOFDynamics*>(&dynamics);
+    if (seven == nullptr) return {};
+    return seven->contact_moment_delta();
 }
 
 }  // namespace vdsim

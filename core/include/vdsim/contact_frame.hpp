@@ -38,6 +38,19 @@ struct ContactFrame {
 
     /** Return the parent-frame vector for normal-load magnitude Fz. */
     Vec3 normal_force(double Fz) const noexcept { return Fz * z_c; }
+
+    /** Rotate the complete contact wrench force into the parent frame. */
+    Vec3 contact_force(double Fx, double Fy, double Fz) const noexcept {
+        return tangential_force(Fx, Fy) + normal_force(Fz);
+    }
+
+    /** Return the moment about a parent-frame origin from the complete force. */
+    Vec3 contact_moment(const Vec3& lever_arm,
+                        double Fx,
+                        double Fy,
+                        double Fz) const noexcept {
+        return lever_arm.cross(contact_force(Fx, Fy, Fz));
+    }
 };
 
 /**
@@ -58,10 +71,8 @@ inline ContactFrame make_contact_frame(const Vec3& injected_normal,
         && injected_normal.z() > 0.0 && wheel_forward.z() == 0.0) {
         const double forward_norm = std::hypot(wheel_forward.x(), wheel_forward.y());
         if (!(forward_norm > 1e-12)) return frame;
-        // Heading is supplied as (cos, sin, 0); retaining those components is
-        // algebraically unit length and preserves the frozen flat-road path.
-        frame.x_c = wheel_forward;
-        frame.y_c = Vec3(-wheel_forward.y(), wheel_forward.x(), 0.0);
+        frame.x_c = wheel_forward / forward_norm;
+        frame.y_c = Vec3(-frame.x_c.y(), frame.x_c.x(), 0.0);
         frame.z_c = Vec3::UnitZ();
         frame.valid = true;
         return frame;

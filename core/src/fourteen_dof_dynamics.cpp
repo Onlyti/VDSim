@@ -44,6 +44,8 @@
 #include "vdsim/subsystems.hpp"
 #include "vdsim/suspension.hpp"
 
+#include "contact_frame_internal.hpp"
+
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
@@ -198,7 +200,18 @@ public:
             inner_->set_external_fz(fz_dyn);
         }
 
+        detail::L4ContactKinematics spatial_contact;
+        if (level() == Level::L4_Kinematic) {
+            const double yaw = yaw_from_quat(state_.orientation);
+            spatial_contact.enabled = true;
+            spatial_contact.body_to_world = quat_from_euler({phi_, th_, yaw});
+            spatial_contact.angular_velocity_body =
+                Vec3(phi_dot_, th_dot_, state_.angular_velocity.z());
+            spatial_contact.wheel_vertical_velocity_world = z_u_dot_;
+        }
+        detail::set_l4_contact_kinematics(*inner_, spatial_contact);
         inner_->step(u, contacts, dt);
+        contact_moment_delta_ = detail::contact_moment_delta(*inner_);
         state_ = inner_->state();
         mx_ = inner_->wheel_overturning_moment();   // camber contact-migration overturning
         if (dt > 0.0 && (mb_dyn_front_ || mb_dyn_rear_)) {
@@ -392,10 +405,13 @@ private:
             F_susp[WHEEL_RL] += Fr.first;  F_susp[WHEEL_RR] += Fr.second;
         }
         double Fz_sum = 0.0, M_pitch_spring = 0.0, M_roll_spring = 0.0;
+        double M_pitch_contact = 0.0, M_roll_contact = 0.0;
         for (int i = 0; i < NUM_WHEELS; ++i) {
             Fz_sum         += F_susp[i];
             M_pitch_spring -= rx_[i] * F_susp[i];
             M_roll_spring  += ry_[i] * F_susp[i];   // includes the ARB roll contribution
+            M_roll_contact  += contact_moment_delta_[i].x();
+            M_pitch_contact += contact_moment_delta_[i].y();
         }
 
         // Anti-dive / anti-squat reduces the longitudinal inertia moment fed
@@ -414,9 +430,11 @@ private:
         d.dz_dot   = Fz_sum / std::max(1.0, m_s);
         d.dphi     = phi_dot;
         const double M_overturn = mx_[0] + mx_[1] + mx_[2] + mx_[3];   // camber contact migration
-        d.dphi_dot = (M_roll_spring + m_s * ay * h + M_overturn) / std::max(1e-3, Ixx);
+        d.dphi_dot = (M_roll_spring + m_s * ay * h + M_overturn
+                     + M_roll_contact) / std::max(1e-3, Ixx);
         d.dth      = th_dot;
-        d.dth_dot  = (M_pitch_spring + M_inertia_pitch) / std::max(1e-3, Iyy);
+        d.dth_dot  = (M_pitch_spring + M_inertia_pitch
+                     + M_pitch_contact) / std::max(1e-3, Iyy);
 
         // Unsprung mass per corner: m_u · z̈_u = -F_susp(on sprung) - k_tire · z_u
         // = +F_susp_on_unsprung - k_tire · z_u
@@ -537,6 +555,7 @@ private:
     std::array<double, NUM_WHEELS> mx_      {{0.0, 0.0, 0.0, 0.0}};  // camber overturning from inner
     std::array<double, NUM_WHEELS> road_dz_ {{0.0, 0.0, 0.0, 0.0}};
     std::array<bool, NUM_WHEELS> contact_valid_ {{true, true, true, true}};
+    std::array<Vec3, NUM_WHEELS> contact_moment_delta_ {};
 
     // Optional hardpoint kinematics (Ld4 Stage D).  When attached, replaces
     // the lumped vp_.camber_per_roll · phi heuristic for the corresponding axle.
