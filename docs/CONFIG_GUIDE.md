@@ -187,7 +187,7 @@ blueprint vs parts: blueprint = base 레시피, parts = 그 위 슬롯 patch. ma
 
 ---
 
-## 3. 실시간 통신 설정 — comms/*.yaml 🟢(vds1) / 🔴(json·nmea·sensor)
+## 3. 실시간 통신 설정 — comms/*.yaml 🟢(vds1·json·nmea_gga) / 🔴(sensor.*)
 
 realtime 모드에서 **데이터가 어디로 흐르는지** 선언. comms 는 **시나리오 단위** — scene 의
 `comms: <name>` 키가 `configs/comms/<name>.yaml` 를 가리킨다(에이전트별이 아니라 시나리오가 소유).
@@ -199,9 +199,16 @@ channels:
   - source: 0.state              # <id>.state | ego.state(=첫 차)
     template: vds1               # 🟢 VDS1 바이너리 (cosim/cosim_protocol.hpp)
     to: [ {ip: 127.0.0.1, port: 7100}, {ip: 127.0.0.1, port: 7101} ]
-  - source: 0.sensor.gnss        # 어느 센서 → 소비자 (🔴 미구현, 경고 후 skip)
+  - source: 0.state              # 🟢 JSON 한 줄 (HTTP/MQTT 브리지용)
+    template: json
+    to: [ {ip: 127.0.0.1, port: 7100} ]
+  - source: 0.state              # 🟢 NMEA 0183 $GPGGA ("*HH\r\n" 종단)
     template: nmea_gga
+    origin: { lat: 37.5665, lon: 126.9780, alt: 38.0 }   # ENU 미터의 측지 원점(선택, 기본 0/0/0)
     to: [ {ip: 10.0.0.5, port: 9001} ]
+  - source: 0.sensor.gnss        # 센서 소스 지정 (🔴 미구현, 경고 후 skip)
+    template: nmea_gga
+    to: [ {ip: 10.0.0.5, port: 9002} ]
   # 수신 RX: 포트에서 listen → 규약 → (vehicle_id 헤더로) 어느 제어 (fan-in)
   - direction: in
     template: vds1_cmd           # 🟢 패킷 헤더 vehicle_id 로 대상 에이전트 선택
@@ -211,7 +218,14 @@ channels:
 - **TX(송신)** = `source`(`<id>.state`) → `template`(규약) → `to`(ip:port, fan-out).
 - **RX(수신)** = `direction: in` + `listen.port` → `template` → 제어 입력 (fan-in). 어느 에이전트인지는 VDS1 cmd 헤더의 `vehicle_id` 로 결정.
 
-**구현 상태**: `vdsim_realtime` 가 comms.yaml 을 실행하는 라우터(🟢) — TX `<id>.state`+`vds1` fan-out, RX `vds1_cmd` listen-port fan-in 동작. comms 키가 없으면 레거시(단일 cmd-in/state-out CLI 플래그)로 fallback. `json`/`nmea_gga` template 및 `sensor.*` source 는 아직 미구현(🔴) — 경고 찍고 skip.
+**구현 상태**: `vdsim_realtime` 가 comms.yaml 을 실행하는 라우터(🟢) — TX `<id>.state` 를 `vds1`(=`vds1_state`) / `json` / `nmea_gga` 로 fan-out, RX `vds1_cmd` listen-port fan-in 동작. comms 키가 없으면 레거시(단일 cmd-in/state-out CLI 플래그)로 fallback. 그 외 template 이름과 `sensor.*` source 는 아직 미구현(🔴) — 경고 찍고 skip.
+
+`nmea_gga` 세부(구현: `cosim/comms_templates.hpp`, 샘플: `configs/comms/json_nmea.yaml`):
+- **origin**: 채널별 선택 필드 `origin: {lat, lon, alt}`. 시뮬 ENU 미터(X east / Y north / Z up, `core/include/vdsim/coordinate.hpp`)의 측지 기준점. 미지정 시 (0, 0, 0).
+- **투영**: origin 접평면 등거리원통(equirectangular) 근사 — `lat = lat0 + north/M·(180/π)`, `lon = lon0 + east/(N·cos lat0)·(180/π)` (WGS84 M/N 곡률반경). WGS84 정밀 역해가 **아님**: 10 km 에서 ~0.1 m, 100 km 에서 ~100 m 수준 오차, 극지방에서는 무의미.
+- **위치 소스**: 측정 GNSS(`m_gnss_x/_y`). GGA 는 수신기 출력이므로 센서 노이즈가 그대로 반영된다. 노이즈 미설정 시에도 `SensorModel` 이 항등 경로로 truth 를 채우므로 값이 비지 않는다. 고도만 truth `z`(GNSS 고도 채널 모델 없음).
+- **UTC 필드**: 시스템 wall clock (STATE 의 `timestamp` 는 steady_clock 기반 monotonic 이라 UTC 가 아님).
+- **satellites / HDOP / geoid separation**: 위성·DOP 모델이 없어 고정 placeholder(12 / 0.9 / 0.0).
 
 ---
 
@@ -226,6 +240,7 @@ channels:
 | 시뮬 세팅(rate/dt·time_scale·integrator·duration) | 🟡 | §1.5, 현재 분산 / 통합 `sim:` 블록은 🔴 |
 | per-agent `control{internal|external}` | 🟡 | §2.2 (이번 추가; internal=speed-hold v1) |
 | comms.yaml 라우터 — vds1 TX fan-out / RX fan-in | 🟢 | §3, `vdsim_realtime` (scene `comms:` 참조) |
-| comms json·nmea_gga template / sensor.* source | 🔴 | §3, 경고 후 skip |
+| comms json·nmea_gga TX template (+ 채널별 `origin`) | 🟢 | §3, `configs/comms/json_nmea.yaml` |
+| comms sensor.* source | 🔴 | §3, 경고 후 skip |
 | scene `path`(trajectory 파일)/`maneuver`/`run{mode}` | 🔴 | §2.3, SIM_CONFIG_ARCH |
 | agent `vehicle.sensors`(mount pose) / map-path CTE | 🔴 | §2.3, SIM_CONFIG_ARCH §7 |

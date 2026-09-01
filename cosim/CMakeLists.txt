@@ -161,6 +161,14 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 300
         ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/python")
+    # Text TX templates end-to-end: json + nmea_gga must reach a UDP socket.
+    add_test(NAME comms_tx_templates
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_comms_tx_templates.py)
+    set_tests_properties(comms_tx_templates PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 60
+        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/build/python:${CMAKE_SOURCE_DIR}/python")
     add_test(NAME cmrosif_compat
         COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_SOURCE_DIR}/tests/scripts/test_cmrosif_compat.py)

@@ -1,0 +1,24 @@
+# Text TX templates — works today in vdsim_realtime (the C++ comms router).
+# Scenario-level: a scene references this via `comms: json_nmea`.
+#   TX json:     vehicle 0 STATE as a compact one-line JSON object (HTTP/MQTT bridges).
+#   TX nmea_gga: vehicle 0 as an NMEA 0183 $GPGGA sentence ("*HH\r\n"-terminated).
+#   RX:          canonical VDS1 CMD fan-in, same as configs/comms/vds1_loopback.yaml.
+#
+# `origin` is the geodetic datum the sim's ENU metres (X east, Y north, Z up) are
+# referenced to; it only matters for lat/lon templates. Optional — it defaults to
+# lat 0 / lon 0 / alt 0. The ENU -> lat/lon projection is an equirectangular
+# tangent-plane about `origin` (formula + accuracy limits: cosim/comms_templates.hpp,
+# enu_to_geodetic) — good to ~0.1 m at 10 km, NOT a survey-grade WGS84 transform.
+# The GGA fix follows the *measured* GNSS channel, so configured sensor noise shows up.
+name: json_nmea
+channels:
+  - source: 0.state
+    template: json
+    to: [ {ip: 127.0.0.1, port: 7100} ]
+  - source: 0.state
+    template: nmea_gga
+    origin: { lat: 37.5665, lon: 126.9780, alt: 38.0 }   # Seoul City Hall
+    to: [ {ip: 127.0.0.1, port: 9001} ]
+  - direction: in
+    template: vds1_cmd
+    listen: { port: 7001 }

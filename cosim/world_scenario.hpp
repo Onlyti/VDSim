@@ -1,5 +1,6 @@
 #pragma once
 
+#include "comms_templates.hpp"
 #include "vdsim/sensors.hpp"
 
 #include <cstdint>
@@ -89,6 +90,10 @@ struct CommsChannel {
     std::string templ {"vds1"};     // template/규약: vds1 | vds1_cmd | json | nmea_gga
     int         listen_port {0};    // rx: udp port to bind
     std::vector<CommsDest> to;      // tx: fan-out destinations
+    // Geodetic datum the sim's ENU metres are referenced to, for templates that
+    // emit lat/lon (nmea_gga). YAML: origin: {lat: 37.5, lon: 127.0, alt: 38.0}.
+    // Optional; defaults to (0,0,0) so existing scenes keep working unchanged.
+    GeodeticOrigin origin;
 };
 
 struct CommsConfig {

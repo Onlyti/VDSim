@@ -1,6 +1,7 @@
 // vdsim_realtime — real-time UDP co-simulation server (catalog scene or world YAML).
 //
 //   vdsim_realtime --scene=<scene.yaml|world.yaml> [options]
+#include "comms_templates.hpp"
 #include "cosim_protocol.hpp"
 #include "scene_loader.hpp"
 
@@ -288,28 +289,6 @@ void fill_state(vdsim::cosim::StateFields& s, const vdsim::SimOutput& o,
     s.m_steer = o.sensors.steer; s.m_gnss_x = o.sensors.gnss_x; s.m_gnss_y = o.sensors.gnss_y;
 }
 
-// Encode state to JSON. Compact one-line format for HTTP/MQTT forwarding.
-// {"id":0,"t":1.23,"x":45.6,"y":-3.2,"yaw":0.04,"vx":15.1,"vy":0.2,"r":0.01,"ax":0.3,"ay":1.2,"Fz":[4500,4500,3000,3000],"alpha":[...]}
-static int encode_state_json(uint8_t* buf, size_t buflen, const vdsim::cosim::StateFields& s) {
-    char* p = reinterpret_cast<char*>(buf);
-    int n = std::snprintf(p, buflen,
-        "{\"id\":%u,\"t\":%.3f,"
-        "\"x\":%.2f,\"y\":%.2f,\"yaw\":%.4f,"
-        "\"vx\":%.2f,\"vy\":%.2f,\"r\":%.4f,"
-        "\"ax\":%.2f,\"ay\":%.2f,"
-        "\"Fz\":[%.0f,%.0f,%.0f,%.0f],"
-        "\"alpha\":[%.4f,%.4f,%.4f,%.4f],"
-        "\"kappa\":[%.4f,%.4f,%.4f,%.4f]}",
-        s.vehicle_id, s.timestamp,
-        s.x, s.y, s.yaw,
-        s.vx, s.vy, s.yaw_rate,
-        s.ax, s.ay,
-        s.Fz[0], s.Fz[1], s.Fz[2], s.Fz[3],
-        s.slip_angle[0], s.slip_angle[1], s.slip_angle[2], s.slip_angle[3],
-        s.slip_ratio[0], s.slip_ratio[1], s.slip_ratio[2], s.slip_ratio[3]);
-    return n > 0 && n < (int)buflen ? n : 0;
-}
-
 void touch_sub(std::vector<Subscriber>& subs, const sockaddr_in& addr, double t) {
     for (auto& s : subs) {
         if (addr_same(s.addr, addr)) { s.last_seen = t; return; }
@@ -410,8 +389,10 @@ struct WorldVehicle {
 // One TX channel resolved to a concrete vehicle + destination sockets (fan-out).
 struct TxChannel {
     uint32_t id;
-    std::string templ {"vds1"};   // vds1 | json (default vds1)
+    // Canonical encoder name from canonical_tx_template(): vds1 | json | nmea_gga.
+    std::string templ {"vds1"};
     std::vector<sockaddr_in> dests;
+    vdsim::cosim::GeodeticOrigin origin;   // datum for lat/lon templates (nmea_gga)
 };
 
 sockaddr_in make_addr(const std::string& ip, int port) {
@@ -582,9 +563,11 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
                     " (v1: <id>.state only), skipping\n", ch.source.c_str());
                 continue;
             }
-            if (ch.templ != "vds1" && ch.templ != "vds1_state") {
+            const std::string canon = vdsim::cosim::canonical_tx_template(ch.templ);
+            if (canon.empty()) {
                 std::fprintf(stderr, "[vdsim_realtime] comms: template '%s' unsupported"
-                    " (v1: vds1 only), skipping '%s'\n", ch.templ.c_str(), ch.source.c_str());
+                    " (vds1 | vds1_state | json | nmea_gga), skipping '%s'\n",
+                    ch.templ.c_str(), ch.source.c_str());
                 continue;
             }
             uint32_t vid = fleet.empty() ? 0u : fleet.front().id;
@@ -594,7 +577,7 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
                     " skipping\n", ch.source.c_str(), vid);
                 continue;
             }
-            TxChannel tc; tc.id = vid; tc.templ = ch.templ;
+            TxChannel tc; tc.id = vid; tc.templ = canon; tc.origin = ch.origin;
             for (const auto& d : ch.to) tc.dests.push_back(make_addr(d.ip, d.port));
             if (!tc.dests.empty()) tx_channels.push_back(std::move(tc));
         }
@@ -662,7 +645,7 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
     auto next = std::chrono::steady_clock::now();
     const auto failsafe_dur = std::chrono::duration<double>(cmd_to);
     const double t_end = world.sim.t_end;   // 0 = unlimited
-    uint8_t out[vdsim::cosim::kStateBytes];
+    uint8_t out[vdsim::cosim::kTxBufBytes];   // binary VDS1 frame or a text template
     while (g_run.load()) {
         time_scale = read_live_time_scale(scene_path, time_scale);
         const double period_s = dt / time_scale;
@@ -743,11 +726,22 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
                 fill_state(s, o, wv->vp.wheel_radius_nominal, wv->id);
                 int len = 0;
                 if (tc.templ == "json")
-                    len = encode_state_json(out, sizeof(out), s);
+                    len = vdsim::cosim::encode_state_json(out, sizeof(out), s);
+                else if (tc.templ == "nmea_gga")
+                    len = vdsim::cosim::encode_state_nmea_gga(
+                        out, sizeof(out), s, tc.origin,
+                        vdsim::cosim::utc_seconds_of_day_now());
                 else if (tc.templ == "vds1")
                     len = vdsim::cosim::encode_state(out, s);
                 else {
                     std::fprintf(stderr, "[vdsim_realtime] skip unknown template %s\n", tc.templ.c_str());
+                    continue;
+                }
+                if (len < 0) {
+                    // The text encoders never emit a truncated frame: a cut-short
+                    // JSON object / NMEA sentence is unparseable at the consumer.
+                    std::fprintf(stderr, "[vdsim_realtime] comms: template %s does not fit"
+                        " the %zu B tx buffer, dropping frame\n", tc.templ.c_str(), sizeof(out));
                     continue;
                 }
                 if (len > 0) {

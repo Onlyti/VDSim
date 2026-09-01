@@ -55,6 +55,13 @@ static CommsConfig parse_comms_node(const YAML::Node& c) {
         if (ch["template"]) cm.templ  = ch["template"].as<std::string>();
         if (ch["listen"] && ch["listen"]["port"])
             cm.listen_port = ch["listen"]["port"].as<int>();
+        // origin: {lat, lon, alt} — datum for lat/lon templates (nmea_gga).
+        if (ch["origin"]) {
+            const auto& og = ch["origin"];
+            cm.origin.lat_deg = node_d(og, "lat", 0.0);
+            cm.origin.lon_deg = node_d(og, "lon", 0.0);
+            cm.origin.alt_m   = node_d(og, "alt", 0.0);
+        }
         if (ch["to"] && ch["to"].IsSequence()) {
             for (const auto& d : ch["to"]) {
                 CommsDest dst;
