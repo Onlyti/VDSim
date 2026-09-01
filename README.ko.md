@@ -170,6 +170,12 @@ BEV 화면에 그려지는 것: 기준 경로(점선, `path2d` overlay 가 있�
 현재 시각 커서가 붙은 `u_steer` / `u_fx` 시계열. 축 범위는 autoscale 이 아니라
 `geometry` 에서 계산하므로 프레임마다 스케일이 흔들리지 않는다.
 
+단일 run 화면에는 고정 좌표 계기 2개도 표시한다. 조향휠 다이얼은 기록된 로드휠
+조향각에 manifest `geometry.steer_ratio` 를 곱한 각도로 회전하고, 속도 게이지는
+km/h 를 표시한다. 속도 눈금은 trace 전체에서 한 번만 정해 20 km/h 단위로 올림하므로
+프레임마다 바늘의 의미가 바뀌지 않는다. matplotlib 헤드리스 출력에 포함되며
+node/npm/브라우저 의존성은 추가하지 않는다.
+
 기록 → overlay → 렌더 전 과정 예시:
 
 ```bash

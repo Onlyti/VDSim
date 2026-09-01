@@ -177,6 +177,13 @@ and the `u_steer` / `u_fx` time series with a current-time cursor. Axis limits
 come from `geometry`, never from autoscale, so the scale never drifts between
 frames.
 
+The single-run view also carries two fixed-screen instruments: a steering-wheel
+dial whose rotation is the recorded road-wheel angle multiplied by manifest
+`geometry.steer_ratio`, and a speedometer in km/h. The speedometer scale is fixed
+for the whole trace (rounded up in 20 km/h steps), so neither needle changes
+meaning between frames. These instruments are part of the headless matplotlib
+output; they do not add node/npm/browser dependencies.
+
 End to end — record, attach overlays, render:
 
 ```bash

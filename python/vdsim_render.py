@@ -97,6 +97,9 @@ ARROW_S_PER_MPS = 0.06
 #: Channels the command panel prefers, in order. Anything absent is skipped and
 #: the list is intersected with the manifest — never assumed present.
 PREFERRED_SERIES = ("u_steer", "u_fx")
+#: Minimum and rounding step for the speedometer's static full-scale [km/h].
+SPEED_GAUGE_MIN_KMH = 40.0
+SPEED_GAUGE_STEP_KMH = 20.0
 
 UTIL_CMAP = LinearSegmentedColormap.from_list(
     "vdsim_util", ["#2c9c4c", "#9acd32", "#f5c542", "#e8752a", "#c02020"])
@@ -206,6 +209,8 @@ class LoadedTrace:
         self.stride = stride
         self.frames = np.arange(0, len(self.t), stride, dtype=int)
         self.steer = self._series_or_zeros("u_steer")
+        self.steer_ratio = float(self.geometry.get("steer_ratio", 1.0))
+        self.speed_gauge_max_kmh = speed_gauge_max_kmh(self.v_body)
         self.body_l, self.body_w = body_size(self.geometry)
         self.view_half = view_half_m(self.geometry)
         self.sidecar = load_sidecar(path if sidecar is None else sidecar,
@@ -413,6 +418,45 @@ def series_for_display(unit: str, values):
     return raw_unit, np.asarray(values)
 
 
+def speed_gauge_max_kmh(v_body) -> float:
+    """Stable speedometer full-scale [km/h] for a whole trace.
+
+    The scale is chosen once at load time, then kept fixed across frames so the
+    needle never changes meaning during an animation.
+    """
+    v = np.asarray(v_body, dtype=float)
+    speed = np.hypot(v[:, 0], v[:, 1]) * 3.6 if v.size else np.zeros(0)
+    finite = speed[np.isfinite(speed)]
+    peak = float(finite.max()) if finite.size else 0.0
+    return max(SPEED_GAUGE_MIN_KMH,
+               SPEED_GAUGE_STEP_KMH * math.ceil(peak / SPEED_GAUGE_STEP_KMH))
+
+
+def instrument_spec(road_steer_rad: float, steer_ratio: float,
+                    speed_mps: float, speed_max_kmh: float) -> dict:
+    """Pure T6 steering-wheel and speedometer description.
+
+    :param road_steer_rad: recorded road-wheel angle [rad].
+    :param steer_ratio: steering-wheel / road-wheel ratio from manifest geometry.
+    :param speed_mps: vehicle speed magnitude [m/s].
+    :param speed_max_kmh: fixed speedometer full-scale [km/h].
+    :returns: display values plus needle angles [rad].
+    """
+    wheel_rad = float(road_steer_rad) * float(steer_ratio)
+    speed_kmh = max(0.0, float(speed_mps) * 3.6)
+    scale = max(float(speed_max_kmh), 1e-9)
+    fraction = min(max(speed_kmh / scale, 0.0), 1.0)
+    return {
+        "steering_wheel_deg": math.degrees(wheel_rad),
+        "steering_needle_rad": wheel_rad,
+        "steer_ratio": float(steer_ratio),
+        "speed_kmh": speed_kmh,
+        "speed_max_kmh": scale,
+        # 225 deg (zero) clockwise over 270 deg to -45 deg (full scale).
+        "speed_needle_rad": math.radians(225.0 - 270.0 * fraction),
+    }
+
+
 def frame_spec(tr: LoadedTrace, i: int) -> dict:
     """Describe frame ``i`` — pure function, no matplotlib, no file access.
 
@@ -478,6 +522,8 @@ def frame_spec(tr: LoadedTrace, i: int) -> dict:
         "status": status,
         "solve_ms": solve_ms,
         "hud": hud,
+        "instruments": instrument_spec(delta, tr.steer_ratio, speed,
+                                       tr.speed_gauge_max_kmh),
     }
 
 
@@ -512,6 +558,42 @@ def _setup_axes(tr: LoadedTrace, figsize, dpi):
     ax_bev = fig.add_subplot(gs[:, 0])
     ax_series = [fig.add_subplot(gs[k, 1]) for k in range(len(tr.series))]
     return fig, ax_bev, ax_series
+
+
+def _instrument_artists(ax_bev, tr: LoadedTrace):
+    """Create the fixed-screen T6 steering-wheel and speedometer artists."""
+    steer_ax = ax_bev.inset_axes([0.64, 0.755, 0.155, 0.19], zorder=9)
+    speed_ax = ax_bev.inset_axes([0.81, 0.755, 0.175, 0.19], zorder=9)
+    for ax, title in ((steer_ax, "steering wheel"), (speed_ax, "speed")):
+        ax.set_xlim(-1.15, 1.15)
+        ax.set_ylim(-1.28, 1.12)
+        ax.set_aspect("equal", adjustable="box")
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_title(title, fontsize=6, pad=1.0)
+        ax.patch.set_facecolor("white")
+        ax.patch.set_alpha(0.82)
+        for spine in ax.spines.values():
+            spine.set_edgecolor("#8a97a5")
+            spine.set_linewidth(0.7)
+
+    ring_a = np.linspace(0.0, 2.0 * math.pi, 120)
+    steer_ax.plot(0.86 * np.cos(ring_a), 0.86 * np.sin(ring_a),
+                  color="#273746", lw=1.5)
+    (steer_spokes,) = steer_ax.plot([], [], color="#273746", lw=1.4)
+    steer_text = steer_ax.text(0.0, -1.08, "", ha="center", va="center",
+                               fontsize=5.8, family="monospace")
+
+    arc_a = np.linspace(math.radians(225.0), math.radians(-45.0), 120)
+    speed_ax.plot(np.cos(arc_a), np.sin(arc_a), color="#273746", lw=1.5)
+    (speed_needle,) = speed_ax.plot([], [], color="#c02020", lw=1.6)
+    speed_ax.text(-0.78, -0.82, "0", ha="center", va="center", fontsize=5.5)
+    speed_ax.text(0.78, -0.82, "%g" % tr.speed_gauge_max_kmh,
+                  ha="center", va="center", fontsize=5.5)
+    speed_text = speed_ax.text(0.0, -1.08, "", ha="center", va="center",
+                               fontsize=5.8, family="monospace")
+    return dict(steer_spokes=steer_spokes, steer_text=steer_text,
+                speed_needle=speed_needle, speed_text=speed_text)
 
 
 def _draw_static(tr: LoadedTrace, ax_bev, ax_series):
@@ -619,10 +701,11 @@ def _draw_static(tr: LoadedTrace, ax_bev, ax_series):
         cursors.append(ax.axvline(float(tr.t[0]), color="#111111", lw=1.0))
     if ax_series:
         ax_series[-1].set_xlabel("time [s]", fontsize=8)
+    instruments = _instrument_artists(ax_bev, tr)
     return dict(trail=trail, body=body, wheels=wheels, arrow=arrow,
                 hud=hud, cursors=cursors, target=target,
                 prediction=prediction, qpfail=qpfail,
-                n_qp_fail=int(len(fail_t)))
+                n_qp_fail=int(len(fail_t)), **instruments)
 
 
 def draw_frame(artists, ax_bev, spec: dict):
@@ -637,9 +720,27 @@ def draw_frame(artists, ax_bev, spec: dict):
     artists["arrow"].set_position((x, y))
     artists["arrow"].xy = (x + dx, y + dy)
     artists["hud"].set_text("\n".join(spec["hud"]))
+    _draw_instruments(artists, spec["instruments"])
     _draw_horizons(artists, spec)
     for cur in artists["cursors"]:
         cur.set_xdata([spec["t"], spec["t"]])
+
+
+def _draw_instruments(artists, spec: dict):
+    """Update T6 instrument needles and numeric readouts."""
+    a = float(spec["steering_needle_rad"])
+    xs, ys = [], []
+    for offset in (0.0, 2.0 * math.pi / 3.0, 4.0 * math.pi / 3.0):
+        xs.extend((0.0, 0.72 * math.cos(a + offset), np.nan))
+        ys.extend((0.0, 0.72 * math.sin(a + offset), np.nan))
+    artists["steer_spokes"].set_data(xs, ys)
+    artists["steer_text"].set_text("%+6.1f deg\nratio %.1f:1" %
+                                    (spec["steering_wheel_deg"], spec["steer_ratio"]))
+
+    a = float(spec["speed_needle_rad"])
+    artists["speed_needle"].set_data((0.0, 0.82 * math.cos(a)),
+                                      (0.0, 0.82 * math.sin(a)))
+    artists["speed_text"].set_text("%5.1f km/h" % spec["speed_kmh"])
 
 
 def _draw_horizons(artists, spec: dict):

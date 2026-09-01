@@ -189,6 +189,33 @@ def test_angular_series_are_displayed_in_degrees():
     vr.plt.close(fig)
 
 
+def test_t6_instrument_panel():
+    """Steering-wheel ratio and speed gauge are pure, fixed-screen artists."""
+    spec = vr.instrument_spec(0.1, 15.0, 10.0, 40.0)
+    check(abs(spec["steering_wheel_deg"] - math.degrees(1.5)) < 1e-12,
+          "T6 steering-wheel dial applies manifest steer_ratio")
+    check(abs(spec["speed_kmh"] - 36.0) < 1e-12,
+          "T6 speedometer converts m/s to km/h")
+    check(abs(math.degrees(spec["speed_needle_rad"]) - (-18.0)) < 1e-12,
+          "T6 speed needle uses the fixed 0..40 km/h scale")
+
+    tr = vr.LoadedTrace(FIXTURE)
+    i = min(20, len(tr.t) - 1)
+    frame = vr.frame_spec(tr, i)
+    expected = math.degrees(float(tr.steer[i]) * float(tr.geometry["steer_ratio"]))
+    check(abs(frame["instruments"]["steering_wheel_deg"] - expected) < 1e-12,
+          "frame instrument uses recorded road steer times geometry steer_ratio")
+
+    fig, ax_bev, axes = vr._setup_axes(tr, (11.0, 5.6), 100)
+    artists = vr._draw_static(tr, ax_bev, axes)
+    vr.draw_frame(artists, ax_bev, frame)
+    check(len(artists["steer_spokes"].get_xdata()) == 9,
+          "steering-wheel dial draws three rotating spokes")
+    check("km/h" in artists["speed_text"].get_text()
+          and ":1" in artists["steer_text"].get_text(),
+          "instrument readouts expose speed unit and steering ratio")
+    vr.plt.close(fig)
+
 def test_render_from_fixture_only():
     """DoD 5 + 7: fixture in, GIF + PNG out, wall-clock measured."""
     with tempfile.TemporaryDirectory() as td:
@@ -226,6 +253,7 @@ def main():
     test_eight_screen_items()
     test_series_selection_is_manifest_driven()
     test_angular_series_are_displayed_in_degrees()
+    test_t6_instrument_panel()
     test_render_from_fixture_only()
     if FAILURES:
         print("\n%d check(s) failed" % len(FAILURES))
