@@ -554,6 +554,41 @@ TEST(SceneSensors, NonFiniteAndOutOfRangeNumbersRejected) {
     EXPECT_DOUBLE_EQ(ok.vehicles[0].scene_sensors[0].rate, 0.0);
 }
 
+// Optional keys distinguish omission (documented default) from an explicit YAML
+// null, which is a present value of the wrong type and therefore a hard error.
+TEST(SceneSensors, ExplicitNullOptionalKeysAreHardErrors) {
+    struct Case { const char* name; const char* block; const char* expect; };
+    const Case cases[] = {
+        {"nullid",     "  sensors:\n  - { id: ~, type: gnss }\n", "id must be a string"},
+        {"nullmount",  "  sensors:\n  - { type: gnss, mount: ~ }\n", "mount must be a map"},
+        {"nullpos",    "  sensors:\n  - { type: gnss, mount: { pos: ~ } }\n", "mount.pos must be a sequence"},
+        {"nullrpy",    "  sensors:\n  - { type: gnss, mount: { rpy: ~ } }\n", "mount.rpy must be a sequence"},
+        {"nullyaw",    "  sensors:\n  - { type: gnss, yaw: ~ }\n", "yaw must be a number"},
+        {"nullrate",   "  sensors:\n  - { type: gnss, rate: ~ }\n", "rate must be a number"},
+        {"nullstd",    "  sensors:\n  - { type: gnss, noise_std: ~ }\n", "noise_std must be a number"},
+        {"nullbias",   "  sensors:\n  - { type: imu, bias: ~ }\n", "bias must be a number"},
+        {"nullrw",     "  sensors:\n  - { type: imu, bias_rw: ~ }\n", "bias_rw must be a number"},
+        {"nullparams", "  sensors:\n  - { type: camera, params: ~ }\n", "params must be a map"},
+        {"nullparam",  "  sensors:\n  - { type: camera, params: { fov_deg: ~ } }\n", "params.fov_deg must be a number"},
+        {"nullenabled", "  sensors:\n    enabled: ~\n    list: []\n", "enabled must be a bool"},
+        {"nullseed",    "  sensors:\n    seed: ~\n    list: []\n", "seed a non-negative integer"},
+    };
+    for (const auto& c : cases) {
+        const std::string msg = sensors_parse_error(c.name, c.block);
+        ASSERT_FALSE(msg.empty()) << c.name << ": explicit null must throw";
+        EXPECT_NE(msg.find(c.expect), std::string::npos)
+            << c.name << ": message was \"" << msg << '"';
+    }
+
+    // Omitting those same optional keys retains the documented zero/default values.
+    const auto omitted = load_world_with_sensors("optional_omitted",
+        "  sensors:\n  - { type: gnss }\n");
+    ASSERT_EQ(omitted.vehicles[0].scene_sensors.size(), 1u);
+    EXPECT_EQ(omitted.vehicles[0].scene_sensors[0].id, "gnss");
+    EXPECT_DOUBLE_EQ(omitted.vehicles[0].scene_sensors[0].rate, 0.0);
+    EXPECT_FALSE(omitted.vehicles[0].sensors.has_value());
+}
+
 // The scalar/file form must not swallow yaml-cpp's reason: a malformed sensors
 // file is undebuggable without the line and column it reports.
 TEST(SceneSensors, FilePathFormNestsTheUnderlyingReason) {
@@ -569,6 +604,25 @@ TEST(SceneSensors, FilePathFormNestsTheUnderlyingReason) {
     EXPECT_NE(msg.find(underlying), std::string::npos)
         << "the yaml-cpp reason must survive, was \"" << msg << '"';
     std::filesystem::remove(bad);
+}
+
+// If the CWD-relative file exists but is malformed, resolution stops there. The
+// error must not claim that the scene-directory candidate was also attempted.
+TEST(SceneSensors, CwdMalformedFileDoesNotClaimSceneDirAttempt) {
+    const std::string filename = "vdsim_cwd_broken_sensors_p3.yaml";
+    const auto cwd_file = std::filesystem::current_path() / filename;
+    {
+        std::ofstream f(cwd_file);
+        f << "gnss_pos: { noise_std: [broken }\n";
+    }
+    const std::string msg = sensors_parse_error("cwd_broken", "  sensors: " + filename + "\n");
+    std::error_code ec;
+    std::filesystem::remove(cwd_file, ec);
+
+    ASSERT_FALSE(msg.empty()) << "the malformed CWD file must fail";
+    EXPECT_NE(msg.find(filename), std::string::npos) << msg;
+    EXPECT_EQ(msg.find("also tried"), std::string::npos)
+        << "the scene-directory candidate was not attempted: " << msg;
 }
 
 // A relative `sensors:` path is used as written first (CWD-relative, which is how

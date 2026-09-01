@@ -114,8 +114,8 @@ static void parse_mount(const YAML::Node& m, uint32_t vid, const std::string& wh
         if (k != "pos" && k != "rpy")
             sensor_throw(vid, where, "unknown mount key '" + k + "' (accepted: pos, rpy)");
     }
-    if (m["pos"]) out.mount_pos = parse_vec3(m["pos"], vid, where, "mount.pos");
-    if (m["rpy"]) {
+    if (m["pos"].IsDefined()) out.mount_pos = parse_vec3(m["pos"], vid, where, "mount.pos");
+    if (m["rpy"].IsDefined()) {
         out.mount_rpy = parse_vec3(m["rpy"], vid, where, "mount.rpy");
         rpy_given = true;
     }
@@ -177,7 +177,7 @@ static void parse_sensors_seq(const YAML::Node& list, uint32_t vid, SensorSuite&
                                   + node_text(item) + "'");
 
         SceneSensor sensor;
-        if (item["id"]) {
+        if (item["id"].IsDefined()) {
             if (!item["id"].IsScalar())
                 sensor_throw(vid, at, "id must be a string, got '" + node_text(item["id"]) + "'");
             // Taken as the literal scalar text: `id: true` is the id "true",
@@ -193,7 +193,7 @@ static void parse_sensors_seq(const YAML::Node& list, uint32_t vid, SensorSuite&
                 sensor_throw(vid, where, "unknown key '" + k + "' (accepted: "
                                          + std::string(kSensorKeys) + ")");
         }
-        if (!item["type"])
+        if (!item["type"].IsDefined())
             sensor_throw(vid, where, "missing required key 'type' (accepted: "
                                      + std::string(kSensorTypes) + ")");
         if (!item["type"].IsScalar())
@@ -207,13 +207,16 @@ static void parse_sensors_seq(const YAML::Node& list, uint32_t vid, SensorSuite&
             sensor_throw(vid, where, "unknown type '" + sensor.type + "' (accepted: "
                                      + std::string(kSensorTypes) + ")");
 
-        if (item["noise_std"] || item["bias"] || item["bias_rw"]) {
+        if (item["noise_std"].IsDefined() || item["bias"].IsDefined()
+            || item["bias_rw"].IsDefined()) {
             vdsim::SensorNoise n;
-            if (item["noise_std"])
+            if (item["noise_std"].IsDefined())
                 n.noise_std = sensor_num(item["noise_std"], vid, where, "noise_std",
                                          NumRange::NonNegative);
-            if (item["bias"])    n.bias    = sensor_num(item["bias"],    vid, where, "bias");
-            if (item["bias_rw"]) n.bias_rw = sensor_num(item["bias_rw"], vid, where, "bias_rw");
+            if (item["bias"].IsDefined())
+                n.bias = sensor_num(item["bias"], vid, where, "bias");
+            if (item["bias_rw"].IsDefined())
+                n.bias_rw = sensor_num(item["bias_rw"], vid, where, "bias_rw");
             // targets is empty for camera/lidar: the numbers are still validated,
             // then dropped, because the core has no measurement model to feed.
             for (auto* t : targets) *t = n;
@@ -229,8 +232,8 @@ static void parse_sensors_seq(const YAML::Node& list, uint32_t vid, SensorSuite&
                                      + "'; give each entry a unique id");
         if (sensor.id.empty()) sensor.id = sensor.type;
         bool rpy_given = false;
-        if (item["mount"]) parse_mount(item["mount"], vid, where, sensor, rpy_given);
-        if (item["yaw"]) {
+        if (item["mount"].IsDefined()) parse_mount(item["mount"], vid, where, sensor, rpy_given);
+        if (item["yaw"].IsDefined()) {
             if (rpy_given)
                 sensor_throw(vid, where, "yaw and mount.rpy both set the heading; give only one");
             // The builder authors yaw in degrees (builder/index.html: "yaw [deg]");
@@ -238,9 +241,9 @@ static void parse_sensors_seq(const YAML::Node& list, uint32_t vid, SensorSuite&
             constexpr double kDegToRad = 3.14159265358979323846 / 180.0;
             sensor.mount_rpy[2] = sensor_num(item["yaw"], vid, where, "yaw") * kDegToRad;
         }
-        if (item["rate"])
+        if (item["rate"].IsDefined())
             sensor.rate = sensor_num(item["rate"], vid, where, "rate", NumRange::NonNegative);
-        if (item["params"]) parse_sensor_params_map(item["params"], vid, where, sensor);
+        if (item["params"].IsDefined()) parse_sensor_params_map(item["params"], vid, where, sensor);
         suite.mounts.push_back(std::move(sensor));
     }
 }
@@ -258,10 +261,10 @@ static vdsim::SensorParams load_sensors_file(const std::string& raw, uint32_t vi
     std::string alt;
     const std::filesystem::path p(raw);
     if (p.is_relative() && !scene_dir.empty()) {
-        alt = (std::filesystem::path(scene_dir) / p).lexically_normal().string();
-        if (!std::filesystem::is_regular_file(p, ec)
-            && std::filesystem::is_regular_file(alt, ec))
-            chosen = alt;
+        if (!std::filesystem::is_regular_file(p, ec)) {
+            alt = (std::filesystem::path(scene_dir) / p).lexically_normal().string();
+            if (std::filesystem::is_regular_file(alt, ec)) chosen = alt;
+        }
     }
     try {
         return vdsim::SensorParams::from_yaml(chosen);
@@ -294,16 +297,17 @@ static SensorSuite parse_sensors_node(const YAML::Node& sn, uint32_t vid,
                 sensor_throw(vid, "", "unknown key '" + k
                                       + "' (the suite form accepts: enabled, seed, list)");
         }
-        if (!sn["list"] || !sn["list"].IsSequence())
+        if (!sn["list"].IsDefined() || !sn["list"].IsSequence())
             sensor_throw(vid, "", "suite form needs 'list:' holding a sequence of sensor entries");
         parse_sensors_seq(sn["list"], vid, suite);
         if (suite.overrides_noise) suite.params.enabled = true;
         // Writing enabled/seed is itself a statement about the noise model, so the
         // suite then overrides the scenario-level file even with a mount-only list.
-        if (sn["enabled"] || sn["seed"]) suite.overrides_noise = true;
+        if (sn["enabled"].IsDefined() || sn["seed"].IsDefined())
+            suite.overrides_noise = true;
         try {
-            if (sn["enabled"]) suite.params.enabled = sn["enabled"].as<bool>();
-            if (sn["seed"])    suite.params.seed    = sn["seed"].as<unsigned>();
+            if (sn["enabled"].IsDefined()) suite.params.enabled = sn["enabled"].as<bool>();
+            if (sn["seed"].IsDefined())    suite.params.seed    = sn["seed"].as<unsigned>();
         } catch (const YAML::Exception&) {
             sensor_throw(vid, "", "enabled must be a bool and seed a non-negative integer");
         }
