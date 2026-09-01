@@ -15,6 +15,7 @@
 //   - Static Fz_z balance only; no aerodynamic lift, no anti-dive geometry.
 
 #include "vdsim/coordinate.hpp"
+#include "vdsim/contact_frame.hpp"
 #include "vdsim/default_subsystems.hpp"
 #include "vdsim/drivetrain_inertia.hpp"
 #include "vdsim/steering_kinematics.hpp"
@@ -288,11 +289,17 @@ private:
         // ---- Road slope from contact normals (flat -> no effect) ----
         // Average unit normal (world). Normal load scales by cos(slope)=n_z; the
         // gravity component tangential to the road is felt as a body force.
-        Vec3 n_road = contacts[0].normal + contacts[1].normal
-                    + contacts[2].normal + contacts[3].normal;
+        Vec3 n_road = Vec3::Zero();
+        for (const auto& contact : contacts) {
+            if (!contact.is_valid || !contact.normal.allFinite()) continue;
+            const double normal_norm = contact.normal.norm();
+            if (normal_norm > 1e-12) n_road += contact.normal / normal_norm;
+        }
         const double nn = n_road.norm();
-        if (nn > 1e-9) n_road /= nn; else n_road = Vec3::UnitZ();
-        const double cos_slope = std::max(0.1, n_road.z());
+        const bool has_road_normal = nn > 1e-9;
+        if (has_road_normal) n_road /= nn;
+        const double cos_slope = has_road_normal
+            ? std::max(0.1, n_road.z()) : 0.0;
         const double gdotn = -kGravity * n_road.z();          // (0,0,-g) . n
         const double gtx = -gdotn * n_road.x();               // tangential gravity (world)
         const double gty = -gdotn * n_road.y();
@@ -366,6 +373,11 @@ private:
         // L3 may supply a dynamic (ride/road-coupled) tire load for grip in place
         // of this quasi-static Fz. One-shot: consumed here, re-set each L3 step.
         if (use_ext_fz_) { Fz = ext_fz_; use_ext_fz_ = false; }
+        // `is_valid=false` is non-contact, including on the L3/L4 external-Fz
+        // path.  Re-mask after the override so no normal load, rolling
+        // resistance, tire wrench, or transient update leaks through.
+        for (int i = 0; i < NUM_WHEELS; ++i)
+            if (!contacts[i].is_valid) Fz[i] = 0.0;
 
         const DriverCmd driver_cmd{
             steer_cmd,
@@ -443,7 +455,19 @@ private:
         std::array<double, NUM_WHEELS> fx_kin {{0.0, 0.0, 0.0, 0.0}};
 
         for (int i = 0; i < NUM_WHEELS; ++i) {
-            if (!contacts[i].is_valid) {
+            const double di = d_wheel[i];
+            const double cd_i = std::cos(di), sd_i = std::sin(di);
+            // Contact normals are injected in world ENU.  Resolve them into
+            // the planar body frame, then construct one shared exact contact
+            // basis for both L3 and L4 (which delegate through this path).
+            const Vec3& nw = contacts[i].normal;
+            const Vec3 normal_body(
+                std::cos(yaw) * nw.x() + std::sin(yaw) * nw.y(),
+               -std::sin(yaw) * nw.x() + std::cos(yaw) * nw.y(),
+                nw.z());
+            const ContactFrame contact_frame = make_contact_frame(
+                normal_body, Vec3(cd_i, sd_i, 0.0));
+            if (!contacts[i].is_valid || !contact_frame.valid) {
                 F_body[i]      = Vec3::Zero();
                 tire_F_disp[i] = Vec3::Zero();
                 tire_F_wheel_disp[i] = Vec3::Zero();
@@ -462,14 +486,8 @@ private:
             }
             const double v_x_body = vx - r * r_y[i];
             const double v_y_body = vy + r * r_x[i];
-
-            const double di = d_wheel[i];
-            // A wheel is "steered" if its angle is non-trivial (front or any
-            // wheel with non-zero toe input).  We just always do the rotation
-            // — it's a cheap cos/sin per wheel.
-            const double cd_i = std::cos(di), sd_i = std::sin(di);
-            const double v_x_wheel = v_x_body * cd_i + v_y_body * sd_i;
-            const double v_y_wheel = -v_x_body * sd_i + v_y_body * cd_i;
+            const Vec3 contact_velocity = contact_frame.resolve_velocity(
+                Vec3(v_x_body, v_y_body, 0.0));
 
             const double mu_long_i = contacts[i].mu_long;
             const double mu_lat_i  = contacts[i].mu_lat;
@@ -483,7 +501,9 @@ private:
             // advance_bristle() / per-substep advance_relaxation() see this stage's
             // kinematics (mirrors the old *_last_ scratch).
             ITireModel::ContactInput ci;
-            ci.Fz = Fz[i]; ci.Vx = v_x_wheel; ci.Vy = v_y_wheel;
+            ci.Fz = Fz[i];
+            ci.Vx = contact_velocity.x();
+            ci.Vy = contact_velocity.y();
             ci.omega = s.wheel_spin[i]; ci.gamma = camber_ext_[i];
             ci.mu_long = mu_long_i; ci.mu_lat = mu_lat_i; ci.R0 = R;
             ci_[i] = ci;
@@ -517,7 +537,7 @@ private:
             } else {
                 const double hold_gate = plant ? 0.0
                     : (1.0 - lambda_i) * std::clamp(cmd.brake - cmd.throttle, 0.0, 1.0);
-                double Fx_hold = -kStickC * v_x_body * hold_gate;
+                double Fx_hold = -kStickC * contact_velocity.x() * hold_gate;
                 if (std::abs(Fx_hold) > muFz) Fx_hold = std::copysign(muFz, Fx_hold);
                 Fx_w = w.Fx + Fx_hold;
                 Fy_w = lambda_i * w.Fy;
@@ -533,16 +553,14 @@ private:
                 Fy_w *= c;
             }
             if (lugre_i) fx_kin[i] = Fx_w;
-            const double Fx_b = Fx_w * cd_i - Fy_w * sd_i;
-            const double Fy_b = Fx_w * sd_i + Fy_w * cd_i;
-            F_body[i] = Vec3(Fx_b, Fy_b, 0.0);
+            F_body[i] = contact_frame.tangential_force(Fx_w, Fy_w);
             const double Fdm = std::hypot(Fxd, Fyd);
             if (!ts_.for_wheel(i).model_provides_combined_slip() && Fdm > muFz && Fdm > 1e-9) {
                 const double c = muFz / Fdm;
                 Fxd *= c;
                 Fyd *= c;
             }
-            tire_F_disp[i] = Vec3(Fxd * cd_i - Fyd * sd_i, Fxd * sd_i + Fyd * cd_i, 0.0);
+            tire_F_disp[i] = contact_frame.tangential_force(Fxd, Fyd);
             tire_F_wheel_disp[i] = Vec3(Fxd, Fyd, 0.0);
             kappa[i]  = k_slip;
             alpha[i]  = a_slip;
@@ -680,7 +698,7 @@ private:
         // ---- Diagnostics ----
         tire_F_       = tire_F_disp;
         tire_F_wheel_ = tire_F_wheel_disp;
-        tire_Fz_  = Fz;
+        tire_Fz_  = Fz;  // scalar normal-load magnitude along each contact z_c
         slip_ratio_ = kappa;
         slip_angle_ = alpha;
 

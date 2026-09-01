@@ -186,6 +186,10 @@ public:
             const double st_r = vp_.mass * kGravity * vp_.cg_to_front / (2.0 * Lwb);
             std::array<double, NUM_WHEELS> fz_dyn;
             for (int i = 0; i < NUM_WHEELS; ++i) {
+                if (!contacts[i].is_valid) {
+                    fz_dyn[i] = 0.0;
+                    continue;
+                }
                 const double cos_slope = std::max(0.1, contacts[i].normal.z());
                 const double st = ((i < 2) ? st_f : st_r) * cos_slope
                                 + ((i < 2) ? aero_f : aero_r);
@@ -212,7 +216,10 @@ public:
                                         axle_prescribed_motion(2, steer_rad), wl, dt);
             }
         }
-        for (int i = 0; i < NUM_WHEELS; ++i) road_dz_[i] = contacts[i].road_dz;
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            contact_valid_[i] = contacts[i].is_valid;
+            if (contact_valid_[i]) road_dz_[i] = contacts[i].road_dz;
+        }
         if (dt > 0.0) integrate_vertical(dt);
         write_pose_and_suspension();
     }
@@ -418,7 +425,12 @@ private:
             const double m_u = std::max(1.0, vp_.unsprung_mass[i]);
             const double k_tire = std::max(1.0, ts_.for_wheel(i).tire_vertical_stiffness);
             d.dz_u[i] = zu_dot[i];
-            d.dz_u_dot[i] = (-F_susp[i] - k_tire * (zu[i] - road_dz_[i])) / m_u;
+            // Invalid contact is airborne: the unsprung state remains dynamic
+            // under suspension force, but no hidden flat-road/tire spring is
+            // synthesized from road_dz.
+            const double F_road = contact_valid_[i]
+                ? k_tire * (zu[i] - road_dz_[i]) : 0.0;
+            d.dz_u_dot[i] = (-F_susp[i] - F_road) / m_u;
         }
         return d;
     }
@@ -524,6 +536,7 @@ private:
     std::array<double, NUM_WHEELS> z_u_dot_ {{0.0, 0.0, 0.0, 0.0}};
     std::array<double, NUM_WHEELS> mx_      {{0.0, 0.0, 0.0, 0.0}};  // camber overturning from inner
     std::array<double, NUM_WHEELS> road_dz_ {{0.0, 0.0, 0.0, 0.0}};
+    std::array<bool, NUM_WHEELS> contact_valid_ {{true, true, true, true}};
 
     // Optional hardpoint kinematics (Ld4 Stage D).  When attached, replaces
     // the lumped vp_.camber_per_roll · phi heuristic for the corresponding axle.

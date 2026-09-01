@@ -22,6 +22,7 @@ add_executable(vdsim_unit_tests
     test_lugre_tire_yaml.cpp
     test_comms_templates.cpp
     test_warn_throttle.cpp
+    test_contact_frame.cpp
 )
 
 target_link_libraries(vdsim_unit_tests PRIVATE vdsim_carla_plugin)
