@@ -46,20 +46,26 @@ vdsim::ContactArray contacts_with_normal(const vdsim::Vec3& normal,
 /** Record every travel value handed to the existing camber/toe sweep API. */
 class TravelRecorder final : public vdsim::ISuspensionKinematics {
 public:
-    explicit TravelRecorder(std::shared_ptr<std::vector<double>> samples)
-        : samples_(std::move(samples)) {}
+    explicit TravelRecorder(std::shared_ptr<std::vector<double>> samples,
+                            double camber_per_travel = 2.0,
+                            double toe_per_travel = -3.0)
+        : samples_(std::move(samples)),
+          camber_per_travel_(camber_per_travel),
+          toe_per_travel_(toe_per_travel) {}
 
     /** Record travel and return a deterministic linear camber/toe sweep. */
     Output compute(double wheel_travel, double) const noexcept override {
         samples_->push_back(wheel_travel);
         Output out;
-        out.camber = 2.0 * wheel_travel;
-        out.toe = -3.0 * wheel_travel;
+        out.camber = camber_per_travel_ * wheel_travel;
+        out.toe = toe_per_travel_ * wheel_travel;
         return out;
     }
 
 private:
     std::shared_ptr<std::vector<double>> samples_;
+    double camber_per_travel_;
+    double toe_per_travel_;
 };
 
 }  // namespace
@@ -176,21 +182,13 @@ RoadProbe probe_contacts(bool l4,
     return probe_contacts_dt(l4, contacts, initial, kProbeDt);
 }
 
-vdsim::Vec3 averaged_normal(const vdsim::ContactArray& contacts) {
-    vdsim::Vec3 n_road = vdsim::Vec3::Zero();
-    for (const auto& contact : contacts) {
-        if (!contact.is_valid) continue;
-        n_road += contact.normal / contact.normal.norm();
-    }
-    return n_road.normalized();
-}
-
-double road_gravity_y(const vdsim::ContactArray& contacts) {
-    const vdsim::Vec3 n_road = averaged_normal(contacts);
-    vdsim::Vec3 x_road = vdsim::Vec3::UnitX();
-    x_road -= x_road.dot(n_road) * n_road;
-    x_road.normalize();
-    return -kGravity * n_road.cross(x_road).normalized().z();
+/** Closed-form road-y gravity for one banked FL normal and three flat normals. */
+double one_banked_three_flat_gravity_y(double bank) {
+    // Sum of the four unit normals is (0, sin(bank), 3 + cos(bank)).
+    // With road-x=(1,0,0), the normalized road-y z component is -sum_y/|sum|.
+    const double sum_y = std::sin(bank);
+    const double sum_z = 3.0 + std::cos(bank);
+    return kGravity * sum_y / std::hypot(sum_y, sum_z);
 }
 
 }  // namespace
@@ -246,7 +244,7 @@ TEST(D2RoadLoads, HeterogeneousNormalsDoNotLeakSpuriousPlanarForce) {
     auto contacts = contacts_with_normal(vdsim::Vec3::UnitZ());
     contacts[vdsim::WHEEL_FL].normal =
         vdsim::Vec3(0.0, std::sin(bank), std::cos(bank));
-    const double expected_gy = road_gravity_y(contacts);
+    const double expected_gy = one_banked_three_flat_gravity_y(bank);
 
     vdsim::State initial;
     for (const bool l4 : {false, true}) {
@@ -268,19 +266,32 @@ TEST(D2RoadLoads, HeterogeneousNormalsDoNotLeakSpuriousPlanarForce) {
 
 TEST(D2RoadLoads, L4RoadHeightDrivesExistingTravelCamberToeSweep) {
     vdsim::State initial;
+    initial.velocity.x() = 15.0;
+    const double wheel_omega =
+        initial.velocity.x() / vdsim::VehicleParams{}.wheel_radius_nominal;
+    initial.wheel_spin = {{wheel_omega, wheel_omega, wheel_omega, wheel_omega}};
     auto dynamics = make_level(true, initial);
+    auto neutral = make_level(true, initial);
     auto samples = std::make_shared<std::vector<double>>();
+    auto neutral_samples = std::make_shared<std::vector<double>>();
     ASSERT_TRUE(vdsim::attach_front_kinematics(
         *dynamics, std::make_unique<TravelRecorder>(samples)));
+    ASSERT_TRUE(vdsim::attach_front_kinematics(
+        *neutral, std::make_unique<TravelRecorder>(neutral_samples, 0.0, 0.0)));
 
     auto contacts = contacts_with_normal(vdsim::Vec3::UnitZ());
     contacts[vdsim::WHEEL_FL].road_dz = 0.010;
     contacts[vdsim::WHEEL_FR].road_dz = -0.010;
-    for (int step = 0; step < 20; ++step) {
-        dynamics->step(vdsim::CmdL4{}, contacts, 0.001);
-    }
+    // Step 1 creates height-driven unsprung travel while both sweep outputs are
+    // zero.  A near-instantaneous second probe consumes that travel from
+    // otherwise identical states, isolating tire input from feedback dynamics.
+    dynamics->step(vdsim::CmdL4{}, contacts, 0.001);
+    neutral->step(vdsim::CmdL4{}, contacts, 0.001);
+    dynamics->step(vdsim::CmdL4{}, contacts, 1e-10);
+    neutral->step(vdsim::CmdL4{}, contacts, 1e-10);
 
-    ASSERT_GE(samples->size(), 40U);
+    ASSERT_EQ(samples->size(), 4U);
+    ASSERT_EQ(neutral_samples->size(), samples->size());
     // Calls are FL then FR on every step.  The first call pair is the initial
     // zero-travel state; later samples must carry the opposite road-height input
     // through z_u -> wheel_travel -> this existing sweep API.
@@ -291,8 +302,39 @@ TEST(D2RoadLoads, L4RoadHeightDrivesExistingTravelCamberToeSweep) {
     EXPECT_GT(fl_travel, 1e-5);
     EXPECT_LT(fr_travel, -1e-5);
     EXPECT_NEAR(fl_travel, -fr_travel, 2e-9);
+    EXPECT_DOUBLE_EQ(fl_travel, (*neutral_samples)[neutral_samples->size() - 2]);
+    EXPECT_DOUBLE_EQ(fr_travel, (*neutral_samples)[neutral_samples->size() - 1]);
+
+    // The neutral sweep sees the same height-driven travel but emits zero
+    // camber/toe.  A front-only difference in the inner tire observables proves
+    // that the nonzero sweep output is consumed by the tire model, rather than
+    // merely calling the kinematics API.
+    const auto swept_slip = dynamics->wheel_slip_angle();
+    const auto neutral_slip = neutral->wheel_slip_angle();
+    const auto swept_force = dynamics->tire_forces_wheel();
+    const auto neutral_force = neutral->tire_forces_wheel();
+    const double fl_slip_delta = swept_slip[vdsim::WHEEL_FL]
+                               - neutral_slip[vdsim::WHEEL_FL];
+    const double fl_force_delta =
+        (swept_force[vdsim::WHEEL_FL] - neutral_force[vdsim::WHEEL_FL]).norm();
+    EXPECT_GT(std::abs(fl_slip_delta), 1e-8);
+    EXPECT_GT(fl_force_delta, 1e-4);
+    double max_rear_force_delta = 0.0;
+    for (const int wheel : {vdsim::WHEEL_RL, vdsim::WHEEL_RR}) {
+        EXPECT_NEAR(swept_slip[wheel], neutral_slip[wheel], 1e-12);
+        max_rear_force_delta = std::max(
+            max_rear_force_delta,
+            (swept_force[wheel] - neutral_force[wheel]).norm());
+    }
+    // The front sweep signal must dominate the O(dt) force-propagation residue
+    // at the unattached rear axle by at least eight orders of magnitude.
+    EXPECT_LT(max_rear_force_delta / fl_force_delta, 1e-8);
     std::cout << std::setprecision(17)
               << "[D2:L4-height-sweep] fl_travel_m=" << fl_travel
               << " fr_travel_m=" << fr_travel
+              << " fl_slip_delta_rad=" << fl_slip_delta
+              << " fl_tire_force_delta_N=" << fl_force_delta
+              << " rear_to_front_force_delta_ratio="
+              << max_rear_force_delta / fl_force_delta
               << " sample_count=" << samples->size() << '\n';
 }

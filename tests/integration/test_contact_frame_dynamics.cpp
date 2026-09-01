@@ -324,7 +324,20 @@ TEST(D1ContactFrame, WarmedRollPitchUsesWorldZLegacyLoadAxis) {
         const double old_body_axis_residual =
             plus->tire_Fz()[wheel] * (1.0 - Rzz);
         if (wheel == vdsim::WHEEL_FL) {
-            EXPECT_NEAR(old_body_axis_residual, 2.805, 0.2);
+            // For a ZYX body attitude, e_z(body) dot e_z(world) is
+            // cos(roll)*cos(pitch).  The legacy body-z load axis therefore
+            // drops this exact fraction of Fz from the world-z balance.  This
+            // dimensionless geometry check is independent of tire load and
+            // replaces the former warmed-state force snapshot.
+            const double expected_axis_loss_fraction =
+                1.0 - std::cos(warm_rp[0]) * std::cos(warm_rp[1]);
+            const double observed_axis_loss_fraction =
+                old_body_axis_residual / plus->tire_Fz()[wheel];
+            EXPECT_GT(expected_axis_loss_fraction, 0.0);
+            EXPECT_GT(old_body_axis_residual, 0.0);
+            EXPECT_NEAR(1.0 - Rzz, expected_axis_loss_fraction, 1e-14);
+            EXPECT_NEAR(observed_axis_loss_fraction,
+                        expected_axis_loss_fraction, 1e-14);
             std::cout << std::setprecision(17)
                       << "[D1:warm-axis] roll_rad=" << warm_rp[0]
                       << " pitch_rad=" << warm_rp[1]
