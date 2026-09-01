@@ -364,6 +364,123 @@ TEST(CommsTemplates, GgaReportsNoFixForDegenerateState) {
     EXPECT_EQ(f[6], "0");
 }
 
+// N1 regression, layer 1: the ECEF->geodetic inverse is only single-valued
+// outside the ellipsoid's evolute. Near/below the geocentre the Newton step's
+// atan2() x-argument flips sign and returns a second/third-quadrant angle -
+// a "latitude" of |lat| > 90 deg. That must be reported as failure, not
+// returned as an angle.
+TEST(CommsTemplates, EnuToGeodeticFailsInsideTheEarthInsteadOfReturningABadAngle) {
+    const GeodeticOrigin o{37.5665, 126.9780, 38.0};
+    // The exact reproduction: a pure vertical divergence 6350 km down, which is
+    // still inside the kMaxEnuOffsetM = 1e8 m coarse guard and used to yield
+    // lat_deg = -163.551823.
+    const auto bad = vdsim::cosim::enu_to_geodetic(0.0, 0.0, -6.35e6, o);
+    EXPECT_FALSE(bad.ok);
+    EXPECT_TRUE(std::isnan(bad.lat_deg));
+    EXPECT_TRUE(std::isnan(bad.lon_deg));
+    EXPECT_TRUE(std::isnan(bad.alt_m));
+    // The whole "inside the Earth" band, at 1 m steps: every result is either a
+    // clean failure or a latitude that actually exists.
+    for (double z = -6.5e6; z <= -6.2e6; z += 1.0) {
+        const auto g = vdsim::cosim::enu_to_geodetic(0.0, 0.0, z, o);
+        if (!g.ok) continue;
+        ASSERT_LE(std::fabs(g.lat_deg), 90.0) << "z=" << z;
+        ASSERT_LE(std::fabs(g.lon_deg), 180.0) << "z=" << z;
+    }
+    // Non-finite inputs and a non-finite datum fail rather than propagating.
+    EXPECT_FALSE(vdsim::cosim::enu_to_geodetic(kNaN, 0.0, 0.0, o).ok);
+    EXPECT_FALSE(vdsim::cosim::enu_to_geodetic(0.0, kInf, 0.0, o).ok);
+    EXPECT_FALSE(vdsim::cosim::enu_to_geodetic(0.0, 0.0, 0.0,
+                                               GeodeticOrigin{kNaN, 0.0, 0.0}).ok);
+    // A default-constructed result is "no fix", not a fix at Null Island.
+    EXPECT_FALSE(vdsim::cosim::Geodetic{}.ok);
+    // Ordinary vehicle states keep reporting success.
+    for (double z : {-1000.0, -10.0, 0.0, 10.0, 1000.0, 1.0e4}) {
+        const auto g = vdsim::cosim::enu_to_geodetic(1234.0, -5678.0, z, o);
+        EXPECT_TRUE(g.ok) << "z=" << z;
+    }
+}
+
+// N1 regression, layer 2: the NMEA angle field bound is per-field. Checking
+// everything against 180 let a latitude of 163.55 deg through, which also
+// widened the field to ten characters where GGA specifies nine (ddmm.mmmm).
+TEST(CommsTemplates, DegMinUsesThePerFieldRangeBound) {
+    EXPECT_DOUBLE_EQ(vdsim::cosim::nmea_deg_max(2), 90.0);
+    EXPECT_DOUBLE_EQ(vdsim::cosim::nmea_deg_max(3), 180.0);
+    // The reproduced value: rejected as a latitude, legal as a longitude.
+    EXPECT_EQ(vdsim::cosim::nmea_deg_min(-163.551823, 2), "");
+    EXPECT_EQ(vdsim::cosim::nmea_deg_min(-163.551823, 3), "16333.1094");
+    EXPECT_EQ(vdsim::cosim::nmea_deg_min(90.0001, 2), "");
+    EXPECT_EQ(vdsim::cosim::nmea_deg_min(-90.0001, 2), "");
+    EXPECT_EQ(vdsim::cosim::nmea_deg_min(90.0, 2), "9000.0000");   // inclusive
+    // A latitude field is always ddmm.mmmm, a longitude field dddmm.mmmm.
+    for (double d = -90.0; d <= 90.0; d += 0.37)
+        ASSERT_EQ(vdsim::cosim::nmea_deg_min(d, 2).size(), 9u) << d;
+    for (double d = -180.0; d <= 180.0; d += 0.73)
+        ASSERT_EQ(vdsim::cosim::nmea_deg_min(d, 3).size(), 10u) << d;
+}
+
+// N1 regression, layer 3: a state the projection cannot invert must take the
+// same D3 "no fix" path as NaN, never a checksum-valid quality-1 sentence with
+// an impossible latitude.
+TEST(CommsTemplates, GgaNeverEmitsAQualityOneFixWithAnOutOfRangeField) {
+    const GeodeticOrigin o{37.5665, 126.9780, 38.0};
+    // Asserts a sentence is either a well-formed fix or the "no fix" form.
+    auto check = [](const std::vector<std::string>& f, double z) {
+        ASSERT_EQ(f.size(), 15u) << "z=" << z;
+        if (f[6] != "1") {                       // "no fix": D3's degradation
+            EXPECT_EQ(f[2], "")     << "z=" << z;
+            EXPECT_EQ(f[3], "")     << "z=" << z;
+            EXPECT_EQ(f[4], "")     << "z=" << z;
+            EXPECT_EQ(f[5], "")     << "z=" << z;
+            EXPECT_EQ(f[6], "0")    << "z=" << z;
+            EXPECT_EQ(f[7], "00")   << "z=" << z;
+            EXPECT_EQ(f[8], "99.9") << "z=" << z;
+            EXPECT_EQ(f[9], "")     << "z=" << z;
+            return;
+        }
+        ASSERT_EQ(f[2].size(), 9u) << "z=" << z << " lat field " << f[2];
+        ASSERT_EQ(f[4].size(), 10u) << "z=" << z << " lon field " << f[4];
+        EXPECT_TRUE(f[3] == "N" || f[3] == "S") << "z=" << z;
+        EXPECT_TRUE(f[5] == "E" || f[5] == "W") << "z=" << z;
+        EXPECT_LE(std::stod(f[2]), 9000.0) << "z=" << z;    // |lat| <= 90 deg
+        EXPECT_LE(std::stod(f[4]), 18000.0) << "z=" << z;   // |lon| <= 180 deg
+        EXPECT_LT(std::stod(f[2].substr(2)), 60.0) << "z=" << z;
+        EXPECT_LT(std::stod(f[4].substr(3)), 60.0) << "z=" << z;
+    };
+    // The exact reproduction, which emitted
+    // "$GPGGA,010000.00,16333.1094,S,12658.6800,E,1,12,0.9,-6402744.3,M,0.0,M,,*5D".
+    StateFields s;
+    s.z = -6.35e6;
+    const std::string sentence = vdsim::cosim::encode_gga(s, o, 3600.0);
+    const auto f = parse_checked_sentence(sentence);
+    ASSERT_EQ(f.size(), 15u);
+    EXPECT_EQ(f[6], "0") << sentence;
+    EXPECT_EQ(f[2], "") << sentence;
+    check(f, s.z);
+    // The measured reachable bands, at 1 m steps, plus the surrounding region.
+    const double bands[][3] = {{-6361743.0, -6360052.0,  1.0},
+                               {-6356268.0, -6337299.0,  1.0},
+                               {-6334874.0, -6334540.0,  1.0},
+                               {-6500000.0, -6200000.0, 11.0}};   // surrounding region
+    for (const auto& b : bands) {
+        for (double z = b[0]; z <= b[1]; z += b[2]) {
+            StateFields t;
+            t.z = z;
+            check(parse_checked_sentence(vdsim::cosim::encode_gga(t, o, 3600.0)), z);
+        }
+    }
+    // ... and a coarse pass over the whole |z| range the coarse guard accepts,
+    // with horizontal offsets, so no other band can hide.
+    for (double h : {0.0, 1.0e3, 1.0e5, 1.0e7}) {
+        for (double z = -1.0e8; z <= 1.0e8; z += 5.0e4) {
+            StateFields t;
+            t.m_gnss_x = h; t.m_gnss_y = -h; t.z = z;
+            check(parse_checked_sentence(vdsim::cosim::encode_gga(t, o, 3600.0)), z);
+        }
+    }
+}
+
 // An altitude too large to format must blank the field, not overflow it, while
 // the horizontal fix (which is still meaningful) is kept.
 TEST(CommsTemplates, GgaBlanksAnUnprintableAltitude) {

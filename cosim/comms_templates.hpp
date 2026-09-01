@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -35,12 +36,18 @@ struct GeodeticOrigin {
 };
 
 // Result of enu_to_geodetic(): WGS84-referenced latitude/longitude + altitude.
-// lat_deg is always in [-90, 90] and lon_deg in (-180, 180]: the closed-form
-// inverse produces both from atan2(), so no separate wrapping step is needed.
+//
+// `ok` is the only field a caller may read unconditionally. When it is true,
+// lat_deg is in [-90, 90] and lon_deg in (-180, 180]; when it is false the
+// three angles/altitude are NaN, because the ECEF->geodetic inverse is not
+// single-valued at that point (see enu_to_geodetic()). Default-constructing a
+// Geodetic yields ok = false so a caller that skips the projection entirely
+// cannot accidentally publish a zeroed "fix at Null Island".
 struct Geodetic {
     double lat_deg {0.0};
     double lon_deg {0.0};
     double alt_m   {0.0};
+    bool   ok      {false};
 };
 
 // Synthetic GGA quality fields. VDSim models GNSS as an additive-noise position
@@ -100,13 +107,26 @@ inline std::string nmea_sentence(const std::vector<std::string>& fields) {
     return "$" + body + tail;
 }
 
+/// @brief Largest |angle| an NMEA degrees+minutes field of @p deg_digits holds.
+/// @param deg_digits Integer degree digits, which is what distinguishes the two
+///        NMEA angle fields: 2 => latitude => 90, 3 => longitude => 180.
+/// @return 90.0 for a two-digit (latitude) field, 180.0 otherwise.
+/// @note The bound is per-field, not a single global 180: a latitude of, say,
+///       163.55 deg does not exist, and printing it would also widen the field
+///       to "16333.1094" — ten characters where GGA specifies nine (ddmm.mmmm).
+constexpr double nmea_deg_max(int deg_digits) {
+    return deg_digits >= 3 ? 180.0 : 90.0;
+}
+
 /// @brief Format a signed angle as an unsigned NMEA degrees+minutes field.
 /// @param deg Angle [deg]; the sign is dropped (the hemisphere field carries
-///        it). Must already be range-reduced: |deg| <= 180.
+///        it). Must already be range-reduced to the field's bound, i.e.
+///        |deg| <= nmea_deg_max(deg_digits).
 /// @param deg_digits Integer degree digits: 2 for latitude, 3 for longitude.
+///        This also selects the legal range checked below (see nmea_deg_max()).
 /// @return "ddmm.mmmm" (or "dddmm.mmmm"), minutes zero-padded to 2 integer
 ///         digits; an empty string (the NMEA "not available" field) when @p deg
-///         is not finite or is out of range.
+///         is not finite or is out of range for the field.
 /// @note Minutes are rounded to the printed 4-decimal precision *before* the
 ///       range check so a value rounding up to 60.0000 carries into degrees
 ///       instead of emitting an illegal minute field.
@@ -115,7 +135,8 @@ inline std::string nmea_sentence(const std::vector<std::string>& fields) {
 ///       observed result was a field like "-2147483648    nan" — with embedded
 ///       spaces inside a comma-delimited field — carrying a valid checksum.
 inline std::string nmea_deg_min(double deg, int deg_digits) {
-    if (!std::isfinite(deg) || std::fabs(deg) > 180.0) return std::string();
+    if (!std::isfinite(deg) || std::fabs(deg) > nmea_deg_max(deg_digits))
+        return std::string();
     const double a = std::fabs(deg);
     int    d = static_cast<int>(a);
     double m = std::round((a - d) * 60.0 * 1e4) / 1e4;
@@ -160,12 +181,27 @@ inline std::string nmea_utc_field(double utc_sod) {
 ///   3. ECEF -> geodetic: Bowring's closed form + Newton refinement.
 /// @endverbatim
 ///
-/// Accuracy: exact to double-precision rounding. Measured against PROJ's
-/// `+proj=topocentric` / `+proj=cart` pipeline (pyproj 3.5 / PROJ 9) the worst
-/// disagreement over the datum/offset grid in
-/// tests/unit/test_comms_templates.cpp is 6e-8 m — sub-micrometre, at any
-/// offset and any latitude, poles and antimeridian included. The
-/// equirectangular form this replaced froze the longitude scale at cos(lat0)
+/// Accuracy: exact to double-precision rounding. The reference it is measured
+/// against is the *exact analytic* ENU->ECEF above, evaluated in 60-digit
+/// arithmetic: the result (lat, lon, h) is forward-transformed back to ECEF and
+/// compared with that reference point. Worst closure over a 234,234-point grid
+/// (datum lat -90..90 incl. both poles, lon -180..180 incl. the antimeridian,
+/// datum alt 0/38/8848 m, east/north +-1 m .. +-1e6 m, up -1000..+1e4 m) is
+/// **5.2e-9 m**.
+///
+/// PROJ is a cross-check, not the reference, because it is the less accurate of
+/// the two here. Against `+proj=topocentric` / `+proj=cart` (pyproj 3.5 /
+/// PROJ 9.2) this code agrees to **6e-8 m while the resulting ellipsoidal
+/// height stays under ~2 km** — which covers every offset a ground-vehicle
+/// scene produces, including 100 km of horizontal ENU (the tangent-plane rise
+/// puts that at ~800 m HAE). Higher than that PROJ's `cart` inverse is what
+/// drifts: 1.4e-6 m at 11 km HAE and 3.4e-4 m at 165 km HAE (lat0 60,
+/// e = n = -1000 km, up = 10 km), and at those points PROJ differs from the
+/// exact analytic reference by that same amount while this code still closes to
+/// ~2.6e-9 m. So the PROJ figure is quoted with its altitude range attached,
+/// and it is not a bound on this code's error.
+///
+/// The equirectangular form this replaced froze the longitude scale at cos(lat0)
 /// and was off by 6.75 m at 10 km / 678 m at 100 km from the Seoul datum
 /// (lat 37.5665), not the "0.1 m / 100 m" it advertised — that figure only
 /// held near the equator, and the error scaled with tan(lat0).
@@ -187,9 +223,18 @@ inline std::string nmea_utc_field(double utc_sod) {
 /// @param north ENU north offset from the origin [m].
 /// @param up    ENU up offset from the origin [m].
 /// @param o     Geodetic datum the offsets are referenced to.
-/// @return Latitude in [-90, 90] deg, longitude in (-180, 180] deg, ellipsoidal
-///         altitude [m]. Non-finite inputs propagate as non-finite outputs; the
-///         GGA encoder checks for that before formatting anything.
+/// @return `ok = true` with latitude in [-90, 90] deg, longitude in
+///         (-180, 180] deg and ellipsoidal altitude [m]; or `ok = false` with
+///         all three set to NaN. The postcondition is enforced, not assumed:
+///         the result is forward-transformed back to ECEF and rejected unless
+///         it reproduces the input point.
+/// @note Failure is reported — rather than a nearest-plausible angle — for
+///       non-finite inputs and for points at or inside the ellipsoid's evolute
+///       (|x| < 42.70 km, |z| < 42.84 km around the geocentre), where a point
+///       has several geodetic latitudes and the closed form silently picks a
+///       second/third-quadrant one. A vehicle 6350 km below the datum is a
+///       diverged solver, not a location, so the honest answer is "no fix" —
+///       and encode_gga() turns it into exactly that sentence.
 inline Geodetic enu_to_geodetic(double east, double north, double up,
                                 const GeodeticOrigin& o) {
     constexpr double kA   = 6378137.0;                    // WGS84 semi-major axis [m]
@@ -215,12 +260,28 @@ inline Geodetic enu_to_geodetic(double east, double north, double up,
     const double y = y0 + cl * east - sp * sl * north + cp * sl * up;
     const double z = z0 +             cp      * north + sp      * up;
 
-    Geodetic g;
+    // Half-height of the WGS84 evolute — the caustic swept by the ellipse's
+    // centres of curvature, |x| <= (a^2-b^2)/a = 42.70 km and
+    // |z| <= (a^2-b^2)/b = 42.84 km. Strictly inside that astroid a point has
+    // several geodetic latitudes and the inverse below is not single-valued.
+    constexpr double kEvoluteZ = (kA * kA - kB * kB) / kB;   // 42841.3 m
+
+    Geodetic g;                                  // ok defaults to false
+    const double kNaN = std::numeric_limits<double>::quiet_NaN();
     const double p = std::hypot(x, y);
-    if (!(p > 1.0e-9)) {          // on the spin axis (or NaN): longitude undefined
-        g.lat_deg = std::isfinite(z) ? (z >= 0.0 ? 90.0 : -90.0) : z;
+    if (!std::isfinite(p) || !std::isfinite(z)) {   // non-finite input or datum
+        g.lat_deg = g.lon_deg = g.alt_m = kNaN;
+        return g;
+    }
+    if (!(p > 1.0e-9)) {          // on the spin axis: longitude undefined
+        if (!(std::fabs(z) > kEvoluteZ)) {         // ... and inside the evolute
+            g.lat_deg = g.lon_deg = g.alt_m = kNaN;
+            return g;
+        }
+        g.lat_deg = z >= 0.0 ? 90.0 : -90.0;
         g.lon_deg = o.lon_deg - std::floor((o.lon_deg + 180.0) / 360.0) * 360.0;
-        g.alt_m   = std::isfinite(z) ? std::fabs(z) - kB : z;
+        g.alt_m   = std::fabs(z) - kB;
+        g.ok      = true;
         return g;
     }
     // Bowring's parametric-latitude start value: already good to ~0.1 mm.
@@ -230,19 +291,46 @@ inline Geodetic enu_to_geodetic(double east, double north, double up,
                             p - kE2  * kA * ct * ct * ct);
     // Two Newton steps drive the residual down to double-precision noise, so a
     // zero offset round-trips back to the datum to within ~1e-13 deg.
+    //
+    // The step is only valid while den = N + h stays above e2*N (~42.7 km):
+    // below that the x-argument of the atan2() flips sign and the "latitude"
+    // lands in the second or third quadrant, i.e. |lat| > 90 deg. That is the
+    // same region the evolute guard above rejects, so the loop simply stops
+    // refining there and the round-trip check below rejects the result.
     for (int i = 0; i < 2; ++i) {
         const double s1 = std::sin(lat), c1 = std::cos(lat);
         const double w  = std::sqrt(1.0 - kE2 * s1 * s1);
         const double nr = kA / w;
         const double h  = p * c1 + z * s1 - kA * w;
         const double den = nr + h;
-        if (!(std::fabs(den) > 1.0)) break;      // degenerate: keep Bowring's value
+        if (!(den > kE2 * nr)) break;            // degenerate: keep Bowring's value
         lat = std::atan2(z, p * (1.0 - kE2 * nr / den));
     }
     const double s1 = std::sin(lat), c1 = std::cos(lat);
+    const double w1 = std::sqrt(1.0 - kE2 * s1 * s1);
+    const double nr = kA / w1;
+    const double h  = p * c1 + z * s1 - kA * w1;
+    // Verify rather than assume: forward-transform the answer and require it to
+    // reproduce the ECEF point that was fed in. This is what makes the
+    // postcondition real — it catches a non-convergent iterate and a wrong
+    // branch of the inverse alike, including the |lat| > 90 case above, for
+    // which cos(lat) < 0 and the reconstructed p comes out negative.
+    const double pr = (nr + h) * c1;
+    const double zr = (nr * (1.0 - kE2) + h) * s1;
+    // 1 mm, plus 1e-11 of the geocentric radius for the cancellation in
+    // h = p cos + z sin - N w at large offsets. The measured closure over the
+    // accuracy grid above is 5.2e-9 m, so this is ~5 orders of headroom for a
+    // valid point while still an order of magnitude tighter than any wrong
+    // branch of the inverse, which misses by kilometres.
+    const double tol = 1.0e-3 + 1.0e-11 * std::hypot(p, z);
+    if (!(std::fabs(pr - p) <= tol) || !(std::fabs(zr - z) <= tol)) {
+        g.lat_deg = g.lon_deg = g.alt_m = kNaN;
+        return g;
+    }
     g.lat_deg = lat * kDeg;
     g.lon_deg = std::atan2(y, x) * kDeg;
-    g.alt_m   = p * c1 + z * s1 - kA * std::sqrt(1.0 - kE2 * s1 * s1);
+    g.alt_m   = h;
+    g.ok      = true;
     return g;
 }
 
@@ -273,12 +361,16 @@ inline double utc_seconds_of_day_now() {
 /// Z up (documented at core/include/vdsim/coordinate.hpp:8), so x maps to the
 /// ENU east offset and y to the north offset — no swap.
 ///
-/// Degenerate states: a diverged solver can hand the encoder NaN, infinity or
-/// an absurd offset. Formatting those was undefined behaviour and produced a
-/// checksum-valid sentence with spaces embedded inside comma-delimited fields.
-/// Instead the sentence now degrades the way a real receiver does — quality 0,
-/// 00 satellites, 99.9 HDOP and empty position/altitude fields — so it stays
-/// well-formed while telling the consumer, explicitly, that there is no fix.
+/// Degenerate states: a diverged solver can hand the encoder NaN, infinity, an
+/// absurd offset, or an offset that puts the vehicle near/below the Earth's
+/// centre where the geodetic inverse has no single answer. Formatting those was
+/// undefined behaviour and produced a checksum-valid sentence with spaces
+/// embedded inside comma-delimited fields, or a quality-1 fix at an impossible
+/// latitude. Instead the sentence degrades the way a real receiver does —
+/// quality 0, 00 satellites, 99.9 HDOP and empty position/altitude fields — so
+/// it stays well-formed while telling the consumer, explicitly, that there is
+/// no fix. There is no path that emits a quality-1 sentence with a field the
+/// encoder could not verify.
 ///
 /// @param s State to encode; m_gnss_x/m_gnss_y are ENU metres from `o`.
 /// @param o Per-channel geodetic datum for the ENU->lat/lon projection.
@@ -295,11 +387,14 @@ inline std::string encode_gga(const StateFields& s, const GeodeticOrigin& o,
                         std::isfinite(o.lat_deg) && std::isfinite(o.lon_deg) &&
                         std::isfinite(o.alt_m);
     const Geodetic g = enu_ok ? enu_to_geodetic(s.m_gnss_x, s.m_gnss_y, s.z, o)
-                              : Geodetic{};
-    // nmea_deg_min() returns an empty field for anything it cannot represent,
-    // so a bad projection result cannot leak into the sentence either.
-    const std::string lat_f = enu_ok ? nmea_deg_min(g.lat_deg, 2) : std::string();
-    const std::string lon_f = enu_ok ? nmea_deg_min(g.lon_deg, 3) : std::string();
+                              : Geodetic{};       // ok = false
+    // Two independent guards, both feeding the same "no fix" degradation:
+    // enu_to_geodetic() reports ok = false wherever the closed-form inverse is
+    // not single-valued (a state below the Earth's surface, say), and
+    // nmea_deg_min() returns an empty field for anything the field itself
+    // cannot represent — non-finite, or outside +-90 deg / +-180 deg.
+    const std::string lat_f = g.ok ? nmea_deg_min(g.lat_deg, 2) : std::string();
+    const std::string lon_f = g.ok ? nmea_deg_min(g.lon_deg, 3) : std::string();
     const bool fix_ok = !lat_f.empty() && !lon_f.empty();
     const bool alt_ok = fix_ok && std::isfinite(g.alt_m) &&
                         std::fabs(g.alt_m) <= kMaxGgaAltitudeM;
@@ -346,7 +441,8 @@ inline std::string json_number(double v, int prec) {
     char out[32];
     const int n = std::snprintf(out, sizeof(out), "%.*f", prec, v);
     if (n < 0) return "null";
-    if (static_cast<size_t>(n) < sizeof(out)) return std::string(out, n);
+    if (static_cast<size_t>(n) < sizeof(out))
+        return std::string(out, static_cast<size_t>(n));
     // Enormous-but-finite magnitudes need more digits than the scratch holds;
     // they will normally overflow the TX buffer and be dropped by the caller,
     // but they must never be reported as a silently truncated number.

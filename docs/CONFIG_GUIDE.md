@@ -222,10 +222,15 @@ channels:
 
 `nmea_gga` 세부(구현: `cosim/comms_templates.hpp`, 샘플: `configs/comms/json_nmea.yaml`):
 - **origin**: 채널별 선택 필드 `origin: {lat, lon, alt}`. 시뮬 ENU 미터(X east / Y north / Z up, `core/include/vdsim/coordinate.hpp`)의 측지 기준점. 미지정 시 (0, 0, 0).
-- **변환**: WGS84 정밀 폐형해 — ENU → ECEF (origin ECEF + ENU 회전행렬) → geodetic (Bowring + Newton). 근사가 아니므로 **위도 의존성이 없다**: PROJ `+proj=topocentric` 기준 최대 편차 6e-8 m (극지방·날짜변경선 포함). lat∈[-90,90], lon∈(-180,180] 로 항상 정규화된다.
+- **변환**: WGS84 정밀 폐형해 — ENU → ECEF (origin ECEF + ENU 회전행렬) → geodetic (Bowring + Newton). 근사가 아니므로 **위도 의존성이 없다**. lat∈[-90,90], lon∈(-180,180] 로 항상 정규화된다.
+  - **정확도 기준은 해석적(analytic) ECEF**: 결과 (lat, lon, h) 를 다시 ECEF 로 정변환해 60자리 정밀도로 계산한 기준점과 비교했을 때, 234,234 점 격자(datum lat −90~90 극점 포함, lon −180~180 날짜변경선 포함, datum alt 0/38/8848 m, east/north ±1 m~±1e6 m, up −1000~+1e4 m)에서 **최대 5.2e-9 m**.
+  - **PROJ 는 기준이 아니라 교차검증**이다. `+proj=topocentric` / `+proj=cart` (pyproj 3.5 / PROJ 9.2) 와는 **결과 타원체고(HAE)가 약 2 km 이하인 범위에서 6e-8 m 이내**로 일치한다 — 수평 ENU 100 km(접평면 상승으로 HAE ≈ 800 m)까지 포함해 지상 차량 시나리오 전 구간이 여기 들어간다. 그보다 높으면 **PROJ 쪽**이 벌어진다: HAE 11 km 에서 1.4e-6 m, HAE 165 km(lat0 60, e=n=−1000 km, up=10 km)에서 3.4e-4 m 이며, 같은 점에서 PROJ 자신이 해석적 기준과 동일한 크기로 어긋난다(이 구현은 여전히 ~2.6e-9 m). 따라서 PROJ 수치는 고도 범위를 반드시 함께 적어야 하고, 이 구현의 오차 상한이 아니다.
   - 직전 버전은 등거리원통(equirectangular) 근사(`lon = lon0 + east/(N·cos lat0)`)로, 서울 datum(lat 37.5665) 기준 10 km 에서 6.75 m / 100 km 에서 678 m 오차였다 — 문서에는 0.1 m / 100 m 로 적혀 있었으나 그것은 적도 근처에서만 성립하는 값이다.
   - 남은 오차는 구현이 아니라 ENU **정의** 자체다: 접평면이므로 수평 거리 d 에서 타원체 위로 ~d²/(2R) 만큼 뜨고(10 km 에서 7.8 m, GGA 고도에 반영됨), 진짜 측지선 대비 ~d³/(3R²) 차이가 남는다(10 km 에서 8 mm, 100 km 에서 8.2 m). 고도는 타원체고(HAE)이며 geoid 모델은 없다.
-- **비정상 상태 처리**: 솔버가 발산해 NaN/Inf 또는 비상식적으로 큰 ENU 오프셋(|offset| > 1e8 m)이 들어오면, 실제 수신기처럼 **no-fix 문장**(quality 0, 00 satellites, 99.9 HDOP, 빈 위치/고도 필드)을 내보낸다. 과거에는 `static_cast<int>(NaN)` UB 로 필드 안에 공백이 들어간 문장이 체크섬까지 맞은 채 전송됐다.
+- **비정상 상태 처리**: 솔버가 발산해 NaN/Inf, 비상식적으로 큰 ENU 오프셋(|offset| > 1e8 m), 또는 **역변환이 유일하지 않은 지점**(지구 중심 근처 — 타원체 evolute 내부, |x| < 42.70 km·|z| < 42.84 km)이 들어오면, 실제 수신기처럼 **no-fix 문장**(quality 0, 00 satellites, 99.9 HDOP, 빈 위치/고도 필드)을 내보낸다. quality 1 문장에 검증되지 않은 필드가 실리는 경로는 없다.
+  - 폐형해는 결과를 ECEF 로 되돌려 입력점과 대조한 뒤에만 성공(`Geodetic::ok`)으로 보고한다. 실패 시 lat/lon/alt 는 NaN 이다.
+  - NMEA 각도 필드 범위 검사는 필드별 상한을 쓴다 — 위도(2자리) 90°, 경도(3자리) 180°. 예전에는 둘 다 180° 로 검사해서, 예컨대 datum 서울 + `z = -6.35e6` m 같은 발산 상태가 위도 −163.55° 를 `16333.1094`(GGA 규격 9자 자리에 10자)로 실어 **체크섬이 맞는 quality 1 문장**으로 나갔다.
+  - 과거에는 `static_cast<int>(NaN)` UB 로 필드 안에 공백이 들어간 문장이 체크섬까지 맞은 채 전송됐다.
 - **위치 소스**: 측정 GNSS(`m_gnss_x/_y`). GGA 는 수신기 출력이므로 센서 노이즈가 그대로 반영된다. 노이즈 미설정 시에도 `SensorModel` 이 항등 경로로 truth 를 채우므로 값이 비지 않는다. 고도만 truth `z`(GNSS 고도 채널 모델 없음).
 - **UTC 필드**: 시스템 wall clock (STATE 의 `timestamp` 는 steady_clock 기반 monotonic 이라 UTC 가 아님). 초는 출력 정밀도(1/100 s)로 **먼저 반올림한 뒤** 초→분→시→날 자리올림을 하므로 `125960.00` 같은 불법 시각은 나오지 않는다.
 - **satellites / HDOP / geoid separation**: 위성·DOP 모델이 없어 고정 placeholder(12 / 0.9 / 0.0).

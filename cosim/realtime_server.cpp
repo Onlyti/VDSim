@@ -728,6 +728,11 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
                 vdsim::cosim::StateFields s;
                 s.seq = seq++; s.timestamp = t;
                 fill_state(s, o, wv->vp.wheel_radius_nominal, wv->id);
+                // tc.templ is always one of the three values canonical_tx_template()
+                // can return: the TX resolve loop above drops the channel outright
+                // when it returns the empty string, so an unknown name never
+                // reaches this loop. "vds1" is therefore the terminal branch rather
+                // than a fourth `else if` guarding an unreachable warn/continue.
                 int len = 0;
                 if (tc.templ == "json")
                     len = vdsim::cosim::encode_state_json(out, sizeof(out), s);
@@ -735,15 +740,8 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
                     len = vdsim::cosim::encode_state_nmea_gga(
                         out, sizeof(out), s, tc.origin,
                         vdsim::cosim::utc_seconds_of_day_now());
-                else if (tc.templ == "vds1")
-                    len = vdsim::cosim::encode_state(out, s);
-                else {
-                    if (vdsim::cosim::warn_due(t, tc.warn))
-                        std::fprintf(stderr, "[vdsim_realtime] skip unknown template %s"
-                            " (%llu suppressed so far)\n", tc.templ.c_str(),
-                            static_cast<unsigned long long>(tc.warn.suppressed));
-                    continue;
-                }
+                else
+                    len = vdsim::cosim::encode_state(out, s);      // "vds1"
                 if (len < 0) {
                     // The text encoders never emit a truncated frame: a cut-short
                     // JSON object / NMEA sentence is unparseable at the consumer.
