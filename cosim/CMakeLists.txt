@@ -161,6 +161,14 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 300
         ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/python")
+    # AC M1 is a standalone Python importer: synthetic data only, no core/KN5.
+    add_test(NAME ac_fast_lane_importer
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_ac_fast_lane_importer.py)
+    set_tests_properties(ac_fast_lane_importer PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 120
+        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/python")
     # Text TX templates end-to-end: json + nmea_gga must reach a UDP socket.
     add_test(NAME comms_tx_templates
         COMMAND ${Python3_EXECUTABLE}

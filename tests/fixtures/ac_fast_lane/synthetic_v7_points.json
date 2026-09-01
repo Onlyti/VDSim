@@ -1,0 +1,17 @@
+{
+  "license": "CC0-1.0 synthetic fixture; contains no Assetto Corsa game data",
+  "format_version": 7,
+  "closed_loop": true,
+  "points": [
+    {"position": [0.0, 1.0, 0.0], "left_width_m": 4.0, "right_width_m": 3.5},
+    {"position": [-4.0, 1.5, 10.0], "left_width_m": 4.2, "right_width_m": 3.7},
+    {"position": [-9.0, 2.0, 20.0], "left_width_m": 4.4, "right_width_m": 3.9},
+    {"position": [-12.0, 2.5, 30.0], "left_width_m": 4.6, "right_width_m": 4.1}
+  ],
+  "transform_source_to_vdsim": [
+    [0.0, 0.0, 1.0, 40.0],
+    [-1.0, 0.0, 0.0, 5.0],
+    [0.0, 1.0, 0.0, 0.0],
+    [0.0, 0.0, 0.0, 1.0]
+  ]
+}
