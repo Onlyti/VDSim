@@ -121,7 +121,7 @@ public:
         mx_w_.fill(0.0);
         transient_.fill(ITireModel::Transient{});
         contact_active_.fill(false);
-        contact_moment_delta_.fill(Vec3::Zero());
+        contact_loads_.fill(detail::ContactLoad{});
         l4_contact_kinematics_ = detail::L4ContactKinematics{};
         ci_.fill(ITireModel::ContactInput{});
         drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
@@ -201,9 +201,9 @@ public:
         l4_contact_kinematics_ = context;
     }
 
-    /** Return contact-moment corrections not already represented by flat suspension/inertia. */
-    const std::array<Vec3, NUM_WHEELS>& contact_moment_delta() const noexcept {
-        return contact_moment_delta_;
+    /** Return full contact loads and corrections for the internal L4 consumer. */
+    const std::array<detail::ContactLoad, NUM_WHEELS>& contact_loads() const noexcept {
+        return contact_loads_;
     }
     bool   set_brake_module(std::shared_ptr<IBrakeSystem> m) override {
         if (!m) return false;
@@ -508,7 +508,7 @@ private:
                 ci_[i]         = ITireModel::ContactInput{};  // neutral: no bristle/relax evolution
                 transient_[i]  = ITireModel::Transient{};
                 contact_active_[i] = false;
-                contact_moment_delta_[i] = Vec3::Zero();
+                contact_loads_[i] = detail::ContactLoad{};
                 continue;
             }
             const double v_x_body = vx - r * r_y[i];
@@ -602,14 +602,27 @@ private:
             // physical contact force full_contact_force without double-counting
             // the legacy Fz*e_z path and is exactly zero on canonical flat road.
             F_applied[i] = full_contact_force - Fz[i] * Vec3::UnitZ();
+            contact_loads_[i].full_force_body = full_contact_force;
+            contact_loads_[i].applied_force_body = F_applied[i];
+            auto force_to_world = [&](const Vec3& force_body) {
+                if (l4_contact_kinematics_.enabled && !canonical_flat) {
+                    return l4_contact_kinematics_.body_to_world * force_body;
+                }
+                return Vec3(
+                    std::cos(yaw) * force_body.x() - std::sin(yaw) * force_body.y(),
+                    std::sin(yaw) * force_body.x() + std::cos(yaw) * force_body.y(),
+                    force_body.z());
+            };
+            contact_loads_[i].full_force_world = force_to_world(full_contact_force);
+            contact_loads_[i].applied_force_world = force_to_world(F_applied[i]);
             if (canonical_flat) {
-                contact_moment_delta_[i] = Vec3::Zero();
+                contact_loads_[i].moment_delta_body = Vec3::Zero();
             } else {
                 const double vertical_delta = full_contact_force.z() - Fz[i];
                 // The existing m*a*h terms already carry the horizontal-force
                 // lever arm, and suspension carries r_xy cross Fz*e_z.  Only
                 // the non-flat vertical correction remains for roll/pitch.
-                contact_moment_delta_[i] = Vec3(
+                contact_loads_[i].moment_delta_body = Vec3(
                     r_y[i] * vertical_delta,
                    -r_x[i] * vertical_delta,
                     0.0);
@@ -894,7 +907,7 @@ private:
     std::array<ITireModel::Transient, NUM_WHEELS> transient_ {};
     std::array<bool, NUM_WHEELS> contact_active_ {{false, false, false, false}};
     detail::L4ContactKinematics l4_contact_kinematics_ {};
-    std::array<Vec3, NUM_WHEELS> contact_moment_delta_ {};
+    std::array<detail::ContactLoad, NUM_WHEELS> contact_loads_ {};
     mutable std::array<ITireModel::ContactInput, NUM_WHEELS> ci_ {};
     mutable std::array<double, NUM_WHEELS> Re_w_ {{0.31, 0.31, 0.31, 0.31}};  // effective rolling radius per wheel
     mutable std::array<double, NUM_WHEELS> contact_dy_ {{0.0, 0.0, 0.0, 0.0}};  // camber lateral contact offset
@@ -927,11 +940,11 @@ bool detail::set_l4_contact_kinematics(
     return true;
 }
 
-std::array<Vec3, NUM_WHEELS> detail::contact_moment_delta(
+std::array<detail::ContactLoad, NUM_WHEELS> detail::contact_loads(
     const IVehicleDynamics& dynamics) noexcept {
     const auto* seven = dynamic_cast<const SevenDOFDynamics*>(&dynamics);
     if (seven == nullptr) return {};
-    return seven->contact_moment_delta();
+    return seven->contact_loads();
 }
 
 }  // namespace vdsim

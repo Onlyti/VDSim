@@ -123,6 +123,9 @@ public:
         th_  = 0.0; th_dot_  = 0.0;
         z_u_     = {{0.0, 0.0, 0.0, 0.0}};
         z_u_dot_ = {{0.0, 0.0, 0.0, 0.0}};
+        contact_loads_.fill(detail::ContactLoad{});
+        contact_force_delta_world_.fill(Vec3::Zero());
+        contact_full_force_world_.fill(Vec3::Zero());
         if (!suspension_) suspension_ = make_default_suspension(vp_);
         if (!arb_front_)  arb_front_  = make_default_antirollbar(vp_, 0);
         if (!arb_rear_)   arb_rear_   = make_default_antirollbar(vp_, 1);
@@ -211,20 +214,27 @@ public:
         }
         detail::set_l4_contact_kinematics(*inner_, spatial_contact);
         inner_->step(u, contacts, dt);
-        contact_moment_delta_ = detail::contact_moment_delta(*inner_);
+        contact_loads_ = detail::contact_loads(*inner_);
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            contact_force_delta_world_[i] =
+                contact_loads_[i].applied_force_world;
+            contact_full_force_world_[i] =
+                contact_loads_[i].full_force_world;
+        }
         state_ = inner_->state();
         mx_ = inner_->wheel_overturning_moment();   // camber contact-migration overturning
         if (dt > 0.0 && (mb_dyn_front_ || mb_dyn_rear_)) {
-            const auto F = inner_->tire_forces_body();
             if (mb_dyn_front_ && mb_dae_front_) {
                 mb::WheelLoad wl;
-                wl.force_world = 0.5 * (F[WHEEL_FL] + F[WHEEL_FR]);
+                wl.force_world = 0.5 * (contact_full_force_world_[WHEEL_FL]
+                                      + contact_full_force_world_[WHEEL_FR]);
                 mb::step_hard_joint_dae(mb_state_front_, *mb_dae_front_, mb_topo_front_,
                                         axle_prescribed_motion(0, steer_rad), wl, dt);
             }
             if (mb_dyn_rear_ && mb_dae_rear_) {
                 mb::WheelLoad wl;
-                wl.force_world = 0.5 * (F[WHEEL_RL] + F[WHEEL_RR]);
+                wl.force_world = 0.5 * (contact_full_force_world_[WHEEL_RL]
+                                      + contact_full_force_world_[WHEEL_RR]);
                 mb::step_hard_joint_dae(mb_state_rear_, *mb_dae_rear_, mb_topo_rear_,
                                         axle_prescribed_motion(2, steer_rad), wl, dt);
             }
@@ -410,8 +420,8 @@ private:
             Fz_sum         += F_susp[i];
             M_pitch_spring -= rx_[i] * F_susp[i];
             M_roll_spring  += ry_[i] * F_susp[i];   // includes the ARB roll contribution
-            M_roll_contact  += contact_moment_delta_[i].x();
-            M_pitch_contact += contact_moment_delta_[i].y();
+            M_roll_contact  += contact_loads_[i].moment_delta_body.x();
+            M_pitch_contact += contact_loads_[i].moment_delta_body.y();
         }
 
         // Anti-dive / anti-squat reduces the longitudinal inertia moment fed
@@ -448,7 +458,12 @@ private:
             // synthesized from road_dz.
             const double F_road = contact_valid_[i]
                 ? k_tire * (zu[i] - road_dz_[i]) : 0.0;
-            d.dz_u_dot[i] = (-F_susp[i] - F_road) / m_u;
+            // The non-flat vertical contact increment is an external force on
+            // the unsprung mass.  Sprung heave receives it exactly once through
+            // the suspension reaction; applying it directly to dz_dot as well
+            // would double-count work and momentum.
+            d.dz_u_dot[i] = (-F_susp[i] - F_road
+                              + contact_force_delta_world_[i].z()) / m_u;
         }
         return d;
     }
@@ -555,7 +570,9 @@ private:
     std::array<double, NUM_WHEELS> mx_      {{0.0, 0.0, 0.0, 0.0}};  // camber overturning from inner
     std::array<double, NUM_WHEELS> road_dz_ {{0.0, 0.0, 0.0, 0.0}};
     std::array<bool, NUM_WHEELS> contact_valid_ {{true, true, true, true}};
-    std::array<Vec3, NUM_WHEELS> contact_moment_delta_ {};
+    std::array<detail::ContactLoad, NUM_WHEELS> contact_loads_ {};
+    std::array<Vec3, NUM_WHEELS> contact_force_delta_world_ {};
+    std::array<Vec3, NUM_WHEELS> contact_full_force_world_ {};
 
     // Optional hardpoint kinematics (Ld4 Stage D).  When attached, replaces
     // the lumped vp_.camber_per_roll · phi heuristic for the corresponding axle.

@@ -167,3 +167,77 @@ TEST(D1ContactFrame, InvalidContactResetsTireTransientBeforeRecontact) {
         }
     }
 }
+
+TEST(D1ContactFrame, BankVerticalDeltaEntersUnsprungForceBalanceOnce) {
+    constexpr double bank = 10.0 * kDegToRad;
+    constexpr double dt = 5e-8;
+    constexpr double expected_front_left_delta_N = -436.5208463;
+    // Central model state is observed after a finite RK step.  A dt sweep at
+    // 1e-7/5e-8 bounded the reconstruction residual by 1.56e-3 N; 2e-3 N is
+    // the measured finite-difference envelope, not a model-error allowance.
+    constexpr double force_balance_tolerance_N = 2e-3;
+
+    auto flat = make_level(true);
+    auto plus = make_level(true);
+    const auto force_probe = evaluate_bank(true, bank);
+    ASSERT_NE(flat, nullptr);
+    ASSERT_NE(plus, nullptr);
+    ASSERT_NE(force_probe, nullptr);
+
+    vdsim::ContactArray flat_contacts{};
+    vdsim::ContactArray bank_contacts{};
+    for (int wheel = 0; wheel < vdsim::NUM_WHEELS; ++wheel) {
+        flat_contacts[wheel].is_valid = true;
+        flat_contacts[wheel].normal = vdsim::Vec3::UnitZ();
+        flat_contacts[wheel].mu_long = 1.0;
+        flat_contacts[wheel].mu_lat = 1.0;
+        bank_contacts[wheel] = flat_contacts[wheel];
+        bank_contacts[wheel].normal =
+            vdsim::Vec3(0.0, -std::sin(bank), std::cos(bank));
+    }
+
+    flat->step(vdsim::CmdL4{}, flat_contacts, dt);
+    plus->step(vdsim::CmdL4{}, bank_contacts, dt);
+
+    const vdsim::VehicleParams vehicle;
+    const std::array<double, vdsim::NUM_WHEELS> rx {{
+        vehicle.cg_to_front, vehicle.cg_to_front,
+       -vehicle.cg_to_rear, -vehicle.cg_to_rear}};
+    const std::array<double, vdsim::NUM_WHEELS> ry {{
+        0.5 * vehicle.track_front, -0.5 * vehicle.track_front,
+        0.5 * vehicle.track_rear, -0.5 * vehicle.track_rear}};
+    const vdsim::Vec3 angular_rate_delta =
+        plus->state().angular_velocity - flat->state().angular_velocity;
+    for (int wheel = 0; wheel < vdsim::NUM_WHEELS; ++wheel) {
+        // Public tire_forces_body is tangential-only.  Its z component is the
+        // contact-plane Fy projection, so the omitted normal contribution is
+        // Fz*cos(bank); subtract the legacy Fz*e_z exactly once.
+        const auto tangential = force_probe->tire_forces_body()[wheel];
+        const double expected_delta = tangential.z()
+            + force_probe->tire_Fz()[wheel] * (std::cos(bank) - 1.0);
+        // susp_velocity = z_u_dot - z_s_dot - ry*phi_dot + rx*theta_dot.
+        // At the first infinitesimal step, z_s_dot is identical because the
+        // contact increment acts on the unsprung mass.  Remove the independently
+        // observed roll/pitch-rate terms to recover the unsprung acceleration.
+        const double observed_unsprung_velocity_delta =
+            plus->state().susp_velocity[wheel]
+            - flat->state().susp_velocity[wheel]
+            + ry[wheel] * angular_rate_delta.x()
+            - rx[wheel] * angular_rate_delta.y();
+        const double observed_delta = vehicle.unsprung_mass[wheel]
+            * observed_unsprung_velocity_delta / dt;
+
+        EXPECT_NEAR(tangential.dot(bank_contacts[wheel].normal), 0.0, 1e-9);
+        EXPECT_LT(expected_delta, 0.0);
+        EXPECT_LT(observed_delta, 0.0);
+        EXPECT_NEAR(observed_delta, expected_delta, force_balance_tolerance_N)
+            << "wheel=" << wheel;
+        if (wheel == vdsim::WHEEL_FL) {
+            EXPECT_NEAR(expected_delta, expected_front_left_delta_N, 1e-6);
+            std::cout << std::setprecision(17)
+                      << "[D1:vertical] expected_delta_N=" << expected_delta
+                      << " observed_balance_N=" << observed_delta
+                      << " virtual_power_at_1mps_W=" << expected_delta << '\n';
+        }
+    }
+}

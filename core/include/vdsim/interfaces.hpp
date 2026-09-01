@@ -74,7 +74,15 @@ public:
     virtual const State& state() const noexcept = 0;
 
     // Per-wheel diagnostics (for validation/debug)
-    virtual std::array<Vec3,   NUM_WHEELS> tire_forces_body()  const = 0;  // [N], body frame
+    /**
+     * Tangential tire force in the body frame [N].
+     *
+     * The vector contains only contact-plane Fx/Fy rotated into body axes; its
+     * body-z component may therefore be non-zero on a bank.  It deliberately
+     * excludes the normal load Fz.  Dynamics consumers use an internal full
+     * contact wrench, preserving this method's established ABI and meaning.
+     */
+    virtual std::array<Vec3,   NUM_WHEELS> tire_forces_body()  const = 0;
     // Per-wheel tire force in the WHEEL (tire) frame: x = wheel heading
     // (longitudinal), y = wheel lateral. The body-frame force is this rotated by
     // the wheel's steer angle. Default returns the body-frame force (levels with no
