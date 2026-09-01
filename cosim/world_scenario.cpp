@@ -2,7 +2,12 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <array>
+#include <cstddef>
+#include <set>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace vdsim::cosim {
 
@@ -10,34 +15,214 @@ static double node_d(const YAML::Node& n, const char* k, double d) {
     return n[k] ? n[k].as<double>() : d;
 }
 
-// Build a SensorParams from a sensors[] list:
-//   - { type: gnss,        noise_std: 0.3  }
-//   - { type: imu,         noise_std: 0.05 }
-//   - { type: wheel_speed, noise_std: 0.05 }
-//   - { type: steer,       noise_std: 0.002 }
-// type maps to the matching SensorNoise field. noise_std, bias, bias_rw per entry.
-static vdsim::SensorParams parse_sensors_list(const YAML::Node& list) {
-    vdsim::SensorParams sp;
-    sp.enabled = true;
-    for (const auto& item : list) {
-        const std::string type = item["type"] ? item["type"].as<std::string>() : "";
-        double std  = item["noise_std"] ? item["noise_std"].as<double>() : 0.0;
-        double bias = item["bias"]      ? item["bias"].as<double>()      : 0.0;
-        double rw   = item["bias_rw"]   ? item["bias_rw"].as<double>()   : 0.0;
-        auto fill = [&](vdsim::SensorNoise& n) {
-            n.noise_std = std; n.bias = bias; n.bias_rw = rw;
-        };
-        if      (type == "gnss")        { fill(sp.gnss_pos); fill(sp.gnss_vel); }
-        else if (type == "gnss_pos")    { fill(sp.gnss_pos); }
-        else if (type == "gnss_vel")    { fill(sp.gnss_vel); }
-        else if (type == "imu")         { fill(sp.imu_accel); fill(sp.imu_gyro); }
-        else if (type == "imu_accel")   { fill(sp.imu_accel); }
-        else if (type == "imu_gyro")    { fill(sp.imu_gyro); }
-        else if (type == "wheel_speed") { fill(sp.wheel_speed); }
-        else if (type == "steer")       { fill(sp.steer); }
-        // mount/rate are for future rendering coupling — parsed but not applied here
+// ---------------------------------------------------------------------------
+// agents.vehicle.sensors[] — see docs/CONFIG_GUIDE.md §2.3.
+//
+// One declaration carries two independent things, and this parser splits them:
+//   * measurement noise  -> vdsim::SensorParams (one per vehicle, per signal group)
+//   * mount pose + rate  -> SceneSensor         (one per declared device)
+// Accepted shapes for the `sensors:` node on a vehicle entry:
+//   sensors: [ {...}, {...} ]                       sequence of entries
+//   sensors: { enabled: false, seed: 7, list: [..] } suite form (adds enabled/seed)
+//   sensors: configs/sensors/noisy.yaml              a SensorParams file path
+// Every other shape, key or type is a mistake we refuse to guess at: it throws.
+// ---------------------------------------------------------------------------
+
+// The two halves of one vehicle's sensor declaration.
+struct SensorSuite {
+    vdsim::SensorParams      params;
+    std::vector<SceneSensor> mounts;
+};
+
+// Errors name the vehicle and the offending entry, in the same "world scenario: ..."
+// shape the rest of this file throws. `where` is "" or "[2] (id=cam)".
+[[noreturn]] static void sensor_throw(uint32_t vid, const std::string& where,
+                                      const std::string& what) {
+    throw std::runtime_error("world scenario: vehicle " + std::to_string(vid)
+                             + " sensors" + where + ": " + what);
+}
+
+// Best-effort rendering of a node for an error message.
+static std::string node_text(const YAML::Node& n) {
+    if (n.IsScalar())   return n.Scalar();
+    if (n.IsSequence()) return "<sequence of " + std::to_string(n.size()) + ">";
+    if (n.IsMap())      return "<map>";
+    return "<null>";
+}
+
+static double sensor_num(const YAML::Node& n, uint32_t vid, const std::string& where,
+                         const std::string& key) {
+    try {
+        return n.as<double>();
+    } catch (const YAML::Exception&) {
+        sensor_throw(vid, where, key + " must be a number, got '" + node_text(n) + "'");
     }
-    return sp;
+}
+
+// mount.pos / mount.rpy: exactly three numbers.
+static std::array<double, 3> parse_vec3(const YAML::Node& n, uint32_t vid,
+                                        const std::string& where, const std::string& key) {
+    if (!n.IsSequence() || n.size() != 3)
+        sensor_throw(vid, where, key + " must be a sequence of 3 numbers, got '"
+                                 + node_text(n) + "'");
+    std::array<double, 3> v {{0.0, 0.0, 0.0}};
+    for (std::size_t i = 0; i < 3; ++i)
+        v[i] = sensor_num(n[i], vid, where, key + "[" + std::to_string(i) + "]");
+    return v;
+}
+
+// mount: { pos: [x,y,z], rpy: [r,p,y] } — both optional, default zero.
+static void parse_mount(const YAML::Node& m, uint32_t vid, const std::string& where,
+                        SceneSensor& out) {
+    if (!m.IsMap())
+        sensor_throw(vid, where, "mount must be a map { pos: [x,y,z], rpy: [r,p,y] }, got '"
+                                 + node_text(m) + "'");
+    for (const auto& kv : m) {
+        const std::string k = kv.first.as<std::string>();
+        if (k != "pos" && k != "rpy")
+            sensor_throw(vid, where, "unknown mount key '" + k + "' (accepted: pos, rpy)");
+    }
+    if (m["pos"]) out.mount_pos = parse_vec3(m["pos"], vid, where, "mount.pos");
+    if (m["rpy"]) out.mount_rpy = parse_vec3(m["rpy"], vid, where, "mount.rpy");
+}
+
+// params: { fov_deg: 90, ... } — an explicit bag of type-specific numeric knobs.
+static void parse_sensor_params_map(const YAML::Node& p, uint32_t vid,
+                                    const std::string& where, SceneSensor& out) {
+    if (!p.IsMap())
+        sensor_throw(vid, where, "params must be a map of numbers, got '" + node_text(p) + "'");
+    for (const auto& kv : p) {
+        const std::string k = kv.first.as<std::string>();
+        out.params[k] = sensor_num(kv.second, vid, where, "params." + k);
+    }
+}
+
+// Route a sensor type onto the SensorParams noise fields it drives. Returns false
+// for an unknown type. camera/lidar are declaration-only (mount + rate): the core
+// has no measurement model for them, so they map to no noise field at all.
+static bool noise_targets_for(const std::string& type, vdsim::SensorParams& sp,
+                              std::vector<vdsim::SensorNoise*>& out) {
+    if      (type == "gnss")        out = {&sp.gnss_pos, &sp.gnss_vel};
+    else if (type == "gnss_pos")    out = {&sp.gnss_pos};
+    else if (type == "gnss_vel")    out = {&sp.gnss_vel};
+    else if (type == "imu")         out = {&sp.imu_accel, &sp.imu_gyro};
+    else if (type == "imu_accel")   out = {&sp.imu_accel};
+    else if (type == "imu_gyro")    out = {&sp.imu_gyro};
+    else if (type == "wheel_speed") out = {&sp.wheel_speed};
+    else if (type == "steer")       out = {&sp.steer};
+    else if (type == "camera" || type == "lidar") out.clear();
+    else return false;
+    return true;
+}
+
+static const char* const kSensorTypes =
+    "gnss, gnss_pos, gnss_vel, imu, imu_accel, imu_gyro, wheel_speed, steer, camera, lidar";
+static const char* const kSensorKeys =
+    "id, type, mount, rate, noise_std, bias, bias_rw, params";
+
+static bool is_known_sensor_key(const std::string& k) {
+    return k == "id" || k == "type" || k == "mount" || k == "rate"
+        || k == "noise_std" || k == "bias" || k == "bias_rw" || k == "params";
+}
+
+// Parse the sequence of entries into both halves of `suite`.
+static void parse_sensors_seq(const YAML::Node& list, uint32_t vid, SensorSuite& suite) {
+    std::set<std::string> seen_ids;
+    std::size_t index = 0;
+    for (const auto& item : list) {
+        const std::string at = "[" + std::to_string(index++) + "]";
+        if (!item.IsMap())
+            sensor_throw(vid, at, "entry must be a map { id, type, mount, rate, ... }, got '"
+                                  + node_text(item) + "'");
+
+        SceneSensor sensor;
+        if (item["id"]) {
+            if (!item["id"].IsScalar())
+                sensor_throw(vid, at, "id must be a string, got '" + node_text(item["id"]) + "'");
+            sensor.id = item["id"].Scalar();
+        }
+        // Everything past this point can name the sensor in its error message.
+        const std::string where = sensor.id.empty() ? at : at + " (id=" + sensor.id + ")";
+
+        for (const auto& kv : item) {
+            const std::string k = kv.first.as<std::string>();
+            if (!is_known_sensor_key(k))
+                sensor_throw(vid, where, "unknown key '" + k + "' (accepted: "
+                                         + std::string(kSensorKeys) + ")");
+        }
+        if (!item["type"] || !item["type"].IsScalar())
+            sensor_throw(vid, where, "missing required key 'type' (accepted: "
+                                     + std::string(kSensorTypes) + ")");
+        sensor.type = item["type"].Scalar();
+
+        std::vector<vdsim::SensorNoise*> targets;
+        if (!noise_targets_for(sensor.type, suite.params, targets))
+            sensor_throw(vid, where, "unknown type '" + sensor.type + "' (accepted: "
+                                     + std::string(kSensorTypes) + ")");
+
+        const bool has_noise = item["noise_std"] || item["bias"] || item["bias_rw"];
+        if (has_noise && targets.empty())
+            sensor_throw(vid, where, "type '" + sensor.type + "' has no measurement model; "
+                                     "noise_std/bias/bias_rw do not apply to it");
+        if (has_noise) {
+            vdsim::SensorNoise n;
+            if (item["noise_std"]) n.noise_std = sensor_num(item["noise_std"], vid, where, "noise_std");
+            if (item["bias"])      n.bias      = sensor_num(item["bias"],      vid, where, "bias");
+            if (item["bias_rw"])   n.bias_rw   = sensor_num(item["bias_rw"],   vid, where, "bias_rw");
+            for (auto* t : targets) *t = n;
+        }
+
+        if (sensor.id.empty()) sensor.id = sensor.type;
+        if (!seen_ids.insert(sensor.id).second)
+            sensor_throw(vid, where, "duplicate sensor id '" + sensor.id
+                                     + "'; give each entry a unique id");
+        if (item["mount"]) parse_mount(item["mount"], vid, where, sensor);
+        if (item["rate"])  sensor.rate = sensor_num(item["rate"], vid, where, "rate");
+        if (item["params"]) parse_sensor_params_map(item["params"], vid, where, sensor);
+        suite.mounts.push_back(std::move(sensor));
+    }
+}
+
+// Dispatch on the shape of a vehicle's `sensors:` node. Anything unrecognised throws
+// rather than leaving the vehicle silently sensorless.
+static SensorSuite parse_sensors_node(const YAML::Node& sn, uint32_t vid) {
+    SensorSuite suite;
+    if (sn.IsSequence()) {
+        suite.params.enabled = true;
+        parse_sensors_seq(sn, vid, suite);
+    } else if (sn.IsMap()) {
+        for (const auto& kv : sn) {
+            const std::string k = kv.first.as<std::string>();
+            if (k != "enabled" && k != "seed" && k != "list")
+                sensor_throw(vid, "", "unknown key '" + k
+                                      + "' (the suite form accepts: enabled, seed, list)");
+        }
+        if (!sn["list"] || !sn["list"].IsSequence())
+            sensor_throw(vid, "", "suite form needs 'list:' holding a sequence of sensor entries");
+        suite.params.enabled = true;
+        parse_sensors_seq(sn["list"], vid, suite);
+        try {
+            if (sn["enabled"]) suite.params.enabled = sn["enabled"].as<bool>();
+            if (sn["seed"])    suite.params.seed    = sn["seed"].as<unsigned>();
+        } catch (const YAML::Exception&) {
+            sensor_throw(vid, "", "enabled must be a bool and seed a non-negative integer");
+        }
+    } else if (sn.IsScalar()) {
+        try {
+            suite.params = vdsim::SensorParams::from_yaml(sn.Scalar());
+        } catch (const std::exception&) {
+            sensor_throw(vid, "", "sensors file not loadable: " + sn.Scalar());
+        }
+    } else {
+        sensor_throw(vid, "", "must be a sequence of entries, a suite map "
+                              "{enabled, seed, list}, or a sensors yaml path");
+    }
+    return suite;
+}
+
+vdsim::SensorParams effective_sensor_params(const vdsim::SensorParams& scenario_default,
+                                            const VehicleSpawn& v) {
+    return v.sensors ? *v.sensors : scenario_default;
 }
 
 // Parse a comms document node ({name, channels: [...]}) into CommsConfig.
@@ -152,13 +337,14 @@ WorldScenario load_world_scenario(const std::string& path) {
         if (v["rear_susp"]) s.rear_susp = v["rear_susp"].as<std::string>();
         if (v["path"])           s.path_yaml      = v["path"].as<std::string>();
         if (v["path_lookahead"]) s.path_lookahead = v["path_lookahead"].as<double>();
-        // per-vehicle sensors: inline list OR a sensors.yaml file path
-        if (v["sensors"]) {
-            const auto& sn = v["sensors"];
-            if (sn.IsSequence())
-                s.sensors = parse_sensors_list(sn);
-            else if (sn.IsScalar())
-                s.sensors = vdsim::SensorParams::from_yaml(sn.as<std::string>());
+        // per-vehicle sensors: inline list / suite map / a sensors.yaml file path.
+        // The list form fills both the noise model and the mount declarations.
+        // IsDefined(), not truthiness: a bare `sensors:` with nothing under it is a
+        // null node, and must be reported rather than treated as "no sensors".
+        if (v["sensors"].IsDefined()) {
+            auto suite = parse_sensors_node(v["sensors"], s.id);
+            s.sensors       = std::move(suite.params);
+            s.scene_sensors = std::move(suite.mounts);
         }
         s.x0   = node_d(v, "x0", 0.0);
         s.y0   = node_d(v, "y0", 0.0);

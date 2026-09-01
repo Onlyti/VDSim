@@ -3,7 +3,9 @@
 #include "comms_templates.hpp"
 #include "vdsim/sensors.hpp"
 
+#include <array>
 #include <cstdint>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -51,6 +53,28 @@ struct StuntConfig {
     bool   rail_guide    {false};
 };
 
+// One sensor exactly as the scene declares it (agents.vehicle.sensors[], see
+// docs/CONFIG_GUIDE.md §2.3):
+//   - { id: gnss, type: gnss, mount: { pos: [1.4,0,1.0], rpy: [0,0,0] }, rate: 10 }
+// This is the mounting half of the declaration. The measurement-noise half of the
+// same list entry (noise_std/bias/bias_rw) goes to VehicleSpawn::sensors instead,
+// because vdsim::SensorParams models noise per signal group, not per mounted device.
+//
+// Nothing reads the mount pose or rate yet: they are parsed and stored for the
+// future render / sensor-frame coupling and do not affect the simulation.
+struct SceneSensor {
+    std::string id;      // scene-unique label ("gnss_roof"); defaults to `type` when omitted
+    std::string type;    // gnss | imu | wheel_speed | steer | camera | lidar, plus the
+                         // gnss_pos / gnss_vel / imu_accel / imu_gyro sub-signals
+    std::array<double, 3> mount_pos {{0.0, 0.0, 0.0}};  // body frame [m]: x fwd, y left, z up
+    std::array<double, 3> mount_rpy {{0.0, 0.0, 0.0}};  // body frame [rad]: roll, pitch, yaw
+    double rate {0.0};   // declared sample rate [Hz]; 0 = unspecified (core runs at sim rate)
+    // Type-specific knobs (camera fov_deg, lidar channels, ...) from an explicit
+    // `params:` sub-map. A map, not fields: the set differs per sensor type and is
+    // still growing. The well-known fields above stay typed.
+    std::map<std::string, double> params;
+};
+
 struct VehicleSpawn {
     uint32_t    id {0};
     std::string vehicle_yaml;
@@ -69,6 +93,10 @@ struct VehicleSpawn {
     // Per-vehicle sensor noise spec (from agents.vehicle.sensors[] in the scene).
     // When set, overrides the scenario-level RoadConfig.sensors file path.
     std::optional<vdsim::SensorParams> sensors;
+    // Mount/rate declarations from that same agents.vehicle.sensors[] list, one
+    // entry per declared device. Empty when the vehicle uses the sensors-file form
+    // (a sensors yaml carries noise only, no mount pose). Stored, not yet consumed.
+    std::vector<SceneSensor> scene_sensors;
     // Per-vehicle reference path for internal path-follow controller.
     // path_yaml: trajectory file ({points:[[x,y,vx],...]} — pure path data, no controller params)
     // path_lookahead: pure-pursuit lookahead distance [m] (controller param, not part of trajectory)
@@ -112,5 +140,11 @@ struct WorldScenario {
 };
 
 WorldScenario load_world_scenario(const std::string& path);
+
+// The sensor params actually in force for one spawn. Precedence, as documented on
+// VehicleSpawn::sensors: a per-vehicle spec wins outright over the scenario-level
+// default (the RoadConfig::sensors file, already loaded by the caller).
+vdsim::SensorParams effective_sensor_params(const vdsim::SensorParams& scenario_default,
+                                            const VehicleSpawn& v);
 
 }  // namespace vdsim::cosim

@@ -165,7 +165,7 @@ agents:                                           # (= 현재 fleet)
     vehicle:                                      # 차량 = 부품(blueprint+parts) + 센서
       blueprint: vehicle.sedan_comfort            # 🟢 완성 레시피(모든 슬롯 채움)
       parts: { tire: tire.sport_grip }            # 🟢 그 위 슬롯 override(diff). 없으면 blueprint 원본
-      sensors:                                    # 🔴 차량 안 (mount = 위치+자세 pose)
+      sensors:                                    # 🟢 파싱/저장 (mount = 위치+자세 pose) — 아래 §2.3.1
         - { id: gnss, type: gnss, mount: { pos: [1.4,0,1.0], rpy: [0,0,0] }, rate: 10 }
         - { id: cam,  type: camera, mount: { pos: [1.6,0,1.2], rpy: [0,-0.05,0] }, rate: 30 }
     spawn: { x: -15, y: -1.5, yaw: 0, vx: 12 }    # 🟢 (현재 x0/y0/z0/yaw0/vx0)
@@ -181,9 +181,50 @@ control 의미(런타임 무관): action 을 sim core 의 `SimSession::set_input
 blueprint vs parts: blueprint = base 레시피, parts = 그 위 슬롯 patch. materialize 가
 `blueprint + parts → resolved vehicle.yaml/tire.yaml` 로 합친다.
 
-> 현재 구현은 평평한 `fleet:` (agent=blueprint+pose+control)이고, 위 `agents.vehicle.sensors`
-> / `path`(trajectory 파일) / `map` / scenario-level `sim`·`comms` 는 단계적으로 추가(🔴).
-> 계층 자체는 위가 확정.
+> 현재 구현은 평평한 `fleet:` (agent=blueprint+pose+control)이고, 위 `path`(trajectory 파일)
+> / `map` / scenario-level `sim`·`comms` 는 단계적으로 추가(🔴). `agents.vehicle.sensors`
+> 는 파서까지 들어왔다(§2.3.1). 계층 자체는 위가 확정.
+
+### 2.3.1 `sensors:` — 에이전트 센서 선언 🟢(YAML→WorldScenario 파서) / 🔴(렌더 커플링)
+
+`fleet[].sensors`(= `agents.vehicle.sensors`)를 `cosim/world_scenario.cpp` 가 파싱해
+`VehicleSpawn` 에 싣는다. 한 항목이 서로 다른 두 가지를 동시에 나른다:
+
+- **노이즈** `noise_std`/`bias`/`bias_rw` → `VehicleSpawn::sensors` (`vdsim::SensorParams`,
+  신호 그룹 단위) → 시뮬레이션에 **실제로 적용된다**.
+- **장착** `id`/`type`/`mount{pos,rpy}`/`rate`/`params` → `VehicleSpawn::scene_sensors`
+  (`SceneSensor`) → **파싱해서 저장하는 데까지만**. mount pose 를 읽는 소비자는 아직 없고
+  (향후 렌더/센서 프레임 커플링 🔴), 지금은 시뮬 결과에 아무 영향을 주지 않는다.
+
+세 가지 형태를 받는다:
+
+```yaml
+sensors:                                   # (1) 목록형 — §2.3 의 정식 형태
+- { id: gnss_roof, type: gnss,   mount: { pos: [0.2,0,1.42], rpy: [0,0,0] },    rate: 10, noise_std: 0.3 }
+- { id: cam_front, type: camera, mount: { pos: [1.6,0,1.2],  rpy: [0,-0.05,0] }, rate: 30, params: { fov_deg: 90 } }
+
+sensors:                                   # (2) suite 형 — enabled/seed 까지 지정
+  enabled: false
+  seed: 42
+  list:
+  - { id: gnss, type: gnss, mount: { pos: [1.4,0,1.0] }, rate: 10 }
+
+sensors: configs/sensors/noisy.yaml        # (3) SensorParams 파일 경로 (노이즈만, mount 없음)
+```
+
+- `type`: `gnss`·`gnss_pos`·`gnss_vel`·`imu`·`imu_accel`·`imu_gyro`·`wheel_speed`·`steer`
+  ·`camera`·`lidar`. `camera`/`lidar` 는 코어에 계측 모델이 없어 **장착 선언 전용**이다
+  (노이즈 키를 주면 에러).
+- `mount.pos` [m] = 차체 좌표(x 전방 / y 좌 / z 상), `mount.rpy` [rad] = roll·pitch·yaw.
+  `rate` [Hz] 는 선언값일 뿐 다운샘플링은 아직 없다(0/생략 = 미지정).
+- `params:` 는 타입별 확장 knob 을 담는 숫자 map(`fov_deg` 등). 역시 저장만 한다.
+- `id` 생략 시 `type` 이 id 가 되고, 한 차량 안에서 id 중복은 에러.
+- **잘못된 입력은 전부 hard error**: 모르는 키/타입, 원소가 3개가 아닌 `pos`/`rpy`, 숫자가
+  아닌 값, 값이 빈 `sensors:`, `list:` 없는 map — 조용히 무시하지 않고 차량 번호와 문제 키를
+  지목해 throw 한다.
+- 우선순위: 차량별 `sensors` 가 시나리오 레벨 `sensors:`(파일 경로)를 덮는다
+  (`effective_sensor_params()`, `cosim/world_scenario.hpp`).
+- 동작 샘플: `configs/scenes/two_vehicle_race.yaml` (0번 차량이 mount pose 4개를 선언).
 
 ---
 
@@ -257,4 +298,5 @@ channels:
 | comms json·nmea_gga TX template (+ 채널별 `origin`) | 🟢 | §3, `configs/comms/json_nmea.yaml` |
 | comms sensor.* source | 🔴 | §3, 경고 후 skip |
 | scene `path`(trajectory 파일)/`maneuver`/`run{mode}` | 🔴 | §2.3, SIM_CONFIG_ARCH |
-| agent `vehicle.sensors`(mount pose) / map-path CTE | 🔴 | §2.3, SIM_CONFIG_ARCH §7 |
+| agent `vehicle.sensors` 파서(mount pose→`WorldScenario`, 검증 포함) | 🟢 | §2.3.1, `cosim/world_scenario.cpp` |
+| mount pose 를 쓰는 렌더/센서프레임 커플링 / map-path CTE | 🔴 | §2.3.1, SIM_CONFIG_ARCH §7 |

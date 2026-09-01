@@ -527,7 +527,7 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
         }
         // Per-vehicle sensors override the scenario-level sensors file, if present.
         vdsim::SimConfig cfg_v = cfg;
-        if (spn.sensors) cfg_v.sensors = *spn.sensors;
+        cfg_v.sensors = vdsim::cosim::effective_sensor_params(cfg.sensors, spn);
         wv.sim = std::make_unique<vdsim::SimSession>(
             std::move(dyn), std::move(gnd), wv.vp, ts, sp_v, cfg_v);
         // Install any user C++ subsystem-module plugins the resolved vehicle declares.

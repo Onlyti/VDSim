@@ -84,6 +84,10 @@ def fleet_spec_from_scene(doc: Mapping[str, Any]) -> List[dict]:
             "vehicle": vehicle_stem_from_blueprint(bid),
             "tire": tire_stem_from_id(parts.get("tire", "tire.default_pacejka")),
         }
+        # per-vehicle sensors: the scene declares them on the fleet entry; carry
+        # them through untouched so resolve_fleet_entry can put them on the world row.
+        if entry.get("sensors") is not None:
+            row["sensors"] = entry["sensors"]
         if level in ("L3", "L4"):
             bp_path = Path(__file__).resolve().parents[2] / "configs" / "blueprints"
             bp_name = bid.replace("vehicle.", "") + ".yaml"
