@@ -32,6 +32,7 @@ HEADER = struct.Struct("<4i")
 BASE_POINT = struct.Struct("<4fi")
 DETAIL_POINT = struct.Struct("<18f")
 INT32 = struct.Struct("<i")
+GRID_META = struct.Struct("<6fif")
 CSV_COLUMNS = (
     "index", "s_m", "x_m", "y_m", "z_m",
     "left_width_m", "right_width_m",
@@ -89,9 +90,10 @@ def parse_fast_lane(path: os.PathLike | str) -> FastLaneSpline:
     """Parse and validate a standard Assetto Corsa v7 AI spline.
 
     Supported layout is the v7 little-endian header, 20-byte base points,
-    detail-count marker, and 72-byte detail points.  Detail widths may be
-    non-finite or absent; :func:`import_fast_lane` then requires an explicit
-    fallback rather than silently writing zero.
+    detail-count marker, 72-byte detail points and the ACTools ``HasGrid``
+    tail.  A present grid is structurally consumed even though M1 does not use
+    it.  Detail widths may be non-finite or absent; :func:`import_fast_lane`
+    then requires an explicit fallback rather than silently writing zero.
 
     :param path: input ``fast_lane.ai`` path.
     :returns: immutable validated spline samples.
@@ -141,9 +143,16 @@ def parse_fast_lane(path: os.PathLike | str) -> FastLaneSpline:
         values, offset = _take(data, offset, DETAIL_POINT, f"detail point {index}")
         details.append(values)
 
-    (grid_entries,), offset = _take(data, offset, INT32, "grid count")
-    if grid_entries < 0:
-        raise FastLaneImportError(f"invalid grid count: {grid_entries}")
+    (has_grid,), offset = _take(data, offset, INT32, "HasGrid flag")
+    if has_grid not in (0, 1):
+        raise FastLaneImportError(f"HasGrid flag must be 0 or 1, got {has_grid}")
+    grid_entries = 0
+    if has_grid:
+        grid_entries, offset = _consume_grid(data, offset)
+    if offset != len(data):
+        raise FastLaneImportError(
+            f"unexpected trailing bytes after AI spline: {len(data) - offset}"
+        )
 
     points = []
     for index, (x, y, z, source_s, point_id) in enumerate(bases):
@@ -158,6 +167,64 @@ def parse_fast_lane(path: os.PathLike | str) -> FastLaneSpline:
         ))
     return FastLaneSpline(version=version, points=tuple(points),
                           grid_entries=grid_entries)
+
+
+def _checked_count(data: bytes, offset: int, what: str,
+                   minimum_record_bytes: int = 4):
+    """Read a non-negative variable-array count bounded by remaining bytes."""
+    (count,), offset = _take(data, offset, INT32, what)
+    if count < 0:
+        raise FastLaneImportError(f"negative {what}: {count}")
+    if count > 10_000_000:
+        raise FastLaneImportError(f"overflow {what}: {count}")
+    remaining = len(data) - offset
+    if minimum_record_bytes and count > remaining // minimum_record_bytes:
+        raise FastLaneImportError(
+            f"{what} {count} exceeds remaining payload ({remaining} bytes)"
+        )
+    return count, offset
+
+
+def _consume_grid(data: bytes, offset: int):
+    """Consume one ACTools ``AiSplineGrid`` payload and return its item count."""
+    values, offset = _take(data, offset, GRID_META, "grid bounds/sampling")
+    max_extreme = values[:3]
+    min_extreme = values[3:6]
+    neighbors = values[6]
+    sampling_density = values[7]
+    if not all(math.isfinite(v) for v in (*max_extreme, *min_extreme,
+                                           sampling_density)):
+        raise FastLaneImportError("non-finite grid bounds or sampling density")
+    if any(maximum < minimum
+           for maximum, minimum in zip(max_extreme, min_extreme)):
+        raise FastLaneImportError("grid MaxExtreme is below MinExtreme")
+    if neighbors < 0:
+        raise FastLaneImportError(
+            f"negative grid NeighborsConsideredNumber: {neighbors}"
+        )
+    if sampling_density <= 0.0:
+        raise FastLaneImportError(
+            f"grid SamplingDensity must be positive, got {sampling_density}"
+        )
+
+    item_count, offset = _checked_count(data, offset, "grid item count")
+    for item_index in range(item_count):
+        sub_count, offset = _checked_count(
+            data, offset, f"grid item {item_index} subitem count"
+        )
+        for sub_index in range(sub_count):
+            value_count, offset = _checked_count(
+                data, offset,
+                f"grid item {item_index} subitem {sub_index} value count"
+            )
+            byte_count = value_count * INT32.size
+            if byte_count > len(data) - offset:
+                raise FastLaneImportError(
+                    f"grid item {item_index} subitem {sub_index} values "
+                    "exceed remaining payload"
+                )
+            offset += byte_count
+    return item_count, offset
 
 
 def validate_transform(transform: Sequence[Sequence[float]]) -> np.ndarray:

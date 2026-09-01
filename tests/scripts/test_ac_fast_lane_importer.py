@@ -19,6 +19,8 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 TOOL = ROOT / "tools" / "ac_fast_lane_importer.py"
 FIXTURE = ROOT / "tests" / "fixtures" / "ac_fast_lane" / "synthetic_v7_points.json"
+CANONICAL_GRID_FIXTURE = (ROOT / "tests" / "fixtures" / "ac_fast_lane"
+                          / "canonical_v7_has_grid.ai")
 TRACE_FIXTURE = ROOT / "tests" / "fixtures" / "trace" / "golden_v0_1.vdtrace"
 sys.path.insert(0, str(ROOT / "python"))
 
@@ -42,7 +44,8 @@ def check(condition, message):
     print("ok  :", message)
 
 
-def write_fast_lane(path: Path, fixture: dict, *, version=7, details=True):
+def write_fast_lane(path: Path, fixture: dict, *, version=7, details=True,
+                    has_grid=False):
     """Encode the synthetic JSON points in the documented v7 layout."""
     points = fixture["points"]
     payload = bytearray(struct.pack("<4i", version, len(points), 0, 0))
@@ -64,8 +67,25 @@ def write_fast_lane(path: Path, fixture: dict, *, version=7, details=True):
             values[12] = 1.0
             values[13:16] = [0.0, 0.0, 1.0]
             payload.extend(struct.pack("<18f", *values))
-    payload.extend(struct.pack("<i", 0))
+    payload.extend(struct.pack("<i", 1 if has_grid else 0))
+    if has_grid:
+        grid = fixture["grid"]
+        payload.extend(struct.pack(
+            "<6fif", *grid["max_extreme"], *grid["min_extreme"],
+            grid["neighbors_considered"], grid["sampling_density"]))
+        payload.extend(struct.pack("<i", len(grid["items"])))
+        for item in grid["items"]:
+            payload.extend(struct.pack("<i", len(item)))
+            for values in item:
+                payload.extend(struct.pack("<i", len(values)))
+                if values:
+                    payload.extend(struct.pack("<%di" % len(values), *values))
     path.write_bytes(payload)
+
+
+def grid_flag_offset(fixture: dict):
+    """Return the HasGrid int32 offset for the canonical detailed fixture."""
+    return 16 + len(fixture["points"]) * 20 + 4 + len(fixture["points"]) * 72
 
 
 def load_rows(path: Path):
@@ -77,7 +97,7 @@ def load_rows(path: Path):
 def test_roundtrip_and_contract(tmp: Path, fixture: dict):
     """Validate required columns, coordinate transform, widths and evidence."""
     source = tmp / "fast_lane.ai"
-    write_fast_lane(source, fixture)
+    write_fast_lane(source, fixture, has_grid=True)
     mtime_ns = source.stat().st_mtime_ns
     out = tmp / "bundle"
     result = ac.import_fast_lane(
@@ -133,6 +153,80 @@ def test_roundtrip_and_contract(tmp: Path, fixture: dict):
     check("Source XYZ" in report and "VDSim XYZ" in report,
           "report contains transform bounding boxes")
     return source, result
+
+
+def test_grid_tail_validation(tmp: Path, fixture: dict):
+    """Consume canonical ACTools grid payloads and reject every malformed tail."""
+    canonical = tmp / "canonical-grid.ai"
+    shutil.copy2(CANONICAL_GRID_FIXTURE, canonical)
+    regenerated = tmp / "regenerated-grid.ai"
+    write_fast_lane(regenerated, fixture, has_grid=True)
+    check(canonical.read_bytes() == regenerated.read_bytes(),
+          "committed canonical HasGrid=1 binary matches its synthetic source spec")
+    spline = ac.parse_fast_lane(canonical)
+    check(spline.grid_entries == len(fixture["grid"]["items"]),
+          "canonical HasGrid=1 variable item/subitem payload is fully consumed")
+
+    no_grid = tmp / "canonical-no-grid.ai"
+    write_fast_lane(no_grid, fixture, has_grid=False)
+    check(ac.parse_fast_lane(no_grid).grid_entries == 0,
+          "existing canonical HasGrid=0 tail remains supported")
+
+    flag_offset = grid_flag_offset(fixture)
+    bad_flag = bytearray(no_grid.read_bytes())
+    struct.pack_into("<i", bad_flag, flag_offset, 2)
+    bad_flag_path = tmp / "bad-grid-flag.ai"
+    bad_flag_path.write_bytes(bad_flag)
+    try:
+        ac.parse_fast_lane(bad_flag_path)
+    except ac.FastLaneImportError as exc:
+        check("0 or 1" in str(exc), "HasGrid=2 is rejected")
+    else:
+        raise AssertionError("HasGrid=2 accepted")
+
+    truncated = tmp / "truncated-grid.ai"
+    truncated.write_bytes(canonical.read_bytes()[:-2])
+    try:
+        ac.parse_fast_lane(truncated)
+    except ac.FastLaneImportError as exc:
+        check("exceeds remaining payload" in str(exc) or "truncated" in str(exc),
+              "truncated grid value tail is rejected")
+    else:
+        raise AssertionError("truncated grid accepted")
+
+    trailing = tmp / "trailing-grid.ai"
+    trailing.write_bytes(canonical.read_bytes() + b"garbage")
+    try:
+        ac.parse_fast_lane(trailing)
+    except ac.FastLaneImportError as exc:
+        check("trailing bytes" in str(exc), "unexpected trailing bytes are rejected")
+    else:
+        raise AssertionError("trailing garbage accepted")
+
+    item_count_offset = flag_offset + 4 + 32
+    negative = bytearray(canonical.read_bytes())
+    struct.pack_into("<i", negative, item_count_offset, -1)
+    negative_path = tmp / "negative-grid-count.ai"
+    negative_path.write_bytes(negative)
+    try:
+        ac.parse_fast_lane(negative_path)
+    except ac.FastLaneImportError as exc:
+        check("negative grid item count" in str(exc),
+              "negative grid item count is rejected")
+    else:
+        raise AssertionError("negative grid count accepted")
+
+    overflow = bytearray(canonical.read_bytes())
+    struct.pack_into("<i", overflow, item_count_offset, 2_147_483_647)
+    overflow_path = tmp / "overflow-grid-count.ai"
+    overflow_path.write_bytes(overflow)
+    try:
+        ac.parse_fast_lane(overflow_path)
+    except ac.FastLaneImportError as exc:
+        check("overflow grid item count" in str(exc),
+              "overflow grid item count is rejected before allocation")
+    else:
+        raise AssertionError("overflow grid count accepted")
 
 
 def test_determinism(tmp: Path, source: Path, fixture: dict):
@@ -256,6 +350,7 @@ def main():
     with tempfile.TemporaryDirectory() as td:
         tmp = Path(td)
         source, _result = test_roundtrip_and_contract(tmp, fixture)
+        test_grid_tail_validation(tmp, fixture)
         test_determinism(tmp, source, fixture)
         test_fail_closed_and_fallback(tmp, fixture)
         test_cli_and_overlay(tmp, source, fixture)

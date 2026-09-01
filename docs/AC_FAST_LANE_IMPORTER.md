@@ -54,8 +54,12 @@ trace overlay object with `kind: path2d`; the importer performs no resampling.
 
 ## Supported input and legal boundary
 
-- Supported: standard little-endian v7 AI spline with 20-byte base points and
-  72-byte detail points.
+- Supported: standard little-endian v7 AI spline with 20-byte base points,
+  72-byte detail points and an ACTools-compatible `HasGrid` tail.
+- `HasGrid=1` bounds, sampling metadata and variable item/subitem/value arrays
+  are fully consumed and validated, then ignored because M1 only needs the path.
+- Grid flag values outside 0/1, negative or overflowing counts, truncated
+  payloads and trailing bytes fail closed.
 - Unsupported versions and damaged point/detail sequences fail immediately.
 - Run locally against the user's own Assetto Corsa installation.
 - Do not commit or redistribute original AI files or converted track bundles.

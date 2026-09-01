@@ -8,6 +8,16 @@
     {"position": [-9.0, 2.0, 20.0], "left_width_m": 4.4, "right_width_m": 3.9},
     {"position": [-12.0, 2.5, 30.0], "left_width_m": 4.6, "right_width_m": 4.1}
   ],
+  "grid": {
+    "max_extreme": [80.0, 30.0, 5.0],
+    "min_extreme": [30.0, -5.0, -1.0],
+    "neighbors_considered": 4,
+    "sampling_density": 0.5,
+    "items": [
+      [[0, 1], [2]],
+      [[], [3, 1, 2]]
+    ]
+  },
   "transform_source_to_vdsim": [
     [0.0, 0.0, 1.0, 40.0],
     [-1.0, 0.0, 0.0, 5.0],
