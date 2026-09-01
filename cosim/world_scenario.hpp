@@ -53,16 +53,18 @@ struct StuntConfig {
     bool   rail_guide    {false};
 };
 
-// One sensor exactly as the scene declares it (agents.vehicle.sensors[], see
-// docs/CONFIG_GUIDE.md §2.3):
-//   - { id: gnss, type: gnss, mount: { pos: [1.4,0,1.0], rpy: [0,0,0] }, rate: 10 }
-//   - { id: gnss, type: gnss, mount: [1.4,0,1.0], yaw: 0, rate: 10 }   (builder form)
-// This is the mounting half of the declaration. The measurement-noise half of the
-// same list entry (noise_std/bias/bias_rw) goes to VehicleSpawn::sensors instead,
-// because vdsim::SensorParams models noise per signal group, not per mounted device.
-//
-// Nothing reads the mount pose or rate yet: they are parsed and stored for the
-// future render / sensor-frame coupling and do not affect the simulation.
+/// @brief Mounted sensor declaration parsed from `agents.vehicle.sensors[]`.
+///
+/// This is the mounting half of a sensor entry: id, type, body-frame pose,
+/// sample rate, and type-specific numeric parameters. The measurement-noise
+/// half (`noise_std`, `bias`, and `bias_rw`) is stored separately in
+/// VehicleSpawn::sensors because vdsim::SensorParams models signal groups,
+/// not individual mounted devices.
+///
+/// @note The parser accepts both `mount: {pos: [...], rpy: [...]}` and the
+///       builder form `mount: [x,y,z]` plus `yaw` in degrees.
+/// @note Mount pose and rate are stored for future render/sensor-frame coupling;
+///       no current simulation component consumes them.
 struct SceneSensor {
     std::string id;      // label ("gnss_roof"); defaults to `type` when omitted. Ids the
                          // scene writes explicitly must be unique within a vehicle; a
@@ -148,9 +150,12 @@ struct WorldScenario {
 
 WorldScenario load_world_scenario(const std::string& path);
 
-// The sensor params actually in force for one spawn. Precedence, as documented on
-// VehicleSpawn::sensors: a per-vehicle spec wins outright over the scenario-level
-// default (the RoadConfig::sensors file, already loaded by the caller).
+/// @brief Select the measurement-noise parameters in force for one vehicle.
+/// @param scenario_default Parameters loaded from the scenario-level sensors file.
+/// @param v Vehicle whose optional sensor declaration may override the default.
+/// @return The per-vehicle parameters when present; otherwise @p scenario_default.
+/// @note A mount-only declaration leaves VehicleSpawn::sensors empty and therefore
+///       preserves the scenario-level default.
 vdsim::SensorParams effective_sensor_params(const vdsim::SensorParams& scenario_default,
                                             const VehicleSpawn& v);
 

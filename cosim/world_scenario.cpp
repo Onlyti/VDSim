@@ -274,8 +274,13 @@ static vdsim::SensorParams load_sensors_file(const std::string& raw, uint32_t vi
     }
 }
 
-// Dispatch on the shape of a vehicle's `sensors:` node. Anything unrecognised throws
-// rather than leaving the vehicle silently sensorless.
+/// @brief Parse one vehicle's sensor declaration in list, suite, or file form.
+/// @param sn YAML node stored at the vehicle's `sensors:` key.
+/// @param vid Vehicle id included in diagnostic messages.
+/// @param scene_dir Directory used to resolve a relative sensor-parameter file.
+/// @return Parsed measurement-noise override and mounted sensor declarations.
+/// @throws std::runtime_error if the shape, key, type, number, or referenced file
+///         violates the scene sensor contract.
 static SensorSuite parse_sensors_node(const YAML::Node& sn, uint32_t vid,
                                       const std::string& scene_dir) {
     SensorSuite suite;
