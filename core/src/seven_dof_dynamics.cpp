@@ -597,13 +597,6 @@ private:
             F_body[i] = contact_frame.tangential_force(Fx_w, Fy_w);
             const Vec3 full_contact_force =
                 contact_frame.contact_force(Fx_w, Fy_w, Fz[i]);
-            // Flat vertical load is already carried by the L3/L4 suspension.
-            // Apply only the normal-vector delta here; this makes the total
-            // physical contact force full_contact_force without double-counting
-            // the legacy Fz*e_z path and is exactly zero on canonical flat road.
-            F_applied[i] = full_contact_force - Fz[i] * Vec3::UnitZ();
-            contact_loads_[i].full_force_body = full_contact_force;
-            contact_loads_[i].applied_force_body = F_applied[i];
             auto force_to_world = [&](const Vec3& force_body) {
                 if (l4_contact_kinematics_.enabled && !canonical_flat) {
                     return l4_contact_kinematics_.body_to_world * force_body;
@@ -613,12 +606,40 @@ private:
                     std::sin(yaw) * force_body.x() + std::cos(yaw) * force_body.y(),
                     force_body.z());
             };
-            contact_loads_[i].full_force_world = force_to_world(full_contact_force);
-            contact_loads_[i].applied_force_world = force_to_world(F_applied[i]);
+            auto force_from_world = [&](const Vec3& force_world) {
+                if (l4_contact_kinematics_.enabled && !canonical_flat) {
+                    return l4_contact_kinematics_.body_to_world.conjugate()
+                        * force_world;
+                }
+                return Vec3(
+                    std::cos(yaw) * force_world.x() + std::sin(yaw) * force_world.y(),
+                   -std::sin(yaw) * force_world.x() + std::cos(yaw) * force_world.y(),
+                    force_world.z());
+            };
+            const Vec3 full_force_world = force_to_world(full_contact_force);
+            Vec3 applied_force_world;
+            if (canonical_flat) {
+                // Preserve the legacy arithmetic exactly on flat road: the
+                // suspension already carries Fz*world-z and the tire path only
+                // applies its tangential body force.
+                F_applied[i] = F_body[i];
+                applied_force_world = force_to_world(F_applied[i]);
+            } else {
+                // road_dz and the L4 vertical spring are defined on world z.
+                // Subtract that legacy load on the same axis, then resolve the
+                // remaining physical force back to body coordinates for planar
+                // body equations.  Subtracting Fz*body-z is incorrect at roll/pitch.
+                applied_force_world = full_force_world - Fz[i] * Vec3::UnitZ();
+                F_applied[i] = force_from_world(applied_force_world);
+            }
+            contact_loads_[i].full_force_body = full_contact_force;
+            contact_loads_[i].applied_force_body = F_applied[i];
+            contact_loads_[i].full_force_world = full_force_world;
+            contact_loads_[i].applied_force_world = applied_force_world;
             if (canonical_flat) {
                 contact_loads_[i].moment_delta_body = Vec3::Zero();
             } else {
-                const double vertical_delta = full_contact_force.z() - Fz[i];
+                const double vertical_delta = F_applied[i].z();
                 // The existing m*a*h terms already carry the horizontal-force
                 // lever arm, and suspension carries r_xy cross Fz*e_z.  Only
                 // the non-flat vertical correction remains for roll/pitch.

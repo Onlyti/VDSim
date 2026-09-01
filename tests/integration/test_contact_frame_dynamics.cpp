@@ -3,6 +3,7 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <iomanip>
@@ -13,6 +14,16 @@
 namespace {
 
 constexpr double kDegToRad = 3.14159265358979323846 / 180.0;
+
+/** Extract ISO body roll/pitch from a body-to-world quaternion. */
+std::array<double, 2> roll_pitch(const vdsim::Quat& q) {
+    const double roll = std::atan2(
+        2.0 * (q.w() * q.x() + q.y() * q.z()),
+        1.0 - 2.0 * (q.x() * q.x() + q.y() * q.y()));
+    const double sin_pitch = std::clamp(
+        2.0 * (q.w() * q.y() - q.z() * q.x()), -1.0, 1.0);
+    return {{roll, std::asin(sin_pitch)}};
+}
 
 /** Construct the real L3 or shipped-topology L4 core path. */
 std::unique_ptr<vdsim::IVehicleDynamics> make_level(
@@ -238,6 +249,86 @@ TEST(D1ContactFrame, BankVerticalDeltaEntersUnsprungForceBalanceOnce) {
                       << "[D1:vertical] expected_delta_N=" << expected_delta
                       << " observed_balance_N=" << observed_delta
                       << " virtual_power_at_1mps_W=" << expected_delta << '\n';
+        }
+    }
+}
+
+TEST(D1ContactFrame, WarmedRollPitchUsesWorldZLegacyLoadAxis) {
+    constexpr double bank = 10.0 * kDegToRad;
+    constexpr double warm_dt = 0.001;
+    constexpr double probe_dt = 5e-8;
+    auto flat = make_level(true);
+    auto plus = make_level(true);
+    ASSERT_NE(flat, nullptr);
+    ASSERT_NE(plus, nullptr);
+
+    vdsim::ContactArray warm_contacts{};
+    for (int wheel = 0; wheel < vdsim::NUM_WHEELS; ++wheel) {
+        auto& contact = warm_contacts[wheel];
+        contact.is_valid = true;
+        contact.normal = vdsim::Vec3::UnitZ();
+        contact.mu_long = 1.0;
+        contact.mu_lat = 1.0;
+        const bool front = wheel == vdsim::WHEEL_FL || wheel == vdsim::WHEEL_FR;
+        contact.road_dz = front ? 0.0022 : -0.0022;
+    }
+    vdsim::CmdL4 warm_command;
+    warm_command.steer_angle_wheel = 0.06;
+    for (int step = 0; step < 4000; ++step) {
+        flat->step(warm_command, warm_contacts, warm_dt);
+        plus->step(warm_command, warm_contacts, warm_dt);
+    }
+
+    const auto warm_rp = roll_pitch(plus->state().orientation);
+    const vdsim::Quat warm_body_to_world = plus->state().orientation;
+    const vdsim::Vec3 warm_rate_delta =
+        plus->state().angular_velocity - flat->state().angular_velocity;
+    EXPECT_NEAR(warm_rp[0], 0.05, 0.01);
+    EXPECT_NEAR(warm_rp[1], -0.00116, 0.001);
+    EXPECT_NEAR(warm_rate_delta.norm(), 0.0, 1e-14);
+
+    vdsim::ContactArray bank_contacts = warm_contacts;
+    const vdsim::Vec3 bank_normal(0.0, -std::sin(bank), std::cos(bank));
+    for (auto& contact : bank_contacts) contact.normal = bank_normal;
+    flat->step(warm_command, warm_contacts, probe_dt);
+    plus->step(warm_command, bank_contacts, probe_dt);
+
+    const vdsim::VehicleParams vehicle;
+    const std::array<double, vdsim::NUM_WHEELS> rx {{
+        vehicle.cg_to_front, vehicle.cg_to_front,
+       -vehicle.cg_to_rear, -vehicle.cg_to_rear}};
+    const std::array<double, vdsim::NUM_WHEELS> ry {{
+        0.5 * vehicle.track_front, -0.5 * vehicle.track_front,
+        0.5 * vehicle.track_rear, -0.5 * vehicle.track_rear}};
+    const vdsim::Vec3 rate_delta =
+        plus->state().angular_velocity - flat->state().angular_velocity;
+    const double Rzz = (warm_body_to_world * vdsim::Vec3::UnitZ()).z();
+
+    for (int wheel = 0; wheel < vdsim::NUM_WHEELS; ++wheel) {
+        const vdsim::Vec3 tangential_world = warm_body_to_world
+            * plus->tire_forces_body()[wheel];
+        const double expected_world_delta = tangential_world.z()
+            + plus->tire_Fz()[wheel] * (bank_normal.z() - 1.0);
+        const double observed_unsprung_velocity_delta =
+            plus->state().susp_velocity[wheel]
+            - flat->state().susp_velocity[wheel]
+            + ry[wheel] * rate_delta.x() - rx[wheel] * rate_delta.y();
+        const double observed_world_delta = vehicle.unsprung_mass[wheel]
+            * observed_unsprung_velocity_delta / probe_dt;
+        EXPECT_NEAR(observed_world_delta, expected_world_delta, 3e-3)
+            << "wheel=" << wheel;
+
+        const double old_body_axis_residual =
+            plus->tire_Fz()[wheel] * (1.0 - Rzz);
+        if (wheel == vdsim::WHEEL_FL) {
+            EXPECT_NEAR(old_body_axis_residual, 2.805, 0.2);
+            std::cout << std::setprecision(17)
+                      << "[D1:warm-axis] roll_rad=" << warm_rp[0]
+                      << " pitch_rad=" << warm_rp[1]
+                      << " expected_world_delta_N=" << expected_world_delta
+                      << " observed_world_delta_N=" << observed_world_delta
+                      << " old_body_axis_residual_N=" << old_body_axis_residual
+                      << '\n';
         }
     }
 }
