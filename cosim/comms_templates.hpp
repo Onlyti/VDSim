@@ -417,7 +417,9 @@ inline double utc_seconds_of_day_now() {
 /// encoder could not verify.
 ///
 /// @param s State to encode; m_gnss_x/m_gnss_y are ENU metres from `o`.
-/// @param o Per-channel geodetic datum for the ENU->lat/lon projection.
+/// @param o Per-channel geodetic datum for the ENU->lat/lon projection;
+///        latitude must be finite and in the inclusive range [-90, 90] deg,
+///        otherwise the sentence reports no fix.
 /// @param utc_sod UTC seconds since midnight for the time field (see
 ///        utc_seconds_of_day_now()); values outside [0,86400) are wrapped.
 /// @return Complete sentence including the "*HH\r\n" terminator.
@@ -429,6 +431,7 @@ inline std::string encode_gga(const StateFields& s, const GeodeticOrigin& o,
                         std::fabs(s.m_gnss_y) <= kMaxEnuOffsetM &&
                         std::fabs(s.z)        <= kMaxEnuOffsetM &&
                         std::isfinite(o.lat_deg) && std::isfinite(o.lon_deg) &&
+                        std::fabs(o.lat_deg) <= 90.0 &&
                         std::isfinite(o.alt_m);
     const Geodetic g = enu_ok ? enu_to_geodetic(s.m_gnss_x, s.m_gnss_y, s.z, o)
                               : Geodetic{};       // ok = false

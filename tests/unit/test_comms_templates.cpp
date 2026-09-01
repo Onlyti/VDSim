@@ -364,6 +364,40 @@ TEST(CommsTemplates, GgaReportsNoFixForDegenerateState) {
     EXPECT_EQ(f[6], "0");
 }
 
+TEST(CommsTemplates, GgaValidatesOriginLatitudeRange) {
+    StateFields s;
+
+    // The geographic poles are valid inclusive endpoints.
+    for (const double lat : {-90.0, 90.0}) {
+        const GeodeticOrigin origin{lat, 126.978, 38.0};
+        const auto f = parse_checked_sentence(
+            vdsim::cosim::encode_gga(s, origin, 0.0));
+        ASSERT_EQ(f.size(), 15u) << lat;
+        EXPECT_EQ(f[2], "9000.0000") << lat;
+        EXPECT_EQ(f[3], lat < 0.0 ? "S" : "N") << lat;
+        EXPECT_EQ(f[6], "1") << lat;
+    }
+
+    // Any latitude outside [-90, 90] is not a geodetic datum. It must take
+    // the same well-formed no-fix path as a non-finite origin rather than be
+    // folded through sin/cos into a plausible-looking coordinate.
+    constexpr double kEpsilon = 1.0e-9;
+    for (const double lat : {-100.0, -90.0 - kEpsilon,
+                              90.0 + kEpsilon, 100.0}) {
+        const GeodeticOrigin origin{lat, 126.978, 38.0};
+        const auto f = parse_checked_sentence(
+            vdsim::cosim::encode_gga(s, origin, 0.0));
+        ASSERT_EQ(f.size(), 15u) << lat;
+        EXPECT_EQ(f[2], "") << lat;
+        EXPECT_EQ(f[3], "") << lat;
+        EXPECT_EQ(f[4], "") << lat;
+        EXPECT_EQ(f[5], "") << lat;
+        EXPECT_EQ(f[6], "0") << lat;
+        EXPECT_EQ(f[7], "00") << lat;
+        EXPECT_EQ(f[9], "") << lat;
+    }
+}
+
 // N1 regression, layer 1: the ECEF->geodetic inverse is only single-valued
 // outside the ellipsoid's evolute. Near/below the geocentre the Newton step's
 // atan2() x-argument flips sign and returns a second/third-quadrant angle -
