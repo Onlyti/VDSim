@@ -392,8 +392,14 @@ TEST(CommsTemplates, EnuToGeodeticFailsInsideTheEarthInsteadOfReturningABadAngle
     EXPECT_FALSE(vdsim::cosim::enu_to_geodetic(0.0, kInf, 0.0, o).ok);
     EXPECT_FALSE(vdsim::cosim::enu_to_geodetic(0.0, 0.0, 0.0,
                                                GeodeticOrigin{kNaN, 0.0, 0.0}).ok);
-    // A default-constructed result is "no fix", not a fix at Null Island.
-    EXPECT_FALSE(vdsim::cosim::Geodetic{}.ok);
+    // A default-constructed result is "no fix", not a fix at Null Island: the
+    // documented "ok == false implies NaN angles" invariant holds for the
+    // defaults too, so a caller that forgets to test ok gets NaN, not (0, 0, 0).
+    const vdsim::cosim::Geodetic none;
+    EXPECT_FALSE(none.ok);
+    EXPECT_TRUE(std::isnan(none.lat_deg));
+    EXPECT_TRUE(std::isnan(none.lon_deg));
+    EXPECT_TRUE(std::isnan(none.alt_m));
     // Ordinary vehicle states keep reporting success.
     for (double z : {-1000.0, -10.0, 0.0, 10.0, 1000.0, 1.0e4}) {
         const auto g = vdsim::cosim::enu_to_geodetic(1234.0, -5678.0, z, o);
@@ -407,6 +413,10 @@ TEST(CommsTemplates, EnuToGeodeticFailsInsideTheEarthInsteadOfReturningABadAngle
 TEST(CommsTemplates, DegMinUsesThePerFieldRangeBound) {
     EXPECT_DOUBLE_EQ(vdsim::cosim::nmea_deg_max(2), 90.0);
     EXPECT_DOUBLE_EQ(vdsim::cosim::nmea_deg_max(3), 180.0);
+    // The function is total, and only >= 3 digits widens the bound: every other
+    // digit count (including a nonsensical one) gets the tighter 90 deg.
+    for (int d : {-1, 0, 1, 2}) EXPECT_DOUBLE_EQ(vdsim::cosim::nmea_deg_max(d), 90.0) << d;
+    for (int d : {3, 4, 9})     EXPECT_DOUBLE_EQ(vdsim::cosim::nmea_deg_max(d), 180.0) << d;
     // The reproduced value: rejected as a latitude, legal as a longitude.
     EXPECT_EQ(vdsim::cosim::nmea_deg_min(-163.551823, 2), "");
     EXPECT_EQ(vdsim::cosim::nmea_deg_min(-163.551823, 3), "16333.1094");
@@ -479,6 +489,141 @@ TEST(CommsTemplates, GgaNeverEmitsAQualityOneFixWithAnOutOfRangeField) {
             check(parse_checked_sentence(vdsim::cosim::encode_gga(t, o, 3600.0)), z);
         }
     }
+}
+
+// N1 regression, layer 4: the evolute test is geometric, not axis-only.
+//
+// The evolute guard used to live inside the "on the spin axis" branch, so it
+// only ever fired for p == 0. Off the axis the ECEF round-trip check was the
+// sole gate — and it cannot do this job, because inside the evolute all four
+// candidate latitudes reproduce the input ECEF point exactly. 2.3% of the
+// astroid's interior therefore came back as a fix.
+TEST(CommsTemplates, InsideEvoluteIsTheAstroidNotJustTheSpinAxis) {
+    using vdsim::cosim::inside_evolute;
+    const double ep = vdsim::cosim::kEvolutePMax;   // 42697.7 m
+    const double ez = vdsim::cosim::kEvoluteZMax;   // 42841.3 m
+    EXPECT_NEAR(ep, 42697.67, 0.01);
+    EXPECT_NEAR(ez, 42841.31, 0.01);
+    // The geocentre and both cusps are in; the boundary itself counts as in,
+    // because that is where two of the four roots merge.
+    EXPECT_TRUE(inside_evolute(0.0, 0.0));
+    EXPECT_TRUE(inside_evolute(ep, 0.0));
+    EXPECT_TRUE(inside_evolute(0.0, ez));
+    EXPECT_TRUE(inside_evolute(0.0, -ez));
+    // Just outside either cusp is out. The astroid is concave, so a point with
+    // both coordinates at half a cusp is already outside it (0.63 + 0.63 > 1).
+    EXPECT_FALSE(inside_evolute(ep * 1.000001, 0.0));
+    EXPECT_FALSE(inside_evolute(0.0, ez * 1.000001));
+    EXPECT_FALSE(inside_evolute(ep * 0.5, ez * 0.5));
+    EXPECT_TRUE(inside_evolute(ep * 0.1, ez * 0.1));
+    // Anywhere a vehicle can be is far outside, and non-finite reads as outside
+    // (enu_to_geodetic() screens those before calling).
+    EXPECT_FALSE(inside_evolute(6378137.0, 0.0));
+    EXPECT_FALSE(inside_evolute(5.0e6, 3.0e6));
+    EXPECT_FALSE(inside_evolute(kNaN, 0.0));
+    EXPECT_FALSE(inside_evolute(kInf, kInf));
+    // The astroid is a surface of revolution: only |z| matters, not its sign.
+    for (double t = 0.0; t <= 1.0; t += 0.05)
+        EXPECT_EQ(inside_evolute(ep * t, ez * t), inside_evolute(ep * t, -ez * t)) << t;
+}
+
+// N1 regression, layer 4 (continued): the exact off-axis reproduction, and a
+// sweep of the region it came from.
+//
+// Placing an arbitrary ECEF point (x, y, z) as an ENU offset about the (0,0,0)
+// datum is exact and needs no projection: there N0 = a, the datum ECEF is
+// (a, 0, 0) and the ENU rotation is a permutation, so
+// east = y, north = z, up = x - a.
+TEST(CommsTemplates, GgaRejectsOffAxisPointsInsideTheEvolute) {
+    constexpr double kA = 6378137.0;
+    const GeodeticOrigin o{0.0, 0.0, 0.0};
+    auto state_at_ecef = [](double x, double y, double z) {
+        StateFields s;
+        s.m_gnss_x = y;                 // east
+        s.m_gnss_y = z;                 // north
+        s.z        = x - kA;            // up
+        return s;
+    };
+    // The reproduction: ECEF (-2045.2, -1595.7, 23172.3), 23.3 km from the
+    // geocentre and strictly inside the astroid, with four distinct solutions.
+    // It used to return ok = 1 at lat 87.748546 / alt -6333529.1 m and encode
+    // "$GPGGA,010000.00,8744.9127,N,14202.2822,W,1,12,0.9,-6333529.1,M,0.0,M,,*6F"
+    // — a checksum-valid quality-1, 12-satellite, HDOP-0.9 fix at the Earth's
+    // core, which kMaxGgaAltitudeM = 1e7 does not filter.
+    StateFields s;
+    s.m_gnss_x = -1595.7;
+    s.m_gnss_y = 23172.3;
+    s.z        = -6380182.2;
+    EXPECT_TRUE(vdsim::cosim::inside_evolute(std::hypot(-2045.2, -1595.7), 23172.3));
+    const auto g = vdsim::cosim::enu_to_geodetic(s.m_gnss_x, s.m_gnss_y, s.z, o);
+    EXPECT_FALSE(g.ok);
+    EXPECT_TRUE(std::isnan(g.lat_deg));
+    EXPECT_TRUE(std::isnan(g.lon_deg));
+    EXPECT_TRUE(std::isnan(g.alt_m));
+    const auto f = parse_checked_sentence(vdsim::cosim::encode_gga(s, o, 3600.0));
+    ASSERT_EQ(f.size(), 15u);
+    EXPECT_EQ(f[6], "0");             // no fix, not quality 1
+    EXPECT_EQ(f[2], "");
+    EXPECT_EQ(f[4], "");
+    EXPECT_EQ(f[9], "");
+    // The whole interior, at two longitudes so the off-meridian path is covered
+    // as well: not one sentence may claim a fix.
+    const double ep = vdsim::cosim::kEvolutePMax;
+    const double ez = vdsim::cosim::kEvoluteZMax;
+    int inside = 0;
+    for (int ip = 0; ip <= 120; ++ip) {
+        for (int iz = -120; iz <= 120; ++iz) {
+            const double p = ep * (ip / 120.0) * 1.02;
+            const double z = ez * (iz / 120.0) * 1.02;
+            if (!vdsim::cosim::inside_evolute(p, z)) continue;
+            ++inside;
+            for (double lonr : {0.0, 1.234}) {
+                const StateFields t = state_at_ecef(p * std::cos(lonr),
+                                                    p * std::sin(lonr), z);
+                ASSERT_FALSE(vdsim::cosim::enu_to_geodetic(t.m_gnss_x, t.m_gnss_y,
+                                                           t.z, o).ok)
+                    << "p=" << p << " z=" << z;
+                const auto ff = parse_checked_sentence(
+                    vdsim::cosim::encode_gga(t, o, 3600.0));
+                ASSERT_EQ(ff.size(), 15u);
+                ASSERT_EQ(ff[6], "0") << "p=" << p << " z=" << z;
+            }
+        }
+    }
+    EXPECT_GT(inside, 5000);          // the sweep really did cover the region
+}
+
+// The other half of layer 4, and the more important one: the geometric test
+// must not cost a single legitimate fix. The evolute is 6335 km below the
+// surface, so nothing a scene can produce is near it.
+TEST(CommsTemplates, EvoluteGuardRejectsNoReachableVehicleState) {
+    int cases = 0;
+    for (double lat0 : {0.0, 37.5665, 60.0, 89.9, 90.0, -90.0, -33.8688}) {
+        for (double lon0 : {0.0, 126.978, 180.0, -180.0, -70.6693}) {
+            for (double alt0 : {0.0, 38.0, 8848.0}) {
+                const GeodeticOrigin o{lat0, lon0, alt0};
+                for (double e = -200000.0; e <= 200000.0; e += 50000.0) {
+                    for (double n = -200000.0; n <= 200000.0; n += 50000.0) {
+                        for (double up = -2000.0; up <= 20000.0; up += 2000.0) {
+                            ++cases;
+                            StateFields s;
+                            s.m_gnss_x = e; s.m_gnss_y = n; s.z = up;
+                            ASSERT_TRUE(vdsim::cosim::enu_to_geodetic(e, n, up, o).ok)
+                                << lat0 << "/" << lon0 << "/" << alt0
+                                << " e=" << e << " n=" << n << " up=" << up;
+                            const auto f = parse_checked_sentence(
+                                vdsim::cosim::encode_gga(s, o, 3600.0));
+                            ASSERT_EQ(f.size(), 15u);
+                            ASSERT_EQ(f[6], "1")
+                                << lat0 << "/" << lon0 << "/" << alt0
+                                << " e=" << e << " n=" << n << " up=" << up;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    EXPECT_GT(cases, 30000);
 }
 
 // An altitude too large to format must blank the field, not overflow it, while

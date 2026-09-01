@@ -40,13 +40,14 @@ struct GeodeticOrigin {
 // `ok` is the only field a caller may read unconditionally. When it is true,
 // lat_deg is in [-90, 90] and lon_deg in (-180, 180]; when it is false the
 // three angles/altitude are NaN, because the ECEF->geodetic inverse is not
-// single-valued at that point (see enu_to_geodetic()). Default-constructing a
-// Geodetic yields ok = false so a caller that skips the projection entirely
+// single-valued at that point (see enu_to_geodetic()). The defaults hold that
+// invariant too: a default-constructed Geodetic is ok = false with NaN angles,
+// so a caller that skips the projection entirely — or forgets to test ok —
 // cannot accidentally publish a zeroed "fix at Null Island".
 struct Geodetic {
-    double lat_deg {0.0};
-    double lon_deg {0.0};
-    double alt_m   {0.0};
+    double lat_deg {std::numeric_limits<double>::quiet_NaN()};
+    double lon_deg {std::numeric_limits<double>::quiet_NaN()};
+    double alt_m   {std::numeric_limits<double>::quiet_NaN()};
     bool   ok      {false};
 };
 
@@ -110,7 +111,10 @@ inline std::string nmea_sentence(const std::vector<std::string>& fields) {
 /// @brief Largest |angle| an NMEA degrees+minutes field of @p deg_digits holds.
 /// @param deg_digits Integer degree digits, which is what distinguishes the two
 ///        NMEA angle fields: 2 => latitude => 90, 3 => longitude => 180.
-/// @return 90.0 for a two-digit (latitude) field, 180.0 otherwise.
+/// @return 180.0 when @p deg_digits >= 3 (the longitude field); 90.0 for every
+///         other value, which covers the two-digit latitude field and, being
+///         the tighter of the two bounds, keeps a nonsensical digit count from
+///         widening the accepted range.
 /// @note The bound is per-field, not a single global 180: a latitude of, say,
 ///       163.55 deg does not exist, and printing it would also widen the field
 ///       to "16333.1094" — ten characters where GGA specifies nine (ddmm.mmmm).
@@ -167,6 +171,40 @@ inline std::string nmea_utc_field(double utc_sod) {
     return std::string(out);
 }
 
+// WGS84 defining parameters, shared by the geodetic helpers below.
+constexpr double kWgs84A = 6378137.0;                     // semi-major axis [m]
+constexpr double kWgs84F = 1.0 / 298.257223563;           // flattening
+constexpr double kWgs84B = kWgs84A * (1.0 - kWgs84F);     // semi-minor axis [m]
+
+// Half-extents of the WGS84 evolute, the astroid-shaped caustic swept by the
+// ellipse's centres of curvature: (a^2-b^2)/a across and (a^2-b^2)/b along the
+// spin axis. Both are ~42.8 km, i.e. the whole figure sits around the geocentre,
+// ~6335 km below the ellipsoid surface.
+constexpr double kEvolutePMax = (kWgs84A * kWgs84A - kWgs84B * kWgs84B) / kWgs84A;  // 42697.7 m
+constexpr double kEvoluteZMax = (kWgs84A * kWgs84A - kWgs84B * kWgs84B) / kWgs84B;  // 42841.3 m
+
+/// @brief Is a meridional ECEF point at or inside the WGS84 evolute?
+/// @param p Cylindrical radius sqrt(x^2 + y^2) of the ECEF point [m].
+/// @param z ECEF z coordinate [m].
+/// @return true when (p, z) lies on or strictly inside the astroid
+///         (p/kEvolutePMax)^(2/3) + (|z|/kEvoluteZMax)^(2/3) = 1.
+/// @note This is exactly the region where the ECEF->geodetic inverse stops
+///       being single-valued: four normals to the ellipse pass through an
+///       interior point, so four distinct geodetic latitudes claim it. All four
+///       reproduce the input ECEF *exactly*, which is why the round-trip check
+///       in enu_to_geodetic() cannot separate them — the region has to be
+///       excluded geometrically. On the boundary two of the four roots merge,
+///       which is no more a single answer, so the astroid itself is included.
+/// @note Non-finite arguments compare false throughout and so report "outside";
+///       enu_to_geodetic() screens those before it gets here.
+/// @note Only the meridional (p, z) half-plane is needed: the evolute is a
+///       surface of revolution about the spin axis, so longitude does not enter.
+inline bool inside_evolute(double p, double z) {
+    const double u = std::cbrt(std::fabs(p) / kEvolutePMax);
+    const double v = std::cbrt(std::fabs(z) / kEvoluteZMax);
+    return u * u + v * v <= 1.0;
+}
+
 /// @brief Local ENU offset -> geodetic: exact closed-form WGS84 inverse.
 ///
 /// The offsets are interpreted as WGS84 local Cartesian (topocentric) ENU about
@@ -192,14 +230,22 @@ inline std::string nmea_utc_field(double utc_sod) {
 /// PROJ is a cross-check, not the reference, because it is the less accurate of
 /// the two here. Against `+proj=topocentric` / `+proj=cart` (pyproj 3.5 /
 /// PROJ 9.2) this code agrees to **6e-8 m while the resulting ellipsoidal
-/// height stays under ~2 km** — which covers every offset a ground-vehicle
-/// scene produces, including 100 km of horizontal ENU (the tangent-plane rise
-/// puts that at ~800 m HAE). Higher than that PROJ's `cart` inverse is what
-/// drifts: 1.4e-6 m at 11 km HAE and 3.4e-4 m at 165 km HAE (lat0 60,
-/// e = n = -1000 km, up = 10 km), and at those points PROJ differs from the
-/// exact analytic reference by that same amount while this code still closes to
-/// ~2.6e-9 m. So the PROJ figure is quoted with its altitude range attached,
-/// and it is not a bound on this code's error.
+/// height stays under ~2 km and the datum latitude stays off the poles
+/// (|lat0| < 89 deg)** — which covers every offset a ground-vehicle scene
+/// produces, including 100 km of horizontal ENU (the tangent-plane rise puts
+/// that at ~800 m HAE). Both qualifiers are load-bearing, and in both cases it
+/// is PROJ that moves:
+///  - Polar datum: the agreement widens to **2e-7 m**, worst measured
+///    1.5832e-07 m at lat0 = -90, lon0 = -180, alt0 = 0, e = -1, n = 1,
+///    up = -1000. Against the 60-digit analytic reference this code is
+///    3.3e-10 m there and PROJ is 1.581e-7 m. The excess is confined to a datum
+///    exactly on the spin axis: over the same grid lat0 = +-89.9 is 2.8e-9 m.
+///  - Above ~2 km HAE, PROJ's `cart` inverse drifts: 1.4e-6 m at 11 km HAE and
+///    3.4e-4 m at 165 km HAE (lat0 60, e = n = -1000 km, up = 10 km), and at
+///    those points PROJ differs from the exact analytic reference by that same
+///    amount while this code still closes to ~2.6e-9 m.
+/// So the PROJ figures are quoted with the range they hold over, and none of
+/// them is a bound on this code's error.
 ///
 /// The equirectangular form this replaced froze the longitude scale at cos(lat0)
 /// and was off by 6.75 m at 10 km / 678 m at 100 km from the Seoul datum
@@ -230,17 +276,21 @@ inline std::string nmea_utc_field(double utc_sod) {
 ///         it reproduces the input point.
 /// @note Failure is reported — rather than a nearest-plausible angle — for
 ///       non-finite inputs and for points at or inside the ellipsoid's evolute
-///       (|x| < 42.70 km, |z| < 42.84 km around the geocentre), where a point
-///       has several geodetic latitudes and the closed form silently picks a
-///       second/third-quadrant one. A vehicle 6350 km below the datum is a
-///       diverged solver, not a location, so the honest answer is "no fix" —
-///       and encode_gga() turns it into exactly that sentence.
+///       (inside_evolute(): the astroid of half-extents 42.70 km across and
+///       42.84 km along the spin axis, around the geocentre), where a point has
+///       up to four geodetic latitudes and no basis to prefer one. That test is
+///       geometric and covers the whole region, on and off the axis: the
+///       round-trip check below cannot do it, because every one of the four
+///       candidate latitudes reproduces the input ECEF point exactly. A vehicle
+///       6350 km below the datum is a diverged solver, not a location, so the
+///       honest answer is "no fix" — and encode_gga() turns it into exactly
+///       that sentence.
 inline Geodetic enu_to_geodetic(double east, double north, double up,
                                 const GeodeticOrigin& o) {
-    constexpr double kA   = 6378137.0;                    // WGS84 semi-major axis [m]
-    constexpr double kF   = 1.0 / 298.257223563;          // WGS84 flattening
+    constexpr double kA   = kWgs84A;                      // WGS84 semi-major axis [m]
+    constexpr double kF   = kWgs84F;                      // WGS84 flattening
     constexpr double kE2  = kF * (2.0 - kF);              // first eccentricity squared
-    constexpr double kB   = kA * (1.0 - kF);              // semi-minor axis [m]
+    constexpr double kB   = kWgs84B;                      // semi-minor axis [m]
     constexpr double kEp2 = (kA * kA - kB * kB) / (kB * kB);  // second eccentricity sq.
     constexpr double kRad = 0.017453292519943295;         // pi/180
     constexpr double kDeg = 57.29577951308232;            // 180/pi
@@ -260,24 +310,18 @@ inline Geodetic enu_to_geodetic(double east, double north, double up,
     const double y = y0 + cl * east - sp * sl * north + cp * sl * up;
     const double z = z0 +             cp      * north + sp      * up;
 
-    // Half-height of the WGS84 evolute — the caustic swept by the ellipse's
-    // centres of curvature, |x| <= (a^2-b^2)/a = 42.70 km and
-    // |z| <= (a^2-b^2)/b = 42.84 km. Strictly inside that astroid a point has
-    // several geodetic latitudes and the inverse below is not single-valued.
-    constexpr double kEvoluteZ = (kA * kA - kB * kB) / kB;   // 42841.3 m
-
-    Geodetic g;                                  // ok defaults to false
-    const double kNaN = std::numeric_limits<double>::quiet_NaN();
+    Geodetic g;                                  // ok defaults to false, angles NaN
     const double p = std::hypot(x, y);
-    if (!std::isfinite(p) || !std::isfinite(z)) {   // non-finite input or datum
-        g.lat_deg = g.lon_deg = g.alt_m = kNaN;
+    if (!std::isfinite(p) || !std::isfinite(z))     // non-finite input or datum
         return g;
-    }
-    if (!(p > 1.0e-9)) {          // on the spin axis: longitude undefined
-        if (!(std::fabs(z) > kEvoluteZ)) {         // ... and inside the evolute
-            g.lat_deg = g.lon_deg = g.alt_m = kNaN;
-            return g;
-        }
+    // Geometric gate, ahead of everything else: at or inside the evolute the
+    // inverse has up to four answers that are all exact, so the round-trip
+    // check below cannot pick one and there is nothing to pick (see
+    // inside_evolute()). This covers the spin axis, where it reduces to
+    // |z| <= kEvoluteZMax, and every off-axis interior point alike.
+    if (inside_evolute(p, z))
+        return g;
+    if (!(p > 1.0e-9)) {          // on the spin axis, outside the evolute: pole
         g.lat_deg = z >= 0.0 ? 90.0 : -90.0;
         g.lon_deg = o.lon_deg - std::floor((o.lon_deg + 180.0) / 360.0) * 360.0;
         g.alt_m   = std::fabs(z) - kB;
@@ -294,9 +338,11 @@ inline Geodetic enu_to_geodetic(double east, double north, double up,
     //
     // The step is only valid while den = N + h stays above e2*N (~42.7 km):
     // below that the x-argument of the atan2() flips sign and the "latitude"
-    // lands in the second or third quadrant, i.e. |lat| > 90 deg. That is the
-    // same region the evolute guard above rejects, so the loop simply stops
-    // refining there and the round-trip check below rejects the result.
+    // lands in the second or third quadrant, i.e. |lat| > 90 deg. The evolute
+    // guard above already rejects that region, so this break is a belt-and-
+    // braces stop for an iterate that wanders near the boundary; if one ever
+    // does, the loop keeps Bowring's value and the round-trip check below
+    // rejects the result.
     for (int i = 0; i < 2; ++i) {
         const double s1 = std::sin(lat), c1 = std::cos(lat);
         const double w  = std::sqrt(1.0 - kE2 * s1 * s1);
@@ -323,10 +369,8 @@ inline Geodetic enu_to_geodetic(double east, double north, double up,
     // valid point while still an order of magnitude tighter than any wrong
     // branch of the inverse, which misses by kilometres.
     const double tol = 1.0e-3 + 1.0e-11 * std::hypot(p, z);
-    if (!(std::fabs(pr - p) <= tol) || !(std::fabs(zr - z) <= tol)) {
-        g.lat_deg = g.lon_deg = g.alt_m = kNaN;
-        return g;
-    }
+    if (!(std::fabs(pr - p) <= tol) || !(std::fabs(zr - z) <= tol))
+        return g;                                // still the NaN "no fix" default
     g.lat_deg = lat * kDeg;
     g.lon_deg = std::atan2(y, x) * kDeg;
     g.alt_m   = h;
