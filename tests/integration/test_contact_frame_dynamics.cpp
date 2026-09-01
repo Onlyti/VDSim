@@ -182,7 +182,10 @@ TEST(D1ContactFrame, InvalidContactResetsTireTransientBeforeRecontact) {
 TEST(D1ContactFrame, BankVerticalDeltaEntersUnsprungForceBalanceOnce) {
     constexpr double bank = 10.0 * kDegToRad;
     constexpr double dt = 5e-8;
-    constexpr double expected_front_left_delta_N = -436.5208463;
+    // D2 resolves gravity along the exact road-y basis (g*sin(bank)) instead of
+    // its former horizontal projection (g*sin(bank)*cos(bank)); this is the new
+    // physical non-flat baseline while the D1 wrench closure itself is unchanged.
+    constexpr double expected_front_left_delta_N = -435.6222462;
     // Central model state is observed after a finite RK step.  A dt sweep at
     // 1e-7/5e-8 bounded the reconstruction residual by 1.56e-3 N; 2e-3 N is
     // the measured finite-difference envelope, not a model-error allowance.

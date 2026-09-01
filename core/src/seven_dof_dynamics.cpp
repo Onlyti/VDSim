@@ -301,9 +301,12 @@ private:
         const double R   = vp_.wheel_radius_nominal;
         const double h_cg = vp_.cg_height;
 
-        // ---- Road slope from contact normals (flat -> no effect) ----
-        // Average unit normal (world). Normal load scales by cos(slope)=n_z; the
-        // gravity component tangential to the road is felt as a body force.
+        // ---- Exact road frame and gravity resolution (flat -> no effect) ----
+        // Contacts carry world-ENU normals.  Resolve one common road frame without
+        // a small-angle approximation: x_road is body-forward projected onto the
+        // road plane and y_road completes the right-handed frame.  D1 already adds
+        // the non-flat normal-force increment to the planar EOM, so the gravity
+        // term below is applied as a residual after that increment is known.
         Vec3 n_road = Vec3::Zero();
         for (const auto& contact : contacts) {
             if (!contact.is_valid || !contact.normal.allFinite()) continue;
@@ -314,28 +317,44 @@ private:
         const bool has_road_normal = nn > 1e-9;
         if (has_road_normal) n_road /= nn;
         const double cos_slope = has_road_normal
-            ? std::max(0.1, n_road.z()) : 0.0;
-        const double gdotn = -kGravity * n_road.z();          // (0,0,-g) . n
-        const double gtx = -gdotn * n_road.x();               // tangential gravity (world)
-        const double gty = -gdotn * n_road.y();
-        const double gx_b =  std::cos(yaw) * gtx + std::sin(yaw) * gty;   // -> body
-        const double gy_b = -std::sin(yaw) * gtx + std::cos(yaw) * gty;
+            ? std::max(0.0, n_road.z()) : 0.0;
+        const Vec3 forward_world(std::cos(yaw), std::sin(yaw), 0.0);
+        Vec3 x_road = forward_world;
+        Vec3 y_road(-std::sin(yaw), std::cos(yaw), 0.0);
+        if (has_road_normal) {
+            x_road -= x_road.dot(n_road) * n_road;
+            const double x_norm = x_road.norm();
+            if (x_norm > 1e-12) {
+                x_road /= x_norm;
+                y_road = n_road.cross(x_road).normalized();
+            }
+        }
+        const double gx_gravity = -kGravity * x_road.z();
+        const double gy_gravity = -kGravity * y_road.z();
+        const double nx_b =  std::cos(yaw) * n_road.x() + std::sin(yaw) * n_road.y();
+        const double ny_b = -std::sin(yaw) * n_road.x() + std::cos(yaw) * n_road.y();
 
         // Specific force the chassis feels in the road-tangent plane = inertial
         // accel minus the tangential gravity the tires already react. On a banked
         // straight ay_kin->0 but ay_felt = -gy_b != 0, so the bank/slope produces
         // quasi-static load transfer (and the reported roll/pitch). Flat: ==0.
-        const double ax_felt = ax_prev_ - gx_b;
-        const double ay_felt = ay_prev_ - gy_b;
+        const double ax_felt = ax_prev_ - gx_gravity;
+        const double ay_felt = ay_prev_ - gy_gravity;
         ax_felt_ = ax_felt; ay_felt_ = ay_felt;
 
         // ---- Per-tire Fz with 1-step lag weight transfer + aero downforce ----
         const double q_aero  = 0.5 * kAirDensity * vp_.frontal_area * vx * std::abs(vx);
         const double Fz_aero_f_per = 0.5 * vp_.aero_lift_front * q_aero;
         const double Fz_aero_r_per = 0.5 * vp_.aero_lift_rear  * q_aero;
-        const double Fz_static_f = m * kGravity * cos_slope * b / (2.0 * L) + Fz_aero_f_per;
-        const double Fz_static_r = m * kGravity * cos_slope * a / (2.0 * L) + Fz_aero_r_per;
-        const double g_perp = kGravity * cos_slope;               // gravity normal to road
+        // For a banked steady turn, the centripetal acceleration has a component
+        // along the road normal.  This is a force-path load, not an equivalent
+        // lateral-acceleration offset: N/m = g*n_z + (v_x*r)*n_y(body).
+        // A longitudinal grade has n_y=0, so the static result remains m*g*cos(theta).
+        const double g_perp = has_road_normal
+            ? std::max(0.0, kGravity * cos_slope
+                             + centripetal_accel_substep_ * ny_b) : 0.0;
+        const double Fz_static_f = m * g_perp * b / (2.0 * L) + Fz_aero_f_per;
+        const double Fz_static_r = m * g_perp * a / (2.0 * L) + Fz_aero_r_per;
 
         // Longitudinal transfer + pitch, with CG-migration (jacking): a pitched
         // body shifts the CG by h_cg*sin(theta), adding a gravity pitch moment ->
@@ -692,8 +711,15 @@ private:
         F_rr *= std::tanh(vx / 0.5);
         Fx_total -= F_aero;
         Fx_total -= F_rr;
-        Fx_total += m * gx_b;   // gravity tangential to the road (0 on flat)
-        Fy_total += m * gy_b;
+        // D1's applied force contains Fz*n in the planar components because the
+        // legacy suspension path subtracts only Fz*world-Z.  Add exactly the
+        // residual required to obtain the road-frame gravity components.  This
+        // avoids double-counting the normal contribution and is identically zero
+        // on canonical flat road.
+        double normal_load_sum = 0.0;
+        for (double load : Fz) normal_load_sum += load;
+        Fx_total += m * gx_gravity - normal_load_sum * nx_b;
+        Fy_total += m * gy_gravity - normal_load_sum * ny_b;
 
         Deriv d_out;
         d_out.dx_world = vx * std::cos(yaw) - vy * std::sin(yaw);
@@ -844,6 +870,12 @@ private:
 
     void substep(const ContactArray& contacts, double h) {
         const State s0 = state_;
+        // Keep the normal-load forcing fixed across the four RK stages.  Stage-
+        // local yaw-rate drift otherwise breaks the exact +/-bank mirror even as
+        // h->0.  It is refreshed at every physical substep, not held for a full
+        // caller step when substepping is active.
+        centripetal_accel_substep_ = s0.velocity.x()
+                                      * s0.angular_velocity.z();
         const bool lugre_on = [&]() {
             for (int wi = 0; wi < NUM_WHEELS; ++wi)
                 if (ts_.for_wheel(wi).lugre.enabled) return true;
@@ -906,6 +938,7 @@ private:
     double ay_prev_ {0.0};
     double ax_felt_ {0.0};   // specific force (accel - tangential gravity) for transfer/attitude
     double ay_felt_ {0.0};
+    double centripetal_accel_substep_ {0.0};  // v_x*r fixed across one RK substep [m/s^2]
     double roll_qs_ {0.0};   // quasi-static roll/pitch incl. CG-migration (set in step)
     double pitch_qs_ {0.0};
     double mz_front_sum_ {0.0};

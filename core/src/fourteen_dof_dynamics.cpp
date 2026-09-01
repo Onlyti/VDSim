@@ -155,6 +155,10 @@ public:
                     continue;
                 const double z_corner_s = z_s_ + ry_[i] * std::sin(phi_)
                                                 - rx_[i] * std::sin(th_);
+                // z_u is driven by the per-wheel contact road_dz in the vertical
+                // EOM below.  Therefore contact-height differences enter the
+                // existing travel -> camber/toe sweep table through this single
+                // physical suspension coordinate (no layer-specific correction).
                 const double wheel_travel = z_u_[i] - z_corner_s;
                 ISuspensionKinematics* k = (i < 2) ? kine_front_.get()
                                                    : kine_rear_.get();
@@ -184,6 +188,8 @@ public:
             const double k_tire = std::max(1.0, ts_.for_wheel(WHEEL_FL).tire_vertical_stiffness);
             const double Lwb  = vp_.wheelbase;
             const double vx   = state_.velocity.x();
+            const double yaw  = yaw_from_quat(state_.orientation);
+            const double yaw_rate = state_.angular_velocity.z();
             const double q_aero = 0.5 * kAirDensity * vp_.frontal_area * vx * std::abs(vx);
             const double aero_f = 0.5 * vp_.aero_lift_front * q_aero;
             const double aero_r = 0.5 * vp_.aero_lift_rear  * q_aero;
@@ -195,8 +201,24 @@ public:
                     fz_dyn[i] = 0.0;
                     continue;
                 }
-                const double cos_slope = std::max(0.1, contacts[i].normal.z());
-                const double st = ((i < 2) ? st_f : st_r) * cos_slope
+                const double normal_norm = contacts[i].normal.norm();
+                if (!contacts[i].normal.allFinite() || normal_norm <= 1e-12) {
+                    fz_dyn[i] = 0.0;
+                    continue;
+                }
+                const Vec3 normal = contacts[i].normal / normal_norm;
+                const double normal_y_body = -std::sin(yaw) * normal.x()
+                                           +  std::cos(yaw) * normal.y();
+                // Exact normal-force balance for a banked steady turn:
+                // N/m = g*n_z + (v_x*r)*n_y(body).  The second term is the
+                // centripetal acceleration projected on the injected normal;
+                // it is applied here in the load path, never as a postprocessed
+                // equivalent lateral-acceleration offset.
+                const double normal_accel = std::max(
+                    0.0, kGravity * std::max(0.0, normal.z())
+                             + vx * yaw_rate * normal_y_body);
+                const double st = ((i < 2) ? st_f : st_r)
+                                * (normal_accel / kGravity)
                                 + ((i < 2) ? aero_f : aero_r);
                 fz_dyn[i] = std::max(0.0, st + k_tire * (contacts[i].road_dz - z_u_[i]));
             }
