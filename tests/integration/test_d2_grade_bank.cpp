@@ -108,64 +108,161 @@ TEST(D2RoadLoads, StaticGradeUsesExactTangentialGravityAndCosineNormalLoad) {
     }
 }
 
-TEST(D2RoadLoads, BankedTurnNormalLoadClosesTextbookFrictionLimit) {
+namespace {
+
+// Richardson-extrapolated probe channels.  dt = 1e-8 (P3-6): at 1e-10 the two
+// runs sit 1 ULP (3.6e-12) apart, so the extrapolation measures rounding
+// instead of accuracy.
+constexpr double kProbeDt = 1e-8;
+constexpr double kEomClosureTolerance = 1e-6;   // [m/s^2]
+constexpr double kLoadToleranceN = 1e-6;        // [N]
+
+struct RoadProbe {
+    std::array<double, vdsim::NUM_WHEELS> fz {{0.0, 0.0, 0.0, 0.0}};
+    double sum_fz {0.0};
+    double tire_fy {0.0};
+    double dvy {0.0};
+    double ay {0.0};
+    double gy_state {0.0};
+    double gy_ay {0.0};
+    double gy_state_coarse {0.0};
+    double gy_state_fine {0.0};
+    double gy_ay_coarse {0.0};
+    double gy_ay_fine {0.0};
+    double vx {0.0};
+    double r {0.0};
+};
+
+RoadProbe probe_contacts_dt(bool l4,
+                            const vdsim::ContactArray& contacts,
+                            const vdsim::State& initial,
+                            double dt) {
+    const double mass = vdsim::VehicleParams{}.mass;
+    auto coarse = make_level(l4, initial);
+    auto fine = make_level(l4, initial);
+    coarse->step(vdsim::CmdL4{}, contacts, dt);
+    fine->step(vdsim::CmdL4{}, contacts, 0.5 * dt);
+    const auto extrapolate = [](double c, double f) { return 2.0 * f - c; };
+    RoadProbe probe;
+    probe.vx = initial.velocity.x();
+    probe.r = initial.angular_velocity.z();
+    const double vy0 = initial.velocity.y();
+    double coarse_fy = 0.0;
+    double fine_fy = 0.0;
+    for (int wheel = 0; wheel < vdsim::NUM_WHEELS; ++wheel) {
+        probe.fz[wheel] = extrapolate(coarse->tire_Fz()[wheel],
+                                      fine->tire_Fz()[wheel]);
+        probe.sum_fz += probe.fz[wheel];
+        coarse_fy += coarse->tire_forces_body()[wheel].y();
+        fine_fy += fine->tire_forces_body()[wheel].y();
+    }
+    probe.tire_fy = extrapolate(coarse_fy, fine_fy);
+    const double coarse_dvy = (coarse->state().velocity.y() - vy0) / dt;
+    const double fine_dvy = (fine->state().velocity.y() - vy0) / (0.5 * dt);
+    probe.dvy = extrapolate(coarse_dvy, fine_dvy);
+    probe.ay = extrapolate(coarse->ay_body_est(), fine->ay_body_est());
+    probe.gy_state_coarse = coarse_dvy + probe.vx * probe.r - coarse_fy / mass;
+    probe.gy_state_fine = fine_dvy + probe.vx * probe.r - fine_fy / mass;
+    probe.gy_ay_coarse = coarse->ay_body_est() - coarse_fy / mass;
+    probe.gy_ay_fine = fine->ay_body_est() - fine_fy / mass;
+    probe.gy_state = extrapolate(probe.gy_state_coarse, probe.gy_state_fine);
+    probe.gy_ay = extrapolate(probe.gy_ay_coarse, probe.gy_ay_fine);
+    return probe;
+}
+
+RoadProbe probe_contacts(bool l4,
+                         const vdsim::ContactArray& contacts,
+                         const vdsim::State& initial) {
+    return probe_contacts_dt(l4, contacts, initial, kProbeDt);
+}
+
+vdsim::Vec3 averaged_normal(const vdsim::ContactArray& contacts) {
+    vdsim::Vec3 n_road = vdsim::Vec3::Zero();
+    for (const auto& contact : contacts) {
+        if (!contact.is_valid) continue;
+        n_road += contact.normal / contact.normal.norm();
+    }
+    return n_road.normalized();
+}
+
+double road_gravity_y(const vdsim::ContactArray& contacts) {
+    const vdsim::Vec3 n_road = averaged_normal(contacts);
+    vdsim::Vec3 x_road = vdsim::Vec3::UnitX();
+    x_road -= x_road.dot(n_road) * n_road;
+    x_road.normalize();
+    return -kGravity * n_road.cross(x_road).normalized().z();
+}
+
+}  // namespace
+
+TEST(D2RoadLoads, BankedTurnMatchesIndependentTextbookFrictionLimit) {
     constexpr double bank = 10.0 * kPi / 180.0;
     constexpr double mu = 0.80;
     constexpr double radius_m = 60.0;
-    constexpr double dt = 1e-10;
-    const double sin_b = std::sin(bank);
-    const double cos_b = std::cos(bank);
+    const double limit_accel = kGravity * (std::sin(bank) + mu * std::cos(bank))
+                             / (std::cos(bank) - mu * std::sin(bank));
+    const double speed = std::sqrt(radius_m * limit_accel);
+    const auto contacts = contacts_with_normal(
+        vdsim::Vec3(0.0, std::sin(bank), std::cos(bank)), mu);
+    vdsim::State initial;
+    initial.velocity.x() = speed;
+    initial.angular_velocity.z() = speed / radius_m;
+    const double omega = speed / vdsim::VehicleParams{}.wheel_radius_nominal;
+    initial.wheel_spin = {{omega, omega, omega, omega}};
 
-    // Textbook banked-curve limit, derived from the actual normal and tangential
-    // force balances (not an equivalent-ay correction):
-    //   N*cos(bank) - mu*N*sin(bank) = m*g
-    //   N*sin(bank) + mu*N*cos(bank) = m*v^2/R
-    //   v_max^2 = R*g*(sin(bank)+mu*cos(bank))/(cos(bank)-mu*sin(bank)).
-    const double expected_a = kGravity * (sin_b + mu * cos_b)
-                            / (cos_b - mu * sin_b);
-    const double expected_speed = std::sqrt(radius_m * expected_a);
-    const double expected_normal = vdsim::VehicleParams{}.mass
-                                 * (kGravity * cos_b + expected_a * sin_b);
-    const vdsim::Vec3 normal(0.0, sin_b, cos_b);
-    const auto contacts = contacts_with_normal(normal, mu);
+    // Independent analytical force balance, without deriving any expected
+    // quantity from the simulated normal load:
+    //   N cos(b) - T sin(b) = m g
+    //   N sin(b) + T cos(b) = m v^2/R
+    // At the friction limit T = mu N, yielding the speed above and
+    //   N = m(g cos(b) + (v^2/R) sin(b)).
+    const double mass = vdsim::VehicleParams{}.mass;
+    const double expected_normal = mass
+        * (kGravity * std::cos(bank) + limit_accel * std::sin(bank));
+    const double required_tangent = mass
+        * (limit_accel * std::cos(bank) - kGravity * std::sin(bank));
 
     for (const bool l4 : {false, true}) {
-        vdsim::State initial;
-        initial.velocity.x() = expected_speed;
-        initial.angular_velocity.z() = expected_speed / radius_m;
-        const double omega = expected_speed
-                           / vdsim::VehicleParams{}.wheel_radius_nominal;
-        initial.wheel_spin = {{omega, omega, omega, omega}};
-        auto coarse = make_level(l4, initial);
-        auto fine = make_level(l4, initial);
-        coarse->step(vdsim::CmdL4{}, contacts, dt);
-        fine->step(vdsim::CmdL4{}, contacts, 0.5 * dt);
-
-        double coarse_normal = 0.0, fine_normal = 0.0;
-        for (double fz : coarse->tire_Fz()) coarse_normal += fz;
-        for (double fz : fine->tire_Fz()) fine_normal += fz;
-        const double observed_normal = 2.0 * fine_normal - coarse_normal;
-        const double observed_a = observed_normal
-            * (sin_b + mu * cos_b) / vdsim::VehicleParams{}.mass;
-        const double observed_speed = std::sqrt(radius_m * observed_a);
-        const double vertical_residual = observed_normal * (cos_b - mu * sin_b)
-                                       - vdsim::VehicleParams{}.mass * kGravity;
-        const double relative_error = std::abs(
-            (observed_speed - expected_speed) / expected_speed);
-
-        EXPECT_NEAR(observed_normal, expected_normal, 2e-8);
-        EXPECT_NEAR(vertical_residual, 0.0, 2e-8);
-        EXPECT_NEAR(observed_speed, expected_speed, 2e-11);
+        const RoadProbe p = probe_contacts(l4, contacts, initial);
+        const double normal_rel_error = std::abs(
+            (p.sum_fz - expected_normal) / expected_normal);
+        const double friction_residual = required_tangent - mu * p.sum_fz;
+        EXPECT_NEAR(p.sum_fz, expected_normal, kLoadToleranceN);
+        EXPECT_NEAR(friction_residual, 0.0, kLoadToleranceN);
         std::cout << std::setprecision(17)
                   << "[D2:bank-limit] l4=" << l4
-                  << " expected_speed_mps=" << expected_speed
-                  << " observed_speed_mps=" << observed_speed
+                  << " expected_speed_mps=" << speed
                   << " expected_sumFz_N=" << expected_normal
-                  << " observed_sumFz_N=" << observed_normal
-                  << " coarse_sumFz_N=" << coarse_normal
-                  << " fine_sumFz_N=" << fine_normal
-                  << " vertical_residual_N=" << vertical_residual
-                  << " relative_error=" << relative_error << '\n';
+                  << " observed_sumFz_N=" << p.sum_fz
+                  << " required_tangent_N=" << required_tangent
+                  << " mu_times_observed_sumFz_N=" << mu * p.sum_fz
+                  << " friction_residual_N=" << friction_residual
+                  << " normal_rel_error=" << normal_rel_error << '\n';
+    }
+}
+
+TEST(D2RoadLoads, HeterogeneousNormalsDoNotLeakSpuriousPlanarForce) {
+    constexpr double bank = 30.0 * kPi / 180.0;
+    auto contacts = contacts_with_normal(vdsim::Vec3::UnitZ());
+    contacts[vdsim::WHEEL_FL].normal =
+        vdsim::Vec3(0.0, std::sin(bank), std::cos(bank));
+    const double expected_gy = road_gravity_y(contacts);
+
+    vdsim::State initial;
+    for (const bool l4 : {false, true}) {
+        const RoadProbe p = probe_contacts(l4, contacts, initial);
+        const double state_residual = p.gy_state - expected_gy;
+        const double reported_residual = p.gy_ay - expected_gy;
+        EXPECT_NEAR(state_residual, 0.0, kEomClosureTolerance);
+        EXPECT_NEAR(reported_residual, 0.0, kEomClosureTolerance);
+        std::cout << std::setprecision(17)
+                  << "[D2:heterogeneous-normal] l4=" << l4
+                  << " expected_gravity_y_mps2=" << expected_gy
+                  << " observed_state_gravity_y_mps2=" << p.gy_state
+                  << " observed_reported_gravity_y_mps2=" << p.gy_ay
+                  << " state_residual_mps2=" << state_residual
+                  << " reported_residual_mps2=" << reported_residual
+                  << " sumFz_N=" << p.sum_fz << '\n';
     }
 }
 

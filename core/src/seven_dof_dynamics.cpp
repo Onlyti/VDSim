@@ -327,6 +327,32 @@ private:
             if (x_norm > 1e-12) {
                 x_road /= x_norm;
                 y_road = n_road.cross(x_road).normalized();
+            } else {
+                // Degenerate: body-forward is (anti)parallel to the contact
+                // normal (near-vertical surface faced head-on).  Do NOT fail
+                // open: leaving x_road unnormalized gives it length ~0, which
+                // silently zeroes gx/gy_gravity and drops gravity out of the
+                // planar EOM.  Rebuild an explicit orthonormal road frame from
+                // body-lateral and surface the event (flag + one-shot warning).
+                Vec3 lateral(-std::sin(yaw), std::cos(yaw), 0.0);
+                lateral -= lateral.dot(n_road) * n_road;
+                if (lateral.norm() > 1e-12) {
+                    y_road = lateral.normalized();
+                } else {
+                    Vec3 seed = n_road.cross(Vec3::UnitZ());
+                    if (seed.norm() <= 1e-12) seed = n_road.cross(Vec3::UnitY());
+                    y_road = seed.normalized();
+                }
+                x_road = y_road.cross(n_road).normalized();
+                road_frame_degenerate_ = true;
+                if (!road_frame_degenerate_logged_) {
+                    road_frame_degenerate_logged_ = true;
+                    spdlog::warn("[L2 7-DOF] degenerate road frame: heading is "
+                                 "parallel to the contact normal "
+                                 "n=({:.3f},{:.3f},{:.3f}); road frame rebuilt "
+                                 "from body-lateral (gravity kept in the EOM)",
+                                 n_road.x(), n_road.y(), n_road.z());
+                }
             }
         }
         const double gx_gravity = -kGravity * x_road.z();
@@ -346,13 +372,29 @@ private:
         const double q_aero  = 0.5 * kAirDensity * vp_.frontal_area * vx * std::abs(vx);
         const double Fz_aero_f_per = 0.5 * vp_.aero_lift_front * q_aero;
         const double Fz_aero_r_per = 0.5 * vp_.aero_lift_rear  * q_aero;
-        // For a banked steady turn, the centripetal acceleration has a component
-        // along the road normal.  This is a force-path load, not an equivalent
-        // lateral-acceleration offset: N/m = g*n_z + (v_x*r)*n_y(body).
-        // A longitudinal grade has n_y=0, so the static result remains m*g*cos(theta).
+        // Exact normal-force balance (no small-angle step).  Dotting
+        //   m*a = m*g_vec + N*n + F_tangential      (F_tangential . n == 0)
+        // with n gives  N/m = g*n_z + a.n.  For a vehicle that stays on a
+        // locally planar surface v.n == 0, so a.n = -v.n_dot: the term exists
+        // only because the normal turns under the vehicle.  With the normal
+        // carried around by the yaw rate (banked-track geometry)
+        // n_dot = r * (e_z x n), hence
+        //   a.n = r * (v_x*n_y(body) - v_y*n_x(body)),
+        // whose leading part is the textbook centripetal contribution
+        // (v_x*r)*n_y.  Force-path load, never an equivalent lateral-accel
+        // offset.  NOTE a tangential force must not enter here: on a fixed
+        // inclined plane N = m*g*cos(theta) whatever a_x is (braking/traction
+        // accelerates the CG inside the road plane, so its a.n is zero) - see
+        // GradeAndBankCombinedNormalLoadIsBrakingIndependent.
+        // Limitation (P3-5): the max(0,.) clamp is a C1 cliff.  At bank b with
+        // the heading along the bank axis the bracket vanishes at
+        // v_x*r = -g*cos(b)/sin(b) = -g/tan(b)  (-21.0 m/s^2 at b = 25 deg),
+        // where all four Fz reach 0 together and the load path stops being
+        // differentiable.  Valid range: g*n_z + a.n > 0.
         const double g_perp = has_road_normal
             ? std::max(0.0, kGravity * cos_slope
-                             + centripetal_accel_substep_ * ny_b) : 0.0;
+                             + centripetal_accel_substep_ * ny_b
+                             - vy_r_substep_ * nx_b) : 0.0;
         const double Fz_static_f = m * g_perp * b / (2.0 * L) + Fz_aero_f_per;
         const double Fz_static_r = m * g_perp * a / (2.0 * L) + Fz_aero_r_per;
 
@@ -406,6 +448,14 @@ private:
             if (!contacts[i].is_valid) Fz[i] = 0.0;
         // L3 may supply a dynamic (ride/road-coupled) tire load for grip in place
         // of this quasi-static Fz. One-shot: consumed here, re-set each L3 step.
+        // KNOWN DEFECT (P1-2), left in place deliberately: only RK stage k1 sees
+        // the injected load, k2..k4 fall back to the quasi-static Fz above, and
+        // tire_Fz_ therefore reports the k4 (quasi-static) value.  Making it
+        // step-scoped is a one-line change but moves the frozen D0 flat-road
+        // baseline (measured: L3 state 5.01e-2 / force 2.08e2 N, L4 state
+        // 6.67e-2 / force 1.82e2 N against tests/fixtures/d0_flat_contact_*),
+        // i.e. it is a behavior change on flat road and needs the D0 fixtures
+        // re-frozen as an explicit decision, not a silent one.
         if (use_ext_fz_) { Fz = ext_fz_; use_ext_fz_ = false; }
         // `is_valid=false` is non-contact, including on the L3/L4 external-Fz
         // path.  Re-mask after the override so no normal load, rolling
@@ -716,10 +766,22 @@ private:
         // residual required to obtain the road-frame gravity components.  This
         // avoids double-counting the normal contribution and is identically zero
         // on canonical flat road.
-        double normal_load_sum = 0.0;
-        for (double load : Fz) normal_load_sum += load;
-        Fx_total += m * gx_gravity - normal_load_sum * nx_b;
-        Fy_total += m * gy_gravity - normal_load_sum * ny_b;
+        // The leak is per wheel, sum_i Fz[i]*n_planar(i); an average normal
+        // reproduces it only when all four normals are equal.  Heterogeneous
+        // normals (one wheel on a banked patch) otherwise leave a spurious
+        // in-plane force sum_i Fz[i]*n(i) - (sum_i Fz[i])*n_avg (1.1 kN,
+        // 0.76 m/s^2 for 30 deg under one wheel).  F_applied - F_body is
+        // exactly Fz[i]*(n_body(i) - R^T e_z), i.e. the leaked term in the very
+        // frame D1 added it in (full quaternion on L4, yaw-only otherwise), so
+        // this cancels identically - and is exactly zero on canonical flat road.
+        double normal_leak_x = 0.0;
+        double normal_leak_y = 0.0;
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            normal_leak_x += F_applied[i].x() - F_body[i].x();
+            normal_leak_y += F_applied[i].y() - F_body[i].y();
+        }
+        Fx_total += m * gx_gravity - normal_leak_x;
+        Fy_total += m * gy_gravity - normal_leak_y;
 
         Deriv d_out;
         d_out.dx_world = vx * std::cos(yaw) - vy * std::sin(yaw);
@@ -874,8 +936,13 @@ private:
         // local yaw-rate drift otherwise breaks the exact +/-bank mirror even as
         // h->0.  It is refreshed at every physical substep, not held for a full
         // caller step when substepping is active.
+        // Known limitation (P3-7): freezing this forcing over the four stages
+        // leaves the load channel first-order accurate in h (its state-
+        // dependent part is held at the stage-0 value) even though the state
+        // integrator is RK4.  Not restructured here; substep size bounds it.
         centripetal_accel_substep_ = s0.velocity.x()
                                       * s0.angular_velocity.z();
+        vy_r_substep_ = s0.velocity.y() * s0.angular_velocity.z();
         const bool lugre_on = [&]() {
             for (int wi = 0; wi < NUM_WHEELS; ++wi)
                 if (ts_.for_wheel(wi).lugre.enabled) return true;
@@ -939,6 +1006,11 @@ private:
     double ax_felt_ {0.0};   // specific force (accel - tangential gravity) for transfer/attitude
     double ay_felt_ {0.0};
     double centripetal_accel_substep_ {0.0};  // v_x*r fixed across one RK substep [m/s^2]
+    double vy_r_substep_ {0.0};               // v_y*r fixed across one RK substep [m/s^2]
+    // Set when body-forward was (anti)parallel to the contact normal and the
+    // road frame had to be rebuilt (see derivatives()); warned once.
+    bool road_frame_degenerate_ {false};
+    bool road_frame_degenerate_logged_ {false};
     double roll_qs_ {0.0};   // quasi-static roll/pitch incl. CG-migration (set in step)
     double pitch_qs_ {0.0};
     double mz_front_sum_ {0.0};
