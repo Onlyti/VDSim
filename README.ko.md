@@ -129,7 +129,7 @@ plant.enable_trace("run.vdtrace", seed=0, run_id="demo")   # 켜야만 기록
 path = plant.finalize_trace()
 ```
 
-- `enable_trace(path, decimation=None, seed=None, run_id=None, producer=None, tags=None)` —
+- `enable_trace(path, decimation=None, seed=None, run_id=None, producer=None, tags=None, role="plant")` —
   `step()` 마다 한 샘플을 적분 *이전* 시점에서 취한다. 따라서 pose 는 시각 `t` 의
   상태이고 `u_steer` / `u_fx` 는 `[t, t+control_dt)` 구간에 유지된 명령이다.
   반환값은 실제 적용된 decimation.
@@ -139,6 +139,14 @@ path = plant.finalize_trace()
   기록한 경로를 돌려준다(기록을 켠 적이 없으면 `None`).
 - 컨테이너는 zip: `manifest.json` + `channels/*.f64` + `overlays/*.json`.
   이 파일 하나면 렌더가 되므로 재시뮬레이션도, 결과 파일 재파싱도 필요 없다.
+- manifest 는 `schema_version` `"0.2"` 와 필수 필드 `role` 을 선언한다. `role` 은
+  검증 대상인 `"plant"` 또는 최적화·MPC 내부 예측 모델로 쓰인 `"predictor"` 다.
+  `VDSimPlant` 은 그 자체가 플랜트이므로 `enable_trace` 의 기본값은 `plant` 이고,
+  `vdsim_trace.TraceWriter` 를 직접 만드는 생산자는 `role=` 을 반드시 넘겨야 한다
+  — 기본값이 없으므로 예측기 run 이 빠뜨림만으로 플랜트 근거가 되는 일이 없다.
+  기존 `0.1` trace 도 그대로 읽힌다. `role` 이 없으면 경고 1회와 함께 `plant` 로
+  간주하고, `0.2` 에서 누락되면 에러다. 렌더러는 HUD 에 문자열로만 표시하고
+  이 값으로 화면 구성을 바꾸지 않는다.
 
 시나리오 지식은 실행이 끝난 뒤 **overlay** 로 붙인다. VDSim 은 `kind` / `name`
 봉투만 검증하고 내용은 해석하지 않으므로, 새 생산자가 쓴 미지의 overlay 를

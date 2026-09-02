@@ -134,7 +134,7 @@ plant.enable_trace("run.vdtrace", seed=0, run_id="demo")   # off unless called
 path = plant.finalize_trace()
 ```
 
-- `enable_trace(path, decimation=None, seed=None, run_id=None, producer=None, tags=None)` —
+- `enable_trace(path, decimation=None, seed=None, run_id=None, producer=None, tags=None, role="plant")` —
   one sample is offered per `step()`, taken *before* the step is integrated, so the
   pose is the state at `t` and `u_steer` / `u_fx` are the command held over
   `[t, t+control_dt)`. Returns the resolved decimation.
@@ -144,6 +144,15 @@ path = plant.finalize_trace()
   it returns the written path (`None` when recording was never enabled).
 - The container is a zip: `manifest.json` + `channels/*.f64` + `overlays/*.json`.
   That one file is enough to render — no re-simulation, no results file.
+- The manifest declares `schema_version` `"0.2"` and a required `role`, either
+  `"plant"` (the simulator under verification) or `"predictor"` (the same code
+  driven as an optimiser's internal model). `enable_trace` defaults to `plant`
+  because `VDSimPlant` *is* the plant; a producer that builds a
+  `vdsim_trace.TraceWriter` directly must pass `role=` — there is no default,
+  so a predictor run cannot be recorded as plant evidence by omission.
+  Reading a legacy `0.1` trace still works: a missing `role` resolves to
+  `plant` with one warning. A `0.2` trace without one is an error.
+  The renderer prints the role in the HUD and never branches on it.
 
 Scenario knowledge is attached after the run as **overlays**. VDSim validates the
 `kind` / `name` envelope and stores the object without interpreting it, so a newer

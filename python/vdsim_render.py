@@ -183,6 +183,7 @@ class LoadedTrace:
             self.geometry = dict(tr.geometry)
             self.tire = dict(tr.tire)
             self.repro = dict(tr.repro)
+            self.role = tr.role
             self.wheels = tr.wheels
             self.available = tr.channel_names()
             self.t = np.asarray(tr.channel("t"))
@@ -442,6 +443,9 @@ def frame_spec(tr: LoadedTrace, i: int) -> dict:
             _fmt_util(max(util) if util else 0.0),
             " ".join("%s %s" % (w, _fmt_util(u))
                      for w, u in zip(tr.wheels, util))),
+        # Displayed verbatim. The renderer never branches on the role — doing
+        # so would put a plant/predictor policy inside a drawing tool.
+        "role = %s" % (tr.role,),
     ]
 
     # Horizons, when a sidecar was found. Without one the two artists are
