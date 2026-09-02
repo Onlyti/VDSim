@@ -148,6 +148,33 @@ path = plant.finalize_trace()
   간주하고, `0.2` 에서 누락되면 에러다. 렌더러는 HUD 에 문자열로만 표시하고
   이 값으로 화면 구성을 바꾸지 않는다.
 
+### 렌더 프리셋
+
+프리셋은 trace 하나를 *어떤 화면으로* 그릴지만 정한다. trace 내용이 아니라
+렌더러 설정이므로 `.vdtrace` 안의 데이터는 바뀌지 않는다. 내장 프리셋은
+`overview` 하나다 — BEV, 주행 궤적, 선택적 기준 경로, 속도, 조향·종방향 명령.
+
+```bash
+vdsim-render run.vdtrace                      # 기본값이 overview
+vdsim-render run.vdtrace --list-presets
+vdsim-render run.vdtrace --preset my.yaml     # 사용자 프리셋(.yaml/.yml/.json)
+vdsim-render run.vdtrace --panels speed,u_fx  # CLI 가 프리셋을 이긴다
+```
+
+- 우선순위는 **CLI 옵션 > 사용자 프리셋 파일 > 내장 기본값**. 사용자 프리셋은
+  바꿀 항목만 적으면 되고, 나머지는 `extends` 가 가리키는 내장 프리셋(기본
+  `overview`)에서 상속된다.
+- 프리셋이 선언하는 것은 패널 채널·라벨·y 범위·BEV 레이어 표시 여부다.
+  `speed` 는 `v_body` 에서 파생되고, 나머지 패널은 trace 채널 이름이다.
+- trace 에 없는 채널의 패널은 조용히 생략된다 — 채널 일부만 기록한 run 에도
+  같은 프리셋을 쓸 수 있다. 생략을 에러로 되돌리려면 `required: true` 를 준다.
+- 패널 위치와 BEV 축 좌표계는 고정이다. 데이터 autoscale 은 허용하지만
+  텍스트·범례·패널이 프레임을 벗어나면 실패이며, `render()` 가
+  `layout_violations` 로 보고한다.
+- `control`·`tire_limit` 은 계약만 되어 있고 미구현이며, `road_contact` 은
+  코어가 접촉 법선을 온전히 푸는 시점까지 예약어다. 이 이름들은 stub 을 두지
+  않고 거부한다.
+
 시나리오 지식은 실행이 끝난 뒤 **overlay** 로 붙인다. VDSim 은 `kind` / `name`
 봉투만 검증하고 내용은 해석하지 않으므로, 새 생산자가 쓴 미지의 overlay 를
 현재 렌더러가 무시하고 지나갈 수 있다.

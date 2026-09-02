@@ -154,6 +154,13 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 300
         ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/python")
+    add_test(NAME render_presets
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_render_presets.py)
+    set_tests_properties(render_presets PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 300
+        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/python")
     add_test(NAME trace_horizons
         COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_SOURCE_DIR}/tests/scripts/test_trace_horizons.py)

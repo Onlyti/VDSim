@@ -74,10 +74,12 @@ from matplotlib.gridspec import GridSpec                           # noqa: E402
 
 try:
     from vdsim_trace import TraceReader, utilization
+    import vdsim_preset
 except ImportError:                                                # in-tree run
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from vdsim_trace import TraceReader, utilization
+    import vdsim_preset
 
 #: BEV half-window, in wheelbases. The tracking camera's extent is a pure
 #: function of manifest `geometry`, which is what keeps the scale constant.
@@ -174,9 +176,11 @@ class LoadedTrace:
     :param sidecar: explicit ``.qp.npz`` with the per-step target and
         prediction horizons. ``None`` looks for ``<trace>.qp.npz`` and
         accepts its absence.
+    :param panels: preset panel list (see :mod:`vdsim_preset`) choosing the
+        time-series panels. ``None`` keeps the manifest-driven default.
     """
 
-    def __init__(self, path, stride: int = 1, sidecar=None):
+    def __init__(self, path, stride: int = 1, sidecar=None, panels=None):
         stride = max(1, int(stride))
         with TraceReader(path) as tr:
             self.manifest = tr.manifest
@@ -202,6 +206,18 @@ class LoadedTrace:
                          if len(c["shape"]) == 1 and c["name"] != "t"][:2]
             self.series = [(n, tr.channel_meta(n).get("unit", ""),
                             np.asarray(tr.channel(n))) for n in names]
+            self.panels = [{"channel": n, "label": n, "ylim": None,
+                            "required": False} for n in names]
+            # Raw scalar channels, kept under their trace names. Panel series
+            # carry preset *labels*, so geometry lookups such as ``u_steer``
+            # must not go through them or a relabelled panel would silently
+            # straighten the front wheels.
+            self._raw_scalar = {
+                c["name"]: np.asarray(tr.channel(c["name"]))
+                for c in self.manifest["channels"]
+                if len(c["shape"]) == 1 and c["name"] != "t"}
+            if panels is not None:
+                self.series, self.panels = self._resolve_panels(tr, panels)
             self.overlays = [tr.overlay(n) for n in tr.overlay_names()]
 
         self.stride = stride
@@ -220,10 +236,51 @@ class LoadedTrace:
         #: Window half-width actually used; ``render`` may override it.
         self.view_half_used = self.view_half
 
+    def _resolve_panels(self, tr, panels):
+        """Pick the panels a preset asks for from what this trace carries.
+
+        A missing *optional* channel drops its panel and is not an error
+        (§6.3): the same preset has to work on a trace recorded with a channel
+        subset. A missing channel marked ``required`` is an error, because a
+        preset that declares it cannot show what it promises without it.
+
+        :param tr: open :class:`~vdsim_trace.TraceReader`.
+        :param panels: normalized preset panel list.
+        :returns: ``(series, panels)`` for the panels that survived.
+        """
+        speed = None
+        if tr.has("v_body"):
+            vb = np.asarray(tr.channel("v_body"), dtype=float)
+            speed = np.hypot(vb[:, 0], vb[:, 1])
+        series, kept = [], []
+        for spec in panels:
+            name = spec["channel"]
+            if name == "speed":
+                if speed is None:
+                    arr, unit = None, ""
+                else:
+                    arr, unit = speed, "m/s"
+            elif tr.has(name) and len(tr.channel_meta(name)["shape"]) == 1:
+                arr = np.asarray(tr.channel(name))
+                unit = tr.channel_meta(name).get("unit", "")
+            else:
+                arr, unit = None, ""
+            if arr is None:
+                if spec.get("required"):
+                    raise ValueError(
+                        "preset panel %r is required but this trace does not "
+                        "carry it (channels: %s)"
+                        % (name, ", ".join(tr.channel_names())))
+                continue
+            series.append((spec.get("label") or name, unit, arr))
+            kept.append(spec)
+        return series, kept
+
     def _series_or_zeros(self, name):
-        for n, _unit, arr in self.series:
-            if n == name:
-                return arr
+        """Raw channel ``name``, or zeros when the trace does not carry it."""
+        arr = self._raw_scalar.get(name)
+        if arr is not None:
+            return arr
         return np.zeros(len(self.t))
 
     @property
@@ -509,29 +566,47 @@ def merge_spans(times, dt: float):
 
 
 def _setup_axes(tr: LoadedTrace, figsize, dpi):
+    """Build the fixed layout: BEV on the left, one panel row per series.
+
+    Panel positions are a function of the panel *count* only — never of the
+    data — which is what keeps the same preset comparable across runs (§6.3).
+    """
     fig = plt.figure(figsize=figsize, dpi=dpi)
-    gs = GridSpec(len(tr.series), 2, figure=fig, width_ratios=[1.45, 1.0],
+    n = len(tr.series)
+    if n == 0:
+        # Every optional panel was dropped for lack of a channel. That is an
+        # allowed outcome, so the BEV takes the whole frame rather than the
+        # renderer failing on an empty GridSpec.
+        gs = GridSpec(1, 1, figure=fig, left=0.07, right=0.965,
+                      top=0.90, bottom=0.10)
+        return fig, fig.add_subplot(gs[0, 0]), []
+    gs = GridSpec(n, 2, figure=fig, width_ratios=[1.45, 1.0],
                   hspace=0.32, wspace=0.24,
                   left=0.07, right=0.965, top=0.90, bottom=0.10)
     ax_bev = fig.add_subplot(gs[:, 0])
-    ax_series = [fig.add_subplot(gs[k, 1]) for k in range(len(tr.series))]
+    ax_series = [fig.add_subplot(gs[k, 1]) for k in range(n)]
     return fig, ax_bev, ax_series
 
 
-def _draw_static(tr: LoadedTrace, ax_bev, ax_series):
-    """Draw everything that does not change per frame, and build the artists."""
+def _draw_static(tr: LoadedTrace, ax_bev, ax_series, bev=None):
+    """Draw everything that does not change per frame, and build the artists.
+
+    :param bev: preset ``bev`` block toggling BEV layers. ``None`` draws every
+        layer, which is the behaviour of every caller that predates presets.
+    """
+    bev = dict(vdsim_preset.BUILTIN_PRESETS["overview"]["bev"]) if bev is None else bev
     ax_bev.set_aspect("equal", adjustable="box")
     ax_bev.set_xlabel("X [m]")
     ax_bev.set_ylabel("Y [m]")
     ax_bev.grid(True, alpha=0.25, lw=0.5)
 
-    for reg in tr.region_overlays():
+    for reg in (tr.region_overlays() if bev.get("regions", True) else []):
         poly = reg.get("polygon") or []
         if len(poly) >= 3:
             ax_bev.add_collection(PolyCollection(
                 [poly], facecolors="#c44e52", alpha=0.16,
                 edgecolors="#c44e52", linewidths=0.8, zorder=0))
-    for ref in tr.path2d_overlays():
+    for ref in (tr.path2d_overlays() if bev.get("waypoint", True) else []):
         xy = np.asarray(ref.get("xy") or [], dtype=float)
         if xy.size:
             # The global route, drawn once. It is *not* the per-step target
@@ -545,6 +620,7 @@ def _draw_static(tr: LoadedTrace, ax_bev, ax_series):
                         else ref.get("name", "reference"))
 
     (trail,) = ax_bev.plot([], [], "-", lw=1.4, color="#333333", alpha=0.85, zorder=2)
+    trail.set_visible(bool(bev.get("trail", True)))
     body = PolyCollection([], facecolors="#dfe6ee", edgecolors="#1b2733",
                           linewidths=1.2, zorder=3)
     ax_bev.add_collection(body)
@@ -556,6 +632,7 @@ def _draw_static(tr: LoadedTrace, ax_bev, ax_series):
         "", xy=(0, 0), xytext=(0, 0), zorder=5,
         arrowprops=dict(arrowstyle="-|>", color="#d62728", lw=1.8,
                         shrinkA=0, shrinkB=0))
+    arrow.set_visible(bool(bev.get("velocity_arrow", True)))
     hud = ax_bev.text(
         0.015, 0.985, "", transform=ax_bev.transAxes, va="top", ha="left",
         fontsize=8, family="monospace", zorder=10,
@@ -580,16 +657,17 @@ def _draw_static(tr: LoadedTrace, ax_bev, ax_series):
                       ec="none", alpha=0.92))
         qpfail.set_visible(False)
 
-    if ax_bev.get_legend_handles_labels()[0]:
+    if bev.get("legend", True) and ax_bev.get_legend_handles_labels()[0]:
         # Lower left: the HUD owns the top-left corner in screen coordinates.
         ax_bev.legend(loc="lower left", fontsize=7, framealpha=0.6)
 
-    cbar = ax_bev.figure.colorbar(
-        plt.cm.ScalarMappable(norm=UTIL_NORM, cmap=UTIL_CMAP),
-        ax=ax_bev, fraction=0.035, pad=0.015)
-    cbar.set_label("tyre friction utilization [-]", fontsize=8)
-    cbar.ax.axhline(UTIL_WARN, color="#111111", lw=1.0, ls="--")
-    cbar.ax.tick_params(labelsize=7)
+    if bev.get("colorbar", True):
+        cbar = ax_bev.figure.colorbar(
+            plt.cm.ScalarMappable(norm=UTIL_NORM, cmap=UTIL_CMAP),
+            ax=ax_bev, fraction=0.035, pad=0.015)
+        cbar.set_label("tyre friction utilization [-]", fontsize=8)
+        cbar.ax.axhline(UTIL_WARN, color="#111111", lw=1.0, ls="--")
+        cbar.ax.tick_params(labelsize=7)
 
     cursors = []
     events = tr.event_overlays()
@@ -602,13 +680,17 @@ def _draw_static(tr: LoadedTrace, ax_bev, ax_series):
         if qp_events else tr.qp_fail_times())
     fail_spans = merge_spans(fail_t, float(np.median(np.diff(tr.t)))
                              if len(tr.t) > 1 else 0.0)
-    for ax, (name, unit, arr) in zip(ax_series, tr.series):
+    panel_specs = getattr(tr, "panels", [{}] * len(tr.series))
+    for ax, (name, unit, arr), spec in zip(ax_series, tr.series, panel_specs):
         display_unit, display_arr = series_for_display(unit, arr)
         ax.plot(tr.t, display_arr, lw=1.1, color="#4c72b0")
         ax.set_ylabel("%s [%s]" % (name, display_unit or "-"), fontsize=8)
         ax.tick_params(labelsize=7)
         ax.grid(True, alpha=0.25, lw=0.5)
         ax.set_xlim(float(tr.t[0]), float(tr.t[-1]))
+        # Autoscale is allowed; a declared range wins over it (§6.3).
+        if spec.get("ylim") is not None:
+            ax.set_ylim(*spec["ylim"])
         for ev in events:
             if ev in qp_events:
                 continue
@@ -626,6 +708,7 @@ def _draw_static(tr: LoadedTrace, ax_bev, ax_series):
     return dict(trail=trail, body=body, wheels=wheels, arrow=arrow,
                 hud=hud, cursors=cursors, target=target,
                 prediction=prediction, qpfail=qpfail,
+                util_color=bool(bev.get("utilization_color", True)),
                 n_qp_fail=int(len(fail_t)))
 
 
@@ -636,7 +719,11 @@ def draw_frame(artists, ax_bev, spec: dict):
     artists["trail"].set_data(spec["trail_x"], spec["trail_y"])
     artists["body"].set_verts([spec["body"]])
     artists["wheels"].set_verts(spec["wheels"])
-    artists["wheels"].set_array(np.asarray(spec["wheel_util"]))
+    if artists.get("util_color", True):
+        artists["wheels"].set_array(np.asarray(spec["wheel_util"]))
+    else:
+        artists["wheels"].set_array(None)
+        artists["wheels"].set_facecolor("#dfe6ee")
     x, y, dx, dy = spec["arrow"]
     artists["arrow"].set_position((x, y))
     artists["arrow"].xy = (x + dx, y + dy)
@@ -1190,7 +1277,8 @@ def _default_multi_title(scene: MultiScene) -> str:
 def render(trace_path, out=None, png=None, fps: int = 20, stride: int = None,
            dpi: int = 100, figsize=(11.0, 5.6), mp4: bool = False,
            title: str = None, quiet: bool = False, sidecar=None,
-           preview_frame: str = "util-peak", view_half: float = None) -> dict:
+           preview_frame: str = "util-peak", view_half: float = None,
+           preset=None, panels=None) -> dict:
     """Render one trace to a GIF (+ preview PNG).
 
     :param trace_path: input ``.vdtrace``.
@@ -1212,9 +1300,16 @@ def render(trace_path, out=None, png=None, fps: int = 20, stride: int = None,
     :param view_half: BEV half-window [m]. ``None`` keeps the geometry-derived
         tracking window, which is ~6 wheelbases and therefore much shorter
         than a typical MPC horizon — widen it to put the horizons on screen.
+        Overrides the preset, per §6.3's CLI-first resolution order.
+    :param preset: built-in preset name, path to a user preset file, or a
+        preset dict. ``None`` uses ``overview``.
+    :param panels: channel names replacing the preset's panels.
     :returns: dict with ``gif``, ``png``, ``mp4``, ``firstfail_png``,
-        ``n_qp_fail``, ``frames`` and ``wall_s``.
+        ``preset``, ``layout_violations``, ``n_qp_fail``, ``frames`` and
+        ``wall_s``.
     """
+    resolved = vdsim_preset.apply_overrides(
+        vdsim_preset.load_preset(preset), panels=panels, view_half=view_half)
     if preview_frame not in ("util-peak", "first-fail"):
         raise ValueError("preview_frame must be util-peak|first-fail, got %r"
                          % (preview_frame,))
@@ -1227,19 +1322,21 @@ def render(trace_path, out=None, png=None, fps: int = 20, stride: int = None,
         with TraceReader(trace_path) as probe:
             dt = float(probe.repro.get("dt_s") or 0.0)
         stride = max(1, int(round(1.0 / (fps * dt)))) if dt > 0 else 1
-    tr = LoadedTrace(trace_path, stride=stride, sidecar=sidecar)
+    tr = LoadedTrace(trace_path, stride=stride, sidecar=sidecar,
+                     panels=resolved["panels"])
     if tr.n_frames == 0:
         raise ValueError("trace has no samples to render: %s" % (trace_path,))
 
-    if view_half is not None:
-        tr.view_half_used = float(view_half) * (1.0 + VIEW_MARGIN_FRAC)
+    preset_half = resolved["bev"].get("view_half_m")
+    if preset_half is not None:
+        tr.view_half_used = float(preset_half) * (1.0 + VIEW_MARGIN_FRAC)
     elif tr.horizon_reach > tr.view_half and not quiet:
         print("note: horizons reach %.0f m but the window is +-%.0f m; pass --view-half to widen"
               % (tr.horizon_reach, tr.view_half))
 
     fig, ax_bev, ax_series = _setup_axes(tr, figsize, dpi)
     fig.suptitle(title or _default_title(tr), fontsize=9)
-    artists = _draw_static(tr, ax_bev, ax_series)
+    artists = _draw_static(tr, ax_bev, ax_series, bev=resolved["bev"])
 
     def _update(k):
         draw_frame(artists, ax_bev, frame_spec(tr, int(tr.frames[k])))
@@ -1261,6 +1358,12 @@ def render(trace_path, out=None, png=None, fps: int = 20, stride: int = None,
     draw_frame(artists, ax_bev, frame_spec(tr, chosen))
     png.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(str(png), dpi=dpi)
+    # Checked on the preview frame, which carries every text element the
+    # animation ever shows (HUD, legend, suptitle, panel labels).
+    violations = layout_violations(fig)
+    if violations and not quiet:
+        print("layout: %d element(s) left the frame:\n  %s"
+              % (len(violations), "\n  ".join(violations)))
 
     # The first failed solve always gets its own PNG when there is one, so
     # the evidence frame does not depend on the preview mode asked for.
@@ -1293,6 +1396,9 @@ def render(trace_path, out=None, png=None, fps: int = 20, stride: int = None,
     wall = time.time() - t_start
     result = {"gif": out, "png": png, "mp4": mp4_path,
               "firstfail_png": fail_png,
+              "preset": resolved["name"],
+              "panels": [n for n, _u, _a in tr.series],
+              "layout_violations": violations,
               "view_half_m": float(tr.view_half_used),
               "horizon_reach_m": float(tr.horizon_reach),
               "n_qp_fail": int(artists.get("n_qp_fail", 0)),
@@ -1302,6 +1408,53 @@ def render(trace_path, out=None, png=None, fps: int = 20, stride: int = None,
         print("wrote %s (%d frames, %.1f fps) + %s in %.2fs wall-clock"
               % (out, tr.n_frames, fps, png.name, wall))
     return result
+
+
+#: Slack allowed when checking that nothing escaped the frame [px].
+LAYOUT_TOLERANCE_PX = 1.0
+
+
+def layout_violations(fig, tol: float = LAYOUT_TOLERANCE_PX):
+    """Names of drawn elements that fall outside the figure frame.
+
+    §6.3 allows data autoscale but treats text, gauges or panels leaving the
+    frame as a failure. Eyeballing a GIF does not catch that reliably, so the
+    check runs on the drawn figure and is reported by :func:`render`.
+
+    Must be called after a draw: extents of text are only known once the
+    renderer has laid it out.
+
+    :param fig: a drawn matplotlib figure.
+    :param tol: slack in pixels, absorbing rounding at the frame edge.
+    :returns: list of human-readable descriptions; empty means the frame holds.
+    """
+    canvas = fig.canvas
+    canvas.draw()
+    renderer = canvas.get_renderer()
+    frame = fig.bbox
+    bad = []
+
+    def _check(label, bbox):
+        if bbox is None or bbox.width <= 0 or bbox.height <= 0:
+            return
+        if (bbox.x0 < frame.x0 - tol or bbox.y0 < frame.y0 - tol
+                or bbox.x1 > frame.x1 + tol or bbox.y1 > frame.y1 + tol):
+            bad.append("%s outside frame: [%.1f, %.1f, %.1f, %.1f] vs [%.1f, %.1f]"
+                       % (label, bbox.x0, bbox.y0, bbox.x1, bbox.y1,
+                          frame.x1, frame.y1))
+
+    for i, ax in enumerate(fig.axes):
+        _check("axes %d" % i, ax.get_window_extent(renderer))
+        for j, txt in enumerate(ax.texts):
+            if txt.get_visible() and txt.get_text():
+                _check("axes %d text %d" % (i, j), txt.get_window_extent(renderer))
+        legend = ax.get_legend()
+        if legend is not None and legend.get_visible():
+            _check("axes %d legend" % i, legend.get_window_extent(renderer))
+    for j, txt in enumerate(fig.texts):
+        if txt.get_visible() and txt.get_text():
+            _check("figure text %d" % j, txt.get_window_extent(renderer))
+    return bad
 
 
 def _default_title(tr: LoadedTrace) -> str:
@@ -1314,7 +1467,7 @@ def _default_title(tr: LoadedTrace) -> str:
 def main(argv=None) -> int:
     """CLI entry point (``vdsim-render``)."""
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("trace", type=Path, nargs="+",
+    ap.add_argument("trace", type=Path, nargs="*",
                     help="input .vdtrace; two or more are overlaid in one view")
     ap.add_argument("--out", type=Path, default=None, help="output GIF path")
     ap.add_argument("--png", type=Path, default=None, help="preview PNG path")
@@ -1334,6 +1487,17 @@ def main(argv=None) -> int:
                     help="single-run only: BEV half-window [m]. The default "
                          "tracking window is ~6 wheelbases, far shorter than "
                          "an MPC horizon, so widen it to see target/prediction")
+    ap.add_argument("--preset", default=None,
+                    help="single-run only: render preset — a built-in name "
+                         "(%s) or a path to a .yaml/.yml/.json preset file "
+                         "(default: overview)"
+                         % ", ".join(vdsim_preset.builtin_names()))
+    ap.add_argument("--panels", default=None,
+                    help="single-run only: comma-separated panel channels "
+                         "replacing the preset's (e.g. speed,u_steer). "
+                         "Overrides the preset file")
+    ap.add_argument("--list-presets", action="store_true",
+                    help="print the built-in presets and exit")
     ap.add_argument("--preview-frame", dest="preview_frame",
                     default="util-peak",
                     choices=("util-peak", "first-fail"),
@@ -1359,11 +1523,20 @@ def main(argv=None) -> int:
                      help="do not draw each run's full route faintly")
     args = ap.parse_args(argv)
 
+    if args.list_presets:
+        for name in vdsim_preset.builtin_names():
+            print("%-12s %s"
+                  % (name, vdsim_preset.BUILTIN_PRESETS[name]["description"]))
+        return 0
+    if not args.trace:
+        ap.error("at least one .vdtrace is required")
+
     if len(args.trace) == 1:
         render(args.trace[0], out=args.out, png=args.png, fps=args.fps,
                stride=args.stride, dpi=args.dpi, mp4=args.mp4,
                title=args.title, sidecar=args.sidecar,
-               preview_frame=args.preview_frame, view_half=args.view_half)
+               preview_frame=args.preview_frame, view_half=args.view_half,
+               preset=args.preset, panels=_split_list(args.panels))
         return 0
 
     if args.stride is not None:
