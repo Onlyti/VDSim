@@ -113,13 +113,15 @@ if(Python3_FOUND)
     set_tests_properties(gui_v3_api_smoke PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/build/python:${CMAKE_SOURCE_DIR}/python:${CMAKE_SOURCE_DIR}/cosim:${CMAKE_SOURCE_DIR}/gui")
-    add_test(NAME gui_v3_e2e
-        COMMAND ${Python3_EXECUTABLE}
-            ${CMAKE_SOURCE_DIR}/tests/scripts/test_gui_v3_e2e.py)
-    set_tests_properties(gui_v3_e2e PROPERTIES
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        TIMEOUT 180
-        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/build/python:${CMAKE_SOURCE_DIR}/python:${CMAKE_SOURCE_DIR}/cosim:${CMAKE_SOURCE_DIR}/gui")
+    if(VDSIM_BUILD_GUI_V3_E2E)
+        add_test(NAME gui_v3_e2e
+            COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_SOURCE_DIR}/tests/scripts/test_gui_v3_e2e.py)
+        set_tests_properties(gui_v3_e2e PROPERTIES
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            TIMEOUT 180
+            ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/build/python:${CMAKE_SOURCE_DIR}/python:${CMAKE_SOURCE_DIR}/cosim:${CMAKE_SOURCE_DIR}/gui")
+    endif()
     add_test(NAME vla_plant_demo
         COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_SOURCE_DIR}/examples/vla_plant_demo.py)
@@ -161,10 +163,14 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 300
         ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/python")
-    add_test(NAME cmrosif_compat
-        COMMAND ${Python3_EXECUTABLE}
-            ${CMAKE_SOURCE_DIR}/tests/scripts/test_cmrosif_compat.py)
-    set_tests_properties(cmrosif_compat PROPERTIES
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/cosim")
+    # Registered only when its driver script is present in the tree: the CarMaker
+    # ROS interface compatibility check ships with the optional cmrosif bridge.
+    if(EXISTS ${CMAKE_SOURCE_DIR}/tests/scripts/test_cmrosif_compat.py)
+        add_test(NAME cmrosif_compat
+            COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_SOURCE_DIR}/tests/scripts/test_cmrosif_compat.py)
+        set_tests_properties(cmrosif_compat PROPERTIES
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/cosim")
+    endif()
 endif()
