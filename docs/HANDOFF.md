@@ -2,7 +2,6 @@
 
 작성: **2026-06-25** · **`VDSim-Thesis`** (active) · **404/404 ctest green**
 
-> **Governance (2026-06-25):** demand-gate active — new fidelity PRs need VDSim-PO named puller (`CLAUDE.md`).
 
 ## 0. 2026-06-25 Product freeze boundary — ACTIVE
 
