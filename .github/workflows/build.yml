@@ -48,3 +48,58 @@ jobs:
       - name: Test
         working-directory: build
         run: ctest --output-on-failure
+
+  # Canonical configuration (the `validation` CMake preset). This is the only
+  # job whose ctest numbers docs/VALIDATION.md is allowed to record, and the
+  # gate below fails if the document no longer matches what was measured.
+  # See VDSimMarketing 07_p0_demo.md 6.4 / 6.5.
+  validation:
+    runs-on: ubuntu-20.04
+    name: validation preset / currency gate
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so the currency gate can test whether the commit
+          # recorded in docs/VALIDATION.md is an ancestor of what was built.
+          fetch-depth: 0
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+
+      - name: Cache FetchContent
+        uses: actions/cache@v4
+        with:
+          path: build-validation/_deps
+          key: ${{ runner.os }}-deps-validation-${{ hashFiles('third_party/CMakeLists.txt') }}
+
+      - name: Configure (validation preset)
+        run: cmake --preset validation
+
+      - name: Build (validation preset)
+        run: cmake --build --preset validation
+
+      - name: List registered tests
+        run: ctest --preset validation -N | tee ctest-list.txt
+
+      - name: Run tests
+        id: run
+        continue-on-error: true
+        run: ctest --preset validation | tee ctest-run.txt
+
+      - name: VALIDATION.md currency gate
+        run: |
+          python3 scripts/check_validation_currency.py \
+            --doc docs/VALIDATION.md \
+            --ctest-list ctest-list.txt \
+            --ctest-run ctest-run.txt \
+            --commit "${{ github.sha }}" \
+            --repo .
+
+      - name: Fail if the suite did not pass
+        if: steps.run.outcome != 'success'
+        run: |
+          echo "ctest reported failures in the canonical configuration"
+          exit 1
