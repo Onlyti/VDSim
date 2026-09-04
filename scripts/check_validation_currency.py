@@ -13,6 +13,7 @@ Contract (VDSimMarketing ``07_p0_demo.md`` 6.3 / 6.5)::
     tests:    407/407
     config:   cmake --preset validation && ...
     presets:  CMakePresets.json@<blob-sha>
+    toolchain: cmake 3.31.10
     commit:   <commit-sha>
     date:     2026-09-04
     excluded: gui_v3_e2e (reason -- link)
@@ -35,8 +36,10 @@ END_MARKER = "<!-- VALIDATION-CURRENCY END -->"
 #: Keys that may appear more than once inside the currency block.
 MULTI_KEYS = ("excluded", "flaky", "failing")
 
-#: The four elements every recorded number must carry (07_p0_demo.md 6.3).
-REQUIRED_KEYS = ("tests", "config", "commit", "date")
+#: The elements every recorded number must carry: the four of
+#: 07_p0_demo.md 6.3 plus the pinned toolchain (18_dev_briefing_0903.md 10,
+#: Q1a).  A count measured with a different CMake is a different measurement.
+REQUIRED_KEYS = ("tests", "config", "commit", "date", "toolchain")
 
 _KV_RE = re.compile(r"^\s*([a-z_]+)\s*:\s*(.+?)\s*$")
 _TESTS_RE = re.compile(r"^(\d+)\s*/\s*(\d+)$")
@@ -48,6 +51,8 @@ _SUMMARY_RE = re.compile(
 #: so the name runs to end of line rather than to the first blank.
 _REGISTERED_RE = re.compile(r"^\s*Test\s*#\d+:\s*(.+?)\s*$")
 _TOTAL_RE = re.compile(r"^\s*Total Tests:\s*(\d+)\s*$")
+_CMAKE_VERSION_RE = re.compile(r"cmake\s+version\s+(\S+)", re.IGNORECASE)
+_DOC_TOOLCHAIN_RE = re.compile(r"cmake\s+(\S+)", re.IGNORECASE)
 _FENCE = chr(96) * 3
 
 
@@ -130,6 +135,31 @@ def parse_run_summary(ctest_run_output):
     return total - failed, total
 
 
+def parse_cmake_version(cmake_version_output):
+    """Read the CMake version out of ``cmake --version`` output.
+
+    @param cmake_version_output  Raw stdout of ``cmake --version``.
+    @return                      Version string, e.g. ``"3.31.10"``.
+    @throws ValueError           If no version line is present.
+    """
+    match = _CMAKE_VERSION_RE.search(cmake_version_output)
+    if not match:
+        raise ValueError(
+            "no 'cmake version <x.y.z>' line found in the toolchain record"
+        )
+    return match.group(1)
+
+
+def parse_doc_toolchain(value):
+    """Read the CMake version out of a ``toolchain:`` document line.
+
+    @param value  Right-hand side of the ``toolchain:`` line.
+    @return       Version string, or ``""`` if the line does not name cmake.
+    """
+    match = _DOC_TOOLCHAIN_RE.search(value or "")
+    return match.group(1) if match else ""
+
+
 def excluded_targets(entries):
     """Strip the reason text from ``excluded:`` lines.
 
@@ -198,7 +228,7 @@ def commit_relation(repo, doc_commit, built_commit):
 
 
 def check_currency(block, registered, measured, commit, presets_sha,
-                   repo=None):
+                   repo=None, cmake_version=""):
     """Compare a parsed currency block against the measured reality.
 
     @param block        Output of :func:`parse_currency_block`.
@@ -207,6 +237,8 @@ def check_currency(block, registered, measured, commit, presets_sha,
     @param commit       Commit sha that was actually built.
     @param presets_sha  Blob sha of ``CMakePresets.json`` at @p commit;
                         an empty string disables the presets comparison.
+    @param cmake_version  CMake version that performed the measurement; an
+                        empty string disables the toolchain comparison.
     @return             Human-readable problems; empty means the gate passes.
     """
     problems = []
@@ -256,6 +288,20 @@ def check_currency(block, registered, measured, commit, presets_sha,
                 "commit mismatch: document records %s, which is not an "
                 "ancestor of the built commit %s" % (doc_commit, commit)
             )
+
+    doc_toolchain = parse_doc_toolchain(str(block.get("toolchain", "")))
+    if not doc_toolchain:
+        problems.append(
+            "toolchain must name the pinned CMake, e.g. 'toolchain: cmake "
+            "3.31.10', got %r" % block.get("toolchain", "")
+        )
+    elif cmake_version and doc_toolchain != cmake_version:
+        problems.append(
+            "toolchain drift: document says cmake %s, the measurement ran "
+            "cmake %s (a toolchain bump is a re-measurement trigger; the "
+            "version and the numbers belong in the same commit)"
+            % (doc_toolchain, cmake_version)
+        )
 
     if not _DATE_RE.match(str(block["date"]).strip()):
         problems.append("date must be YYYY-MM-DD, got %r" % block["date"])
@@ -318,6 +364,9 @@ def main(argv=None):
                         help="repository root")
     parser.add_argument("--presets-file", default="CMakePresets.json",
                         help="preset file recorded in the document")
+    parser.add_argument("--cmake-version-file", default=None, type=Path,
+                        help="file holding 'cmake --version' output of the "
+                             "toolchain that performed the measurement")
     args = parser.parse_args(argv)
 
     try:
@@ -326,6 +375,11 @@ def main(argv=None):
             args.ctest_list.read_text(encoding="utf-8")
         )
         measured = parse_run_summary(args.ctest_run.read_text(encoding="utf-8"))
+        cmake_version = ""
+        if args.cmake_version_file is not None:
+            cmake_version = parse_cmake_version(
+                args.cmake_version_file.read_text(encoding="utf-8")
+            )
     except (OSError, ValueError) as exc:
         print("VALIDATION currency gate: FAIL -- %s" % exc, file=sys.stderr)
         return 1
@@ -333,7 +387,8 @@ def main(argv=None):
     commit = args.commit.strip()
     presets_sha = git_blob_sha(args.repo, args.presets_file, commit or "HEAD")
     problems = check_currency(
-        block, registered, measured, commit, presets_sha, repo=args.repo
+        block, registered, measured, commit, presets_sha, repo=args.repo,
+        cmake_version=cmake_version,
     )
 
     if problems:
@@ -342,8 +397,9 @@ def main(argv=None):
             print("  - %s" % problem, file=sys.stderr)
         return 1
     print(
-        "VALIDATION currency gate: OK (%s, %d registered, commit %s)"
-        % (block["tests"], len(registered), commit or "unchecked")
+        "VALIDATION currency gate: OK (%s, %d registered, commit %s, %s)"
+        % (block["tests"], len(registered), commit or "unchecked",
+           block.get("toolchain", "toolchain unrecorded"))
     )
     return 0
 

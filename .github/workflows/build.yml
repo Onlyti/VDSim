@@ -6,15 +6,22 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  # Single pinned CMake for every job in this workflow, matching the version
+  # recorded on the `toolchain:` line of docs/VALIDATION.md. Never `latest`:
+  # a toolchain bump is a re-measurement trigger, so it has to be an explicit
+  # edit that lands in the same commit as the refreshed numbers.
+  VDSIM_CMAKE_VERSION: 3.31.10
+
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
         compiler:
-          - { name: gcc-9,    cc: gcc-9,    cxx: g++-9 }
-          - { name: clang-10, cc: clang-10, cxx: clang++-10 }
+          - { name: gcc-11,   cc: gcc-11,   cxx: g++-11 }
+          - { name: clang-14, cc: clang-14, cxx: clang++-14 }
         build_type: [Debug, Release]
 
     name: ${{ matrix.compiler.name }} / ${{ matrix.build_type }}
@@ -29,6 +36,11 @@ jobs:
             ninja-build \
             ${{ matrix.compiler.cc }} \
             ${{ matrix.compiler.cxx }}
+
+      - name: Pin CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: ${{ env.VDSIM_CMAKE_VERSION }}
 
       - name: Cache FetchContent
         uses: actions/cache@v4
@@ -52,9 +64,9 @@ jobs:
   # Canonical configuration (the `validation` CMake preset). This is the only
   # job whose ctest numbers docs/VALIDATION.md is allowed to record, and the
   # gate below fails if the document no longer matches what was measured.
-  # See VDSimMarketing 07_p0_demo.md 6.4 / 6.5.
+  # See VDSimMarketing 07_p0_demo.md 6.4 / 6.5 / 6.6.
   validation:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     name: validation preset / currency gate
 
     steps:
@@ -68,6 +80,16 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build
+
+      - name: Pin CMake
+        # CMakePresets.json is version 3, which needs CMake >= 3.21, so the
+        # runner image default is deliberately not relied upon.
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: ${{ env.VDSIM_CMAKE_VERSION }}
+
+      - name: Record toolchain
+        run: cmake --version | tee cmake-version.txt
 
       - name: Cache FetchContent
         uses: actions/cache@v4
@@ -95,6 +117,7 @@ jobs:
             --doc docs/VALIDATION.md \
             --ctest-list ctest-list.txt \
             --ctest-run ctest-run.txt \
+            --cmake-version-file cmake-version.txt \
             --commit "${{ github.sha }}" \
             --repo .
 

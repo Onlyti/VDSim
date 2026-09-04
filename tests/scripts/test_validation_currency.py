@@ -22,6 +22,7 @@ Some prose above the block.
 tests:    {tests}
 config:   cmake --preset validation && ctest --preset validation
 presets:  CMakePresets.json@{presets}
+toolchain: cmake {toolchain}
 commit:   {commit}
 date:     {date}
 {extra}<!-- VALIDATION-CURRENCY END -->
@@ -50,7 +51,7 @@ Total Test time (real) = 1.00 sec
 
 
 def make_doc(tests="3/3", presets="a" * 40, commit="b" * 40,
-             date="2026-09-04", extra=""):
+             date="2026-09-04", extra="", toolchain="3.31.10"):
     """Build a VALIDATION.md body with a currency block.
 
     @param tests    Value for the ``tests:`` line.
@@ -58,22 +59,25 @@ def make_doc(tests="3/3", presets="a" * 40, commit="b" * 40,
     @param commit   Commit sha recorded on the ``commit:`` line.
     @param date     Value for the ``date:`` line.
     @param extra    Extra raw lines inserted before the end marker.
+    @param toolchain  CMake version recorded on the ``toolchain:`` line.
     @return         Markdown source as a string.
     """
     return DOC_TEMPLATE.format(
-        tests=tests, presets=presets, commit=commit, date=date, extra=extra
+        tests=tests, presets=presets, commit=commit, date=date, extra=extra,
+        toolchain=toolchain,
     )
 
 
 class ParseCurrencyBlockTest(unittest.TestCase):
     """The block parser must ignore surrounding prose and collect repeats."""
 
-    def test_reads_all_four_elements(self):
+    def test_reads_all_required_elements(self):
         block = cvc.parse_currency_block(make_doc())
         self.assertEqual(block["tests"], "3/3")
         self.assertEqual(block["date"], "2026-09-04")
         self.assertIn("--preset validation", block["config"])
         self.assertEqual(block["commit"], "b" * 40)
+        self.assertEqual(block["toolchain"], "cmake 3.31.10")
 
     def test_collects_repeated_keys(self):
         extra = ("excluded: gui_v3_e2e (deferred)\n"
@@ -118,6 +122,15 @@ class ParseCtestOutputTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             cvc.parse_run_summary("no summary line at all")
 
+    def test_cmake_version_is_read_from_the_banner(self):
+        banner = ("cmake version 3.31.10" + chr(10) + chr(10)
+                  + "CMake suite maintained and supported by Kitware")
+        self.assertEqual(cvc.parse_cmake_version(banner), "3.31.10")
+
+    def test_missing_cmake_version_raises(self):
+        with self.assertRaises(ValueError):
+            cvc.parse_cmake_version("not a cmake banner")
+
 
 class CheckCurrencyTest(unittest.TestCase):
     """The gate itself: each drift mode must produce a problem."""
@@ -127,7 +140,8 @@ class CheckCurrencyTest(unittest.TestCase):
         self.commit = "b" * 40
         self.presets = "a" * 40
 
-    def run_gate(self, doc, registered=None, measured=(3, 3)):
+    def run_gate(self, doc, registered=None, measured=(3, 3),
+                 cmake_version="3.31.10"):
         """Parse @p doc and run the gate against the measured numbers."""
         block = cvc.parse_currency_block(doc)
         return cvc.check_currency(
@@ -136,6 +150,7 @@ class CheckCurrencyTest(unittest.TestCase):
             measured,
             self.commit,
             self.presets,
+            cmake_version=cmake_version,
         )
 
     def test_matching_document_passes(self):
@@ -214,6 +229,28 @@ class CheckCurrencyTest(unittest.TestCase):
 
         doc_ok = make_doc(tests="2/3", extra="failing: gamma (known break)\n")
         self.assertEqual(self.run_gate(doc_ok, measured=(2, 3)), [])
+
+    def test_toolchain_drift_fails(self):
+        """A count measured with another CMake is another measurement."""
+        problems = self.run_gate(make_doc(toolchain="4.0.3"))
+        self.assertTrue(any("toolchain drift" in p for p in problems))
+
+    def test_missing_toolchain_fails(self):
+        doc = make_doc().replace("toolchain: cmake 3.31.10\n", "")
+        problems = self.run_gate(doc)
+        self.assertTrue(any("missing required element 'toolchain:'" in p
+                            for p in problems))
+
+    def test_toolchain_must_name_cmake(self):
+        doc = make_doc().replace("toolchain: cmake 3.31.10",
+                                 "toolchain: whatever the runner ships")
+        problems = self.run_gate(doc)
+        self.assertTrue(any("toolchain must name the pinned CMake" in p
+                            for p in problems))
+
+    def test_unmeasured_toolchain_does_not_fail(self):
+        """Local runs without a version record still gate on the numbers."""
+        self.assertEqual(self.run_gate(make_doc(), cmake_version=""), [])
 
     def test_config_without_preset_fails(self):
         doc = make_doc().replace(

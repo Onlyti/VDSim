@@ -35,12 +35,19 @@ It records the **canonical configuration only** -- the `validation` CMake preset
 Counts measured in any other configuration are deliberately not recorded here, so
 that one number cannot drift against another.
 
+`commit:` is the sha of the tree that was *measured*; this document is a
+descendant of it, so the gate accepts the recorded commit when it is that
+sha or an ancestor of it. `toolchain:` pins the CMake that performed the
+measurement -- a toolchain bump is a re-measurement trigger, so the new
+version and the new numbers have to land in the same commit.
+
 <!-- VALIDATION-CURRENCY BEGIN -->
 ```text
 tests:    407/407
 config:   cmake --preset validation && cmake --build --preset validation && ctest --preset validation
 presets:  CMakePresets.json@fb1f0c198a0201fcce2543a9f5b2242a255fb97a
-commit:   aee9835ce155fb57827808882179afdf01384d10
+toolchain: cmake 3.31.10
+commit:   1ad89a584e8db1985a8351c227e1a36b947dc712
 date:     2026-09-04
 excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)

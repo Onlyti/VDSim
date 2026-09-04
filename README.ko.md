@@ -54,9 +54,12 @@ python -c "import vdsim; from vdsim_lab import Sim; Sim(vehicle='sedan', level='
 
 ## 소스 빌드
 
-전제: C++17 컴파일러, CMake ≥ 3.20, Python ≥ 3.10.
-- Linux: `g++ ≥ 9` 또는 `clang ≥ 10`
+전제: C++17 컴파일러, CMake ≥ 3.16, Python ≥ 3.10.
+- Linux: `g++ ≥ 9` 또는 `clang ≥ 10`. CI 는 Ubuntu 22.04 에서 gcc-11 · clang-14 를 빌드한다
 - Windows: Visual Studio 2019+ "C++ 데스크톱 개발"(MSVC)
+- 빌드 자체는 CMake ≥ 3.16 이면 되지만, 정본 검증은 `CMakePresets.json`
+  (preset schema v3) 을 거치므로 **CMake ≥ 3.21** 이 필요하다 — 그보다 낮은
+  CMake 는 빌드는 되고 프리셋만 못 읽는다
 
 Python 패키지 (editable / 로컬 wheel 빌드):
 ```bash
@@ -68,7 +71,13 @@ python -c "import vdsim; print('ok')"
 ```bash
 cmake -B build -DVDSIM_BUILD_PYTHON=ON          # Linux 는 -G Ninja 추가
 cmake --build build --config Release            # Linux 는 -j
-ctest --test-dir build -C Release               # 328/328 ; 바이너리는 build/bin/
+cd build && ctest -C Release                    # 바이너리는 build/bin/
+```
+정본 테스트 개수는 [docs/VALIDATION.md](docs/VALIDATION.md) 한 곳에만 둔다.
+재현은 고정된 프리셋으로 한다:
+```bash
+cmake --preset validation && cmake --build --preset validation
+ctest --preset validation
 ```
 
 ## Python 으로 실험하기 (제어기는 직접 작성)
