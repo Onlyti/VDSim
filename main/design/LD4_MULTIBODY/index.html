@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -2813,9 +2813,9 @@ geometry; they are not yet consumed by the L4 DAE. Test
 <code>MultibodyTopology.KnuckleBlockWheelCenterRelative</code>.</p>
 <h2 id="5-python-gui-entry-points">5. Python / GUI entry points<a class="headerlink" href="#5-python-gui-entry-points" title="Permanent link">&para;</a></h2>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">vdsim</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">topo</span> <span class="o">=</span> <span class="n">vdsim</span><span class="o">.</span><span class="n">mb</span><span class="o">.</span><span class="n">SuspensionTopology</span><span class="o">.</span><span class="n">from_yaml</span><span class="p">(</span><span class="s2">&quot;configs/parts/susp_kinematics/kin/mp_front_sedan.yaml&quot;</span><span class="p">)</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">sweep</span> <span class="o">=</span> <span class="n">vdsim</span><span class="o">.</span><span class="n">run_kc_sweep</span><span class="p">(</span><span class="s2">&quot;configs/parts/susp_kinematics/kin/mp_front_sedan.yaml&quot;</span><span class="p">)</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">report</span> <span class="o">=</span> <span class="n">vdsim</span><span class="o">.</span><span class="n">run_kc_xcheck</span><span class="p">(</span><span class="s2">&quot;ref.yaml&quot;</span><span class="p">,</span> <span class="s2">&quot;cand.yaml&quot;</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">topo</span> <span class="o">=</span> <span class="n">vdsim</span><span class="o">.</span><span class="n">mb</span><span class="o">.</span><span class="n">SuspensionTopology</span><span class="o">.</span><span class="n">from_yaml</span><span class="p">(</span><span class="s2">"configs/parts/susp_kinematics/kin/mp_front_sedan.yaml"</span><span class="p">)</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">sweep</span> <span class="o">=</span> <span class="n">vdsim</span><span class="o">.</span><span class="n">run_kc_sweep</span><span class="p">(</span><span class="s2">"configs/parts/susp_kinematics/kin/mp_front_sedan.yaml"</span><span class="p">)</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">report</span> <span class="o">=</span> <span class="n">vdsim</span><span class="o">.</span><span class="n">run_kc_xcheck</span><span class="p">(</span><span class="s2">"ref.yaml"</span><span class="p">,</span> <span class="s2">"cand.yaml"</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
 </span></code></pre></div>
 <p>CLI:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python3<span class="w"> </span>tools/kinematics/adams_xcheck.py<span class="w"> </span>--csv<span class="w"> </span>export.csv<span class="w"> </span>--reference<span class="w"> </span>ref.yaml
@@ -2944,7 +2944,7 @@ geometry; they are not yet consumed by the L4 DAE. Test
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.expand", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="../../javascripts/mathjax.js"></script>
       

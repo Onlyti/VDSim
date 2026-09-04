@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -3058,11 +3058,11 @@ build (<code>build_fmu.sh</code>): <code>libvdsim_core.a</code> + yaml-cpp + spd
 출력 <code>vdsim_l2.fmu</code> (4.1 MB), <code>vdsim_l3.fmu</code> (4.6 MB, Ld4 포함).</p>
 <p><strong>[VDSim impl] § 16.6 — import master</strong></p>
 <p><code>fmi_export/fmu_master.py</code> (ctypes, fmpy 의존 없음):</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">fmu</span> <span class="o">=</span> <span class="n">FMUMaster</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;anything.fmu&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">fmu</span> <span class="o">=</span> <span class="n">FMUMaster</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"anything.fmu"</span><span class="p">)</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">fmu</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="n">t0</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">fmu</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;steer_angle_wheel&quot;</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">)</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">fmu</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">"steer_angle_wheel"</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">)</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">fmu</span><span class="o">.</span><span class="n">do_step</span><span class="p">(</span><span class="n">t</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.02</span><span class="p">)</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">fmu</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;vx&quot;</span><span class="p">))</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">fmu</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"vx"</span><span class="p">))</span>
 </span></code></pre></div>
 <p><strong>[VDSim impl] § 16.8 — round-trip 검증</strong></p>
 <p><code>fmi_export/test_roundtrip.py</code> (native L2 vs FMU-wrapped L2, 100 step):
@@ -3140,7 +3140,7 @@ build (<code>build_fmu.sh</code>): <code>libvdsim_core.a</code> + yaml-cpp + spd
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.expand", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="../../javascripts/mathjax.js"></script>
       
