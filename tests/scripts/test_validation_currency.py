@@ -5,7 +5,11 @@ The gate exists to make a stale ``docs/VALIDATION.md`` fail CI, so every test
 here pins one way the document can drift away from the measured reality.
 """
 
+import os
+import shutil
+import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -252,6 +256,35 @@ class CheckCurrencyTest(unittest.TestCase):
         """Local runs without a version record still gate on the numbers."""
         self.assertEqual(self.run_gate(make_doc(), cmake_version=""), [])
 
+    def test_ancestor_with_moved_registration_surface_fails(self):
+        """Ancestry alone must not carry a count across a CMake change."""
+        original_rel = cvc.commit_relation
+        original_diff = cvc.registration_surface_diff
+        cvc.commit_relation = lambda repo, doc, built: "ancestor"
+        cvc.registration_surface_diff = (
+            lambda repo, doc, built: ["tests/CMakeLists.txt"]
+        )
+        try:
+            problems = self.run_gate(make_doc(commit="c" * 40))
+        finally:
+            cvc.commit_relation = original_rel
+            cvc.registration_surface_diff = original_diff
+        self.assertTrue(any("registration surface changed" in p
+                            for p in problems))
+
+    def test_identical_commit_skips_surface_check(self):
+        """Same sha cannot differ from itself; do not shell out for it."""
+        called = []
+        original_diff = cvc.registration_surface_diff
+        cvc.registration_surface_diff = (
+            lambda repo, doc, built: called.append(1) or []
+        )
+        try:
+            self.assertEqual(self.run_gate(make_doc()), [])
+        finally:
+            cvc.registration_surface_diff = original_diff
+        self.assertEqual(called, [])
+
     def test_config_without_preset_fails(self):
         doc = make_doc().replace(
             "cmake --preset validation && ctest --preset validation",
@@ -260,6 +293,79 @@ class CheckCurrencyTest(unittest.TestCase):
         problems = self.run_gate(doc)
         self.assertTrue(any("must invoke the canonical CMake preset" in p
                             for p in problems))
+
+
+class RegistrationSurfaceDiffTest(unittest.TestCase):
+    """The helper runs real git; stubs elsewhere would hide a wrong pathspec."""
+
+    def setUp(self):
+        self.repo = Path(tempfile.mkdtemp(prefix="vdsim_surface_"))
+        self.addCleanup(shutil.rmtree, str(self.repo), True)
+        if shutil.which("git") is None:
+            self.skipTest("git not available")
+        self._git("init", "-q")
+        self._git("config", "user.email", "t@example.com")
+        self._git("config", "user.name", "t")
+        self._write("CMakeLists.txt", "add_test(NAME a COMMAND true)")
+        self._write("tests/CMakeLists.txt", "add_test(NAME b COMMAND true)")
+        self._write("cmake/helpers.cmake", "# helpers")
+        self._write("tests/test_body.cpp", "int main() { return 0; }")
+        self._git("add", "-A")
+        self._git("commit", "-qm", "base")
+        self.base = self._git("rev-parse", "HEAD").strip()
+
+    def _git(self, *args):
+        out = subprocess.run(
+            ["git"] + list(args), cwd=str(self.repo),
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            universal_newlines=True,
+        )
+        return out.stdout
+
+    def _write(self, relative, text):
+        path = self.repo / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text + chr(10), encoding="utf-8")
+
+    def _commit(self, relative, text, message):
+        self._write(relative, text)
+        self._git("add", "-A")
+        self._git("commit", "-qm", message)
+        return self._git("rev-parse", "HEAD").strip()
+
+    def test_unchanged_surface_is_empty(self):
+        head = self._commit("README.md", "prose", "docs only")
+        self.assertEqual(
+            cvc.registration_surface_diff(self.repo, self.base, head), []
+        )
+
+    def test_nested_cmakelists_is_on_the_surface(self):
+        head = self._commit("tests/CMakeLists.txt",
+                            "add_test(NAME b COMMAND true)" + chr(10)
+                            + "add_test(NAME c COMMAND true)", "new test")
+        self.assertEqual(
+            cvc.registration_surface_diff(self.repo, self.base, head),
+            ["tests/CMakeLists.txt"],
+        )
+
+    def test_cmake_module_is_on_the_surface(self):
+        head = self._commit("cmake/helpers.cmake", "# changed", "cmake module")
+        self.assertEqual(
+            cvc.registration_surface_diff(self.repo, self.base, head),
+            ["cmake/helpers.cmake"],
+        )
+
+    def test_test_body_is_off_the_surface(self):
+        head = self._commit("tests/test_body.cpp", "int main() { return 1; }",
+                            "body only")
+        self.assertEqual(
+            cvc.registration_surface_diff(self.repo, self.base, head), []
+        )
+
+    def test_unresolvable_shas_do_not_raise(self):
+        self.assertEqual(
+            cvc.registration_surface_diff(self.repo, "d" * 40, "e" * 40), []
+        )
 
 
 class RealDocumentTest(unittest.TestCase):

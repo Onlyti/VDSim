@@ -227,6 +227,53 @@ def commit_relation(repo, doc_commit, built_commit):
     return "unknown"
 
 
+#: Paths that decide *which* tests get registered.  A change to any of them
+#: can move the count without touching a single test body, so a recorded
+#: number stays valid only while this surface is unchanged.  Test sources are
+#: deliberately outside the surface -- their effect shows up in passed/total.
+REGISTRATION_SURFACE = ("CMakePresets.json", "*CMakeLists.txt", "cmake/")
+
+#: Printed whenever the gate fails.  An unexplained gate failure gets
+#: "resolved" by deleting the gate unless the fix is spelled out.
+REMEASURE_COMMAND = (
+    "cmake --preset validation && "
+    "cmake --build --preset validation -j && "
+    "ctest --preset validation"
+)
+
+
+def registration_surface_diff(repo, doc_commit, built_commit):
+    """List registration-surface paths that changed between two commits.
+
+    A document can never record the sha of the commit that contains it, so
+    commit: is allowed to name an ancestor.  Ancestry alone is too weak:
+    any commit in between may have added or removed a test registration, which
+    invalidates the recorded count while every other element still matches.
+
+    @param repo          Repository root.
+    @param doc_commit    Sha recorded on the commit: line.
+    @param built_commit  Sha that was actually measured.
+    @return              Sorted changed paths; empty when the surface is
+                         unchanged or the comparison could not be made.
+    """
+    if not doc_commit or not built_commit:
+        return []
+    try:
+        out = subprocess.run(
+            ["git", "diff", "--name-only", doc_commit, built_commit, "--"]
+            + list(REGISTRATION_SURFACE),
+            cwd=str(repo),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+        )
+    except OSError:
+        return []
+    if out.returncode != 0:
+        return []
+    return sorted(line.strip() for line in out.stdout.splitlines() if line.strip())
+
+
 def check_currency(block, registered, measured, commit, presets_sha,
                    repo=None, cmake_version=""):
     """Compare a parsed currency block against the measured reality.
@@ -288,6 +335,17 @@ def check_currency(block, registered, measured, commit, presets_sha,
                 "commit mismatch: document records %s, which is not an "
                 "ancestor of the built commit %s" % (doc_commit, commit)
             )
+        elif relation == "ancestor":
+            drifted = registration_surface_diff(
+                repo or Path("."), doc_commit, commit
+            )
+            if drifted:
+                problems.append(
+                    "registration surface changed between the recorded "
+                    "commit %s and the built commit %s: %s -- ancestry alone "
+                    "does not keep the count valid, these files decide which "
+                    "tests exist" % (doc_commit, commit, ", ".join(drifted))
+                )
 
     doc_toolchain = parse_doc_toolchain(str(block.get("toolchain", "")))
     if not doc_toolchain:
@@ -395,6 +453,13 @@ def main(argv=None):
         print("VALIDATION currency gate: FAIL", file=sys.stderr)
         for problem in problems:
             print("  - %s" % problem, file=sys.stderr)
+        print("", file=sys.stderr)
+        print("Prescription -- re-measure the canonical configuration:",
+              file=sys.stderr)
+        print("  %s" % REMEASURE_COMMAND, file=sys.stderr)
+        print("then rewrite tests:/commit:/date:/presets:/toolchain: in %s "
+              "in the same commit as the change that moved them." % args.doc,
+              file=sys.stderr)
         return 1
     print(
         "VALIDATION currency gate: OK (%s, %d registered, commit %s, %s)"

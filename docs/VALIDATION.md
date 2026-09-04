@@ -37,7 +37,12 @@ that one number cannot drift against another.
 
 `commit:` is the sha of the tree that was *measured*; this document is a
 descendant of it, so the gate accepts the recorded commit when it is that
-sha or an ancestor of it. `toolchain:` pins the CMake that performed the
+sha or an ancestor of it. Ancestry alone is not enough: the registration
+surface (`CMakePresets.json`, every `CMakeLists.txt`, `cmake/**`) has to
+be unchanged between that sha and the measured tree, because those files
+decide which tests exist. Test sources are outside that surface -- their
+effect is caught by the passed/total comparison instead. `toolchain:` pins
+the CMake that performed the
 measurement -- a toolchain bump is a re-measurement trigger, so the new
 version and the new numbers have to land in the same commit.
 
