@@ -91,3 +91,11 @@ apps/validation/results/
 # Catalog: generated resolve cache + GUI-runtime-registered package stub
 configs/.resolve_cache/
 configs/catalog/packages/gui_custom/
+
+# Per-agent / personal tooling config (not part of the open-core product)
+AGENTS.md
+.cursor/rules/00-personalize.mdc
+.cursor/rules/copyedit-en.mdc
+.cursor/rules/copyedit-ko.mdc
+.cursor/rules/over-eng-review.mdc
+.cursor/rules/temp-debt.mdc
