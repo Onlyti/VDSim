@@ -55,6 +55,46 @@ _CMAKE_VERSION_RE = re.compile(r"cmake\s+version\s+(\S+)", re.IGNORECASE)
 _DOC_TOOLCHAIN_RE = re.compile(r"cmake\s+(\S+)", re.IGNORECASE)
 _FENCE = chr(96) * 3
 
+#: Historical measurements remain evidence rather than mutable status claims.
+HISTORICAL_DOC_PREFIXES = ("tasks/", "evidence/")
+HISTORICAL_DOC_PATHS = frozenset((
+    "design/CURSOR_USAGE.md",
+    "design/L5_6DOF_MULTIBODY.md",
+    "design/LD4_MULTIBODY.md",
+    "design/LOW_SPEED_HANDLING.md",
+    "design/TIRE_INTERFACE_INVERSION.md",
+    "design/TIRE_ROADMAP.md",
+    "design/V0.2_PLAN.md",
+    "design/V0.2_SUBSYSTEMS.md",
+    "design/V0.4_PLAN.md",
+    "design/V0.4_SLOPE_JUMP_DYNAMICS.md",
+    "design/V0.5_TERRAIN_L5.md",
+))
+HISTORICAL_DOC_NAMES = frozenset((
+    "CLEANUP_PLAN.md",
+    "IMPROVEMENT_REPORT.md",
+    "PLANT_DELIVERY_NOTE.md",
+    "SUMMARY.md",
+    "TIRE_VALIDATION.md",
+))
+_HARDCODED_TEST_COUNT_RE = re.compile(
+    r"(?:\b\d+\s*/\s*\d+\b.{0,24}\bctests?\b|"
+    r"\bctests?\b.{0,24}\b\d+\s*/\s*\d+\b|"
+    r"\b\d{2,}\b\*{0,2}\s+(?:automated\s+)?ctests?\b|"
+    r"\bctests?\b(?:\s+(?:suite|green|count|total))?\s*[:=]?\s*\*{0,2}\d{2,}\b)", re.IGNORECASE
+)
+
+
+def _is_historical_doc(relative):
+    """Return whether @p relative is an immutable report or evidence page."""
+    posix = Path(relative).as_posix()
+    name = Path(posix).name
+    return (posix.startswith(HISTORICAL_DOC_PREFIXES)
+            or posix in HISTORICAL_DOC_PATHS
+            or name in HISTORICAL_DOC_NAMES
+            or name.startswith("HANDOFF")
+            or name.startswith("STATUS_"))
+
 
 def parse_currency_block(text):
     """Extract the currency block from a VALIDATION.md body.
@@ -168,6 +208,34 @@ def excluded_targets(entries):
     """
     stripped = [entry.split("(")[0].strip() for entry in entries]
     return [name for name in stripped if name]
+
+
+def hardcoded_test_counts(docs_root):
+    """Find duplicated full-suite counts in the live MkDocs tree.
+
+    ``VALIDATION.md`` is the single source of truth. Historical task reports,
+    evidence, design snapshots, status snapshots, and handoffs retain their
+    measured values; current product and user-guide pages must link to the
+    canonical document instead of copying its volatile count.
+
+    @param docs_root  Path to the MkDocs document tree.
+    @return           ``path:line: text`` records for every violation.
+    """
+    violations = []
+    root = Path(docs_root)
+    if not root.is_dir():
+        return ["%s: MkDocs document tree not found" % root]
+    for path in sorted(root.rglob("*.md")):
+        relative = path.relative_to(root).as_posix()
+        if relative == "VALIDATION.md" or _is_historical_doc(relative):
+            continue
+        for number, line in enumerate(
+                path.read_text(encoding="utf-8").splitlines(), 1):
+            if _HARDCODED_TEST_COUNT_RE.search(line):
+                violations.append(
+                    "%s:%d: %s" % (relative, number, line.strip())
+                )
+    return violations
 
 
 def git_blob_sha(repo, relative_path, commit="HEAD"):
@@ -448,6 +516,14 @@ def main(argv=None):
         block, registered, measured, commit, presets_sha, repo=args.repo,
         cmake_version=cmake_version,
     )
+
+    duplicated_counts = hardcoded_test_counts(args.doc.parent)
+    if duplicated_counts:
+        problems.append(
+            "live documentation duplicates the canonical ctest count; "
+            "remove the number and link to docs/VALIDATION.md: %s"
+            % "; ".join(duplicated_counts)
+        )
 
     if problems:
         print("VALIDATION currency gate: FAIL", file=sys.stderr)

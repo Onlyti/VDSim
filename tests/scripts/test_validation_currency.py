@@ -136,6 +136,66 @@ class ParseCtestOutputTest(unittest.TestCase):
             cvc.parse_cmake_version("not a cmake banner")
 
 
+class PublicDocumentationCurrencyTest(unittest.TestCase):
+    """Live pages must not copy the canonical full-suite count."""
+
+    def setUp(self):
+        self.docs = Path(tempfile.mkdtemp(prefix="vdsim_docs_"))
+        self.addCleanup(shutil.rmtree, str(self.docs), True)
+        (self.docs / "index.md").write_text(
+            "Tests: see [Validation](VALIDATION.md).\n", encoding="utf-8"
+        )
+
+    def _write(self, relative, text):
+        path = self.docs / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+
+    def test_validation_link_without_count_passes(self):
+        self.assertEqual(cvc.hardcoded_test_counts(self.docs), [])
+
+    def test_count_before_ctest_fails(self):
+        self._write("index.md", "Tests: **407 / 407 ctest** green.\n")
+        problems = cvc.hardcoded_test_counts(self.docs)
+        self.assertEqual(len(problems), 1)
+        self.assertIn("index.md:1", problems[0])
+
+    def test_single_count_before_ctest_fails(self):
+        self._write("ROADMAP.md", "Validation includes 382 ctests.\n")
+        problems = cvc.hardcoded_test_counts(self.docs)
+        self.assertEqual(len(problems), 1)
+
+    def test_ctest_threshold_is_not_mistaken_for_suite_count(self):
+        self._write("ROADMAP.md", "ctest gate: pure-long ~2% and pure-lat ~1%.\n")
+        problems = cvc.hardcoded_test_counts(self.docs)
+        self.assertEqual(problems, [])
+
+    def test_ctest_before_count_fails_on_nested_live_page(self):
+        self._write("guide/current.md", "Canonical ctest result: 407/407.\n")
+        problems = cvc.hardcoded_test_counts(self.docs)
+        self.assertEqual(len(problems), 1)
+        self.assertIn("guide/current.md:1", problems[0])
+
+    def test_validation_and_historical_reports_are_exempt(self):
+        self._write("VALIDATION.md", "tests: 407/407\n")
+        self._write("tasks/old.md", "Measured 12/12 ctest in 2025.\n")
+        self._write("evidence/run.md", "Suite: 15/15 tests.\n")
+        self._write("design/V0.2_PLAN.md", "All 9/9 ctest passed.\n")
+        self._write("HANDOFF_2025.md", "8/8 ctest green.\n")
+        self._write("STATUS_2025.md", "7/7 tests green.\n")
+        self.assertEqual(cvc.hardcoded_test_counts(self.docs), [])
+
+    def test_new_design_page_is_not_implicitly_exempt(self):
+        self._write("design/current.md", "All 10/10 ctest passed.\n")
+        problems = cvc.hardcoded_test_counts(self.docs)
+        self.assertEqual(len(problems), 1)
+        self.assertIn("design/current.md:1", problems[0])
+
+    def test_missing_docs_tree_is_reported(self):
+        missing = self.docs / "absent"
+        self.assertEqual(len(cvc.hardcoded_test_counts(missing)), 1)
+
+
 class CheckCurrencyTest(unittest.TestCase):
     """The gate itself: each drift mode must produce a problem."""
 
@@ -379,6 +439,10 @@ class RealDocumentTest(unittest.TestCase):
         for key in cvc.REQUIRED_KEYS:
             self.assertTrue(block.get(key), "missing %s" % key)
         cvc.parse_tests_field(str(block["tests"]))
+
+    def test_live_docs_do_not_duplicate_canonical_count(self):
+        self.assertEqual(cvc.hardcoded_test_counts(REPO_ROOT / "docs"), [])
+
 
 
 if __name__ == "__main__":
