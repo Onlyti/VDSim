@@ -27,8 +27,24 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             ninja-build \
+            python3-dev \
             ${{ matrix.compiler.cc }} \
             ${{ matrix.compiler.cxx }}
+
+      # The ctest suite registers ~17 Python tests unconditionally (cosim/
+      # CMakeLists.txt); they import the `vdsim` extension module, so the
+      # bindings must be built or every one of them fails with
+      # ModuleNotFoundError. pybind11 is pinned: it decides how the module is
+      # compiled, so an unpinned bump is a silent toolchain change.
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install "pybind11==2.13.6" numpy pyyaml
+
+      - name: Report toolchain
+        run: |
+          python3 --version
+          python3 -c "import pybind11, numpy, yaml; print('pybind11', pybind11.__version__); print('numpy', numpy.__version__); print('pyyaml', yaml.__version__)"
 
       - name: Cache FetchContent
         uses: actions/cache@v4
@@ -40,7 +56,11 @@ jobs:
         env:
           CC: ${{ matrix.compiler.cc }}
           CXX: ${{ matrix.compiler.cxx }}
-        run: cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        run: |
+          cmake -G Ninja -B build \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DVDSIM_BUILD_PYTHON=ON \
+            -Dpybind11_DIR="$(python3 -m pybind11 --cmakedir)"
 
       - name: Build
         run: cmake --build build -j
