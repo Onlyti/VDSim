@@ -65,6 +65,12 @@ jobs:
       - name: Build
         run: cmake --build build -j
 
+      # The plant speed budget is a Release contract. Debug builds carry no
+      # optimisation, so they are given the budget that matches what they are,
+      # not an exemption: the assert still runs and still fails on a real
+      # regression.
       - name: Test
         working-directory: build
+        env:
+          VDSIM_PERF_BUDGET_S: ${{ matrix.build_type == 'Debug' && '10.0' || '1.0' }}
         run: ctest --output-on-failure
