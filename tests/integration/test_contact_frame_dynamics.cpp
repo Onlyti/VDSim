@@ -153,28 +153,61 @@ TEST(D1ContactFrame, InvalidContactResetsTireTransientBeforeRecontact) {
         contact.normal = vdsim::Vec3::Zero();
     }
 
-    for (const bool l4 : {false, true}) {
+    // Rebuilding a level from a State snapshot is an exact clone only when the
+    // whole history lives in that State. At L4 it does not: the KC bushing
+    // compliance keeps its history in the axle hard-joint DAE. That residual
+    // belongs to the reconstruction, not to the airborne step, so it is
+    // measured on a control run that never loses contact and used as the
+    // bound. Picking a numeric tolerance from the observed failure instead
+    // would only record that the difference exists.
+    struct Residual {
+        std::array<double, vdsim::NUM_WHEELS> force{};
+        std::array<double, vdsim::NUM_WHEELS> kappa{};
+        std::array<double, vdsim::NUM_WHEELS> alpha{};
+    };
+    const auto measure = [&](bool l4, bool go_airborne) {
+        Residual residual{};
         auto warm = make_level(l4, true);
-        ASSERT_NE(warm, nullptr);
+        EXPECT_NE(warm, nullptr);
+        if (warm == nullptr) return residual;
         for (int i = 0; i < 100; ++i) {
             warm->step(vdsim::CmdL4{}, valid, 0.001);
         }
-        warm->step(vdsim::CmdL4{}, invalid, 0.001);
+        if (go_airborne) warm->step(vdsim::CmdL4{}, invalid, 0.001);
         const vdsim::State recontact_state = warm->state();
         auto fresh = make_level(l4, true, &recontact_state);
-        ASSERT_NE(fresh, nullptr);
+        EXPECT_NE(fresh, nullptr);
+        if (fresh == nullptr) return residual;
 
         warm->step(vdsim::CmdL4{}, valid, 1e-10);
         fresh->step(vdsim::CmdL4{}, valid, 1e-10);
         for (int wheel = 0; wheel < vdsim::NUM_WHEELS; ++wheel) {
-            EXPECT_NEAR((warm->tire_forces_body()[wheel]
-                         - fresh->tire_forces_body()[wheel]).norm(),
-                        0.0, 1e-8)
+            residual.force[wheel] = (warm->tire_forces_body()[wheel]
+                                     - fresh->tire_forces_body()[wheel]).norm();
+            residual.kappa[wheel] = std::abs(warm->wheel_slip_ratio()[wheel]
+                                             - fresh->wheel_slip_ratio()[wheel]);
+            residual.alpha[wheel] = std::abs(warm->wheel_slip_angle()[wheel]
+                                             - fresh->wheel_slip_angle()[wheel]);
+        }
+        return residual;
+    };
+
+    for (const bool l4 : {false, true}) {
+        const Residual airborne = measure(l4, true);
+        const Residual control = measure(l4, false);
+        for (int wheel = 0; wheel < vdsim::NUM_WHEELS; ++wheel) {
+            // Losing contact must leave nothing behind: after the airborne
+            // step the warm level and a level rebuilt from its state agree at
+            // least as closely as they do when contact was never lost.
+            EXPECT_LE(airborne.force[wheel],
+                      std::max(control.force[wheel], 1e-8))
                 << "l4=" << l4 << " wheel=" << wheel;
-            EXPECT_NEAR(warm->wheel_slip_ratio()[wheel],
-                        fresh->wheel_slip_ratio()[wheel], 2e-10);
-            EXPECT_NEAR(warm->wheel_slip_angle()[wheel],
-                        fresh->wheel_slip_angle()[wheel], 3e-9);
+            EXPECT_LE(airborne.kappa[wheel],
+                      std::max(control.kappa[wheel], 2e-10))
+                << "l4=" << l4 << " wheel=" << wheel;
+            EXPECT_LE(airborne.alpha[wheel],
+                      std::max(control.alpha[wheel], 3e-9))
+                << "l4=" << l4 << " wheel=" << wheel;
         }
     }
 }

@@ -3,6 +3,15 @@
 // This test intentionally changes no core behavior. It freezes the current L3
 // response for normal=(0,0,1), road_dz=0 and compares future implementations
 // against raw state, force and output samples.
+//
+// Fixture provenance: the L3 fixture has never moved. The L4 fixture was
+// re-captured on integration/p0-merge because main 9a40c1b (KC bushing
+// compliance under lateral tire load) changes the flat-road L4 response for a
+// reason that has nothing to do with the contact-frame work. That attribution
+// was measured, not assumed: with compliance_targets_rad() suppressed, the
+// merged tree reproduces the pre-merge L4 fixture bit-for-bit, so the D0
+// equivalence claim still holds on this tree and only its reference moved.
+// Re-capture with VDSIM_D0_CAPTURE_L3 / VDSIM_D0_CAPTURE_L4 and say why.
 
 #include "vdsim/interfaces.hpp"
 #include "vdsim/multibody.hpp"
