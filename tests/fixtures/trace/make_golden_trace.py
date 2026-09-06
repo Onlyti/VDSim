@@ -5,12 +5,16 @@ The fixture is **synthetic**, not simulator output: it is written analytically
 so that the container round-trip test and the renderer test run without the
 compiled core, which is exactly what DoD 5 ("render from the fixture file
 alone, no simulation") asks for. Nothing here should be read as validated
-vehicle physics — its only job is to exercise every part of the v0.1 contract:
+vehicle physics — its only job is to exercise every part of the v0.2 contract:
 
 * all ten channels of §3.2
 * a ``tire`` block whose ``mu_aniso`` is elliptic, so the friction-ellipse
   branch of the utilization formula is covered rather than the circular one
 * one overlay of each of the three kinds a renderer draws
+* the ``role`` field required from schema 0.2 on
+
+``golden_v0_1.vdtrace`` is kept next to the output as a frozen legacy artefact
+— it is what pins the reader's 0.1 fallback path, so it is never regenerated.
 
 Run::
 
@@ -27,7 +31,7 @@ sys.path.insert(0, str(REPO / "python"))
 
 import vdsim_trace  # noqa: E402
 
-OUT = Path(__file__).resolve().parent / "golden_v0_1.vdtrace"
+OUT = Path(__file__).resolve().parent / "golden_v0_2.vdtrace"
 
 DT = 0.02             # 50 Hz record rate
 N = 400               # 8 s
@@ -69,10 +73,11 @@ def build():
         repro={
             "vdsim_version": "fixture", "git_sha": "0" * 40,
             "param_hash": vdsim_trace.param_hash(plant_params),
-            "seed": 12345, "dt_s": DT, "run_id": "golden_v0_1",
+            "seed": 12345, "dt_s": DT, "run_id": "golden_v0_2",
             "control_dt_s": DT, "substep_dt_s": 5e-4, "decimation": 1,
         },
-        producer={"name": "make_golden_trace.py", "version": "0.1"},
+        producer={"name": "make_golden_trace.py", "version": "0.2"},
+        role="plant",
         decimation=1,
         extra={"tags": {"fixture": "golden", "synthetic": True}},
     )

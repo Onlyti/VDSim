@@ -17,6 +17,9 @@ Design contract (``11_trace_contract_spec.md``, source of truth):
 * VDSim records **plant** concepts only. Reference paths, lateral error and
   pass/fail verdicts are not plant concepts; they arrive as overlays (§4) and
   VDSim never interprets them.
+* A trace declares its ``role`` (``plant`` or ``predictor``) so the same code
+  used as both the simulator under test and an optimiser's internal model
+  cannot be presented as one undeclared thing.
 * The schema is independent of the tyre model. Model-dependent information
   leaks out through exactly two manifest constants, ``tire.mu_aniso``.
 * Friction utilization is a *derived* value computed by the consumer
@@ -32,13 +35,31 @@ import hashlib
 import io
 import json
 import os
+import warnings
 import zipfile
 from pathlib import Path
 
 import numpy as np
 
-#: Container schema version. ``0.x`` is unstable — see the release notes.
-SCHEMA_VERSION = "0.1"
+#: Container schema version written by this module. ``0.x`` is unstable —
+#: see the release notes. ``0.2`` added the required ``role`` field (§3.1).
+SCHEMA_VERSION = "0.2"
+
+#: ``0.x`` minors this reader accepts. Each ``0.x`` minor is its own line, so
+#: readability is opt-in rather than inferred: ``0.1`` stays readable only
+#: because :func:`_resolve_role` defines a fallback for its missing ``role``.
+READABLE_SCHEMA_VERSIONS = ("0.1", "0.2")
+
+#: Declared role of the run a trace records (§3.1, decided 2026-09-02).
+#: ``plant`` is the simulator under verification; ``predictor`` is the same
+#: code used as the internal model of an optimiser/MPC. The pair
+#: ``role`` + ``param_hash`` is what makes an *undeclared* dual role — a run
+#: whose plant and predictor are the same parameters presented as a
+#: verification result — mechanically detectable.
+ROLES = ("plant", "predictor")
+
+#: Role assumed for a ``0.1`` trace, which predates the field.
+LEGACY_DEFAULT_ROLE = "plant"
 
 #: Wheel order used by every per-wheel channel.
 WHEELS = ("FL", "FR", "RL", "RR")
@@ -127,8 +148,43 @@ def _schema_compatible(found: str) -> bool:
     if f_major != c_major:
         return False
     if c_major == 0:
-        return f_minor == c_minor
+        return "%d.%d" % (f_major, f_minor) in READABLE_SCHEMA_VERSIONS
     return f_minor <= c_minor
+
+
+def _resolve_role(manifest) -> str:
+    """Return the run's declared role, applying the ``0.1`` fallback.
+
+    ``role`` became required in schema ``0.2``. A ``0.1`` trace predates the
+    field, so a missing ``role`` there resolves to :data:`LEGACY_DEFAULT_ROLE`
+    with one warning; the same omission at ``0.2`` is an error, because a
+    silent default would reintroduce exactly the undeclared dual role the
+    field exists to expose.
+
+    :param manifest: parsed ``manifest.json``.
+    :returns: one of :data:`ROLES`.
+    :raises TraceSchemaError: on a missing ``role`` at ``0.2``+ or an
+        unknown role value at any version.
+    """
+    role = manifest.get("role")
+    if role is None:
+        if str(manifest.get("schema_version")) == "0.1":
+            warnings.warn(
+                "trace schema_version 0.1 declares no 'role'; assuming %r. "
+                "Re-record with vdsim_trace %s so the run states whether it "
+                "was the plant or a predictor."
+                % (LEGACY_DEFAULT_ROLE, SCHEMA_VERSION),
+                UserWarning, stacklevel=3)
+            return LEGACY_DEFAULT_ROLE
+        raise TraceSchemaError(
+            "manifest is missing 'role' — schema %s requires one of %s so a "
+            "plant run and a predictor run of the same code cannot be "
+            "presented as the same evidence"
+            % (manifest.get("schema_version"), list(ROLES)))
+    if role not in ROLES:
+        raise TraceSchemaError(
+            "manifest.role must be one of %s, got %r" % (list(ROLES), role))
+    return role
 
 
 def validate_overlay(obj) -> str:
@@ -207,10 +263,14 @@ class TraceWriter:
     :param decimation: keep 1 of every ``N`` :meth:`append` calls (``N>=1``).
     :param channels: channel subset to record; defaults to the full v0.1 table.
     :param extra: additional manifest keys merged verbatim (never required).
+    :param role: keyword-only and **required** — one of :data:`ROLES`. It has
+        no default on purpose: the field exists to catch a producer that
+        silently records a predictor run as if it were the plant, and a
+        default would be that silence.
     """
 
     def __init__(self, path, geometry, tire, repro, producer=None,
-                 decimation: int = 1, channels=None, extra=None):
+                 decimation: int = 1, channels=None, extra=None, *, role):
         decimation = int(decimation)
         if decimation < 1:
             raise TraceError("decimation must be >= 1, got %r" % (decimation,))
@@ -220,8 +280,11 @@ class TraceWriter:
             raise TraceError("unknown channel(s): %s" % (", ".join(unknown),))
         _validate_geometry(geometry)
         _validate_tire(tire)
+        if role not in ROLES:
+            raise TraceError("role must be one of %s, got %r" % (list(ROLES), role))
 
         self.path = Path(path)
+        self.role = role
         self.decimation = decimation
         self.geometry = dict(geometry)
         self.tire = dict(tire)
@@ -307,6 +370,7 @@ class TraceWriter:
         manifest.update({
             "schema_version": SCHEMA_VERSION,
             "producer": self.producer,
+            "role": self.role,
             "repro": self.repro,
             "n_steps": int(n),
             "wheels": list(WHEELS),
@@ -420,10 +484,12 @@ class TraceReader:
                 "or use a matching VDSim release" % (found, SCHEMA_VERSION))
         try:
             _validate_manifest(manifest)
+            role = _resolve_role(manifest)
         except TraceError:
             self._zf.close()
             raise
         self.manifest = manifest
+        self._role = role
         self._cache = {}
 
     # -- lifecycle ---------------------------------------------------------
@@ -458,6 +524,15 @@ class TraceReader:
     def repro(self) -> dict:
         """Manifest ``repro`` block."""
         return self.manifest["repro"]
+
+    @property
+    def role(self) -> str:
+        """Declared run role — ``plant`` or ``predictor`` (§3.1).
+
+        Resolved once at open time, so a ``0.1`` trace reports the legacy
+        default here and warns exactly once rather than on every access.
+        """
+        return self._role
 
     @property
     def wheels(self):
