@@ -80,10 +80,19 @@ jobs:
       # optimisation, so they are given the budget that matches what they are,
       # not an exemption: the assert still runs and still fails on a real
       # regression.
-      - name: Test
+      - name: Test (Debug budget)
+        if: matrix.build_type == 'Debug'
         working-directory: build
         env:
-          VDSIM_PERF_BUDGET_S: ${{ matrix.build_type == 'Debug' && '10.0' || '1.0' }}
+          VDSIM_PERF_BUDGET_S: '10.0'
+        run: ctest --output-on-failure
+
+      # Release states no budget: it runs on the defaults compiled into the
+      # tests, which are the Release contract. Injecting a value here would
+      # quietly relax the only configuration that can detect a real regression.
+      - name: Test
+        if: matrix.build_type != 'Debug'
+        working-directory: build
         run: ctest --output-on-failure
 
   # Canonical configuration (the `validation` CMake preset). This is the only

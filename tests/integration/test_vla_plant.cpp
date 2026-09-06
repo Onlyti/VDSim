@@ -6,6 +6,8 @@
 #include "vdsim/params.hpp"
 #include "vdsim/state.hpp"
 
+#include "../support/perf_budget.hpp"
+
 #include <gtest/gtest.h>
 
 #include <chrono>
@@ -452,7 +454,13 @@ TEST(VlaPlant, FasterThanRealtime) {
     }
     const double ms = std::chrono::duration<double, std::milli>(
         std::chrono::steady_clock::now() - t0).count();
-    EXPECT_LT(ms, 500.0) << "5 s plant traj took " << ms << " ms (want << 1 s real time)";
+    // Release contract: 5 s of simulated time in under 500 ms of wall clock.
+    // A Debug build states its own budget through VDSIM_PERF_BUDGET_S; the
+    // assertion itself is never skipped. See tests/support/perf_budget.hpp.
+    const double budget_ms = vdsim::testing::perf_budget_ms(500.0);
+    EXPECT_LT(ms, budget_ms) << "5 s plant traj took " << ms << " ms (budget "
+                             << budget_ms << " ms, override with "
+                             << vdsim::testing::perf_budget_env_name() << ")";
 }
 
 TEST(VlaPlant, FrictionPatchPerWheelMu) {

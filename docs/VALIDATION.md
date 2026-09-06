@@ -55,6 +55,7 @@ toolchain: PENDING
 commit:   PENDING
 date:     PENDING
 pending:  integration/p0-merge is a new tree (main + three feature lines). The last canonical figure was measured on a tree that no longer exists, so it is void rather than stale; the canonical CI job re-measures once this merge lands.
+blocking: run 34033051346 -- both Debug jobs failed on the VlaPlant.FasterThanRealtime wall-clock budget (2171 ms vs 500 ms). Build-configuration budget, not a physical reference; split per configuration in Q13-e. Canonical figures stay unwritten until all five jobs pass three times in a row.
 excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: ergaccess (optional external dependency not installed -- VDSIM_WITH_ERGACCESS=OFF)
