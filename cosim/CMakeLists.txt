@@ -113,19 +113,25 @@ if(Python3_FOUND)
     set_tests_properties(vla_plant PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/build/python:${CMAKE_SOURCE_DIR}/python")
-    add_test(NAME gui_v3_api_smoke
-        COMMAND ${Python3_EXECUTABLE}
-            ${CMAKE_SOURCE_DIR}/tests/scripts/test_gui_v3_api_smoke.py)
-    set_tests_properties(gui_v3_api_smoke PROPERTIES
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/build/python:${CMAKE_SOURCE_DIR}/python:${CMAKE_SOURCE_DIR}/cosim:${CMAKE_SOURCE_DIR}/gui")
-    add_test(NAME gui_v3_e2e
-        COMMAND ${Python3_EXECUTABLE}
-            ${CMAKE_SOURCE_DIR}/tests/scripts/test_gui_v3_e2e.py)
-    set_tests_properties(gui_v3_e2e PROPERTIES
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        TIMEOUT 180
-        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/build/python:${CMAKE_SOURCE_DIR}/python:${CMAKE_SOURCE_DIR}/cosim:${CMAKE_SOURCE_DIR}/gui")
+    # GUI v3 is a deferred (node-stack) component. Its tests are excluded from
+    # the canonical `validation` preset as a component, not one target at a
+    # time, and are listed by name on the `excluded:` lines of
+    # docs/VALIDATION.md (07_p0_demo.md 6.4(2)).
+    if(VDSIM_BUILD_GUI_V3_TESTS)
+        add_test(NAME gui_v3_api_smoke
+            COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_SOURCE_DIR}/tests/scripts/test_gui_v3_api_smoke.py)
+        set_tests_properties(gui_v3_api_smoke PROPERTIES
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/build/python:${CMAKE_SOURCE_DIR}/python:${CMAKE_SOURCE_DIR}/cosim:${CMAKE_SOURCE_DIR}/gui")
+            add_test(NAME gui_v3_e2e
+                COMMAND ${Python3_EXECUTABLE}
+                    ${CMAKE_SOURCE_DIR}/tests/scripts/test_gui_v3_e2e.py)
+            set_tests_properties(gui_v3_e2e PROPERTIES
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                TIMEOUT 180
+                ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/build/python:${CMAKE_SOURCE_DIR}/python:${CMAKE_SOURCE_DIR}/cosim:${CMAKE_SOURCE_DIR}/gui")
+    endif()
     add_test(NAME vla_plant_demo
         COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_SOURCE_DIR}/examples/vla_plant_demo.py)
@@ -190,10 +196,14 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 60
         ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/build/python:${CMAKE_SOURCE_DIR}/python")
-    add_test(NAME cmrosif_compat
-        COMMAND ${Python3_EXECUTABLE}
-            ${CMAKE_SOURCE_DIR}/tests/scripts/test_cmrosif_compat.py)
-    set_tests_properties(cmrosif_compat PROPERTIES
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/cosim")
+    # Registered only when its driver script is present in the tree: the CarMaker
+    # ROS interface compatibility check ships with the optional cmrosif bridge.
+    if(EXISTS ${CMAKE_SOURCE_DIR}/tests/scripts/test_cmrosif_compat.py)
+        add_test(NAME cmrosif_compat
+            COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_SOURCE_DIR}/tests/scripts/test_cmrosif_compat.py)
+        set_tests_properties(cmrosif_compat PROPERTIES
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/cosim")
+    endif()
 endif()

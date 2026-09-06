@@ -70,9 +70,12 @@ Source for the script: [`examples/quickstart.py`](examples/quickstart.py) — us
 
 ## From source
 
-Prerequisites: a C++17 compiler, CMake ≥ 3.20, Python ≥ 3.10.
-- Linux: `g++ ≥ 9` or `clang ≥ 10`.
+Prerequisites: a C++17 compiler, CMake ≥ 3.16, Python ≥ 3.10.
+- Linux: `g++ ≥ 9` or `clang ≥ 10`. CI builds gcc-11 and clang-14 on Ubuntu 22.04.
 - Windows: Visual Studio 2019+ with "Desktop development with C++" (MSVC).
+- Building the tree needs CMake ≥ 3.16, but the canonical validation run goes
+  through `CMakePresets.json` (preset schema v3), which needs **CMake ≥ 3.21** —
+  an older CMake builds VDSim fine and simply cannot read the preset.
 
 Python package (editable / local wheel build):
 ```bash
@@ -84,7 +87,13 @@ Full C++ tree (tests, real-time runtime, FMI, CARLA bridge):
 ```bash
 cmake -B build -DVDSIM_BUILD_PYTHON=ON          # add -G Ninja on Linux
 cmake --build build --config Release            # -j on Linux
-ctest --test-dir build -C Release               # 328/328 ; binaries in build/bin/
+cd build && ctest -C Release                    # binaries in build/bin/
+```
+The canonical suite count lives in one place only — [docs/VALIDATION.md](docs/VALIDATION.md).
+Reproduce it with the pinned preset:
+```bash
+cmake --preset validation && cmake --build --preset validation
+ctest --preset validation
 ```
 
 ## Run an experiment in Python (write your own controller)

@@ -27,6 +27,40 @@ the last section.
 Note: ISO 3888-2 DLC@60 not meeting the 1.0 m gate is a default-preset
 vehicle/controller property, not a sim defect (see "Notes on specific results").
 
+## Test-suite currency
+
+The suite count below is the only number in this document that is machine-checked
+(`scripts/check_validation_currency.py`, run as the `validation_currency` ctest).
+It records the **canonical configuration only** -- the `validation` CMake preset.
+Counts measured in any other configuration are deliberately not recorded here, so
+that one number cannot drift against another.
+
+`commit:` is the sha of the tree that was *measured*; this document is a
+descendant of it, so the gate accepts the recorded commit when it is that
+sha or an ancestor of it. Ancestry alone is not enough: the registration
+surface (`CMakePresets.json`, every `CMakeLists.txt`, `cmake/**`) has to
+be unchanged between that sha and the measured tree, because those files
+decide which tests exist. Test sources are outside that surface -- their
+effect is caught by the passed/total comparison instead. `toolchain:` pins
+the CMake that performed the
+measurement -- a toolchain bump is a re-measurement trigger, so the new
+version and the new numbers have to land in the same commit.
+
+<!-- VALIDATION-CURRENCY BEGIN -->
+```text
+tests:    PENDING
+config:   cmake --preset validation && cmake --build --preset validation && ctest --preset validation
+presets:  PENDING
+toolchain: PENDING
+commit:   PENDING
+date:     PENDING
+pending:  integration/p0-merge is a new tree (main + three feature lines). The last canonical figure was measured on a tree that no longer exists, so it is void rather than stale; the canonical CI job re-measures once this merge lands.
+excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
+excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
+excluded: ergaccess (optional external dependency not installed -- VDSIM_WITH_ERGACCESS=OFF)
+```
+<!-- VALIDATION-CURRENCY END -->
+
 ## Validation layers
 
 1. **Analytic** — closed-form results the model must reproduce (linear bicycle
