@@ -165,7 +165,7 @@ agents:                                           # (= 현재 fleet)
     vehicle:                                      # 차량 = 부품(blueprint+parts) + 센서
       blueprint: vehicle.sedan_comfort            # 🟢 완성 레시피(모든 슬롯 채움)
       parts: { tire: tire.sport_grip }            # 🟢 그 위 슬롯 override(diff). 없으면 blueprint 원본
-      sensors:                                    # 🔴 차량 안 (mount = 위치+자세 pose)
+      sensors:                                    # 🟢 파싱/저장 (mount = 위치+자세 pose) — 아래 §2.3.1
         - { id: gnss, type: gnss, mount: { pos: [1.4,0,1.0], rpy: [0,0,0] }, rate: 10 }
         - { id: cam,  type: camera, mount: { pos: [1.6,0,1.2], rpy: [0,-0.05,0] }, rate: 30 }
     spawn: { x: -15, y: -1.5, yaw: 0, vx: 12 }    # 🟢 (현재 x0/y0/z0/yaw0/vx0)
@@ -181,13 +181,109 @@ control 의미(런타임 무관): action 을 sim core 의 `SimSession::set_input
 blueprint vs parts: blueprint = base 레시피, parts = 그 위 슬롯 patch. materialize 가
 `blueprint + parts → resolved vehicle.yaml/tire.yaml` 로 합친다.
 
-> 현재 구현은 평평한 `fleet:` (agent=blueprint+pose+control)이고, 위 `agents.vehicle.sensors`
-> / `path`(trajectory 파일) / `map` / scenario-level `sim`·`comms` 는 단계적으로 추가(🔴).
-> 계층 자체는 위가 확정.
+> 현재 구현은 평평한 `fleet:` (agent=blueprint+pose+control)이고, 위 `path`(trajectory 파일)
+> / `map` / scenario-level `sim`·`comms` 는 단계적으로 추가(🔴). `agents.vehicle.sensors`
+> 는 파서까지 들어왔다(§2.3.1). 계층 자체는 위가 확정.
+
+### 2.3.1 `sensors:` — 에이전트 센서 선언 🟢(YAML→WorldScenario 파서) / 🔴(렌더 커플링)
+
+`fleet[].sensors`(= `agents.vehicle.sensors`)를 `cosim/world_scenario.cpp` 가 파싱해
+`VehicleSpawn` 에 싣는다. 한 항목이 서로 다른 두 가지를 동시에 나른다:
+
+- **노이즈** `noise_std`/`bias`/`bias_rw` → `VehicleSpawn::sensors` (`vdsim::SensorParams`,
+  신호 그룹 단위) → 시뮬레이션에 **실제로 적용된다**.
+- **장착** `id`/`type`/`mount{pos,rpy}`(또는 `mount:[x,y,z]`+`yaw`)/`rate`/`params` → `VehicleSpawn::scene_sensors`
+  (`SceneSensor`) → **파싱해서 저장하는 데까지만**. mount pose 를 읽는 소비자는 아직 없고
+  (향후 렌더/센서 프레임 커플링 🔴), 지금은 시뮬 결과에 아무 영향을 주지 않는다.
+
+세 가지 형태를 받는다:
+
+```yaml
+sensors:                                   # (1) 목록형 — §2.3 의 정식 형태
+- { id: gnss_roof, type: gnss,   mount: { pos: [0.2,0,1.42], rpy: [0,0,0] },    rate: 10, noise_std: 0.3 }
+- { id: cam_front, type: camera, mount: { pos: [1.6,0,1.2],  rpy: [0,-0.05,0] }, rate: 30, params: { fov_deg: 90 } }
+- { id: gnss_b,    type: gnss,   mount: [0.2,0,1.42], yaw: 15, rate: 10, noise_std: 0.3 }   # builder 표기
+
+sensors:                                   # (2) suite 형 — enabled/seed 까지 지정
+  enabled: false
+  seed: 42
+  list:
+  - { id: gnss, type: gnss, mount: { pos: [1.4,0,1.0] }, rate: 10 }
+
+sensors: configs/sensors/noisy.yaml        # (3) SensorParams 파일 경로 (노이즈만, mount 없음)
+```
+
+- `type`: `gnss`·`gnss_pos`·`gnss_vel`·`imu`·`imu_accel`·`imu_gyro`·`wheel_speed`·`steer`
+  ·`camera`·`lidar`. `camera`/`lidar` 는 코어에 계측 모델이 없어 **장착 선언 전용**이다.
+  노이즈 키를 줘도 값 검증만 하고 **버린다**(먹일 계측 모델이 없다) — builder 는 타입과
+  무관하게 항상 `noise_std` 를 붙이므로 에러로 막지 않는다.
+- `mount` 는 두 표기를 모두 받는다:
+  - `mount: { pos: [x,y,z], rpy: [r,p,y] }` — 정식 형태. `pos` [m] = 차체 좌표(x 전방 /
+    y 좌 / z 상), `rpy` [rad] = roll·pitch·yaw. 둘 다 선택, 생략 시 0.
+  - `mount: [x,y,z]` + `yaw: <deg>` — builder 가 내보내는 형태(`builder/README.md`,
+    `builder/index.html` 의 `addSensor()`). `yaw` 는 **도(deg)** 단위이고 라디안으로 바꿔
+    `mount_rpy[2]` 에 들어간다. `yaw` 와 `mount.rpy` 를 함께 주면 에러(같은 각을 두 번 지정).
+- `rate` [Hz] 는 선언값일 뿐 다운샘플링은 아직 없다(0/생략 = 미지정).
+- `params:` 는 타입별 확장 knob 을 담는 숫자 map(`fov_deg` 등). 역시 저장만 한다.
+- `id` 생략 시 `type` 이 id 가 된다. **명시한** id 는 한 차량 안에서 유일해야 하고 중복은 에러다.
+  생략해서 자동으로 붙은 id 는 표시용 라벨이라 겹쳐도 된다(`{type: gnss}` 두 개 OK, 뒤 항목의
+  노이즈가 이긴다). `id` 는 스칼라 원문 그대로다 — `id: true` → `"true"`, `id: 12` → `"12"`.
+- **덮어쓰기 규칙**: 차량별 `sensors` 블록이 시나리오 레벨 `sensors:`(파일 경로)를 덮는 것은
+  그 블록이 **노이즈를 실제로 말했을 때뿐**이다 — 계측 모델이 있는 타입의
+  `noise_std`/`bias`/`bias_rw`, suite 형의 `enabled`/`seed`, 또는 (3) 파일 형. mount·id·rate·
+  params 만 선언한 블록은 `scene_sensors` 만 채우고 `VehicleSpawn::sensors` 를 비워 두므로 그
+  차량은 시나리오 레벨 파일을 그대로 쓴다. 즉 **mount 를 하나 적었다는 이유로 옆 차와 다른
+  (깨끗한) 센서로 도는 일이 없다**. (`effective_sensor_params()`, `cosim/world_scenario.hpp`)
+- **그룹이 겹칠 때**: 노이즈 키가 없는 항목은 `SensorParams` 에 아무것도 쓰지 않는다. 그래서
+  `[{type: gnss, noise_std: 0.5}, {type: gnss_pos}]` → `gnss_pos = gnss_vel = 0.5`,
+  `[{type: imu, noise_std: 0.05}, {type: imu_gyro, mount: {...}}]` → `imu_accel = imu_gyro = 0.05`.
+  노이즈 키가 **있는** 항목은 예전처럼 그룹을 통째로 덮는다:
+  `[{type: gnss, noise_std: 0.5}, {type: gnss_pos, noise_std: 0.1}]` → `gnss_pos=0.1`, `gnss_vel=0.5`.
+  (⚠️ 시뮬 출력이 바뀌는 지점이다. 예전에는 뒤의 장착 전용 항목이 기본값 0 을 써 넣어
+  `gnss_pos=0` / `imu_gyro=0` 이 됐다. 장착 선언이 노이즈를 지우던 쪽이 버그라 고쳤다.)
+- 숫자 검증: 모든 숫자는 유한해야 한다(NaN/Inf 거부 — `mount` 성분, `rate`, `noise_std`,
+  `bias`, `bias_rw`, `params.*`). 추가로 `rate >= 0`, `noise_std >= 0`. `bias`/`bias_rw` 는
+  부호 제한 없이 유한하기만 하면 된다.
+- (3) 의 상대경로는 **먼저 프로세스 CWD 기준**으로 찾고, 없으면 **scene 파일이 있는 디렉터리
+  기준**으로 다시 찾는다(그래서 리포 루트에서 돌리는 `configs/sensors/noisy.yaml` 도, scene 옆에
+  둔 `my_sensors.yaml` 도 둘 다 열린다). 둘 다 실패하면 시도한 경로와 yaml-cpp 의 원인
+  메시지(파일·줄·열)를 함께 던진다.
+- **잘못된 입력은 전부 hard error**: 조용히 무시하지 않고 차량 번호와 문제 키를 지목해 throw
+  한다. 정확히 무엇이 막히는지는 바로 아래 §2.3.1.1.
+- 동작 샘플: `configs/scenes/two_vehicle_race.yaml` (0번 차량이 mount pose 4개를 선언. 노이즈
+  키가 없으므로 시나리오 레벨 설정을 덮지 않는다).
+
+#### 2.3.1.1 ⚠️ breaking change — 예전에 통과하던 `sensors:` 입력이 이제 로드를 막는다
+
+`feat(cosim): parse scene sensor mount pose/id/rate` 이전에는 `sensors:` 항목의 잘못된 값이
+대부분 **조용히 무시**됐다(그리고 `fleet:` 카탈로그 scene 에서는 `sensors:` 가 world YAML 로
+전달조차 되지 않아 아무 효과가 없었다). 지금은 아래 입력이 **로드를 중단시킨다**. 기존 scene
+이 여기 해당하면 고쳐야 한다:
+
+| 입력 | 이전 | 지금 |
+|---|---|---|
+| `type` 누락 | 그 항목을 무시 | throw `missing required key 'type'` |
+| `type` 이 스칼라가 아님 (`type: [gnss]`) | 무시 | throw `type must be one of the type names` |
+| 모르는 `type` (`radar`) | 무시 | throw `unknown type` |
+| 모르는 항목 키 (`noise_stdd`) | 무시 | throw `unknown key` |
+| 모르는 `mount` 키 (`position`) | 무시 | throw `unknown mount key` |
+| `mount` 가 map 도 3원소 시퀀스도 아님 / `pos`·`rpy` 원소가 3개가 아님 | 무시 | throw |
+| `yaw` 와 `mount.rpy` 동시 지정 | (해당 없음) | throw |
+| 숫자 자리에 숫자가 아닌 값 (`rate: fast`) | yaml-cpp 예외 또는 무시 | throw(키 지목) |
+| NaN/Inf 숫자, `rate < 0`, `noise_std < 0` | 그대로 통과(런타임 NaN/음수) | throw |
+| 값이 빈 `sensors:` / `sensors: ''` | 센서 없음 취급 | throw |
+| `list:` 없는 map 형 `sensors:` / suite 형의 모르는 키 | 센서 없음 취급 | throw |
+| 항목이 map 이 아님 (`- gnss`) | 무시 | throw `entry must be a map` |
+| 시퀀스·map·스칼라 어느 것도 아닌 `sensors:` | 무시 | throw |
+| **명시한** id 중복 | 마지막 항목이 이김 | throw `duplicate sensor id` |
+| 읽을 수 없는 sensors 파일 경로 | yaml-cpp 예외 | throw(원인 메시지 중첩) |
+
+반대로 **에러가 아닌 것**(허용): builder 표기 `mount: [x,y,z]` + `yaw:`, `camera`/`lidar` 의
+`noise_std`/`bias`/`bias_rw`(검증 후 무시), `id` 를 생략한 같은 `type` 의 중복 선언.
 
 ---
 
-## 3. 실시간 통신 설정 — comms/*.yaml 🟢(vds1) / 🔴(json·nmea·sensor)
+## 3. 실시간 통신 설정 — comms/*.yaml 🟢(vds1·json·nmea_gga) / 🔴(sensor.*)
 
 realtime 모드에서 **데이터가 어디로 흐르는지** 선언. comms 는 **시나리오 단위** — scene 의
 `comms: <name>` 키가 `configs/comms/<name>.yaml` 를 가리킨다(에이전트별이 아니라 시나리오가 소유).
@@ -199,9 +295,16 @@ channels:
   - source: 0.state              # <id>.state | ego.state(=첫 차)
     template: vds1               # 🟢 VDS1 바이너리 (cosim/cosim_protocol.hpp)
     to: [ {ip: 127.0.0.1, port: 7100}, {ip: 127.0.0.1, port: 7101} ]
-  - source: 0.sensor.gnss        # 어느 센서 → 소비자 (🔴 미구현, 경고 후 skip)
+  - source: 0.state              # 🟢 JSON 한 줄 (HTTP/MQTT 브리지용)
+    template: json
+    to: [ {ip: 127.0.0.1, port: 7100} ]
+  - source: 0.state              # 🟢 NMEA 0183 $GPGGA ("*HH\r\n" 종단)
     template: nmea_gga
+    origin: { lat: 37.5665, lon: 126.9780, alt: 38.0 }   # ENU 미터의 측지 원점(선택, 기본 0/0/0)
     to: [ {ip: 10.0.0.5, port: 9001} ]
+  - source: 0.sensor.gnss        # 센서 소스 지정 (🔴 미구현, 경고 후 skip)
+    template: nmea_gga
+    to: [ {ip: 10.0.0.5, port: 9002} ]
   # 수신 RX: 포트에서 listen → 규약 → (vehicle_id 헤더로) 어느 제어 (fan-in)
   - direction: in
     template: vds1_cmd           # 🟢 패킷 헤더 vehicle_id 로 대상 에이전트 선택
@@ -211,7 +314,28 @@ channels:
 - **TX(송신)** = `source`(`<id>.state`) → `template`(규약) → `to`(ip:port, fan-out).
 - **RX(수신)** = `direction: in` + `listen.port` → `template` → 제어 입력 (fan-in). 어느 에이전트인지는 VDS1 cmd 헤더의 `vehicle_id` 로 결정.
 
-**구현 상태**: `vdsim_realtime` 가 comms.yaml 을 실행하는 라우터(🟢) — TX `<id>.state`+`vds1` fan-out, RX `vds1_cmd` listen-port fan-in 동작. comms 키가 없으면 레거시(단일 cmd-in/state-out CLI 플래그)로 fallback. `json`/`nmea_gga` template 및 `sensor.*` source 는 아직 미구현(🔴) — 경고 찍고 skip.
+**구현 상태**: `vdsim_realtime` 가 comms.yaml 을 실행하는 라우터(🟢) — TX `<id>.state` 를 `vds1`(=`vds1_state`) / `json` / `nmea_gga` 로 fan-out, RX `vds1_cmd` listen-port fan-in 동작. comms 키가 없으면 레거시(단일 cmd-in/state-out CLI 플래그)로 fallback. 그 외 template 이름과 `sensor.*` source 는 아직 미구현(🔴) — 경고 찍고 skip.
+
+`nmea_gga` 세부(구현: `cosim/comms_templates.hpp`, 샘플: `configs/comms/json_nmea.yaml`):
+- **origin**: 채널별 선택 필드 `origin: {lat, lon, alt}`. 시뮬 ENU 미터(X east / Y north / Z up, `core/include/vdsim/coordinate.hpp`)의 측지 기준점. 미지정 시 (0, 0, 0).
+- **변환**: WGS84 정밀 폐형해 — ENU → ECEF (origin ECEF + ENU 회전행렬) → geodetic (Bowring + Newton). 근사가 아니므로 **위도 의존성이 없다**. lat∈[-90,90], lon∈(-180,180] 로 항상 정규화된다.
+  - **정확도 기준은 해석적(analytic) ECEF**: 결과 (lat, lon, h) 를 다시 ECEF 로 정변환해 60자리 정밀도로 계산한 기준점과 비교했을 때, 234,234 점 격자(datum lat −90~90 극점 포함, lon −180~180 날짜변경선 포함, datum alt 0/38/8848 m, east/north ±1 m~±1e6 m, up −1000~+1e4 m)에서 **최대 5.2e-9 m**.
+  - **PROJ 는 기준이 아니라 교차검증**이다. `+proj=topocentric` / `+proj=cart` (pyproj 3.5 / PROJ 9.2) 와는 **결과 타원체고(HAE)가 약 2 km 이하이고 datum 위도가 극점을 벗어난(|lat0| < 89°) 범위에서 6e-8 m 이내**로 일치한다 — 수평 ENU 100 km(접평면 상승으로 HAE ≈ 800 m)까지 포함해 지상 차량 시나리오 전 구간이 여기 들어간다. 두 단서는 모두 필요하고, 벌어지는 쪽은 두 경우 모두 **PROJ** 다.
+    - **datum 이 극점(|lat0| ≥ 89°)**: 일치 범위가 **2e-7 m** 로 넓어진다(실측 최댓값 1.5832e-07 m — lat0 −90, lon0 −180, alt0 0, e −1, n 1, up −1000). 같은 점에서 60자리 해석적 기준 대비 이 구현은 3.3e-10 m, PROJ 는 1.581e-7 m 다. 초과분은 datum 이 정확히 자전축 위(±90°)일 때만 나타난다 — 동일 격자에서 lat0 ±89.9° 는 2.8e-9 m.
+    - **HAE 2 km 초과**: PROJ 의 `cart` 역변환이 벌어진다. HAE 11 km 에서 1.4e-6 m, HAE 165 km(lat0 60, e=n=−1000 km, up=10 km)에서 3.4e-4 m 이며, 같은 점에서 PROJ 자신이 해석적 기준과 동일한 크기로 어긋난다(이 구현은 여전히 ~2.6e-9 m).
+    따라서 PROJ 수치는 성립 범위(고도·위도)를 반드시 함께 적어야 하고, 이 구현의 오차 상한이 아니다.
+  - 직전 버전은 등거리원통(equirectangular) 근사(`lon = lon0 + east/(N·cos lat0)`)로, 서울 datum(lat 37.5665) 기준 10 km 에서 6.75 m / 100 km 에서 678 m 오차였다 — 문서에는 0.1 m / 100 m 로 적혀 있었으나 그것은 적도 근처에서만 성립하는 값이다.
+  - 남은 오차는 구현이 아니라 ENU **정의** 자체다: 접평면이므로 수평 거리 d 에서 타원체 위로 ~d²/(2R) 만큼 뜨고(10 km 에서 7.8 m, GGA 고도에 반영됨), 진짜 측지선 대비 ~d³/(3R²) 차이가 남는다(10 km 에서 8 mm, 100 km 에서 8.2 m). 고도는 타원체고(HAE)이며 geoid 모델은 없다.
+- **비정상 상태 처리**: 솔버가 발산해 NaN/Inf, 비상식적으로 큰 ENU 오프셋(|offset| > 1e8 m), 또는 **역변환이 유일하지 않은 지점**(지구 중심 근처 — 타원체 evolute 위/내부)이 들어오면, 실제 수신기처럼 **no-fix 문장**(quality 0, 00 satellites, 99.9 HDOP, 빈 위치/고도 필드)을 내보낸다. quality 1 문장에 검증되지 않은 필드가 실리는 경로는 없다.
+  - 폐형해는 결과를 ECEF 로 되돌려 입력점과 대조한 뒤에만 성공(`Geodetic::ok`)으로 보고한다. 실패 시 lat/lon/alt 는 NaN 이며, 기본 생성된 `Geodetic` 역시 `ok=false` + NaN 이다.
+  - **evolute 판정은 기하학적 판정**이다(`inside_evolute()`): 자전축 위뿐 아니라 축을 벗어난 점도 포함해, 자오면 좌표 (p, z) 에 대해 astroid 부등식 `(p/42697.7)^(2/3) + (|z|/42841.3)^(2/3) ≤ 1` 을 직접 평가한다. 왕복(round-trip) 검사로는 이 영역을 걸러낼 수 없다 — 내부의 점 하나에 대해 **네 개의 위도 해가 모두 입력 ECEF 를 정확히 재현**하기 때문이다. 실제로 예전에는 축 위(p ≈ 0)에서만 판정해서, 예컨대 datum (0,0,0) + `m_gnss_x=-1595.7, m_gnss_y=23172.3, z=-6380182.2`(ECEF 원점에서 23.3 km)가 **지구 중심의 quality 1 · 위성 12 · HDOP 0.9 문장**으로 나갔다. 이 영역은 타원체면에서 약 6335 km 아래(지오센터 반경 42.9 km 이내)라 정상 차량 상태와는 무관하다.
+  - NMEA 각도 필드 범위 검사는 필드별 상한을 쓴다 — 위도(2자리) 90°, 경도(3자리) 180°. 예전에는 둘 다 180° 로 검사해서, 예컨대 datum 서울 + `z = -6.35e6` m 같은 발산 상태가 위도 −163.55° 를 `16333.1094`(GGA 규격 9자 자리에 10자)로 실어 **체크섬이 맞는 quality 1 문장**으로 나갔다.
+  - 과거에는 `static_cast<int>(NaN)` UB 로 필드 안에 공백이 들어간 문장이 체크섬까지 맞은 채 전송됐다.
+- **위치 소스**: 측정 GNSS(`m_gnss_x/_y`). GGA 는 수신기 출력이므로 센서 노이즈가 그대로 반영된다. 노이즈 미설정 시에도 `SensorModel` 이 항등 경로로 truth 를 채우므로 값이 비지 않는다. 고도만 truth `z`(GNSS 고도 채널 모델 없음).
+- **UTC 필드**: 시스템 wall clock (STATE 의 `timestamp` 는 steady_clock 기반 monotonic 이라 UTC 가 아님). 초는 출력 정밀도(1/100 s)로 **먼저 반올림한 뒤** 초→분→시→날 자리올림을 하므로 `125960.00` 같은 불법 시각은 나오지 않는다.
+- **satellites / HDOP / geoid separation**: 위성·DOP 모델이 없어 고정 placeholder(12 / 0.9 / 0.0).
+
+`json` 세부: 모든 숫자 필드는 유한값이 아니면 RFC 8259 의 `null` 로 출력된다(`nan`/`inf` 는 JSON 이 아니라 `json.loads`·`JSON.parse` 모두 거부한다). 발산 시 프레임을 버리지 않고 `null` 로 신호하는 이유는, 조용히 사라진 데이터그램은 단순 UDP 손실과 구분되지 않기 때문이다.
 
 ---
 
@@ -226,6 +350,8 @@ channels:
 | 시뮬 세팅(rate/dt·time_scale·integrator·duration) | 🟡 | §1.5, 현재 분산 / 통합 `sim:` 블록은 🔴 |
 | per-agent `control{internal|external}` | 🟡 | §2.2 (이번 추가; internal=speed-hold v1) |
 | comms.yaml 라우터 — vds1 TX fan-out / RX fan-in | 🟢 | §3, `vdsim_realtime` (scene `comms:` 참조) |
-| comms json·nmea_gga template / sensor.* source | 🔴 | §3, 경고 후 skip |
+| comms json·nmea_gga TX template (+ 채널별 `origin`) | 🟢 | §3, `configs/comms/json_nmea.yaml` |
+| comms sensor.* source | 🔴 | §3, 경고 후 skip |
 | scene `path`(trajectory 파일)/`maneuver`/`run{mode}` | 🔴 | §2.3, SIM_CONFIG_ARCH |
-| agent `vehicle.sensors`(mount pose) / map-path CTE | 🔴 | §2.3, SIM_CONFIG_ARCH §7 |
+| agent `vehicle.sensors` 파서(mount pose→`WorldScenario`, 키·타입·유한성·범위 검증 포함) | 🟢 | §2.3.1 / §2.3.1.1, `cosim/world_scenario.cpp` |
+| mount pose 를 쓰는 렌더/센서프레임 커플링 / map-path CTE | 🔴 | §2.3.1, SIM_CONFIG_ARCH §7 |

@@ -1,6 +1,7 @@
 # Build directories
 build/
 build-*/
+build_*/
 out/
 cmake-build-*/
 
@@ -76,6 +77,7 @@ apps/jump_demo/*/frames/
 *.tir
 # Exception: public synthetic coefficients for the Chrono Pac02 parity gate (no measured data)
 !external/chrono_parity/sample_pac02.tir
+!configs/parts/tire/ioniq5_pac2002.tir
 # Chrono parity build artifacts (the reference CSV IS committed; these are not)
 external/chrono_parity/build/
 external/chrono_parity/_pac02_chrono.json
@@ -91,3 +93,11 @@ apps/validation/results/
 # Catalog: generated resolve cache + GUI-runtime-registered package stub
 configs/.resolve_cache/
 configs/catalog/packages/gui_custom/
+
+# Per-agent / personal tooling config (not part of the open-core product)
+AGENTS.md
+.cursor/rules/00-personalize.mdc
+.cursor/rules/copyedit-en.mdc
+.cursor/rules/copyedit-ko.mdc
+.cursor/rules/over-eng-review.mdc
+.cursor/rules/temp-debt.mdc

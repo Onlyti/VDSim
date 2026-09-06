@@ -37,6 +37,14 @@ class WaypointPath:
         return max(-0.6, min(0.6, math.atan(2.0 * dy / l2 * wb))), near
 
 
+def circle_pts(cx=0.0, cy=0.0, R=40.0, n=64):
+    pts = []
+    for i in range(n):
+        t = 2 * math.pi * i / n
+        pts.append((cx + R * math.cos(t), cy + R * math.sin(t)))
+    return pts
+
+
 def fig8_pts(cx=0.0, cy=0.0, R=20.0, n=80):
     pts = []
     for i in range(n):

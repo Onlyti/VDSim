@@ -5,6 +5,8 @@
 
 #include "vdsim/interfaces.hpp"
 
+#include <algorithm>
+#include <limits>
 #include <memory>
 
 namespace vdsim {
@@ -25,6 +27,9 @@ public:
         out.Fx = C_kappa_ * in.kappa * in.mu_long;
         out.Fy = -C_alpha_ * in.alpha * in.mu_lat;
         out.Mz = 0.0;
+        out.mu_peak = std::max(in.mu_long, in.mu_lat);
+        out.alpha_peak = std::numeric_limits<double>::infinity();
+        out.kappa_peak = std::numeric_limits<double>::infinity();
         return out;
     }
 

@@ -31,6 +31,14 @@ def main():
         for v in doc["vehicles"]:
             assert Path(v["vehicle"]).is_file()
             assert Path(v["tire"]).is_file()
+        # scene sensor declarations (mount pose) must survive materialize untouched,
+        # or the cosim parser never sees them (CONFIG_GUIDE 2.3).
+        s0 = doc["vehicles"][0].get("sensors")
+        assert s0, "fleet[0].sensors must reach the world YAML"
+        assert [x["id"] for x in s0] == ["gnss_roof", "imu_cg", "enc", "cam_front"]
+        assert s0[0]["mount"]["pos"] == [0.20, 0.0, 1.42], s0[0]
+        assert s0[3]["mount"]["rpy"] == [0, -0.05, 0], s0[3]
+        assert "sensors" not in doc["vehicles"][1]
 
         l3_out = Path(td) / "l3_world.yaml"
         materialize_scene_file(run_cfg, l3_out)

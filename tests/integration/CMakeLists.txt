@@ -22,9 +22,13 @@ add_executable(vdsim_integration_tests
     test_user_modules.cpp
     test_module_plugin.cpp
     test_multi_vehicle.cpp
+    test_vla_plant.cpp
     test_per_axle_tire.cpp
     test_per_wheel_tire.cpp
     test_low_speed_t3.cpp
+    test_d0_flat_contact_baseline.cpp
+    test_contact_frame_dynamics.cpp
+    test_d2_grade_bank.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../cosim/scene_loader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../cosim/world_scenario.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../parity/test_chrono_pac02_parity.cpp

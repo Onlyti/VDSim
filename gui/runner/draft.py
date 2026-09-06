@@ -530,3 +530,40 @@ class DraftMixin:
             self.import_scene_v3(data)
             self._rebuild_if_running()
         return self.config()
+
+    def apply_scenario_template(self, key):
+        allowed = ("empty", "figure8", "straight", "skidpad")
+        if key not in allowed:
+            raise ValueError(f"unknown template '{key}'")
+        with self.lock:
+            if self.cfg["running"]:
+                raise ValueError("stop simulation before applying a template")
+            self.fleet_overrides = {}
+            row = self._default_fleet_spec(0)
+            strip_fleet_susp_if_not_l3(row)
+            self.fleet_spec = [row]
+            self.live_vid = 0
+            self._ensure_ports()
+            self._sync_live_from_fleet()
+            self.cfg["road_mu"] = 1.0
+            self.cfg["road_grade"] = 0.0
+            self.cfg["road_bank"] = 0.0
+            self.cfg["road_mu_right"] = -1.0
+            self.cfg["road_boundary"] = 0.0
+            self.cfg["road_rough_amp"] = 0.0
+            self.cfg["road_rough_wl"] = 4.0
+            if key == "empty":
+                self.path = WaypointPath([(0.0, 0.0), (30.0, 0.0)])
+                self.path_preset = "custom"
+                self.cfg["v_target"] = 10.0
+            elif key == "figure8":
+                self.set_path_preset("figure8")
+                self.cfg["v_target"] = 10.0
+            elif key == "straight":
+                self.set_path_preset("straight")
+                self.cfg["v_target"] = 15.0
+            else:
+                self.set_path_preset("skidpad")
+                self.cfg["v_target"] = 12.0
+            if not self.cfg["running"]:
+                self.latest = self._setup_snapshot()

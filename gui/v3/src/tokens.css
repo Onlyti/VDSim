@@ -1,0 +1,21 @@
+:root {
+  --bg: #f7f8fa;
+  --surface: #ffffff;
+  --border: #e2e5eb;
+  --ink: #1a1d24;
+  --dim: #6b7280;
+  --acc: #01a0e9;
+  --acc-dim: #0188c7;
+  --ok: #16a34a;
+  --warn: #f59e0b;
+  --err: #dc2626;
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --fs-xs: 10px;
+  --fs-sm: 11px;
+  --fs-md: 13px;
+  --fs-lg: 15px;
+  --radius: 6px;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --nav-h: 44px;
+  --status-h: 28px;
+}

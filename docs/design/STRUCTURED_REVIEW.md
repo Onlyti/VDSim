@@ -12,6 +12,7 @@ implementations minimal after review.
 | Lane | Scope | Self-review hook |
 |------|--------|------------------|
 | **A — Validation** | ISO/Chrono parity gates | `ctest -R 'ChronoKcParity|IsoBaseline'` |
+| **A — Plant** | `python/vdsim_plant.py`, `VLA_THESIS_PLANT.md`, `test_vla_plant*` | `ctest -R VlaPlant`; `python3 tests/scripts/test_vla_plant.py` |
 | **B — Core session** | `make_direct_control_session`, CmdL1, `TireSetup`, friction ground | `ctest -R 'PerWheel|PerAxle|VlaPlant|SimSession'` |
 | **C — Catalog/GUI** | `assembly.py`, `part_cards.py`, `catalog_bridge.py` | `ctest -R 'catalog|assembly|blueprint|multi_vehicle'` |
 
@@ -59,6 +60,6 @@ After bug fixes:
 ## Acceptance
 
 - All lane tests **PASS**
-- Full `ctest` green (388 on `main`, 402 on `VDSim-Thesis`)
+- Full `ctest` green (count PENDING — re-measured on the integration tree)
 - Review report committed or attached to PR
 - No ISO/benchmark number re-baseline unless explicitly approved

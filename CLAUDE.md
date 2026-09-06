@@ -14,4 +14,4 @@
 
 ## 빌드
 - CMake (CMakeLists.txt). docs = mkdocs (github.io 배포)
-- 공통: ~/.claude/CLAUDE.md (wheel FL=0, ISO 8855)
+- 전역 규약: wheel index FL=0/FR=1/RL=2/RR=3, ISO 8855 RH (+x fwd, +y left, +z up) — 상세는 .cursor/rules/vdsim.mdc

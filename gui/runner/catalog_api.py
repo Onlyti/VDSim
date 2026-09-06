@@ -174,6 +174,27 @@ def catalog_part_import_kin(text: str, stem: str, label: str) -> dict:
     return save_user_kin_part(REPO, doc, kin)
 
 
+def catalog_kin_save(
+    doc: dict,
+    stem: str,
+    label: str,
+    *,
+    base_part_id: Optional[str] = None,
+) -> dict:
+    import yaml
+    from catalog.part_store import kin_yaml_to_susp_part, save_user_kin_part
+    from runner.config import REPO
+
+    text = yaml.safe_dump(doc, sort_keys=False)
+    clone = catalog_resolver().load_part(base_part_id) if base_part_id else None
+    part_doc, kin = kin_yaml_to_susp_part(text, stem, label, clone_from=clone)
+    if base_part_id and "gui_custom" in base_part_id:
+        part_doc["id"] = base_part_id
+        part_doc["label"] = str(label)
+    saved = save_user_kin_part(REPO, part_doc, kin)
+    return {"part_id": saved["part_id"], "label": saved.get("label", label), "part": saved}
+
+
 def catalog_part_delete(part_id: str) -> dict:
     from catalog.part_store import delete_user_part
     from runner.config import REPO

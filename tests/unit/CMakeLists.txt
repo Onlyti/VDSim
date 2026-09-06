@@ -20,9 +20,15 @@ add_executable(vdsim_unit_tests
     test_kinematic.cpp
     test_road_roughness.cpp
     test_lugre_tire_yaml.cpp
+    test_comms_templates.cpp
+    test_warn_throttle.cpp
+    test_contact_frame.cpp
 )
 
 target_link_libraries(vdsim_unit_tests PRIVATE vdsim_carla_plugin)
+
+# cosim/ is header-only for the wire protocol + TX templates (comms_templates.hpp).
+target_include_directories(vdsim_unit_tests PRIVATE ${CMAKE_SOURCE_DIR}/cosim)
 
 target_compile_definitions(vdsim_unit_tests PRIVATE
     VDSIM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")

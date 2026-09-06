@@ -113,6 +113,19 @@ if(Python3_FOUND)
     set_tests_properties(vla_plant PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/build/python:${CMAKE_SOURCE_DIR}/python")
+    add_test(NAME gui_v3_api_smoke
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_gui_v3_api_smoke.py)
+    set_tests_properties(gui_v3_api_smoke PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/build/python:${CMAKE_SOURCE_DIR}/python:${CMAKE_SOURCE_DIR}/cosim:${CMAKE_SOURCE_DIR}/gui")
+    add_test(NAME gui_v3_e2e
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_gui_v3_e2e.py)
+    set_tests_properties(gui_v3_e2e PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 180
+        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/build/python:${CMAKE_SOURCE_DIR}/python:${CMAKE_SOURCE_DIR}/cosim:${CMAKE_SOURCE_DIR}/gui")
     add_test(NAME vla_plant_demo
         COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_SOURCE_DIR}/examples/vla_plant_demo.py)
@@ -125,4 +138,55 @@ if(Python3_FOUND)
     set_tests_properties(control_ladder PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/build/python:${CMAKE_SOURCE_DIR}/python")
+    add_test(NAME trace_roundtrip
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_trace_roundtrip.py)
+    set_tests_properties(trace_roundtrip PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/python")
+    # The trace tests deliberately do NOT put build/python on the path: reading
+    # and rendering a trace must work where the compiled core cannot be built.
+    add_test(NAME trace_render
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_trace_render.py)
+    set_tests_properties(trace_render PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 180
+        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/python")
+    add_test(NAME trace_render_multi
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_trace_multi_render.py)
+    set_tests_properties(trace_render_multi PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 300
+        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/python")
+    add_test(NAME trace_horizons
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_trace_horizons.py)
+    set_tests_properties(trace_horizons PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 300
+        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/python")
+    # AC M1 is a standalone Python importer: synthetic data only, no core/KN5.
+    add_test(NAME ac_fast_lane_importer
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_ac_fast_lane_importer.py)
+    set_tests_properties(ac_fast_lane_importer PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 120
+        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/python")
+    # Text TX templates end-to-end: json + nmea_gga must reach a UDP socket.
+    add_test(NAME comms_tx_templates
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_comms_tx_templates.py)
+    set_tests_properties(comms_tx_templates PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 60
+        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/build/python:${CMAKE_SOURCE_DIR}/python")
+    add_test(NAME cmrosif_compat
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_cmrosif_compat.py)
+    set_tests_properties(cmrosif_compat PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/cosim")
 endif()

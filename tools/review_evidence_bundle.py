@@ -14,6 +14,7 @@ REPO = Path(__file__).resolve().parents[1]
 
 LANES = [
     ("validation", ["ChronoKcParity", "IsoBaseline"]),
+    ("plant", ["VlaPlant", "vla_plant"]),
     ("core_session", ["PerWheel", "PerAxle", "SimSession", "DragCoast"]),
     ("catalog", ["catalog", "assembly", "blueprint", "multi_vehicle"]),
 ]

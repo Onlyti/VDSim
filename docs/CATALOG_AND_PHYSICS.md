@@ -39,6 +39,27 @@ L2 is **not** “3-DOF Ackermann”: the chassis is planar 3-DOF (x, y, yaw); th
 ladder name **Seven-DOF** counts four wheel-spin states. Ackermann steering is one
 feature of L2, not the level name.
 
+## Computational cost per step
+
+**Benchmark** (ioniq5_awd, dt=5e-4, MF2002 tire, flat ground):
+
+| Level | Model | ms/step | Realtime factor |
+|-------|-------|--------:|-----------------|
+| **K** | Kinematic bicycle | 0.0005 | ~1000× |
+| **L1** | Bicycle | 0.0162 | ~31× |
+| **L2** | Seven-DOF | 0.0313 | ~16× |
+| **L3** | Fourteen-DOF | 0.0317 | ~16× |
+| **L4** | Hardpoint multibody | 0.0321 | ~15× |
+| **L5** | Free-3D stunt | 0.0354 | ~14× |
+
+**Notes:**
+- **K** has no tire slip / dynamics; ~30× faster than L1.
+- **L2–L4** are dominated by MF2002 tire evaluation; L3/L4 nearly identical (L4 hardpoint kinematics not yet wired to suspension geometry in this test).
+- **L5** adds 3D orientation + strut DAE (~10% slower than L4).
+- Measurement includes `SimSession.tick()` overhead (ground contact, actuator lag, sensor filtering).
+
+**Tool:** `python3 tools/bench_dynamics_levels.py` (Python L0–L4) + `build/bin/vdsim_bench_levels` (C++ L5).
+
 ## Running a scene
 
 ```bash

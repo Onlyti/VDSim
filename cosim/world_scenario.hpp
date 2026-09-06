@@ -1,8 +1,11 @@
 #pragma once
 
+#include "comms_templates.hpp"
 #include "vdsim/sensors.hpp"
 
+#include <array>
 #include <cstdint>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -50,6 +53,33 @@ struct StuntConfig {
     bool   rail_guide    {false};
 };
 
+/// @brief Mounted sensor declaration parsed from `agents.vehicle.sensors[]`.
+///
+/// This is the mounting half of a sensor entry: id, type, body-frame pose,
+/// sample rate, and type-specific numeric parameters. The measurement-noise
+/// half (`noise_std`, `bias`, and `bias_rw`) is stored separately in
+/// VehicleSpawn::sensors because vdsim::SensorParams models signal groups,
+/// not individual mounted devices.
+///
+/// @note The parser accepts both `mount: {pos: [...], rpy: [...]}` and the
+///       builder form `mount: [x,y,z]` plus `yaw` in degrees.
+/// @note Mount pose and rate are stored for future render/sensor-frame coupling;
+///       no current simulation component consumes them.
+struct SceneSensor {
+    std::string id;      // label ("gnss_roof"); defaults to `type` when omitted. Ids the
+                         // scene writes explicitly must be unique within a vehicle; a
+                         // defaulted one is a display label and may repeat.
+    std::string type;    // gnss | imu | wheel_speed | steer | camera | lidar, plus the
+                         // gnss_pos / gnss_vel / imu_accel / imu_gyro sub-signals
+    std::array<double, 3> mount_pos {{0.0, 0.0, 0.0}};  // body frame [m]: x fwd, y left, z up
+    std::array<double, 3> mount_rpy {{0.0, 0.0, 0.0}};  // body frame [rad]: roll, pitch, yaw
+    double rate {0.0};   // declared sample rate [Hz]; 0 = unspecified (core runs at sim rate)
+    // Type-specific knobs (camera fov_deg, lidar channels, ...) from an explicit
+    // `params:` sub-map. A map, not fields: the set differs per sensor type and is
+    // still growing. The well-known fields above stay typed.
+    std::map<std::string, double> params;
+};
+
 struct VehicleSpawn {
     uint32_t    id {0};
     std::string vehicle_yaml;
@@ -66,8 +96,16 @@ struct VehicleSpawn {
     // "internal": built-in controller (v1 = speed-hold cruise at vx0).
     std::string control {"external"};
     // Per-vehicle sensor noise spec (from agents.vehicle.sensors[] in the scene).
-    // When set, overrides the scenario-level RoadConfig.sensors file path.
+    // When set, overrides the scenario-level RoadConfig.sensors file path. Set only
+    // when the declaration actually specifies noise (a noise key on an entry that has
+    // a measurement model, an explicit enabled/seed, or the sensors-file form): a
+    // mount-only `sensors:` block leaves this empty so the vehicle keeps the
+    // scenario-level file rather than silently running clean beside its neighbours.
     std::optional<vdsim::SensorParams> sensors;
+    // Mount/rate declarations from that same agents.vehicle.sensors[] list, one
+    // entry per declared device. Empty when the vehicle uses the sensors-file form
+    // (a sensors yaml carries noise only, no mount pose). Stored, not yet consumed.
+    std::vector<SceneSensor> scene_sensors;
     // Per-vehicle reference path for internal path-follow controller.
     // path_yaml: trajectory file ({points:[[x,y,vx],...]} — pure path data, no controller params)
     // path_lookahead: pure-pursuit lookahead distance [m] (controller param, not part of trajectory)
@@ -89,6 +127,10 @@ struct CommsChannel {
     std::string templ {"vds1"};     // template/규약: vds1 | vds1_cmd | json | nmea_gga
     int         listen_port {0};    // rx: udp port to bind
     std::vector<CommsDest> to;      // tx: fan-out destinations
+    // Geodetic datum the sim's ENU metres are referenced to, for templates that
+    // emit lat/lon (nmea_gga). YAML: origin: {lat: 37.5, lon: 127.0, alt: 38.0}.
+    // Optional; defaults to (0,0,0) so existing scenes keep working unchanged.
+    GeodeticOrigin origin;
 };
 
 struct CommsConfig {
@@ -107,5 +149,14 @@ struct WorldScenario {
 };
 
 WorldScenario load_world_scenario(const std::string& path);
+
+/// @brief Select the measurement-noise parameters in force for one vehicle.
+/// @param scenario_default Parameters loaded from the scenario-level sensors file.
+/// @param v Vehicle whose optional sensor declaration may override the default.
+/// @return The per-vehicle parameters when present; otherwise @p scenario_default.
+/// @note A mount-only declaration leaves VehicleSpawn::sensors empty and therefore
+///       preserves the scenario-level default.
+vdsim::SensorParams effective_sensor_params(const vdsim::SensorParams& scenario_default,
+                                            const VehicleSpawn& v);
 
 }  // namespace vdsim::cosim

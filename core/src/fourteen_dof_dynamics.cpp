@@ -44,6 +44,8 @@
 #include "vdsim/subsystems.hpp"
 #include "vdsim/suspension.hpp"
 
+#include "contact_frame_internal.hpp"
+
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
@@ -121,6 +123,9 @@ public:
         th_  = 0.0; th_dot_  = 0.0;
         z_u_     = {{0.0, 0.0, 0.0, 0.0}};
         z_u_dot_ = {{0.0, 0.0, 0.0, 0.0}};
+        contact_loads_.fill(detail::ContactLoad{});
+        contact_force_delta_world_.fill(Vec3::Zero());
+        contact_full_force_world_.fill(Vec3::Zero());
         if (!suspension_) suspension_ = make_default_suspension(vp_);
         if (!arb_front_)  arb_front_  = make_default_antirollbar(vp_, 0);
         if (!arb_rear_)   arb_rear_   = make_default_antirollbar(vp_, 1);
@@ -150,6 +155,10 @@ public:
                     continue;
                 const double z_corner_s = z_s_ + ry_[i] * std::sin(phi_)
                                                 - rx_[i] * std::sin(th_);
+                // z_u is driven by the per-wheel contact road_dz in the vertical
+                // EOM below.  Therefore contact-height differences enter the
+                // existing travel -> camber/toe sweep table through this single
+                // physical suspension coordinate (no layer-specific correction).
                 const double wheel_travel = z_u_[i] - z_corner_s;
                 ISuspensionKinematics* k = (i < 2) ? kine_front_.get()
                                                    : kine_rear_.get();
@@ -179,6 +188,8 @@ public:
             const double k_tire = std::max(1.0, ts_.for_wheel(WHEEL_FL).tire_vertical_stiffness);
             const double Lwb  = vp_.wheelbase;
             const double vx   = state_.velocity.x();
+            const double yaw  = yaw_from_quat(state_.orientation);
+            const double yaw_rate = state_.angular_velocity.z();
             const double q_aero = 0.5 * kAirDensity * vp_.frontal_area * vx * std::abs(vx);
             const double aero_f = 0.5 * vp_.aero_lift_front * q_aero;
             const double aero_r = 0.5 * vp_.aero_lift_rear  * q_aero;
@@ -186,33 +197,74 @@ public:
             const double st_r = vp_.mass * kGravity * vp_.cg_to_front / (2.0 * Lwb);
             std::array<double, NUM_WHEELS> fz_dyn;
             for (int i = 0; i < NUM_WHEELS; ++i) {
-                const double cos_slope = std::max(0.1, contacts[i].normal.z());
-                const double st = ((i < 2) ? st_f : st_r) * cos_slope
+                if (!contacts[i].is_valid) {
+                    fz_dyn[i] = 0.0;
+                    continue;
+                }
+                const double normal_norm = contacts[i].normal.norm();
+                if (!contacts[i].normal.allFinite() || normal_norm <= 1e-12) {
+                    fz_dyn[i] = 0.0;
+                    continue;
+                }
+                const Vec3 normal = contacts[i].normal / normal_norm;
+                const double normal_y_body = -std::sin(yaw) * normal.x()
+                                           +  std::cos(yaw) * normal.y();
+                // Exact normal-force balance for a banked steady turn:
+                // N/m = g*n_z + (v_x*r)*n_y(body).  The second term is the
+                // centripetal acceleration projected on the injected normal;
+                // it is applied here in the load path, never as a postprocessed
+                // equivalent lateral-acceleration offset.
+                const double normal_accel = std::max(
+                    0.0, kGravity * std::max(0.0, normal.z())
+                             + vx * yaw_rate * normal_y_body);
+                const double st = ((i < 2) ? st_f : st_r)
+                                * (normal_accel / kGravity)
                                 + ((i < 2) ? aero_f : aero_r);
                 fz_dyn[i] = std::max(0.0, st + k_tire * (contacts[i].road_dz - z_u_[i]));
             }
             inner_->set_external_fz(fz_dyn);
         }
 
+        detail::L4ContactKinematics spatial_contact;
+        if (level() == Level::L4_Kinematic) {
+            const double yaw = yaw_from_quat(state_.orientation);
+            spatial_contact.enabled = true;
+            spatial_contact.body_to_world = quat_from_euler({phi_, th_, yaw});
+            spatial_contact.angular_velocity_body =
+                Vec3(phi_dot_, th_dot_, state_.angular_velocity.z());
+            spatial_contact.wheel_vertical_velocity_world = z_u_dot_;
+        }
+        detail::set_l4_contact_kinematics(*inner_, spatial_contact);
         inner_->step(u, contacts, dt);
+        contact_loads_ = detail::contact_loads(*inner_);
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            contact_force_delta_world_[i] =
+                contact_loads_[i].applied_force_world;
+            contact_full_force_world_[i] =
+                contact_loads_[i].full_force_world;
+        }
         state_ = inner_->state();
         mx_ = inner_->wheel_overturning_moment();   // camber contact-migration overturning
         if (dt > 0.0 && (mb_dyn_front_ || mb_dyn_rear_)) {
-            const auto F = inner_->tire_forces_body();
             if (mb_dyn_front_ && mb_dae_front_) {
                 mb::WheelLoad wl;
-                wl.force_world = 0.5 * (F[WHEEL_FL] + F[WHEEL_FR]);
+                wl.force_world = 0.5 * (contact_full_force_world_[WHEEL_FL]
+                                      + contact_full_force_world_[WHEEL_FR]);
                 mb::step_hard_joint_dae(mb_state_front_, *mb_dae_front_, mb_topo_front_,
                                         axle_prescribed_motion(0, steer_rad), wl, dt);
             }
             if (mb_dyn_rear_ && mb_dae_rear_) {
                 mb::WheelLoad wl;
-                wl.force_world = 0.5 * (F[WHEEL_RL] + F[WHEEL_RR]);
+                wl.force_world = 0.5 * (contact_full_force_world_[WHEEL_RL]
+                                      + contact_full_force_world_[WHEEL_RR]);
                 mb::step_hard_joint_dae(mb_state_rear_, *mb_dae_rear_, mb_topo_rear_,
                                         axle_prescribed_motion(2, steer_rad), wl, dt);
             }
         }
-        for (int i = 0; i < NUM_WHEELS; ++i) road_dz_[i] = contacts[i].road_dz;
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            contact_valid_[i] = contacts[i].is_valid;
+            if (contact_valid_[i]) road_dz_[i] = contacts[i].road_dz;
+        }
         if (dt > 0.0) integrate_vertical(dt);
         write_pose_and_suspension();
     }
@@ -397,10 +449,13 @@ private:
             F_susp[WHEEL_RL] += Fr.first;  F_susp[WHEEL_RR] += Fr.second;
         }
         double Fz_sum = 0.0, M_pitch_spring = 0.0, M_roll_spring = 0.0;
+        double M_pitch_contact = 0.0, M_roll_contact = 0.0;
         for (int i = 0; i < NUM_WHEELS; ++i) {
             Fz_sum         += F_susp[i];
             M_pitch_spring -= rx_[i] * F_susp[i];
             M_roll_spring  += ry_[i] * F_susp[i];   // includes the ARB roll contribution
+            M_roll_contact  += contact_loads_[i].moment_delta_body.x();
+            M_pitch_contact += contact_loads_[i].moment_delta_body.y();
         }
 
         // Anti-dive / anti-squat reduces the longitudinal inertia moment fed
@@ -419,9 +474,11 @@ private:
         d.dz_dot   = Fz_sum / std::max(1.0, m_s);
         d.dphi     = phi_dot;
         const double M_overturn = mx_[0] + mx_[1] + mx_[2] + mx_[3];   // camber contact migration
-        d.dphi_dot = (M_roll_spring + m_s * ay * h + M_overturn) / std::max(1e-3, Ixx);
+        d.dphi_dot = (M_roll_spring + m_s * ay * h + M_overturn
+                     + M_roll_contact) / std::max(1e-3, Ixx);
         d.dth      = th_dot;
-        d.dth_dot  = (M_pitch_spring + M_inertia_pitch) / std::max(1e-3, Iyy);
+        d.dth_dot  = (M_pitch_spring + M_inertia_pitch
+                     + M_pitch_contact) / std::max(1e-3, Iyy);
 
         // Unsprung mass per corner: m_u · z̈_u = -F_susp(on sprung) - k_tire · z_u
         // = +F_susp_on_unsprung - k_tire · z_u
@@ -430,7 +487,17 @@ private:
             const double m_u = std::max(1.0, vp_.unsprung_mass[i]);
             const double k_tire = std::max(1.0, ts_.for_wheel(i).tire_vertical_stiffness);
             d.dz_u[i] = zu_dot[i];
-            d.dz_u_dot[i] = (-F_susp[i] - k_tire * (zu[i] - road_dz_[i])) / m_u;
+            // Invalid contact is airborne: the unsprung state remains dynamic
+            // under suspension force, but no hidden flat-road/tire spring is
+            // synthesized from road_dz.
+            const double F_road = contact_valid_[i]
+                ? k_tire * (zu[i] - road_dz_[i]) : 0.0;
+            // The non-flat vertical contact increment is an external force on
+            // the unsprung mass.  Sprung heave receives it exactly once through
+            // the suspension reaction; applying it directly to dz_dot as well
+            // would double-count work and momentum.
+            d.dz_u_dot[i] = (-F_susp[i] - F_road
+                              + contact_force_delta_world_[i].z()) / m_u;
         }
         return d;
     }
@@ -536,6 +603,10 @@ private:
     std::array<double, NUM_WHEELS> z_u_dot_ {{0.0, 0.0, 0.0, 0.0}};
     std::array<double, NUM_WHEELS> mx_      {{0.0, 0.0, 0.0, 0.0}};  // camber overturning from inner
     std::array<double, NUM_WHEELS> road_dz_ {{0.0, 0.0, 0.0, 0.0}};
+    std::array<bool, NUM_WHEELS> contact_valid_ {{true, true, true, true}};
+    std::array<detail::ContactLoad, NUM_WHEELS> contact_loads_ {};
+    std::array<Vec3, NUM_WHEELS> contact_force_delta_world_ {};
+    std::array<Vec3, NUM_WHEELS> contact_full_force_world_ {};
 
     // Optional hardpoint kinematics (Ld4 Stage D).  When attached, replaces
     // the lumped vp_.camber_per_roll · phi heuristic for the corresponding axle.

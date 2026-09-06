@@ -15,6 +15,7 @@
 //   - Static Fz_z balance only; no aerodynamic lift, no anti-dive geometry.
 
 #include "vdsim/coordinate.hpp"
+#include "vdsim/contact_frame.hpp"
 #include "vdsim/default_subsystems.hpp"
 #include "vdsim/drivetrain_inertia.hpp"
 #include "vdsim/steering_kinematics.hpp"
@@ -22,6 +23,8 @@
 #include "vdsim/ladder_lowering.hpp"
 #include "vdsim/low_speed.hpp"
 #include "vdsim/subsystems.hpp"
+
+#include "contact_frame_internal.hpp"
 
 #include <spdlog/spdlog.h>
 
@@ -117,6 +120,9 @@ public:
         contact_dy_.fill(0.0);
         mx_w_.fill(0.0);
         transient_.fill(ITireModel::Transient{});
+        contact_active_.fill(false);
+        contact_loads_.fill(detail::ContactLoad{});
+        l4_contact_kinematics_ = detail::L4ContactKinematics{};
         ci_.fill(ITireModel::ContactInput{});
         drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
         brake_      = make_default_brake(vp_, vp_.brake_deadtime_s);
@@ -189,6 +195,16 @@ public:
     int    current_gear() const override { return drivetrain_->current_gear(); }
     bool   set_shift_policy(ShiftPolicy fn) override {
         return drivetrain_->set_shift_policy(std::move(fn)); }
+
+    /** Set one-step L4 spatial kinematics without extending the public plant interface. */
+    void set_l4_contact_kinematics(const detail::L4ContactKinematics& context) noexcept {
+        l4_contact_kinematics_ = context;
+    }
+
+    /** Return full contact loads and corrections for the internal L4 consumer. */
+    const std::array<detail::ContactLoad, NUM_WHEELS>& contact_loads() const noexcept {
+        return contact_loads_;
+    }
     bool   set_brake_module(std::shared_ptr<IBrakeSystem> m) override {
         if (!m) return false;
         brake_ = std::move(m);
@@ -285,35 +301,102 @@ private:
         const double R   = vp_.wheel_radius_nominal;
         const double h_cg = vp_.cg_height;
 
-        // ---- Road slope from contact normals (flat -> no effect) ----
-        // Average unit normal (world). Normal load scales by cos(slope)=n_z; the
-        // gravity component tangential to the road is felt as a body force.
-        Vec3 n_road = contacts[0].normal + contacts[1].normal
-                    + contacts[2].normal + contacts[3].normal;
+        // ---- Exact road frame and gravity resolution (flat -> no effect) ----
+        // Contacts carry world-ENU normals.  Resolve one common road frame without
+        // a small-angle approximation: x_road is body-forward projected onto the
+        // road plane and y_road completes the right-handed frame.  D1 already adds
+        // the non-flat normal-force increment to the planar EOM, so the gravity
+        // term below is applied as a residual after that increment is known.
+        Vec3 n_road = Vec3::Zero();
+        for (const auto& contact : contacts) {
+            if (!contact.is_valid || !contact.normal.allFinite()) continue;
+            const double normal_norm = contact.normal.norm();
+            if (normal_norm > 1e-12) n_road += contact.normal / normal_norm;
+        }
         const double nn = n_road.norm();
-        if (nn > 1e-9) n_road /= nn; else n_road = Vec3::UnitZ();
-        const double cos_slope = std::max(0.1, n_road.z());
-        const double gdotn = -kGravity * n_road.z();          // (0,0,-g) . n
-        const double gtx = -gdotn * n_road.x();               // tangential gravity (world)
-        const double gty = -gdotn * n_road.y();
-        const double gx_b =  std::cos(yaw) * gtx + std::sin(yaw) * gty;   // -> body
-        const double gy_b = -std::sin(yaw) * gtx + std::cos(yaw) * gty;
+        const bool has_road_normal = nn > 1e-9;
+        if (has_road_normal) n_road /= nn;
+        const double cos_slope = has_road_normal
+            ? std::max(0.0, n_road.z()) : 0.0;
+        const Vec3 forward_world(std::cos(yaw), std::sin(yaw), 0.0);
+        Vec3 x_road = forward_world;
+        Vec3 y_road(-std::sin(yaw), std::cos(yaw), 0.0);
+        if (has_road_normal) {
+            x_road -= x_road.dot(n_road) * n_road;
+            const double x_norm = x_road.norm();
+            if (x_norm > 1e-12) {
+                x_road /= x_norm;
+                y_road = n_road.cross(x_road).normalized();
+            } else {
+                // Degenerate: body-forward is (anti)parallel to the contact
+                // normal (near-vertical surface faced head-on).  Do NOT fail
+                // open: leaving x_road unnormalized gives it length ~0, which
+                // silently zeroes gx/gy_gravity and drops gravity out of the
+                // planar EOM.  Rebuild an explicit orthonormal road frame from
+                // body-lateral and surface the event (flag + one-shot warning).
+                Vec3 lateral(-std::sin(yaw), std::cos(yaw), 0.0);
+                lateral -= lateral.dot(n_road) * n_road;
+                if (lateral.norm() > 1e-12) {
+                    y_road = lateral.normalized();
+                } else {
+                    Vec3 seed = n_road.cross(Vec3::UnitZ());
+                    if (seed.norm() <= 1e-12) seed = n_road.cross(Vec3::UnitY());
+                    y_road = seed.normalized();
+                }
+                x_road = y_road.cross(n_road).normalized();
+                road_frame_degenerate_ = true;
+                if (!road_frame_degenerate_logged_) {
+                    road_frame_degenerate_logged_ = true;
+                    spdlog::warn("[L2 7-DOF] degenerate road frame: heading is "
+                                 "parallel to the contact normal "
+                                 "n=({:.3f},{:.3f},{:.3f}); road frame rebuilt "
+                                 "from body-lateral (gravity kept in the EOM)",
+                                 n_road.x(), n_road.y(), n_road.z());
+                }
+            }
+        }
+        const double gx_gravity = -kGravity * x_road.z();
+        const double gy_gravity = -kGravity * y_road.z();
+        const double nx_b =  std::cos(yaw) * n_road.x() + std::sin(yaw) * n_road.y();
+        const double ny_b = -std::sin(yaw) * n_road.x() + std::cos(yaw) * n_road.y();
 
         // Specific force the chassis feels in the road-tangent plane = inertial
         // accel minus the tangential gravity the tires already react. On a banked
         // straight ay_kin->0 but ay_felt = -gy_b != 0, so the bank/slope produces
         // quasi-static load transfer (and the reported roll/pitch). Flat: ==0.
-        const double ax_felt = ax_prev_ - gx_b;
-        const double ay_felt = ay_prev_ - gy_b;
+        const double ax_felt = ax_prev_ - gx_gravity;
+        const double ay_felt = ay_prev_ - gy_gravity;
         ax_felt_ = ax_felt; ay_felt_ = ay_felt;
 
         // ---- Per-tire Fz with 1-step lag weight transfer + aero downforce ----
         const double q_aero  = 0.5 * kAirDensity * vp_.frontal_area * vx * std::abs(vx);
         const double Fz_aero_f_per = 0.5 * vp_.aero_lift_front * q_aero;
         const double Fz_aero_r_per = 0.5 * vp_.aero_lift_rear  * q_aero;
-        const double Fz_static_f = m * kGravity * cos_slope * b / (2.0 * L) + Fz_aero_f_per;
-        const double Fz_static_r = m * kGravity * cos_slope * a / (2.0 * L) + Fz_aero_r_per;
-        const double g_perp = kGravity * cos_slope;               // gravity normal to road
+        // Exact normal-force balance (no small-angle step).  Dotting
+        //   m*a = m*g_vec + N*n + F_tangential      (F_tangential . n == 0)
+        // with n gives  N/m = g*n_z + a.n.  For a vehicle that stays on a
+        // locally planar surface v.n == 0, so a.n = -v.n_dot: the term exists
+        // only because the normal turns under the vehicle.  With the normal
+        // carried around by the yaw rate (banked-track geometry)
+        // n_dot = r * (e_z x n), hence
+        //   a.n = r * (v_x*n_y(body) - v_y*n_x(body)),
+        // whose leading part is the textbook centripetal contribution
+        // (v_x*r)*n_y.  Force-path load, never an equivalent lateral-accel
+        // offset.  NOTE a tangential force must not enter here: on a fixed
+        // inclined plane N = m*g*cos(theta) whatever a_x is (braking/traction
+        // accelerates the CG inside the road plane, so its a.n is zero) - see
+        // GradeAndBankCombinedNormalLoadIsBrakingIndependent.
+        // Limitation (P3-5): the max(0,.) clamp is a C1 cliff.  At bank b with
+        // the heading along the bank axis the bracket vanishes at
+        // v_x*r = -g*cos(b)/sin(b) = -g/tan(b)  (-21.0 m/s^2 at b = 25 deg),
+        // where all four Fz reach 0 together and the load path stops being
+        // differentiable.  Valid range: g*n_z + a.n > 0.
+        const double g_perp = has_road_normal
+            ? std::max(0.0, kGravity * cos_slope
+                             + centripetal_accel_substep_ * ny_b
+                             - vy_r_substep_ * nx_b) : 0.0;
+        const double Fz_static_f = m * g_perp * b / (2.0 * L) + Fz_aero_f_per;
+        const double Fz_static_r = m * g_perp * a / (2.0 * L) + Fz_aero_r_per;
 
         // Longitudinal transfer + pitch, with CG-migration (jacking): a pitched
         // body shifts the CG by h_cg*sin(theta), adding a gravity pitch moment ->
@@ -365,7 +448,20 @@ private:
             if (!contacts[i].is_valid) Fz[i] = 0.0;
         // L3 may supply a dynamic (ride/road-coupled) tire load for grip in place
         // of this quasi-static Fz. One-shot: consumed here, re-set each L3 step.
+        // KNOWN DEFECT (P1-2), left in place deliberately: only RK stage k1 sees
+        // the injected load, k2..k4 fall back to the quasi-static Fz above, and
+        // tire_Fz_ therefore reports the k4 (quasi-static) value.  Making it
+        // step-scoped is a one-line change but moves the frozen D0 flat-road
+        // baseline (measured: L3 state 5.01e-2 / force 2.08e2 N, L4 state
+        // 6.67e-2 / force 1.82e2 N against tests/fixtures/d0_flat_contact_*),
+        // i.e. it is a behavior change on flat road and needs the D0 fixtures
+        // re-frozen as an explicit decision, not a silent one.
         if (use_ext_fz_) { Fz = ext_fz_; use_ext_fz_ = false; }
+        // `is_valid=false` is non-contact, including on the L3/L4 external-Fz
+        // path.  Re-mask after the override so no normal load, rolling
+        // resistance, tire wrench, or transient update leaks through.
+        for (int i = 0; i < NUM_WHEELS; ++i)
+            if (!contacts[i].is_valid) Fz[i] = 0.0;
 
         const DriverCmd driver_cmd{
             steer_cmd,
@@ -410,6 +506,7 @@ private:
 
         // ---- Per-tire velocity, slip, force ----
         std::array<Vec3,   NUM_WHEELS> F_body;
+        std::array<Vec3,   NUM_WHEELS> F_applied;
         std::array<Vec3,   NUM_WHEELS> tire_F_disp;   // reported force (lateral faded by lambda)
         std::array<Vec3,   NUM_WHEELS> tire_F_wheel_disp;  // same, wheel frame (pre steer rotation)
         std::array<double, NUM_WHEELS> kappa, alpha;
@@ -443,8 +540,28 @@ private:
         std::array<double, NUM_WHEELS> fx_kin {{0.0, 0.0, 0.0, 0.0}};
 
         for (int i = 0; i < NUM_WHEELS; ++i) {
-            if (!contacts[i].is_valid) {
+            const double di = d_wheel[i];
+            const double cd_i = std::cos(di), sd_i = std::sin(di);
+            // Contact normals are injected in world ENU.  Resolve them into
+            // the planar body frame, then construct one shared exact contact
+            // basis for both L3 and L4 (which delegate through this path).
+            const Vec3& nw = contacts[i].normal;
+            const bool canonical_flat = nw.x() == 0.0 && nw.y() == 0.0
+                                      && nw.z() > 0.0;
+            Vec3 normal_body;
+            if (l4_contact_kinematics_.enabled && !canonical_flat) {
+                normal_body = l4_contact_kinematics_.body_to_world.conjugate() * nw;
+            } else {
+                normal_body = Vec3(
+                    std::cos(yaw) * nw.x() + std::sin(yaw) * nw.y(),
+                   -std::sin(yaw) * nw.x() + std::cos(yaw) * nw.y(),
+                    nw.z());
+            }
+            const ContactFrame contact_frame = make_contact_frame(
+                normal_body, Vec3(cd_i, sd_i, 0.0));
+            if (!contacts[i].is_valid || !contact_frame.valid) {
                 F_body[i]      = Vec3::Zero();
+                F_applied[i]   = Vec3::Zero();
                 tire_F_disp[i] = Vec3::Zero();
                 tire_F_wheel_disp[i] = Vec3::Zero();
                 kappa[i]       = 0.0;
@@ -458,18 +575,29 @@ private:
                 wheel_alpha_peak_[i] = 0.0;
                 wheel_kappa_peak_[i] = 0.0;
                 ci_[i]         = ITireModel::ContactInput{};  // neutral: no bristle/relax evolution
+                transient_[i]  = ITireModel::Transient{};
+                contact_active_[i] = false;
+                contact_loads_[i] = detail::ContactLoad{};
                 continue;
             }
             const double v_x_body = vx - r * r_y[i];
             const double v_y_body = vy + r * r_x[i];
-
-            const double di = d_wheel[i];
-            // A wheel is "steered" if its angle is non-trivial (front or any
-            // wheel with non-zero toe input).  We just always do the rotation
-            // — it's a cheap cos/sin per wheel.
-            const double cd_i = std::cos(di), sd_i = std::sin(di);
-            const double v_x_wheel = v_x_body * cd_i + v_y_body * sd_i;
-            const double v_y_wheel = -v_x_body * sd_i + v_y_body * cd_i;
+            Vec3 wheel_velocity_body(v_x_body, v_y_body, 0.0);
+            if (l4_contact_kinematics_.enabled && !canonical_flat) {
+                const Vec3 lever(r_x[i], r_y[i], -h_cg);
+                const Vec3 rigid_velocity = s.velocity
+                    + l4_contact_kinematics_.angular_velocity_body.cross(lever);
+                Vec3 wheel_velocity_world =
+                    l4_contact_kinematics_.body_to_world * rigid_velocity;
+                wheel_velocity_world.z() =
+                    l4_contact_kinematics_.wheel_vertical_velocity_world[i];
+                wheel_velocity_body =
+                    l4_contact_kinematics_.body_to_world.conjugate()
+                    * wheel_velocity_world;
+            }
+            const Vec3 contact_velocity = contact_frame.resolve_velocity(
+                wheel_velocity_body);
+            contact_active_[i] = true;
 
             const double mu_long_i = contacts[i].mu_long;
             const double mu_lat_i  = contacts[i].mu_lat;
@@ -483,7 +611,9 @@ private:
             // advance_bristle() / per-substep advance_relaxation() see this stage's
             // kinematics (mirrors the old *_last_ scratch).
             ITireModel::ContactInput ci;
-            ci.Fz = Fz[i]; ci.Vx = v_x_wheel; ci.Vy = v_y_wheel;
+            ci.Fz = Fz[i];
+            ci.Vx = contact_velocity.x();
+            ci.Vy = contact_velocity.y();
             ci.omega = s.wheel_spin[i]; ci.gamma = camber_ext_[i];
             ci.mu_long = mu_long_i; ci.mu_lat = mu_lat_i; ci.R0 = R;
             ci_[i] = ci;
@@ -517,7 +647,7 @@ private:
             } else {
                 const double hold_gate = plant ? 0.0
                     : (1.0 - lambda_i) * std::clamp(cmd.brake - cmd.throttle, 0.0, 1.0);
-                double Fx_hold = -kStickC * v_x_body * hold_gate;
+                double Fx_hold = -kStickC * contact_velocity.x() * hold_gate;
                 if (std::abs(Fx_hold) > muFz) Fx_hold = std::copysign(muFz, Fx_hold);
                 Fx_w = w.Fx + Fx_hold;
                 Fy_w = lambda_i * w.Fy;
@@ -533,16 +663,67 @@ private:
                 Fy_w *= c;
             }
             if (lugre_i) fx_kin[i] = Fx_w;
-            const double Fx_b = Fx_w * cd_i - Fy_w * sd_i;
-            const double Fy_b = Fx_w * sd_i + Fy_w * cd_i;
-            F_body[i] = Vec3(Fx_b, Fy_b, 0.0);
+            F_body[i] = contact_frame.tangential_force(Fx_w, Fy_w);
+            const Vec3 full_contact_force =
+                contact_frame.contact_force(Fx_w, Fy_w, Fz[i]);
+            auto force_to_world = [&](const Vec3& force_body) {
+                if (l4_contact_kinematics_.enabled && !canonical_flat) {
+                    return l4_contact_kinematics_.body_to_world * force_body;
+                }
+                return Vec3(
+                    std::cos(yaw) * force_body.x() - std::sin(yaw) * force_body.y(),
+                    std::sin(yaw) * force_body.x() + std::cos(yaw) * force_body.y(),
+                    force_body.z());
+            };
+            auto force_from_world = [&](const Vec3& force_world) {
+                if (l4_contact_kinematics_.enabled && !canonical_flat) {
+                    return l4_contact_kinematics_.body_to_world.conjugate()
+                        * force_world;
+                }
+                return Vec3(
+                    std::cos(yaw) * force_world.x() + std::sin(yaw) * force_world.y(),
+                   -std::sin(yaw) * force_world.x() + std::cos(yaw) * force_world.y(),
+                    force_world.z());
+            };
+            const Vec3 full_force_world = force_to_world(full_contact_force);
+            Vec3 applied_force_world;
+            if (canonical_flat) {
+                // Preserve the legacy arithmetic exactly on flat road: the
+                // suspension already carries Fz*world-z and the tire path only
+                // applies its tangential body force.
+                F_applied[i] = F_body[i];
+                applied_force_world = force_to_world(F_applied[i]);
+            } else {
+                // road_dz and the L4 vertical spring are defined on world z.
+                // Subtract that legacy load on the same axis, then resolve the
+                // remaining physical force back to body coordinates for planar
+                // body equations.  Subtracting Fz*body-z is incorrect at roll/pitch.
+                applied_force_world = full_force_world - Fz[i] * Vec3::UnitZ();
+                F_applied[i] = force_from_world(applied_force_world);
+            }
+            contact_loads_[i].full_force_body = full_contact_force;
+            contact_loads_[i].applied_force_body = F_applied[i];
+            contact_loads_[i].full_force_world = full_force_world;
+            contact_loads_[i].applied_force_world = applied_force_world;
+            if (canonical_flat) {
+                contact_loads_[i].moment_delta_body = Vec3::Zero();
+            } else {
+                const double vertical_delta = F_applied[i].z();
+                // The existing m*a*h terms already carry the horizontal-force
+                // lever arm, and suspension carries r_xy cross Fz*e_z.  Only
+                // the non-flat vertical correction remains for roll/pitch.
+                contact_loads_[i].moment_delta_body = Vec3(
+                    r_y[i] * vertical_delta,
+                   -r_x[i] * vertical_delta,
+                    0.0);
+            }
             const double Fdm = std::hypot(Fxd, Fyd);
             if (!ts_.for_wheel(i).model_provides_combined_slip() && Fdm > muFz && Fdm > 1e-9) {
                 const double c = muFz / Fdm;
                 Fxd *= c;
                 Fyd *= c;
             }
-            tire_F_disp[i] = Vec3(Fxd * cd_i - Fyd * sd_i, Fxd * sd_i + Fyd * cd_i, 0.0);
+            tire_F_disp[i] = contact_frame.tangential_force(Fxd, Fyd);
             tire_F_wheel_disp[i] = Vec3(Fxd, Fyd, 0.0);
             kappa[i]  = k_slip;
             alpha[i]  = a_slip;
@@ -565,9 +746,9 @@ private:
         // ---- Body equations ----
         double Fx_total = 0.0, Fy_total = 0.0, Mz_total = 0.0;
         for (int i = 0; i < NUM_WHEELS; ++i) {
-            Fx_total += F_body[i].x();
-            Fy_total += F_body[i].y();
-            Mz_total += r_x[i] * F_body[i].y() - r_y[i] * F_body[i].x();
+            Fx_total += F_applied[i].x();
+            Fy_total += F_applied[i].y();
+            Mz_total += r_x[i] * F_applied[i].y() - r_y[i] * F_applied[i].x();
         }
         // Per-tire Mz_wheel adds directly to body z (parallel axes, camber=0).
         for (int i = 0; i < NUM_WHEELS; ++i) Mz_total += mz_wheel[i];
@@ -580,8 +761,27 @@ private:
         F_rr *= std::tanh(vx / 0.5);
         Fx_total -= F_aero;
         Fx_total -= F_rr;
-        Fx_total += m * gx_b;   // gravity tangential to the road (0 on flat)
-        Fy_total += m * gy_b;
+        // D1's applied force contains Fz*n in the planar components because the
+        // legacy suspension path subtracts only Fz*world-Z.  Add exactly the
+        // residual required to obtain the road-frame gravity components.  This
+        // avoids double-counting the normal contribution and is identically zero
+        // on canonical flat road.
+        // The leak is per wheel, sum_i Fz[i]*n_planar(i); an average normal
+        // reproduces it only when all four normals are equal.  Heterogeneous
+        // normals (one wheel on a banked patch) otherwise leave a spurious
+        // in-plane force sum_i Fz[i]*n(i) - (sum_i Fz[i])*n_avg (1.1 kN,
+        // 0.76 m/s^2 for 30 deg under one wheel).  F_applied - F_body is
+        // exactly Fz[i]*(n_body(i) - R^T e_z), i.e. the leaked term in the very
+        // frame D1 added it in (full quaternion on L4, yaw-only otherwise), so
+        // this cancels identically - and is exactly zero on canonical flat road.
+        double normal_leak_x = 0.0;
+        double normal_leak_y = 0.0;
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            normal_leak_x += F_applied[i].x() - F_body[i].x();
+            normal_leak_y += F_applied[i].y() - F_body[i].y();
+        }
+        Fx_total += m * gx_gravity - normal_leak_x;
+        Fy_total += m * gy_gravity - normal_leak_y;
 
         Deriv d_out;
         d_out.dx_world = vx * std::cos(yaw) - vy * std::sin(yaw);
@@ -680,7 +880,7 @@ private:
         // ---- Diagnostics ----
         tire_F_       = tire_F_disp;
         tire_F_wheel_ = tire_F_wheel_disp;
-        tire_Fz_  = Fz;
+        tire_Fz_  = Fz;  // scalar normal-load magnitude along each contact z_c
         slip_ratio_ = kappa;
         slip_angle_ = alpha;
 
@@ -714,6 +914,7 @@ private:
     // kinematics of the stage just evaluated (stored in ci_).
     void advance_bristle_(double dt) {
         for (int i = 0; i < NUM_WHEELS; ++i) {
+            if (!contact_active_[i]) continue;
             if (!ts_.for_wheel(i).lugre.enabled) continue;
             transient_[i] = wheel_tire_model(tire_, i)
                                 .advance_bristle(ci_[i], transient_[i], dt);
@@ -721,13 +922,27 @@ private:
     }
     // Carcass/belt + relaxation-length lag — advanced once per substep at the full dt,
     void advance_relaxation_(double dt) {
-        for (int i = 0; i < NUM_WHEELS; ++i)
-            transient_[i] = wheel_tire_model(tire_, i)
-                                .advance_relaxation(ci_[i], transient_[i], dt);
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            if (contact_active_[i]) {
+                transient_[i] = wheel_tire_model(tire_, i)
+                                    .advance_relaxation(ci_[i], transient_[i], dt);
+            }
+        }
     }
 
     void substep(const ContactArray& contacts, double h) {
         const State s0 = state_;
+        // Keep the normal-load forcing fixed across the four RK stages.  Stage-
+        // local yaw-rate drift otherwise breaks the exact +/-bank mirror even as
+        // h->0.  It is refreshed at every physical substep, not held for a full
+        // caller step when substepping is active.
+        // Known limitation (P3-7): freezing this forcing over the four stages
+        // leaves the load channel first-order accurate in h (its state-
+        // dependent part is held at the stage-0 value) even though the state
+        // integrator is RK4.  Not restructured here; substep size bounds it.
+        centripetal_accel_substep_ = s0.velocity.x()
+                                      * s0.angular_velocity.z();
+        vy_r_substep_ = s0.velocity.y() * s0.angular_velocity.z();
         const bool lugre_on = [&]() {
             for (int wi = 0; wi < NUM_WHEELS; ++wi)
                 if (ts_.for_wheel(wi).lugre.enabled) return true;
@@ -790,6 +1005,12 @@ private:
     double ay_prev_ {0.0};
     double ax_felt_ {0.0};   // specific force (accel - tangential gravity) for transfer/attitude
     double ay_felt_ {0.0};
+    double centripetal_accel_substep_ {0.0};  // v_x*r fixed across one RK substep [m/s^2]
+    double vy_r_substep_ {0.0};               // v_y*r fixed across one RK substep [m/s^2]
+    // Set when body-forward was (anti)parallel to the contact normal and the
+    // road frame had to be rebuilt (see derivatives()); warned once.
+    bool road_frame_degenerate_ {false};
+    bool road_frame_degenerate_logged_ {false};
     double roll_qs_ {0.0};   // quasi-static roll/pitch incl. CG-migration (set in step)
     double pitch_qs_ {0.0};
     double mz_front_sum_ {0.0};
@@ -810,6 +1031,9 @@ private:
     // advance_bristle()/advance_relaxation(). ci_ holds the contact kinematics the tire
     // was last evaluated at (per stage), feeding those advance calls.
     std::array<ITireModel::Transient, NUM_WHEELS> transient_ {};
+    std::array<bool, NUM_WHEELS> contact_active_ {{false, false, false, false}};
+    detail::L4ContactKinematics l4_contact_kinematics_ {};
+    std::array<detail::ContactLoad, NUM_WHEELS> contact_loads_ {};
     mutable std::array<ITireModel::ContactInput, NUM_WHEELS> ci_ {};
     mutable std::array<double, NUM_WHEELS> Re_w_ {{0.31, 0.31, 0.31, 0.31}};  // effective rolling radius per wheel
     mutable std::array<double, NUM_WHEELS> contact_dy_ {{0.0, 0.0, 0.0, 0.0}};  // camber lateral contact offset
@@ -831,6 +1055,22 @@ std::unique_ptr<IVehicleDynamics> create_seven_dof() {
 
 std::unique_ptr<IVehicleDynamics> create_seven_dof(std::unique_ptr<ITireModel> tire) {
     return std::make_unique<SevenDOFDynamics>(std::move(tire));
+}
+
+bool detail::set_l4_contact_kinematics(
+    IVehicleDynamics& dynamics,
+    const detail::L4ContactKinematics& context) noexcept {
+    auto* seven = dynamic_cast<SevenDOFDynamics*>(&dynamics);
+    if (seven == nullptr) return false;
+    seven->set_l4_contact_kinematics(context);
+    return true;
+}
+
+std::array<detail::ContactLoad, NUM_WHEELS> detail::contact_loads(
+    const IVehicleDynamics& dynamics) noexcept {
+    const auto* seven = dynamic_cast<const SevenDOFDynamics*>(&dynamics);
+    if (seven == nullptr) return {};
+    return seven->contact_loads();
 }
 
 }  // namespace vdsim

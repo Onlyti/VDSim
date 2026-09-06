@@ -163,6 +163,9 @@ public:
         out.Fx = Fx;
         out.Fy = Fy;
         out.Mz = Mz;
+        out.mu_peak = std::max(std::abs(mux), std::abs(muy));
+        out.alpha_peak = mf_peak_slip(By, Cy, Ey);
+        out.kappa_peak = mf_peak_slip(Bx, Cx, Ex);
         return out;
     }
 
