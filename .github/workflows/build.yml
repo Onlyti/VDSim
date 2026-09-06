@@ -46,7 +46,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install "pybind11==2.13.6" numpy pyyaml
+          python3 -m pip install "pybind11==2.13.6" numpy pyyaml matplotlib pillow
 
       - name: Report toolchain
         run: |
@@ -104,7 +104,15 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build
+          sudo apt-get install -y ninja-build python3-dev
+
+      # The validation preset builds the Python bindings, and the canonical
+      # suite includes the catalog, plant and trace/render tests, so the same
+      # pinned dependency set as the build job has to be present here too.
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install "pybind11==2.13.6" numpy pyyaml matplotlib pillow
 
       - name: Pin CMake
         # CMakePresets.json is version 3, which needs CMake >= 3.21, so the
@@ -123,7 +131,7 @@ jobs:
           key: ${{ runner.os }}-deps-validation-${{ hashFiles('third_party/CMakeLists.txt') }}
 
       - name: Configure (validation preset)
-        run: cmake --preset validation
+        run: cmake --preset validation -Dpybind11_DIR="$(python3 -m pybind11 --cmakedir)"
 
       - name: Build (validation preset)
         run: cmake --build --preset validation
