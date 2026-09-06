@@ -192,7 +192,23 @@ def test_longitudinal_fx_accel():
 # contract (real-time factor >= 5x). An unoptimised Debug build runs the same
 # code 3-6x slower, which says nothing about a performance regression, so the
 # caller states the budget that belongs to the build it produced.
-BUDGET_S = float(os.environ.get("VDSIM_PERF_BUDGET_S", "1.0"))
+def perf_budget_s(default_s):
+    """Wall-clock budget in seconds, taken from the environment if set.
+
+    Mirrors ``vdsim::testing::perf_budget_s`` in tests/support/perf_budget.hpp:
+    same variable name, same rule. Unset, empty and malformed all mean "not
+    stated" and fall back to the Release contract, so a broken CI expression
+    cannot silently disable the assertion.
+    """
+    raw = os.environ.get("VDSIM_PERF_BUDGET_S", "")
+    try:
+        parsed = float(raw)
+    except ValueError:
+        return default_s
+    return parsed if parsed > 0.0 else default_s
+
+
+BUDGET_S = perf_budget_s(1.0)
 
 
 def test_speed_budget():

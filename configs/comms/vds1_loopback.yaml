@@ -3,8 +3,8 @@
 #   TX: vehicle 0 STATE fans out to a controller + a logger (canonical VDS1 binary).
 #   RX: any controller sends a VDS1 CMD here; the packet's vehicle_id header
 #       selects which agent's control it drives (fan-in).
-# (json / nmea_gga templates and sensor.* sources are specced but not yet
-#  realized by the C++ router; see docs/CONFIG_GUIDE.md §3.)
+# (json / nmea_gga TX templates are realized too — see configs/comms/json_nmea.yaml.
+#  sensor.* sources are still specced only; see docs/CONFIG_GUIDE.md §3.)
 name: vds1_loopback
 channels:
   - source: 0.state

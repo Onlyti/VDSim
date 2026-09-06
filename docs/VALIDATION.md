@@ -1,6 +1,6 @@
 # VDSim validation & credibility
 
-> **v0.5.1+ experimental / pre-release.** The claims below rest on open evidence
+> **v0.6.2+ experimental / pre-release.** The claims below rest on open evidence
 > (analytic + ISO standard + cross-model/cross-tool self-consistency). There is
 > no published cross-validation against a commercial reference on real-vehicle
 > data — see "Honest limitations". Not for production use. Do **not** claim
@@ -20,12 +20,45 @@ the last section.
 | ISO 7401 step-steer / 4138 understeer / 3888-2 DLC — run + measured | — |
 | L1↔L2↔L3 cross-model consistency where physics overlaps | Dependent axles (twist-beam / solid beam) — configs are stubs |
 | FMI round-trip Δ=0 (machine precision); ISO 8608 PSD RMS per class | L3 unsprung lateral-transfer term (small) |
-| Full suite: **391/391 ctest green** (measured 2026-06-25, `main`) | — |
+| Full suite: **485/485 ctest green** (`validation` preset, as of 2026-09-06) | — |
 | Drivetrain engine inertia (open-diff carrier coupling) | — |
 | **ISO step-steer signature gated in CI** (`ctest -R IsoBaseline`, sedan L2 LuGre) | DLC moose gate is a preset property, not a defect (see note) |
 
 Note: ISO 3888-2 DLC@60 not meeting the 1.0 m gate is a default-preset
 vehicle/controller property, not a sim defect (see "Notes on specific results").
+
+## Test-suite currency
+
+The suite count below is the only number in this document that is machine-checked
+(`scripts/check_validation_currency.py`, run as the `validation_currency` ctest).
+It records the **canonical configuration only** -- the `validation` CMake preset.
+Counts measured in any other configuration are deliberately not recorded here, so
+that one number cannot drift against another.
+
+`commit:` is the sha of the tree that was *measured*; this document is a
+descendant of it, so the gate accepts the recorded commit when it is that
+sha or an ancestor of it. Ancestry alone is not enough: the registration
+surface (`CMakePresets.json`, every `CMakeLists.txt`, `cmake/**`) has to
+be unchanged between that sha and the measured tree, because those files
+decide which tests exist. Test sources are outside that surface -- their
+effect is caught by the passed/total comparison instead. `toolchain:` pins
+the CMake that performed the
+measurement -- a toolchain bump is a re-measurement trigger, so the new
+version and the new numbers have to land in the same commit.
+
+<!-- VALIDATION-CURRENCY BEGIN -->
+```text
+tests:    485/485
+config:   cmake --preset validation && cmake --build --preset validation && ctest --preset validation
+presets:  CMakePresets.json@fb1f0c198a0201fcce2543a9f5b2242a255fb97a
+toolchain: cmake 3.31.10
+commit:   f9cf765
+date:     2026-09-06
+excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
+excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
+excluded: ergaccess (optional external dependency not installed -- VDSIM_WITH_ERGACCESS=OFF)
+```
+<!-- VALIDATION-CURRENCY END -->
 
 ## Validation layers
 
@@ -78,7 +111,7 @@ matching MF-Tyre/CarMaker. Initial wheel spin is set per-wheel via `free_roll_wh
 (vx/Re at static load) so no phantom longitudinal force appears at t=0. Re is opt-in: tires
 without BREFF/DREFF/FREFF (reff_*=0) fall back to the unloaded radius R0 unchanged.
 
-Full automated suite: `cd build && ctest` — **391** checks, 100% green (measured 2026-06-25, `main`; thesis GUI adds 13 more → 404).
+Full automated suite: `ctest --preset validation` — **485** checks, 100% green (see the currency block above).
 One-command evidence bundle (ctests + tire parity table + ISO figures + summary.md):
 `python3 tools/validation_report.py`.
 
@@ -167,7 +200,7 @@ folded into the re-baselined table above.
 ## Reproducing the whole report
 
 ```sh
-cmake --build build -j && (cd build && ctest --output-on-failure)   # 391 checks on main
+cmake --build build -j && (cd build && ctest --output-on-failure)   # 485 checks
 python3 apps/validation/run_validation.py    # ISO 7401/4138/3888 -> REPORT.md
 python3 fmi_export/test_roundtrip.py          # FMU vs native
 ```

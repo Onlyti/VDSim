@@ -20,7 +20,18 @@ green**. main HEAD = `7d77754`. 태그 `v0.6.0` 푸시됨. **미push = `7d77754`
 - v0.6.0 tag, ROADMAP 갱신, superseded 설계문서 3개 배너.
 
 **미완 / 다음 할 일**:
-0. **[최우선 — VLA thesis plant = 첫 고객/제품, Cursor 위임 in-flight]** spec(최종·자립형):
+0. **[최우선 — VLA thesis plant = 첫 고객 = 첫 BETA TESTER. 브랜치 `VDSim-Thesis`]**
+   main(`34db50c`)은 stable 고정 — plant 작업은 전부 `VDSim-Thesis` 브랜치. **베타이므로
+   현 구현을 못박지 말 것**: Cursor 1차 구현 → **개발 후 장단점 평가 → 개선(iterate)** 단계가
+   파이프라인의 일부(스펙의 product-quality bar는 "v0 beta, 평가 후 다듬는다" 기준으로 적용,
+   contract 영구 freeze 아님). main 머지는 베타 평가·polish 통과 후에만.
+   **베타 v0 구현+검증 DONE (VDSim-Thesis @ 5e2b33e, 390/390 green)**: Cursor 1차 구현 후
+   Claude iterate — (1) **실결함 수정**: direct-L1 brake가 상수라 ω<0 역회전(κ→−31) → tanh(ω/eps)
+   부호정규화 → locked κ≈−1. (2) acceptance 6종 강화/추가: throttle-bypass·headline combined
+   grip-loss(circle 불변식+real slip+brake-no-reverse+차량 grip-loss)·GT consistency(ΣFy↔m·ay)·
+   **dry==linear bicycle ratio 0.963(4%, BCD→Ca 캘리브 검증)**·perf 23ms/5s·friction-patch.
+   남은 polish: #7 README obs frame/단위, 그리고 **thesis 실사용 피드백→다음 iterate**(진짜 베타).
+   spec(자립형):
    `docs/design/VLA_THESIS_PLANT.md` (#0=Fx→torque physical κ 확정 + 2-tier dt + product
    quality bar 포함). Cursor headless 위임함(background) — 출력 `/tmp/claude-1000/.../b8v49i1fc.output`.
    **다음 세션 필수 = Cursor 산출물 검증·리뷰·폴리시 게이트** (Claude 책임): `git diff` 리뷰 +

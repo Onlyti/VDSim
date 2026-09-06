@@ -53,6 +53,13 @@ target_link_libraries(vdsim_module_check PRIVATE vdsim::core)
 set_target_properties(vdsim_module_check PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+add_executable(vdsim_bench_levels bench_dynamics_levels.cpp)
+target_compile_definitions(vdsim_bench_levels PRIVATE
+    VDSIM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+target_link_libraries(vdsim_bench_levels PRIVATE vdsim::core)
+set_target_properties(vdsim_bench_levels PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
 # Sample user subsystem-module built as a runtime-loadable plugin (.so) — used by the
 # module-plugin tests and as a worked example of the VDSIM_REGISTER_*_MODULE ABI.
 add_library(custom_brake_module MODULE modules/custom_brake.cpp)

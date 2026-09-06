@@ -15,6 +15,11 @@ option(VDSIM_BUILD_PYTHON        "Build Python bindings"        OFF)
 option(VDSIM_BUILD_CARLA_PLUGIN  "Build CARLA integration"      ON)
 option(VDSIM_BUILD_COSIM         "Build UDP co-simulation server" ON)
 option(VDSIM_WITH_ERGACCESS      "Build with CarMaker ERGAccess" OFF)
+# GUI v3 is a deferred (node-stack) component. Its whole test group is outside
+# the canonical `validation` preset; see the `excluded:` lines in
+# docs/VALIDATION.md. Exclusion is per component, not per target, so future
+# GUI v3 tests attach to this same switch (07_p0_demo.md 6.4(2)).
+option(VDSIM_BUILD_GUI_V3_TESTS  "Register the GUI v3 test group" OFF)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     add_compile_options(-Wall -Wextra -Wpedantic -Wno-unused-parameter)
@@ -70,3 +75,4 @@ message(STATUS "Build examples      : ${VDSIM_BUILD_EXAMPLES}")
 message(STATUS "Build Python        : ${VDSIM_BUILD_PYTHON}")
 message(STATUS "Build CARLA plugin  : ${VDSIM_BUILD_CARLA_PLUGIN}")
 message(STATUS "ERGAccess           : ${VDSIM_WITH_ERGACCESS}")
+message(STATUS "GUI v3 tests        : ${VDSIM_BUILD_GUI_V3_TESTS}")

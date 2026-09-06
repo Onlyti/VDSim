@@ -196,6 +196,8 @@ VehicleParams VehicleParams::from_yaml(const std::string& path) {
     }
     pull(root, "lsd_preload", p.lsd_preload);
     pull(root, "lsd_ramp",    p.lsd_ramp);
+    pull(root, "drive_split_front", p.drive_split_front);
+    pull(root, "plant_path",        p.plant_path);
     pull(root, "max_motor_torque", p.max_motor_torque);
     pull(root, "final_drive_ratio", p.final_drive_ratio);
     pull(root, "engine_rotational_inertia", p.engine_rotational_inertia);
@@ -265,6 +267,8 @@ void VehicleParams::to_yaml(const std::string& path) const {
     out << YAML::Key << "differential"      << YAML::Value << diff_to_string(differential);
     out << YAML::Key << "lsd_preload"       << YAML::Value << lsd_preload;
     out << YAML::Key << "lsd_ramp"          << YAML::Value << lsd_ramp;
+    out << YAML::Key << "drive_split_front" << YAML::Value << drive_split_front;
+    out << YAML::Key << "plant_path"        << YAML::Value << plant_path;
     out << YAML::Key << "max_motor_torque"  << YAML::Value << max_motor_torque;
     out << YAML::Key << "final_drive_ratio" << YAML::Value << final_drive_ratio;
     out << YAML::Key << "engine_rotational_inertia" << YAML::Value << engine_rotational_inertia;

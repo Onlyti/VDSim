@@ -23,6 +23,8 @@ if(pybind11_FOUND)
         install(FILES
             ${CMAKE_SOURCE_DIR}/python/vdsim_lab.py
             ${CMAKE_SOURCE_DIR}/python/vdsim_plant.py
+            ${CMAKE_SOURCE_DIR}/python/vdsim_trace.py
+            ${CMAKE_SOURCE_DIR}/python/vdsim_render.py
             ${CMAKE_SOURCE_DIR}/cosim/protocol.py
             ${CMAKE_SOURCE_DIR}/examples/opendrive.py
             ${CMAKE_SOURCE_DIR}/examples/rd5_route.py
