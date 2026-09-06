@@ -1510,6 +1510,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#computational-cost-per-step" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Computational cost per step
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#running-a-scene" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2550,6 +2561,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#computational-cost-per-step" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Computational cost per step
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#running-a-scene" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2717,6 +2739,62 @@ Canonical names: <code>python/catalog/levels.py</code>.</p>
 <p>L2 is <strong>not</strong> “3-DOF Ackermann”: the chassis is planar 3-DOF (x, y, yaw); the
 ladder name <strong>Seven-DOF</strong> counts four wheel-spin states. Ackermann steering is one
 feature of L2, not the level name.</p>
+<h2 id="computational-cost-per-step">Computational cost per step<a class="headerlink" href="#computational-cost-per-step" title="Permanent link">&para;</a></h2>
+<p><strong>Benchmark</strong> (ioniq5_awd, dt=5e-4, MF2002 tire, flat ground):</p>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Model</th>
+<th style="text-align: right;">ms/step</th>
+<th>Realtime factor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>K</strong></td>
+<td>Kinematic bicycle</td>
+<td style="text-align: right;">0.0005</td>
+<td>~1000×</td>
+</tr>
+<tr>
+<td><strong>L1</strong></td>
+<td>Bicycle</td>
+<td style="text-align: right;">0.0162</td>
+<td>~31×</td>
+</tr>
+<tr>
+<td><strong>L2</strong></td>
+<td>Seven-DOF</td>
+<td style="text-align: right;">0.0313</td>
+<td>~16×</td>
+</tr>
+<tr>
+<td><strong>L3</strong></td>
+<td>Fourteen-DOF</td>
+<td style="text-align: right;">0.0317</td>
+<td>~16×</td>
+</tr>
+<tr>
+<td><strong>L4</strong></td>
+<td>Hardpoint multibody</td>
+<td style="text-align: right;">0.0321</td>
+<td>~15×</td>
+</tr>
+<tr>
+<td><strong>L5</strong></td>
+<td>Free-3D stunt</td>
+<td style="text-align: right;">0.0354</td>
+<td>~14×</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Notes:</strong>
+- <strong>K</strong> has no tire slip / dynamics; ~30× faster than L1.
+- <strong>L2–L4</strong> are dominated by MF2002 tire evaluation; L3/L4 nearly identical (L4 hardpoint kinematics not yet wired to suspension geometry in this test).
+- <strong>L5</strong> adds 3D orientation + strut DAE (~10% slower than L4).
+- Measurement includes <code>SimSession.tick()</code> overhead (ground contact, actuator lag, sensor filtering).</p>
+<p><strong>Tool:</strong> <code>python3 tools/bench_dynamics_levels.py</code> (Python L0–L4) + <code>build/bin/vdsim_bench_levels</code> (C++ L5).</p>
 <h2 id="running-a-scene">Running a scene<a class="headerlink" href="#running-a-scene" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>build/bin/vdsim_realtime<span class="w"> </span>--scene<span class="o">=</span>configs/scenes/two_vehicle_race.yaml<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span>--cmd-port<span class="o">=</span><span class="m">7001</span><span class="w"> </span>--state-port<span class="o">=</span><span class="m">7002</span><span class="w"> </span>--rate<span class="o">=</span><span class="m">200</span>

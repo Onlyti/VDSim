@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/design/STRUCTURED_REVIEW/">
+        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/design/GUI_V3_ADR/">
       
       
       
@@ -23,7 +23,7 @@
     
     
       
-        <title>Structured agent review process (VDSim) - VDSim</title>
+        <title>GUI v3 — Architecture Decision Records - VDSim</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#structured-agent-review-process-vdsim" class="md-skip">
+        <a href="#gui-v3-architecture-decision-records" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Structured agent review process (VDSim)
+              GUI v3 — Architecture Decision Records
             
           </span>
         </div>
@@ -2373,10 +2373,626 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#goal" class="md-nav__link">
+  <a href="#adr-001-application-framework-svelte-5-vite-spa" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Goal
+        ADR-001 — Application framework: Svelte 5 + Vite SPA
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-001 — Application framework: Svelte 5 + Vite SPA">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#options-considered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options considered
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rationale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rationale
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#revisit-if" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Revisit if
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-002-language-typescript-strict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-002 — Language: TypeScript (strict)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-002 — Language: TypeScript (strict)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#decision_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rationale_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rationale
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-003-routing-hash-mode-v3scenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-003 — Routing: hash mode (/v3/#/scenario)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-003 — Routing: hash mode (/v3/#/scenario)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rationale_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rationale
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-004-build-deploy-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-004 — Build &amp; deploy layout
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-004 — Build &amp; deploy layout">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#decision_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#server-integration-guiapiroutespy-planned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Server integration (gui/api/routes.py — planned)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#build-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-005-threejs-keep-vendored-copy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-005 — Three.js: keep vendored copy
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-005 — Three.js: keep vendored copy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#decision_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rationale_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rationale
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-006-layout-docking-css-split-panes-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-006 — Layout / docking: CSS split panes first
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-006 — Layout / docking: CSS split panes first">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rationale_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rationale
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#revisit-if_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Revisit if
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-007-design-system-workflow-in-repo-tokens-storybook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-007 — Design system workflow: in-repo tokens + Storybook
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-007 — Design system workflow: in-repo tokens + Storybook">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rationale_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rationale
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-008-v1-deprecation-cutover" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-008 — v1 deprecation &amp; cutover
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-008 — v1 deprecation &amp; cutover">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#decision_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rationale_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rationale
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-009-state-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-009 — State management
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-009 — State management">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#decision_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rationale_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rationale
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-010-api-client-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-010 — API client pattern
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-010 — API client pattern">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#decision_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-011-product-priority-scenario-studio-first-run-viz-second" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-011 — Product priority: Scenario studio first, Run viz second
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-011 — Product priority: Scenario studio first, Run viz second">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rationale_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rationale
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#summary-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Summary table
       
     </span>
   </a>
@@ -2384,10 +3000,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#parallel-review-lanes-3-agents-minimum" class="md-nav__link">
+  <a href="#rejected-react-vite-record" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Parallel review lanes (3 agents minimum)
+        Rejected: React + Vite (record)
       
     </span>
   </a>
@@ -2395,10 +3011,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#structural-verification-rule" class="md-nav__link">
+  <a href="#next-implementation-steps" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Structural verification rule
+        Next implementation steps
       
     </span>
   </a>
@@ -2406,32 +3022,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#deliverables-per-review-round" class="md-nav__link">
+  <a href="#related" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Deliverables (per review round)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#post-code-simplification-pass" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Post-code simplification pass
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#acceptance" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Acceptance
+        Related
       
     </span>
   </a>
@@ -2458,103 +3052,480 @@
   
 
 
-<h1 id="structured-agent-review-process-vdsim">Structured agent review process (VDSim)<a class="headerlink" href="#structured-agent-review-process-vdsim" title="Permanent link">&para;</a></h1>
-<p>Status: <strong>2026-06-21</strong> · thesis + main shared</p>
-<h2 id="goal">Goal<a class="headerlink" href="#goal" title="Permanent link">&para;</a></h2>
-<p>Detect bugs before merge, prove validation with <strong>non-code evidence</strong>, and keep
-implementations minimal after review.</p>
-<h2 id="parallel-review-lanes-3-agents-minimum">Parallel review lanes (3 agents minimum)<a class="headerlink" href="#parallel-review-lanes-3-agents-minimum" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Lane</th>
-<th>Scope</th>
-<th>Self-review hook</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>A — Validation</strong></td>
-<td>ISO/Chrono parity gates</td>
-<td><code>ctest -R 'ChronoKcParity|IsoBaseline'</code></td>
-</tr>
-<tr>
-<td><strong>A — Plant</strong></td>
-<td><code>python/vdsim_plant.py</code>, <code>VLA_THESIS_PLANT.md</code>, <code>test_vla_plant*</code></td>
-<td><code>ctest -R VlaPlant</code>; <code>python3 tests/scripts/test_vla_plant.py</code></td>
-</tr>
-<tr>
-<td><strong>B — Core session</strong></td>
-<td><code>make_direct_control_session</code>, CmdL1, <code>TireSetup</code>, friction ground</td>
-<td><code>ctest -R 'PerWheel|PerAxle|VlaPlant|SimSession'</code></td>
-</tr>
-<tr>
-<td><strong>C — Catalog/GUI</strong></td>
-<td><code>assembly.py</code>, <code>part_cards.py</code>, <code>catalog_bridge.py</code></td>
-<td><code>ctest -R 'catalog|assembly|blueprint|multi_vehicle'</code></td>
-</tr>
-</tbody>
-</table>
-<p>Each lane returns the same template:</p>
-<ol>
-<li><strong>BUGS</strong> — severity, location, fix</li>
-<li><strong>SIMPLIFICATION</strong> — dead code / over-abstraction</li>
-<li><strong>VERIFICATION_MATRIX</strong> — feature → test → pass/fail</li>
-<li><strong>GAPS</strong> — features with no structural test</li>
-</ol>
-<h2 id="structural-verification-rule">Structural verification rule<a class="headerlink" href="#structural-verification-rule" title="Permanent link">&para;</a></h2>
-<p>Every shipped feature must map to <strong>at least one</strong> automated check:</p>
+<h1 id="gui-v3-architecture-decision-records">GUI v3 — Architecture Decision Records<a class="headerlink" href="#gui-v3-architecture-decision-records" title="Permanent link">&para;</a></h1>
+<p>Status: <strong>accepted</strong> (2026-06-21)<br />
+Parent: <a href="../GUI_V3_REQUIREMENTS/"><code>GUI_V3_REQUIREMENTS.md</code></a><br />
+Resolves open decisions <strong>O1, O3, O4</strong> from v3 requirements §11.</p>
+<hr />
+<h2 id="adr-001-application-framework-svelte-5-vite-spa">ADR-001 — Application framework: <strong>Svelte 5 + Vite SPA</strong><a class="headerlink" href="#adr-001-application-framework-svelte-5-vite-spa" title="Permanent link">&para;</a></h2>
+<h3 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h3>
 <ul>
-<li>C++ gtest (<code>ctest -R Name</code>)</li>
-<li>Python script under <code>tests/scripts/</code> (wired in CTest)</li>
-<li>Parity gate (Chrono / CarMaker) with committed reference</li>
+<li>v1 is a <strong>4235 LOC</strong> vanilla <code>app.js</code> monolith on stdlib <code>http.server</code>.</li>
+<li>v3 needs four modes, a component design system, typed API client, and maintainable
+  module boundaries (NF-09: no file &gt; 800 LOC).</li>
+<li>Backend stays Python (<code>gui/server.py</code>); <strong>no SSR</strong>, no Node server in production.</li>
+<li>Lab constraints: offline-first, integrated GPU, SSE @ ~60 Hz telemetry.</li>
 </ul>
-<p>No check → either add test or mark <strong>GAP</strong> in the review report.</p>
-<h2 id="deliverables-per-review-round">Deliverables (per review round)<a class="headerlink" href="#deliverables-per-review-round" title="Permanent link">&para;</a></h2>
+<h3 id="options-considered">Options considered<a class="headerlink" href="#options-considered" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
-<th>Artifact</th>
-<th>Path</th>
+<th>Option</th>
+<th>Pros</th>
+<th>Cons</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Synthesis report</td>
-<td><code>docs/evidence/review/REVIEW_YYYY-MM-DD.md</code></td>
+<td><strong>A. Svelte 5 + Vite SPA</strong></td>
+<td>Fine-grained updates (SSE-friendly); low boilerplate for dense rows/forms; small bundles; single-file components</td>
+<td>Smaller hiring pool vs React; Three.js lifecycle needs discipline</td>
 </tr>
 <tr>
-<td>Machine log</td>
-<td><code>docs/evidence/review/YYYY-MM-DD/ctest_summary.txt</code></td>
+<td><strong>B. React 19 + Vite SPA</strong></td>
+<td>Largest ecosystem (docking, charts); most agent/human familiarity</td>
+<td>More boilerplate; larger runtime; easy to over-abstract</td>
 </tr>
 <tr>
-<td>Feature matrix</td>
-<td><code>docs/evidence/review/YYYY-MM-DD/verification_matrix.json</code></td>
+<td><strong>C. SvelteKit</strong></td>
+<td>File routing, adapters</td>
+<td>SSR/adapters unused; couples to Kit conventions for a static lab SPA</td>
 </tr>
 <tr>
-<td>Process spec</td>
-<td>this file</td>
+<td><strong>D. Vue 3 + Vite</strong></td>
+<td>Good DX</td>
+<td>Weaker fit for planned docking/chart libs; team has no Vue history</td>
+</tr>
+<tr>
+<td><strong>E. Stay vanilla ES modules</strong></td>
+<td>Zero build step</td>
+<td>Already failed at v1 scale; rejected in v3 charter</td>
 </tr>
 </tbody>
 </table>
-<p>Generate bundle:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python3<span class="w"> </span>tools/review_evidence_bundle.py<span class="w"> </span>--tag<span class="w"> </span>thesis-2026-06-21
+<h3 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h3>
+<p><strong>A — Svelte 5 + Vite SPA</strong> (not SvelteKit).</p>
+<h3 id="rationale">Rationale<a class="headerlink" href="#rationale" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>No SSR benefit</strong> — app is a local authoring client over REST/SSE; static <code>dist/</code> is enough.</li>
+<li><strong>SSE / Run mode</strong> — compiler-driven fine-grained DOM updates avoid re-rendering large React trees
+   on every 16 ms state tick (telemetry drawer can subscribe narrowly).</li>
+<li><strong>Build + Compose density</strong> — Danawa slot rows, inspector fields, and status chips are
+   faster to ship in Svelte with less state-plumbing than React hooks/context.</li>
+<li><strong>Bundle size</strong> — lab LAN + offline vendor fonts; smaller initial JS helps cold load.</li>
+<li><strong>Monolith split</strong> — <code>.svelte</code> per panel maps cleanly to <code>modes/{scenario,run,build,analyze}/</code>.</li>
+</ol>
+<h3 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Add <code>gui/v3/package.json</code>, <code>vite.config.ts</code>, <code>svelte.config.js</code>.</li>
+<li><strong>Dev prerequisite:</strong> Node <strong>≥ 20</strong> (system has v24 — OK). Python server unchanged.</li>
+<li><code>gui/v3/dist/</code> is <strong>build output</strong> — not committed; documented in README + CMake optional target later.</li>
+<li>Port v1 Three.js scene logic to <code>gui/v3/src/lib/viewport/</code> as imperative TS module
+  (no <code>@react-three/fiber</code> — keep v1 approach, less magic).</li>
+<li>Agents/contributors need Svelte 5 runes/docs; link in <code>gui/v3/README.md</code>.</li>
+</ul>
+<h3 id="revisit-if">Revisit if<a class="headerlink" href="#revisit-if" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Team standardizes on React for other products and won't maintain Svelte.</li>
+<li>A required P0 library is React-only <strong>and</strong> has no Svelte port (none identified today).</li>
+</ul>
+<hr />
+<h2 id="adr-002-language-typescript-strict">ADR-002 — Language: <strong>TypeScript (strict)</strong><a class="headerlink" href="#adr-002-language-typescript-strict" title="Permanent link">&para;</a></h2>
+<h3 id="decision_1">Decision<a class="headerlink" href="#decision_1" title="Permanent link">&para;</a></h3>
+<p>All v3 app code in <strong>TypeScript</strong> with <code>strict: true</code>.</p>
+<h3 id="rationale_1">Rationale<a class="headerlink" href="#rationale_1" title="Permanent link">&para;</a></h3>
+<p>Wire contract has many endpoints (<code>/api/setup</code>, <code>/api/catalog/assembly</code>, <code>/api/compare</code>, …).
+Typed <code>api/*.ts</code> modules catch field drift at compile time; aligns with NF-07 API stability.</p>
+<h3 id="consequences_1">Consequences<a class="headerlink" href="#consequences_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Hand-maintained types in <code>gui/v3/src/lib/api/types.ts</code> initially.</li>
+<li>Optional later: generate from OpenAPI if <code>gui/api</code> documents JSON shapes.</li>
+</ul>
+<hr />
+<h2 id="adr-003-routing-hash-mode-v3scenario">ADR-003 — Routing: <strong>hash mode</strong> (<code>/v3/#/scenario</code>)<a class="headerlink" href="#adr-003-routing-hash-mode-v3scenario" title="Permanent link">&para;</a></h2>
+<h3 id="context_1">Context<a class="headerlink" href="#context_1" title="Permanent link">&para;</a></h3>
+<p><code>gui/api/routes.py</code> serves exact paths; no generic SPA fallback today.</p>
+<h3 id="options">Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Server change</th>
+<th>Bookmarkable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hash <code>#/build</code></td>
+<td>Serve single <code>index.html</code> at <code>/v3/</code> only</td>
+<td>Yes (full URL)</td>
+</tr>
+<tr>
+<td>History <code>/v3/build</code></td>
+<td>Catch-all → <code>index.html</code> for every <code>/v3/*</code></td>
+<td>Cleaner URLs</td>
+</tr>
+</tbody>
+</table>
+<h3 id="decision_2">Decision<a class="headerlink" href="#decision_2" title="Permanent link">&para;</a></h3>
+<p><strong>Hash routing</strong> for v3.0-alpha through v3.0-rc. Default hash: <strong><code>#/scenario</code></strong>.</p>
+<h3 id="rationale_2">Rationale<a class="headerlink" href="#rationale_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Minimal server diff</strong> — one new route <code>/v3/</code> + static asset mount for <code>dist/assets/</code>.</li>
+<li>Avoids accidental shadowing of future <code>/api/*</code> paths.</li>
+<li>Upgrade to history API in v3.1 is a client-only change + small routes.py fallback.</li>
+</ul>
+<h3 id="implementation">Implementation<a class="headerlink" href="#implementation" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Router: lightweight (<code>svelte-spa-router</code> or ~50 LOC hash store).</li>
+<li>Modes: <code>#/scenario</code> | <code>#/run</code> | <code>#/build</code> | <code>#/analyze</code> — <strong>default <code>#/scenario</code></strong>.</li>
+</ul>
+<hr />
+<h2 id="adr-004-build-deploy-layout">ADR-004 — Build &amp; deploy layout<a class="headerlink" href="#adr-004-build-deploy-layout" title="Permanent link">&para;</a></h2>
+<h3 id="decision_3">Decision<a class="headerlink" href="#decision_3" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>gui/v3/
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  package.json
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  vite.config.ts          # base: '/v3/', outDir: 'dist'
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  src/
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    main.ts
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    App.svelte            # shell + nav
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    modes/ ...
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    lib/api/ ...
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    lib/viewport/ ...
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    components/ ...
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>  dist/                   # gitignored — npm run build
 </span></code></pre></div>
-<h2 id="post-code-simplification-pass">Post-code simplification pass<a class="headerlink" href="#post-code-simplification-pass" title="Permanent link">&para;</a></h2>
-<p>After bug fixes:</p>
-<ol>
-<li>Remove dead symbols flagged by review</li>
-<li>Collapse duplicate helpers (same file only; no cross-module abstraction unless ≥3 call sites)</li>
-<li>Re-run lane tests + full <code>ctest</code></li>
-<li>Update <code>docs/HANDOFF.md</code> with review date and test count</li>
-</ol>
-<h2 id="acceptance">Acceptance<a class="headerlink" href="#acceptance" title="Permanent link">&para;</a></h2>
+<p>Vite <code>base: '/v3/'</code> so asset URLs work when served under <code>/v3/</code>.</p>
+<h3 id="server-integration-guiapiroutespy-planned">Server integration (<code>gui/api/routes.py</code> — planned)<a class="headerlink" href="#server-integration-guiapiroutespy-planned" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Serves</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /v3</code>, <code>GET /v3/</code></td>
+<td><code>gui/v3/dist/index.html</code></td>
+</tr>
+<tr>
+<td><code>GET /v3/assets/*</code></td>
+<td><code>gui/v3/dist/assets/*</code></td>
+</tr>
+<tr>
+<td><code>GET /app.html</code></td>
+<td>v1 (until v3.0 cutover)</td>
+</tr>
+</tbody>
+</table>
+<p>v1 <code>/static/*</code> and <code>/vendor/*</code> unchanged.</p>
+<h3 id="build-commands">Build commands<a class="headerlink" href="#build-commands" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">cd</span><span class="w"> </span>gui/v3<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>npm<span class="w"> </span>ci<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>npm<span class="w"> </span>run<span class="w"> </span>build<span class="w">    </span><span class="c1"># production</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">cd</span><span class="w"> </span>gui/v3<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>npm<span class="w"> </span>run<span class="w"> </span>dev<span class="w">                </span><span class="c1"># Vite dev server; proxy /api → :8095</span>
+</span></code></pre></div>
+<h3 id="consequences_2">Consequences<a class="headerlink" href="#consequences_2" title="Permanent link">&para;</a></h3>
 <ul>
-<li>All lane tests <strong>PASS</strong></li>
-<li>Full <code>ctest</code> green (count PENDING — re-measured on the integration tree)</li>
-<li>Review report committed or attached to PR</li>
-<li>No ISO/benchmark number re-baseline unless explicitly approved</li>
+<li>CI (future): add Node job <code>npm run check &amp;&amp; npm run build</code> — does not block ctest today.</li>
+<li>README: v3 dev is optional; default users still use v1 until cutover.</li>
 </ul>
+<hr />
+<h2 id="adr-005-threejs-keep-vendored-copy">ADR-005 — Three.js: <strong>keep vendored copy</strong><a class="headerlink" href="#adr-005-threejs-keep-vendored-copy" title="Permanent link">&para;</a></h2>
+<h3 id="decision_4">Decision<a class="headerlink" href="#decision_4" title="Permanent link">&para;</a></h3>
+<p>Import Three.js from existing <code>gui/vendor/three/</code> via Vite alias — <strong>no CDN</strong>, no duplicate npm three unless vendor is removed later.</p>
+<div class="language-ts highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1">// vite.config.ts (sketch)</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nx">resolve</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nx">alias</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nx">three</span><span class="o">:</span><span class="w"> </span><span class="kt">path.resolve</span><span class="p">(</span><span class="nx">__dirname</span><span class="p">,</span><span class="w"> </span><span class="s1">'../vendor/three/three.module.js'</span><span class="p">),</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="p">},</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="p">},</span>
+</span></code></pre></div>
+<h3 id="rationale_3">Rationale<a class="headerlink" href="#rationale_3" title="Permanent link">&para;</a></h3>
+<p>P5 offline-first; v1 already ships vendor tree; pin version when upgrading.</p>
+<h3 id="consequences_3">Consequences<a class="headerlink" href="#consequences_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li>WebGPU renderer path same as v1 (<code>three/addons/</code> from vendor).</li>
+<li>NF-02 perf validation stays comparable to v1 baseline.</li>
+</ul>
+<hr />
+<h2 id="adr-006-layout-docking-css-split-panes-first">ADR-006 — Layout / docking: <strong>CSS split panes first</strong><a class="headerlink" href="#adr-006-layout-docking-css-split-panes-first" title="Permanent link">&para;</a></h2>
+<h3 id="context_2">Context<a class="headerlink" href="#context_2" title="Permanent link">&para;</a></h3>
+<p>Design review asked for dockable panels (G-02). Libraries like <code>flexlayout-react</code> are React-only.</p>
+<h3 id="decision_5">Decision<a class="headerlink" href="#decision_5" title="Permanent link">&para;</a></h3>
+<p>v3.0-alpha/beta: <strong>CSS grid + <code>resize</code> handles</strong> per mode default layout (requirements §4.3).
+No docking library until v3.1 <strong>if</strong> users need persisted arbitrary layouts.</p>
+<h3 id="rationale_4">Rationale<a class="headerlink" href="#rationale_4" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Ships faster; satisfies “resizable panels” for default Compose/Build splits.</li>
+<li>Keeps framework choice from being forced by a React-only dock lib.</li>
+<li>SH-06 (localStorage layout persist) stores pane widths only, not arbitrary dock graphs.</li>
+</ul>
+<h3 id="revisit-if_1">Revisit if<a class="headerlink" href="#revisit-if_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>FS/Auto users request IDE-style free docking → evaluate <code>golden-layout</code> (framework-agnostic)
+  or migrate layout shell to React (would trigger ADR-001 revisit).</li>
+</ul>
+<hr />
+<h2 id="adr-007-design-system-workflow-in-repo-tokens-storybook">ADR-007 — Design system workflow: <strong>in-repo tokens + Storybook</strong><a class="headerlink" href="#adr-007-design-system-workflow-in-repo-tokens-storybook" title="Permanent link">&para;</a></h2>
+<h3 id="context_3">Context<a class="headerlink" href="#context_3" title="Permanent link">&para;</a></h3>
+<p>O2: Figma vs Storybook. HANDOFF: “design pass before more hand-coded CSS.”</p>
+<h3 id="decision_6">Decision<a class="headerlink" href="#decision_6" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong><code>gui/v3/src/tokens.css</code></strong> — source of truth for colors, spacing, typography (DS-01).</li>
+<li><strong>Storybook 8 + Svelte</strong> in <code>gui/v3/.storybook/</code> for core components (DS-02).</li>
+<li><strong>Figma optional</strong> — link in README if maintainer maintains one; not a merge blocker.</li>
+</ol>
+<h3 id="rationale_5">Rationale<a class="headerlink" href="#rationale_5" title="Permanent link">&para;</a></h3>
+<ul>
+<li>OSS repo: Storybook lives with code, reviewable in PRs, no external tool lock-in.</li>
+<li>Components (Chip, DenseRow, InspectorField) get visual regression baseline for agents.</li>
+</ul>
+<h3 id="consequences_4">Consequences<a class="headerlink" href="#consequences_4" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>npm run storybook</code> for local design review (DS-05 gate).</li>
+<li>No Figma-to-code automation in v3.0.</li>
+</ul>
+<hr />
+<h2 id="adr-008-v1-deprecation-cutover">ADR-008 — v1 deprecation &amp; cutover<a class="headerlink" href="#adr-008-v1-deprecation-cutover" title="Permanent link">&para;</a></h2>
+<h3 id="decision_7">Decision<a class="headerlink" href="#decision_7" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Milestone</th>
+<th>Policy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>v3.0-alpha … rc</td>
+<td>v1 <code>gui/app.html</code> = <strong>production</strong>; <code>/v3/</code> = preview</td>
+</tr>
+<tr>
+<td>v3.0</td>
+<td><code>/app.html</code> redirects to <code>/v3/</code>; move v1 to <code>gui/legacy/</code> (read-only, one release)</td>
+</tr>
+<tr>
+<td>After v3.0 +1</td>
+<td>Delete <code>gui/legacy/</code> if no rollback request</td>
+</tr>
+</tbody>
+</table>
+<h3 id="rationale_6">Rationale<a class="headerlink" href="#rationale_6" title="Permanent link">&para;</a></h3>
+<p>P6 parity-before-cutover; lab bookmarks on <code>/app.html</code> get redirect, not silent break.</p>
+<hr />
+<h2 id="adr-009-state-management">ADR-009 — State management<a class="headerlink" href="#adr-009-state-management" title="Permanent link">&para;</a></h2>
+<h3 id="decision_8">Decision<a class="headerlink" href="#decision_8" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Scope</th>
+<th>Approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Server draft (fleet, scene, path)</td>
+<td><strong>Server truth</strong> — <code>GET/POST /api/setup</code>; UI shows sync errors</td>
+</tr>
+<tr>
+<td>SSE stream (Run)</td>
+<td>Dedicated <code>viewport</code> module + narrow Svelte stores for telemetry</td>
+</tr>
+<tr>
+<td>Build assembly</td>
+<td>Fetch on action; debounced preview query param</td>
+</tr>
+<tr>
+<td>Cross-mode</td>
+<td>Shell store: <code>scenarioName</code>, <code>liveVid</code>, <code>connStatus</code></td>
+</tr>
+</tbody>
+</table>
+<p>No Redux/Pinia. Avoid global client cache of physics params beyond session.</p>
+<h3 id="rationale_7">Rationale<a class="headerlink" href="#rationale_7" title="Permanent link">&para;</a></h3>
+<p>R6 — physics resolves on server; duplicating resolve client-side caused v1 bugs.</p>
+<hr />
+<h2 id="adr-010-api-client-pattern">ADR-010 — API client pattern<a class="headerlink" href="#adr-010-api-client-pattern" title="Permanent link">&para;</a></h2>
+<h3 id="decision_9">Decision<a class="headerlink" href="#decision_9" title="Permanent link">&para;</a></h3>
+<p>Thin module per domain:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>gui/v3/src/lib/api/
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>  client.ts      # fetchJson, error envelope
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>  setup.ts
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>  catalog.ts
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>  control.ts
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>  compare.ts
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>  stream.ts      # EventSource wrapper
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>  types.ts
+</span></code></pre></div>
+<p>Generated from <code>gui/api/routes.py</code> route list — manual types until OpenAPI exists.</p>
+<h3 id="consequences_5">Consequences<a class="headerlink" href="#consequences_5" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Any new <code>/api/*</code> route: update <code>types.ts</code> + ctest; NF-07 unchanged.</li>
+</ul>
+<hr />
+<hr />
+<h2 id="adr-011-product-priority-scenario-studio-first-run-viz-second">ADR-011 — Product priority: <strong>Scenario studio first, Run viz second</strong><a class="headerlink" href="#adr-011-product-priority-scenario-studio-first-run-viz-second" title="Permanent link">&para;</a></h2>
+<p>Status: <strong>accepted</strong> (2026-06-21)</p>
+<h3 id="context_4">Context<a class="headerlink" href="#context_4" title="Permanent link">&para;</a></h3>
+<p>User direction: the GUI’s <strong>main job</strong> is <strong>scenario generation</strong> (<code>configs/scenes/</code>).
+<strong>Second</strong> is <strong>realtime visualization</strong> while the plant runs — not the other way around.
+v1 felt “3D viewer with setup bar attached”; v3 must invert that emphasis.</p>
+<h3 id="decision_10">Decision<a class="headerlink" href="#decision_10" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>Mode</th>
+<th>Route</th>
+<th>v3 phase</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1</strong></td>
+<td><strong>Scenario</strong> (시나리오 생성기)</td>
+<td><code>#/scenario</code> (default)</td>
+<td>v3.0-alpha</td>
+</tr>
+<tr>
+<td><strong>2</strong></td>
+<td><strong>Run</strong> (realtime 시각화)</td>
+<td><code>#/run</code> (via ▶ or tab)</td>
+<td>v3.0-beta</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Build (agent vehicle parts)</td>
+<td><code>#/build</code> or drawer from Scenario</td>
+<td>v3.0-rc</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Analyze</td>
+<td><code>#/analyze</code></td>
+<td>v3.0-rc</td>
+</tr>
+</tbody>
+</table>
+<h3 id="rationale_8">Rationale<a class="headerlink" href="#rationale_8" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Matches VDSim runtime split: [1] gui = scenario editor + run controller (<a href="../RUNTIME_ARCH/"><code>RUNTIME_ARCH.md</code></a>).</li>
+<li>Scenario authoring is the differentiated OSS surface; Run reuses existing SSE + Three.js port.</li>
+<li>Build stays necessary (fleet <code>blueprint</code> + <code>parts</code>) but is <strong>in service of</strong> scenario agents.</li>
+</ul>
+<h3 id="consequences_6">Consequences<a class="headerlink" href="#consequences_6" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Shell nav highlights <strong>Scenario</strong> and <strong>Run</strong>; Build/Analyze de-emphasized.</li>
+<li><strong>▶ Play</strong> syncs draft then <strong>auto-navigates to Run</strong> (SH-03).</li>
+<li>Storybook / component priority: map canvas, fleet inspector, path editor before schematic/build-sheet.</li>
+<li>Implementation order in ADR “Next steps” follows Scenario → Run → Build.</li>
+</ul>
+<hr />
+<h2 id="summary-table">Summary table<a class="headerlink" href="#summary-table" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>ADR</th>
+<th>Decision</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>001</td>
+<td><strong>Svelte 5 + Vite SPA</strong></td>
+</tr>
+<tr>
+<td>002</td>
+<td>TypeScript strict</td>
+</tr>
+<tr>
+<td>003</td>
+<td>Hash router <code>/v3/#/scenario</code> (default)</td>
+</tr>
+<tr>
+<td>004</td>
+<td>Build to <code>gui/v3/dist/</code>; server serves <code>/v3/</code></td>
+</tr>
+<tr>
+<td>005</td>
+<td>Three.js from <code>gui/vendor/</code></td>
+</tr>
+<tr>
+<td>006</td>
+<td>CSS split panes; no dock lib in v3.0</td>
+</tr>
+<tr>
+<td>007</td>
+<td>tokens.css + Storybook (Figma optional)</td>
+</tr>
+<tr>
+<td>008</td>
+<td>v1 until v3.0 parity → redirect</td>
+</tr>
+<tr>
+<td>009</td>
+<td>Server-truth draft; minimal client state</td>
+</tr>
+<tr>
+<td>010</td>
+<td>Typed <code>lib/api/*</code> modules</td>
+</tr>
+<tr>
+<td><strong>011</strong></td>
+<td><strong>Scenario-first, Run-second product priority</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="rejected-react-vite-record">Rejected: React + Vite (record)<a class="headerlink" href="#rejected-react-vite-record" title="Permanent link">&para;</a></h2>
+<p>React remains a <strong>credible alternate</strong>. Not chosen because:</p>
+<ul>
+<li>v3 UI is form-dense + SSE-heavy, not a large component tree with shared global state.</li>
+<li>Planned v3.0 does not need React-only libs (docking deferred).</li>
+<li>Bundle and boilerplate cost matters for a sidecar lab UI.</li>
+</ul>
+<p>If ADR-001 is reopened, use <strong>React 19 + Vite + TypeScript</strong> with the same ADR-003–010
+(hash routing, vendor three, server layout, deprecation policy).</p>
+<hr />
+<h2 id="next-implementation-steps">Next implementation steps<a class="headerlink" href="#next-implementation-steps" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Scaffold <code>gui/v3/</code> (<code>npm create vite@latest</code> svelte-ts template, adapt).</li>
+<li>Add <code>gui/v3/.gitignore</code> (<code>node_modules</code>, <code>dist</code>).</li>
+<li>Patch <code>gui/api/routes.py</code> — <code>/v3/</code> + <code>/v3/assets/*</code> (small PR).</li>
+<li>Shell: default <code>#/scenario</code> + <strong>Run</strong> tab + <code>api/client.ts</code> health check.</li>
+<li>Storybook + <code>tokens.css</code> — <strong>Scenario</strong> components first (map, fleet row, path wp).</li>
+<li><strong>Scenario mode</strong> CO-00–CO-08, CO-16 (v3.0-alpha).</li>
+<li><strong>Run mode</strong> RN-00–RN-07 + viewport port from v1 (v3.0-beta).</li>
+<li>Build drawer + Analyze (v3.0-rc).</li>
+</ol>
+<hr />
+<h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Doc</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="../GUI_V3_REQUIREMENTS/"><code>GUI_V3_REQUIREMENTS.md</code></a></td>
+<td>Functional requirements</td>
+</tr>
+<tr>
+<td><a href="../GUI_V2_REQUIREMENTS/"><code>GUI_V2_REQUIREMENTS.md</code></a></td>
+<td>v1 parity §3.1</td>
+</tr>
+<tr>
+<td><a href="../../gui_architecture/"><code>../gui_architecture.md</code></a></td>
+<td>Wire contract</td>
+</tr>
+<tr>
+<td><a href="../../HANDOFF/"><code>../HANDOFF.md</code></a></td>
+<td>Session handoff</td>
+</tr>
+</tbody>
+</table>
 
 
 

@@ -2467,16 +2467,27 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#231-sensors-yamlworldscenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3.1 sensors: — 에이전트 센서 선언 🟢(YAML→WorldScenario 파서) / 🔴(렌더 커플링)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-commsyaml-vds1-jsonnmeasensor" class="md-nav__link">
+  <a href="#3-commsyaml-vds1jsonnmea_gga-sensor" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. 실시간 통신 설정 — comms/*.yaml 🟢(vds1) / 🔴(json·nmea·sensor)
+        3. 실시간 통신 설정 — comms/.yaml 🟢(vds1·json·nmea_gga) / 🔴(sensor.)
       
     </span>
   </a>
@@ -2683,7 +2694,7 @@
 </span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="nt">vehicle</span><span class="p">:</span><span class="w">                                      </span><span class="c1"># 차량 = 부품(blueprint+parts) + 센서</span>
 </span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">      </span><span class="nt">blueprint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vehicle.sedan_comfort</span><span class="w">            </span><span class="c1"># 🟢 완성 레시피(모든 슬롯 채움)</span>
 </span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">      </span><span class="nt">parts</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> tire</span><span class="p">:</span><span class="w"> </span><span class="nv">tire.sport_grip</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">            </span><span class="c1"># 🟢 그 위 슬롯 override(diff). 없으면 blueprint 원본</span>
-</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">      </span><span class="nt">sensors</span><span class="p">:</span><span class="w">                                    </span><span class="c1"># 🔴 차량 안 (mount = 위치+자세 pose)</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">      </span><span class="nt">sensors</span><span class="p">:</span><span class="w">                                    </span><span class="c1"># 🟢 파싱/저장 (mount = 위치+자세 pose) — 아래 §2.3.1</span>
 </span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">gnss</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">gnss</span><span class="p p-Indicator">,</span><span class="nt"> mount</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> pos</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1.4</span><span class="p p-Indicator">,</span><span class="nv">0</span><span class="p p-Indicator">,</span><span class="nv">1.0</span><span class="p p-Indicator">],</span><span class="nt"> rpy</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0</span><span class="p p-Indicator">,</span><span class="nv">0</span><span class="p p-Indicator">,</span><span class="nv">0</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="p p-Indicator">},</span><span class="nt"> rate</span><span class="p">:</span><span class="w"> </span><span class="nv">10</span><span class="w"> </span><span class="p p-Indicator">}</span>
 </span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">cam</span><span class="p p-Indicator">,</span><span class="nt">  type</span><span class="p">:</span><span class="w"> </span><span class="nv">camera</span><span class="p p-Indicator">,</span><span class="nt"> mount</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> pos</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1.6</span><span class="p p-Indicator">,</span><span class="nv">0</span><span class="p p-Indicator">,</span><span class="nv">1.2</span><span class="p p-Indicator">],</span><span class="nt"> rpy</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0</span><span class="p p-Indicator">,</span><span class="nv">-0.05</span><span class="p p-Indicator">,</span><span class="nv">0</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="p p-Indicator">},</span><span class="nt"> rate</span><span class="p">:</span><span class="w"> </span><span class="nv">30</span><span class="w"> </span><span class="p p-Indicator">}</span>
 </span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">    </span><span class="nt">spawn</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> x</span><span class="p">:</span><span class="w"> </span><span class="nv">-15</span><span class="p p-Indicator">,</span><span class="nt"> y</span><span class="p">:</span><span class="w"> </span><span class="nv">-1.5</span><span class="p p-Indicator">,</span><span class="nt"> yaw</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">,</span><span class="nt"> vx</span><span class="p">:</span><span class="w"> </span><span class="nv">12</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">    </span><span class="c1"># 🟢 (현재 x0/y0/z0/yaw0/vx0)</span>
@@ -2697,33 +2708,217 @@
 <p>blueprint vs parts: blueprint = base 레시피, parts = 그 위 슬롯 patch. materialize 가
 <code>blueprint + parts → resolved vehicle.yaml/tire.yaml</code> 로 합친다.</p>
 <blockquote>
-<p>현재 구현은 평평한 <code>fleet:</code> (agent=blueprint+pose+control)이고, 위 <code>agents.vehicle.sensors</code>
-/ <code>path</code>(trajectory 파일) / <code>map</code> / scenario-level <code>sim</code>·<code>comms</code> 는 단계적으로 추가(🔴).
-계층 자체는 위가 확정.</p>
+<p>현재 구현은 평평한 <code>fleet:</code> (agent=blueprint+pose+control)이고, 위 <code>path</code>(trajectory 파일)
+/ <code>map</code> / scenario-level <code>sim</code>·<code>comms</code> 는 단계적으로 추가(🔴). <code>agents.vehicle.sensors</code>
+는 파서까지 들어왔다(§2.3.1). 계층 자체는 위가 확정.</p>
 </blockquote>
+<h3 id="231-sensors-yamlworldscenario">2.3.1 <code>sensors:</code> — 에이전트 센서 선언 🟢(YAML→WorldScenario 파서) / 🔴(렌더 커플링)<a class="headerlink" href="#231-sensors-yamlworldscenario" title="Permanent link">&para;</a></h3>
+<p><code>fleet[].sensors</code>(= <code>agents.vehicle.sensors</code>)를 <code>cosim/world_scenario.cpp</code> 가 파싱해
+<code>VehicleSpawn</code> 에 싣는다. 한 항목이 서로 다른 두 가지를 동시에 나른다:</p>
+<ul>
+<li><strong>노이즈</strong> <code>noise_std</code>/<code>bias</code>/<code>bias_rw</code> → <code>VehicleSpawn::sensors</code> (<code>vdsim::SensorParams</code>,
+  신호 그룹 단위) → 시뮬레이션에 <strong>실제로 적용된다</strong>.</li>
+<li><strong>장착</strong> <code>id</code>/<code>type</code>/<code>mount{pos,rpy}</code>(또는 <code>mount:[x,y,z]</code>+<code>yaw</code>)/<code>rate</code>/<code>params</code> → <code>VehicleSpawn::scene_sensors</code>
+  (<code>SceneSensor</code>) → <strong>파싱해서 저장하는 데까지만</strong>. mount pose 를 읽는 소비자는 아직 없고
+  (향후 렌더/센서 프레임 커플링 🔴), 지금은 시뮬 결과에 아무 영향을 주지 않는다.</li>
+</ul>
+<p>세 가지 형태를 받는다:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">sensors</span><span class="p">:</span><span class="w">                                   </span><span class="c1"># (1) 목록형 — §2.3 의 정식 형태</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">gnss_roof</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">gnss</span><span class="p p-Indicator">,</span><span class="nt">   mount</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> pos</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.2</span><span class="p p-Indicator">,</span><span class="nv">0</span><span class="p p-Indicator">,</span><span class="nv">1.42</span><span class="p p-Indicator">],</span><span class="nt"> rpy</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0</span><span class="p p-Indicator">,</span><span class="nv">0</span><span class="p p-Indicator">,</span><span class="nv">0</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="p p-Indicator">},</span><span class="nt">    rate</span><span class="p">:</span><span class="w"> </span><span class="nv">10</span><span class="p p-Indicator">,</span><span class="nt"> noise_std</span><span class="p">:</span><span class="w"> </span><span class="nv">0.3</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">cam_front</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">camera</span><span class="p p-Indicator">,</span><span class="nt"> mount</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> pos</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1.6</span><span class="p p-Indicator">,</span><span class="nv">0</span><span class="p p-Indicator">,</span><span class="nv">1.2</span><span class="p p-Indicator">],</span><span class="nt">  rpy</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0</span><span class="p p-Indicator">,</span><span class="nv">-0.05</span><span class="p p-Indicator">,</span><span class="nv">0</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="p p-Indicator">},</span><span class="nt"> rate</span><span class="p">:</span><span class="w"> </span><span class="nv">30</span><span class="p p-Indicator">,</span><span class="nt"> params</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> fov_deg</span><span class="p">:</span><span class="w"> </span><span class="nv">90</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">gnss_b</span><span class="p p-Indicator">,</span><span class="nt">    type</span><span class="p">:</span><span class="w"> </span><span class="nv">gnss</span><span class="p p-Indicator">,</span><span class="nt">   mount</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.2</span><span class="p p-Indicator">,</span><span class="nv">0</span><span class="p p-Indicator">,</span><span class="nv">1.42</span><span class="p p-Indicator">],</span><span class="nt"> yaw</span><span class="p">:</span><span class="w"> </span><span class="nv">15</span><span class="p p-Indicator">,</span><span class="nt"> rate</span><span class="p">:</span><span class="w"> </span><span class="nv">10</span><span class="p p-Indicator">,</span><span class="nt"> noise_std</span><span class="p">:</span><span class="w"> </span><span class="nv">0.3</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">   </span><span class="c1"># builder 표기</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="nt">sensors</span><span class="p">:</span><span class="w">                                   </span><span class="c1"># (2) suite 형 — enabled/seed 까지 지정</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span><span class="nt">seed</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">42</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">  </span><span class="nt">list</span><span class="p">:</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">gnss</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">gnss</span><span class="p p-Indicator">,</span><span class="nt"> mount</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> pos</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1.4</span><span class="p p-Indicator">,</span><span class="nv">0</span><span class="p p-Indicator">,</span><span class="nv">1.0</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="p p-Indicator">},</span><span class="nt"> rate</span><span class="p">:</span><span class="w"> </span><span class="nv">10</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="nt">sensors</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">configs/sensors/noisy.yaml</span><span class="w">        </span><span class="c1"># (3) SensorParams 파일 경로 (노이즈만, mount 없음)</span>
+</span></code></pre></div>
+<ul>
+<li><code>type</code>: <code>gnss</code>·<code>gnss_pos</code>·<code>gnss_vel</code>·<code>imu</code>·<code>imu_accel</code>·<code>imu_gyro</code>·<code>wheel_speed</code>·<code>steer</code>
+  ·<code>camera</code>·<code>lidar</code>. <code>camera</code>/<code>lidar</code> 는 코어에 계측 모델이 없어 <strong>장착 선언 전용</strong>이다.
+  노이즈 키를 줘도 값 검증만 하고 <strong>버린다</strong>(먹일 계측 모델이 없다) — builder 는 타입과
+  무관하게 항상 <code>noise_std</code> 를 붙이므로 에러로 막지 않는다.</li>
+<li><code>mount</code> 는 두 표기를 모두 받는다:</li>
+<li><code>mount: { pos: [x,y,z], rpy: [r,p,y] }</code> — 정식 형태. <code>pos</code> [m] = 차체 좌표(x 전방 /
+    y 좌 / z 상), <code>rpy</code> [rad] = roll·pitch·yaw. 둘 다 선택, 생략 시 0.</li>
+<li><code>mount: [x,y,z]</code> + <code>yaw: &lt;deg&gt;</code> — builder 가 내보내는 형태(<code>builder/README.md</code>,
+    <code>builder/index.html</code> 의 <code>addSensor()</code>). <code>yaw</code> 는 <strong>도(deg)</strong> 단위이고 라디안으로 바꿔
+    <code>mount_rpy[2]</code> 에 들어간다. <code>yaw</code> 와 <code>mount.rpy</code> 를 함께 주면 에러(같은 각을 두 번 지정).</li>
+<li><code>rate</code> [Hz] 는 선언값일 뿐 다운샘플링은 아직 없다(0/생략 = 미지정).</li>
+<li><code>params:</code> 는 타입별 확장 knob 을 담는 숫자 map(<code>fov_deg</code> 등). 역시 저장만 한다.</li>
+<li><code>id</code> 생략 시 <code>type</code> 이 id 가 된다. <strong>명시한</strong> id 는 한 차량 안에서 유일해야 하고 중복은 에러다.
+  생략해서 자동으로 붙은 id 는 표시용 라벨이라 겹쳐도 된다(<code>{type: gnss}</code> 두 개 OK, 뒤 항목의
+  노이즈가 이긴다). <code>id</code> 는 스칼라 원문 그대로다 — <code>id: true</code> → <code>"true"</code>, <code>id: 12</code> → <code>"12"</code>.</li>
+<li><strong>덮어쓰기 규칙</strong>: 차량별 <code>sensors</code> 블록이 시나리오 레벨 <code>sensors:</code>(파일 경로)를 덮는 것은
+  그 블록이 <strong>노이즈를 실제로 말했을 때뿐</strong>이다 — 계측 모델이 있는 타입의
+  <code>noise_std</code>/<code>bias</code>/<code>bias_rw</code>, suite 형의 <code>enabled</code>/<code>seed</code>, 또는 (3) 파일 형. mount·id·rate·
+  params 만 선언한 블록은 <code>scene_sensors</code> 만 채우고 <code>VehicleSpawn::sensors</code> 를 비워 두므로 그
+  차량은 시나리오 레벨 파일을 그대로 쓴다. 즉 <strong>mount 를 하나 적었다는 이유로 옆 차와 다른
+  (깨끗한) 센서로 도는 일이 없다</strong>. (<code>effective_sensor_params()</code>, <code>cosim/world_scenario.hpp</code>)</li>
+<li><strong>그룹이 겹칠 때</strong>: 노이즈 키가 없는 항목은 <code>SensorParams</code> 에 아무것도 쓰지 않는다. 그래서
+  <code>[{type: gnss, noise_std: 0.5}, {type: gnss_pos}]</code> → <code>gnss_pos = gnss_vel = 0.5</code>,
+  <code>[{type: imu, noise_std: 0.05}, {type: imu_gyro, mount: {...}}]</code> → <code>imu_accel = imu_gyro = 0.05</code>.
+  노이즈 키가 <strong>있는</strong> 항목은 예전처럼 그룹을 통째로 덮는다:
+  <code>[{type: gnss, noise_std: 0.5}, {type: gnss_pos, noise_std: 0.1}]</code> → <code>gnss_pos=0.1</code>, <code>gnss_vel=0.5</code>.
+  (⚠️ 시뮬 출력이 바뀌는 지점이다. 예전에는 뒤의 장착 전용 항목이 기본값 0 을 써 넣어
+  <code>gnss_pos=0</code> / <code>imu_gyro=0</code> 이 됐다. 장착 선언이 노이즈를 지우던 쪽이 버그라 고쳤다.)</li>
+<li>숫자 검증: 모든 숫자는 유한해야 한다(NaN/Inf 거부 — <code>mount</code> 성분, <code>rate</code>, <code>noise_std</code>,
+  <code>bias</code>, <code>bias_rw</code>, <code>params.*</code>). 추가로 <code>rate &gt;= 0</code>, <code>noise_std &gt;= 0</code>. <code>bias</code>/<code>bias_rw</code> 는
+  부호 제한 없이 유한하기만 하면 된다.</li>
+<li>(3) 의 상대경로는 <strong>먼저 프로세스 CWD 기준</strong>으로 찾고, 없으면 <strong>scene 파일이 있는 디렉터리
+  기준</strong>으로 다시 찾는다(그래서 리포 루트에서 돌리는 <code>configs/sensors/noisy.yaml</code> 도, scene 옆에
+  둔 <code>my_sensors.yaml</code> 도 둘 다 열린다). 둘 다 실패하면 시도한 경로와 yaml-cpp 의 원인
+  메시지(파일·줄·열)를 함께 던진다.</li>
+<li><strong>잘못된 입력은 전부 hard error</strong>: 조용히 무시하지 않고 차량 번호와 문제 키를 지목해 throw
+  한다. 정확히 무엇이 막히는지는 바로 아래 §2.3.1.1.</li>
+<li>동작 샘플: <code>configs/scenes/two_vehicle_race.yaml</code> (0번 차량이 mount pose 4개를 선언. 노이즈
+  키가 없으므로 시나리오 레벨 설정을 덮지 않는다).</li>
+</ul>
+<h4 id="2311-breaking-change-sensors">2.3.1.1 ⚠️ breaking change — 예전에 통과하던 <code>sensors:</code> 입력이 이제 로드를 막는다<a class="headerlink" href="#2311-breaking-change-sensors" title="Permanent link">&para;</a></h4>
+<p><code>feat(cosim): parse scene sensor mount pose/id/rate</code> 이전에는 <code>sensors:</code> 항목의 잘못된 값이
+대부분 <strong>조용히 무시</strong>됐다(그리고 <code>fleet:</code> 카탈로그 scene 에서는 <code>sensors:</code> 가 world YAML 로
+전달조차 되지 않아 아무 효과가 없었다). 지금은 아래 입력이 <strong>로드를 중단시킨다</strong>. 기존 scene
+이 여기 해당하면 고쳐야 한다:</p>
+<table>
+<thead>
+<tr>
+<th>입력</th>
+<th>이전</th>
+<th>지금</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>type</code> 누락</td>
+<td>그 항목을 무시</td>
+<td>throw <code>missing required key 'type'</code></td>
+</tr>
+<tr>
+<td><code>type</code> 이 스칼라가 아님 (<code>type: [gnss]</code>)</td>
+<td>무시</td>
+<td>throw <code>type must be one of the type names</code></td>
+</tr>
+<tr>
+<td>모르는 <code>type</code> (<code>radar</code>)</td>
+<td>무시</td>
+<td>throw <code>unknown type</code></td>
+</tr>
+<tr>
+<td>모르는 항목 키 (<code>noise_stdd</code>)</td>
+<td>무시</td>
+<td>throw <code>unknown key</code></td>
+</tr>
+<tr>
+<td>모르는 <code>mount</code> 키 (<code>position</code>)</td>
+<td>무시</td>
+<td>throw <code>unknown mount key</code></td>
+</tr>
+<tr>
+<td><code>mount</code> 가 map 도 3원소 시퀀스도 아님 / <code>pos</code>·<code>rpy</code> 원소가 3개가 아님</td>
+<td>무시</td>
+<td>throw</td>
+</tr>
+<tr>
+<td><code>yaw</code> 와 <code>mount.rpy</code> 동시 지정</td>
+<td>(해당 없음)</td>
+<td>throw</td>
+</tr>
+<tr>
+<td>숫자 자리에 숫자가 아닌 값 (<code>rate: fast</code>)</td>
+<td>yaml-cpp 예외 또는 무시</td>
+<td>throw(키 지목)</td>
+</tr>
+<tr>
+<td>NaN/Inf 숫자, <code>rate &lt; 0</code>, <code>noise_std &lt; 0</code></td>
+<td>그대로 통과(런타임 NaN/음수)</td>
+<td>throw</td>
+</tr>
+<tr>
+<td>값이 빈 <code>sensors:</code> / <code>sensors: ''</code></td>
+<td>센서 없음 취급</td>
+<td>throw</td>
+</tr>
+<tr>
+<td><code>list:</code> 없는 map 형 <code>sensors:</code> / suite 형의 모르는 키</td>
+<td>센서 없음 취급</td>
+<td>throw</td>
+</tr>
+<tr>
+<td>항목이 map 이 아님 (<code>- gnss</code>)</td>
+<td>무시</td>
+<td>throw <code>entry must be a map</code></td>
+</tr>
+<tr>
+<td>시퀀스·map·스칼라 어느 것도 아닌 <code>sensors:</code></td>
+<td>무시</td>
+<td>throw</td>
+</tr>
+<tr>
+<td><strong>명시한</strong> id 중복</td>
+<td>마지막 항목이 이김</td>
+<td>throw <code>duplicate sensor id</code></td>
+</tr>
+<tr>
+<td>읽을 수 없는 sensors 파일 경로</td>
+<td>yaml-cpp 예외</td>
+<td>throw(원인 메시지 중첩)</td>
+</tr>
+</tbody>
+</table>
+<p>반대로 <strong>에러가 아닌 것</strong>(허용): builder 표기 <code>mount: [x,y,z]</code> + <code>yaw:</code>, <code>camera</code>/<code>lidar</code> 의
+<code>noise_std</code>/<code>bias</code>/<code>bias_rw</code>(검증 후 무시), <code>id</code> 를 생략한 같은 <code>type</code> 의 중복 선언.</p>
 <hr />
-<h2 id="3-commsyaml-vds1-jsonnmeasensor">3. 실시간 통신 설정 — comms/*.yaml 🟢(vds1) / 🔴(json·nmea·sensor)<a class="headerlink" href="#3-commsyaml-vds1-jsonnmeasensor" title="Permanent link">&para;</a></h2>
+<h2 id="3-commsyaml-vds1jsonnmea_gga-sensor">3. 실시간 통신 설정 — comms/<em>.yaml 🟢(vds1·json·nmea_gga) / 🔴(sensor.</em>)<a class="headerlink" href="#3-commsyaml-vds1jsonnmea_gga-sensor" title="Permanent link">&para;</a></h2>
 <p>realtime 모드에서 <strong>데이터가 어디로 흐르는지</strong> 선언. comms 는 <strong>시나리오 단위</strong> — scene 의
 <code>comms: &lt;name&gt;</code> 키가 <code>configs/comms/&lt;name&gt;.yaml</code> 를 가리킨다(에이전트별이 아니라 시나리오가 소유).</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vds1_loopback</span><span class="w">              </span><span class="c1"># 동작 샘플: configs/comms/vds1_loopback.yaml</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">channels</span><span class="p">:</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="c1"># 송신 TX: source → 규약(template) → 목적지(들) (fan-out)</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.state</span><span class="w">              </span><span class="c1"># &lt;id&gt;.state | ego.state(=첫 차)</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vds1</span><span class="w">               </span><span class="c1"># 🟢 VDS1 바이너리 (cosim/cosim_protocol.hpp)</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="nt">to</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">ip</span><span class="p">:</span><span class="w"> </span><span class="nv">127.0.0.1</span><span class="p p-Indicator">,</span><span class="nt"> port</span><span class="p">:</span><span class="w"> </span><span class="nv">7100</span><span class="p p-Indicator">},</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">ip</span><span class="p">:</span><span class="w"> </span><span class="nv">127.0.0.1</span><span class="p p-Indicator">,</span><span class="nt"> port</span><span class="p">:</span><span class="w"> </span><span class="nv">7101</span><span class="p p-Indicator">}</span><span class="w"> </span><span class="p p-Indicator">]</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.sensor.gnss</span><span class="w">        </span><span class="c1"># 어느 센서 → 소비자 (🔴 미구현, 경고 후 skip)</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">nmea_gga</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">    </span><span class="nt">to</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">ip</span><span class="p">:</span><span class="w"> </span><span class="nv">10.0.0.5</span><span class="p p-Indicator">,</span><span class="nt"> port</span><span class="p">:</span><span class="w"> </span><span class="nv">9001</span><span class="p p-Indicator">}</span><span class="w"> </span><span class="p p-Indicator">]</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">  </span><span class="c1"># 수신 RX: 포트에서 listen → 규약 → (vehicle_id 헤더로) 어느 제어 (fan-in)</span>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">direction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">in</span>
-</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">    </span><span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vds1_cmd</span><span class="w">           </span><span class="c1"># 🟢 패킷 헤더 vehicle_id 로 대상 에이전트 선택</span>
-</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">    </span><span class="nt">listen</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> port</span><span class="p">:</span><span class="w"> </span><span class="nv">7001</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">       </span><span class="c1"># 누구나 이 포트로 cmd 전송 (last-writer/ZOH)</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vds1_loopback</span><span class="w">              </span><span class="c1"># 동작 샘플: configs/comms/vds1_loopback.yaml</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nt">channels</span><span class="p">:</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="c1"># 송신 TX: source → 규약(template) → 목적지(들) (fan-out)</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.state</span><span class="w">              </span><span class="c1"># &lt;id&gt;.state | ego.state(=첫 차)</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vds1</span><span class="w">               </span><span class="c1"># 🟢 VDS1 바이너리 (cosim/cosim_protocol.hpp)</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="nt">to</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">ip</span><span class="p">:</span><span class="w"> </span><span class="nv">127.0.0.1</span><span class="p p-Indicator">,</span><span class="nt"> port</span><span class="p">:</span><span class="w"> </span><span class="nv">7100</span><span class="p p-Indicator">},</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">ip</span><span class="p">:</span><span class="w"> </span><span class="nv">127.0.0.1</span><span class="p p-Indicator">,</span><span class="nt"> port</span><span class="p">:</span><span class="w"> </span><span class="nv">7101</span><span class="p p-Indicator">}</span><span class="w"> </span><span class="p p-Indicator">]</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.state</span><span class="w">              </span><span class="c1"># 🟢 JSON 한 줄 (HTTP/MQTT 브리지용)</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span><span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">json</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">    </span><span class="nt">to</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">ip</span><span class="p">:</span><span class="w"> </span><span class="nv">127.0.0.1</span><span class="p p-Indicator">,</span><span class="nt"> port</span><span class="p">:</span><span class="w"> </span><span class="nv">7100</span><span class="p p-Indicator">}</span><span class="w"> </span><span class="p p-Indicator">]</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.state</span><span class="w">              </span><span class="c1"># 🟢 NMEA 0183 $GPGGA ("*HH\r\n" 종단)</span>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">    </span><span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">nmea_gga</span>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">    </span><span class="nt">origin</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> lat</span><span class="p">:</span><span class="w"> </span><span class="nv">37.5665</span><span class="p p-Indicator">,</span><span class="nt"> lon</span><span class="p">:</span><span class="w"> </span><span class="nv">126.9780</span><span class="p p-Indicator">,</span><span class="nt"> alt</span><span class="p">:</span><span class="w"> </span><span class="nv">38.0</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">   </span><span class="c1"># ENU 미터의 측지 원점(선택, 기본 0/0/0)</span>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">    </span><span class="nt">to</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">ip</span><span class="p">:</span><span class="w"> </span><span class="nv">10.0.0.5</span><span class="p p-Indicator">,</span><span class="nt"> port</span><span class="p">:</span><span class="w"> </span><span class="nv">9001</span><span class="p p-Indicator">}</span><span class="w"> </span><span class="p p-Indicator">]</span>
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.sensor.gnss</span><span class="w">        </span><span class="c1"># 센서 소스 지정 (🔴 미구현, 경고 후 skip)</span>
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="w">    </span><span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">nmea_gga</span>
+</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="w">    </span><span class="nt">to</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">ip</span><span class="p">:</span><span class="w"> </span><span class="nv">10.0.0.5</span><span class="p p-Indicator">,</span><span class="nt"> port</span><span class="p">:</span><span class="w"> </span><span class="nv">9002</span><span class="p p-Indicator">}</span><span class="w"> </span><span class="p p-Indicator">]</span>
+</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="w">  </span><span class="c1"># 수신 RX: 포트에서 listen → 규약 → (vehicle_id 헤더로) 어느 제어 (fan-in)</span>
+</span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">direction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">in</span>
+</span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="w">    </span><span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vds1_cmd</span><span class="w">           </span><span class="c1"># 🟢 패킷 헤더 vehicle_id 로 대상 에이전트 선택</span>
+</span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a><span class="w">    </span><span class="nt">listen</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> port</span><span class="p">:</span><span class="w"> </span><span class="nv">7001</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">       </span><span class="c1"># 누구나 이 포트로 cmd 전송 (last-writer/ZOH)</span>
 </span></code></pre></div>
 <ul>
 <li><strong>TX(송신)</strong> = <code>source</code>(<code>&lt;id&gt;.state</code>) → <code>template</code>(규약) → <code>to</code>(ip:port, fan-out).</li>
 <li><strong>RX(수신)</strong> = <code>direction: in</code> + <code>listen.port</code> → <code>template</code> → 제어 입력 (fan-in). 어느 에이전트인지는 VDS1 cmd 헤더의 <code>vehicle_id</code> 로 결정.</li>
 </ul>
-<p><strong>구현 상태</strong>: <code>vdsim_realtime</code> 가 comms.yaml 을 실행하는 라우터(🟢) — TX <code>&lt;id&gt;.state</code>+<code>vds1</code> fan-out, RX <code>vds1_cmd</code> listen-port fan-in 동작. comms 키가 없으면 레거시(단일 cmd-in/state-out CLI 플래그)로 fallback. <code>json</code>/<code>nmea_gga</code> template 및 <code>sensor.*</code> source 는 아직 미구현(🔴) — 경고 찍고 skip.</p>
+<p><strong>구현 상태</strong>: <code>vdsim_realtime</code> 가 comms.yaml 을 실행하는 라우터(🟢) — TX <code>&lt;id&gt;.state</code> 를 <code>vds1</code>(=<code>vds1_state</code>) / <code>json</code> / <code>nmea_gga</code> 로 fan-out, RX <code>vds1_cmd</code> listen-port fan-in 동작. comms 키가 없으면 레거시(단일 cmd-in/state-out CLI 플래그)로 fallback. 그 외 template 이름과 <code>sensor.*</code> source 는 아직 미구현(🔴) — 경고 찍고 skip.</p>
+<p><code>nmea_gga</code> 세부(구현: <code>cosim/comms_templates.hpp</code>, 샘플: <code>configs/comms/json_nmea.yaml</code>):
+- <strong>origin</strong>: 채널별 선택 필드 <code>origin: {lat, lon, alt}</code>. 시뮬 ENU 미터(X east / Y north / Z up, <code>core/include/vdsim/coordinate.hpp</code>)의 측지 기준점. 미지정 시 (0, 0, 0).
+- <strong>변환</strong>: WGS84 정밀 폐형해 — ENU → ECEF (origin ECEF + ENU 회전행렬) → geodetic (Bowring + Newton). 근사가 아니므로 <strong>위도 의존성이 없다</strong>. lat∈[-90,90], lon∈(-180,180] 로 항상 정규화된다.
+  - <strong>정확도 기준은 해석적(analytic) ECEF</strong>: 결과 (lat, lon, h) 를 다시 ECEF 로 정변환해 60자리 정밀도로 계산한 기준점과 비교했을 때, 234,234 점 격자(datum lat −90~90 극점 포함, lon −180~180 날짜변경선 포함, datum alt 0/38/8848 m, east/north ±1 m~±1e6 m, up −1000~+1e4 m)에서 <strong>최대 5.2e-9 m</strong>.
+  - <strong>PROJ 는 기준이 아니라 교차검증</strong>이다. <code>+proj=topocentric</code> / <code>+proj=cart</code> (pyproj 3.5 / PROJ 9.2) 와는 <strong>결과 타원체고(HAE)가 약 2 km 이하이고 datum 위도가 극점을 벗어난(|lat0| &lt; 89°) 범위에서 6e-8 m 이내</strong>로 일치한다 — 수평 ENU 100 km(접평면 상승으로 HAE ≈ 800 m)까지 포함해 지상 차량 시나리오 전 구간이 여기 들어간다. 두 단서는 모두 필요하고, 벌어지는 쪽은 두 경우 모두 <strong>PROJ</strong> 다.
+    - <strong>datum 이 극점(|lat0| ≥ 89°)</strong>: 일치 범위가 <strong>2e-7 m</strong> 로 넓어진다(실측 최댓값 1.5832e-07 m — lat0 −90, lon0 −180, alt0 0, e −1, n 1, up −1000). 같은 점에서 60자리 해석적 기준 대비 이 구현은 3.3e-10 m, PROJ 는 1.581e-7 m 다. 초과분은 datum 이 정확히 자전축 위(±90°)일 때만 나타난다 — 동일 격자에서 lat0 ±89.9° 는 2.8e-9 m.
+    - <strong>HAE 2 km 초과</strong>: PROJ 의 <code>cart</code> 역변환이 벌어진다. HAE 11 km 에서 1.4e-6 m, HAE 165 km(lat0 60, e=n=−1000 km, up=10 km)에서 3.4e-4 m 이며, 같은 점에서 PROJ 자신이 해석적 기준과 동일한 크기로 어긋난다(이 구현은 여전히 ~2.6e-9 m).
+    따라서 PROJ 수치는 성립 범위(고도·위도)를 반드시 함께 적어야 하고, 이 구현의 오차 상한이 아니다.
+  - 직전 버전은 등거리원통(equirectangular) 근사(<code>lon = lon0 + east/(N·cos lat0)</code>)로, 서울 datum(lat 37.5665) 기준 10 km 에서 6.75 m / 100 km 에서 678 m 오차였다 — 문서에는 0.1 m / 100 m 로 적혀 있었으나 그것은 적도 근처에서만 성립하는 값이다.
+  - 남은 오차는 구현이 아니라 ENU <strong>정의</strong> 자체다: 접평면이므로 수평 거리 d 에서 타원체 위로 ~d²/(2R) 만큼 뜨고(10 km 에서 7.8 m, GGA 고도에 반영됨), 진짜 측지선 대비 ~d³/(3R²) 차이가 남는다(10 km 에서 8 mm, 100 km 에서 8.2 m). 고도는 타원체고(HAE)이며 geoid 모델은 없다.
+- <strong>비정상 상태 처리</strong>: 솔버가 발산해 NaN/Inf, 비상식적으로 큰 ENU 오프셋(|offset| &gt; 1e8 m), 또는 <strong>역변환이 유일하지 않은 지점</strong>(지구 중심 근처 — 타원체 evolute 위/내부)이 들어오면, 실제 수신기처럼 <strong>no-fix 문장</strong>(quality 0, 00 satellites, 99.9 HDOP, 빈 위치/고도 필드)을 내보낸다. quality 1 문장에 검증되지 않은 필드가 실리는 경로는 없다.
+  - 폐형해는 결과를 ECEF 로 되돌려 입력점과 대조한 뒤에만 성공(<code>Geodetic::ok</code>)으로 보고한다. 실패 시 lat/lon/alt 는 NaN 이며, 기본 생성된 <code>Geodetic</code> 역시 <code>ok=false</code> + NaN 이다.
+  - <strong>evolute 판정은 기하학적 판정</strong>이다(<code>inside_evolute()</code>): 자전축 위뿐 아니라 축을 벗어난 점도 포함해, 자오면 좌표 (p, z) 에 대해 astroid 부등식 <code>(p/42697.7)^(2/3) + (|z|/42841.3)^(2/3) ≤ 1</code> 을 직접 평가한다. 왕복(round-trip) 검사로는 이 영역을 걸러낼 수 없다 — 내부의 점 하나에 대해 <strong>네 개의 위도 해가 모두 입력 ECEF 를 정확히 재현</strong>하기 때문이다. 실제로 예전에는 축 위(p ≈ 0)에서만 판정해서, 예컨대 datum (0,0,0) + <code>m_gnss_x=-1595.7, m_gnss_y=23172.3, z=-6380182.2</code>(ECEF 원점에서 23.3 km)가 <strong>지구 중심의 quality 1 · 위성 12 · HDOP 0.9 문장</strong>으로 나갔다. 이 영역은 타원체면에서 약 6335 km 아래(지오센터 반경 42.9 km 이내)라 정상 차량 상태와는 무관하다.
+  - NMEA 각도 필드 범위 검사는 필드별 상한을 쓴다 — 위도(2자리) 90°, 경도(3자리) 180°. 예전에는 둘 다 180° 로 검사해서, 예컨대 datum 서울 + <code>z = -6.35e6</code> m 같은 발산 상태가 위도 −163.55° 를 <code>16333.1094</code>(GGA 규격 9자 자리에 10자)로 실어 <strong>체크섬이 맞는 quality 1 문장</strong>으로 나갔다.
+  - 과거에는 <code>static_cast&lt;int&gt;(NaN)</code> UB 로 필드 안에 공백이 들어간 문장이 체크섬까지 맞은 채 전송됐다.
+- <strong>위치 소스</strong>: 측정 GNSS(<code>m_gnss_x/_y</code>). GGA 는 수신기 출력이므로 센서 노이즈가 그대로 반영된다. 노이즈 미설정 시에도 <code>SensorModel</code> 이 항등 경로로 truth 를 채우므로 값이 비지 않는다. 고도만 truth <code>z</code>(GNSS 고도 채널 모델 없음).
+- <strong>UTC 필드</strong>: 시스템 wall clock (STATE 의 <code>timestamp</code> 는 steady_clock 기반 monotonic 이라 UTC 가 아님). 초는 출력 정밀도(1/100 s)로 <strong>먼저 반올림한 뒤</strong> 초→분→시→날 자리올림을 하므로 <code>125960.00</code> 같은 불법 시각은 나오지 않는다.
+- <strong>satellites / HDOP / geoid separation</strong>: 위성·DOP 모델이 없어 고정 placeholder(12 / 0.9 / 0.0).</p>
+<p><code>json</code> 세부: 모든 숫자 필드는 유한값이 아니면 RFC 8259 의 <code>null</code> 로 출력된다(<code>nan</code>/<code>inf</code> 는 JSON 이 아니라 <code>json.loads</code>·<code>JSON.parse</code> 모두 거부한다). 발산 시 프레임을 버리지 않고 <code>null</code> 로 신호하는 이유는, 조용히 사라진 데이터그램은 단순 UDP 손실과 구분되지 않기 때문이다.</p>
 <hr />
 <h2 id="4-vs">4. 현재 vs 계획 요약<a class="headerlink" href="#4-vs" title="Permanent link">&para;</a></h2>
 <table>
@@ -2771,7 +2966,12 @@
 <td>§3, <code>vdsim_realtime</code> (scene <code>comms:</code> 참조)</td>
 </tr>
 <tr>
-<td>comms json·nmea_gga template / sensor.* source</td>
+<td>comms json·nmea_gga TX template (+ 채널별 <code>origin</code>)</td>
+<td>🟢</td>
+<td>§3, <code>configs/comms/json_nmea.yaml</code></td>
+</tr>
+<tr>
+<td>comms sensor.* source</td>
 <td>🔴</td>
 <td>§3, 경고 후 skip</td>
 </tr>
@@ -2781,9 +2981,14 @@
 <td>§2.3, SIM_CONFIG_ARCH</td>
 </tr>
 <tr>
-<td>agent <code>vehicle.sensors</code>(mount pose) / map-path CTE</td>
+<td>agent <code>vehicle.sensors</code> 파서(mount pose→<code>WorldScenario</code>, 키·타입·유한성·범위 검증 포함)</td>
+<td>🟢</td>
+<td>§2.3.1 / §2.3.1.1, <code>cosim/world_scenario.cpp</code></td>
+</tr>
+<tr>
+<td>mount pose 를 쓰는 렌더/센서프레임 커플링 / map-path CTE</td>
 <td>🔴</td>
-<td>§2.3, SIM_CONFIG_ARCH §7</td>
+<td>§2.3.1, SIM_CONFIG_ARCH §7</td>
 </tr>
 </tbody>
 </table>

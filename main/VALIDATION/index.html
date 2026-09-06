@@ -1555,6 +1555,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#test-suite-currency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test-suite currency
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#validation-layers" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2506,6 +2517,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#test-suite-currency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test-suite currency
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#validation-layers" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2582,7 +2604,7 @@
 
 <h1 id="vdsim-validation-credibility">VDSim validation &amp; credibility<a class="headerlink" href="#vdsim-validation-credibility" title="Permanent link">&para;</a></h1>
 <blockquote>
-<p><strong>v0.5.1+ experimental / pre-release.</strong> The claims below rest on open evidence
+<p><strong>v0.6.2+ experimental / pre-release.</strong> The claims below rest on open evidence
 (analytic + ISO standard + cross-model/cross-tool self-consistency). There is
 no published cross-validation against a commercial reference on real-vehicle
 data — see "Honest limitations". Not for production use. Do <strong>not</strong> claim
@@ -2622,7 +2644,7 @@ the last section.</p>
 <td>L3 unsprung lateral-transfer term (small)</td>
 </tr>
 <tr>
-<td>Full suite: <strong>391/391 ctest green</strong> (measured 2026-06-25, <code>main</code>)</td>
+<td>Full suite: <strong>485/485 ctest green</strong> (<code>validation</code> preset, as of 2026-09-06)</td>
 <td>—</td>
 </tr>
 <tr>
@@ -2637,6 +2659,35 @@ the last section.</p>
 </table>
 <p>Note: ISO 3888-2 DLC@60 not meeting the 1.0 m gate is a default-preset
 vehicle/controller property, not a sim defect (see "Notes on specific results").</p>
+<h2 id="test-suite-currency">Test-suite currency<a class="headerlink" href="#test-suite-currency" title="Permanent link">&para;</a></h2>
+<p>The suite count below is the only number in this document that is machine-checked
+(<code>scripts/check_validation_currency.py</code>, run as the <code>validation_currency</code> ctest).
+It records the <strong>canonical configuration only</strong> -- the <code>validation</code> CMake preset.
+Counts measured in any other configuration are deliberately not recorded here, so
+that one number cannot drift against another.</p>
+<p><code>commit:</code> is the sha of the tree that was <em>measured</em>; this document is a
+descendant of it, so the gate accepts the recorded commit when it is that
+sha or an ancestor of it. Ancestry alone is not enough: the registration
+surface (<code>CMakePresets.json</code>, every <code>CMakeLists.txt</code>, <code>cmake/**</code>) has to
+be unchanged between that sha and the measured tree, because those files
+decide which tests exist. Test sources are outside that surface -- their
+effect is caught by the passed/total comparison instead. <code>toolchain:</code> pins
+the CMake that performed the
+measurement -- a toolchain bump is a re-measurement trigger, so the new
+version and the new numbers have to land in the same commit.</p>
+<!-- VALIDATION-CURRENCY BEGIN -->
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>tests:    485/485
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>config:   cmake --preset validation &amp;&amp; cmake --build --preset validation &amp;&amp; ctest --preset validation
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>presets:  CMakePresets.json@fb1f0c198a0201fcce2543a9f5b2242a255fb97a
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>toolchain: cmake 3.31.10
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>commit:   f9cf765
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>date:     2026-09-06
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>excluded: ergaccess (optional external dependency not installed -- VDSIM_WITH_ERGACCESS=OFF)
+</span></code></pre></div>
+<!-- VALIDATION-CURRENCY END -->
+
 <h2 id="validation-layers">Validation layers<a class="headerlink" href="#validation-layers" title="Permanent link">&para;</a></h2>
 <ol>
 <li><strong>Analytic</strong> — closed-form results the model must reproduce (linear bicycle
@@ -2814,14 +2865,14 @@ across L1/L2/L3/L5 — slip = (ω·Re − vx)/vx, so a free-rolling loaded tire 
 matching MF-Tyre/CarMaker. Initial wheel spin is set per-wheel via <code>free_roll_wheel_spin</code>
 (vx/Re at static load) so no phantom longitudinal force appears at t=0. Re is opt-in: tires
 without BREFF/DREFF/FREFF (reff_*=0) fall back to the unloaded radius R0 unchanged.</p>
-<p>Full automated suite: <code>cd build &amp;&amp; ctest</code> — <strong>391</strong> checks, 100% green (measured 2026-06-25, <code>main</code>; thesis GUI adds 13 more → 404).
+<p>Full automated suite: <code>ctest --preset validation</code> — <strong>485</strong> checks, 100% green (see the currency block above).
 One-command evidence bundle (ctests + tire parity table + ISO figures + summary.md):
 <code>python3 tools/validation_report.py</code>.</p>
 <p><strong>LuGre baseline (re-baselined 2026-06-10, sedan L2, <code>default_pacejka</code> tire):</strong></p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python3<span class="w"> </span>apps/validation/run_validation.py<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>--vehicle<span class="w"> </span>configs/parts/chassis/sedan.yaml<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>--tire<span class="w"> </span>configs/parts/tire/default_pacejka.yaml<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span>--level<span class="w"> </span>L2<span class="w"> </span>--out<span class="w"> </span>apps/validation/results/lugre_sedan_l2
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python3<span class="w"> </span>apps/validation/run_validation.py<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--vehicle<span class="w"> </span>configs/parts/chassis/sedan.yaml<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--tire<span class="w"> </span>configs/parts/tire/default_pacejka.yaml<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>--level<span class="w"> </span>L2<span class="w"> </span>--out<span class="w"> </span>apps/validation/results/lugre_sedan_l2
 </span></code></pre></div>
 <table>
 <thead>
@@ -2911,9 +2962,9 @@ folded into the re-baselined table above.</p>
   <code>docs/design/L5_6DOF_MULTIBODY.md</code>.</li>
 </ul>
 <h2 id="reproducing-the-whole-report">Reproducing the whole report<a class="headerlink" href="#reproducing-the-whole-report" title="Permanent link">&para;</a></h2>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>cmake<span class="w"> </span>--build<span class="w"> </span>build<span class="w"> </span>-j<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">(</span><span class="nb">cd</span><span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ctest<span class="w"> </span>--output-on-failure<span class="o">)</span><span class="w">   </span><span class="c1"># 391 checks on main</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>python3<span class="w"> </span>apps/validation/run_validation.py<span class="w">    </span><span class="c1"># ISO 7401/4138/3888 -&gt; REPORT.md</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>python3<span class="w"> </span>fmi_export/test_roundtrip.py<span class="w">          </span><span class="c1"># FMU vs native</span>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>cmake<span class="w"> </span>--build<span class="w"> </span>build<span class="w"> </span>-j<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">(</span><span class="nb">cd</span><span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ctest<span class="w"> </span>--output-on-failure<span class="o">)</span><span class="w">   </span><span class="c1"># 485 checks</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>python3<span class="w"> </span>apps/validation/run_validation.py<span class="w">    </span><span class="c1"># ISO 7401/4138/3888 -&gt; REPORT.md</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>python3<span class="w"> </span>fmi_export/test_roundtrip.py<span class="w">          </span><span class="c1"># FMU vs native</span>
 </span></code></pre></div>
 
 

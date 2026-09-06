@@ -3111,7 +3111,7 @@
 
 
 <h1 id="vdsim-product-roadmap">VDSim product roadmap<a class="headerlink" href="#vdsim-product-roadmap" title="Permanent link">&para;</a></h1>
-<p><strong>Last updated:</strong> 2026-06-20 · <strong>Tests:</strong> 388/388 ctest green (<code>main</code>) · 402 on <code>VDSim-Thesis</code> (+ VLA plant)</p>
+<p><strong>Last updated:</strong> 2026-09-04 · <strong>Tests:</strong> <a href="../VALIDATION/">canonical validation status</a></p>
 <p>Living roadmap from early PoC through v0.6. Tracks what shipped in <strong><code>main</code></strong> vs what
 is planned. The <strong>VLA thesis closed-loop plant</strong> (<code>python/vdsim_plant.py</code>) ships on
 <code>VDSim-Thesis</code> only (tag <code>vdsim-thesis-beta</code>); core APIs it depends on are on <code>main</code>.
@@ -3171,12 +3171,12 @@ tire + direct-control session factory</strong> on <code>main</code> → <strong>
 <tr>
 <td>GUI</td>
 <td>3-tab scene UI, catalog API, workshops, multi-vehicle compare</td>
-<td><strong>GUI v2</strong> (framework decision); terrain Play; <code>.tir</code> import</td>
+<td><strong>GUI v2</strong> (framework decision); terrain Play; <code>.tir</code> import; <strong>expose user-defined modules (decide: C++ <code>.so</code> plugin / Python path / GUI authoring)</strong></td>
 </tr>
 <tr>
 <td>Validation</td>
-<td>ISO 7401/4138/3888 <strong>re-baselined + CI-gated</strong> (<code>IsoBaseline</code>), <strong>388</strong> ctest</td>
-<td>Adams x-check</td>
+<td>ISO 7401/4138/3888 <strong>re-baselined + CI-gated</strong> (<code>IsoBaseline</code>); <a href="../VALIDATION/">canonical suite status</a></td>
+<td>Adams x-check rtol; commercial cross-val</td>
 </tr>
 </tbody>
 </table>
@@ -3435,7 +3435,7 @@ tire + direct-control session factory</strong> on <code>main</code> → <strong>
 <tr>
 <td>[x] <code>LuGreTire/*</code> integration tests</td>
 <td>Shipped</td>
-<td>209 ctest suite</td>
+<td>Included in the <a href="../VALIDATION/">canonical suite</a></td>
 </tr>
 <tr>
 <td>[x] Theory ch.19 + user docs synced</td>
@@ -3473,6 +3473,11 @@ tire + direct-control session factory</strong> on <code>main</code> → <strong>
 <td>T1</td>
 <td>MF2002 combined slip bypasses host friction ellipse</td>
 <td>[x] merged</td>
+</tr>
+<tr>
+<td>T1</td>
+<td><strong>Tire model selectable per-part</strong> via <code>backend: mf96 \| mf2002 \| linear</code> — all three live in <code>create_tire_from_params</code> (mf96 default, mf2002→.tir, linear→<code>create_linear_tire</code>), routed by every dynamics (L1/L2/L5).</td>
+<td>[x] infra present; TODO: formalize <code>linear</code> (catalog preset + tests + docs), confirm L1/L5 parity. Requested 2026-06-18</td>
 </tr>
 <tr>
 <td>T1</td>
@@ -3880,6 +3885,36 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <td><code>vp.steer_deadtime_s</code> on direct path</td>
 </tr>
 <tr>
+<td>[x] Plant data-access view <code>plant.vehicle.tire.{model,params}</code> (vehicle→part→physics, read-only)</td>
+<td>Shipped 2026-06-18</td>
+<td>tyre only</td>
+</tr>
+<tr>
+<td>[ ] Extend the data-access view to brake/steering/drivetrain/suspension/ARB parts</td>
+<td>TODO</td>
+<td>needs const module getters on IVehicleDynamics (only set_*_module exists); tyre is the only part with a live model handle today</td>
+</tr>
+<tr>
+<td>[ ] <strong>VLA Thesis Plant API P1:</strong> roll angle in obs (<code>obs["roll"]</code>, <code>obs["pitch"]</code>)</td>
+<td>Planned</td>
+<td>BETA #1 customer request; already computed in L2–L5</td>
+</tr>
+<tr>
+<td>[ ] <strong>VLA Thesis Plant API P1:</strong> split-μ friction map (left/right different grip)</td>
+<td>Planned</td>
+<td><code>create_split_mu_ground</code> exists in C++; needs Python API surface</td>
+</tr>
+<tr>
+<td>[ ] <strong>VLA Thesis Plant API P2:</strong> steering actuator lag option (selectable 1<sup>st</sup>-order LPF)</td>
+<td>Planned</td>
+<td><code>VehicleParams.steer_deadtime_s</code> implemented; needs API convenience + docs</td>
+</tr>
+<tr>
+<td>[ ] <strong>VLA Thesis Plant API P2:</strong> smooth friction patch transition (tanh vs step μ)</td>
+<td>Planned</td>
+<td>Reduces numerical jitter at patch boundaries</td>
+</tr>
+<tr>
 <td>[x] <code>tools/import_part_pack.py</code> stub</td>
 <td>Shipped</td>
 <td>M5</td>
@@ -3902,7 +3937,7 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <tr>
 <td>[x] VLA P2: smooth patch blend (1 m) + steer lag docs</td>
 <td><strong>Thesis-only</strong></td>
-<td><a href="VDSIM_PLANT_TUTORIAL.md"><code>VDSIM_PLANT_TUTORIAL.md</code></a></td>
+<td><a href="../VDSIM_PLANT_TUTORIAL/"><code>VDSIM_PLANT_TUTORIAL.md</code></a></td>
 </tr>
 <tr>
 <td>[x] VLA: <strong><code>mu_peak</code></strong> per wheel (realized friction circle)</td>
@@ -4094,24 +4129,9 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <td></td>
 </tr>
 <tr>
-<td>[x] <strong>382</strong> automated ctests</td>
+<td>[x] Automated ctest suite; <a href="../VALIDATION/">current result</a></td>
 <td>Shipped</td>
 <td>2026-06-17</td>
-</tr>
-<tr>
-<td>[x] <strong>385</strong> automated ctests (<code>main</code>, post core port)</td>
-<td>Shipped</td>
-<td>2026-06-20</td>
-</tr>
-<tr>
-<td>[x] <strong>388</strong> automated ctests (<code>main</code>, SessionKind + KC + T3)</td>
-<td>Shipped</td>
-<td>2026-06-20</td>
-</tr>
-<tr>
-<td>[x] <strong>402</strong> on <code>VDSim-Thesis</code> (+ VLA plant suite)</td>
-<td>Shipped thesis</td>
-<td>2026-06-20</td>
 </tr>
 <tr>
 <td>[x] ISO matrix re-baseline (post engine inertia + LuGre) + CI gate</td>
@@ -4250,7 +4270,8 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Gyroscopic wheel-spin coupling (yaw↔roll at speed)</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Per-substep contact re-query default in <code>SimSession</code>; contact sampled at the wheel
   particle (exact on curved surfaces, no false contact leaving a loop/bank)</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> 385/385 ctest; design <a href="../design/L5_MBD_FREE3D_UNSPRUNG/"><code>L5_MBD_FREE3D_UNSPRUNG.md</code></a></li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Canonical suite status tracked in <a href="../VALIDATION/">Validation</a>; design
+  <a href="../design/L5_MBD_FREE3D_UNSPRUNG/"><code>L5_MBD_FREE3D_UNSPRUNG.md</code></a></li>
 </ul>
 <h3 id="v061-core-port-from-thesis-2026-06-20-on-main">v0.6.1 — core port from thesis (2026-06-20, on <code>main</code>)<a class="headerlink" href="#v061-core-port-from-thesis-2026-06-20-on-main" title="Permanent link">&para;</a></h3>
 <ul class="task-list">
@@ -4258,14 +4279,12 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <code>make_direct_control_session</code>, <code>FrictionMapConfig</code>, polygon friction canonical path</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <code>IVehicleDynamics::tire(wheel)</code>, <code>SimOutput</code> wheel GT fields</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <code>ladder_lowering.hpp</code>; steer deadtime via actuator on direct-control path</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <strong>v0.6.2 tag</strong> — SessionKind + KC compliance + T3 VLOW (code ready)</li>
 </ul>
 <h3 id="v062-core-quality-tire-t3-2026-06-20-on-main">v0.6.2 — core quality + tire T3 (2026-06-20, on <code>main</code>)<a class="headerlink" href="#v062-core-quality-tire-t3-2026-06-20-on-main" title="Permanent link">&para;</a></h3>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <code>SessionKind</code> (<code>Standard</code> / <code>DirectControl</code>) replaces <code>SimConfig.direct_control_path</code></li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> KC bushing compliance in L3/L4 hard-joint step (<code>compliance_targets_rad</code> under tire load)</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> T3: <code>TireParams.low_speed_mode</code> (<code>kinematic_blend</code> | <code>tire_vlow</code>) + <code>vlow_speed_eps</code></li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> 388/388 ctest</li>
 </ul>
 <h3 id="v052-planned">v0.5.2+ (planned)<a class="headerlink" href="#v052-planned" title="Permanent link">&para;</a></h3>
 <ul class="task-list">
@@ -4282,11 +4301,11 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <p><strong>Shipped today</strong></p>
 <blockquote>
 <p>Open-core L1–L5 vehicle dynamics with Pacejka MF tire, optional LuGre brush + belt
-transient layers, opt-in MF2002 <code>.tir</code> backend, per-wheel tire setup, drivetrain v2
-(engine map + gearbox), parts catalog, real-time UDP/FMI, and ISO-standard validation
-(385 ctests on <code>main</code>). The L5 model is a hardpoint-driven free-3D multibody:
-anti-dive/squat, roll-centre migration and a progressive coil rate emerge from the
-suspension geometry, energy-consistent on arbitrary surfaces (banks, loops, jumps).</p>
+transient layers, opt-in MF2002 <code>.tir</code> backend, per-wheel tire setup and drivetrain v2
+(engine map + gearbox), parts catalog, real-time UDP/FMI, and
+<a href="../VALIDATION/">ISO-standard validation</a>. The L5 model is a hardpoint-driven free-3D
+multibody: anti-dive/squat, roll-centre migration and a progressive coil rate emerge from
+the suspension geometry, energy-consistent on arbitrary surfaces (banks, loops, jumps).</p>
 </blockquote>
 <p><strong>In active development</strong></p>
 <blockquote>
@@ -4309,6 +4328,22 @@ numbers, or production sign-off.</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td><strong><a href="../PLANT_CUSTOMER_FEEDBACK/"><code>PLANT_CUSTOMER_FEEDBACK.md</code></a></strong></td>
+<td><strong>BETA #1 customer feedback (VLA thesis); P1/P2 feature requests</strong></td>
+</tr>
+<tr>
+<td><a href="../VDSIM_PLANT_TUTORIAL/"><code>VDSIM_PLANT_TUTORIAL.md</code></a></td>
+<td>External closed-loop plant user guide</td>
+</tr>
+<tr>
+<td><a href="../PLANT_DELIVERY_NOTE/"><code>PLANT_DELIVERY_NOTE.md</code></a></td>
+<td>Thesis-side handoff (setup, API, validation)</td>
+</tr>
+<tr>
+<td><a href="../design/VLA_THESIS_PLANT/"><code>design/VLA_THESIS_PLANT.md</code></a></td>
+<td>Plant specification</td>
+</tr>
 <tr>
 <td><a href="../design/V0.2_PLAN/"><code>design/V0.2_PLAN.md</code></a></td>
 <td>v0.2 workstreams (historical + status)</td>
@@ -4358,7 +4393,7 @@ numbers, or production sign-off.</p>
 <td>VLA closed-loop plant spec (thesis channel)</td>
 </tr>
 <tr>
-<td><a href="VDSIM_PLANT_TUTORIAL.md"><code>VDSIM_PLANT_TUTORIAL.md</code></a></td>
+<td><a href="../VDSIM_PLANT_TUTORIAL/"><code>VDSIM_PLANT_TUTORIAL.md</code></a></td>
 <td>VLA plant user guide (thesis branch)</td>
 </tr>
 </tbody>

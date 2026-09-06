@@ -1,0 +1,4210 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Open-core vehicle dynamics simulator — theory + PoC reports">
+      
+      
+      
+        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/design/GUI_V3_REQUIREMENTS/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>GUI v3 — feedback synthesis & requirements - VDSim</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#gui-v3-feedback-synthesis-requirements" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="VDSim" class="md-header__button md-logo" aria-label="VDSim" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            VDSim
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              GUI v3 — feedback synthesis &amp; requirements
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Onlyti/VDSim" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Onlyti/VDSim
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../.." class="md-tabs__link">
+          
+  
+  
+    
+  
+  Home
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../theory/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Theory
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../ROADMAP/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  User guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../references/actuator_nonlinearity/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  References
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Phase 2 — Multibody & Integration
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../tasks/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  PoC Reports
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../examples/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Examples
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="VDSim" class="md-nav__button md-logo" aria-label="VDSim" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    VDSim
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Onlyti/VDSim" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Onlyti/VDSim
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../.." class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Home
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../theory/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Theory
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Theory
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/01_frames_and_conventions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    01 — Frames & conventions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/02_rigid_body_dynamics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    02 — Rigid-body dynamics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/03_tire_pacejka_mf96/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    03 — Tire (Pacejka MF96)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/19_lugre_dynamic_tire/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    19 — Tire (LuGre / brush)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/21_belt_transient/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    21 — Tire (belt transient)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/25_tire_contact_interface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    25 — Tire contact & interface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/04_ld1_bicycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    04 — Ld1-Bicycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/05_ld2_seven_dof/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    05 — Ld2-SevenDOF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/06_ld3_fourteen_dof/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    06 — Ld3-FourteenDOF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/20_ld5_stunt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    20 — Ld5-Stunt (jump/loop)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/07_control_ladder/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    07 — Control ladder Lc1-Lc8
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/08_pid_controllers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    08 — PID controllers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/09_pure_pursuit_path/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    09 — Pure Pursuit / path
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/10_driver_model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10 — Driver model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/11_numerical_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11 — Numerical integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/12_software_architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12 — Software architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/13_multibody_outlook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13 — Multibody (Ld4) overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/14_hardpoint_kinematics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    14 — Hardpoint kinematics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/15_validation_and_doe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    15 — Validation & DOE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/16_fmi_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16 — FMI 2.0 integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/17_actuator_and_sensing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    17 — Actuator dynamics & sensing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/18_runtime_and_cosim/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18 — Runtime kernel & co-simulation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/22_drivetrain_v2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    22 — Drivetrain v2 (engine/gearbox)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/23_user_modules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    23 — User-defined subsystem modules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../theory/24_module_plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    24 — User module plugins (build/check/register)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ROADMAP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Product roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CATALOG_AND_PHYSICS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalog, scenes & physics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RUNNING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running VDSim
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../VALIDATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    References
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    References
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../references/actuator_nonlinearity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Actuator/sensor nonlinearity & delay
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gui_architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GUI architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vdsim_bridge_interface_requirements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Co-sim bridge interface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../map_import_strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Map import strategy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase 2 — Multibody & Integration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Phase 2 — Multibody & Integration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/T22_carla_bridge/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T22 — CARLA Python bridge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/T23_jump_14dof/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T23 — Jump 14-DOF (world-z)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/T27_ld4_dw/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T27 — Ld4 double wishbone
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/T28_ld4_mp/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T28 — Ld4 MacPherson
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/T29_ld4_ta/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T29 — Ld4 trailing arm
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/T30_ld4_5link/REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T30 — Ld4 5-link rear
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../tasks/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PoC Reports
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    PoC Reports
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/68_poc_summary_v3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PoC Summary v3 (95%)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/69_competitive_matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Competitive matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/62_cycles_overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cycles overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmark matrix (4 vehicles)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/20_l1_l2_grid_sweep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    L1 vs L2 grid sweep
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/30_l3_dynamic_suspension/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    L3 dynamic suspension
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/31_l6_l7_l8_control/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    L5-L8 control cascade
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/57_58_59_driver_skidpad/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Driver / skidpad / brake-in-turn
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks/50_benchmark_matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmark matrix (4 vehicles)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../examples/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#0-charter-why-v3-not-v2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0. Charter — why v3, not v2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0. Charter — why v3, not v2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#product-priority-2026-06-21-locked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Product priority (2026-06-21 — locked)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-feedback-synthesis-v1-development-v2-planning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Feedback synthesis (v1 development → v2 planning)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Feedback synthesis (v1 development → v2 planning)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-external-design-review-handoff-2026-06" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 External / design review (HANDOFF 2026-06)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-what-worked-keep-in-v3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2 What worked (keep in v3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-what-failed-or-hurt-fix-in-v3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.3 What failed or hurt (fix in v3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-user-session-feedback-condensed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.4 User / session feedback (condensed)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#15-deferred-from-v052-handoff-still-in-v3-backlog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.5 Deferred from v0.5.2 / HANDOFF (still in v3 backlog)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-product-positioning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Product positioning
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-v3-principles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. v3 principles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-information-architecture-v3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Information architecture (v3)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Information architecture (v3)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-global-shell-scenario-centric" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Global shell — Scenario-centric
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-scenario-studio-layout-main-surface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Scenario studio layout (main surface)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-run-layout-visualization-surface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Run layout (visualization surface)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-v1-v3-surface-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 v1 → v3 surface mapping
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#45-default-layouts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.5 Default layouts
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-functional-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Functional requirements
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Functional requirements">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-shell-navigation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 Shell &amp; navigation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-scenario-mode-p0-main" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 Scenario mode (시나리오 생성기 — P0 main)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#53-build-mode-vehicle-supporting-entry-from-scenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 Build mode (vehicle — supporting, entry from Scenario)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#54-run-mode-realtime-p0-second" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.4 Run mode (realtime 시각화 — P0 second)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#55-analyze-mode-was-compare-modal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.5 Analyze mode (was Compare modal)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-design-system-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Design system requirements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-technical-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Technical architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Technical architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#71-stack-decisions-required-in-week-0" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.1 Stack (decisions required in week 0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#72-module-boundaries-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.2 Module boundaries (target)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#73-wire-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.3 Wire contract
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-parity-checklist-v3-launch-gate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Parity checklist (v3 launch gate)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-non-functional-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Non-functional requirements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-phased-delivery-scenario-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Phased delivery (scenario-first)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-open-decisions-week-0" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Open decisions (week 0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-traceability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. Traceability
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-adr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. ADR
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="gui-v3-feedback-synthesis-requirements">GUI v3 — feedback synthesis &amp; requirements<a class="headerlink" href="#gui-v3-feedback-synthesis-requirements" title="Permanent link">&para;</a></h1>
+<p>Status: <strong>planning baseline</strong> (2026-06-21)<br />
+Supersedes <strong><code>GUI_V2_REQUIREMENTS.md</code> for product direction</strong> — v2 incremental route is <strong>cancelled</strong>; v1 <code>/app.html</code> remains the production surface until v3 parity.<br />
+Wire contract: <a href="../../gui_architecture/"><code>../gui_architecture.md</code></a> (REST + SSE)<br />
+Catalog: <a href="../PARTS_CATALOG/"><code>PARTS_CATALOG.md</code></a> · Scenario: <a href="../../CONFIG_GUIDE/"><code>../CONFIG_GUIDE.md</code></a></p>
+<hr />
+<h2 id="0-charter-why-v3-not-v2">0. Charter — why v3, not v2<a class="headerlink" href="#0-charter-why-v3-not-v2" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>What we tried</th>
+<th>Outcome</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>v0.2 → v1</strong></td>
+<td>Full-screen <code>app.html</code>, sidebar + modal workshops + setup bar</td>
+<td><strong>Feature-complete prototype</strong> — all three composition layers shipped, but IA debt</td>
+</tr>
+<tr>
+<td><strong>v2</strong></td>
+<td><code>/v2/app.html</code>, rewrite build-sheet only; rest stays on v1</td>
+<td><strong>Requirements felt incomplete</strong> — map/scene/fleet/compare treated as “carry-over”; two UIs, no unified shell</td>
+</tr>
+<tr>
+<td><strong>v3</strong></td>
+<td><strong>Greenfield shell</strong> — modes, dockable layout, design system first; <strong>one</strong> app route when ready</td>
+<td>Target: credible OSS engineering UI, not a patched monolith</td>
+</tr>
+</tbody>
+</table>
+<p><strong>v3 rule:</strong> Do not ship another partial skin. Ship a <strong>coherent workspace</strong> with explicit parity against <a href="../GUI_V2_REQUIREMENTS/"><code>GUI_V2_REQUIREMENTS.md</code> §3.1</a> (v1 inventory).</p>
+<h3 id="product-priority-2026-06-21-locked">Product priority (2026-06-21 — locked)<a class="headerlink" href="#product-priority-2026-06-21-locked" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Rank</th>
+<th>GUI role</th>
+<th>v3 mode</th>
+<th>Investment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1 — Main</strong></td>
+<td><strong>시나리오 생성기</strong> — map, road, path, fleet/agents, save/load <code>configs/scenes/</code></td>
+<td><strong>Scenario</strong></td>
+<td>~60% UX / v3.0-alpha</td>
+</tr>
+<tr>
+<td><strong>2 — Second</strong></td>
+<td><strong>Realtime 시각화</strong> — Play 중 Three.js + telemetry (plant state reconstruction)</td>
+<td><strong>Run</strong></td>
+<td>~30% / v3.0-beta</td>
+</tr>
+<tr>
+<td>3 — Supporting</td>
+<td>차량 부품 조립 (agent <code>blueprint</code> + parts)</td>
+<td><strong>Build</strong> (panel in Scenario + deep-edit route)</td>
+<td>~10% / v3.0-rc</td>
+</tr>
+<tr>
+<td>4 — Validation</td>
+<td>ISO compare, metrics</td>
+<td><strong>Analyze</strong></td>
+<td>polish / v3.1</td>
+</tr>
+</tbody>
+</table>
+<p>The GUI is <strong>not</strong> a game client or a CAD tool — it is a <strong>scenario authoring studio</strong> with an attached <strong>runtime viewer</strong>.</p>
+<hr />
+<h2 id="1-feedback-synthesis-v1-development-v2-planning">1. Feedback synthesis (v1 development → v2 planning)<a class="headerlink" href="#1-feedback-synthesis-v1-development-v2-planning" title="Permanent link">&para;</a></h2>
+<h3 id="11-external-design-review-handoff-2026-06">1.1 External / design review (HANDOFF 2026-06)<a class="headerlink" href="#11-external-design-review-handoff-2026-06" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Score / verdict</th>
+<th>Finding</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>~4/10 “prototype”</strong></td>
+<td>Looks bolted-on; not a product-grade authoring tool</td>
+</tr>
+<tr>
+<td>Layout</td>
+<td>Need <strong>dockable / resizable</strong> panels; stop stacking unrelated concerns in fixed columns</td>
+</tr>
+<tr>
+<td>Navigation</td>
+<td>Need <strong>global mode nav</strong> — user mental model: <strong>Compose → Build → Run → Analyze</strong> (HANDOFF: Setup · Sim · Analyze)</td>
+</tr>
+<tr>
+<td>Modals</td>
+<td><strong>Large vehicle modal</strong> hides context; build-sheet + session tune + parts library trapped behind one overlay</td>
+</tr>
+<tr>
+<td>Design</td>
+<td>Need <strong>design system</strong> (tokens, components, density) before more hand-coded CSS</td>
+</tr>
+<tr>
+<td>Stack</td>
+<td><code>stdlib http.server</code> + <strong>4.2k LOC <code>app.js</code></strong> monolith is a maintenance ceiling — framework decision <strong>before</strong> more UI code</td>
+</tr>
+</tbody>
+</table>
+<h3 id="12-what-worked-keep-in-v3">1.2 What worked (keep in v3)<a class="headerlink" href="#12-what-worked-keep-in-v3" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Evidence</th>
+<th>v3 carry-forward</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Three composition layers</strong></td>
+<td>Vehicle build / scene compose / compare are distinct VDSim objects</td>
+<td>Becomes <strong>top-level modes</strong>, not sidebar + setup bar + modals</td>
+</tr>
+<tr>
+<td><strong>Danawa build-sheet</strong></td>
+<td>Slot rows, categories, resolved stats, preset chips</td>
+<td><strong>Build mode</strong> primary surface (not a modal)</td>
+</tr>
+<tr>
+<td><strong>Schematic preview</strong></td>
+<td>Level-aware SVG (L1–L5), Adams linkage from API — stash removed 3D car in modal</td>
+<td><strong>Build mode</strong> center panel; no runtime mesh in authoring</td>
+</tr>
+<tr>
+<td><strong>Compare dashboard</strong></td>
+<td><code>/api/compare</code>, yaw-rate overlay, Δ% table</td>
+<td><strong>Analyze mode</strong> full page</td>
+</tr>
+<tr>
+<td><strong>Wire contract</strong></td>
+<td>REST draft + SSE stream; GUI does not step physics</td>
+<td><strong>Frozen</strong> — v3 is frontend-only replacement</td>
+</tr>
+<tr>
+<td><strong>Catalog assembly API</strong></td>
+<td><code>assembly.py</code>, preview Δ stats, <code>build_complete</code></td>
+<td>Same backend; v3 client uses typed API wrapper</td>
+</tr>
+<tr>
+<td><strong>Setup bar concepts</strong></td>
+<td>Map / fleet / path / save</td>
+<td><strong>Scenario mode</strong> inspector + map</td>
+</tr>
+<tr>
+<td><strong>Play viewport</strong></td>
+<td>Three.js from SSE</td>
+<td><strong>Run mode</strong> (secondary product)</td>
+</tr>
+<tr>
+<td><strong>mkdocs help</strong></td>
+<td><code>[?]</code> → theory/docs</td>
+<td>All non-obvious labels</td>
+</tr>
+</tbody>
+</table>
+<h3 id="13-what-failed-or-hurt-fix-in-v3">1.3 What failed or hurt (fix in v3)<a class="headerlink" href="#13-what-failed-or-hurt-fix-in-v3" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Pain</th>
+<th>Symptom</th>
+<th>v3 response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Modal-centric IA</strong></td>
+<td>Vehicle edit = full-screen modal; compare = another modal; context loss</td>
+<td><strong>Mode pages</strong> + optional <strong>drawers</strong>; no full-screen modal for primary workflows</td>
+</tr>
+<tr>
+<td><strong>Duplicate entry points</strong></td>
+<td>Blueprint/level in fleet tree, assembly modal, setup vehicle tab</td>
+<td><strong>Single source of truth</strong> per field; cross-links only</td>
+</tr>
+<tr>
+<td><strong>Split attention</strong></td>
+<td>Sidebar sim + bottom setup bar + center 3D + right telemetry</td>
+<td><strong>Mode-specific layout</strong> — only show panels relevant to current job</td>
+</tr>
+<tr>
+<td><strong>Incremental v2 trap</strong></td>
+<td>Build-sheet on <code>/v2</code>, map/spawn on <code>/app.html</code></td>
+<td><strong>One route</strong> (<code>/v3/</code> or <code>/app.html</code> swap) at parity gate</td>
+</tr>
+<tr>
+<td><strong>UX bugs (found in review)</strong></td>
+<td>Double-click to install; silent blueprint parts wipe; <code>build_complete</code> false on L2</td>
+<td>Fixed in core/catalog; v3 must <strong>confirm destructive edits</strong> (D1)</td>
+</tr>
+<tr>
+<td><strong>Monolith JS</strong></td>
+<td><code>app.js</code> 4235 LOC — scene, assembly, setup, compare, path edit intertwined</td>
+<td><strong>Framework + modules</strong> by mode and domain</td>
+</tr>
+<tr>
+<td><strong>Requirements doc drift</strong></td>
+<td>v2 doc over-indexed build-sheet; map/fleet under-documented until late</td>
+<td>v3 doc inherits <strong>full §3.1 parity IDs</strong> (see §8)</td>
+</tr>
+<tr>
+<td><strong>Visual polish without system</strong></td>
+<td>One-off CSS, inconsistent spacing/typography</td>
+<td><strong>Design tokens + component library</strong> before feature sprint</td>
+</tr>
+</tbody>
+</table>
+<h3 id="14-user-session-feedback-condensed">1.4 User / session feedback (condensed)<a class="headerlink" href="#14-user-session-feedback-condensed" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Request</th>
+<th>v1 state</th>
+<th>v3 requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>차량 구성 (parts, presets, stats)</td>
+<td>Assembly modal</td>
+<td><strong>Build mode</strong> — full width</td>
+</tr>
+<tr>
+<td>지도·도로·terrain 구성</td>
+<td>Setup → Map</td>
+<td><strong>Scenario</strong> mode</td>
+</tr>
+<tr>
+<td>경로·waypoint 편집</td>
+<td>Setup table + 3D edit</td>
+<td><strong>Scenario</strong> map tools</td>
+</tr>
+<tr>
+<td>플릿 spawn</td>
+<td>Setup Vehicle + drag</td>
+<td><strong>Scenario</strong> fleet inspector</td>
+</tr>
+<tr>
+<td>시나리오 save/load</td>
+<td>Setup header</td>
+<td><strong>Scenario</strong> shell (CO-16)</td>
+</tr>
+<tr>
+<td>Realtime 3D 시각화</td>
+<td>Sidebar + viewport</td>
+<td><strong>Run</strong> mode (▶ from Scenario)</td>
+</tr>
+<tr>
+<td>ISO 비교</td>
+<td>Compare modal</td>
+<td><strong>Analyze mode</strong></td>
+</tr>
+<tr>
+<td>Session tune (타이어·서스)</td>
+<td>Modal tabs</td>
+<td><strong>Build mode</strong> sub-inspector (not separate modal)</td>
+</tr>
+<tr>
+<td>Single-click part install</td>
+<td>Fixed in stash</td>
+<td><strong>Build mode</strong> default</td>
+</tr>
+<tr>
+<td>Hover Δ stats preview</td>
+<td>Stash / API</td>
+<td><strong>Build mode</strong></td>
+</tr>
+<tr>
+<td>Teaching credibility</td>
+<td>Schematic not game mesh</td>
+<td><strong>NF-10</strong> — engineering aesthetic</td>
+</tr>
+</tbody>
+</table>
+<h3 id="15-deferred-from-v052-handoff-still-in-v3-backlog">1.5 Deferred from v0.5.2 / HANDOFF (still in v3 backlog)<a class="headerlink" href="#15-deferred-from-v052-handoff-still-in-v3-backlog" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Item</th>
+<th>v3 phase</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G-01</td>
+<td>Multi-fleet 3D render polish (#158)</td>
+<td>Run mode P1</td>
+</tr>
+<tr>
+<td>G-04</td>
+<td>Terrain Play — chase on mesh, spawn on surface</td>
+<td>Run mode P1</td>
+</tr>
+<tr>
+<td>G-05</td>
+<td>Stunt <strong>authoring</strong> (not render-only)</td>
+<td>Compose P2</td>
+</tr>
+<tr>
+<td>G-06</td>
+<td>GUI <code>.tir</code> import</td>
+<td>Build P2 (metadata only; no coefficient editor)</td>
+</tr>
+<tr>
+<td>G-07</td>
+<td>Belt transient force arrow viz</td>
+<td>Run P2</td>
+</tr>
+<tr>
+<td>G-08</td>
+<td><code>powertrain</code> catalog slot</td>
+<td>Backend + Build P0</td>
+</tr>
+<tr>
+<td>G-09</td>
+<td>Blueprint switch confirm</td>
+<td>Build P0</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2-product-positioning">2. Product positioning<a class="headerlink" href="#2-product-positioning" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Primary product</strong></td>
+<td><strong>Scenario generator</strong> — author <code>scene.yaml</code>: shared map/road/comms + per-agent fleet, path, spawn</td>
+</tr>
+<tr>
+<td><strong>Secondary product</strong></td>
+<td><strong>Realtime visualization</strong> — while plant runs, reconstruct pose/tires/forces from SSE (not pixel stream)</td>
+</tr>
+<tr>
+<td>Not</td>
+<td>CAD, tire coefficient workshop, AAA game UI, primary 3D editor</td>
+</tr>
+<tr>
+<td>Differentiator</td>
+<td>YAML-native scenarios + compact physics state → local Three.js</td>
+</tr>
+<tr>
+<td>Audience</td>
+<td>Maintainer, FS/Auto teams, ADAS students composing experiments</td>
+</tr>
+<tr>
+<td>Success (primary)</td>
+<td>New user loads template → edits map/path/fleet → saves scenario → <strong>≤3 min</strong> without reading source</td>
+</tr>
+<tr>
+<td>Success (secondary)</td>
+<td>▶ Play → Run mode shows credible motion + telemetry within <strong>2 s</strong> of sync</td>
+</tr>
+</tbody>
+</table>
+<p><strong>VDSim object the GUI owns:</strong> <code>configs/scenes/*.yaml</code> (and derived <code>runs/live/</code> on Play).<br />
+Vehicle physics manifests (<code>blueprints/</code>, <code>parts/</code>) are <strong>edited in service of</strong> scenario agents, not as a standalone app goal.</p>
+<hr />
+<h2 id="3-v3-principles">3. v3 principles<a class="headerlink" href="#3-v3-principles" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Principle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P0</td>
+<td><strong>Scenario-first</strong> — default mode, default route, most polish budget</td>
+</tr>
+<tr>
+<td>P1</td>
+<td><strong>Run-second</strong> — visualization serves the scenario being played, not a separate “game”</td>
+</tr>
+<tr>
+<td>P2</td>
+<td><strong>One workspace</strong> — Scenario · Run · (Build · Analyze); one design system</td>
+</tr>
+<tr>
+<td>P3</td>
+<td><strong>Wire contract frozen</strong> — REST/SSE schema is the migration boundary</td>
+</tr>
+<tr>
+<td>P4</td>
+<td><strong>Authoring ≠ runtime</strong> — Scenario edits draft; Play syncs → <code>runs/live/</code> → Run visualizes</td>
+</tr>
+<tr>
+<td>P5</td>
+<td><strong>No physics in browser</strong> — server resolves catalog; GUI edits manifests + session overrides</td>
+</tr>
+<tr>
+<td>P6</td>
+<td><strong>Offline-first</strong> — <code>gui/vendor/</code> fonts/icons; lab LAN without CDN</td>
+</tr>
+<tr>
+<td>P7</td>
+<td><strong>Parity before cutover</strong> — v1 stays at <code>/app.html</code> until §8 checklist passes on <code>/v3/</code></td>
+</tr>
+<tr>
+<td>P8</td>
+<td><strong>Design system before features</strong> — Storybook for scenario inspector components first</td>
+</tr>
+<tr>
+<td>P9</td>
+<td><strong>Not game UI</strong> — Notion/Linear-like light OSS; <code>#01A0E9</code> accent; dense engineering rows</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-information-architecture-v3">4. Information architecture (v3)<a class="headerlink" href="#4-information-architecture-v3" title="Permanent link">&para;</a></h2>
+<h3 id="41-global-shell-scenario-centric">4.1 Global shell — Scenario-centric<a class="headerlink" href="#41-global-shell-scenario-centric" title="Permanent link">&para;</a></h3>
+<p><strong>Default route:</strong> <code>/v3/#/scenario</code> (app opens in scenario studio).</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌─────────────────────────────────────────────────────────────────────────┐
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│ VDSim   [ Scenario ★ ] [ Run ]     Build · Analyze (secondary)   scenario ▾ │
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├─────────────────────────────────────────────────────────────────────────┤
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│  SCENARIO STUDIO (default) — map · path · fleet · road · save/load       │
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│  or RUN VIEWPORT — Three.js + transport (entered via ▶ or Run tab)       │
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>├─────────────────────────────────────────────────────────────────────────┤
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│  draft synced · [Sync] [▶ Play → Run] · last run · warnings · [?]      │
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>└─────────────────────────────────────────────────────────────────────────┘
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Priority</th>
+<th>User job</th>
+<th>Primary viewport</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Scenario</strong></td>
+<td><strong>1 — Main</strong></td>
+<td>시나리오 생성·편집</td>
+<td><strong>Map canvas</strong> — road, terrain, path, spawn, fleet agents</td>
+</tr>
+<tr>
+<td><strong>Run</strong></td>
+<td><strong>2 — Second</strong></td>
+<td>Realtime 시각화</td>
+<td><strong>Three.js</strong> — chase/top/orbit, force vectors, telemetry drawer</td>
+</tr>
+<tr>
+<td><strong>Build</strong></td>
+<td>3 — Supporting</td>
+<td>Agent 차량 부품 조립</td>
+<td>Schematic + slot list (opens from Scenario fleet row or <code>#/build</code>)</td>
+</tr>
+<tr>
+<td><strong>Analyze</strong></td>
+<td>4 — Validation</td>
+<td>ISO compare</td>
+<td>Charts + Δ% table</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Cross-mode rules</strong></p>
+<ul>
+<li>Scenario name + draft sync <strong>always visible</strong>; <strong>▶ Play</strong> syncs draft then switches to <strong>Run</strong>.</li>
+<li><strong>Build</strong> is scoped to selected fleet agent (<code>vid</code>); entry from Scenario fleet inspector, not the default landing.</li>
+<li>Run mode is <strong>read-mostly</strong> for scene params — “back to Scenario” for edits.</li>
+<li>No modal larger than confirm / save-as / import.</li>
+</ul>
+<h3 id="42-scenario-studio-layout-main-surface">4.2 Scenario studio layout (main surface)<a class="headerlink" href="#42-scenario-studio-layout-main-surface" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>┌──────────────── map / path editor (70%) ────────┬─ inspector (30%) ─┐
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>│  · road μ / grade / bank preview                   │  Scenario meta      │
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>│  · fleet spawn markers (drag)                      │  Road                 │
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>│  · path waypoints (●)                              │  Map / terrain files  │
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>│  · optional light 3D ground (not full Run viz)     │  Fleet agents[]       │
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>│                                                    │    → blueprint link   │
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>│                                                    │    → [Edit parts]     │
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>│                                                    │  Path preset / wps     │
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>│                                                    │  Comms / cosim (adv)  │
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>└────────────────────────────────────────────────────┴───────────────────────┘
+</span></code></pre></div>
+<p>Fleet agent row <strong>Edit parts</strong> opens Build as <strong>split pane or drawer</strong> without leaving Scenario context when possible (deep edit → <code>#/build?vid=</code>).</p>
+<h3 id="43-run-layout-visualization-surface">4.3 Run layout (visualization surface)<a class="headerlink" href="#43-run-layout-visualization-surface" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>┌──────────────────── Three.js viewport (100%) ────────────────────────────┐
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>│  transport: ⏹ ⟲ · time scale · cam orbit/chase/top · manual (optional)    │
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>│  overlay: spawn hint off · wheel forces · selected vehicle telemetry →    │
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>└──────────────────────────────────────────────────────────────────────────┘
+</span></code></pre></div>
+<p>Minimap trail lives in Run (or PiP); Scenario map shows <strong>static</strong> fleet/path for authoring.</p>
+<h3 id="44-v1-v3-surface-mapping">4.4 v1 → v3 surface mapping<a class="headerlink" href="#44-v1-v3-surface-mapping" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>v1 location</th>
+<th>v3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Setup bar (Map/Vehicle/Options)</td>
+<td><strong>Scenario</strong> mode</td>
+</tr>
+<tr>
+<td>Sidebar Play + center 3D</td>
+<td><strong>Run</strong> mode (+ ▶ from shell)</td>
+</tr>
+<tr>
+<td>Modal → Assembly</td>
+<td><strong>Build</strong> (from Scenario agent)</td>
+</tr>
+<tr>
+<td>Compare modal</td>
+<td><strong>Analyze</strong></td>
+</tr>
+<tr>
+<td>Sidebar fleet tree</td>
+<td>Scenario <strong>Fleet agents</strong> inspector</td>
+</tr>
+</tbody>
+</table>
+<h3 id="45-default-layouts">4.5 Default layouts<a class="headerlink" href="#45-default-layouts" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Layout</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Scenario</strong></td>
+<td><code>map (70%)</code> | <code>inspector (30%)</code> — resizable</td>
+</tr>
+<tr>
+<td><strong>Run</strong></td>
+<td><code>viewport (100%)</code> — telemetry slide-over</td>
+</tr>
+<tr>
+<td>Build</td>
+<td><code>slots (25%)</code> | <code>schematic (45%)</code> | <code>picker + stats (30%)</code></td>
+</tr>
+<tr>
+<td>Analyze</td>
+<td><code>config top</code> | <code>chart (60%)</code> | <code>table (40%)</code></td>
+</tr>
+</tbody>
+</table>
+<p>Docking: CSS split panes (ADR-006).</p>
+<hr />
+<h2 id="5-functional-requirements">5. Functional requirements<a class="headerlink" href="#5-functional-requirements" title="Permanent link">&para;</a></h2>
+<p>IDs extend v2 where noted. <strong>P0</strong> = v3 launch blocker.</p>
+<h3 id="51-shell-navigation">5.1 Shell &amp; navigation<a class="headerlink" href="#51-shell-navigation" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>P</th>
+<th>Acceptance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SH-01</td>
+<td><strong>Scenario</strong> default route <code>#/scenario</code>; <strong>Run</strong> <code>#/run</code>; Build/Analyze secondary</td>
+<td>P0</td>
+<td>Opens on Scenario</td>
+</tr>
+<tr>
+<td>SH-02</td>
+<td>Scenario selector + load/save/export/import in shell</td>
+<td>P0</td>
+<td>Replaces setup header</td>
+</tr>
+<tr>
+<td>SH-03</td>
+<td>Draft sync + <strong>▶ Play</strong> → sync → auto-switch to <strong>Run</strong></td>
+<td>P0</td>
+<td>Same as S-02</td>
+</tr>
+<tr>
+<td>SH-04</td>
+<td>Connection + kinematics warnings in status strip</td>
+<td>P0</td>
+<td>v1 parity</td>
+</tr>
+<tr>
+<td>SH-05</td>
+<td>mkdocs <code>[?]</code> on labels</td>
+<td>P0</td>
+<td>HP-01</td>
+</tr>
+<tr>
+<td>SH-06</td>
+<td>Panel resize persist (localStorage)</td>
+<td>P1</td>
+<td>Per mode</td>
+</tr>
+<tr>
+<td>SH-07</td>
+<td>Keyboard: Esc closes drawer; <code>?</code> opens help</td>
+<td>P1</td>
+<td>NF-04</td>
+</tr>
+</tbody>
+</table>
+<h3 id="52-scenario-mode-p0-main">5.2 Scenario mode (시나리오 생성기 — <strong>P0 main</strong>)<a class="headerlink" href="#52-scenario-mode-p0-main" title="Permanent link">&para;</a></h3>
+<p>Was “Compose”. IDs unchanged (<code>CO-*</code>).</p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>P</th>
+<th>v1 ref</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CO-00</td>
+<td><strong>New scenario</strong> template gallery (empty, skidpad, straight, figure-8)</td>
+<td>P0</td>
+<td>new</td>
+</tr>
+<tr>
+<td>CO-01</td>
+<td>Road μ, grade°, bank°, v_target</td>
+<td>P0</td>
+<td>S-03</td>
+</tr>
+<tr>
+<td>CO-02</td>
+<td>OpenDRIVE <code>.xodr</code> load</td>
+<td>P1</td>
+<td>S-04</td>
+</tr>
+<tr>
+<td>CO-03</td>
+<td>Terrain <code>.obj</code> load + clear</td>
+<td>P1</td>
+<td>S-05</td>
+</tr>
+<tr>
+<td>CO-04</td>
+<td>Fleet spawn table (x0,y0,yaw0,vx0…)</td>
+<td>P0</td>
+<td>S-06</td>
+</tr>
+<tr>
+<td>CO-05</td>
+<td>Map drag spawn + multi-vehicle add</td>
+<td>P0</td>
+<td>S-07, S-16</td>
+</tr>
+<tr>
+<td>CO-06</td>
+<td>Path preset + waypoint table</td>
+<td>P0</td>
+<td>S-08, S-09</td>
+</tr>
+<tr>
+<td>CO-07</td>
+<td>Path edit on map (drag ●, add, Del)</td>
+<td>P0</td>
+<td>S-10</td>
+</tr>
+<tr>
+<td>CO-08</td>
+<td>Static fleet + path on Scenario map; trail overlay in <strong>Run</strong> only</td>
+<td>P0</td>
+<td>S-11</td>
+</tr>
+<tr>
+<td>CO-09</td>
+<td>Cosim attach host/ports</td>
+<td>P1</td>
+<td>S-12</td>
+</tr>
+<tr>
+<td>CO-10</td>
+<td>IO / telemetry targets</td>
+<td>P2</td>
+<td>S-13</td>
+</tr>
+<tr>
+<td>CO-11</td>
+<td>C++ module workshop</td>
+<td>P2</td>
+<td>S-14</td>
+</tr>
+<tr>
+<td>CO-12</td>
+<td>Infra sensors tree</td>
+<td>P2</td>
+<td>S-15</td>
+</tr>
+<tr>
+<td>CO-13</td>
+<td>Stunt viz when scene defines <code>stunt:</code></td>
+<td>P2</td>
+<td>S-17</td>
+</tr>
+<tr>
+<td>CO-14</td>
+<td>Named scenario presets in repo (<code>configs/scenes/</code>) surfaced as chips</td>
+<td>P1</td>
+<td>new</td>
+</tr>
+<tr>
+<td>CO-15</td>
+<td>Fleet agent row → <strong>Edit parts</strong> (Build drawer or <code>#/build?vid=</code>)</td>
+<td>P0</td>
+<td>cross-mode</td>
+</tr>
+<tr>
+<td>CO-16</td>
+<td><strong>Save</strong> writes <code>configs/scenes/&lt;name&gt;.yaml</code>; load/export/import in shell</td>
+<td>P0</td>
+<td>S-01</td>
+</tr>
+</tbody>
+</table>
+<h3 id="53-build-mode-vehicle-supporting-entry-from-scenario">5.3 Build mode (vehicle — <strong>supporting</strong>, entry from Scenario)<a class="headerlink" href="#53-build-mode-vehicle-supporting-entry-from-scenario" title="Permanent link">&para;</a></h3>
+<p>Deep-edit route for catalog assembly. Not the default landing.</p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>P</th>
+<th>v1 ref</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BU-01</td>
+<td>Preset blueprint chips → slot list</td>
+<td>P0</td>
+<td>BS-02</td>
+</tr>
+<tr>
+<td>BU-02</td>
+<td>Categories: Body&amp;chassis / Powertrain / Grip / Control</td>
+<td>P0</td>
+<td>BS-03</td>
+</tr>
+<tr>
+<td>BU-03</td>
+<td>Single-click row → part cards; hover Δ stats</td>
+<td>P0</td>
+<td>BS-04–06</td>
+</tr>
+<tr>
+<td>BU-04</td>
+<td>Resolved stats panel (mass, WB, CG, μ, drive)</td>
+<td>P0</td>
+<td>BS-05</td>
+</tr>
+<tr>
+<td>BU-05</td>
+<td><code>build_complete</code> on required slots only</td>
+<td>P0</td>
+<td>BS-07</td>
+</tr>
+<tr>
+<td>BU-06</td>
+<td>Level L1–L5 updates slot set</td>
+<td>P0</td>
+<td>BS-08</td>
+</tr>
+<tr>
+<td>BU-07</td>
+<td>Compat badges on cards</td>
+<td>P1</td>
+<td>BS-09</td>
+</tr>
+<tr>
+<td>BU-08</td>
+<td>Blueprint change <strong>confirm</strong> (slots reset list)</td>
+<td>P0</td>
+<td>BS-11, G-09</td>
+</tr>
+<tr>
+<td>BU-09</td>
+<td>Export / register blueprint</td>
+<td>P1</td>
+<td>V-10</td>
+</tr>
+<tr>
+<td>BU-10</td>
+<td>Schematic: L1–L2 textbook, L3 7-DOF, L4–L5 Adams SVG</td>
+<td>P0</td>
+<td>PV-01–04</td>
+</tr>
+<tr>
+<td>BU-11</td>
+<td>No Three.js vehicle mesh in Build</td>
+<td>P0</td>
+<td>PV-01</td>
+</tr>
+<tr>
+<td>BU-12</td>
+<td>Session tune tabs in inspector (chassis, tire, susp, …)</td>
+<td>P1</td>
+<td>V-07–V-09</td>
+</tr>
+<tr>
+<td>BU-13</td>
+<td>K&amp;C plots L3/L4</td>
+<td>P2</td>
+<td>V-08</td>
+</tr>
+<tr>
+<td>BU-14</td>
+<td>Parts library drawer (browse/import)</td>
+<td>P1</td>
+<td>V-06, PT-*</td>
+</tr>
+<tr>
+<td>BU-15</td>
+<td><code>powertrain</code> slot when catalog ships</td>
+<td>P0</td>
+<td>G-08</td>
+</tr>
+</tbody>
+</table>
+<h3 id="54-run-mode-realtime-p0-second">5.4 Run mode (realtime 시각화 — <strong>P0 second</strong>)<a class="headerlink" href="#54-run-mode-realtime-p0-second" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>P</th>
+<th>v1 ref</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RN-00</td>
+<td>Enter via <strong>▶ Play</strong> (sync → Run) or <strong>Run</strong> tab when sim active</td>
+<td>P0</td>
+<td>SH-03</td>
+</tr>
+<tr>
+<td>RN-01</td>
+<td>Play / Stop / Reset</td>
+<td>P0</td>
+<td>P-01</td>
+</tr>
+<tr>
+<td>RN-02</td>
+<td>Autopilot vs manual + manbar / keyboard</td>
+<td>P0</td>
+<td>P-02</td>
+</tr>
+<tr>
+<td>RN-03</td>
+<td>Realtime time scale</td>
+<td>P0</td>
+<td>P-03</td>
+</tr>
+<tr>
+<td>RN-04</td>
+<td>Cam orbit / chase / top</td>
+<td>P0</td>
+<td>P-04</td>
+</tr>
+<tr>
+<td>RN-05</td>
+<td>SSE ~60 Hz → fleet meshes</td>
+<td>P0</td>
+<td>P-05</td>
+</tr>
+<tr>
+<td>RN-06</td>
+<td>Wheel force triad (common origin)</td>
+<td>P1</td>
+<td>P-06</td>
+</tr>
+<tr>
+<td>RN-07</td>
+<td>Telemetry drawer</td>
+<td>P0</td>
+<td>P-07</td>
+</tr>
+<tr>
+<td>RN-08</td>
+<td>Multi-fleet 3D (#158)</td>
+<td>P1</td>
+<td>G-01</td>
+</tr>
+<tr>
+<td>RN-09</td>
+<td>Terrain-aware chase / spawn on mesh</td>
+<td>P1</td>
+<td>G-04</td>
+</tr>
+<tr>
+<td>RN-10</td>
+<td>Sim cfg load/save</td>
+<td>P1</td>
+<td>S-18</td>
+</tr>
+<tr>
+<td>RN-11</td>
+<td>WebGPU optional, WebGL2 fallback</td>
+<td>P2</td>
+<td>PL-05</td>
+</tr>
+</tbody>
+</table>
+<h3 id="55-analyze-mode-was-compare-modal">5.5 Analyze mode (was Compare modal)<a class="headerlink" href="#55-analyze-mode-was-compare-modal" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>P</th>
+<th>v1 ref</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AN-01</td>
+<td>Multi blueprint select from fleet</td>
+<td>P0</td>
+<td>A-01–A-02</td>
+</tr>
+<tr>
+<td>AN-02</td>
+<td>ISO maneuver picker</td>
+<td>P0</td>
+<td>A-03</td>
+</tr>
+<tr>
+<td>AN-03</td>
+<td>Yaw-rate overlay chart (SVG or canvas)</td>
+<td>P0</td>
+<td>A-04</td>
+</tr>
+<tr>
+<td>AN-04</td>
+<td>Δ% table vs baseline</td>
+<td>P0</td>
+<td>A-05</td>
+</tr>
+<tr>
+<td>AN-05</td>
+<td>Export compare CSV</td>
+<td>P1</td>
+<td>headless parity</td>
+</tr>
+<tr>
+<td>AN-06</td>
+<td>Separate from Build (no embedded compare)</td>
+<td>P0</td>
+<td>CP-03</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-design-system-requirements">6. Design system requirements<a class="headerlink" href="#6-design-system-requirements" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DS-01</td>
+<td>Token file: color, spacing, radius, typography (<code>gui/v3/tokens.css</code> or CSS vars from build)</td>
+</tr>
+<tr>
+<td>DS-02</td>
+<td>Components: Button, Chip, DenseRow, Panel, InspectorField, StatusBadge, ChartFrame</td>
+</tr>
+<tr>
+<td>DS-03</td>
+<td>Light theme default; accent <code>#01A0E9</code>; system font stack</td>
+</tr>
+<tr>
+<td>DS-04</td>
+<td>Danawa-density slot rows; resolved stats always visible in Build</td>
+</tr>
+<tr>
+<td>DS-05</td>
+<td>Design review gate: external or maintainer sign-off <strong>before</strong> Run mode polish</td>
+</tr>
+<tr>
+<td>DS-06</td>
+<td>Optional: Figma file linked from repo; or Storybook in <code>gui/v3/storybook/</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Reference mood:</strong> Notion / Linear / OSS engineering — not racing game HUD.</p>
+<hr />
+<h2 id="7-technical-architecture">7. Technical architecture<a class="headerlink" href="#7-technical-architecture" title="Permanent link">&para;</a></h2>
+<h3 id="71-stack-decisions-required-in-week-0">7.1 Stack (decisions required in week 0)<a class="headerlink" href="#71-stack-decisions-required-in-week-0" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Decision</th>
+<th>Options</th>
+<th>v3 recommendation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T1</td>
+<td>Framework</td>
+<td>SvelteKit, React+Vite, Vue</td>
+<td><strong>Svelte 5 + Vite SPA</strong> — see <a href="../GUI_V3_ADR/"><code>GUI_V3_ADR.md</code></a> ADR-001</td>
+</tr>
+<tr>
+<td>T2</td>
+<td>Entry route</td>
+<td><code>/v3/</code>, <code>/app.html</code> swap</td>
+<td><strong><code>/v3/index.html</code></strong> until parity → redirect <code>/app.html</code></td>
+</tr>
+<tr>
+<td>T3</td>
+<td>3D</td>
+<td>Three.js ES module</td>
+<td>Keep; extract <code>packages/viewport/</code> or <code>gui/v3/lib/viewport/</code></td>
+</tr>
+<tr>
+<td>T4</td>
+<td>API client</td>
+<td>hand <code>fetch</code></td>
+<td>Thin typed wrapper from route list in <code>gui/api/</code></td>
+</tr>
+<tr>
+<td>T5</td>
+<td>State</td>
+<td>mode-local stores</td>
+<td>Compose draft = server truth; optimistic UI with sync errors surfaced</td>
+</tr>
+<tr>
+<td>T6</td>
+<td>Build</td>
+<td>Vite</td>
+<td>Bundle to <code>gui/v3/dist/</code> served by <code>server.py</code></td>
+</tr>
+<tr>
+<td>T7</td>
+<td>Backend</td>
+<td><code>gui/server.py</code></td>
+<td><strong>No change</strong> for v3.0</td>
+</tr>
+</tbody>
+</table>
+<h3 id="72-module-boundaries-target">7.2 Module boundaries (target)<a class="headerlink" href="#72-module-boundaries-target" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>gui/v3/
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>  app/           # shell, router, mode layouts
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>  modes/
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    scenario/    # P0 — scenario studio (was compose/)
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    run/         # P1 — realtime viz
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    build/       # supporting
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    analyze/
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>  lib/
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    api/         # fetch wrappers
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    viewport/    # Three.js (Run)
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>    schematic/   # SVG build preview
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    charts/      # Analyze
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>  components/    # design system
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>  tokens.css
+</span></code></pre></div>
+<p>v1 <code>gui/static/app.js</code> <strong>not extended</strong> — maintenance mode only until v3 cutover.</p>
+<h3 id="73-wire-contract">7.3 Wire contract<a class="headerlink" href="#73-wire-contract" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Unchanged</td>
+<td><code>POST /api/setup</code>, <code>/api/control</code>, <code>/api/stream</code>, <code>/api/catalog/*</code>, <code>/api/compare</code>, …</td>
+</tr>
+<tr>
+<td>Optional v3 additions</td>
+<td><code>GET /api/schema/*</code> expansion for form codegen (future); not blocking v3.0</td>
+</tr>
+<tr>
+<td>Wheel order</td>
+<td>FL=0, FR=1, RL=2, RR=3</td>
+</tr>
+<tr>
+<td>Frame</td>
+<td>ISO 8855 RH</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="8-parity-checklist-v3-launch-gate">8. Parity checklist (v3 launch gate)<a class="headerlink" href="#8-parity-checklist-v3-launch-gate" title="Permanent link">&para;</a></h2>
+<p>All items from <a href="../GUI_V2_REQUIREMENTS/"><code>GUI_V2_REQUIREMENTS.md</code> §3.1</a> must pass on <code>/v3/</code>. Summary:</p>
+<table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Count</th>
+<th>v3 mode</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>V-* vehicle build</td>
+<td>11</td>
+<td>Build (from Scenario)</td>
+</tr>
+<tr>
+<td>S-* scene compose</td>
+<td>18</td>
+<td><strong>Scenario</strong></td>
+</tr>
+<tr>
+<td>P-* play runtime</td>
+<td>9</td>
+<td><strong>Run</strong></td>
+</tr>
+<tr>
+<td>A-* analyze</td>
+<td>5</td>
+<td>Analyze</td>
+</tr>
+<tr>
+<td>G-* gaps</td>
+<td>9</td>
+<td>per table §1.5 (P0 items block launch)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Automated:</strong> <code>ctest -R 'assembly|catalog|multi_vehicle_compare|gui_v3_api_smoke|gui_v3_e2e'</code> + <code>python3 tools/gui_v3_eval_bundle.py</code> (npm + Playwright + parity audit).</p>
+<hr />
+<h2 id="9-non-functional-requirements">9. Non-functional requirements<a class="headerlink" href="#9-non-functional-requirements" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Category</th>
+<th>Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NF-01</td>
+<td>Performance</td>
+<td>Build interactions &lt; 200 ms perceived (cached resolve)</td>
+</tr>
+<tr>
+<td>NF-02</td>
+<td>Performance</td>
+<td>Run viewport 30+ FPS integrated GPU, 1–4 vehicles</td>
+</tr>
+<tr>
+<td>NF-03</td>
+<td>Reliability</td>
+<td>Show <code>summary.error</code> on catalog resolve failure</td>
+</tr>
+<tr>
+<td>NF-04</td>
+<td>Accessibility</td>
+<td>Focus trap in drawers; keyboard transport in Run</td>
+</tr>
+<tr>
+<td>NF-05</td>
+<td>i18n</td>
+<td>UI English</td>
+</tr>
+<tr>
+<td>NF-06</td>
+<td>Security</td>
+<td>No Hyundai <code>.tir</code> secrets in browser</td>
+</tr>
+<tr>
+<td>NF-07</td>
+<td>Test</td>
+<td>API ctests green after any <code>gui/api</code> change</td>
+</tr>
+<tr>
+<td>NF-08</td>
+<td>Offline</td>
+<td>Lab LAN without internet</td>
+</tr>
+<tr>
+<td>NF-09</td>
+<td>Maintainability</td>
+<td>No single file &gt; 800 LOC (enforced in review)</td>
+</tr>
+<tr>
+<td>NF-10</td>
+<td>Aesthetic</td>
+<td>Engineering schematic &gt; game mesh for authoring</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="10-phased-delivery-scenario-first">10. Phased delivery (scenario-first)<a class="headerlink" href="#10-phased-delivery-scenario-first" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Deliverable</th>
+<th>Exit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>v3.0-alpha</strong></td>
+<td>Shell + <strong>Scenario studio</strong> CO-00–CO-08, CO-16 + templates</td>
+<td>Author/save scenario without v1</td>
+</tr>
+<tr>
+<td><strong>v3.0-beta</strong></td>
+<td><strong>Run visualization</strong> RN-00–RN-07 (▶ → sync → Run)</td>
+<td>Realtime viz credible</td>
+</tr>
+<tr>
+<td><strong>v3.0-rc</strong></td>
+<td><strong>Build</strong> drawer/route BU-01–BU-11 + <strong>Analyze</strong> AN-01–AN-04</td>
+<td>§8 parity manual pass</td>
+</tr>
+<tr>
+<td><strong>v3.0</strong></td>
+<td>Redirect <code>/app.html</code> → <code>/v3/#/scenario</code>; v1 → <code>gui/legacy/</code></td>
+<td>Cutover</td>
+</tr>
+<tr>
+<td><strong>v3.1</strong></td>
+<td>G-01/G-04 Run polish, CO-09–CO-13, dock persist</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>v3.2</strong></td>
+<td>G-05 stunt authoring, G-06, time-series Analyze</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Investment order:</strong> Scenario <strong>→</strong> Run <strong>→</strong> Build <strong>→</strong> Analyze.</p>
+<p><strong>Explicitly out of v3.0:</strong> CMake GUI, CAD export, in-browser coefficient editing, AAA visuals.</p>
+<hr />
+<h2 id="11-open-decisions-week-0">11. Open decisions (week 0)<a class="headerlink" href="#11-open-decisions-week-0" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Question</th>
+<th>Owner</th>
+<th>Blocker for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><del>O1</del></td>
+<td><del>SvelteKit vs React+Vite</del></td>
+<td>—</td>
+<td><strong>Closed → ADR-001: Svelte 5 + Vite SPA</strong></td>
+</tr>
+<tr>
+<td>O2</td>
+<td>Figma emphasis vs Storybook-only</td>
+<td>Maintainer</td>
+<td>DS-05 (ADR-007: Storybook primary)</td>
+</tr>
+<tr>
+<td><del>O3</del></td>
+<td>Docking library vs fixed split panes</td>
+<td>—</td>
+<td><strong>Closed → ADR-006: CSS splits v3.0</strong></td>
+</tr>
+<tr>
+<td><del>O4</del></td>
+<td><code>/v3/</code> URL vs hash routing</td>
+<td>—</td>
+<td><strong>Closed → ADR-003: hash</strong></td>
+</tr>
+<tr>
+<td>O5</td>
+<td>Merge-by-slot blueprint (non-destructive preset)</td>
+<td>Product</td>
+<td>BU-08 alternative</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="12-traceability">12. Traceability<a class="headerlink" href="#12-traceability" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Source doc</th>
+<th>Relationship</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GUI_V2_REQUIREMENTS.md</code></td>
+<td>Parity inventory §3.1; v2 phased plan <strong>cancelled</strong></td>
+</tr>
+<tr>
+<td><code>V0.2_GUI_REDESIGN.md</code></td>
+<td>Historical v1 layout intent</td>
+</tr>
+<tr>
+<td><code>docs/gui_architecture.md</code></td>
+<td>Wire contract</td>
+</tr>
+<tr>
+<td><code>docs/HANDOFF.md</code></td>
+<td>Session state + design review quote</td>
+</tr>
+<tr>
+<td>Stash <code>wip: main GUI v2 + build_viz</code></td>
+<td>Cherry-pick → v3 Build</td>
+</tr>
+<tr>
+<td><strong>Concept art</strong></td>
+<td><a href="assets/"><code>docs/design/assets/</code></a> — 6 PNG mockups</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="13-adr">13. ADR<a class="headerlink" href="#13-adr" title="Permanent link">&para;</a></h2>
+<p><strong>Accepted:</strong> <a href="../GUI_V3_ADR/"><code>GUI_V3_ADR.md</code></a> — incl. <strong>ADR-011 Scenario-first</strong>.</p>
+<p><em>End of v3 requirements baseline.</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/Onlyti/VDSim" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.expand", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

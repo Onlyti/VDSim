@@ -2481,11 +2481,21 @@ single C++17 + Python ABI.</p>
 <hr />
 <h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>v0.5</strong>: terrain + Ld5 stunt driving; parts catalog + scene runtime (<code>--scene=</code>), GUI catalog API.</li>
+<li><strong>Release line</strong>: v0.5 terrain + Ld5 stunt driving; parts catalog + scene runtime
+  (<code>--scene=</code>), GUI catalog API.</li>
 <li><strong>Physics</strong>: LuGre tire default on (<code>lugre.enabled</code>); opt-in <strong>MF2002 <code>.tir</code> backend</strong></li>
 <li><strong>belt transient</strong> (L1–L5); opt-in <strong>drivetrain v2</strong> (<code>powertrain:</code> — 2D engine map +
   gearbox + shift policy); kinematic fallback via <code>tire.kinematic_fallback</code> or <code>--no-lugre</code>.</li>
-<li><strong>Tests</strong>: <strong>328 / 328 ctest</strong> (2026-06-10, <code>main</code>).</li>
+<li><strong>Trace &amp; visualization (in integration)</strong>: opt-in <code>.vdtrace</code> recording and headless BEV rendering;
+  single-run playback, multi-run comparison, and separate <strong>waypoint</strong>, <strong>target</strong>, and
+  <strong>prediction</strong> overlays.</li>
+<li><strong>Render presets (in integration)</strong>: declarative panel and BEV-layer selection,
+  including the built-in <code>overview</code> layout.</li>
+<li><strong>C2 road contact (in integration)</strong>: L3/L4 consume the full 3-D surface normal,
+  including grade/bank gravity and normal-load response. The road-bundle provider
+  remains pending.</li>
+<li><strong>Tests</strong>: the current canonical result, configuration, toolchain, exclusions, commit,
+  and measurement date live only in <a href="VALIDATION/">Validation</a>.</li>
 <li><strong>Roadmap</strong>: <a href="ROADMAP/">Product roadmap</a> — shipped vs planned by subsystem.</li>
 <li><strong>User guide</strong>: <a href="CATALOG_AND_PHYSICS/">Catalog &amp; physics options</a>.</li>
 <li><strong>10 CLI demo binaries</strong>, <strong>Python bindings</strong>, <strong>CARLA-ready raycast ABI</strong>,
