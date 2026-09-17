@@ -1,0 +1,76 @@
+{
+  "substep_dt": 0.0025,
+  "dt": 0.005,
+  "level": "L2",
+  "action_repeat": 4,
+  "L0_core": [
+    {
+      "threads": 1,
+      "ticks_per_s": 32188.05197441259
+    },
+    {
+      "threads": 2,
+      "ticks_per_s": 63461.64694800093
+    },
+    {
+      "threads": 4,
+      "ticks_per_s": 126546.76028958107
+    },
+    {
+      "threads": 8,
+      "ticks_per_s": 214457.59528693493
+    },
+    {
+      "threads": 12,
+      "ticks_per_s": 274970.5152928367
+    },
+    {
+      "threads": 16,
+      "ticks_per_s": 310828.9978020751
+    },
+    {
+      "threads": 20,
+      "ticks_per_s": 374334.66436637164
+    },
+    {
+      "threads": 22,
+      "ticks_per_s": 378381.63249256
+    }
+  ],
+  "L1_adapter": [
+    {
+      "n_envs": 16,
+      "ticks_per_s": 223451.1258286737,
+      "env_steps_per_s": 55862.78145716843
+    },
+    {
+      "n_envs": 32,
+      "ticks_per_s": 327466.1588375975,
+      "env_steps_per_s": 81866.53970939938
+    },
+    {
+      "n_envs": 64,
+      "ticks_per_s": 354688.265155312,
+      "env_steps_per_s": 88672.066288828
+    }
+  ],
+  "L2_training": [
+    {
+      "n_envs": 16,
+      "ticks_per_s": 61314.40701713918,
+      "env_steps_per_s": 15328.601754284795
+    },
+    {
+      "n_envs": 64,
+      "ticks_per_s": 32832.37708787983,
+      "env_steps_per_s": 8208.094271969958
+    }
+  ],
+  "summary": {
+    "core_peak_ticks_per_s": 378382,
+    "adapter_peak_ticks_per_s": 354688,
+    "training_peak_ticks_per_s": 61314,
+    "adapter_frac_of_core": 0.937,
+    "training_frac_of_core": 0.162
+  }
+}

@@ -28,7 +28,7 @@ anti-dive/squat/roll-centre + progressive coil rate (untagged, v0.6 candidate)**
 | Brake / steer | Pluggable modules + deadtime; **user-defined modules (C++/Python subclass)** | Booster/MDPS physics |
 | Catalog / runtime | `--scene=`, fleet, FMI | External part packs, VDS1 v4 |
 | GUI | 3-tab scene UI, catalog API, workshops | Tire `.tir` import UI; **expose user-defined modules (decide: C++ `.so` plugin / Python path / GUI authoring)** |
-| Reinforcement learning | **Vectorized RL env: `VecSession` C++ pool (11.9x, bitwise-equal to serial), gymnasium/SB3 adapter, snapshot/restore, domain randomization** (§10) | Throughput ceiling (377 k vs 1.0 M); controller-in-the-loop snapshot |
+| Reinforcement learning | **Vectorized RL env: `VecSession` C++ pool (11.9x, bitwise-equal to serial), gymnasium/SB3 adapter, snapshot/restore, domain randomization** (§10) | Training-loop ceiling (policy-bound at 16% of core); controller-in-the-loop snapshot |
 | Validation | ISO 7401/4138/3888 **re-baselined + CI-gated** (`IsoBaseline`), 382 ctest | Adams x-check rtol; commercial cross-val |
 
 ```mermaid
@@ -294,7 +294,8 @@ Training surface on top of `SimSession`; default-path physics unchanged.
 | [x] `SessionSnapshot` save / restore (actuator, delay lines, sensor RNG, tire relaxation, model lag) | Shipped | picklable; restore is bitwise-identical on L1 / L2 / L3 |
 | [x] Substep accuracy gate vs a 0.1 ms baseline | Shipped | 1.0 ms 1.22% / 2.5 ms 4.07% / 5.0 ms 6.82% -> training 2.5 ms, evaluation 1.0 ms, 5.0 ms rejected (`configs/rl/fast_env.yaml`) |
 | [ ] `CascadeController` and non-identity network snapshotting | Planned | explicitly out of the first cut |
-| [ ] Throughput target 1.0 M steps/s | Open | 377 k steps/s at the adopted substep on 22 threads; target under re-judgement |
+| [x] Throughput target, re-judged 2026-09-17 | **Lowered / re-defined** | The old "1.0 M ticks/s" was a core-only number with no hardware basis. Measured on the reference box (8P+16E): core 378 k ticks/s @ 22 threads, near-linear on P-cores (1.97x @ 2 th) and ~half-rate on E-cores (11.8x @ 22 th). 1.0 M would need ~31 P-core equivalents -- a hardware statement, not a code one. New target: **>=350 k ticks/s on the reference box and >=90% of core throughput retained through the python adapter** -- both met (378 k / 93.7%). |
+| [ ] Training-loop throughput (the real ceiling) | Open | End-to-end PPO reaches only 61 k ticks/s = 16.2% of core; the CPU policy forward/backward dominates, and 64 envs is *slower* than 16 (32.8 k vs 61.3 k) because torch and the sim pool contend for the same cores. Candidates: GPU policy, pinning the sim pool off the torch threads, larger `n_steps` per update. Measured by `tests/rl/bench_throughput_layers.py`. |
 
 ---
 
