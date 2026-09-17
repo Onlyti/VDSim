@@ -56,6 +56,12 @@ public:
     // road-wheel angle. Returns the measured bundle.
     SensorMeas apply(const State& s, double ax, double ay, double steer_true, double dt);
 
+    // R8: bias random walks plus the RNG stream position (text form, so the
+    // exact engine state round-trips).
+    void save_aux(std::vector<double>& v, std::string& rng) const;
+    void restore_aux(const std::vector<double>& v, std::size_t& p,
+                     const std::string& rng);
+
 private:
     SensorParams p_{};
     std::mt19937 rng_{1};

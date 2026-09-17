@@ -685,4 +685,40 @@ std::unique_ptr<IRoughnessProvider> create_iso8608_psd(int grade) {
     return std::make_unique<Iso8608Roughness>(std::clamp(grade, 0, 7), 1u);
 }
 
+// R7 (moved here from cosim/realtime_server.cpp so every front end -- cosim,
+// python, RL respawn -- settles a spawn the same way).
+void settle_spawn_on_ground(IContactProvider& ground,
+                            const VehicleParams& vp, State& s) {
+    auto max_pen = [&]() {
+        ContactArray c{};
+        ground.query(s, vp, c);
+        double lift = 0.0;
+        for (int i = 0; i < NUM_WHEELS; ++i)
+            if (c[i].is_valid) lift = std::max(lift, c[i].penetration);
+        return lift;
+    };
+    if (s.position.z() < 1e-6) s.position.z() = vp.cg_height;
+    for (int drop = 0; drop < 120; ++drop) {         // fall to the surface
+        if (max_pen() > 1e-5) break;
+        s.position.z() -= 0.04;
+        if (s.position.z() < -2.0) break;
+    }
+    for (int climb = 0; climb < 400; ++climb) {      // spawned below terrain
+        if (max_pen() > 1e-5) break;
+        s.position.z() += 0.08;
+        if (s.position.z() > 250.0) break;
+    }
+    for (int k = 0; k < 24; ++k) {                   // lift out of penetration
+        const double lift = max_pen();
+        if (lift < 1e-5) break;
+        s.position.z() += lift;
+    }
+    for (int k = 0; k < 32; ++k) {                   // settle back to contact
+        const double pen = max_pen();
+        if (pen < 1e-6) break;
+        s.position.z() -= std::min(pen * 0.5, 0.02);
+    }
+    s.velocity.z() = 0.0;
+}
+
 }  // namespace vdsim

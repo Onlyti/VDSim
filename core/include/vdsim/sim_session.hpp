@@ -26,6 +26,7 @@
 #include "vdsim/interfaces.hpp"
 #include "vdsim/params.hpp"
 #include "vdsim/sensors.hpp"
+#include "vdsim/snapshot.hpp"
 #include "vdsim/state.hpp"
 #include "vdsim/veh_network.hpp"
 
@@ -65,6 +66,18 @@ struct SimOutput {
     SensorMeas sensors {};        // noisy/biased measured signals (identity if disabled)
 };
 
+// R5: runtime domain randomization.  Stored on the session and applied at the
+// next reset(): the dynamics is re-initialized in place and the friction the
+// ground reports is scaled, so nothing is re-allocated (no new contact
+// provider, no new plant object) and an RL rollout can randomize per episode.
+struct DomainRandomization {
+    double mass_scale           {1.0};   // mass + sprung mass + inertia together
+    double mu_scale             {1.0};   // ground friction multiplier
+    double tire_stiffness_scale {1.0};   // B_long, B_lat, cornering_stiffness
+    double tire_mu_scale        {1.0};   // TireParams::mu_nominal
+    double sensor_delay_s       {-1.0};  // [s], <0 = keep the configured value
+};
+
 class SimSession {
 public:
     SimSession(std::unique_ptr<IVehicleDynamics> dyn,
@@ -78,6 +91,28 @@ public:
         : SimSession(std::move(dyn), std::move(ground), vp, TireSetup(tp), sp, cfg) {}
 
     void reset(const State& s0);
+
+    // R8: capture / restore everything this session carries between ticks --
+    // state, diagnostics, latched command, actuator memory, feedback delay
+    // line, sensor noise model and the tire relaxation transients.  See
+    // snapshot.hpp for what is deliberately out of scope.
+    SessionSnapshot snapshot() const;
+    void            restore(const SessionSnapshot& s);
+
+    // R7: put a spawn pose on this session's ground before resetting to it.
+    // settle_on_ground() mutates the pose in place; reset_settled() does both.
+    void  settle_on_ground(State& s);
+    State reset_settled(const State& s0);
+
+    // Latch a domain-randomization spec; it takes effect on the next reset().
+    // mu_scale applies from the very next tick.
+    void set_randomization(const DomainRandomization& d);
+    DomainRandomization randomization() const;
+
+    // R6: this session's stochastic stream (sensor noise).  Re-armed at every
+    // reset(), so episode k with the same seed is bitwise identical no matter
+    // what ran before it.  Unset = the SensorParams seed from construction.
+    void set_seed(unsigned seed);
 
     // Latch the command (thread-safe). Subsequent ticks use it until replaced.
     void set_input(const CmdL4& u);
@@ -100,6 +135,8 @@ public:
     IVehicleDynamics& dynamics() { return *dyn_; }
 
 private:
+    void apply_randomization_locked();
+
     std::unique_ptr<IVehicleDynamics> dyn_;
     std::unique_ptr<IContactProvider> ground_;
     std::unique_ptr<IVehNetwork>      network_;   // ECU/CAN network (deadtime + drop)
@@ -108,6 +145,19 @@ private:
     SensorModel       sensors_;
     CascadeController cascade_;   // Lc5-L8 → CmdL4 (with measured-state feedback)
     VehicleParams vp_;
+
+    // R5 baseline (randomization always starts from the as-built parameters).
+    VehicleParams       base_vp_ {};
+    TireSetup           base_ts_ {};
+    SolverParams        base_sp_ {};
+    double              base_sensor_delay_s_ {0.0};
+    double              nominal_dt_ {0.005};
+    SensorParams        base_sensors_ {};
+    unsigned            seed_ {0};
+    bool                has_seed_ {false};
+    DomainRandomization rand_ {};
+    bool                rand_dirty_ {false};
+    double              mu_scale_ {1.0};
 
     mutable std::mutex mtx_;
     ControlInput latched_ {CmdL4{}};

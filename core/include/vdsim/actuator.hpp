@@ -14,6 +14,7 @@
 // backward-compatible.  See docs/references/actuator_nonlinearity.md.
 #pragma once
 
+#include "vdsim/snapshot.hpp"
 #include <vector>
 
 #include "vdsim/control.hpp"
@@ -80,6 +81,11 @@ public:
     // returns the realized CmdL4 to feed the plant.
     CmdL4 apply(const CmdL4& desired, double speed_mps, double dt);
 
+    // R8: transport rings, lag / rate-limit memory, servo and LuGre bristle,
+    // brake temperature -- everything apply() carries between calls.
+    void save_aux(std::vector<double>& v) const;
+    void restore_aux(const std::vector<double>& v, std::size_t& p);
+
     double brake_temperature() const { return brake_T_; }
     double steer_angle()       const { return steer_pos_; }
 
@@ -121,6 +127,10 @@ public:
     void  initialize(double delay_s, double nominal_dt);
     void  reset(const State& s);
     State apply(const State& measured, double dt);
+
+    // R8: the buffered State history is the delay's whole memory.
+    void save_aux(std::vector<double>& v) const;
+    void restore_aux(const std::vector<double>& v, std::size_t& p);
 
 private:
     std::vector<State> buf_;

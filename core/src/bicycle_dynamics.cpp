@@ -14,6 +14,7 @@
 // Note: this differs from Rajamani's "delta - atan(...)" which assumes
 // SAE Y-right convention.
 
+#include "vdsim/snapshot.hpp"
 #include "vdsim/coordinate.hpp"
 #include "vdsim/drivetrain_inertia.hpp"
 #include "vdsim/interfaces.hpp"
@@ -119,6 +120,31 @@ public:
             I_spin_f_ = I_wheel_f_ + I_axle_f;
             I_spin_r_ = I_wheel_r_ + I_axle_r;
         }
+    }
+
+    // R8: the per-wheel tire relaxation (belt) transients are the model state
+    // that State does not carry.
+    void save_aux(std::vector<double>& v) const override {
+        for (const auto& tr : transient_) {
+            v.push_back(tr.belt_kappa);   v.push_back(tr.belt_alpha);
+            v.push_back(tr.belt_vlong);   v.push_back(tr.belt_vlat);
+            v.push_back(tr.lugre_z_long); v.push_back(tr.lugre_z_lat);
+            v.push_back(tr.alpha_dyn);
+        }
+
+        // R8 extra lag state (quasi-static transfer / attitude carried forward)
+        v.push_back(ax_prev_);
+    }
+    void restore_aux(const std::vector<double>& v, std::size_t& p) override {
+        for (auto& tr : transient_) {
+            tr.belt_kappa   = snap::get(v, p); tr.belt_alpha = snap::get(v, p);
+            tr.belt_vlong   = snap::get(v, p); tr.belt_vlat  = snap::get(v, p);
+            tr.lugre_z_long = snap::get(v, p); tr.lugre_z_lat = snap::get(v, p);
+            tr.alpha_dyn    = snap::get(v, p);
+        }
+
+        // R8 extra lag state
+        ax_prev_ = snap::get(v, p);
     }
 
     void reset(const State& s) noexcept override {

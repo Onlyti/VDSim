@@ -14,6 +14,7 @@
 #include "vdsim/magic_formula.hpp"
 #include "vdsim/params.hpp"
 #include "vdsim/sim_session.hpp"
+#include "vdsim/vec_session.hpp"
 #include "vdsim/scenario.hpp"
 #include "vdsim/state.hpp"
 #include "vdsim/multibody.hpp"
@@ -136,6 +137,45 @@ void bind_wheel_array_type(py::module& m) {
 }
 
 }  // namespace
+
+// Flat / split-mu / inclined / rough / ISO-8608 ground session builder, shared
+// by make_sim_session() and the RL vector factory make_vec_session() so the two
+// cannot drift apart.
+static std::unique_ptr<vdsim::SimSession> build_ground_session(
+    const vdsim::VehicleParams& vp, const vdsim::TireParams& tp,
+    const std::string& level, double sensor_delay_s, double mu,
+    double nominal_dt, const vdsim::ActuatorParams& actuator,
+    const vdsim::SolverParams& solver, const vdsim::SensorParams& sensors,
+    double mu_right, double mu_boundary_y, double grade, double bank,
+    double rough_amp, double rough_wavelength, int iso_class,
+    unsigned ground_seed = 1u) {
+    std::unique_ptr<vdsim::IVehicleDynamics> dyn =
+        (level == "K" || level == "L0") ? vdsim::create_kinematic()
+        : (level == "L1") ? vdsim::create_bicycle()
+        : (level == "L3") ? vdsim::create_fourteen_dof()
+        : (level == "L4") ? vdsim::create_fourteen_dof_kinematic()
+                          : vdsim::create_seven_dof();
+    vdsim::SimConfig cfg;
+    cfg.actuator       = actuator;
+    cfg.sensors        = sensors;
+    cfg.sensor_delay_s = sensor_delay_s;
+    cfg.nominal_dt     = nominal_dt;
+    // iso_class>=0 -> ISO 8608; rough_amp>0 -> two-tone rough;
+    // grade/bank -> inclined; mu_right>=0 -> split; else flat.
+    std::unique_ptr<vdsim::IContactProvider> ground;
+    if (iso_class >= 0)
+        ground = vdsim::create_iso8608_ground(0.0, mu, iso_class, ground_seed);
+    else if (rough_amp > 0.0)
+        ground = vdsim::create_rough_ground(0.0, mu, rough_amp, rough_wavelength);
+    else if (grade != 0.0 || bank != 0.0)
+        ground = vdsim::create_inclined_ground(0.0, grade, bank, mu);
+    else if (mu_right >= 0.0)
+        ground = vdsim::create_split_mu_ground(0.0, mu, mu_right, mu_boundary_y);
+    else
+        ground = vdsim::create_flat_ground(0.0, mu);
+    return std::make_unique<vdsim::SimSession>(
+        std::move(dyn), std::move(ground), vp, tp, solver, cfg);
+}
 
 PYBIND11_MODULE(vdsim, m) {
     m.doc() = "VDSim core Python bindings";
@@ -1022,6 +1062,35 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readonly("rack_torque",   &vdsim::SimOutput::rack_torque)
         .def_readonly("sensors",       &vdsim::SimOutput::sensors);
 
+    // -------- R5: runtime domain randomization --------
+    py::class_<vdsim::DomainRandomization>(m, "DomainRandomization")
+        .def(py::init<>())
+        .def_readwrite("mass_scale",           &vdsim::DomainRandomization::mass_scale)
+        .def_readwrite("mu_scale",             &vdsim::DomainRandomization::mu_scale)
+        .def_readwrite("tire_stiffness_scale", &vdsim::DomainRandomization::tire_stiffness_scale)
+        .def_readwrite("tire_mu_scale",        &vdsim::DomainRandomization::tire_mu_scale)
+        .def_readwrite("sensor_delay_s",       &vdsim::DomainRandomization::sensor_delay_s);
+
+    // -------- R8: session snapshot / restore --------
+    py::class_<vdsim::SessionSnapshot>(m, "SessionSnapshot")
+        .def(py::init<>())
+        .def("__len__", &vdsim::SessionSnapshot::size)
+        .def_readwrite("data", &vdsim::SessionSnapshot::d,
+             "Flat numeric blob (opaque; the layout is an implementation detail).")
+        .def_readwrite("rng", &vdsim::SessionSnapshot::rng,
+             "Sensor RNG stream, text form.")
+        .def(py::pickle(
+            [](const vdsim::SessionSnapshot& s) {
+                return py::make_tuple(s.d, s.rng);
+            },
+            [](py::tuple t) {
+                if (t.size() != 2) throw std::runtime_error("bad SessionSnapshot");
+                vdsim::SessionSnapshot s;
+                s.d = t[0].cast<std::vector<double>>();
+                s.rng = t[1].cast<std::string>();
+                return s;
+            }));
+
     py::class_<vdsim::SimSession>(m, "SimSession")
         .def("reset",          &vdsim::SimSession::reset)
         .def("set_input",
@@ -1031,6 +1100,23 @@ PYBIND11_MODULE(vdsim, m) {
              static_cast<void (vdsim::SimSession::*)(const vdsim::ControlInput&)>(
                  &vdsim::SimSession::set_input))
         .def("tick",           &vdsim::SimSession::tick)
+        .def("snapshot", &vdsim::SimSession::snapshot,
+             "Capture state + actuator + delay line + sensor + tire transients (R8).")
+        .def("restore",  &vdsim::SimSession::restore, py::arg("snapshot"))
+        .def("settle_on_ground",
+             [](vdsim::SimSession& s, vdsim::State st) {
+                 s.settle_on_ground(st);
+                 return st;
+             }, py::arg("state"),
+             "Return the spawn pose dropped onto this session's ground (R7).")
+        .def("reset_settled", &vdsim::SimSession::reset_settled, py::arg("state"),
+             "settle_on_ground() then reset(); returns the settled state.")
+        .def("set_seed", &vdsim::SimSession::set_seed, py::arg("seed"),
+             "Arm this session's noise stream; re-applied at every reset().")
+        .def("set_randomization", &vdsim::SimSession::set_randomization,
+             py::arg("spec"),
+             "Latch a DomainRandomization; applied at the next reset().")
+        .def("randomization",  &vdsim::SimSession::randomization)
         .def("state",          &vdsim::SimSession::state)
         .def("measured_state", &vdsim::SimSession::measured_state)
         .def("output",         &vdsim::SimSession::output)
@@ -1047,32 +1133,10 @@ PYBIND11_MODULE(vdsim, m) {
              const vdsim::SolverParams& solver, const vdsim::SensorParams& sensors,
              double mu_right, double mu_boundary_y, double grade, double bank,
              double rough_amp, double rough_wavelength, int iso_class) {
-              std::unique_ptr<vdsim::IVehicleDynamics> dyn =
-                  (level == "K" || level == "L0") ? vdsim::create_kinematic()
-                  : (level == "L1") ? vdsim::create_bicycle()
-                  : (level == "L3") ? vdsim::create_fourteen_dof()
-                  : (level == "L4") ? vdsim::create_fourteen_dof_kinematic()
-                                    : vdsim::create_seven_dof();
-              vdsim::SimConfig cfg;
-              cfg.actuator       = actuator;
-              cfg.sensors        = sensors;
-              cfg.sensor_delay_s = sensor_delay_s;
-              cfg.nominal_dt     = nominal_dt;
-              // iso_class>=0 -> ISO 8608; rough_amp>0 -> two-tone rough;
-              // grade/bank -> inclined; mu_right>=0 -> split; else flat.
-              std::unique_ptr<vdsim::IContactProvider> ground;
-              if (iso_class >= 0)
-                  ground = vdsim::create_iso8608_ground(0.0, mu, iso_class, 1u);
-              else if (rough_amp > 0.0)
-                  ground = vdsim::create_rough_ground(0.0, mu, rough_amp, rough_wavelength);
-              else if (grade != 0.0 || bank != 0.0)
-                  ground = vdsim::create_inclined_ground(0.0, grade, bank, mu);
-              else if (mu_right >= 0.0)
-                  ground = vdsim::create_split_mu_ground(0.0, mu, mu_right, mu_boundary_y);
-              else
-                  ground = vdsim::create_flat_ground(0.0, mu);
-              return std::make_unique<vdsim::SimSession>(
-                  std::move(dyn), std::move(ground), vp, tp, solver, cfg);
+              return build_ground_session(
+                  vp, tp, level, sensor_delay_s, mu, nominal_dt, actuator,
+                  solver, sensors, mu_right, mu_boundary_y, grade, bank,
+                  rough_amp, rough_wavelength, iso_class);
           },
           py::arg("vehicle"), py::arg("tire"), py::arg("level") = "L2",
           py::arg("sensor_delay_s") = 0.0, py::arg("mu") = 1.0,
@@ -1084,6 +1148,148 @@ PYBIND11_MODULE(vdsim, m) {
           py::arg("grade") = 0.0, py::arg("bank") = 0.0,
           py::arg("rough_amp") = 0.0, py::arg("rough_wavelength") = 4.0,
           py::arg("iso_class") = -1);
+
+    // -------- R3/R4: termination spec + observation layout --------
+    py::class_<vdsim::TermSpec>(m, "TermSpec")
+        .def(py::init<>())
+        .def_readwrite("lane_y",       &vdsim::TermSpec::lane_y)
+        .def_readwrite("max_lateral",  &vdsim::TermSpec::max_lateral)
+        .def_readwrite("max_roll",     &vdsim::TermSpec::max_roll)
+        .def_readwrite("max_beta",     &vdsim::TermSpec::max_beta)
+        .def_readwrite("max_yaw_rate", &vdsim::TermSpec::max_yaw_rate)
+        .def_readwrite("time_limit_s", &vdsim::TermSpec::time_limit_s)
+        .def_readwrite("min_speed",    &vdsim::TermSpec::min_speed)
+        .def_readwrite("check_nan",    &vdsim::TermSpec::check_nan);
+
+    m.attr("TERM_NONE")       = (int)vdsim::TERM_NONE;
+    m.attr("TERM_OFF_TRACK")  = (int)vdsim::TERM_OFF_TRACK;
+    m.attr("TERM_ROLLOVER")   = (int)vdsim::TERM_ROLLOVER;
+    m.attr("TERM_SPIN_OUT")   = (int)vdsim::TERM_SPIN_OUT;
+    m.attr("TERM_NAN_STATE")  = (int)vdsim::TERM_NAN_STATE;
+    m.attr("TERM_TIME_LIMIT") = (int)vdsim::TERM_TIME_LIMIT;
+    m.attr("TERM_STALL")      = (int)vdsim::TERM_STALL;
+
+    m.def("obs_field_names", &vdsim::obs_field_names,
+          "Observation field names accepted by VecSession.set_obs_fields().");
+
+    // -------- VecSession: N independent sessions, one worker pool (RL) --------
+    py::class_<vdsim::VecSession>(m, "VecSession")
+        .def("__len__", &vdsim::VecSession::size)
+        .def_property_readonly("num_envs", &vdsim::VecSession::size)
+        .def_property_readonly("threads", &vdsim::VecSession::threads,
+             "Worker threads incl. the calling thread.")
+        .def("at", &vdsim::VecSession::at, py::arg("index"),
+             py::return_value_policy::reference_internal,
+             "Borrow env i as a SimSession (do NOT tick it while tick() runs).")
+        .def("set_inputs", &vdsim::VecSession::set_inputs, py::arg("commands"),
+             "Latch one CmdL4 per env (a list of length 1 broadcasts).")
+        .def("set_input_all", &vdsim::VecSession::set_input_all, py::arg("command"))
+        .def("reset_all", &vdsim::VecSession::reset_all, py::arg("states"),
+             py::arg("settle") = false,
+             "Reset each env (a list of length 1 broadcasts); settle=True drops "
+             "each spawn pose onto the ground first.")
+        .def("tick", &vdsim::VecSession::tick_all,
+             py::arg("dt"), py::arg("repeat") = 1,
+             py::call_guard<py::gil_scoped_release>(),
+             "Advance every env by `repeat` ticks of dt on the pool. Releases "
+             "the GIL, so this is the only call that scales with cores.")
+        .def("reset_subset", &vdsim::VecSession::reset_subset,
+             py::arg("indices"), py::arg("states"), py::arg("settle") = false,
+             "Reset only the listed envs (RL auto-reset after done).")
+        .def("set_seeds", &vdsim::VecSession::set_seeds, py::arg("seeds"),
+             "Per-env seeds (a list of length 1 means seed, seed+1, ...).")
+        .def("set_randomizations", &vdsim::VecSession::set_randomizations,
+             py::arg("specs"),
+             "Per-env DomainRandomization (a list of length 1 broadcasts).")
+        .def("set_obs_fields", &vdsim::VecSession::set_obs_fields, py::arg("fields"),
+             "Declare the flat observation layout; a bare per-wheel name "
+             "expands to 4 columns (FL FR RL RR), 'slip_ratio.2' picks one.")
+        .def_property_readonly("obs_dim", &vdsim::VecSession::obs_dim)
+        .def("set_term_spec", &vdsim::VecSession::set_term_spec, py::arg("spec"))
+        .def("advance",
+             [](vdsim::VecSession& v, double dt, int repeat,
+                py::array_t<float, py::array::c_style> obs,
+                py::array_t<std::int32_t, py::array::c_style> term) {
+                 float*        op = nullptr;
+                 std::int32_t* tp = nullptr;
+                 if (obs.size() > 0) {
+                     if (obs.ndim() != 2 ||
+                         static_cast<std::size_t>(obs.shape(0)) != v.size() ||
+                         static_cast<std::size_t>(obs.shape(1)) != v.obs_dim())
+                         throw std::invalid_argument(
+                             "advance: obs must be a (num_envs, obs_dim) float32 array");
+                     op = obs.mutable_data();
+                 }
+                 if (term.size() > 0) {
+                     if (term.ndim() != 1 ||
+                         static_cast<std::size_t>(term.shape(0)) != v.size())
+                         throw std::invalid_argument(
+                             "advance: term must be a (num_envs,) int32 array");
+                     tp = term.mutable_data();
+                 }
+                 py::gil_scoped_release nogil;
+                 v.advance(dt, repeat, op, tp);
+             },
+             py::arg("dt"), py::arg("repeat"), py::arg("obs"), py::arg("term"),
+             "Tick every env `repeat` times (stopping early on termination), "
+             "then write its obs row and reason code in place. Zero-copy: the "
+             "caller owns both buffers. GIL released.")
+        .def("observe",
+             [](const vdsim::VecSession& v,
+                py::array_t<float, py::array::c_style> obs) {
+                 if (obs.ndim() != 2 ||
+                     static_cast<std::size_t>(obs.shape(0)) != v.size() ||
+                     static_cast<std::size_t>(obs.shape(1)) != v.obs_dim())
+                     throw std::invalid_argument(
+                         "observe: obs must be a (num_envs, obs_dim) float32 array");
+                 float* op = obs.mutable_data();
+                 py::gil_scoped_release nogil;
+                 v.observe(op);
+             },
+             py::arg("obs"), "Fill the obs buffer without stepping (after reset).")
+        .def("snapshots", &vdsim::VecSession::snapshots,
+             "One SessionSnapshot per env (R8).")
+        .def("restore", &vdsim::VecSession::restore, py::arg("snapshots"),
+             "Restore every env (a list of length 1 broadcasts).")
+        .def("restore_subset", &vdsim::VecSession::restore_subset,
+             py::arg("indices"), py::arg("snapshots"))
+        .def("states", &vdsim::VecSession::states)
+        .def("outputs", &vdsim::VecSession::outputs);
+
+    // Factory: N identical flat-ground sessions + a persistent worker pool.
+    // threads<=0 -> hardware_concurrency (capped at num_envs).
+    m.def("make_vec_session",
+          [](int num_envs, const vdsim::VehicleParams& vp, const vdsim::TireParams& tp,
+             const std::string& level, double sensor_delay_s, double mu,
+             double nominal_dt, const vdsim::ActuatorParams& actuator,
+             const vdsim::SolverParams& solver, const vdsim::SensorParams& sensors,
+             double mu_right, double mu_boundary_y, double grade, double bank,
+             double rough_amp, double rough_wavelength, int iso_class,
+             int threads, unsigned ground_seed) {
+              if (num_envs < 1)
+                  throw std::invalid_argument("make_vec_session: num_envs must be >= 1");
+              std::vector<std::unique_ptr<vdsim::SimSession>> v;
+              v.reserve(static_cast<std::size_t>(num_envs));
+              for (int i = 0; i < num_envs; ++i)
+                  v.push_back(build_ground_session(
+                      vp, tp, level, sensor_delay_s, mu, nominal_dt, actuator,
+                      solver, sensors, mu_right, mu_boundary_y, grade, bank,
+                      rough_amp, rough_wavelength, iso_class,
+                      ground_seed + static_cast<unsigned>(i)));
+              return std::make_unique<vdsim::VecSession>(std::move(v), threads);
+          },
+          py::arg("num_envs"), py::arg("vehicle"), py::arg("tire"),
+          py::arg("level") = "L2",
+          py::arg("sensor_delay_s") = 0.0, py::arg("mu") = 1.0,
+          py::arg("nominal_dt") = 0.005,
+          py::arg("actuator") = vdsim::ActuatorParams{},
+          py::arg("solver") = vdsim::SolverParams{},
+          py::arg("sensors") = vdsim::SensorParams{},
+          py::arg("mu_right") = -1.0, py::arg("mu_boundary_y") = 0.0,
+          py::arg("grade") = 0.0, py::arg("bank") = 0.0,
+          py::arg("rough_amp") = 0.0, py::arg("rough_wavelength") = 4.0,
+          py::arg("iso_class") = -1, py::arg("threads") = 0,
+          py::arg("ground_seed") = 1u);
 
     // Build a SimSession on a heightmap terrain (2D array h[ny][nx]). Per-wheel
     // bilinear height + gradient normal -> slope-gravity works on arbitrary

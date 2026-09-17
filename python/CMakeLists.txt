@@ -32,6 +32,7 @@ if(pybind11_FOUND)
             DESTINATION ".")
         install(DIRECTORY
             ${CMAKE_SOURCE_DIR}/python/catalog
+            ${CMAKE_SOURCE_DIR}/python/vdsim_rl
             DESTINATION "."
             FILES_MATCHING PATTERN "*.py")
         install(DIRECTORY
@@ -39,6 +40,7 @@ if(pybind11_FOUND)
             ${CMAKE_SOURCE_DIR}/configs/blueprints
             ${CMAKE_SOURCE_DIR}/configs/catalog
             ${CMAKE_SOURCE_DIR}/configs/roads
+            ${CMAKE_SOURCE_DIR}/configs/rl
             ${CMAKE_SOURCE_DIR}/configs/vehicles
             DESTINATION "vdsim_configs"
             FILES_MATCHING

@@ -1,4 +1,5 @@
 // Actuator dynamics + sensor delay implementation. See actuator.hpp.
+#include "vdsim/snapshot.hpp"
 #include "vdsim/actuator.hpp"
 
 #include <algorithm>
@@ -205,6 +206,54 @@ State SensorDelay::apply(const State& measured, double dt) {
         buf_.erase(buf_.begin(), buf_.end() - maxlen);
     const int idx = static_cast<int>(buf_.size()) - 1 - N;
     return buf_[std::max(0, idx)];
+}
+
+// ---- R8 snapshot ----------------------------------------------------------
+
+namespace {
+void put_ring(std::vector<double>& v, const std::vector<double>& buf, int w) {
+    v.push_back(static_cast<double>(buf.size()));
+    v.push_back(static_cast<double>(w));
+    v.insert(v.end(), buf.begin(), buf.end());
+}
+}  // namespace
+
+void ActuatorModel::save_aux(std::vector<double>& v) const {
+    put_ring(v, steer_buf_.buf, steer_buf_.w);
+    put_ring(v, throttle_buf_.buf, throttle_buf_.w);
+    put_ring(v, brake_buf_.buf, brake_buf_.w);
+    v.push_back(steer_lag_);   v.push_back(throttle_lag_); v.push_back(brake_lag_);
+    v.push_back(steer_out_);   v.push_back(throttle_out_); v.push_back(brake_out_);
+    v.push_back(steer_pos_);   v.push_back(steer_vel_);    v.push_back(lugre_z_);
+    v.push_back(brake_T_);
+}
+
+void ActuatorModel::restore_aux(const std::vector<double>& v, std::size_t& p) {
+    auto get_ring = [&](FracDelay& d) {
+        const std::size_t n = static_cast<std::size_t>(snap::get(v, p));
+        d.w = static_cast<int>(snap::get(v, p));
+        d.buf.assign(n, 0.0);
+        for (std::size_t i = 0; i < n; ++i) d.buf[i] = snap::get(v, p);
+    };
+    get_ring(steer_buf_); get_ring(throttle_buf_); get_ring(brake_buf_);
+    steer_lag_ = snap::get(v, p); throttle_lag_ = snap::get(v, p);
+    brake_lag_ = snap::get(v, p);
+    steer_out_ = snap::get(v, p); throttle_out_ = snap::get(v, p);
+    brake_out_ = snap::get(v, p);
+    steer_pos_ = snap::get(v, p); steer_vel_ = snap::get(v, p);
+    lugre_z_   = snap::get(v, p); brake_T_   = snap::get(v, p);
+}
+
+void SensorDelay::save_aux(std::vector<double>& v) const {
+    v.push_back(static_cast<double>(buf_.size()));
+    for (const State& s : buf_) snap::put_state(v, s);
+}
+
+void SensorDelay::restore_aux(const std::vector<double>& v, std::size_t& p) {
+    const std::size_t n = static_cast<std::size_t>(snap::get(v, p));
+    buf_.clear();
+    buf_.reserve(n);
+    for (std::size_t i = 0; i < n; ++i) buf_.push_back(snap::get_state(v, p));
 }
 
 }  // namespace vdsim
