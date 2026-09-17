@@ -266,6 +266,23 @@ struct SolverParams {
     void                to_yaml (const std::string& path) const;
 };
 
+// Substep count for one outer step of length `dt`, shared by every integrator.
+//
+// Returns N = clamp(ceil(dt / max_substep_dt), 1, max_substeps); the caller then
+// integrates with h = dt / N. When ceil(dt / max_substep_dt) exceeds max_substeps
+// the requested resolution cannot be delivered and h > max_substep_dt. That used
+// to happen silently -- at RL control rates (dt = 20..50 ms against the default
+// max_substeps = 10) it pushed the explicit wheel-spin integrator past its
+// stability bound h < 2*tau with no indication. It now logs a warning (throttled
+// to one line per distinct (dt, max_substep_dt, max_substeps) combination) and
+// bumps a counter callers and tests can read.
+int solver_substeps(const SolverParams& sp, double dt) noexcept;
+
+// Number of times solver_substeps() has had to clamp since process start (or
+// since the last reset). Reading is cheap and thread-safe.
+unsigned long long solver_substep_clamp_count() noexcept;
+void               reset_solver_substep_clamp_count() noexcept;
+
 // Effective rolling radius Re(Fz) — the radius at which a free-rolling loaded tire
 // satisfies vx = omega·Re (so slip = (omega·Re - vx)/vx is zero at free roll).
 // Pacejka form using BREFF/DREFF/FREFF; falls back to R0 when those are zero.

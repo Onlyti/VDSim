@@ -66,8 +66,7 @@ public:
                                     -vp_.max_steer_angle_wheel, vp_.max_steer_angle_wheel);
         const int gear = (c.gear != 0) ? c.gear : 1;
 
-        const int N = std::max(1, std::min(sp_.max_substeps,
-                        static_cast<int>(std::ceil(dt / std::max(1e-6, sp_.max_substep_dt)))));
+        const int N = solver_substeps(sp_, dt);
         const double h = dt / static_cast<double>(N);
 
         double v   = state_.velocity.x();

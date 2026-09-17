@@ -233,9 +233,7 @@ public:
         // L4's once-per-step DAE update. No-op unless strut path + a corner DAE attached.
         update_corner_dae(cmd, dt);
 
-        const int N = std::max(1,
-                       std::min(sp_.max_substeps,
-                                static_cast<int>(std::ceil(dt / sp_.max_substep_dt))));
+        const int N = solver_substeps(sp_, dt);
         const double h = dt / static_cast<double>(N);
         for (int i = 0; i < N; ++i) substep(cmd, contacts, h);
     }

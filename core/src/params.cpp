@@ -12,8 +12,11 @@
 #include <yaml-cpp/yaml.h>
 #include <spdlog/spdlog.h>
 
+#include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <fstream>
+#include <mutex>
 #include <stdexcept>
 #include <string>
 
@@ -506,6 +509,66 @@ void SensorParams::to_yaml(const std::string& path) const {
     std::ofstream ofs(path);
     if (!ofs) throw std::runtime_error("Cannot open YAML file for write: " + path);
     ofs << out.c_str() << "\n";
+}
+
+// ---------------------------------------------------------------------------
+// Shared substep resolution (see params.hpp for why the clamp must be visible).
+// ---------------------------------------------------------------------------
+namespace {
+
+std::atomic<unsigned long long> g_substep_clamp_count{0};
+
+// One warning per distinct (dt, max_substep_dt, max_substeps) combination, so a
+// misconfigured run says so once instead of once per tick. The table is tiny and
+// fixed-size: nothing here allocates, which keeps the caller noexcept-safe.
+bool clamp_warning_is_new(double dt, double h_max, int cap) {
+    struct Key { double dt, h_max; int cap; };
+    static std::mutex mu;
+    static Key seen[8];
+    static int n_seen = 0;
+    std::lock_guard<std::mutex> lock(mu);
+    for (int i = 0; i < n_seen; ++i) {
+        if (seen[i].dt == dt && seen[i].h_max == h_max && seen[i].cap == cap)
+            return false;
+    }
+    if (n_seen < 8) seen[n_seen++] = Key{dt, h_max, cap};
+    return true;   // table full => keep warning; a run with >8 distinct
+                   // configurations wants to hear about all of them.
+}
+
+}  // namespace
+
+int solver_substeps(const SolverParams& sp, double dt) noexcept {
+    if (!(dt > 0.0) || !std::isfinite(dt)) return 1;
+
+    const double h_max = (sp.max_substep_dt > 0.0 && std::isfinite(sp.max_substep_dt))
+                       ? sp.max_substep_dt : 1e-6;
+    const int cap  = std::max(1, sp.max_substeps);
+    const double want_d = std::ceil(dt / h_max);
+    const int want = (want_d >= static_cast<double>(cap)) ? cap
+                   : std::max(1, static_cast<int>(want_d));   // no overflow on huge dt/h_max
+    const int N = std::max(1, std::min(cap, want));
+
+    if (want_d > static_cast<double>(cap)) {
+        g_substep_clamp_count.fetch_add(1, std::memory_order_relaxed);
+        if (clamp_warning_is_new(dt, h_max, cap)) {
+            spdlog::warn(
+                "solver: max_substeps={} cannot deliver max_substep_dt={:.6g} s for an "
+                "outer dt={:.6g} s ({} substeps needed); integrating with h={:.6g} s "
+                "instead -- raise max_substeps to {} or lower the outer dt.",
+                cap, h_max, dt, static_cast<long long>(want_d), dt / N,
+                static_cast<long long>(want_d));
+        }
+    }
+    return N;
+}
+
+unsigned long long solver_substep_clamp_count() noexcept {
+    return g_substep_clamp_count.load(std::memory_order_relaxed);
+}
+
+void reset_solver_substep_clamp_count() noexcept {
+    g_substep_clamp_count.store(0, std::memory_order_relaxed);
 }
 
 }  // namespace vdsim

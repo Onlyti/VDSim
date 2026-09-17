@@ -222,9 +222,7 @@ public:
             steering_->begin_step(ctx, dt);
         }
 
-        const int N = std::max(1,
-                       std::min(sp_.max_substeps,
-                                static_cast<int>(std::ceil(dt / sp_.max_substep_dt))));
+        const int N = solver_substeps(sp_, dt);
         const double h = dt / static_cast<double>(N);
         for (int i = 0; i < N; ++i) substep(contacts, h);
     }

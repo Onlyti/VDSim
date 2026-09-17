@@ -519,9 +519,7 @@ private:
     }
 
     void integrate_vertical(double dt) noexcept {
-        const int N = std::max(1,
-                       std::min(sp_.max_substeps,
-                                static_cast<int>(std::ceil(dt / sp_.max_substep_dt))));
+        const int N = solver_substeps(sp_, dt);
         const double h = dt / static_cast<double>(N);
         const double ax = inner_->ax_body_est();
         const double ay = inner_->ay_body_est();

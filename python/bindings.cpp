@@ -1258,6 +1258,12 @@ PYBIND11_MODULE(vdsim, m) {
 
     // Factory: N identical flat-ground sessions + a persistent worker pool.
     // threads<=0 -> hardware_concurrency (capped at num_envs).
+    m.def("solver_substep_clamp_count", &vdsim::solver_substep_clamp_count,
+          "Times the solver had to integrate with h > max_substep_dt because "
+          "max_substeps was too low (see SolverParams).");
+    m.def("reset_solver_substep_clamp_count", &vdsim::reset_solver_substep_clamp_count,
+          "Zero the substep clamp counter.");
+
     m.def("make_vec_session",
           [](int num_envs, const vdsim::VehicleParams& vp, const vdsim::TireParams& tp,
              const std::string& level, double sensor_delay_s, double mu,
