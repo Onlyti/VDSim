@@ -4,6 +4,8 @@
 #include "comms_templates.hpp"
 #include "cosim_protocol.hpp"
 #include "warn_throttle.hpp"
+
+#include <cmath>
 #include "scene_loader.hpp"
 
 #include <yaml-cpp/yaml.h>
@@ -427,6 +429,11 @@ socket_t make_rx_socket(int port) {
 // Decode + route one VDS1 cmd datagram to its target vehicle. Returns the
 // sender address via *from when a command was actually applied (for legacy
 // subscriber discovery); returns false otherwise.
+//
+// Longitudinal command source is selected by the wire itself: a finite
+// aux_accel is an acceleration request (CmdL5, core closes the loop), while
+// NaN -- what pack_cmd() sends by default -- keeps the legacy pedal path
+// (CmdL4). Senders therefore need no handshake to pick a level.
 bool route_cmd(std::unordered_map<uint32_t, WorldVehicle*>& by_id,
                const uint8_t* buf, int n, std::atomic<uint64_t>& cmd_count) {
     vdsim::cosim::CmdFields f;
@@ -436,10 +443,23 @@ bool route_cmd(std::unordered_map<uint32_t, WorldVehicle*>& by_id,
     WorldVehicle& wv = *it->second;
     if (f.seq != 0 && f.seq <= wv.last_seq) return false;
     wv.last_seq = f.seq;
-    vdsim::CmdL4 u; u.throttle = f.throttle; u.brake = f.brake;
-    u.steer_angle_wheel = f.steer_tire; u.gear = f.gear;
-    u.handbrake = (f.handbrake != 0);
-    wv.sim->set_input(u);
+    if (std::isfinite(f.aux_accel)) {
+        // Pedal fields are ignored on purpose: forwarding them as well would
+        // apply the same longitudinal request twice. CmdL5 carries no gear, so
+        // reverse stays on the pedal path.
+        vdsim::CmdL5 u;
+        u.ax_target = f.aux_accel;
+        u.steer_angle_wheel = f.steer_tire;
+        wv.sim->set_input(vdsim::ControlInput{u});
+    } else {
+        vdsim::CmdL4 u; u.throttle = f.throttle; u.brake = f.brake;
+        u.steer_angle_wheel = f.steer_tire;
+        // Clamp into the CmdL4 gear domain (+1 fwd / 0 N / -1 rev). CarMaker
+        // senders code park as -9, which is not a reverse request.
+        u.gear = f.gear >= 1 ? 1 : (f.gear == -1 ? -1 : 0);
+        u.handbrake = (f.handbrake != 0);
+        wv.sim->set_input(u);
+    }
     wv.last_cmd = std::chrono::steady_clock::now();
     cmd_count.fetch_add(1);
     return true;
