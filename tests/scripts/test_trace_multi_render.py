@@ -63,7 +63,8 @@ def write_run(path, n, dt, y0=0.0, v=15.0, yaw0=0.0, yaw_rate=0.0,
         tire={"friction_shape": "circle", "mu_aniso": [1.0, 1.0]},
         repro={"vdsim_version": "test", "git_sha": "x", "param_hash": "sha256:x",
                "seed": 1, "dt_s": dt, "run_id": run_id},
-        producer={"name": "test_trace_multi_render", "version": "0"})
+        producer={"name": "test_trace_multi_render", "version": "0"},
+        role="plant")
     x, y, yaw = 0.0, y0, yaw0
     for i in range(n):
         t = i * dt

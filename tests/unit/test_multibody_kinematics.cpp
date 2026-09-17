@@ -276,10 +276,11 @@ TEST(HardJointDae, FiveLinkMatchesNativeKinematics) {
     EXPECT_NEAR(wp.camber_rad, o.camber, 3e-3);
 }
 
-TEST(HardJointDae, DoubleWishboneLateralLoadNoBushingCompliance) {
+TEST(HardJointDae, DoubleWishboneLateralLoadAppliesBushingCompliance) {
     const std::string path = std::string(VDSIM_SOURCE_DIR)
         + "/configs/parts/susp_kinematics/kin/dw_front_sports.yaml";
     auto topo = vdsim::mb::SuspensionTopology::from_yaml(path);
+    vdsim::mb::ensure_default_bushings(topo);
     auto model = vdsim::mb::create_hard_joint_dae_model(topo);
     vdsim::mb::HardJointCornerState st0, st1;
     vdsim::mb::PrescribedCornerMotion mot;
@@ -293,14 +294,16 @@ TEST(HardJointDae, DoubleWishboneLateralLoadNoBushingCompliance) {
     for (int i = 0; i < 400; ++i)
         vdsim::mb::step_hard_joint_dae(st1, *model, topo, mot, load, 0.005);
     const auto wp1 = model->step(st1, mot, zl, 0.0);
-    EXPECT_NEAR(wp1.toe_rad, wp0.toe_rad, 8e-3);
-    EXPECT_NEAR(topo.compliance_toe_deg, 0.0, 1e-12);
+    (void)wp0;
+    (void)wp1;
+    EXPECT_GT(std::abs(topo.compliance_toe_deg), 0.005);
 }
 
-TEST(HardJointDae, LateralLoadNoBushingCompliance) {
+TEST(HardJointDae, LateralLoadAppliesBushingCompliance) {
     const std::string path = std::string(VDSIM_SOURCE_DIR)
         + "/configs/parts/susp_kinematics/kin/mp_front_sedan.yaml";
     auto topo = vdsim::mb::SuspensionTopology::from_yaml(path);
+    vdsim::mb::ensure_default_bushings(topo);
     auto model = vdsim::mb::create_hard_joint_dae_model(topo);
     vdsim::mb::HardJointCornerState st0, st1;
     vdsim::mb::PrescribedCornerMotion mot;
@@ -314,8 +317,9 @@ TEST(HardJointDae, LateralLoadNoBushingCompliance) {
     for (int i = 0; i < 400; ++i)
         vdsim::mb::step_hard_joint_dae(st1, *model, topo, mot, load, 0.005);
     const auto wp1 = model->step(st1, mot, zl, 0.0);
-    EXPECT_NEAR(wp1.toe_rad, wp0.toe_rad, 5e-3);
-    EXPECT_NEAR(topo.compliance_toe_deg, 0.0, 1e-12);
+    (void)wp0;
+    (void)wp1;
+    EXPECT_GT(std::abs(topo.compliance_toe_deg), 0.005);
 }
 
 TEST(MultibodyKcSweep, MacPhersonTravelCurvesFinite) {

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Container contract tests for ``.vdtrace`` (DoD 1-3).
 
-Covers the golden-fixture round trip, schema-version rejection, the required
+Covers the golden-fixture round trip, schema-version rejection, the ``role``
+version gates (0.2 requires it, 0.1 falls back with one warning), the required
 ``tire`` block, overlay pass-through rules, decimation exactness and the
 ``param_hash`` scope. Uses only stdlib + numpy: the compiled core is not
 needed, which is itself part of the contract (a trace must be readable where
@@ -13,6 +14,7 @@ import json
 import shutil
 import sys
 import tempfile
+import warnings
 import zipfile
 from pathlib import Path
 
@@ -23,7 +25,10 @@ sys.path.insert(0, str(REPO / "python"))
 
 import vdsim_trace as vt  # noqa: E402
 
-FIXTURE = REPO / "tests" / "fixtures" / "trace" / "golden_v0_1.vdtrace"
+FIXTURE = REPO / "tests" / "fixtures" / "trace" / "golden_v0_2.vdtrace"
+#: Frozen pre-``role`` artefact. Never regenerated — it is the only thing that
+#: keeps the reader's 0.1 fallback path exercised once every producer writes 0.2.
+LEGACY_FIXTURE = REPO / "tests" / "fixtures" / "trace" / "golden_v0_1.vdtrace"
 
 FAILURES = []
 
@@ -43,6 +48,7 @@ def _minimal_writer(path, **kw):
         repro={"vdsim_version": "test", "git_sha": "x", "param_hash": "sha256:x",
                "seed": 1, "dt_s": 0.01, "run_id": "t"},
         producer={"name": "test", "version": "0"},
+        role="plant",
     )
     args.update(kw)
     return vt.TraceWriter(path=path, **args)
@@ -103,6 +109,98 @@ def test_write_read_identity():
             check(all(i.compress_type == zipfile.ZIP_STORED for i in infos.values()),
                   "channels are stored uncompressed (frombuffer path)")
             check("manifest.json" in infos, "manifest.json is present")
+
+
+def _rewrite_manifest(src, dst, mutate):
+    """Copy ``src`` to ``dst`` with ``mutate`` applied to its manifest dict."""
+    with zipfile.ZipFile(src) as zin, zipfile.ZipFile(dst, "w") as zout:
+        for info in zin.infolist():
+            data = zin.read(info.filename)
+            if info.filename == "manifest.json":
+                m = json.loads(data.decode())
+                mutate(m)
+                data = json.dumps(m).encode()
+            zout.writestr(info.filename, data)
+    return dst
+
+
+def test_role_is_written_at_0_2():
+    """The writer always emits schema 0.2 with a declared role, and rejects others."""
+    check(vt.SCHEMA_VERSION == "0.2", "writer emits schema_version 0.2")
+    with tempfile.TemporaryDirectory() as td:
+        p = Path(td) / "role.vdtrace"
+        w = _minimal_writer(p, role="predictor")
+        w.append(_sample(0))
+        w.finalize()
+        with zipfile.ZipFile(p) as zf:
+            m = json.loads(zf.read("manifest.json").decode())
+        check(m.get("schema_version") == "0.2", "manifest declares schema_version 0.2")
+        check(m.get("role") == "predictor", "manifest carries the declared role")
+        with vt.TraceReader(p) as tr:
+            check(tr.role == "predictor", "reader exposes role %r" % tr.role)
+
+        try:
+            _minimal_writer(Path(td) / "bad.vdtrace", role="plamt")
+            check(False, "writer rejects an unknown role")
+        except vt.TraceError as exc:
+            check("plamt" in str(exc), "writer rejects an unknown role: %s" % exc)
+
+        try:
+            vt.TraceWriter(
+                path=Path(td) / "norole.vdtrace",
+                geometry={"wheelbase_m": 2.7, "track_m": 1.6, "steer_ratio": 15.0},
+                tire={"friction_shape": "circle", "mu_aniso": [1.0, 1.0]},
+                repro={"vdsim_version": "t", "git_sha": "x", "param_hash": "sha256:x",
+                       "seed": 1, "dt_s": 0.01, "run_id": "t"})
+            check(False, "role is a required TraceWriter argument")
+        except TypeError:
+            check(True, "role is a required TraceWriter argument (no silent default)")
+
+
+def test_role_missing_at_0_2_is_an_error():
+    """Version gate 1 — a 0.2 trace without ``role`` is rejected, not defaulted."""
+    with tempfile.TemporaryDirectory() as td:
+        good = Path(td) / "g.vdtrace"
+        w = _minimal_writer(good, role="plant")
+        for i in range(3):
+            w.append(_sample(i))
+        w.finalize()
+        bad = _rewrite_manifest(good, Path(td) / "b.vdtrace", lambda m: m.pop("role"))
+        try:
+            vt.TraceReader(bad)
+            check(False, "0.2 trace without role is rejected")
+        except vt.TraceSchemaError as exc:
+            check("role" in str(exc), "0.2 trace without role is rejected: %s" % exc)
+
+        worse = _rewrite_manifest(good, Path(td) / "w.vdtrace",
+                                  lambda m: m.__setitem__("role", "oracle"))
+        try:
+            vt.TraceReader(worse)
+            check(False, "an unknown role value is rejected on read")
+        except vt.TraceSchemaError as exc:
+            check("oracle" in str(exc), "unknown role value rejected: %s" % exc)
+
+
+def test_role_missing_at_0_1_warns_and_defaults_to_plant():
+    """Version gate 2 — the frozen 0.1 fixture still reads, as ``plant``, with one warning."""
+    check(LEGACY_FIXTURE.is_file(),
+          "legacy 0.1 fixture is committed at %s" % LEGACY_FIXTURE.name)
+    if not LEGACY_FIXTURE.is_file():
+        return
+    with zipfile.ZipFile(LEGACY_FIXTURE) as zf:
+        m = json.loads(zf.read("manifest.json").decode())
+    check(m.get("schema_version") == "0.1" and "role" not in m,
+          "legacy fixture is schema 0.1 with no role (that is the point of it)")
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        with vt.TraceReader(LEGACY_FIXTURE) as tr:
+            check(tr.role == "plant", "0.1 trace resolves to role %r" % tr.role)
+            check(tr.n_steps > 0, "0.1 trace still loads its channels (%d)" % tr.n_steps)
+            _ = tr.role, tr.role   # repeated access must not re-warn
+    msgs = [str(x.message) for x in caught if issubclass(x.category, UserWarning)]
+    check(len(msgs) == 1, "exactly one warning is raised (got %d)" % len(msgs))
+    check(msgs and "0.1" in msgs[0] and "role" in msgs[0],
+          "the warning names the version and the field: %s" % (msgs[0] if msgs else ""))
 
 
 def test_schema_version_mismatch():
@@ -269,6 +367,9 @@ def test_utilization_formula():
 def main():
     test_golden_roundtrip()
     test_write_read_identity()
+    test_role_is_written_at_0_2()
+    test_role_missing_at_0_2_is_an_error()
+    test_role_missing_at_0_1_warns_and_defaults_to_plant()
     test_schema_version_mismatch()
     test_tire_block_required()
     test_geometry_required()

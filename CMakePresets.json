@@ -1,0 +1,33 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 21, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "validation",
+      "displayName": "Canonical validation configuration",
+      "description": "The single configuration whose ctest count docs/VALIDATION.md is allowed to record. See VDSimMarketing 07_p0_demo.md 6.4.",
+      "binaryDir": "${sourceDir}/build-validation",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "VDSIM_BUILD_TESTS": "ON",
+        "VDSIM_BUILD_EXAMPLES": "ON",
+        "VDSIM_BUILD_PYTHON": "ON",
+        "VDSIM_BUILD_COSIM": "ON",
+        "VDSIM_BUILD_CARLA_PLUGIN": "ON",
+        "VDSIM_WITH_ERGACCESS": "OFF",
+        "VDSIM_BUILD_GUI_V3_TESTS": "OFF"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "validation", "configurePreset": "validation", "jobs": 0 }
+  ],
+  "testPresets": [
+    {
+      "name": "validation",
+      "configurePreset": "validation",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
+    }
+  ]
+}

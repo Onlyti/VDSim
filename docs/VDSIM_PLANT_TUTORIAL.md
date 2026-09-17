@@ -427,7 +427,8 @@ Inputs are validated; bad ones raise a clear `ValueError`/`TypeError` (see Troub
 
 ## 11. What's validated (so you can trust it)
 
-Gated by `ctest -R VlaPlant` (394/394 suite green):
+Gated by `ctest -R VlaPlant`; the current full-suite result and measurement
+configuration are tracked in [Validation](VALIDATION.md):
 - **Dry handling = linear bicycle within ~4 %** (steady yaw-rate gain vs the single-track model
   with the same `Caf/Car`) — your bicycle results carry over. Checked for both the analytic-B
   tyre and the real MF2002 `.tir`.

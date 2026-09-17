@@ -2,6 +2,7 @@
 """VLA plant acceptance smokes (docs/design/VLA_THESIS_PLANT.md)."""
 import math
 import sys
+import os
 import time
 from pathlib import Path
 
@@ -187,6 +188,29 @@ def test_longitudinal_fx_accel():
         obs["ax"], obs["vx"]))
 
 
+# Wall-clock budget for 5 s of simulated time. The default is the Release
+# contract (real-time factor >= 5x). An unoptimised Debug build runs the same
+# code 3-6x slower, which says nothing about a performance regression, so the
+# caller states the budget that belongs to the build it produced.
+def perf_budget_s(default_s):
+    """Wall-clock budget in seconds, taken from the environment if set.
+
+    Mirrors ``vdsim::testing::perf_budget_s`` in tests/support/perf_budget.hpp:
+    same variable name, same rule. Unset, empty and malformed all mean "not
+    stated" and fall back to the Release contract, so a broken CI expression
+    cannot silently disable the assertion.
+    """
+    raw = os.environ.get("VDSIM_PERF_BUDGET_S", "")
+    try:
+        parsed = float(raw)
+    except ValueError:
+        return default_s
+    return parsed if parsed > 0.0 else default_s
+
+
+BUDGET_S = perf_budget_s(1.0)
+
+
 def test_speed_budget():
     plant = VDSimPlant(base_mu=0.9, control_dt=DT, substep_dt=SUB)
     plant.reset([0.0, 0.0, 0.0, V0, 0.0, 0.0])
@@ -194,8 +218,12 @@ def test_speed_budget():
     for _ in range(100):
         plant.step([0.02, 0.0])
     elapsed = time.perf_counter() - t0
-    assert elapsed < 1.0, f"5 s traj too slow: {elapsed:.2f} s wall"
-    print("speed budget: ok ({:.3f} s for 5 s sim)".format(elapsed))
+    assert elapsed < BUDGET_S, (
+        f"5 s traj too slow: {elapsed:.2f} s wall (budget {BUDGET_S:.2f} s, "
+        "override with VDSIM_PERF_BUDGET_S)"
+    )
+    print("speed budget: ok ({:.3f} s for 5 s sim, budget {:.2f} s)".format(
+        elapsed, BUDGET_S))
 
 
 def main():

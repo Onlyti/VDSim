@@ -1,6 +1,13 @@
 #include "vdsim/module_plugin.hpp"
 
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#else
 #include <dlfcn.h>
+#endif
 
 #include <string>
 
@@ -10,6 +17,48 @@
 #include "vdsim/interfaces.hpp"
 
 namespace vdsim {
+namespace {
+
+#ifdef _WIN32
+void clear_dl_error() { SetLastError(0); }
+
+void* open_plugin(const std::string& path) {
+    return reinterpret_cast<void*>(LoadLibraryA(path.c_str()));
+}
+
+void* plugin_sym(void* handle, const char* name) {
+    return reinterpret_cast<void*>(GetProcAddress(static_cast<HMODULE>(handle), name));
+}
+
+int close_plugin(void* handle) {
+    return FreeLibrary(static_cast<HMODULE>(handle)) ? 0 : -1;
+}
+
+std::string plugin_error(const char* prefix) {
+    const DWORD e = GetLastError();
+    if (e == 0) return std::string(prefix) + "unknown error";
+    return std::string(prefix) + "Win32 error " + std::to_string(e);
+}
+#else
+void clear_dl_error() { dlerror(); }
+
+void* open_plugin(const std::string& path) {
+    return dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
+}
+
+void* plugin_sym(void* handle, const char* name) {
+    return dlsym(handle, name);
+}
+
+int close_plugin(void* handle) { return dlclose(handle); }
+
+std::string plugin_error(const char* prefix) {
+    const char* e = dlerror();
+    return std::string(prefix) + (e ? e : "unknown error");
+}
+#endif
+
+}  // namespace
 
 const char* to_string(ModuleKind k) noexcept {
     switch (k) {
@@ -34,21 +83,20 @@ ModuleKind module_kind_from_string(const std::string& s) noexcept {
 LoadedModule load_module_plugin(const std::string& so_path) {
     LoadedModule out;
 
-    dlerror();
-    void* h = dlopen(so_path.c_str(), RTLD_NOW | RTLD_LOCAL);
+    clear_dl_error();
+    void* h = open_plugin(so_path);
     if (!h) {
-        const char* e = dlerror();
-        out.error = std::string("dlopen failed: ") + (e ? e : "unknown error");
+        out.error = plugin_error("dlopen failed: ");
         return out;
     }
 
-    auto abi_fn    = reinterpret_cast<int (*)()>(dlsym(h, kSymAbiVersion));
-    auto kind_fn   = reinterpret_cast<const char* (*)()>(dlsym(h, kSymKind));
-    auto name_fn   = reinterpret_cast<const char* (*)()>(dlsym(h, kSymName));
-    auto create_fn = reinterpret_cast<void* (*)()>(dlsym(h, kSymCreate));
+    auto abi_fn    = reinterpret_cast<int (*)()>(plugin_sym(h, kSymAbiVersion));
+    auto kind_fn   = reinterpret_cast<const char* (*)()>(plugin_sym(h, kSymKind));
+    auto name_fn   = reinterpret_cast<const char* (*)()>(plugin_sym(h, kSymName));
+    auto create_fn = reinterpret_cast<void* (*)()>(plugin_sym(h, kSymCreate));
     if (!abi_fn || !kind_fn || !name_fn || !create_fn) {
         out.error = "missing plugin symbol(s) — the .so must use a VDSIM_REGISTER_*_MODULE macro";
-        dlclose(h);
+        close_plugin(h);
         return out;
     }
 
@@ -57,7 +105,7 @@ LoadedModule load_module_plugin(const std::string& so_path) {
         out.error = "ABI mismatch: plugin abi=" + std::to_string(abi) +
                     " expected=" + std::to_string(kModuleAbiVersion) +
                     " (rebuild the module against the current core)";
-        dlclose(h);
+        close_plugin(h);
         return out;
     }
 
@@ -68,14 +116,14 @@ LoadedModule load_module_plugin(const std::string& so_path) {
     if (out.kind == ModuleKind::Unknown) {
         out.error = std::string("unknown module kind: '") + (kind_s ? kind_s : "") +
                     "' (expected brake/steering/drivetrain/suspension/antirollbar)";
-        dlclose(h);
+        close_plugin(h);
         return out;
     }
 
     void* raw = create_fn();
     if (!raw) {
         out.error = "vdsim_module_create() returned null";
-        dlclose(h);
+        close_plugin(h);
         return out;
     }
 

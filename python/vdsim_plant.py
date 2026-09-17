@@ -447,7 +447,7 @@ class VDSimPlant:
 
   # ---- trace recording (opt-in) ---------------------------------------
   def enable_trace(self, path, decimation=None, seed=None, run_id=None,
-                   producer=None, tags=None):
+                   producer=None, tags=None, role="plant"):
       """Start recording this run to a ``.vdtrace``. Off unless called.
 
       One sample is offered per :meth:`step`, taken *before* the step is
@@ -463,6 +463,10 @@ class VDSimPlant:
       :param run_id: run identifier; defaults to the trace file stem.
       :param producer: ``{"name","version"}`` of the calling script.
       :param tags: free-form dict merged into the manifest as ``tags``.
+      :param role: manifest ``role`` (§3.1). Defaults to ``"plant"`` because
+          this class *is* the plant; pass ``"predictor"`` when the same object
+          is driven as an optimiser's internal model rather than as the run
+          under verification.
       :returns: the resolved decimation.
       """
       import vdsim_trace
@@ -506,6 +510,7 @@ class VDSimPlant:
                                 "version": _vdsim_version()},
           decimation=decimation,
           extra={"tags": dict(tags or {})},
+          role=role,
       )
       return decimation
 

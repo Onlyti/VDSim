@@ -37,7 +37,9 @@ inline ContactKinematics tire_contact_kinematics(
         double gamma, const TireParams& tp, double R0) {
     ContactKinematics ck;
     ck.Re  = effective_rolling_radius(tp, R0, Fz);
-    const double denom = std::max(std::abs(Vx), kTireSpeedEps);
+    const double denom = std::max(std::abs(Vx), tp.vlow_speed_eps > 0.0
+                                              ? tp.vlow_speed_eps
+                                              : kTireSpeedEps);
     ck.vsx = ck.Re * omega - Vx;
     ck.vsy = Vy;
     ck.kappa = ck.vsx / denom;

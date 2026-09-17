@@ -29,7 +29,7 @@ sys.path.insert(0, str(REPO / "python"))
 import vdsim_render as vr  # noqa: E402
 import vdsim_trace as vt   # noqa: E402
 
-FIXTURE = REPO / "tests" / "fixtures" / "trace" / "golden_v0_1.vdtrace"
+FIXTURE = REPO / "tests" / "fixtures" / "trace" / "golden_v0_2.vdtrace"
 FAILURES = []
 #: Horizon length of the synthetic sidecar (the real one is the MPC's N+1).
 NH = 21

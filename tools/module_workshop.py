@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -28,19 +29,39 @@ sys.path.insert(0, str(REPO / "python"))
 KINDS = ("brake", "steering", "drivetrain", "suspension", "antirollbar")
 
 
+def build_dir(repo: Path) -> Path:
+    """Return the CMake binary directory to compile user modules against.
+
+    ``VDSIM_BUILD_DIR`` wins so that ctest can point the tool at whichever
+    directory the running configuration produced; the canonical `validation`
+    preset builds into ``build-validation``, not ``build``. Without the
+    variable the first existing candidate is used, which keeps the documented
+    ``cmake -B build`` workflow working unchanged.
+    """
+    env = os.environ.get("VDSIM_BUILD_DIR", "").strip()
+    if env:
+        return Path(env)
+    for name in ("build", "build-validation"):
+        if (repo / name / "lib" / "libvdsim_core.a").is_file():
+            return repo / name
+    return repo / "build"
+
+
 def _discover(repo: Path) -> dict:
     """Locate the include/lib/checker the build produced. Returns paths or an error."""
     core_inc = repo / "core" / "include"
-    lib_dir = repo / "build" / "lib"
-    checker = repo / "build" / "bin" / "vdsim_module_check"
-    eigen = sorted((repo / "build" / "_deps").glob("eigen-src"))
+    build = build_dir(repo)
+    rel = build.name
+    lib_dir = build / "lib"
+    checker = build / "bin" / "vdsim_module_check"
+    eigen = sorted((build / "_deps").glob("eigen-src"))
     missing = []
     if not (lib_dir / "libvdsim_core.a").is_file():
-        missing.append("build/lib/libvdsim_core.a (build the project first)")
+        missing.append("%s/lib/libvdsim_core.a (build the project first)" % rel)
     if not checker.is_file():
-        missing.append("build/bin/vdsim_module_check (build the project first)")
+        missing.append("%s/bin/vdsim_module_check (build the project first)" % rel)
     if not eigen:
-        missing.append("Eigen headers under build/_deps/eigen-src")
+        missing.append("Eigen headers under %s/_deps/eigen-src" % rel)
     return {
         "core_inc": core_inc,
         "lib_dir": lib_dir,

@@ -22,7 +22,7 @@ sys.path.insert(0, str(REPO / "python"))
 import vdsim_render as vr  # noqa: E402
 import vdsim_trace as vt   # noqa: E402
 
-FIXTURE = REPO / "tests" / "fixtures" / "trace" / "golden_v0_1.vdtrace"
+FIXTURE = REPO / "tests" / "fixtures" / "trace" / "golden_v0_2.vdtrace"
 FAILURES = []
 
 
@@ -117,8 +117,11 @@ def test_eight_screen_items():
     speed = math.hypot(*tr.v_body[peak])
     check(math.hypot(ax_, ay_) > 0.0,
           "5. velocity arrow has length %.2f m at %.1f m/s" % (math.hypot(ax_, ay_), speed))
-    check(len(spec["hud"]) >= 5 and "util max" in spec["hud"][-1],
+    hud = spec["hud"]
+    check(len(hud) >= 6 and any("util max" in line for line in hud),
           "6. HUD carries time / speed / slip / yaw-rate / steer / utilization")
+    check(hud[-1] == "role = plant",
+          "6b. HUD states the declared role verbatim (%r)" % hud[-1])
     check(len(spec["wheel_util"]) == 4 and max(spec["wheel_util"]) > 0.0,
           "7. four per-wheel utilization values drive the colour (max %.2f)"
           % max(spec["wheel_util"]))
@@ -138,6 +141,7 @@ def test_series_selection_is_manifest_driven():
             tire={"friction_shape": "circle", "mu_aniso": [1.0, 1.0]},
             repro={"vdsim_version": "t", "git_sha": "x", "param_hash": "sha256:x",
                    "seed": 0, "dt_s": 0.05, "run_id": "partial"},
+            role="plant",
             channels=["t", "pose", "yaw_rate", "u_steer"])
         for i in range(20):
             w.append({"t": i * 0.05, "pose": (i * 0.5, 0.0, 0.0),

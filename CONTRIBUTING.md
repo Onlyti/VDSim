@@ -8,10 +8,23 @@ openly.
 
 ```bash
 cmake -DVDSIM_BUILD_PYTHON=ON -B build && cmake --build build -j
-cd build && ctest --output-on-failure        # 191 checks, must stay 100% green
+cd build && ctest --output-on-failure        # must stay 100% green
 ```
+Before quoting a suite count anywhere, reproduce it in the canonical
+configuration — that is the only one [docs/VALIDATION.md](docs/VALIDATION.md)
+records, and the `validation_currency` test fails if the two disagree:
+```bash
+cmake --preset validation && cmake --build --preset validation && ctest --preset validation
+```
+Building VDSim needs CMake ≥ 3.16; reading `CMakePresets.json` (schema v3) needs
+**CMake ≥ 3.21**, so the canonical run has the higher floor. CI pins one exact
+CMake (`VDSIM_CMAKE_VERSION` in `.github/workflows/build.yml`) and the same
+version is used on the measurement host — changing it means re-measuring in the
+same commit.
+
 Python package: `pip install ".[plot]"` (Python ≥ 3.10 with a modern `pip`).
-CI (GitHub Actions) builds gcc-9 + clang-10 and runs ctest on every push/PR.
+CI (GitHub Actions) builds gcc-11 + clang-14 on Ubuntu 22.04 and runs ctest on
+every push/PR.
 
 ## Conventions (non-negotiable — they keep results comparable)
 

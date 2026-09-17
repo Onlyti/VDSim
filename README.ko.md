@@ -5,6 +5,19 @@
 [![build](https://github.com/Onlyti/VDSim/actions/workflows/build.yml/badge.svg)](https://github.com/Onlyti/VDSim/actions/workflows/build.yml)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 ![status](https://img.shields.io/badge/status-experimental%20pre--release-orange.svg)
+![tests](https://img.shields.io/badge/ctest-391%2F391-green.svg)
+
+> **Experimental / pre-release — 양산용 아님.** 근거·한계:
+> [VALIDATION.md](docs/VALIDATION.md) (v0.5.1+).
+> **검증됨:** analytic + ISO 기동 + L1↔L3 self-consistency + 동일 `.tir` pure-slip
+> cross-check (CarMaker &lt;0.1%, Chrono Pac02 ~0.8%) — MF-Tyre 제품 parity 아님.
+> **미검증:** full-vehicle 상용 cross-val, 실차 데이터, production sign-off.
+
+![Grip-loss demo](docs/assets/demo_grip_loss.gif)
+
+*결정론적 VDSim plant: 컨트롤러가 사전에 모르는 저-μ patch를 통과하며 타이어가 peak
+너머 포화(drift>1) — soft-clamp가 아닌 실제 grip loss.* 재현:
+`python examples/demo_grip_loss.py` (`pip install vdsim[plot]` 또는 로컬 wheel).
 
 > **Experimental / pre-release software — not for production use.**
 > What is verified, and what is *not yet*: see [docs/VALIDATION.md](docs/VALIDATION.md).
@@ -54,9 +67,12 @@ python -c "import vdsim; from vdsim_lab import Sim; Sim(vehicle='sedan', level='
 
 ## 소스 빌드
 
-전제: C++17 컴파일러, CMake ≥ 3.20, Python ≥ 3.10.
-- Linux: `g++ ≥ 9` 또는 `clang ≥ 10`
+전제: C++17 컴파일러, CMake ≥ 3.16, Python ≥ 3.10.
+- Linux: `g++ ≥ 9` 또는 `clang ≥ 10`. CI 는 Ubuntu 22.04 에서 gcc-11 · clang-14 를 빌드한다
 - Windows: Visual Studio 2019+ "C++ 데스크톱 개발"(MSVC)
+- 빌드 자체는 CMake ≥ 3.16 이면 되지만, 정본 검증은 `CMakePresets.json`
+  (preset schema v3) 을 거치므로 **CMake ≥ 3.21** 이 필요하다 — 그보다 낮은
+  CMake 는 빌드는 되고 프리셋만 못 읽는다
 
 Python 패키지 (editable / 로컬 wheel 빌드):
 ```bash
@@ -68,7 +84,13 @@ python -c "import vdsim; print('ok')"
 ```bash
 cmake -B build -DVDSIM_BUILD_PYTHON=ON          # Linux 는 -G Ninja 추가
 cmake --build build --config Release            # Linux 는 -j
-ctest --test-dir build -C Release               # 328/328 ; 바이너리는 build/bin/
+cd build && ctest -C Release                    # 바이너리는 build/bin/
+```
+정본 테스트 개수는 [docs/VALIDATION.md](docs/VALIDATION.md) 한 곳에만 둔다.
+재현은 고정된 프리셋으로 한다:
+```bash
+cmake --preset validation && cmake --build --preset validation
+ctest --preset validation
 ```
 
 ## Python 으로 실험하기 (제어기는 직접 작성)
@@ -129,7 +151,7 @@ plant.enable_trace("run.vdtrace", seed=0, run_id="demo")   # 켜야만 기록
 path = plant.finalize_trace()
 ```
 
-- `enable_trace(path, decimation=None, seed=None, run_id=None, producer=None, tags=None)` —
+- `enable_trace(path, decimation=None, seed=None, run_id=None, producer=None, tags=None, role="plant")` —
   `step()` 마다 한 샘플을 적분 *이전* 시점에서 취한다. 따라서 pose 는 시각 `t` 의
   상태이고 `u_steer` / `u_fx` 는 `[t, t+control_dt)` 구간에 유지된 명령이다.
   반환값은 실제 적용된 decimation.
@@ -139,6 +161,41 @@ path = plant.finalize_trace()
   기록한 경로를 돌려준다(기록을 켠 적이 없으면 `None`).
 - 컨테이너는 zip: `manifest.json` + `channels/*.f64` + `overlays/*.json`.
   이 파일 하나면 렌더가 되므로 재시뮬레이션도, 결과 파일 재파싱도 필요 없다.
+- manifest 는 `schema_version` `"0.2"` 와 필수 필드 `role` 을 선언한다. `role` 은
+  검증 대상인 `"plant"` 또는 최적화·MPC 내부 예측 모델로 쓰인 `"predictor"` 다.
+  `VDSimPlant` 은 그 자체가 플랜트이므로 `enable_trace` 의 기본값은 `plant` 이고,
+  `vdsim_trace.TraceWriter` 를 직접 만드는 생산자는 `role=` 을 반드시 넘겨야 한다
+  — 기본값이 없으므로 예측기 run 이 빠뜨림만으로 플랜트 근거가 되는 일이 없다.
+  기존 `0.1` trace 도 그대로 읽힌다. `role` 이 없으면 경고 1회와 함께 `plant` 로
+  간주하고, `0.2` 에서 누락되면 에러다. 렌더러는 HUD 에 문자열로만 표시하고
+  이 값으로 화면 구성을 바꾸지 않는다.
+
+### 렌더 프리셋
+
+프리셋은 trace 하나를 *어떤 화면으로* 그릴지만 정한다. trace 내용이 아니라
+렌더러 설정이므로 `.vdtrace` 안의 데이터는 바뀌지 않는다. 내장 프리셋은
+`overview` 하나다 — BEV, 주행 궤적, 선택적 기준 경로, 속도, 조향·종방향 명령.
+
+```bash
+vdsim-render run.vdtrace                      # 기본값이 overview
+vdsim-render run.vdtrace --list-presets
+vdsim-render run.vdtrace --preset my.yaml     # 사용자 프리셋(.yaml/.yml/.json)
+vdsim-render run.vdtrace --panels speed,u_fx  # CLI 가 프리셋을 이긴다
+```
+
+- 우선순위는 **CLI 옵션 > 사용자 프리셋 파일 > 내장 기본값**. 사용자 프리셋은
+  바꿀 항목만 적으면 되고, 나머지는 `extends` 가 가리키는 내장 프리셋(기본
+  `overview`)에서 상속된다.
+- 프리셋이 선언하는 것은 패널 채널·라벨·y 범위·BEV 레이어 표시 여부다.
+  `speed` 는 `v_body` 에서 파생되고, 나머지 패널은 trace 채널 이름이다.
+- trace 에 없는 채널의 패널은 조용히 생략된다 — 채널 일부만 기록한 run 에도
+  같은 프리셋을 쓸 수 있다. 생략을 에러로 되돌리려면 `required: true` 를 준다.
+- 패널 위치와 BEV 축 좌표계는 고정이다. 데이터 autoscale 은 허용하지만
+  텍스트·범례·패널이 프레임을 벗어나면 실패이며, `render()` 가
+  `layout_violations` 로 보고한다.
+- `control`·`tire_limit` 은 계약만 되어 있고 미구현이며, `road_contact` 은
+  코어가 접촉 법선을 온전히 푸는 시점까지 예약어다. 이 이름들은 stub 을 두지
+  않고 거부한다.
 
 시나리오 지식은 실행이 끝난 뒤 **overlay** 로 붙인다. VDSim 은 `kind` / `name`
 봉투만 검증하고 내용은 해석하지 않으므로, 새 생산자가 쓴 미지의 overlay 를

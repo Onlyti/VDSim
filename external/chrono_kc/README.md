@@ -74,9 +74,18 @@ ctest -R ChronoKcParity                      # now active (was SKIP without the 
 
 ## Status
 
-SKELETON: `gen_kc_reference.cpp` has the structure + hardpoint mapping; the Chrono API
-specifics (PointId spelling, `ChSuspensionTestRig` construction/readout, spring/damper
-getters) are marked TODO and must be filled against the installed Chrono version. Tolerances
-in the gate (rel 8 %, floor 0.1 deg) are placeholders for the joint-idealisation / mapping
-residual — tighten once the first reference is captured. No reference CSV is committed yet, so
-the parity gate SKIPs.
+**ACTIVE** (2026-06-20): `gen_kc_reference` drives Chrono::Vehicle `ChSuspensionTestRigPlatform`
+from `dw_front_sports.yaml` hardpoints and writes `reference/kc_dw_front_reference.csv`.
+`ctest -R ChronoKcParity` passes when the CSV is present (8 % / 0.1 deg bands).
+
+Regenerate (requires local Chrono build):
+
+```
+cmake -B external/chrono_kc/build -DChrono_DIR=<chrono>/build/cmake
+cmake --build external/chrono_kc/build -j
+./external/chrono_kc/build/gen_kc_reference "$(pwd)" <chrono_src_root>
+ctest -R ChronoKcParity
+```
+
+Note: platform rig reach is limited in rebound (~−14 mm for this axle); the CSV uses
+achieved wheel travel as the abscissa and de-duplicates saturated points.

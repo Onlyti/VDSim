@@ -794,11 +794,15 @@ void step_hard_joint_dae(HardJointCornerState& state,
                          const WheelLoad& load,
                          double dt) {
     const WheelPose wp = model.step(state, mot, load, dt);
+    double toe_c = 0.0, camber_c = 0.0;
+    compliance_targets_rad(topo, load, toe_c, camber_c);
     topo.toe_deg = wp.toe_rad * 180.0 / M_PI;
     topo.camber_deg = wp.camber_rad * 180.0 / M_PI;
     topo.caster_deg = wp.caster_rad * 180.0 / M_PI;
-    topo.compliance_toe_deg = 0.0;
-    topo.compliance_camber_deg = 0.0;
+    topo.compliance_toe_deg = toe_c * 180.0 / M_PI;
+    topo.compliance_camber_deg = camber_c * 180.0 / M_PI;
+    topo.toe_deg += topo.compliance_toe_deg;
+    topo.camber_deg += topo.compliance_camber_deg;
 }
 
 }  // namespace vdsim::mb

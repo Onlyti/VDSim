@@ -5,6 +5,19 @@
 [![build](https://github.com/Onlyti/VDSim/actions/workflows/build.yml/badge.svg)](https://github.com/Onlyti/VDSim/actions/workflows/build.yml)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 ![status](https://img.shields.io/badge/status-experimental%20pre--release-orange.svg)
+![tests](https://img.shields.io/badge/ctest-391%2F391-green.svg)
+
+> **Experimental / pre-release — not for production.** Evidence and limits:
+> [VALIDATION.md](docs/VALIDATION.md) (v0.5.1+).
+> **Validated:** analytic + ISO maneuvers + L1↔L3 self-consistency + pure-slip same-`.tir`
+> cross-check (CarMaker &lt;0.1%, Chrono Pac02 ~0.8%) — not MF-Tyre product parity.
+> **NOT yet:** full-vehicle commercial cross-val, real-vehicle data, production sign-off.
+
+![Grip-loss demo](docs/assets/demo_grip_loss.gif)
+
+*Deterministic VDSim plant: controller hits an unseen low-μ patch, tyres saturate past
+peak (drift>1) — real grip loss, not a soft-clamp.* Reproduce:
+`python examples/demo_grip_loss.py` (`pip install vdsim[plot]` or local wheel).
 
 > **Experimental / pre-release software — not for production use.**
 > What is verified, and what is *not yet*: see [docs/VALIDATION.md](docs/VALIDATION.md).
@@ -57,9 +70,12 @@ Source for the script: [`examples/quickstart.py`](examples/quickstart.py) — us
 
 ## From source
 
-Prerequisites: a C++17 compiler, CMake ≥ 3.20, Python ≥ 3.10.
-- Linux: `g++ ≥ 9` or `clang ≥ 10`.
+Prerequisites: a C++17 compiler, CMake ≥ 3.16, Python ≥ 3.10.
+- Linux: `g++ ≥ 9` or `clang ≥ 10`. CI builds gcc-11 and clang-14 on Ubuntu 22.04.
 - Windows: Visual Studio 2019+ with "Desktop development with C++" (MSVC).
+- Building the tree needs CMake ≥ 3.16, but the canonical validation run goes
+  through `CMakePresets.json` (preset schema v3), which needs **CMake ≥ 3.21** —
+  an older CMake builds VDSim fine and simply cannot read the preset.
 
 Python package (editable / local wheel build):
 ```bash
@@ -71,7 +87,13 @@ Full C++ tree (tests, real-time runtime, FMI, CARLA bridge):
 ```bash
 cmake -B build -DVDSIM_BUILD_PYTHON=ON          # add -G Ninja on Linux
 cmake --build build --config Release            # -j on Linux
-ctest --test-dir build -C Release               # 328/328 ; binaries in build/bin/
+cd build && ctest -C Release                    # binaries in build/bin/
+```
+The canonical suite count lives in one place only — [docs/VALIDATION.md](docs/VALIDATION.md).
+Reproduce it with the pinned preset:
+```bash
+cmake --preset validation && cmake --build --preset validation
+ctest --preset validation
 ```
 
 ## Run an experiment in Python (write your own controller)
@@ -134,7 +156,7 @@ plant.enable_trace("run.vdtrace", seed=0, run_id="demo")   # off unless called
 path = plant.finalize_trace()
 ```
 
-- `enable_trace(path, decimation=None, seed=None, run_id=None, producer=None, tags=None)` —
+- `enable_trace(path, decimation=None, seed=None, run_id=None, producer=None, tags=None, role="plant")` —
   one sample is offered per `step()`, taken *before* the step is integrated, so the
   pose is the state at `t` and `u_steer` / `u_fx` are the command held over
   `[t, t+control_dt)`. Returns the resolved decimation.
@@ -144,6 +166,56 @@ path = plant.finalize_trace()
   it returns the written path (`None` when recording was never enabled).
 - The container is a zip: `manifest.json` + `channels/*.f64` + `overlays/*.json`.
   That one file is enough to render — no re-simulation, no results file.
+- The manifest declares `schema_version` `"0.2"` and a required `role`, either
+  `"plant"` (the simulator under verification) or `"predictor"` (the same code
+  driven as an optimiser's internal model). `enable_trace` defaults to `plant`
+  because `VDSimPlant` *is* the plant; a producer that builds a
+  `vdsim_trace.TraceWriter` directly must pass `role=` — there is no default,
+  so a predictor run cannot be recorded as plant evidence by omission.
+  Reading a legacy `0.1` trace still works: a missing `role` resolves to
+  `plant` with one warning. A `0.2` trace without one is an error.
+  The renderer prints the role in the HUD and never branches on it.
+
+### Render presets
+
+A preset decides *which view* of one trace is drawn. It is renderer
+configuration, not trace content, so presets never change what a `.vdtrace`
+holds. `overview` is the built-in — BEV, driven path, optional reference path,
+speed, steer and longitudinal command:
+
+```bash
+vdsim-render run.vdtrace                      # overview is the default
+vdsim-render run.vdtrace --list-presets
+vdsim-render run.vdtrace --preset my.yaml     # user preset (.yaml/.yml/.json)
+vdsim-render run.vdtrace --panels speed,u_fx  # CLI wins over the preset
+```
+
+- Resolution order: **CLI option > user preset file > built-in default**. A user
+  preset only has to state what it changes; the rest is inherited from the
+  built-in named by `extends` (default `overview`).
+- A preset declares panel channels, labels, y-ranges and BEV layer visibility.
+  `speed` is derived from `v_body`; every other panel names a trace channel.
+- A channel the trace does not carry drops its panel silently — the same preset
+  works on a run recorded with a channel subset. Mark a panel `required: true`
+  to turn that omission back into an error.
+- Panel positions and the BEV axis coordinate system are fixed. Data autoscale
+  is allowed; text, legend or panels leaving the frame is a failure and
+  `render()` reports it in `layout_violations`.
+- `control` and `tire_limit` are contracted but not implemented, and
+  `road_contact` is reserved until the core resolves full contact normals.
+  Those names are refused rather than stubbed.
+
+```yaml
+# my.yaml — everything not named here is inherited from overview
+name: steer_only
+panels:
+  - channel: u_steer
+    label: delta
+    ylim: [-0.5, 0.5]
+bev:
+  waypoint: false
+  view_half_m: 45.0
+```
 
 Scenario knowledge is attached after the run as **overlays**. VDSim validates the
 `kind` / `name` envelope and stores the object without interpreting it, so a newer

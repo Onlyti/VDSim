@@ -192,6 +192,8 @@ VehicleParams VehicleParams::from_yaml(const std::string& path) {
     if (const auto n = root["drive_type"]; n && !n.IsNull()) {
         p.drive_type = parse_drive(n.as<std::string>());
     }
+    pull(root, "drive_split_front", p.drive_split_front);
+    pull(root, "plant_path", p.plant_path);
     if (const auto n = root["differential"]; n && !n.IsNull()) {
         p.differential = parse_diff(n.as<std::string>());
     }
@@ -263,6 +265,8 @@ void VehicleParams::to_yaml(const std::string& path) const {
     out << YAML::Key << "camber_per_roll"      << YAML::Value << camber_per_roll;
 
     out << YAML::Key << "drive_type"        << YAML::Value << drive_to_string(drive_type);
+    out << YAML::Key << "drive_split_front" << YAML::Value << drive_split_front;
+    out << YAML::Key << "plant_path"        << YAML::Value << plant_path;
     out << YAML::Key << "differential"      << YAML::Value << diff_to_string(differential);
     out << YAML::Key << "lsd_preload"       << YAML::Value << lsd_preload;
     out << YAML::Key << "lsd_ramp"          << YAML::Value << lsd_ramp;
@@ -339,6 +343,14 @@ TireParams TireParams::from_yaml(const std::string& path) {
         pull(n, "sigma_lat",  p.belt.sigma_lat);
         pull(n, "sigma_long", p.belt.sigma_long);
     }
+    pull(root, "vlow_speed_eps", p.vlow_speed_eps);
+    if (const auto n = root["low_speed_mode"]; n && !n.IsNull()) {
+        const std::string m = n.as<std::string>();
+        if (m == "tire_vlow" || m == "TireVlowOnly")
+            p.low_speed_mode = LowSpeedMode::TireVlowOnly;
+        else
+            p.low_speed_mode = LowSpeedMode::KinematicBlend;
+    }
     return p;
 }
 
@@ -370,6 +382,9 @@ void TireParams::to_yaml(const std::string& path) const {
     out << YAML::Key << "reff_dreff"            << YAML::Value << reff_dreff;
     out << YAML::Key << "reff_freff"            << YAML::Value << reff_freff;
     out << YAML::Key << "crown_radius"          << YAML::Value << crown_radius;
+    out << YAML::Key << "vlow_speed_eps"        << YAML::Value << vlow_speed_eps;
+    out << YAML::Key << "low_speed_mode"        << YAML::Value
+        << (low_speed_mode == LowSpeedMode::TireVlowOnly ? "tire_vlow" : "kinematic_blend");
     out << YAML::Key << "lugre" << YAML::Value << YAML::BeginMap;
     out << YAML::Key << "enabled" << YAML::Value << lugre.enabled;
     out << YAML::Key << "sigma0"  << YAML::Value << lugre.sigma0;

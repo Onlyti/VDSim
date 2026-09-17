@@ -12,11 +12,21 @@ single C++17 + Python ABI.
 
 ## Status
 
-- **v0.5**: terrain + Ld5 stunt driving; parts catalog + scene runtime (`--scene=`), GUI catalog API.
+- **Release line**: v0.5 terrain + Ld5 stunt driving; parts catalog + scene runtime
+  (`--scene=`), GUI catalog API.
 - **Physics**: LuGre tire default on (`lugre.enabled`); opt-in **MF2002 `.tir` backend**
   + **belt transient** (L1–L5); opt-in **drivetrain v2** (`powertrain:` — 2D engine map +
   gearbox + shift policy); kinematic fallback via `tire.kinematic_fallback` or `--no-lugre`.
-- **Tests**: **328 / 328 ctest** (2026-06-10, `main`).
+- **Trace & visualization (in integration)**: opt-in `.vdtrace` recording and headless BEV rendering;
+  single-run playback, multi-run comparison, and separate **waypoint**, **target**, and
+  **prediction** overlays.
+- **Render presets (in integration)**: declarative panel and BEV-layer selection,
+  including the built-in `overview` layout.
+- **C2 road contact (in integration)**: L3/L4 consume the full 3-D surface normal,
+  including grade/bank gravity and normal-load response. The road-bundle provider
+  remains pending.
+- **Tests**: the current canonical result, configuration, toolchain, exclusions, commit,
+  and measurement date live only in [Validation](VALIDATION.md).
 - **Roadmap**: [Product roadmap](ROADMAP.md) — shipped vs planned by subsystem.
 - **User guide**: [Catalog & physics options](CATALOG_AND_PHYSICS.md).
 - **10 CLI demo binaries**, **Python bindings**, **CARLA-ready raycast ABI**,
