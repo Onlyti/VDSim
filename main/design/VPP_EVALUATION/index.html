@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/design/VLA_THESIS_PLANT/">
+        <link rel="canonical" href="https://onlyti.github.io/VDSim/main/design/VPP_EVALUATION/">
       
       
       
@@ -23,7 +23,7 @@
     
     
       
-        <title>VDSim plant for the VLA thesis (T-IV) — implementation spec (GO, 2026-06-17) - VDSim</title>
+        <title>Vehicle Physics Pro — hands-on evaluation plan - VDSim</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#vdsim-plant-for-the-vla-thesis-t-iv-implementation-spec-go-2026-06-17" class="md-skip">
+        <a href="#vehicle-physics-pro-hands-on-evaluation-plan" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              VDSim plant for the VLA thesis (T-IV) — implementation spec (GO, 2026-06-17)
+              Vehicle Physics Pro — hands-on evaluation plan
             
           </span>
         </div>
@@ -2373,10 +2373,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#decisions-thesis-side-final" class="md-nav__link">
+  <a href="#1-why-we-are-looking-at-it" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Decisions (thesis-side, FINAL)
+        1. Why we are looking at it
       
     </span>
   </a>
@@ -2384,10 +2384,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ioniq5_awdyaml-values-final" class="md-nav__link">
+  <a href="#2-what-is-already-established-no-install-needed" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ioniq5_awd.yaml (values FINAL)
+        2. What is already established (no install needed)
       
     </span>
   </a>
@@ -2395,10 +2395,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#already-in-vdsim-reuse-do-not-reimplement" class="md-nav__link">
+  <a href="#3-what-the-hands-on-actually-has-to-produce" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Already in VDSim — REUSE, do not reimplement
+        3. What the hands-on actually has to produce
       
     </span>
   </a>
@@ -2406,10 +2406,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#correction-fx-is-not-a-clean-drop-in-the-main-coordination-item" class="md-nav__link">
+  <a href="#4-what-the-hands-on-costs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        CORRECTION — Fx is NOT a clean drop-in (the main coordination item)
+        4. What the hands-on costs
       
     </span>
   </a>
@@ -2417,10 +2417,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#deliverables-the-job" class="md-nav__link">
+  <a href="#5-blocking-issue" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Deliverables (the job)
+        5. Blocking issue
       
     </span>
   </a>
@@ -2428,10 +2428,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#two-tier-dt-required-ii-wheel-spin-is-stiff" class="md-nav__link">
+  <a href="#6-options" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Two-tier dt (REQUIRED — (ii) wheel-spin is stiff)
+        6. Options
       
     </span>
   </a>
@@ -2439,54 +2439,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#target-api-drop-in" class="md-nav__link">
+  <a href="#7-recommended-next-action" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Target API (drop-in)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#acceptance" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Acceptance
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#verify-coordinate-before-claiming-done-open-risks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Verify / coordinate before claiming done (open risks)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#product-quality-bar-this-is-the-first-client-treat-as-a-real-sale" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Product quality bar — THIS IS THE FIRST CLIENT (treat as a real sale)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#guardrails" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Guardrails
+        7. Recommended next action
       
     </span>
   </a>
@@ -2513,177 +2469,145 @@
   
 
 
-<h1 id="vdsim-plant-for-the-vla-thesis-t-iv-implementation-spec-go-2026-06-17">VDSim plant for the VLA thesis (T-IV) — implementation spec (GO, 2026-06-17)<a class="headerlink" href="#vdsim-plant-for-the-vla-thesis-t-iv-implementation-spec-go-2026-06-17" title="Permanent link">&para;</a></h1>
-<p>Next-session entry point. Self-contained: implement this, then <code>closed_loop_sim.py</code>'s Python
-dynamic-bicycle plant is drop-in replaced by VDSim. MPC (acados, Python) is UNCHANGED — only
-the plant is swapped. Reference behaviour: <code>~/vla_design/sim/closed_loop_sim.py</code>
-(<code>plant_tire/plant_deriv/rk4/usage_demanded</code>).</p>
-<h2 id="decisions-thesis-side-final">Decisions (thesis-side, FINAL)<a class="headerlink" href="#decisions-thesis-side-final" title="Permanent link">&para;</a></h2>
-<ol>
-<li><strong>Level = Ld2 7DOF</strong> (<code>create_seven_dof</code>). CmdL3 native + load transfer + fast = enough for
-   the P1 gate. Roll (Ld3 14DOF) = optional for final paper figures only, not now. <strong>Ld5
-   forbidden</strong> (it maps Fx→throttle).</li>
-<li><strong>AWD = CmdL3 <code>Fx_total</code> drop-in</strong>, 50/50 front/rear. MPC uses <code>KF_DRIVE=0.5</code>. Expose
-   <code>drive_split_front=0.5</code> in the yaml and make Ld2 split <code>Fx_total</code> by it. (No per-axle CmdL1.)</li>
-<li><strong>Friction circle = combined slip is mandatory.</strong> The headline acceptance case is
-   <strong>brake+turn simultaneously on the low-μ patch</strong> (the pre-brake narrative), NOT lateral-only.</li>
-<li><strong>friction patch provider = per-wheel contact-point μ.</strong> <code>create_friction_patch_ground(
-   base_mu, [(x0,x1,mu)])</code>, straight road so s=x. Per-wheel (front enters the patch before
-   rear = real time lag), an upgrade over the Python CG-single-μ plant. μ(x,y) general would
-   give split-μ for free, but x-interval is sufficient for P1.</li>
-<li><strong>Metric lives in analysis (MPC side), NOT the plant.</strong> The plant exposes RAW GT only:
-   per-wheel actual Fx,Fy,Fz + the real μ that wheel used (<code>wheel_mu()</code>). The headline
-   violation <code>‖F_belief(μ_nom)‖/(μ_real·Fz)</code> needs the MPC belief → computed thesis-side. A
-   plant-side <code>actual/(μ·Fz)</code> (≤1, clamp-active = at-limit) is incidental, not headline. Do
-   NOT put usage logic in the plant.</li>
-<li><strong>dry match = qualitative; keep the model mismatch.</strong> MF96 (plant) ≠ the MPC's saturating
-   bicycle is an INTENDED plant-model mismatch (the chance constraint absorbing it is the
-   stronger robustness story). Do not match them. BUT align the low-slip cornering stiffness so
-   dry is qualitatively consistent: MF96 <code>Ca = B·C·D</code> must give front 2.2e5 / rear 1.6e5 N/rad
-   with <code>C=1.3</code>, <code>D=μ·Fz</code> ⇒ <code>B = Ca/(C·D)</code>.</li>
-<li><strong>Determinism / frame.</strong> LuGre OFF + fixed <code>substep_dt</code> (figure reproducibility); confirm no
-   nondeterministic element. ISO 8855, +δ→+yaw→+Y, wheel FL0/FR1/RL2/RR3.</li>
-<li><strong>Low-speed = VLOW, not the kinematic blend.</strong> The tyre already has a slip-denominator VLOW
-   floor (<code>tire_model.cpp</code> <code>kTireSpeedEps</code>). The VEHICLE-side kinematic blend (seven_dof
-   <code>lambda = clamp(speed/kStickBlend)</code>) fades the dynamic tyre at low speed and would MASK grip
-   loss → bypass it on the plant path (rely on the tyre VLOW). Maneuvers are 16.7 m/s ≫
-   kStickBlend so it rarely engages, but bypass it for grip-loss consistency. (Aligns with
-   roadmap T3 "VLOW-class unified low speed".)</li>
-</ol>
-<h2 id="ioniq5_awdyaml-values-final">ioniq5_awd.yaml (values FINAL)<a class="headerlink" href="#ioniq5_awdyaml-values-final" title="Permanent link">&para;</a></h2>
-<p><code>m=2359, Iz=3400, lf=1.17, lr=1.80, mu_nom=0.9, drive_split_front=0.5</code>. track / h_cg = public
-Ioniq5-class (NO confidential/measured data). MF96 BCD <code>D=mu·Fz, C=1.3, B=Ca/(C·D)</code>.
-<strong>TRAP: <code>Ca_f=2.2e5 / Ca_r=1.6e5</code> are AXLE values</strong> (the thesis bicycle is single-track), but
-7DOF has 4 wheels with PER-WHEEL MF. So per front wheel use <code>Ca=Ca_f/2</code> and
-<code>D=mu·Fz_front_wheel</code> (<code>Fz_front_wheel = m·g·lr/L / 2</code>); likewise rear. Calibrate B at the
-static per-wheel Fz. (Get this wrong ⇒ each axle 2× too stiff.)</p>
-<h2 id="already-in-vdsim-reuse-do-not-reimplement">Already in VDSim — REUSE, do not reimplement<a class="headerlink" href="#already-in-vdsim-reuse-do-not-reimplement" title="Permanent link">&para;</a></h2>
+<h1 id="vehicle-physics-pro-hands-on-evaluation-plan">Vehicle Physics Pro — hands-on evaluation plan<a class="headerlink" href="#vehicle-physics-pro-hands-on-evaluation-plan" title="Permanent link">&para;</a></h1>
+<p><strong>Status:</strong> plan written, hands-on <strong>not started</strong> (blocked; see §5) · <strong>Date:</strong> 2026-09-17
+<strong>Type:</strong> discussion document (current state → evidence → open issues → options → next action)</p>
+<h2 id="1-why-we-are-looking-at-it">1. Why we are looking at it<a class="headerlink" href="#1-why-we-are-looking-at-it" title="Permanent link">&para;</a></h2>
+<p>VDSim's credibility gap is external cross-validation: the roadmap's validation
+section still lists "published commercial cross-val" and "external Adams /
+physical KC-rig" as open. Vehicle Physics Pro (VPP) is the closest thing to a
+peer product that is (a) reachable without a commercial license negotiation and
+(b) built around an explicit multibody-ish vehicle model rather than an arcade
+approximation. It is a <em>reference point</em>, not a ground truth — VPP is another
+simulator, so the same caveat we already apply to the Chrono KC cross-check
+applies here.</p>
+<p>The question this evaluation answers is narrow: <strong>where does VDSim's fidelity
+and workflow sit relative to a mature commercial vehicle-dynamics package, and
+which of its features are table stakes that we are missing?</strong></p>
+<h2 id="2-what-is-already-established-no-install-needed">2. What is already established (no install needed)<a class="headerlink" href="#2-what-is-already-established-no-install-needed" title="Permanent link">&para;</a></h2>
+<p>Editions and cost (<a href="https://vehiclephysics.com/about/licensing/">vehiclephysics.com/about/licensing</a>):</p>
+<table>
+<thead>
+<tr>
+<th>Edition</th>
+<th>Cost</th>
+<th>Scope</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Community</td>
+<td>free, via Unity Asset Store</td>
+<td>single vehicle, desktop only — "ideal for evaluation"</td>
+</tr>
+<tr>
+<td>Professional</td>
+<td>€590 + €190/yr</td>
+<td>unlimited vehicles, all build targets, custom extensions</td>
+</tr>
+<tr>
+<td>Enterprise</td>
+<td>€5,900 + €1,900/yr</td>
+<td>full source, motion platform; requires &gt;€200k annual revenue</td>
+</tr>
+</tbody>
+</table>
+<p>Feature surface (<a href="https://vehiclephysics.com/about/features/">vehiclephysics.com/about/features</a>):</p>
 <ul>
-<li>Lockstep step API: <code>vdsim</code> pybind <code>SimSession</code> — <code>sess.reset(make_init_state(...))</code>,
-  <code>sess.set_input(cmd)</code>, step, state get. Pattern: <code>examples/estimator_in_loop.py</code>.</li>
-<li>Tyre saturation: Pacejka MF96 combined slip (<code>model_provides_combined_slip</code>) — saturates at μFz.</li>
-<li>Per-wheel GT getters: <code>tire_forces_wheel</code>(Fx,Fy in the CONTACT/wheel frame — USE THIS for the
-  friction circle, not <code>tire_forces_body</code>) · <code>tire_Fz</code> · <code>wheel_slip_ratio</code>(κ) ·
-  <code>wheel_slip_angle</code>(α). Vehicle: State X,Y,ψ,vx,vy,r + <code>ax/ay_body_est</code> + <code>beta()</code>.</li>
-<li>Load transfer: Ld2 7DOF (<code>WeightTransfer</code> tests). YAML params: <code>VehicleParams</code> / <code>Vehicle.preset</code>.</li>
-<li>Per-wheel μ contact: <code>create_split_mu_ground</code> (y-based; the new provider is the x-based analog).</li>
-<li>High-level Python: <code>python/vdsim_lab.py</code> (build session + step loop + per-wheel GT CSV) —
-  build the wrapper ON this, don't duplicate.</li>
+<li><strong>Tire:</strong> selectable friction models — flat, linear, smooth, parametric,
+  <strong>Pacejka</strong> — with lateral deflection and rolling friction. Same family as our
+  MF96 / MF2002 path; no <code>.tir</code> ingest is advertised.</li>
+<li><strong>Suspension:</strong> spring / damper / ARB with bump-rebound and slow-fast damper
+  splits, variable-rate springs, ride-height-preserving "dynamic suspension".
+  Parameter-level, <strong>not hardpoint-level</strong> — no advertised KC / anti-dive /
+  roll-centre emergence, which is exactly where our L5 free-3D MBD sits.</li>
+<li><strong>Drivetrain:</strong> open / locked / LSD / Torsen differentials, torque splitters,
+  manual + automatic transmissions, FWD/RWD/AWD. Torsen and the torque splitter
+  are ahead of our open-diff-only drivetrain v2.</li>
+<li><strong>Solver:</strong> per-vehicle substeps for outer rates from 16 Hz to 2 kHz — the same
+  substep-vs-outer-step contract we just made explicit in <code>solver_substeps()</code>.</li>
+<li><strong>Telemetry:</strong> live telemetry, suspension charts, CSV export.</li>
+<li><strong>Validation:</strong> <strong>none advertised.</strong> No real-vehicle or ISO-manoeuvre
+  comparison is claimed anywhere in the feature documentation.</li>
 </ul>
-<h2 id="correction-fx-is-not-a-clean-drop-in-the-main-coordination-item">CORRECTION — Fx is NOT a clean drop-in (the main coordination item)<a class="headerlink" href="#correction-fx-is-not-a-clean-drop-in-the-main-coordination-item" title="Permanent link">&para;</a></h2>
-<p><code>vdsim.CmdL3 = {Fx_total[N], steer_angle_wheel[rad]}</code> LOOKS right, but <strong>Ld2's <code>lower_to_l4</code>
-THROTTLE-MAPS it</strong>: <code>throttle = Fx_total/(1500·5)</code> → drivetrain → wheel torque → slip. So the
-commanded Fx_total is NOT delivered as-is (arbitrary 7500 N = full-throttle calibration) — this
-is exactly the pedal/throttle map the thesis forbids (P0.2). Steer (δ) IS clean.
-- Good side: the torque path runs wheel-spin → slip-ratio → MF96 combined, so longitudinal
-  grip-loss and κ ARE physical (the friction circle works).
-- <strong>DECISION (FINAL) = (ii) Fx → per-wheel TORQUE, keep wheel-spin/slip dynamics</strong> (physical κ).
-  Rationale: the ONLY reason to use VDSim over the Python clamp toy is native MF96 combined-slip
-  (α+κ) — a force+clamp would just re-implement that clamp in C++ for zero fidelity gain. (ii)
-  is what makes acceptance #2 (brake+turn grip-loss) a REAL tyre result (wheel lock/spin → κ →
-  saturation), and exposing κ as GT defends "full tyre physics". This is deliverable #0.
-- <strong>Mapping (required)</strong>: the MPC emits <code>Fx_total</code> as a force intent (its internal model has no
-  wheel dynamics). The plant converts <code>Fx_total</code> → per-wheel drive/brake torque, applied
-  DIRECTLY to the wheel-spin ODE, BYPASSING the throttle/drivetrain calibration:
-  - per-wheel <code>τ_i = split_axle/2 · Fx_total · R_eff</code>, front axle split = <code>drive_split_front</code>
-    (0.5), rear = <code>1 − drive_split_front</code>; braking (Fx_total&lt;0) uses the SAME 0.5/0.5 split
-    (matches the MPC's <code>KF_DRIVE</code>). Fx_total&gt;0 → drive torque, Fx_total&lt;0 → brake torque.
-  - Normal regime: realised contact <code>ΣFx ≈ Fx_total</code> (small wheel inertia → transient
-    negligible → matches the MPC's instant-force assumption).
-  - Limit regime: wheel slips → κ↑ → MF96 saturates → realised <code>Fx &lt; Fx_total</code> = the physical
-    grip loss we want to show. The normal↔limit mismatch is absorbed by the chance constraint
-    (intended plant-model mismatch = realism).
-  - Implementation hint: handle <code>CmdL1</code> (per-wheel motor_torque/brake_torque) NATIVELY in Ld2
-    (apply to the spin ODE, skip <code>lower_to_l4</code>'s throttle mapping); the wrapper builds CmdL1
-    from <code>Fx_total</code>. The MPC API stays single <code>Fx_total</code> (no per-axle exposure to the MPC).</p>
-<h2 id="deliverables-the-job">Deliverables (the job)<a class="headerlink" href="#deliverables-the-job" title="Permanent link">&para;</a></h2>
+<p>That last point is the most important finding so far, and it reframes the
+evaluation: VPP is a <em>game/production</em> physics package with a richer drivetrain
+and authoring workflow, not a validated reference. Our ISO-gated baseline is a
+differentiator, not a gap.</p>
+<h2 id="3-what-the-hands-on-actually-has-to-produce">3. What the hands-on actually has to produce<a class="headerlink" href="#3-what-the-hands-on-actually-has-to-produce" title="Permanent link">&para;</a></h2>
+<p>Running their demo is not an evaluation. The hands-on is worth doing only if it
+produces a side-by-side on manoeuvres we already have baselines for:</p>
 <ol>
-<li><strong>Direct-Fx force-input path in Ld2</strong> (bypass the throttle map; split by <code>drive_split_front</code>;
-   decide force+clamp vs Fx→torque per the CORRECTION above). Without this, acceptance #2 fails
-   and Fx_commanded ≠ Fx_delivered.</li>
-<li><strong><code>create_friction_patch_ground(base_mu, [(x0,x1,mu)...])</code></strong> — per-wheel contact-point μ by
-   wheel world-x (front-before-rear lag). C++ provider + pybind. (μ(x,y) general = bonus.)</li>
-<li><strong><code>wheel_mu()</code> getter</strong> on the dynamics (the real μ each wheel used this step) + pybind.
-   (forces/Fz already exposed.) No usage computation.</li>
-<li><strong><code>configs/.../ioniq5_awd.yaml</code></strong> with the §8 values + the BCD mapping.</li>
-<li><strong><code>VDSimPlant</code> Python wrapper</strong> (<code>from vdsim_plant import VDSimPlant</code>): ctor(config,
-   friction_patch, base_mu, dt) → <code>reset(state0)</code> → <code>step([delta, Fx]) -&gt; obs dict</code>. Internally:
-   Ld2 SimSession + CmdL3 + the getters, on top of <code>vdsim_lab</code>. obs (per §API).</li>
-<li><strong>3 smoke tests</strong> = acceptance §below. #2 MUST be brake+turn on the patch (combined).</li>
+<li><strong>ISO 7401 step steer</strong> — yaw-rate response time, overshoot, steady gain.
+   We have a CI-gated baseline (<code>IsoBaseline</code>); VPP output comes from its CSV
+   telemetry export.</li>
+<li><strong>ISO 4138 understeer gradient</strong> — steady-state circle, gradient in deg/g.</li>
+<li><strong>ISO 3888-2 double lane change</strong> — max entry speed, path deviation.</li>
+<li><strong>Coast-down</strong> — pure resistance stack, isolates road load from tire.</li>
+<li><strong>Authoring workflow cost</strong> — wall-clock from "vehicle parameters in hand" to
+   "manoeuvre result plotted", measured the same way on both. This is the axis
+   where a commercial package usually wins and we should know by how much.</li>
 </ol>
-<h2 id="two-tier-dt-required-ii-wheel-spin-is-stiff">Two-tier dt (REQUIRED — (ii) wheel-spin is stiff)<a class="headerlink" href="#two-tier-dt-required-ii-wheel-spin-is-stiff" title="Permanent link">&para;</a></h2>
-<p><code>step()</code> advances one CONTROL period at ZOH, integrating internally at a fine fixed substep:
-- <code>control_dt</code> = MPC sample (the MPC solves at dt=0.1, Tf=4/N=40); the control is held ZOH.
-- <code>substep_dt</code> ≤ 1 ms (e.g. 0.5 ms) for the wheel-spin/slip ODE (coarse steps → inaccurate or
-  divergent with (ii)). Constraint: <code>substep_dt</code> divides <code>control_dt</code>; <code>control_dt ≤ MPC dt</code>.
-- Deterministic, FIXED substep (no adaptive) for figure reproducibility.</p>
-<h2 id="target-api-drop-in">Target API (drop-in)<a class="headerlink" href="#target-api-drop-in" title="Permanent link">&para;</a></h2>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">plant</span> <span class="o">=</span> <span class="n">VDSimPlant</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="s2">"ioniq5_awd.yaml"</span><span class="p">,</span> <span class="n">friction_map</span><span class="o">=</span><span class="p">[(</span><span class="n">s0</span><span class="p">,</span><span class="n">s1</span><span class="p">,</span><span class="mf">0.5</span><span class="p">)],</span> <span class="n">base_mu</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>                   <span class="n">control_dt</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">substep_dt</span><span class="o">=</span><span class="mf">5e-4</span><span class="p">)</span>   <span class="c1"># control_dt &lt;= MPC dt (0.1); ZOH</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">plant</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">state0</span><span class="o">=</span><span class="p">[</span><span class="n">X</span><span class="p">,</span><span class="n">Y</span><span class="p">,</span><span class="n">psi</span><span class="p">,</span><span class="n">vx</span><span class="p">,</span><span class="n">vy</span><span class="p">,</span><span class="n">r</span><span class="p">])</span>                  <span class="c1"># seeds wheel_spin = vx/R internally</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">u</span> <span class="o">=</span> <span class="n">mpc</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>              <span class="c1"># u = [delta_roadwheel_rad, Fx_total_N] (force intent)</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">obs</span> <span class="o">=</span> <span class="n">plant</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>            <span class="c1"># ZOH-hold u over control_dt, integrate at substep_dt</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="c1"># obs: { X,Y,psi,vx,vy,r,ax,ay,beta,</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="c1">#        wheel: [{Fx,Fy,Fz,alpha,kappa,mu}]*4 }   (Fx,Fy = contact frame; mu = real μ used;</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="c1">#                                                   raw GT only — no usage field)</span>
-</span></code></pre></div>
-<h2 id="acceptance">Acceptance<a class="headerlink" href="#acceptance" title="Permanent link">&para;</a></h2>
-<ol>
-<li><strong>dry qualitative</strong>: μ=0.9 uniform, moderate lane change (16.7 m/s) — trajectory / yawrate
-   sign+magnitude qualitatively match the Python bicycle plant (NOT bit-exact; mismatch kept).</li>
-<li><strong>patch combined grip-loss (headline)</strong>: <strong>brake+turn on the μ=0.5 patch</strong> — when the
-   controller over-demands, per-wheel <code>‖[Fx,Fy]‖</code> saturates at <code>μ·Fz</code> and the vehicle
-   slips/departs. This is where a throttle-mapped Fx (wrong) would show up.</li>
-<li><strong>GT consistency</strong>: per-wheel <code>‖[Fx,Fy]‖ ≤ μ·Fz</code> (+ numeric eps) always; <code>ΣFx,ΣFy ↔ m·ax,ay</code>.</li>
-<li><strong>determinism</strong>: same input twice ⇒ bit/near-equal.</li>
-<li><strong>speed</strong>: one Ld2 7DOF traj (≈5 s, dt=0.05) ≪ 1 s wall-clock.</li>
-</ol>
-<h2 id="verify-coordinate-before-claiming-done-open-risks">Verify / coordinate before claiming done (open risks)<a class="headerlink" href="#verify-coordinate-before-claiming-done-open-risks" title="Permanent link">&para;</a></h2>
+<p>Each comparison is reported with the metric definition, units, and how VPP's
+parameters were matched to ours — an unmatched-parameter comparison is worthless
+and should be labelled as such rather than published.</p>
+<p>Known limits to state up front: Community Edition is single-vehicle and
+desktop-only, so fleet and multi-vehicle behaviour cannot be evaluated; without
+source access (Enterprise) the tire and solver internals stay a black box, so
+any disagreement can be attributed but not diagnosed.</p>
+<h2 id="4-what-the-hands-on-costs">4. What the hands-on costs<a class="headerlink" href="#4-what-the-hands-on-costs" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>deliverable #0 (direct-Fx path)</strong> is the crux — see CORRECTION. Ld2 currently throttle-maps
-  Fx_total; acceptance #2 fails until a direct force/torque path delivers the commanded Fx and
-  grip-loses on over-demand. (Lateral grip loss via MF96 is already certain.)</li>
-<li><strong>wheel_spin seed at reset = <code>vx / wheel_radius</code></strong> (7DOF integrates spin; unseeded ⇒ a huge
-  first-step κ transient / spurious longitudinal force). <code>make_init_state</code> already does this —
-  confirm the wrapper uses it, not a raw State.</li>
-<li><strong>plant obs = TRUE state</strong> (P1 has no sensor noise): use SimSession's <code>true_state</code>, not the
-  measured/noisy state.</li>
-<li><strong>friction circle frame</strong>: use <code>tire_forces_wheel()</code> (contact frame), not <code>tire_forces_body()</code>.</li>
-<li><strong>vehicle kinematic-blend bypass</strong> on the plant path (decision 8; rely on tyre VLOW).</li>
-<li><strong>dt = 0.05 ZOH</strong>: the MPC sample = plant.step dt; VDSim subdivides internally (substep_dt).</li>
-<li>straight road ⇒ s≈x for the patch; fine for lane-change/DLC, revisit if the path curves a lot.</li>
+<li>Unity Hub + Editor (LTS): ~10 GB, GUI host required. <code>ailab-12</code> is a headless
+  research box; the natural host is the Windows machine <code>jiwon</code>.</li>
+<li>A Unity account sign-in is required to pull the Community Edition from the
+  Asset Store.</li>
+<li>Estimated effort: ~0.5 day to a running demo scene, ~1-2 days to the four
+  manoeuvre comparisons including parameter matching (the matching is the slow
+  part, not the driving).</li>
 </ul>
-<h2 id="product-quality-bar-this-is-the-first-client-treat-as-a-real-sale">Product quality bar — THIS IS THE FIRST CLIENT (treat as a real sale)<a class="headerlink" href="#product-quality-bar-this-is-the-first-client-treat-as-a-real-sale" title="Permanent link">&para;</a></h2>
-<p>The thesis is VDSim's first external customer. Ship <code>vdsim_plant</code> as a first-class, SUPPORTED
-product surface, not a one-off test helper. Build to these bars (reviewed next session):
-- <strong>Stable, documented contract</strong>: the <code>step()</code> input <code>[delta_rad, Fx_total_N]</code> and the obs dict
-  (keys, units, frames: ISO 8855, contact-frame per-wheel F, FL0/FR1/RL2/RR3) are FIXED and
-  documented in the README + a docstring. Changing them later is a breaking change — pin it now.
-- <strong>Boundary validation + clear errors</strong> (this is a user-facing API = a real boundary): validate
-  on construction/step — finite <code>delta</code>/<code>Fx</code>; well-formed <code>friction_map</code> (x0&lt;x1, 0&lt;mu≤~1.2);
-  <code>state0</code> length/finiteness; <code>substep_dt&gt;0</code>, <code>substep_dt</code> divides <code>control_dt</code>, <code>control_dt&gt;0</code>.
-  Raise informative Python exceptions (e.g. <code>ValueError("friction_map[1]: x0&gt;=x1")</code>), never
-  silent garbage or a C++ crash. (Trust internal core; validate only at this Python boundary.)
-- <strong>Quickstart that runs in one command</strong>: <code>examples/vla_plant_demo.py</code> — a self-contained
-  closed loop (trivial controller is fine) printing/saving a trajectory, so the client verifies
-  the install in &lt;1 min. README with import path, the contract, the 5 acceptance results, and a
-  copy-paste snippet.
-- <strong>Reproducibility guarantee</strong>: deterministic, no RNG by default; document "same input ⇒ same
-  output" and the fixed-substep requirement. A determinism test is part of the smokes.
-- <strong>Sensible defaults + discoverable preset</strong>: <code>ioniq5_awd</code> resolvable like other presets
-  (via <code>vdsim_lab</code> config resolution); friction<strong>ap optional (</strong>iform <code>base_mu</code> default).
-- <strong>Drop-in proof*</strong> demonstrate the <code>from vdsim_plant import VDSimPlant</code> import works from a
-  sibling project (path/install noted), and that it replaces <code>closed_loop_sim.py</code>'s plant with
-  no MPC change. Keep performance ≪1 s/traj (state it in the README).
-- <strong>No rough edges</strong>: no NaN at the grip limit / very low speed (VLOW), helpful failure on a
-  misconfigured yaml, obs always complete (all 4 wheels, all keys) every step.</p>
-<h2 id="guardrails">Guardrails<a class="headerlink" href="#guardrails" title="Permanent link">&para;</a></h2>
-<p>wheel FL0/FR1/RL2/RR3, ISO 8855, YAML params, estimation noise = Q-process/R-meas (plant-
-irrelevant). No confidential/measured tyre data (Ioniq5 = public approx). No push/force/tag
-before approval; keep tests green. Fidelity discipline: 7DOF + MF + load transfer is enough —
-no new dynamics, no full suspension (P2). Reuse Ld2 + MF96 + SimSession + vdsim_lab; only add
-the patch provider, the μ getter, the yaml, the wrapper, the smokes.</p>
+<h2 id="5-blocking-issue">5. Blocking issue<a class="headerlink" href="#5-blocking-issue" title="Permanent link">&para;</a></h2>
+<p>The hands-on cannot be started autonomously. Downloading the Community Edition
+requires signing in to the user's Unity account, and installing a ~10 GB GUI
+editor on a lab workstation is a host-level decision, not a repo change.</p>
+<h2 id="6-options">6. Options<a class="headerlink" href="#6-options" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Cost</th>
+<th>What it buys</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A. Community Edition on <code>jiwon</code></td>
+<td>free, ~2 days</td>
+<td>The four manoeuvre comparisons + workflow timing. Single vehicle, black-box internals.</td>
+</tr>
+<tr>
+<td>B. Desk research only</td>
+<td>~2 h</td>
+<td>Feature-matrix comparison from public docs. No numbers, no workflow measurement.</td>
+</tr>
+<tr>
+<td>C. Professional (€590)</td>
+<td>paid</td>
+<td>Multi-vehicle + all targets. Buys nothing the evaluation needs; source is still closed.</td>
+</tr>
+<tr>
+<td>D. Drop VPP, spend the time on Chrono KC</td>
+<td>free</td>
+<td>Chrono is already scaffolded (<code>external/chrono_kc/</code>) and is an <em>independent MBD</em>, which is the stronger cross-check. VPP has no validation claim to cross-check against.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="7-recommended-next-action">7. Recommended next action<a class="headerlink" href="#7-recommended-next-action" title="Permanent link">&para;</a></h2>
+<p><strong>D, with B as a cheap companion.</strong> The finding in §2 — VPP advertises no
+validation — means a VPP cross-check would compare us against an unvalidated
+peer, which does not close the roadmap's credibility gap. The already-scaffolded
+Chrono KC cross-validation does. Keep a short public-docs feature comparison (B)
+for competitive positioning, and re-open A only if the goal changes from
+<em>credibility</em> to <em>authoring-workflow benchmarking</em>, where VPP is genuinely ahead.</p>
 
 
 

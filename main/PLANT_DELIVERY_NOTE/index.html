@@ -2742,7 +2742,7 @@ inner-front, dfz≈-0.8 → Fz≈0.2·Fz0)에서 <code>muy ≈ 1.08·mu_contact<
 <p><strong>결정: (A) 채택</strong> (2026-06-18). obs에 <strong>realized peak 계수</strong> 노출 — <code>wheel.mu_peak</code> =
 <code>max(mu_x, mu_y)</code> (load-dependent, force/Fz). <code>useGT = ‖F‖/(mu_peak·Fz) ≤ 1</code> 정의상 보장.
 <code>wheel.mu</code>(노면 μ)는 보존. ITireModel::Output/Wrench + <code>wheel_mu_peak()</code> + obs schema 확장.
-이 .tir는 PDX==PDY라 mu_x==mu_y → mu_peak가 한계영역에서 정확히 useGT==1.
+이 .tir는 PDX<mark>PDY라 mu_x</mark>mu_y → mu_peak가 한계영역에서 정확히 useGT==1.
 검증: combined brake+turn on patch 시나리오에서 모든 wheel·step <code>‖F‖ ≤ mu_peak·Fz</code>.</p>
 <hr />
 <h2 id="changelog-beta-iterate">Changelog (BETA iterate 기록)<a class="headerlink" href="#changelog-beta-iterate" title="Permanent link">&para;</a></h2>

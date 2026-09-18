@@ -2916,7 +2916,7 @@
   - NMEA 각도 필드 범위 검사는 필드별 상한을 쓴다 — 위도(2자리) 90°, 경도(3자리) 180°. 예전에는 둘 다 180° 로 검사해서, 예컨대 datum 서울 + <code>z = -6.35e6</code> m 같은 발산 상태가 위도 −163.55° 를 <code>16333.1094</code>(GGA 규격 9자 자리에 10자)로 실어 <strong>체크섬이 맞는 quality 1 문장</strong>으로 나갔다.
   - 과거에는 <code>static_cast&lt;int&gt;(NaN)</code> UB 로 필드 안에 공백이 들어간 문장이 체크섬까지 맞은 채 전송됐다.
 - <strong>위치 소스</strong>: 측정 GNSS(<code>m_gnss_x/_y</code>). GGA 는 수신기 출력이므로 센서 노이즈가 그대로 반영된다. 노이즈 미설정 시에도 <code>SensorModel</code> 이 항등 경로로 truth 를 채우므로 값이 비지 않는다. 고도만 truth <code>z</code>(GNSS 고도 채널 모델 없음).
-- <strong>UTC 필드</strong>: 시스템 wall clock (STATE 의 <code>timestamp</code> 는 steady_clock 기반 monotonic 이라 UTC 가 아님). 초는 출력 정밀도(1/100 s)로 <strong>먼저 반올림한 뒤</strong> 초→분→시→날 자리올림을 하므로 <code>125960.00</code> 같은 불법 시각은 나오지 않는다.
+- <strong>UTC 필드</strong>: 시스템 wall clock (STATE 의 <code>timestamp</code> 는 steady<strong>lock 기반 m</strong>otonic 이라 UTC 가 아님). 초는 출력 정밀도(1/100 s)로 <strong>먼저 반올림한 뒤** 초→분→시→날 자리올림을 하므로 klzzw</strong>:0087 같은 불법 시각은 나오지 않는다.
 - <strong>satellites / HDOP / geoid separation</strong>: 위성·DOP 모델이 없어 고정 placeholder(12 / 0.9 / 0.0).</p>
 <p><code>json</code> 세부: 모든 숫자 필드는 유한값이 아니면 RFC 8259 의 <code>null</code> 로 출력된다(<code>nan</code>/<code>inf</code> 는 JSON 이 아니라 <code>json.loads</code>·<code>JSON.parse</code> 모두 거부한다). 발산 시 프레임을 버리지 않고 <code>null</code> 로 신호하는 이유는, 조용히 사라진 데이터그램은 단순 UDP 손실과 구분되지 않기 때문이다.</p>
 <hr />

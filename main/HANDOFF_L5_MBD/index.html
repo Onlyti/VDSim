@@ -2515,7 +2515,7 @@ normal). Direction set by user: discard world-z, keep arbitrary-surface contact.
   This is the core L5 (Adams-class hardpoint -&gt; behaviour) value prop. Design doc updated.</li>
 <li>Follow-up DONE (2026-06-17): progressive coil rate from spring hardpoints. DAE exposes
   spring eye-to-eye length l(z_v) (MacPherson strut, DW spring_damper); travel_maps gives
-  spring_len + motion_ratio=dl/dz_v; free_3d uses F=k_coil<em>(l-l_free)</em>MR with k_coil=ks/MR0^2
+  spring_len + motion_ratio=dl/dz_v; free_3d uses F=k_coil*(l-l_free)*MR with k_coil=ks/MR0^2
   cached at attach so static load/rate match the wheel-rate model, then progressive +
   bump/rebound asymmetric (verified MacPherson -7%/+10%, DW -7%/+12% over +-60mm; DW MR0=-0.53
   -&gt; stiff inboard coil). No spring hardpoints -&gt; wheel-rate fallback. 377/377 green.</li>
