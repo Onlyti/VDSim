@@ -1217,6 +1217,12 @@ PYBIND11_MODULE(vdsim, m) {
         .def("set_randomizations", &vdsim::VecSession::set_randomizations,
              py::arg("specs"),
              "Per-env DomainRandomization (a list of length 1 broadcasts).")
+        .def("set_actuators", &vdsim::VecSession::set_actuators,
+             py::arg("actuators"),
+             "Per-env ActuatorParams swap, effective immediately and keeping "
+             "actuator memory (a list of length 1 broadcasts).")
+        .def("actuators", &vdsim::VecSession::actuators,
+             "The ActuatorParams currently in force on each env.")
         .def("set_obs_fields", &vdsim::VecSession::set_obs_fields, py::arg("fields"),
              "Declare the flat observation layout; a bare per-wheel name "
              "expands to 4 columns (FL FR RL RR), 'slip_ratio.2' picks one.")

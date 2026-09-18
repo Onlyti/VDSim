@@ -104,6 +104,14 @@ public:
     // R6: one independent stochastic stream per env (size 1 = seed, seed+1, ...).
     void set_seeds(const std::vector<unsigned>& seeds);
 
+    // Per-env actuator swap (size 1 broadcasts).  Takes effect immediately
+    // and keeps every actuator memory (transport rings, first-order lag,
+    // rate-limit state, steering servo + LuGre bristle, brake temperature),
+    // so this is the in-episode degradation / fault channel for a rollout.
+    // set_randomizations() is the other half: it waits for the next reset().
+    void set_actuators(const std::vector<ActuatorParams>& p);
+    std::vector<ActuatorParams> actuators() const;
+
     // Advance every session by `repeat` ticks of `dt`.  repeat > 1 is the RL
     // action-hold (frame skip): it stays inside the worker, so one barrier
     // covers the whole control interval instead of one per physics tick.
