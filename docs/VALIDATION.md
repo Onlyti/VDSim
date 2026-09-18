@@ -20,7 +20,7 @@ the last section.
 | ISO 7401 step-steer / 4138 understeer / 3888-2 DLC — run + measured | — |
 | L1↔L2↔L3 cross-model consistency where physics overlaps | Dependent axles (twist-beam / solid beam) — configs are stubs |
 | FMI round-trip Δ=0 (machine precision); ISO 8608 PSD RMS per class | L3 unsprung lateral-transfer term (small) |
-| Full suite: **490/490 ctest green** (`validation` preset, as of 2026-09-17) | — |
+| Full suite: **PENDING** — see the currency block below (`validation` preset) | — |
 | Drivetrain engine inertia (open-diff carrier coupling) | — |
 | **ISO step-steer signature gated in CI** (`ctest -R IsoBaseline`, sedan L2 LuGre) | DLC moose gate is a preset property, not a defect (see note) |
 
@@ -48,12 +48,13 @@ version and the new numbers have to land in the same commit.
 
 <!-- VALIDATION-CURRENCY BEGIN -->
 ```text
-tests:    490/490
+tests:    PENDING
+pending:  CarMaker-derived Ioniq5 suspension adds 2 registered tests (490 -> 492); the canonical count is whatever the CI validation job measures on the merged tree, not a local run.
 config:   cmake --preset validation && cmake --build --preset validation && ctest --preset validation
 presets:  CMakePresets.json@fb1f0c198a0201fcce2543a9f5b2242a255fb97a
 toolchain: cmake 3.31.10
-commit:   33d504b
-date:     2026-09-17
+commit:   PENDING
+date:     PENDING
 excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: ergaccess (optional external dependency not installed -- VDSIM_WITH_ERGACCESS=OFF)
@@ -200,7 +201,7 @@ folded into the re-baselined table above.
 ## Reproducing the whole report
 
 ```sh
-cmake --build build -j && (cd build && ctest --output-on-failure)   # 490 checks
+cmake --build build -j && (cd build && ctest --output-on-failure)   # count: see currency block
 python3 apps/validation/run_validation.py    # ISO 7401/4138/3888 -> REPORT.md
 python3 fmi_export/test_roundtrip.py          # FMU vs native
 ```

@@ -1,12 +1,20 @@
-# Ioniq5-class AWD parameters (public approximation — no measured tyre data).
-# Vehicle geometry + mass; tyre MF2002 in configs/parts/tire/ioniq5_pac2002.yaml.
-mass: 2359.0
-mass_sprung: 2200.0
+# Ioniq5-class AWD parameters.
+#
+# Source: IPG CarMaker 12.0.1 vehicle dataset "Hyundai_Ioniq_5_CG_based"
+#   (/home/ailab-12/git/cmrosif-12.0.1-control-validation/Data/Vehicle/).
+#   Mass, geometry and the suspension block below are read off that dataset;
+#   the conversion of every derived value is written next to it.  Values that
+#   CarMaker states directly are copied verbatim.
+# Tyre: MF2002 in configs/parts/tire/ioniq5_pac2002.yaml (NOT from CarMaker --
+#   the CarMaker dataset ships the generic example tyre RT_245_35R19).
+mass: 2359.0            # Body 2100.8 + 2x(WheelCarrier 44.959 + Wheel 29.161)
+                        #              + 2x(WheelCarrier 29.638 + Wheel 25.357)
+mass_sprung: 2100.8     # CarMaker Body.mass
 inertia_diag: [1200.0, 4200.0, 3400.0]
-wheelbase: 2.97
-cg_to_front: 1.17
+wheelbase: 2.97         # Wheel.fl.pos.x 3.79 - Wheel.rl.pos.x 0.82
+cg_to_front: 1.17       # 3.79 - Body.pos.x 2.635 (+ unsprung, = 1.167)
 cg_to_rear: 1.80
-track_front: 1.635
+track_front: 1.635      # CarMaker 2 x 0.817 = 1.634
 track_rear: 1.635
 cg_height: 0.58
 wheel_radius_nominal: 0.338
@@ -20,3 +28,35 @@ ackerman_percent: 0.0
 aero_drag_coeff: 0.28
 frontal_area: 2.45
 tire_yaml: parts/tire/ioniq5_pac2002.yaml
+
+# ---- Suspension (CarMaker-derived) ----
+# Wheel rate = spring table slope x Spring.Amplify, at motion ratio 1.0
+#   (SuspF/R.Kin.0.L.lSpring = 0 -1 0, so spring travel == wheel travel).
+#   front 49361 * 0.9 = 44424.9 N/m,  rear 54903 * 0.9 = 49412.7 N/m.
+spring_stiffness: [44425.0, 44425.0, 49413.0, 49413.0]
+# CarMaker splits bump/rebound (Damp_Push / Damp_Pull); VDSim has one linear
+# coefficient per corner, so this is the mean of the two low-speed slopes:
+#   front (2989.0 + 5869.6)/2,  rear (2921.9 + 4981.6)/2.
+damper_coefficient: [4429.0, 4429.0, 3952.0, 3952.0]
+# WheelCarrier + Wheel per corner (44.959+29.161, 29.638+25.357).
+unsprung_mass: [74.12, 74.12, 55.0, 55.0]
+# Spin inertia of the rotating wheel body only (CarMaker Wheel.X.I about y, the
+# spin axis: 0.859 1.718 0.859).  Must be given explicitly: the built-in fallback
+# 0.5 * unsprung_mass * r^2 treats the whole corner as a rotating disk, which
+# here would be 4.2 kg m^2 -- 2.5x too large, because most of the unsprung mass
+# is the non-rotating wheel carrier.
+wheel_inertia: [1.718, 1.718, 1.718, 1.718]
+# Anti-roll bar.  CarMaker stores a stabiliser "spring" rate c_Stabi [N/m] with
+# F_Stabi,l = c * (x_r - x_l) and F_Stabi,r = -F_Stabi,l (Reference Manual 12.7.3,
+# EQ 58/59); the stabi deflection equals the wheel travel here (lStabi = 0 1 0).
+# In pure roll x_r - x_l = track * phi, so K_roll = c_Stabi * track^2:
+#   front 16289 * 1.634^2 = 43490.9,  rear 18118 * 1.634^2 = 48374.3 [N m/rad].
+arb_stiffness_front: 43491.0
+arb_stiffness_rear: 48374.0
+# Roll-centre height from the CarMaker suspension kinematics table: the contact
+# patch moves laterally by dy/dz = dty/dtz + r_w * drx/dtz per unit wheel travel,
+# and h_rc = (track/2) * dy/dz.
+#   front (1.634/2) * (-0.059 + 0.298 * 0.628) = 0.1047 m
+#   rear  (1.634/2) * ( 0.035 + 0.298 * 0.314) = 0.1050 m
+roll_center_height_front: 0.105
+roll_center_height_rear: 0.105
