@@ -19,6 +19,7 @@ plot = ["matplotlib", "pillow"]
 [project.scripts]
 vdsim-quickstart = "quickstart:main"
 vdsim-render = "vdsim_render:main"
+vdsim-render3d = "vdsim_render3d:main"
 
 [project.urls]
 Homepage = "https://onlyti.github.io/VDSim/"

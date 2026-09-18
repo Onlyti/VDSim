@@ -613,6 +613,8 @@ PYBIND11_MODULE(vdsim, m) {
         .def(py::init<>())
         .def_readwrite("position",  &vdsim::ContactPoint::position)
         .def_readwrite("normal",    &vdsim::ContactPoint::normal)
+        .def_readwrite("road_dz",   &vdsim::ContactPoint::road_dz)
+        .def_readwrite("penetration", &vdsim::ContactPoint::penetration)
         .def_readwrite("is_valid",  &vdsim::ContactPoint::is_valid)
         .def_readwrite("mu_long",   &vdsim::ContactPoint::mu_long)
         .def_readwrite("mu_lat",    &vdsim::ContactPoint::mu_lat)
@@ -1051,6 +1053,9 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readonly("sim_time",      &vdsim::SimOutput::sim_time)
         .def_readonly("ax",            &vdsim::SimOutput::ax)
         .def_readonly("ay",            &vdsim::SimOutput::ay)
+        .def_readonly("az",            &vdsim::SimOutput::az)
+        .def_readonly("heave_z",       &vdsim::SimOutput::heave_z)
+        .def_readonly("contacts",      &vdsim::SimOutput::contacts)
         .def_readonly("roll",          &vdsim::SimOutput::roll)
         .def_readonly("pitch",         &vdsim::SimOutput::pitch)
         .def_readonly("Fz",            &vdsim::SimOutput::Fz)
@@ -1378,7 +1383,8 @@ PYBIND11_MODULE(vdsim, m) {
     py::class_<vdsim::DirectControlSessionOptions>(m, "DirectControlSessionOptions")
         .def(py::init<>())
         .def_readwrite("friction", &vdsim::DirectControlSessionOptions::friction)
-        .def_readwrite("nominal_dt", &vdsim::DirectControlSessionOptions::nominal_dt);
+        .def_readwrite("nominal_dt", &vdsim::DirectControlSessionOptions::nominal_dt)
+        .def_readwrite("level", &vdsim::DirectControlSessionOptions::level);
 
     m.def("make_direct_control_session",
           [](const vdsim::VehicleParams& vp, const vdsim::TireSetup& ts,

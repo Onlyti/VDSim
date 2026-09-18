@@ -86,6 +86,7 @@ SessionSnapshot SimSession::snapshot() const {
 
     v.push_back(ax_); v.push_back(ay_); v.push_back(roll_);
     v.push_back(pitch_); v.push_back(rack_);
+    v.push_back(az_); v.push_back(heave_z_);
     v.push_back(steer_applied_); v.push_back(throttle_applied_);
     v.push_back(brake_applied_);
     for (int i = 0; i < NUM_WHEELS; ++i) v.push_back(Fz_[i]);
@@ -136,6 +137,7 @@ void SimSession::restore(const SessionSnapshot& s) {
 
     ax_ = snap::get(v, p); ay_ = snap::get(v, p); roll_ = snap::get(v, p);
     pitch_ = snap::get(v, p); rack_ = snap::get(v, p);
+    az_ = snap::get(v, p); heave_z_ = snap::get(v, p);
     steer_applied_ = snap::get(v, p); throttle_applied_ = snap::get(v, p);
     brake_applied_ = snap::get(v, p);
     for (int i = 0; i < NUM_WHEELS; ++i) Fz_[i] = snap::get(v, p);
@@ -250,6 +252,8 @@ void SimSession::reset(const State& s0) {
     // the first observation of episode k+1 still carries episode k's accel,
     // slip and load.
     ax_ = ay_ = roll_ = pitch_ = rack_ = 0.0;
+    az_ = heave_z_ = 0.0;
+    contacts_ = ContactArray{};
     steer_applied_ = throttle_applied_ = brake_applied_ = 0.0;
     Fz_.fill(0.0);
     slip_ratio_.fill(0.0);
@@ -348,6 +352,8 @@ void SimSession::tick(double dt) {
 
         const double ax = dyn_->ax_body_est();
         const double ay = dyn_->ay_body_est();
+        const double az = dyn_->az_body_est();
+        const double heave = dyn_->heave_z();
         const double roll = dyn_->roll_angle_qs();
         const double pitch = dyn_->pitch_angle_qs();
         const double rack = dyn_->steering_rack_torque();
@@ -360,6 +366,7 @@ void SimSession::tick(double dt) {
             true_state_ = next;
             meas_state_ = meas;
             ax_ = ax; ay_ = ay; roll_ = roll; pitch_ = pitch; rack_ = rack;
+            az_ = az; heave_z_ = heave; contacts_ = contacts;
             steer_applied_ = steer_realized.steer_angle_wheel;
             throttle_applied_ = 0.0;
             brake_applied_ = 0.0;
@@ -389,6 +396,8 @@ void SimSession::tick(double dt) {
 
     const double ax = dyn_->ax_body_est();
     const double ay = dyn_->ay_body_est();
+    const double az = dyn_->az_body_est();
+    const double heave = dyn_->heave_z();
     const double roll = dyn_->roll_angle_qs();
     const double pitch = dyn_->pitch_angle_qs();
     const double rack = dyn_->steering_rack_torque();
@@ -400,6 +409,7 @@ void SimSession::tick(double dt) {
         true_state_ = next;
         meas_state_ = meas;
         ax_ = ax; ay_ = ay; roll_ = roll; pitch_ = pitch; rack_ = rack;
+        az_ = az; heave_z_ = heave; contacts_ = contacts;
         steer_applied_ = realized.steer_angle_wheel;
         throttle_applied_ = realized.throttle;
         brake_applied_ = realized.brake;
@@ -419,6 +429,7 @@ SimOutput SimSession::output() const {
     o.measured = meas_state_;
     o.sim_time = sim_time_;
     o.ax = ax_; o.ay = ay_; o.roll = roll_; o.pitch = pitch_;
+    o.az = az_; o.heave_z = heave_z_; o.contacts = contacts_;
     o.rack_torque = rack_;
     o.steer_applied = steer_applied_;
     o.throttle_applied = throttle_applied_;
@@ -483,8 +494,14 @@ std::unique_ptr<SimSession> make_direct_control_session(
     VehicleParams vp_dc = vp;
     vp_dc.plant_path = true;
     auto ground = make_friction_ground(opts.friction);
+    auto dyn =
+        (opts.level == "K" || opts.level == "L0") ? create_kinematic()
+        : (opts.level == "L1") ? create_bicycle()
+        : (opts.level == "L3") ? create_fourteen_dof()
+        : (opts.level == "L4") ? create_fourteen_dof_kinematic()
+                               : create_seven_dof();
     return std::make_unique<SimSession>(
-        create_seven_dof(), std::move(ground), vp_dc, ts, sp, cfg);
+        std::move(dyn), std::move(ground), vp_dc, ts, sp, cfg);
 }
 
 }  // namespace vdsim

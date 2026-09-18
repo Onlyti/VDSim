@@ -43,12 +43,20 @@ def check(cond, msg):
 
 def _minimal_writer(path, **kw):
     args = dict(
-        geometry={"wheelbase_m": 2.7, "track_m": 1.6, "steer_ratio": 15.0},
+        geometry={"wheelbase_m": 2.7, "track_m": 1.6, "steer_ratio": 15.0,
+                  "mass_kg": 2000.0, "cg_height_m": 0.55, "wheel_radius_m": 0.32,
+                  "wheel_width_m": 0.225, "body_lwh_m": [4.6, 1.9, 1.5]},
         tire={"friction_shape": "circle", "mu_aniso": [1.0, 1.0]},
         repro={"vdsim_version": "test", "git_sha": "x", "param_hash": "sha256:x",
                "seed": 1, "dt_s": 0.01, "run_id": "t"},
         producer={"name": "test", "version": "0"},
         role="plant",
+        model_level="L2",
+        contact_scope="C2",
+        # 2D-only synthetic samples: the 0.3 channels are additive optional
+        # (11 3.2.1), so this fixture declares the base set rather than
+        # fabricating an a_body it never computed.
+        channels=list(vt.BASE_CHANNELS),
     )
     args.update(kw)
     return vt.TraceWriter(path=path, **args)
@@ -71,7 +79,8 @@ def test_golden_roundtrip():
     with vt.TraceReader(FIXTURE) as tr:
         n = tr.n_steps
         check(n > 0, "fixture has %d samples" % n)
-        for name, (unit, trailing) in vt.CHANNEL_SPECS.items():
+        for name in vt.BASE_CHANNELS:
+            unit, trailing = vt.CHANNEL_SPECS[name]
             check(tr.has(name), "fixture carries channel %r" % name)
             arr = tr.channel(name)
             check(arr.shape == (n,) + trailing,
@@ -125,8 +134,14 @@ def _rewrite_manifest(src, dst, mutate):
 
 
 def test_role_is_written_at_0_2():
-    """The writer always emits schema 0.2 with a declared role, and rejects others."""
-    check(vt.SCHEMA_VERSION == "0.2", "writer emits schema_version 0.2")
+    """The writer emits the current schema with a declared role, and rejects others.
+
+    Pinned to :data:`vdsim_trace.SCHEMA_VERSION` rather than a literal: the gate
+    under test is "role is always written", and re-pinning a literal on every
+    minor bump turns that gate into busywork that gets loosened instead.
+    """
+    check(vt.SCHEMA_VERSION in vt.READABLE_SCHEMA_VERSIONS,
+          "writer emits a readable schema_version (%s)" % vt.SCHEMA_VERSION)
     with tempfile.TemporaryDirectory() as td:
         p = Path(td) / "role.vdtrace"
         w = _minimal_writer(p, role="predictor")
@@ -134,7 +149,8 @@ def test_role_is_written_at_0_2():
         w.finalize()
         with zipfile.ZipFile(p) as zf:
             m = json.loads(zf.read("manifest.json").decode())
-        check(m.get("schema_version") == "0.2", "manifest declares schema_version 0.2")
+        check(m.get("schema_version") == vt.SCHEMA_VERSION,
+              "manifest declares schema_version %s" % vt.SCHEMA_VERSION)
         check(m.get("role") == "predictor", "manifest carries the declared role")
         with vt.TraceReader(p) as tr:
             check(tr.role == "predictor", "reader exposes role %r" % tr.role)

@@ -43,15 +43,17 @@ def check(cond, msg):
 
 def _write_trace(path, channels=None, n=40):
     """Write a small synthetic trace carrying ``channels`` only."""
-    names = channels or list(vt.CHANNEL_SPECS)
+    names = channels or list(vt.BASE_CHANNELS)
     w = vt.TraceWriter(
         path=path,
-        geometry={"wheelbase_m": 2.7, "track_m": 1.6, "steer_ratio": 15.0},
+        geometry={"wheelbase_m": 2.7, "track_m": 1.6, "steer_ratio": 15.0,
+                  "mass_kg": 2000.0, "cg_height_m": 0.55, "wheel_radius_m": 0.32,
+                  "wheel_width_m": 0.225, "body_lwh_m": [4.6, 1.9, 1.5]},
         tire={"friction_shape": "circle", "mu_aniso": [1.0, 1.0]},
         repro={"vdsim_version": "test", "git_sha": "x", "param_hash": "sha256:x",
                "seed": 1, "dt_s": 0.05, "run_id": "preset_test"},
         producer={"name": "test_render_presets", "version": "0"},
-        role="plant",
+        role="plant", model_level="L2", contact_scope="C2",
         channels=names)
     full = {
         "t": 0.0, "pose": (0.0, 0.0, 0.0), "v_body": (12.0, 0.4),

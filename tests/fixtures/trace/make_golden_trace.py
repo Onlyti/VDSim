@@ -52,7 +52,18 @@ def _mu_at(x: float) -> float:
 
 
 def build():
-    """Synthesise the fixture channels and write the container."""
+    """Synthesise the fixture channels and write the container.
+
+    Refuses to run once the module has moved past ``0.2``. The 0.2 fixture is
+    the only artefact that keeps the backwards-compatible read path exercised,
+    so regenerating it at a newer schema would delete the very thing it tests —
+    and the deletion would look like a passing test run.
+    """
+    if vdsim_trace.SCHEMA_VERSION != "0.2":
+        raise SystemExit(
+            "vdsim_trace is at %s; golden_v0_2.vdtrace is frozen. Use "
+            "make_golden_trace_0_3.py for the current schema."
+            % vdsim_trace.SCHEMA_VERSION)
     plant_params = {
         "config": "fixture_vehicle.yaml", "base_mu": BASE_MU,
         "friction_map": [[PATCH_X[0], PATCH_X[1], LOW_MU]],

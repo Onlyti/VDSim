@@ -340,6 +340,120 @@ vdsim-render run.vdtrace --out run.gif --view-half 100 --preview-frame first-fai
 
 세 옵션 모두 단일 run 전용이라 겹침 모드에서는 무시된다.
 
+### 3D 리플레이 — `vdsim_render3d`
+
+위의 BEV는 구조상 평면이다. 스키마 `0.3`으로 기록한 run은 자세·승차높이·차체
+가속도·노면 접촉까지 담고 있고, `python/vdsim_render3d.py`는 그 trace 파일
+하나만으로 3차원 재생을 한다 — 시뮬레이터도 시나리오도 재실행도 필요 없다.
+
+```bash
+PYTHONPATH=python python3 -m vdsim_render3d run.vdtrace \
+    --out results/replay --cameras quarter,side,chase \
+    --stride 5 --fps 20 --rt1 force,accel,saturation,normal
+```
+
+기록부터 재생까지 한 번에:
+
+```bash
+python3 examples/demo_replay3d.py --out results/replay3d
+```
+
+2D 렌더러는 건드리지 않았다. `vdsim_render`와 `vdsim_render3d`는 컨테이너
+리더만 공유하는 별개 모듈이라, 같은 trace·같은 프리셋의 기존 BEV 산출물은
+바이트까지 동일하게 유지된다.
+
+**렌더 tier.** `RT0`는 항상 켜져 있다 — 차체 박스, 조향이 반영된 바퀴 4개,
+노면 격자, 주행 궤적. `RT1`은 `--rt1`로 레이어별 opt-in이다.
+
+| 레이어 | 그리는 것 | 필요 채널 |
+| --- | --- | --- |
+| `force` | 바퀴별 접지력 화살표 | `wheel_F` |
+| `accel` | CG 가속도 벡터 | `a_body` |
+| `saturation` | 마찰 포화도에 따른 바퀴 색 | `wheel_F`, `wheel_mu` |
+| `normal` | 접촉점의 노면 법선 | `wheel_road_normal` |
+| `refpath` | `path2d` 오버레이(점선) | `path2d` 오버레이 |
+
+`--rt1 all`이면 전부 켜진다. 서스펜션 링크·타이어 변형·접지압(RT2)은 그리지
+**않는다**. 안 하는 게 아니라 trace에 입력이 없다 — 그리려면 없는 값을
+지어내야 한다.
+
+벡터 길이는 고정 계수다. `--force-scale`(그려진 1 m당 N),
+`--accel-scale`(1 m당 m/s²), `--normal-scale`(단위 법선의 표시 길이)이며 매
+프레임 화면에 표기된다. 프레임별 autoscale은 없다 — 같은 화살표 길이가 시각에
+따라 다른 값을 뜻하면 영상이 알아채기 어려운 방식으로 거짓말을 한다.
+
+**카메라는 이름 목록이 아니라 조합이다.**
+`mount` × `aim` × `offset` × `projection` × `follow_attitude`가 계약이고,
+아래 6개는 그 조합의 별칭이다.
+
+| 별칭 | mount | aim | projection | 용도 |
+| --- | --- | --- | --- | --- |
+| `bev3d` | vehicle | vehicle | ortho | 위에서, 2D BEV의 3D 대응 |
+| `side` | vehicle | vehicle | ortho | roll·pitch·승차높이 판독 |
+| `quarter` | vehicle | vehicle | persp | 3/4 시점, 기본값 |
+| `chase` | vehicle | vehicle | persp | 차량 뒤 추종 |
+| `map_fixed` | world | fixed_point | persp | 궤적 전체가 한 프레임에 |
+| `map_track` | world | vehicle | persp | 고정 시점에서 차량 추적 |
+
+`follow_attitude` 기본값은 `yaw`다. roll·pitch는 일부러 따라가지 않는다 —
+카메라가 차체와 함께 기울면 수평선이 계속 수평으로 보여서 자세를 읽을 수
+없게 된다. 그게 3D 리플레이의 존재 이유인데 말이다.
+
+**카메라당 파일 1개, trace는 한 번만 읽는다.** `--cameras quarter,side`는
+`<run_id>__<preset>__<camera>.mp4`와 카메라별 preview PNG를 각각 쓴다. 그리드
+합성은 하지 않는다 — 해상도를 쪼개면 HUD 수치를 읽을 수 없다. 로드·decimation
+·utilization 파생계산은 카메라 수와 무관하게 1회이므로 총시간은
+`base + N × draw`다. 30 s L3 run(600프레임, ailab-12) 실측: load+prep은 양쪽
+모두 `0.19 s`, draw는 카메라 1대 `13.3 s` / 3대 `41.3 s`.
+
+`ffmpeg`은 `PATH`에 있으면 쓰고 번들하지 않는다. 없으면 렌더는 그대로
+성공하고 PNG 시퀀스와 재조립 명령 한 줄을 출력한다.
+
+**옛 trace는 거짓말 대신 저하 모드로 떨어진다.** `0.2` trace에는 `pose_zrp`가
+없으므로 `z = 0`, `roll = pitch = 0`으로 그리고 사유를 1회 출력한 뒤 프레임에
+라벨을 단다. 그리고 `contact_scope`가 `C0`/`C1`이면 코어가 법선의 x·y를 쓰지
+않은 것이므로 법선 레이어에 `normal: display-only` 배지가 붙는다 — 기울어진
+노면 위를 도는 화면과 평면 물리의 조합이야말로 그냥 통과해버리는 프레임이다.
+
+### trace 스키마 `0.3` — 3D 재생에 필요한 기록
+
+기록은 여전히 opt-in이고 꺼져 있을 때 비용은 없다(직전 리비전 대비 `step()`의
+`+0.08 %` 실측, 게이트는 1 %). `0.3`이 추가하는 것:
+
+- manifest의 `model_level`(`L1`..`L5`)과 `contact_scope`(`C0`/`C1`/`C2`), 둘 다
+  **필수**. 레벨이 있어야 "이 모델엔 roll이 없다"와 "roll을 기록하지 않았다"를
+  구분할 수 있고, scope는 노면 법선이 물리에 실제로 얼마나 결합됐는지를
+  선언한다.
+- `geometry`에 `mass_kg`, `cg_height_m`, `wheel_radius_m`, `wheel_width_m`,
+  `body_lwh_m` 추가. 3D 렌더러는 이 값들로 차체 박스·바퀴 실린더·CG 벡터의
+  크기를 정한다. 없으면 추측해야 하고, 추측한 차체 박스는 조용히 틀린 그림이다.
+- 채널 5종: `pose_zrp`(z, roll, pitch), `a_body`(ax, ay, az),
+  `wheel_road_dz`, `wheel_road_normal`, `wheel_travel`.
+
+`a_body`는 동역학이 내놓는 값을 그대로 쓴다. `v_body`의 수치미분이 아니다 —
+`dt = 1 ms`에서 그 차분은 대부분 노이즈고, decimation 설정에 따라 크기가
+달라진다.
+
+**레벨이 갖지 않는 양은 채널 자체를 기록하지 않는다.** L2(7-DOF) run에는 승차
+모델이 없으므로 `pose_zrp`를 0으로 채우는 대신 아예 쓰지 않는다. 리더는 부재와
+0을 구분할 수 있어야 하고, writer는 선언된 레벨이 만들 수 없는 채널을 거부한다.
+
+플랜트는 생성 시점에 레벨을 고르며, 제어 계약 `u = [delta_rad, Fx_total_N]`은
+모든 레벨에서 동일하다.
+
+```python
+from vdsim_plant import VDSimPlant
+
+plant = VDSimPlant(config="ioniq5_awd.yaml", level="L3")   # 14-DOF 승차 모델
+plant.reset([0, 0, 0, 22.0, 0, 0])
+plant.enable_trace("run.vdtrace", seed=0, run_id="demo")
+...
+plant.finalize_trace()
+```
+
+`0.1`·`0.2` trace는 계속 읽힌다. `0.3` 파일에서 필수 필드가 빠지면 경고가 아니라
+에러다.
+
 ## 설정 — parts catalog & scene (v0.3)
 
 차량 = `configs/parts/` 조합 **blueprint**, 실행 = `fleet[]`가 있는 **scene**
