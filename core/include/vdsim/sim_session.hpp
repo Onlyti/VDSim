@@ -80,6 +80,12 @@ struct DomainRandomization {
     double tire_stiffness_scale {1.0};   // B_long, B_lat, cornering_stiffness
     double tire_mu_scale        {1.0};   // TireParams::mu_nominal
     double sensor_delay_s       {-1.0};  // [s], <0 = keep the configured value
+    // Actuator channels.  Rebuilt at reset() from the as-built ActuatorParams,
+    // so the scales never compound across episodes.
+    double steer_delay_scale    {1.0};   // x steer ChannelActuator::dead_time_s
+    double steer_tau_scale      {1.0};   // x steer ChannelActuator::tau_s
+    double rate_limit_scale     {1.0};   // x rate_limit on all three channels
+    double brake_deadzone_add   {0.0};   // [-] added to brake dead_zone (pad wear)
 };
 
 class SimSession {
@@ -113,6 +119,14 @@ public:
     void set_randomization(const DomainRandomization& d);
     DomainRandomization randomization() const;
 
+    // Swap the actuator parameters on a live session.  Unlike construction this
+    // keeps every actuator memory, so dead time / lag / rate limit / dead-zone
+    // can change *during* an episode (degradation, fault injection).  The next
+    // reset() returns to the as-built parameters with DomainRandomization
+    // applied -- this setter is an in-episode override, not a new baseline.
+    void set_actuator(const ActuatorParams& p);
+    ActuatorParams actuator() const;
+
     // R6: this session's stochastic stream (sensor noise).  Re-armed at every
     // reset(), so episode k with the same seed is bitwise identical no matter
     // what ran before it.  Unset = the SensorParams seed from construction.
@@ -145,6 +159,7 @@ private:
     std::unique_ptr<IContactProvider> ground_;
     std::unique_ptr<IVehNetwork>      network_;   // ECU/CAN network (deadtime + drop)
     ActuatorModel     actuator_;
+    ActuatorParams    base_actuator_ {};  // as-built; randomization rebuilds from this
     SensorDelay       sensor_;
     SensorModel       sensors_;
     CascadeController cascade_;   // Lc5-L8 → CmdL4 (with measured-state feedback)

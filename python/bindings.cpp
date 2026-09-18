@@ -1075,7 +1075,11 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("mu_scale",             &vdsim::DomainRandomization::mu_scale)
         .def_readwrite("tire_stiffness_scale", &vdsim::DomainRandomization::tire_stiffness_scale)
         .def_readwrite("tire_mu_scale",        &vdsim::DomainRandomization::tire_mu_scale)
-        .def_readwrite("sensor_delay_s",       &vdsim::DomainRandomization::sensor_delay_s);
+        .def_readwrite("sensor_delay_s",       &vdsim::DomainRandomization::sensor_delay_s)
+        .def_readwrite("steer_delay_scale",    &vdsim::DomainRandomization::steer_delay_scale)
+        .def_readwrite("steer_tau_scale",      &vdsim::DomainRandomization::steer_tau_scale)
+        .def_readwrite("rate_limit_scale",     &vdsim::DomainRandomization::rate_limit_scale)
+        .def_readwrite("brake_deadzone_add",   &vdsim::DomainRandomization::brake_deadzone_add);
 
     // -------- R8: session snapshot / restore --------
     py::class_<vdsim::SessionSnapshot>(m, "SessionSnapshot")
@@ -1123,6 +1127,12 @@ PYBIND11_MODULE(vdsim, m) {
              py::arg("spec"),
              "Latch a DomainRandomization; applied at the next reset().")
         .def("randomization",  &vdsim::SimSession::randomization)
+        .def("set_actuator", &vdsim::SimSession::set_actuator, py::arg("actuator"),
+             "Swap ActuatorParams on a live session, keeping actuator memory "
+             "(delay rings, lag, LuGre, brake temperature). Takes effect on the "
+             "next tick(); the next reset() returns to the as-built params.")
+        .def("actuator", &vdsim::SimSession::actuator,
+             "The ActuatorParams currently in force on this session.")
         .def("state",          &vdsim::SimSession::state)
         .def("measured_state", &vdsim::SimSession::measured_state)
         .def("output",         &vdsim::SimSession::output)

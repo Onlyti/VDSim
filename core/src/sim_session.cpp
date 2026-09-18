@@ -50,6 +50,7 @@ SimSession::SimSession(std::unique_ptr<IVehicleDynamics> dyn,
     network_ = make_default_veh_network(cfg.veh_network);
     SimConfig cfg_act = cfg;
     apply_vehicle_steer_deadtime(cfg_act, vp);
+    base_actuator_ = cfg_act.actuator;
     actuator_.initialize(cfg_act.actuator, cfg_act.nominal_dt);
     sensor_.initialize(cfg.sensor_delay_s, cfg.nominal_dt);
     sensors_.initialize(cfg.sensors);
@@ -197,6 +198,16 @@ DomainRandomization SimSession::randomization() const {
     return rand_;
 }
 
+void SimSession::set_actuator(const ActuatorParams& p) {
+    std::lock_guard<std::mutex> lk(mtx_);
+    actuator_.set_params(p);
+}
+
+ActuatorParams SimSession::actuator() const {
+    std::lock_guard<std::mutex> lk(mtx_);
+    return actuator_.params();
+}
+
 // Rebuild the plant parameters from the as-built baseline and re-initialize in
 // place.  Called under mtx_ from reset().
 void SimSession::apply_randomization_locked() {
@@ -222,6 +233,20 @@ void SimSession::apply_randomization_locked() {
     const double delay = (rand_.sensor_delay_s >= 0.0) ? rand_.sensor_delay_s
                                                        : base_sensor_delay_s_;
     sensor_.initialize(delay, nominal_dt_);
+
+    // Actuator channels: rebuild from the as-built params so repeated resets do
+    // not compound the scales.  set_params() rather than initialize() -- the
+    // memory is cleared by actuator_.reset() in reset() right after this.
+    ActuatorParams ap = base_actuator_;
+    if (rand_.steer_delay_scale > 0.0) ap.steer.ch.dead_time_s *= rand_.steer_delay_scale;
+    if (rand_.steer_tau_scale   > 0.0) ap.steer.ch.tau_s       *= rand_.steer_tau_scale;
+    if (rand_.rate_limit_scale  > 0.0) {
+        ap.steer.ch.rate_limit *= rand_.rate_limit_scale;
+        ap.throttle.rate_limit *= rand_.rate_limit_scale;
+        ap.brake.ch.rate_limit *= rand_.rate_limit_scale;
+    }
+    ap.brake.ch.dead_zone += rand_.brake_deadzone_add;
+    actuator_.set_params(ap);
 }
 
 void SimSession::reset(const State& s0) {

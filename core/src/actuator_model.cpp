@@ -73,6 +73,30 @@ void ActuatorModel::initialize(const ActuatorParams& p, double nominal_dt) {
     initialized_ = true;
 }
 
+void ActuatorModel::grow_ring(FracDelay& b, double L, double dt) {
+    if (L <= 0.0 || dt <= 1e-9) return;
+    const int need = static_cast<int>(std::floor(L / dt)) + 3;
+    const int sz   = static_cast<int>(b.buf.size());
+    if (sz >= need) return;
+    // FracDelay::resize() zero-fills, which would wipe the delay line at the
+    // exact moment the delay grows.  Re-lay the samples oldest-first instead.
+    std::vector<double> out(static_cast<std::size_t>(need), 0.0);
+    for (int i = 0; i < sz; ++i)
+        out[static_cast<std::size_t>(i)] = b.ago(sz - 1 - i);
+    b.buf.swap(out);
+    b.w = sz;                      // next write slot; sz < need by construction
+}
+
+void ActuatorModel::set_params(const ActuatorParams& p) {
+    p_ = p;
+    // Pre-grow here so push_delay()'s own resize() (which zero-fills) never
+    // fires as a side effect of a mid-rollout dead-time increase.
+    grow_ring(steer_buf_,    p_.steer.ch.dead_time_s, nominal_dt_);
+    grow_ring(throttle_buf_, p_.throttle.dead_time_s, nominal_dt_);
+    grow_ring(brake_buf_,    p_.brake.ch.dead_time_s, nominal_dt_);
+    initialized_ = true;
+}
+
 void ActuatorModel::reset() {
     steer_buf_.clear(); throttle_buf_.clear(); brake_buf_.clear();
     steer_lag_ = throttle_lag_ = brake_lag_ = 0.0;

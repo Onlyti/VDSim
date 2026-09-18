@@ -86,6 +86,15 @@ public:
     void save_aux(std::vector<double>& v) const;
     void restore_aux(const std::vector<double>& v, std::size_t& p);
 
+    // Swap parameters on a live model WITHOUT clearing its memory (transport
+    // rings, lag / rate state, servo + LuGre bristle, brake temperature).
+    // initialize() resets all of that, so it cannot express an actuator whose
+    // characteristics change *during* a rollout -- degradation, fault
+    // injection, a latency step.  Transport rings grow in place, history kept,
+    // when the dead time increases.
+    void set_params(const ActuatorParams& p);
+    const ActuatorParams& params() const { return p_; }
+
     double brake_temperature() const { return brake_T_; }
     double steer_angle()       const { return steer_pos_; }
 
@@ -118,6 +127,8 @@ private:
     bool   initialized_ {false};
 
     double push_delay(FracDelay& buf, double v, double L, double dt) const;
+    // Grow a transport ring to hold delay L without discarding its history.
+    void   grow_ring(FracDelay& buf, double L, double dt);
 };
 
 // Feedback-path transport delay: returns the state as seen by the controller
