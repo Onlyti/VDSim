@@ -1,0 +1,44 @@
+# vdsim_rl default environment declaration (EnvConfig.from_yaml).
+# Observation layout is this list, left to right; a bare per-wheel name expands
+# to four columns in FL, FR, RL, RR order.
+level: L2
+dt: 0.005
+action_repeat: 4          # control interval = 20 ms
+max_steer: 0.5            # [rad] at the wheel
+mu: 1.0
+
+obs_fields:
+  - vx                    # [m/s] body
+  - vy                    # [m/s] body
+  - yaw_rate              # [rad/s]
+  - beta                  # [rad] side-slip
+  - ay                    # [m/s^2] body
+  - y                     # [m] lateral position (odom)
+  - yaw                   # [rad]
+  - slip_ratio            # 4 wheels
+  - slip_angle            # 4 wheels [rad]
+  - steer_applied         # [rad] after actuator
+  - throttle_applied
+  - brake_applied
+
+# termination (<=0 disables the check)
+lane_y: 0.0
+max_lateral: 6.0          # [m]
+max_roll: 0.7             # [rad]
+max_beta: 0.7             # [rad]
+max_yaw_rate: 3.0         # [rad/s]
+time_limit_s: 20.0        # [s] -> truncation
+min_speed: 1.0            # [m/s]
+
+# reset randomization
+speed_range: [8.0, 25.0]  # [m/s]
+lateral_range: 1.0        # +-[m]
+yaw_range: 0.1            # +-[rad]
+
+# solver / pool
+max_substep_dt: 0.001
+max_substeps: 64
+threads: 0                # 0 = hardware_concurrency
+
+crash_penalty: 10.0
+speed_target: 15.0        # [m/s]

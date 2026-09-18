@@ -16,7 +16,9 @@ add_library(vdsim_core
     src/control_converter.cpp
     src/actuator_model.cpp
     src/sensor_model.cpp
+    src/snapshot.cpp
     src/sim_session.cpp
+    src/vec_session.cpp
     src/default_subsystems.cpp
     src/module_plugin_loader.cpp
     src/suspension_lookup.cpp

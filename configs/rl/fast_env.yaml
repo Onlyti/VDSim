@@ -1,0 +1,64 @@
+# vdsim_rl training preset: same plant as default_env.yaml, coarser substep.
+#
+# G1 gate (2026-09-17, L3, outer tick 5 ms, reference = same plant at
+# max_substep_dt 0.1 ms).  Worst max-relative error over the manoeuvre,
+# throughput = 64 envs on 22 threads of an i7-13700K:
+#
+#   substep   step-steer ay   step-steer yaw   brake Fz_FL   throughput
+#   0.50 ms       0.23 %          0.08 %          0.51 %       80 k steps/s
+#   1.00 ms       0.52 %          0.18 %          1.22 %      157 k steps/s   <- default_env.yaml
+#   2.50 ms       1.38 %          0.37 %          4.07 %      377 k steps/s   <- this file
+#   5.00 ms       6.82 %          0.82 %          6.69 %      722 k steps/s   (rejected)
+#
+# Adopted: 2.5 ms for training (2.4x throughput, trajectory signals within
+# 1.4 %).  Keep default_env.yaml (1 ms) for evaluation and for any reward that
+# reads per-wheel load - Fz is the signal that degrades first.  5 ms is not
+# adopted: ay and Fz both pass 6 %.
+#
+# max_substeps must stay above outer_dt / max_substep_dt, otherwise the solver
+# silently clamps and runs a coarser step than requested.
+level: L2
+dt: 0.005
+action_repeat: 4
+max_steer: 0.5
+mu: 1.0
+
+obs_fields:
+  - vx
+  - vy
+  - yaw_rate
+  - beta
+  - ay
+  - y
+  - yaw
+  - slip_ratio
+  - slip_angle
+  - steer_applied
+  - throttle_applied
+  - brake_applied
+
+lane_y: 0.0
+max_lateral: 6.0
+max_roll: 0.7
+max_beta: 0.7
+max_yaw_rate: 3.0
+time_limit_s: 20.0
+min_speed: 1.0
+
+speed_range: [8.0, 25.0]
+lateral_range: 1.0
+yaw_range: 0.1
+
+# domain randomization (R5)
+mass_scale_range: [0.85, 1.15]
+mu_scale_range: [0.6, 1.0]
+tire_stiffness_scale_range: [0.85, 1.15]
+tire_mu_scale_range: [1.0, 1.0]
+sensor_delay_range: [-1.0, -1.0]
+
+max_substep_dt: 0.0025      # G1-adopted training value
+max_substeps: 64
+threads: 0
+
+crash_penalty: 10.0
+speed_target: 15.0

@@ -1,6 +1,6 @@
 # VDSim product roadmap
 
-**Last updated:** 2026-09-04 · **Tests:** [canonical validation status](VALIDATION.md)
+**Last updated:** 2026-09-17 · **Tests:** [canonical validation status](VALIDATION.md)
 
 Living roadmap from early PoC through v0.6. Tracks what shipped in **`main`** vs what
 is planned. The **VLA thesis closed-loop plant** (`python/vdsim_plant.py`) ships on
@@ -29,6 +29,7 @@ tire + direct-control session factory** on `main` → **VLA plant beta** on thes
 | Catalog / runtime | `--scene=`, fleet, FMI; **`make_direct_control_session`**, `FrictionMapConfig`, `SimOutput` wheel GT | External part packs; VDS1 v4; **Fx→τ contract (#1)** |
 | Closed-loop plant | Core session API on `main` | **VLA `VDSimPlant`** thesis-only → main PR when client done |
 | GUI | 3-tab scene UI, catalog API, workshops, multi-vehicle compare | **GUI v2** (framework decision); terrain Play; `.tir` import; **expose user-defined modules (decide: C++ `.so` plugin / Python path / GUI authoring)** |
+| Reinforcement learning | **Vectorized RL env: `VecSession` C++ pool (11.9x, bitwise-equal to serial), gymnasium/SB3 adapter, snapshot/restore, domain randomization** (§10) | Training-loop ceiling (policy-bound at 16% of core); controller-in-the-loop snapshot |
 | Validation | ISO 7401/4138/3888 **re-baselined + CI-gated** (`IsoBaseline`); [canonical suite status](VALIDATION.md) | Adams x-check rtol; commercial cross-val |
 
 ```mermaid
@@ -296,7 +297,28 @@ LuGre (contact bristle, presliding). See [`TIRE_ROADMAP.md`](design/TIRE_ROADMAP
 
 ---
 
-## 10. Validation & credibility
+## 10. Reinforcement-learning environment
+
+Training surface on top of `SimSession`; default-path physics unchanged.
+
+| Item | Status | Reference |
+|------|--------|-----------|
+| [x] `VecSession` — N resident sessions on a C++ thread pool, GIL released across the barrier | Shipped | `core/src/vec_session.cpp`; bitwise â¡ serial stepping, 11.9x on 22 threads, 6.8% barrier overhead |
+| [x] Gymnasium / SB3 adapter (`VDSimEnv`, `VDSimVecEnv`, `make_sb3_vec_env`) | Shipped | `python/vdsim_rl/`; PPO 100k-step run learns lane-keep + speed-hold (return 87.5 -> 552, episode length 309 -> 967 of 1000) |
+| [x] Six termination conditions judged in C++ with reason codes | Shipped | off-track, rollover, spin-out (beta / yaw-rate), stall, time limit |
+| [x] Zero-copy `(N, obs_dim)` float32 observation buffer, YAML field set | Shipped | `configs/rl/default_env.yaml` |
+| [x] Runtime domain randomization: mu, mass, tire stiffness / mu, sensor latency | Shipped | `reset()` arguments; provider re-creation 0 |
+| [x] Per-env seed streams (python + core), bitwise reproducible | Shipped | `reset()` also re-arms the diagnostic snapshot and the sensor RNG |
+| [x] `settle_spawn_on_ground` in core, exposed as `reset(settle=True)` | Shipped | moved out of `cosim/`; every front end settles a spawn the same way |
+| [x] `SessionSnapshot` save / restore (actuator, delay lines, sensor RNG, tire relaxation, model lag) | Shipped | picklable; restore is bitwise-identical on L1 / L2 / L3 |
+| [x] Substep accuracy gate vs a 0.1 ms baseline | Shipped | 1.0 ms 1.22% / 2.5 ms 4.07% / 5.0 ms 6.82% -> training 2.5 ms, evaluation 1.0 ms, 5.0 ms rejected (`configs/rl/fast_env.yaml`) |
+| [ ] `CascadeController` and non-identity network snapshotting | Planned | explicitly out of the first cut |
+| [x] Throughput target, re-judged 2026-09-17 | **Lowered / re-defined** | The old "1.0 M ticks/s" was a core-only number with no hardware basis. Measured on the reference box (8P+16E): core 378 k ticks/s @ 22 threads, near-linear on P-cores (1.97x @ 2 th) and ~half-rate on E-cores (11.8x @ 22 th). 1.0 M would need ~31 P-core equivalents -- a hardware statement, not a code one. New target: **>=350 k ticks/s on the reference box and >=90% of core throughput retained through the python adapter** -- both met (378 k / 93.7%). |
+| [ ] Training-loop throughput (the real ceiling) | Open | End-to-end PPO reaches only 61 k ticks/s = 16.2% of core; the CPU policy forward/backward dominates, and 64 envs is *slower* than 16 (32.8 k vs 61.3 k) because torch and the sim pool contend for the same cores. Candidates: GPU policy, pinning the sim pool off the torch threads, larger `n_steps` per update. Measured by `tests/rl/bench_throughput_layers.py`. |
+
+---
+
+## 11. Validation & credibility
 
 | Item | Status | Reference |
 |------|--------|-----------|
@@ -316,7 +338,7 @@ LuGre (contact bristle, presliding). See [`TIRE_ROADMAP.md`](design/TIRE_ROADMAP
 
 ---
 
-## 11. v0.4 — stunt physics (planned release)
+## 12. v0.4 — stunt physics (planned release)
 
 Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block tire T1/T2.
 
@@ -335,7 +357,7 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 
 ---
 
-## 12. Version history (checklist)
+## 13. Version history (checklist)
 
 ### PoC → v0.1 (2025)
 
@@ -416,7 +438,7 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 
 ---
 
-## 13. External messaging (approved)
+## 14. External messaging (approved)
 
 **Shipped today**
 
@@ -440,7 +462,7 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 
 ---
 
-## 14. Related documents
+## 15. Related documents
 
 | Doc | Role |
 |-----|------|
@@ -464,7 +486,7 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 
 ---
 
-## 15. Development priorities (`main`, 2026-06-20)
+## 16. Development priorities (`main`, 2026-06-20)
 
 Ordered for **implementation** (not doc-only). ISO / default subsystem numbers stay frozen
 unless an explicit re-baseline is agreed.

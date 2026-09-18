@@ -36,6 +36,7 @@
 //
 // matches the Task 22 quasi-static formulas.  Damper gives transient ringing.
 
+#include "vdsim/snapshot.hpp"
 #include "vdsim/control.hpp"
 #include "vdsim/coordinate.hpp"
 #include "vdsim/default_subsystems.hpp"
@@ -109,6 +110,33 @@ public:
                           - vp.arb_stiffness_front - vp.arb_stiffness_rear,
                       vp.arb_stiffness_front + vp.arb_stiffness_rear,
                       ts_.for_wheel(WHEEL_FL).tire_vertical_stiffness, vp.anti_dive_front);
+    }
+
+    // R8: the ride DOFs (heave / roll / pitch and the four unsprung masses) plus
+    // the frozen contact bookkeeping live here; the planar half lives in inner_.
+    void save_aux(std::vector<double>& v) const override {
+        v.push_back(z_s_); v.push_back(z_s_dot_);
+        v.push_back(phi_); v.push_back(phi_dot_);
+        v.push_back(th_);  v.push_back(th_dot_);
+        for (int i = 0; i < NUM_WHEELS; ++i) v.push_back(z_u_[i]);
+        for (int i = 0; i < NUM_WHEELS; ++i) v.push_back(z_u_dot_[i]);
+        for (int i = 0; i < NUM_WHEELS; ++i) v.push_back(mx_[i]);
+        for (int i = 0; i < NUM_WHEELS; ++i) v.push_back(road_dz_[i]);
+        for (int i = 0; i < NUM_WHEELS; ++i)
+            v.push_back(contact_valid_[i] ? 1.0 : 0.0);
+        inner_->save_aux(v);
+    }
+    void restore_aux(const std::vector<double>& v, std::size_t& p) override {
+        z_s_ = snap::get(v, p); z_s_dot_ = snap::get(v, p);
+        phi_ = snap::get(v, p); phi_dot_ = snap::get(v, p);
+        th_  = snap::get(v, p); th_dot_  = snap::get(v, p);
+        for (int i = 0; i < NUM_WHEELS; ++i) z_u_[i] = snap::get(v, p);
+        for (int i = 0; i < NUM_WHEELS; ++i) z_u_dot_[i] = snap::get(v, p);
+        for (int i = 0; i < NUM_WHEELS; ++i) mx_[i] = snap::get(v, p);
+        for (int i = 0; i < NUM_WHEELS; ++i) road_dz_[i] = snap::get(v, p);
+        for (int i = 0; i < NUM_WHEELS; ++i)
+            contact_valid_[i] = snap::get(v, p) != 0.0;
+        inner_->restore_aux(v, p);
     }
 
     void reset(const State& s) noexcept override {
@@ -503,9 +531,7 @@ private:
     }
 
     void integrate_vertical(double dt) noexcept {
-        const int N = std::max(1,
-                       std::min(sp_.max_substeps,
-                                static_cast<int>(std::ceil(dt / sp_.max_substep_dt))));
+        const int N = solver_substeps(sp_, dt);
         const double h = dt / static_cast<double>(N);
         const double ax = inner_->ax_body_est();
         const double ay = inner_->ay_body_est();

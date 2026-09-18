@@ -20,7 +20,7 @@ the last section.
 | ISO 7401 step-steer / 4138 understeer / 3888-2 DLC — run + measured | — |
 | L1↔L2↔L3 cross-model consistency where physics overlaps | Dependent axles (twist-beam / solid beam) — configs are stubs |
 | FMI round-trip Δ=0 (machine precision); ISO 8608 PSD RMS per class | L3 unsprung lateral-transfer term (small) |
-| Full suite: **485/485 ctest green** (`validation` preset, as of 2026-09-06) | — |
+| Full suite: **490/490 ctest green** (`validation` preset, as of 2026-09-17) | — |
 | Drivetrain engine inertia (open-diff carrier coupling) | — |
 | **ISO step-steer signature gated in CI** (`ctest -R IsoBaseline`, sedan L2 LuGre) | DLC moose gate is a preset property, not a defect (see note) |
 
@@ -48,12 +48,12 @@ version and the new numbers have to land in the same commit.
 
 <!-- VALIDATION-CURRENCY BEGIN -->
 ```text
-tests:    485/485
+tests:    490/490
 config:   cmake --preset validation && cmake --build --preset validation && ctest --preset validation
 presets:  CMakePresets.json@fb1f0c198a0201fcce2543a9f5b2242a255fb97a
 toolchain: cmake 3.31.10
-commit:   f9cf765
-date:     2026-09-06
+commit:   33d504b
+date:     2026-09-17
 excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: ergaccess (optional external dependency not installed -- VDSIM_WITH_ERGACCESS=OFF)
@@ -111,7 +111,7 @@ matching MF-Tyre/CarMaker. Initial wheel spin is set per-wheel via `free_roll_wh
 (vx/Re at static load) so no phantom longitudinal force appears at t=0. Re is opt-in: tires
 without BREFF/DREFF/FREFF (reff_*=0) fall back to the unloaded radius R0 unchanged.
 
-Full automated suite: `ctest --preset validation` — **485** checks, 100% green (see the currency block above).
+Full automated suite: `ctest --preset validation` — count and status in the currency block above.
 One-command evidence bundle (ctests + tire parity table + ISO figures + summary.md):
 `python3 tools/validation_report.py`.
 
@@ -200,7 +200,7 @@ folded into the re-baselined table above.
 ## Reproducing the whole report
 
 ```sh
-cmake --build build -j && (cd build && ctest --output-on-failure)   # 485 checks
+cmake --build build -j && (cd build && ctest --output-on-failure)   # 490 checks
 python3 apps/validation/run_validation.py    # ISO 7401/4138/3888 -> REPORT.md
 python3 fmi_export/test_roundtrip.py          # FMU vs native
 ```

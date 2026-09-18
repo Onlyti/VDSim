@@ -1,4 +1,7 @@
 // SensorModel implementation. See sensors.hpp.
+#include <sstream>
+
+#include "vdsim/snapshot.hpp"
 #include "vdsim/sensors.hpp"
 
 #include <cmath>
@@ -17,6 +20,9 @@ void SensorModel::initialize(const SensorParams& p) {
 }
 
 void SensorModel::reset() {
+    // normal_distribution caches the second Box-Muller value; without this the
+    // noise stream depends on where the previous episode stopped.
+    nd_.reset();
     b_ax_ = b_ay_ = b_az_ = b_wx_ = b_wy_ = b_wz_ = 0.0;
     b_w_ = {{0.0, 0.0, 0.0, 0.0}};
     b_st_ = b_gx_ = b_gy_ = b_gvx_ = b_gvy_ = 0.0;
@@ -62,7 +68,35 @@ SensorMeas SensorModel::apply(const State& s, double ax, double ay,
     m.gnss_y = meas(s.position.y(), p_.gnss_pos, b_gy_);
     m.gnss_vx = meas(vE, p_.gnss_vel, b_gvx_);
     m.gnss_vy = meas(vN, p_.gnss_vel, b_gvy_);
+    nd_.reset();   // R8: leave no un-snapshottable cache
     return m;
+}
+
+// ---- R8 snapshot ----------------------------------------------------------
+
+void SensorModel::save_aux(std::vector<double>& v, std::string& rng) const {
+    v.push_back(b_ax_); v.push_back(b_ay_); v.push_back(b_az_);
+    v.push_back(b_wx_); v.push_back(b_wy_); v.push_back(b_wz_);
+    for (int i = 0; i < NUM_WHEELS; ++i) v.push_back(b_w_[i]);
+    v.push_back(b_st_); v.push_back(b_gx_); v.push_back(b_gy_);
+    v.push_back(b_gvx_); v.push_back(b_gvy_);
+    std::ostringstream os;
+    os << rng_;
+    rng = os.str();
+}
+
+void SensorModel::restore_aux(const std::vector<double>& v, std::size_t& p,
+                              const std::string& rng) {
+    b_ax_ = snap::get(v, p); b_ay_ = snap::get(v, p); b_az_ = snap::get(v, p);
+    b_wx_ = snap::get(v, p); b_wy_ = snap::get(v, p); b_wz_ = snap::get(v, p);
+    for (int i = 0; i < NUM_WHEELS; ++i) b_w_[i] = snap::get(v, p);
+    b_st_ = snap::get(v, p); b_gx_ = snap::get(v, p); b_gy_ = snap::get(v, p);
+    b_gvx_ = snap::get(v, p); b_gvy_ = snap::get(v, p);
+    if (!rng.empty()) {
+        std::istringstream is(rng);
+        is >> rng_;
+    }
+    nd_.reset();
 }
 
 }  // namespace vdsim

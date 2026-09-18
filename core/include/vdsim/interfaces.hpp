@@ -66,6 +66,13 @@ public:
     // Set internal state (no error: caller's responsibility)
     virtual void reset(const State& initial) noexcept = 0;
 
+    // R8: model state that does not live in State -- per-wheel tire relaxation
+    // (belt / LuGre) transients and internal integrators.  Default: none, so a
+    // model without extra state needs no code.  save_aux appends, restore_aux
+    // consumes from `pos`.
+    virtual void save_aux(std::vector<double>&) const {}
+    virtual void restore_aux(const std::vector<double>&, std::size_t&) {}
+
     // Advance one tick. NaN / out-of-range inputs are logged and clamped.
     virtual void step(const ControlInput& u,
                       const ContactArray& contacts,
@@ -343,6 +350,14 @@ public:
                        const VehicleParams& vparams,
                        ContactArray& out) = 0;
 };
+
+// R7: drop / raise a spawn pose along world z until the wheels just touch the
+// surface, then zero vz.  A pose authored in 2D (x, y, yaw) has no usable z on
+// non-flat terrain: spawning interpenetrated makes the suspension blow up on
+// the first tick, spawning too high drops the car.  Idempotent, ~600 ground
+// queries worst case, no dynamics involved.
+void settle_spawn_on_ground(IContactProvider& ground,
+                            const VehicleParams& vp, State& s);
 
 std::unique_ptr<IContactProvider> create_flat_ground(double z = 0.0,
                                                      double mu = 1.0);

@@ -217,41 +217,8 @@ std::unique_ptr<vdsim::IContactProvider> make_ground(
     return vdsim::create_flat_ground(0.0, mu);
 }
 
-void settle_spawn_on_ground(vdsim::IContactProvider& ground,
-                            const vdsim::VehicleParams& vp, vdsim::State& s) {
-    auto max_pen = [&]() {
-        vdsim::ContactArray c{};
-        ground.query(s, vp, c);
-        double lift = 0.0;
-        for (int i = 0; i < vdsim::NUM_WHEELS; ++i) {
-            if (c[i].is_valid)
-                lift = std::max(lift, c[i].penetration);
-        }
-        return lift;
-    };
-    if (s.position.z() < 1e-6) s.position.z() = vp.cg_height;
-    for (int drop = 0; drop < 120; ++drop) {
-        if (max_pen() > 1e-5) break;
-        s.position.z() -= 0.04;
-        if (s.position.z() < -2.0) break;
-    }
-    for (int climb = 0; climb < 400; ++climb) {
-        if (max_pen() > 1e-5) break;
-        s.position.z() += 0.08;
-        if (s.position.z() > 250.0) break;
-    }
-    for (int k = 0; k < 24; ++k) {
-        const double lift = max_pen();
-        if (lift < 1e-5) break;
-        s.position.z() += lift;
-    }
-    for (int k = 0; k < 32; ++k) {
-        const double pen = max_pen();
-        if (pen < 1e-6) break;
-        s.position.z() -= std::min(pen * 0.5, 0.02);
-    }
-    s.velocity.z() = 0.0;
-}
+// settle_spawn_on_ground now lives in the core (vdsim/interfaces.hpp);
+// the call below resolves to vdsim::settle_spawn_on_ground by ADL.
 
 bool addr_same(const sockaddr_in& a, const sockaddr_in& b) {
     return a.sin_family == b.sin_family &&
