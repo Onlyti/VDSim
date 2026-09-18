@@ -421,6 +421,10 @@ public:
     double pitch_angle_qs() const override { return th_;  }
     double ax_body_est()    const override { return inner_->ax_body_est(); }
     double ay_body_est()    const override { return inner_->ay_body_est(); }
+    // The heave acceleration actually integrated over the last substep (the
+    // RK4-weighted mean of dz_dot), not a finite difference of z_s_.
+    double az_body_est()    const override { return az_est_; }
+    double heave_z()        const override { return z_s_; }
 
 private:
     struct Deriv6 {
@@ -575,6 +579,7 @@ private:
                                                   shift_zu(z_u_dot_, k3.dz_u_dot, h),
                                                   ax, ay);
 
+            az_est_   = (k1.dz_dot + 2*k2.dz_dot + 2*k3.dz_dot + k4.dz_dot) / 6.0;
             z_s_     += h * (k1.dz       + 2*k2.dz       + 2*k3.dz       + k4.dz)       / 6.0;
             z_s_dot_ += h * (k1.dz_dot   + 2*k2.dz_dot   + 2*k3.dz_dot   + k4.dz_dot)   / 6.0;
             phi_     += h * (k1.dphi     + 2*k2.dphi     + 2*k3.dphi     + k4.dphi)     / 6.0;
@@ -623,6 +628,7 @@ private:
 
     State state_;
     double z_s_ {0.0}, z_s_dot_ {0.0};
+    double az_est_ {0.0};   // [m/s^2] last integrated heave acceleration
     double phi_ {0.0}, phi_dot_ {0.0};
     double th_  {0.0}, th_dot_  {0.0};
     std::array<double, NUM_WHEELS> z_u_     {{0.0, 0.0, 0.0, 0.0}};

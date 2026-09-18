@@ -372,6 +372,128 @@ vdsim-render run.vdtrace --out run.gif --view-half 100 --preview-frame first-fai
 
 All three flags are single-run only — overlay mode ignores them.
 
+### Replay in 3D — `vdsim_render3d`
+
+The bird's-eye view above is flat by construction. A run recorded at schema
+`0.3` also carries attitude, ride height, body accelerations and the road
+contacts, and `python/vdsim_render3d.py` replays that in three dimensions from
+the trace file alone — no simulator, no scenario, no re-run:
+
+```bash
+PYTHONPATH=python python3 -m vdsim_render3d run.vdtrace \
+    --out results/replay --cameras quarter,side,chase \
+    --stride 5 --fps 20 --rt1 force,accel,saturation,normal
+```
+
+End to end, record and replay in one script:
+
+```bash
+python3 examples/demo_replay3d.py --out results/replay3d
+```
+
+The 2D renderer is untouched: `vdsim_render` and `vdsim_render3d` are separate
+modules that share only the container reader, so an existing BEV render of the
+same trace and preset stays byte-identical.
+
+**Render tiers.** `RT0` is always on — body box, four steered wheels, the ground
+grid and the driven trajectory. `RT1` is opt-in per layer through `--rt1`:
+
+| layer | draws | needs |
+| --- | --- | --- |
+| `force` | per-wheel contact-force arrows | `wheel_F` |
+| `accel` | the CG acceleration vector | `a_body` |
+| `saturation` | wheel colour by friction utilization | `wheel_F`, `wheel_mu` |
+| `normal` | per-wheel road normals at the contact points | `wheel_road_normal` |
+| `refpath` | the `path2d` overlay, dashed | a `path2d` overlay |
+
+`--rt1 all` turns them all on. Suspension links, tyre deformation and contact
+pressure (RT2) are **not** drawn: the trace has no input for them, so drawing
+them would mean inventing one.
+
+Vector lengths are fixed constants — `--force-scale` (N per drawn metre),
+`--accel-scale` (m/s² per drawn metre) and `--normal-scale` (drawn length of the
+unit normal), all printed on every frame. Nothing autoscales per frame: if the
+same arrow length meant different things at different times the video would be
+misleading in a way that is very hard to notice.
+
+**Cameras are a combination, not a list.** A camera is
+`mount` × `aim` × `offset` × `projection` × `follow_attitude`; the six names are
+aliases over that:
+
+| alias | mount | aim | projection | note |
+| --- | --- | --- | --- | --- |
+| `bev3d` | vehicle | vehicle | ortho | top-down, the 3D counterpart of the 2D BEV |
+| `side` | vehicle | vehicle | ortho | for reading roll, pitch and ride height |
+| `quarter` | vehicle | vehicle | persp | three-quarter, the default |
+| `chase` | vehicle | vehicle | persp | behind the car |
+| `map_fixed` | world | fixed_point | persp | whole trajectory in one frame |
+| `map_track` | world | vehicle | persp | fixed viewpoint, follows the car |
+
+`follow_attitude` defaults to `yaw`. Roll and pitch are deliberately **not**
+followed: a camera that rolled with the body would keep the horizon level and
+make the attitude unreadable, which is the one thing a 3D replay is for.
+
+**One file per camera, one pass over the trace.** `--cameras quarter,side`
+writes `<run_id>__<preset>__<camera>.mp4` plus a preview PNG for each; there is
+no grid composite, because splitting the resolution makes the HUD unreadable.
+Loading, decimation and the utilization derivation happen once regardless of how
+many cameras are drawn, so the total is `base + N × draw`. Measured on a 30 s L3
+run (600 frames, ailab-12): load+prep `0.19 s` either way, draw `13.3 s` for one
+camera and `41.3 s` for three.
+
+`ffmpeg` is used when it is on `PATH` and is never bundled. Without it the
+render still succeeds, writing a PNG sequence and printing the one-line command
+that assembles it.
+
+**Older traces degrade instead of lying.** A `0.2` trace has no `pose_zrp`, so
+the player draws `z = 0`, `roll = pitch = 0`, prints the reason once and labels
+every frame. And when `contact_scope` is `C0`/`C1` the core never read the road
+normal's x/y, so the normal layer carries a `normal: display-only` badge — a
+tilted road drawn over flat physics is exactly the frame that would otherwise
+pass review.
+
+### Trace schema `0.3` — what a 3D replay needs recorded
+
+Recording is still opt-in and still costs nothing when off (measured `+0.08 %`
+of `step()` on the OFF path against the previous revision; the gate is 1 %).
+What `0.3` adds:
+
+- `model_level` (`L1`..`L5`) and `contact_scope` (`C0`/`C1`/`C2`) in the
+  manifest, both **required**. The level is what lets a reader tell "this model
+  has no roll" from "the roll was never recorded"; the scope declares how far
+  the road normal actually reaches into the physics.
+- `geometry` gains `mass_kg`, `cg_height_m`, `wheel_radius_m`, `wheel_width_m`
+  and `body_lwh_m`. A 3D renderer sizes the body box, the wheel cylinders and
+  the CG vector from these — without them it would be guessing, and a guessed
+  body box is a picture that is quietly wrong.
+- five channels: `pose_zrp` (z, roll, pitch), `a_body` (ax, ay, az),
+  `wheel_road_dz`, `wheel_road_normal`, `wheel_travel`.
+
+`a_body` comes straight from the dynamics. It is not the derivative of
+`v_body`: at `dt = 1 ms` that difference is mostly noise, and its magnitude
+would change with the decimation setting.
+
+**A level that does not have a quantity does not record the channel.** An L2
+(7-DOF) run has no ride model, so it writes no `pose_zrp` at all rather than a
+column of zeros — a reader must be able to tell absence from zero, and the
+writer refuses a channel the declared level cannot produce.
+
+The plant picks its level at construction, and the control contract
+`u = [delta_rad, Fx_total_N]` is the same at every level:
+
+```python
+from vdsim_plant import VDSimPlant
+
+plant = VDSimPlant(config="ioniq5_awd.yaml", level="L3")   # 14-DOF ride model
+plant.reset([0, 0, 0, 22.0, 0, 0])
+plant.enable_trace("run.vdtrace", seed=0, run_id="demo")
+...
+plant.finalize_trace()
+```
+
+`0.1` and `0.2` traces stay readable. A `0.3` file that omits any of the
+required fields is an error, not a warning.
+
 ## Config — parts catalog & scenes (v0.3)
 
 Vehicles are **blueprints** over `configs/parts/` (chassis, tire, drivetrain, …).

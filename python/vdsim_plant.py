@@ -98,6 +98,56 @@ def _load_tire_setup_for_vehicle(vp_path: Path) -> vdsim.TireSetup:
 #: render and keeps 1 kHz control loops at a 10x storage saving.
 TRACE_TARGET_HZ = 100.0
 
+#: Ladder levels this plant can be built at. The control contract
+#: ``u = [delta_rad, Fx_total_N]`` is the same at every one of them; only the
+#: model behind the seam changes, and with it which trace channels exist.
+PLANT_LEVELS = ("L1", "L2", "L3", "L4")
+
+#: How far the road normal is coupled into the physics, per level
+#: (``11_trace_contract_spec`` §3.1.1 ``contact_scope``).
+#:
+#: This is a **measurement, not an aspiration**. It is measured by stepping the
+#: dynamics twice with contact arrays that differ only in the normal — once the
+#: true banked normal, once ``(0,0,1)`` — and asking whether the trajectory
+#: moves. On ``origin/main`` (D1/D2 merged) every level moves, so every level is
+#: ``C2``. ``tests/scripts/test_trace_0_3.py`` re-runs that comparison and fails
+#: if the declaration and the code ever drift apart, which is the only thing
+#: that keeps a hand-written constant honest.
+CONTACT_SCOPE_BY_LEVEL = {
+    "L1": "C2",
+    "L2": "C2",
+    "L3": "C2",
+    "L4": "C2",
+}
+
+
+def body_dimensions(vp_path):
+    """Read the body box and wheel width [m] from the vehicle YAML.
+
+    Schema ``0.3`` needs ``body_lwh_m`` and ``wheel_width_m`` because a 3D
+    renderer draws a body box and wheel cylinders (§3.1.1). They are vehicle
+    facts, not render settings, so they live in the vehicle file — and they have
+    **no default**: a guessed body length would put the wheels in the wrong place
+    on screen and nothing would report it.
+
+    :param vp_path: vehicle YAML path.
+    :returns: ``(body_lwh_m, wheel_width_m)``.
+    :raises KeyError: when the vehicle file declares neither.
+    """
+    import yaml
+    data = yaml.safe_load(Path(vp_path).read_text()) or {}
+    missing = [k for k in ("body_lwh_m", "wheel_width_m") if k not in data]
+    if missing:
+        raise KeyError(
+            "vehicle config %s declares no %s; trace schema 0.3 requires them "
+            "(11 §3.1.1). Add them to the vehicle YAML rather than defaulting "
+            "them here — a guessed body box is a silently wrong picture."
+            % (Path(vp_path).name, ", ".join(missing)))
+    lwh = [float(v) for v in data["body_lwh_m"]]
+    if len(lwh) != 3 or not all(v > 0.0 for v in lwh):
+        raise ValueError("body_lwh_m must be [length, width, height] in m, all > 0")
+    return lwh, float(data["wheel_width_m"])
+
 
 def measure_mu_aniso(tp: vdsim.TireParams, Fz: float = None, n: int = 601):
     """Measure the friction-ellipse mu multipliers of a tyre parameter set.
@@ -329,7 +379,14 @@ class _VehicleView:
 
 
 class VDSimPlant:
-  """Ld2 7DOF Pacejka plant with direct Fx→torque path (no throttle map)."""
+  """Pacejka plant with a direct Fx→torque path (no throttle map).
+
+  ``level`` selects the model behind the seam — ``"L2"`` (7-DOF, the default and
+  the historical behaviour), ``"L3"``/``"L4"`` (14-DOF ride models), ``"L1"``
+  (bicycle). The control contract ``u = [delta_rad, Fx_total_N]`` does not
+  change with the level; what changes is which quantities exist, and therefore
+  which trace channels a run at that level is allowed to record.
+  """
 
   def __init__(
       self,
@@ -339,7 +396,11 @@ class VDSimPlant:
       base_mu: float = 0.9,
       control_dt: float = 0.05,
       substep_dt: float = 5e-4,
+      level: str = "L2",
   ):
+      if level not in PLANT_LEVELS:
+          raise ValueError(
+              f"level={level!r} is not one of {list(PLANT_LEVELS)}")
       if not math.isfinite(base_mu) or not (0.0 < base_mu <= 1.2):
           raise ValueError(f"base_mu={base_mu} outside (0, 1.2]")
       if friction_map is not None and friction_map_2d is not None:
@@ -368,7 +429,9 @@ class VDSimPlant:
       opts.friction.x_bands = patches
       opts.friction.polygons = poly_patches
       opts.friction.blend_distance = 1.0
+      opts.level = level
 
+      self.level = level
       self.control_dt = float(control_dt)
       self.substep_dt = float(substep_dt)
       self._n_sub = int(round(control_dt / substep_dt))
@@ -379,8 +442,10 @@ class VDSimPlant:
       # regression to the customer. `_trace is None` is the OFF fast path.
       self._trace = None
       self._t = 0.0
+      self._vp_path = vp_path
       self._plant_params = {
           "config": Path(vp_path).name,
+          "level": level,
           "base_mu": float(base_mu),
           "friction_map": [[float(a), float(b), float(m)] for a, b, m in (friction_map or [])],
           "friction_map_2d": [
@@ -478,6 +543,7 @@ class VDSimPlant:
       decimation = int(decimation)
 
       shape, aniso = measure_mu_aniso(self._ts.wheel[0])
+      body_lwh, wheel_width = body_dimensions(self._vp_path)
       path = Path(path)
       geometry = {
           "wheelbase_m": float(self._vp.wheelbase),
@@ -488,6 +554,12 @@ class VDSimPlant:
           "cg_to_front_m": float(self._vp.cg_to_front),
           "cg_to_rear_m": float(self._vp.cg_to_rear),
           "wheel_radius_m": float(self._vp.wheel_radius_nominal),
+          # -- 0.3 (§3.1.1): the 3D renderer sizes the body box, the wheel
+          # -- cylinders and the CG acceleration vector from these.
+          "mass_kg": float(self._vp.mass),
+          "cg_height_m": float(self._vp.cg_height),
+          "wheel_width_m": wheel_width,
+          "body_lwh_m": body_lwh,
       }
       repro = {
           "vdsim_version": _vdsim_version(),
@@ -500,9 +572,13 @@ class VDSimPlant:
           "substep_dt_s": float(self.substep_dt),
           "decimation": decimation,
       }
+      self._channels = vdsim_trace.channels_for_level(self.level)
       self._trace = vdsim_trace.TraceWriter(
           path=path,
           geometry=geometry,
+          model_level=self.level,
+          contact_scope=CONTACT_SCOPE_BY_LEVEL[self.level],
+          channels=self._channels,
           tire={"friction_shape": shape, "mu_aniso": aniso,
                 "mu_aniso_source": "measured"},
           repro=repro,
@@ -532,7 +608,7 @@ class VDSimPlant:
   def _record(self, delta: float, fx: float):
       o = self._sess.output()
       st = o.state
-      self._trace.append({
+      sample = {
           "t": self._t,
           "pose": (float(st.position[0]), float(st.position[1]), float(st.yaw())),
           "v_body": (float(st.vx()), float(st.vy())),
@@ -545,7 +621,30 @@ class VDSimPlant:
           "wheel_mu": [float(o.wheel_mu[i]) for i in range(4)],
           "wheel_kappa": [float(o.slip_ratio[i]) for i in range(4)],
           "wheel_alpha": [float(o.slip_angle[i]) for i in range(4)],
-      })
+      }
+      # 0.3 channels. `self._channels` already excludes anything this level does
+      # not produce, so no branch here can write a zero standing in for a
+      # quantity the model does not have (§3.2.1).
+      ch = self._channels
+      if "a_body" in ch:
+          # Straight from the dynamics — never a difference of `v_body`, which
+          # at dt=1 ms would hand the CG vector a noise floor larger than the
+          # signal and would change size with `decimation`.
+          sample["a_body"] = (float(o.ax), float(o.ay), float(o.az))
+      if "pose_zrp" in ch:
+          # z = settled CG height + the ride model's heave about it.
+          sample["pose_zrp"] = (float(st.position[2]) + float(o.heave_z),
+                                float(o.roll), float(o.pitch))
+      if "wheel_road_dz" in ch:
+          sample["wheel_road_dz"] = [float(o.contacts[i].road_dz) for i in range(4)]
+      if "wheel_road_normal" in ch:
+          sample["wheel_road_normal"] = [
+              (float(o.contacts[i].normal[0]),
+               float(o.contacts[i].normal[1]),
+               float(o.contacts[i].normal[2])) for i in range(4)]
+      if "wheel_travel" in ch:
+          sample["wheel_travel"] = [float(st.susp_compression[i]) for i in range(4)]
+      self._trace.append(sample)
 
   @property
   def vehicle(self):

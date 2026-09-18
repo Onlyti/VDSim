@@ -20,3 +20,10 @@ ackerman_percent: 0.0
 aero_drag_coeff: 0.28
 frontal_area: 2.45
 tire_yaml: parts/tire/ioniq5_pac2002.yaml
+
+# Body box and wheel width, for the 3D replay renderer (trace schema 0.3,
+# 11_trace_contract_spec 3.1.1). Published Ioniq 5 exterior dimensions
+# L x W x H = 4635 x 1890 x 1605 mm; wheel_width_m is the 255/45R20 section
+# width. These size the drawn primitives only -- no equation reads them.
+body_lwh_m: [4.635, 1.890, 1.605]
+wheel_width_m: 0.255

@@ -59,12 +59,15 @@ def write_run(path, n, dt, y0=0.0, v=15.0, yaw0=0.0, yaw_rate=0.0,
     w = vt.TraceWriter(
         path=path,
         geometry={"wheelbase_m": 2.7, "track_m": 1.6, "steer_ratio": 15.0,
-                  "body_length_m": 4.6, "body_width_m": 1.9},
+                  "body_length_m": 4.6, "body_width_m": 1.9,
+                  "mass_kg": 2000.0, "cg_height_m": 0.55, "wheel_radius_m": 0.32,
+                  "wheel_width_m": 0.225, "body_lwh_m": [4.6, 1.9, 1.5]},
         tire={"friction_shape": "circle", "mu_aniso": [1.0, 1.0]},
         repro={"vdsim_version": "test", "git_sha": "x", "param_hash": "sha256:x",
                "seed": 1, "dt_s": dt, "run_id": run_id},
         producer={"name": "test_trace_multi_render", "version": "0"},
-        role="plant")
+        role="plant", model_level="L2", contact_scope="C2",
+        channels=list(vt.BASE_CHANNELS))
     x, y, yaw = 0.0, y0, yaw0
     for i in range(n):
         t = i * dt

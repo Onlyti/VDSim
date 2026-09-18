@@ -137,11 +137,13 @@ def test_series_selection_is_manifest_driven():
         p = Path(td) / "partial.vdtrace"
         w = vt.TraceWriter(
             path=p,
-            geometry={"wheelbase_m": 2.7, "track_m": 1.6, "steer_ratio": 15.0},
+            geometry={"wheelbase_m": 2.7, "track_m": 1.6, "steer_ratio": 15.0,
+                      "mass_kg": 2000.0, "cg_height_m": 0.55, "wheel_radius_m": 0.32,
+                      "wheel_width_m": 0.225, "body_lwh_m": [4.6, 1.9, 1.5]},
             tire={"friction_shape": "circle", "mu_aniso": [1.0, 1.0]},
             repro={"vdsim_version": "t", "git_sha": "x", "param_hash": "sha256:x",
                    "seed": 0, "dt_s": 0.05, "run_id": "partial"},
-            role="plant",
+            role="plant", model_level="L2", contact_scope="C2",
             channels=["t", "pose", "yaw_rate", "u_steer"])
         for i in range(20):
             w.append({"t": i * 0.05, "pose": (i * 0.5, 0.0, 0.0),

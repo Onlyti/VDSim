@@ -20,6 +20,8 @@
 #include <vector>
 
 #include "vdsim/actuator.hpp"
+#include <string>
+
 #include "vdsim/contact.hpp"
 #include "vdsim/control.hpp"
 #include "vdsim/control_converter.hpp"
@@ -53,7 +55,10 @@ struct SimOutput {
     State  measured {};                  // sensor-delayed (controller feedback)
     double sim_time {0.0};
     double ax {0.0}, ay {0.0};           // body accel (ax_body_est / ay_body_est)
+    double az {0.0};                     // body vertical accel (az_body_est); 0 on planar models
     double roll {0.0}, pitch {0.0};      // roll_angle_qs / pitch_angle_qs
+    double heave_z {0.0};                // sprung-CG heave [m] about the settled ride height
+    ContactArray contacts {};            // the wheel contacts this tick was stepped with
     std::array<double, NUM_WHEELS> Fz {{0,0,0,0}};
     std::array<Vec3, NUM_WHEELS>   tire_forces {};       // body-frame per wheel [N]
     std::array<Vec3, NUM_WHEELS>   tire_forces_wheel {}; // contact / wheel frame [N]
@@ -168,6 +173,8 @@ private:
     State  true_state_ {};
     State  meas_state_ {};
     double ax_ {0.0}, ay_ {0.0}, roll_ {0.0}, pitch_ {0.0}, rack_ {0.0};
+    double az_ {0.0}, heave_z_ {0.0};
+    ContactArray contacts_ {};
     double steer_applied_ {0.0}, throttle_applied_ {0.0}, brake_applied_ {0.0};
     std::array<double, NUM_WHEELS> Fz_ {{0,0,0,0}};
     std::array<Vec3, NUM_WHEELS>   tire_forces_ {};
@@ -197,6 +204,11 @@ std::unique_ptr<IContactProvider> make_friction_ground(const FrictionMapConfig& 
 struct DirectControlSessionOptions {
     FrictionMapConfig friction;
     double nominal_dt {0.001};
+    // Ladder level of the plant behind the direct-control seam.
+    // "K"/"L0" kinematic, "L1" bicycle, "L2" 7-DOF (default, historical
+    // behaviour), "L3" 14-DOF ride, "L4" 14-DOF + KC tables.
+    // The control contract does not change with the level.
+    std::string level {"L2"};
 };
 
 std::unique_ptr<SimSession> make_direct_control_session(

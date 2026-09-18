@@ -126,6 +126,14 @@ public:
     virtual double pitch_angle_qs() const { return 0.0; }   // [rad]
     virtual double ax_body_est()    const { return 0.0; }   // [m/s^2]
     virtual double ay_body_est()    const { return 0.0; }
+    // Body-frame vertical acceleration of the sprung mass, about its static
+    // equilibrium (gravity already carried by the static loads).  Zero for a
+    // planar model because such a model *has* no vertical mode -- that zero is
+    // the model's own answer, not a placeholder.  Ride models (L3+) override.
+    virtual double az_body_est()    const { return 0.0; }   // [m/s^2]
+    // Sprung-CG heave [m] relative to the settled ride height, same sign as
+    // world +z.  Planar models do not heave, so 0.
+    virtual double heave_z()        const { return 0.0; }   // [m]
 
     // Steering-rack feedback torque (sum of front-wheel Mz times steering ratio).
     // Useful for driver model torque feedback. Returns 0 for L1 (axle-averaged Mz).

@@ -42,13 +42,15 @@ from pathlib import Path
 import numpy as np
 
 #: Container schema version written by this module. ``0.x`` is unstable —
-#: see the release notes. ``0.2`` added the required ``role`` field (§3.1).
-SCHEMA_VERSION = "0.2"
+#: see the release notes. ``0.2`` added the required ``role`` field (§3.1);
+#: ``0.3`` added ``model_level``, ``contact_scope``, the 3D geometry block and
+#: the five 3D channels of §3.2.1.
+SCHEMA_VERSION = "0.3"
 
 #: ``0.x`` minors this reader accepts. Each ``0.x`` minor is its own line, so
 #: readability is opt-in rather than inferred: ``0.1`` stays readable only
 #: because :func:`_resolve_role` defines a fallback for its missing ``role``.
-READABLE_SCHEMA_VERSIONS = ("0.1", "0.2")
+READABLE_SCHEMA_VERSIONS = ("0.1", "0.2", "0.3")
 
 #: Declared role of the run a trace records (§3.1, decided 2026-09-02).
 #: ``plant`` is the simulator under verification; ``predictor`` is the same
@@ -63,6 +65,30 @@ LEGACY_DEFAULT_ROLE = "plant"
 
 #: Wheel order used by every per-wheel channel.
 WHEELS = ("FL", "FR", "RL", "RR")
+
+#: Ladder level of the model that produced the run (§3.1.1, required at 0.3).
+#: It is the *only* thing that distinguishes "this model has no roll" from
+#: "somebody forgot to record roll", so a consumer that cannot read it cannot
+#: tell a planar run from a broken one.
+MODEL_LEVELS = ("L1", "L2", "L3", "L4", "L5")
+
+#: How far the road normal is actually coupled into the physics (§3.1.1).
+#: ``C0`` flat only, ``C1`` the normal's z component (height / load) only,
+#: ``C2`` the full normal (contact frame rotates with the surface).
+#: Record what the core does, never what the picture suggests.
+CONTACT_SCOPES = ("C0", "C1", "C2")
+
+#: Lowest ladder level at which a 0.3 channel carries meaning (§3.2.1 table).
+#: A level below this does not have the quantity, so the channel is *absent*
+#: rather than zero — "no channel" and "channel of zeros" must stay
+#: distinguishable for a consumer.
+CHANNEL_MIN_LEVEL = {
+    "a_body":            "L2",
+    "pose_zrp":          "L3",
+    "wheel_road_dz":     "L3",
+    "wheel_road_normal": "L3",
+    "wheel_travel":      "L3",
+}
 
 _MANIFEST_NAME = "manifest.json"
 _CHANNEL_DIR = "channels"
@@ -83,7 +109,46 @@ CHANNEL_SPECS = {
     "wheel_mu":    ("-",       (4,)),
     "wheel_kappa": ("-",       (4,)),
     "wheel_alpha": ("rad",     (4,)),
+    # -- 0.3 extension (§3.2.1). Additive and optional: a 0.2 reader ignores
+    # -- what it does not know, which is why this did not widen 0.2's scope.
+    "pose_zrp":          ("m,rad,rad", (3,)),
+    "a_body":            ("m/s^2",     (3,)),
+    "wheel_road_dz":     ("m",         (4,)),
+    "wheel_road_normal": ("-",         (4, 3)),
+    "wheel_travel":      ("m",         (4,)),
 }
+
+#: Channels of the 0.1/0.2 contract — the set a trace records when no explicit
+#: subset is requested at those versions.
+BASE_CHANNELS = tuple(n for n in CHANNEL_SPECS if n not in CHANNEL_MIN_LEVEL)
+
+
+def channels_for_level(model_level, base=None):
+    """Channel names a ``model_level`` run is allowed to record.
+
+    The 0.1 channels plus every 0.3 channel whose ``CHANNEL_MIN_LEVEL`` the
+    level reaches. Used by producers so the "do not zero-fill" rule of §3.2.1
+    is enforced by construction rather than by reviewer attention.
+
+    :param model_level: one of :data:`MODEL_LEVELS`.
+    :param base: base channel names; defaults to :data:`BASE_CHANNELS`.
+    :returns: tuple of channel names in :data:`CHANNEL_SPECS` order.
+    """
+    rank = _level_rank(model_level)
+    names = set(base if base is not None else BASE_CHANNELS)
+    for name, min_level in CHANNEL_MIN_LEVEL.items():
+        if rank >= _level_rank(min_level):
+            names.add(name)
+    return tuple(n for n in CHANNEL_SPECS if n in names)
+
+
+def _level_rank(model_level) -> int:
+    """Ordinal of a ladder level; raises on an unknown one."""
+    try:
+        return MODEL_LEVELS.index(str(model_level))
+    except ValueError:
+        raise TraceSchemaError(
+            "model_level must be one of %s, got %r" % (list(MODEL_LEVELS), model_level))
 
 #: Overlay kinds the container validates. Unknown kinds are stored verbatim
 #: (a renderer must ignore them); a missing ``kind`` is rejected.
@@ -95,6 +160,13 @@ _REQUIRED_MANIFEST_KEYS = (
 )
 _REQUIRED_REPRO_KEYS = ("vdsim_version", "git_sha", "param_hash", "seed", "dt_s", "run_id")
 _REQUIRED_GEOMETRY_KEYS = ("wheelbase_m", "track_m", "steer_ratio")
+#: Added at 0.3 (§3.1.1). A 3D renderer draws a body box, wheel cylinders and a
+#: CG acceleration vector; without these five it would be sizing them by guess,
+#: which is the renderer/simulator coupling this contract exists to remove.
+_REQUIRED_GEOMETRY_KEYS_0_3 = (
+    "mass_kg", "cg_height_m", "wheel_radius_m", "wheel_width_m", "body_lwh_m")
+#: Manifest keys 0.3 adds on top of :data:`_REQUIRED_MANIFEST_KEYS`.
+_REQUIRED_MANIFEST_KEYS_0_3 = ("model_level", "contact_scope")
 
 
 class TraceError(ValueError):
@@ -267,24 +339,47 @@ class TraceWriter:
         no default on purpose: the field exists to catch a producer that
         silently records a predictor run as if it were the plant, and a
         default would be that silence.
+    :param model_level: keyword-only and **required** at schema 0.3 — one of
+        :data:`MODEL_LEVELS`. Same reasoning as ``role``: it is the field that
+        says which 3D channels this run is entitled not to have.
+    :param contact_scope: keyword-only and **required** at schema 0.3 — one of
+        :data:`CONTACT_SCOPES`. Declare what the core consumes, not what the
+        picture implies; a run whose renderer tilts the road while the physics
+        stays flat is exactly what this field exposes.
     """
 
     def __init__(self, path, geometry, tire, repro, producer=None,
-                 decimation: int = 1, channels=None, extra=None, *, role):
+                 decimation: int = 1, channels=None, extra=None, *, role,
+                 model_level, contact_scope):
         decimation = int(decimation)
         if decimation < 1:
             raise TraceError("decimation must be >= 1, got %r" % (decimation,))
-        names = tuple(channels) if channels is not None else tuple(CHANNEL_SPECS)
+        if model_level not in MODEL_LEVELS:
+            raise TraceError(
+                "model_level must be one of %s, got %r" % (list(MODEL_LEVELS), model_level))
+        if contact_scope not in CONTACT_SCOPES:
+            raise TraceError(
+                "contact_scope must be one of %s, got %r"
+                % (list(CONTACT_SCOPES), contact_scope))
+        allowed = channels_for_level(model_level)
+        names = tuple(channels) if channels is not None else allowed
         unknown = [n for n in names if n not in CHANNEL_SPECS]
         if unknown:
             raise TraceError("unknown channel(s): %s" % (", ".join(unknown),))
-        _validate_geometry(geometry)
+        too_high = [n for n in names if n not in allowed]
+        if too_high:
+            raise TraceError(
+                "model_level %s does not produce %s — omit the channel instead of "
+                "recording zeros (§3.2.1)" % (model_level, ", ".join(sorted(too_high))))
+        _validate_geometry(geometry, SCHEMA_VERSION)
         _validate_tire(tire)
         if role not in ROLES:
             raise TraceError("role must be one of %s, got %r" % (list(ROLES), role))
 
         self.path = Path(path)
         self.role = role
+        self.model_level = model_level
+        self.contact_scope = contact_scope
         self.decimation = decimation
         self.geometry = dict(geometry)
         self.tire = dict(tire)
@@ -371,6 +466,8 @@ class TraceWriter:
             "schema_version": SCHEMA_VERSION,
             "producer": self.producer,
             "role": self.role,
+            "model_level": self.model_level,
+            "contact_scope": self.contact_scope,
             "repro": self.repro,
             "n_steps": int(n),
             "wheels": list(WHEELS),
@@ -391,7 +488,12 @@ class TraceWriter:
         return self.path
 
 
-def _validate_geometry(geometry):
+def _validate_geometry(geometry, schema_version=None):
+    """Validate the geometry block for the schema version that declared it.
+
+    The 0.3 keys are checked only on a 0.3 manifest: a 0.2 trace predates them
+    and stays readable, which is what keeps old fixtures alive.
+    """
     if not isinstance(geometry, dict):
         raise TraceSchemaError("manifest.geometry must be an object")
     missing = [k for k in _REQUIRED_GEOMETRY_KEYS if k not in geometry]
@@ -400,6 +502,26 @@ def _validate_geometry(geometry):
             "manifest.geometry is missing %s — the renderer draws the body "
             "rectangle, front-wheel position and steering angle from this block "
             "and must never guess vehicle parameters" % (", ".join(missing),))
+    if str(schema_version) != "0.3":
+        return
+    missing = [k for k in _REQUIRED_GEOMETRY_KEYS_0_3 if k not in geometry]
+    if missing:
+        raise TraceSchemaError(
+            "manifest.geometry is missing %s — schema 0.3 requires them (§3.1.1) "
+            "so a 3D renderer sizes the body box, the wheel cylinders and the CG "
+            "vector from the run instead of inventing defaults"
+            % (", ".join(missing),))
+    lwh = geometry.get("body_lwh_m")
+    if (not isinstance(lwh, (list, tuple)) or len(lwh) != 3
+            or not all(isinstance(v, (int, float)) and float(v) > 0.0 for v in lwh)):
+        raise TraceSchemaError(
+            "manifest.geometry.body_lwh_m must be [length, width, height] in m "
+            "with all three > 0, got %r" % (lwh,))
+    for key in ("mass_kg", "cg_height_m", "wheel_radius_m", "wheel_width_m"):
+        val = geometry.get(key)
+        if not isinstance(val, (int, float)) or not float(val) > 0.0:
+            raise TraceSchemaError(
+                "manifest.geometry.%s must be a positive number, got %r" % (key, val))
 
 
 def _validate_tire(tire):
@@ -426,6 +548,7 @@ def _validate_tire(tire):
 def _validate_manifest(manifest):
     if not isinstance(manifest, dict):
         raise TraceSchemaError("manifest.json must be an object")
+    version = str(manifest.get("schema_version"))
     missing = [k for k in _REQUIRED_MANIFEST_KEYS if k not in manifest]
     if missing:
         raise TraceSchemaError("manifest is missing required key(s): %s" % (", ".join(missing),))
@@ -434,10 +557,44 @@ def _validate_manifest(manifest):
         raise TraceSchemaError(
             "manifest.repro is missing %s — without it 'deterministic replay' "
             "is an unverifiable claim" % (", ".join(missing),))
-    _validate_geometry(manifest["geometry"])
+    _validate_geometry(manifest["geometry"], version)
     _validate_tire(manifest["tire"])
     if not isinstance(manifest["channels"], list) or not manifest["channels"]:
         raise TraceSchemaError("manifest.channels must be a non-empty list")
+    if version == "0.3":
+        _validate_manifest_0_3(manifest)
+
+
+def _validate_manifest_0_3(manifest):
+    """Enforce the 0.3 additions — an error, deliberately, not a warning.
+
+    A missing ``model_level`` cannot be defaulted: the whole point of the field
+    is to say which of the 3D channels the run is *entitled* to omit. Guessing
+    it would make an omission indistinguishable from a recording bug.
+    """
+    missing = [k for k in _REQUIRED_MANIFEST_KEYS_0_3 if k not in manifest]
+    if missing:
+        raise TraceSchemaError(
+            "manifest is missing %s — schema 0.3 requires them (§3.1.1); they "
+            "decide which 3D channels may legitimately be absent and how far "
+            "the road normal is coupled into the physics" % (", ".join(missing),))
+    level = manifest["model_level"]
+    _level_rank(level)                                   # raises on unknown
+    scope = manifest["contact_scope"]
+    if scope not in CONTACT_SCOPES:
+        raise TraceSchemaError(
+            "manifest.contact_scope must be one of %s, got %r"
+            % (list(CONTACT_SCOPES), scope))
+    rank = _level_rank(level)
+    present = {c["name"] for c in manifest["channels"] if isinstance(c, dict)}
+    too_high = sorted(
+        n for n in present & set(CHANNEL_MIN_LEVEL)
+        if rank < _level_rank(CHANNEL_MIN_LEVEL[n]))
+    if too_high:
+        raise TraceSchemaError(
+            "model_level %s does not have %s; recording the channel anyway would "
+            "store zeros that read as measurements (§3.2.1 no zero-fill)"
+            % (level, ", ".join("%s (needs %s)" % (n, CHANNEL_MIN_LEVEL[n]) for n in too_high)))
 
 
 # --------------------------------------------------------------------------
@@ -533,6 +690,33 @@ class TraceReader:
         default here and warns exactly once rather than on every access.
         """
         return self._role
+
+    @property
+    def model_level(self):
+        """Declared ladder level (§3.1.1), or ``None`` on a 0.1/0.2 trace.
+
+        ``None`` is returned rather than a guess: a consumer that needs the
+        level must be able to see that the file never stated one.
+        """
+        return self.manifest.get("model_level")
+
+    @property
+    def contact_scope(self):
+        """Declared road-normal coupling (§3.1.1), or ``None`` before 0.3."""
+        return self.manifest.get("contact_scope")
+
+    @property
+    def normal_is_display_only(self) -> bool:
+        """True when ``wheel_road_normal`` must be labelled display-only.
+
+        At ``contact_scope`` ``C0``/``C1`` the core never consumes the normal's
+        x and y components, so drawing a tilted road surface from this channel
+        shows something the physics did not use. The renderer is contractually
+        required to say so on the frame; this property is that single decision
+        point, so the rule cannot drift between renderers.
+        """
+        return (self.has("wheel_road_normal")
+                and self.contact_scope in (None, "C0", "C1"))
 
     @property
     def wheels(self):
