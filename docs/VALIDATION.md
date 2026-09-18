@@ -20,7 +20,7 @@ the last section.
 | ISO 7401 step-steer / 4138 understeer / 3888-2 DLC — run + measured | — |
 | L1↔L2↔L3 cross-model consistency where physics overlaps | Dependent axles (twist-beam / solid beam) — configs are stubs |
 | FMI round-trip Δ=0 (machine precision); ISO 8608 PSD RMS per class | L3 unsprung lateral-transfer term (small) |
-| Full suite: **PENDING** — see the currency block below (`validation` preset; this branch adds two tests, so the canonical count is remeasured after merge) | — |
+| Full suite: **492/492 ctest green** (`validation` preset, as of 2026-09-18) | — |
 | Drivetrain engine inertia (open-diff carrier coupling) | — |
 | **ISO step-steer signature gated in CI** (`ctest -R IsoBaseline`, sedan L2 LuGre) | DLC moose gate is a preset property, not a defect (see note) |
 
@@ -48,15 +48,11 @@ version and the new numbers have to land in the same commit.
 
 <!-- VALIDATION-CURRENCY BEGIN -->
 ```text
-tests:    PENDING
-pending:  this branch registers two new tests (trace_schema_0_3, render3d), so the
-pending:  490/490 measured on 33d504b no longer describes this tree. The canonical
-pending:  number is whatever the CI validation job measures after the merge -- see
-pending:  07_p0_demo.md 6.12. Local runs on this branch: 492/492 twice, serial.
+tests:    492/492
 config:   cmake --preset validation && cmake --build --preset validation && ctest --preset validation
 presets:  CMakePresets.json@fb1f0c198a0201fcce2543a9f5b2242a255fb97a
 toolchain: cmake 3.31.10
-commit:   PENDING
+commit:   1fc790e
 date:     2026-09-18
 excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
