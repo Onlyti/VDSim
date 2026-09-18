@@ -49,7 +49,7 @@ version and the new numbers have to land in the same commit.
 <!-- VALIDATION-CURRENCY BEGIN -->
 ```text
 tests:    PENDING
-pending:  CarMaker-derived Ioniq5 suspension adds 2 registered tests (490 -> 492); the canonical count is whatever the CI validation job measures on the merged tree, not a local run.
+pending:  CarMaker-derived Ioniq5 vehicle block adds 7 registered tests (490 -> 497); the canonical count is whatever the CI validation job measures on the merged tree, not a local run.
 config:   cmake --preset validation && cmake --build --preset validation && ctest --preset validation
 presets:  CMakePresets.json@fb1f0c198a0201fcce2543a9f5b2242a255fb97a
 toolchain: cmake 3.31.10

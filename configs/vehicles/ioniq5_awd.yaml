@@ -2,32 +2,72 @@
 #
 # Source: IPG CarMaker 12.0.1 vehicle dataset "Hyundai_Ioniq_5_CG_based"
 #   (/home/ailab-12/git/cmrosif-12.0.1-control-validation/Data/Vehicle/).
-#   Mass, geometry and the suspension block below are read off that dataset;
-#   the conversion of every derived value is written next to it.  Values that
-#   CarMaker states directly are copied verbatim.
+#   Mass, geometry, inertia, aero, driveline and the suspension block below are
+#   read off that dataset; the conversion of every derived value is written next
+#   to it.  Values that CarMaker states directly are copied verbatim.
+#   Equation numbers refer to the CarMaker 12.0.1 Reference Manual.
 # Tyre: MF2002 in configs/parts/tire/ioniq5_pac2002.yaml (NOT from CarMaker --
 #   the CarMaker dataset ships the generic example tyre RT_245_35R19).
+#
+# What this dataset does NOT provide, so the VDSim defaults stand (see the
+# "not in the CarMaker dataset" block at the bottom):
+#   brake torque/bias, steering lock, wheel radius, actuator dead times.
 mass: 2359.0            # Body 2100.8 + 2x(WheelCarrier 44.959 + Wheel 29.161)
                         #              + 2x(WheelCarrier 29.638 + Wheel 25.357)
 mass_sprung: 2100.8     # CarMaker Body.mass
-inertia_diag: [1200.0, 4200.0, 3400.0]
+# Sprung-body inertia about the sprung CG -- CarMaker Body.I, verbatim
+# (params.hpp defines inertia_diag as "Ixx, Iyy, Izz of sprung").
+#   For reference, the whole-vehicle values (parallel axis of the four corners
+#   about the total CG at x 2.623, z 0.615) are 956.5 / 3330.0 / 3637.6 kg m^2;
+#   the yaw-plane models read inertia_diag.z() as the vehicle yaw inertia, so
+#   that 2900.3 vs 3637.6 gap is a VDSim-side definition question, not a
+#   CarMaker one.  Left verbatim rather than silently switching reference body.
+inertia_diag: [749.84, 2732.2, 2900.3]
 wheelbase: 2.97         # Wheel.fl.pos.x 3.79 - Wheel.rl.pos.x 0.82
 cg_to_front: 1.17       # 3.79 - Body.pos.x 2.635 (+ unsprung, = 1.167)
 cg_to_rear: 1.80
 track_front: 1.635      # CarMaker 2 x 0.817 = 1.634
 track_rear: 1.635
-cg_height: 0.58
+# Whole-vehicle CG height: mass-weighted Body.pos.z 0.654 with the four corners
+# at Wheel.pos.z 0.298 -> (2100.8*0.654 + 258.23*0.298)/2359.03 = 0.6150 m.
+# (Used as h_cg in the load-transfer terms, which carry the total mass.)
+cg_height: 0.615
 wheel_radius_nominal: 0.338
 drive_type: AWD
 drive_split_front: 0.5
 plant_path: true
-differential: Open
-steering_ratio: 14.0
+differential: Open      # PowerTrain.DL.F/RDiff have no Cpl.Kind = open diffs
+steering_ratio: 14.46   # Steering.Rack2StWhl 72.314 / SuspF.Kin.0.L.rz dq2 5.0
 max_steer_angle_wheel: 0.55
-ackerman_percent: 0.0
-aero_drag_coeff: 0.28
-frontal_area: 2.45
+ackerman_percent: 0.0   # rz is linear in the rack and mirrored L/R = parallel steer
+# Aero.Coeff row tau = 0 deg, CarMaker Coeff6x1 = [tau cD cS cL cRM cPM cYM],
+# Reference Manual EQ 83/84 (cL positive = lift UP, cPM positive = nose up,
+# reference length l = Aero.lReference).
+aero_drag_coeff: 0.288  # cD at tau = 0
+frontal_area: 2.594     # Aero.Ax, verbatim
+# Axle split of the lift: an up force at the front axle is nose-up, so
+#   cL_f = cL/2 + (l/L)*cPM = 0.149/2 + (4.635/2.97)*(-0.002) = 0.0714
+#   cL_r = cL/2 - (l/L)*cPM                                   = 0.0776
+# VDSim signs these positive-for-downforce, and this vehicle produces lift, so
+# both entries are negative.
+aero_lift_front: -0.071
+aero_lift_rear: -0.078
 tire_yaml: parts/tire/ioniq5_pac2002.yaml
+
+# ---- Driveline (CarMaker BEV powertrain) ----
+# PowerTrain.nMotor = 2, both mapped motors with Mot.Trq_max 255 Nm.  VDSim
+# lumps the pair into one pre-gear motor torque and splits it by
+# drive_split_front, so the peak is the sum.
+max_motor_torque: 510.0
+# Motor.Ratio 2.263 x DL.F/RDiff.i 4.706 = 10.6497 (both axles share it).
+final_drive_ratio: 10.65
+# Rotating inertia reflected to the motor node (VDSim multiplies by
+# final_drive_ratio^2 on the way to the wheels).  Per motor:
+#   rotor Motor.I 0.002
+#   + (GearBoxM.I_in 0.001 + I_out 0.016 + FDiff.I_in 0.001) / 2.263^2 = 0.003515
+#   (FDiff.I_out 0.001 sits behind the full 10.65 and is negligible)
+# = 0.005515, x2 motors = 0.01103 kg m^2.
+engine_rotational_inertia: 0.011
 
 # ---- Suspension (CarMaker-derived) ----
 # Wheel rate = spring table slope x Spring.Amplify, at motion ratio 1.0
@@ -60,3 +100,39 @@ arb_stiffness_rear: 48374.0
 #   rear  (1.634/2) * ( 0.035 + 0.298 * 0.314) = 0.1050 m
 roll_center_height_front: 0.105
 roll_center_height_rear: 0.105
+# Anti-dive / anti-squat from the same Linear2D table (Reference Manual EQ 73:
+# row = [offset  d/dq0  d/dq2], q0 = compression, q2 = steering).  The side-view
+# swing-arm slope is the longitudinal travel of the point the force is reacted
+# at, per unit wheel travel; with x forward and z up a rotation dry moves a point
+# r_w below the wheel centre by -r_w*dry.
+#   Front brakes are outboard -> the contact patch is the reaction point:
+#     tan(theta_f) = dtx/dq0 - r_w*dry/dq0 = -0.019 - 0.298*(-0.602) = 0.1604
+#   Rear drive comes through shafts from a chassis-mounted diff -> the wheel
+#   centre is the reaction point (the drive torque is carried by the chassis):
+#     tan(theta_r) = dtx/dq0 = -0.003  (magnitude 0.003, near zero anti-squat)
+# Fraction of the longitudinal transfer reacted through the links:
+#   anti = (axle force share) * tan(theta) * wheelbase / h_cg,  L/h = 4.829.
+#   The force share is 0.5 both ways here: brake bias is unknown (see below) so
+#   the VDSim default 0.5 is used, and drive_split_front is 0.5.
+anti_dive_front: 0.387
+anti_squat_rear: 0.007
+# Camber gain relative to body roll.  In pure roll the wheel travel is
+# (track/2)*phi, so k_camber = (drx/dq0) * track/2:
+#   front 0.628 * 0.817 = 0.513,  rear 0.314 * 0.817 = 0.257 [rad/rad].
+# VDSim carries one lumped scalar for all four wheels, so this is the mean of
+# the two axles.  The per-axle path (ISuspensionKinematics) needs a hardpoint
+# geometry file, which the CarMaker linearised table cannot supply.
+camber_per_roll: 0.385
+
+# ---- Not in the CarMaker dataset: VDSim defaults stand ----
+# max_brake_torque / brake_bias_front : Brake.Kind = Hyd with
+#   Brake.System.FName = HydESP_DemoParam, and that system file is not shipped
+#   with this dataset, so the pad/pressure data behind Brake.Torque.Amplify
+#   (2.0 2.0 2.0 2.0) is unavailable.
+# max_steer_angle_wheel : Steering.Kind = GenAngle carries only Rack2StWhl, no
+#   rack travel limit, so the steering lock is not derivable.
+# wheel_radius_nominal : the dataset runs the example tyre RT_245_35R19 while
+#   VDSim runs ioniq5_pac2002; the radius must follow the tyre actually used.
+# *_deadtime_s : CarMaker models the torque rise as a first-order build-up
+#   (Motor.tBuildUp = 0.01 s), which is not the same quantity as a transport
+#   delay, so it is not copied across.
