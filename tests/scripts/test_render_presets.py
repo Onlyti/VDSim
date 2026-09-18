@@ -13,8 +13,10 @@ four properties the contract actually constrains:
 """
 from __future__ import annotations
 
+import ast
 import json
 import math
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -267,6 +269,66 @@ def test_layout_guard_catches_an_escape():
     plt.close(fig)
 
 
+def _shipped_module_names():
+    """Top-level module names the wheel installs, read from the install rules.
+
+    The wheel manifest lives in ``python/CMakeLists.txt`` under
+    ``if(DEFINED SKBUILD)``; parsing it here keeps the check honest when that
+    list changes, instead of restating the list in a second place.
+    """
+    text = (REPO / "python" / "CMakeLists.txt").read_text()
+    body = text.split("if(DEFINED SKBUILD)", 1)[1].split("endif()", 1)[0]
+    names = {"vdsim"}                      # install(TARGETS vdsim_py ...)
+    for m in re.finditer(r"\$\{CMAKE_SOURCE_DIR\}/([^\s)]+)", body):
+        rel = m.group(1)
+        stem = Path(rel).name
+        names.add(stem[:-3] if stem.endswith(".py") else stem)
+    return names
+
+
+def _first_party_imports(py_path):
+    """Top-level names ``py_path`` imports that resolve inside this repo."""
+    tree = ast.parse(py_path.read_text())
+    wanted = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            wanted.update(a.name.split(".")[0] for a in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+            wanted.add(node.module.split(".")[0])
+    here = set()
+    for name in wanted:
+        for d in ("python", "cosim", "examples"):
+            if (REPO / d / (name + ".py")).exists() or (REPO / d / name).is_dir():
+                here.add(name)
+                break
+    return here
+
+
+def test_wheel_ships_every_first_party_import():
+    """A shipped module may not import a module the wheel leaves behind.
+
+    Measured 2026-09-18 (pre-flight C-2): the wheel carried vdsim_render.py but
+    not vdsim_preset.py, so ``import vdsim_render`` raised ModuleNotFoundError
+    for every pip user while the source tree stayed green. The failure mode is
+    invisible in-tree, which is why it is pinned here rather than left to the
+    packaging job.
+    """
+    shipped = _shipped_module_names()
+    check("vdsim_preset" in shipped, "the wheel ships vdsim_preset")
+    missing = []
+    for name in sorted(shipped):
+        for d in ("python", "cosim", "examples"):
+            p = REPO / d / (name + ".py")
+            if p.exists():
+                for dep in sorted(_first_party_imports(p)):
+                    if dep not in shipped:
+                        missing.append("%s imports %s" % (name, dep))
+                break
+    check(missing == [],
+          "every shipped module's first-party imports are shipped too (%s)"
+          % (", ".join(missing) if missing else "none missing"))
+
+
 def main():
     test_builtin_surface()
     test_unknown_and_reserved_names_are_refused()
@@ -277,6 +339,7 @@ def main():
     test_required_channel_is_an_error()
     test_panel_geometry_is_fixed()
     test_layout_guard_catches_an_escape()
+    test_wheel_ships_every_first_party_import()
     if FAILURES:
         print("\n%d check(s) failed" % len(FAILURES))
         for f in FAILURES:
