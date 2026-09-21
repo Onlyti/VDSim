@@ -1,0 +1,5 @@
+clang-14 / Debug	success
+gcc-11 / Release	success
+validation preset / currency gate	success
+clang-14 / Release	success
+gcc-11 / Debug	success
