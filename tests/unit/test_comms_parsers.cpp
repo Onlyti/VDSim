@@ -98,6 +98,18 @@ TEST(CommsJsonParser, RejectsMissingRequiredField) {
     EXPECT_EQ(status.error, "json: missing one or more required state fields");
 }
 
+TEST(CommsJsonParser, RejectsWrongScalarType) {
+    const std::string text =
+        "{\"id\":0,\"t\":0,\"x\":0,\"y\":0,\"yaw\":0,\"vx\":\"fast\","
+        "\"vy\":0,\"r\":0,\"ax\":0,\"ay\":0,\"Fz\":[0,0,0,0],"
+        "\"alpha\":[0,0,0,0],\"kappa\":[0,0,0,0]}";
+    StateFields state;
+    const ParseStatus status = parse_json_text(text, state);
+    EXPECT_FALSE(status.ok);
+    EXPECT_NE(status.error.find("field 'vx' must be a number or null"),
+              std::string::npos) << status.error;
+}
+
 TEST(CommsJsonParser, RejectsWrongWheelArrayLength) {
     const std::string text =
         "{\"id\":0,\"t\":0,\"x\":0,\"y\":0,\"yaw\":0,\"vx\":0,"
@@ -154,6 +166,15 @@ TEST(CommsGgaParser, ParsesNoFixSentence) {
     EXPECT_FALSE(fix.has_fix());
     EXPECT_TRUE(std::isnan(fix.lat_deg));
     EXPECT_TRUE(std::isnan(fix.lon_deg));
+}
+
+TEST(CommsGgaParser, RejectsIncompleteSentence) {
+    const std::string sentence =
+        "$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47\r";
+    GgaFix fix;
+    const ParseStatus status = parse_gga_text(sentence, fix);
+    EXPECT_FALSE(status.ok);
+    EXPECT_EQ(status.error, "nmea_gga: expected CRLF terminator");
 }
 
 TEST(CommsGgaParser, RejectsChecksumMismatch) {
