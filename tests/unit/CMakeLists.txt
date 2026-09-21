@@ -21,6 +21,7 @@ add_executable(vdsim_unit_tests
     test_road_roughness.cpp
     test_lugre_tire_yaml.cpp
     test_comms_templates.cpp
+    test_comms_parsers.cpp
     test_warn_throttle.cpp
     test_contact_frame.cpp
     test_solver_substeps.cpp
