@@ -1,0 +1,28 @@
+﻿# demo.vdtrace (windows C-2, 2026-09-21) container inventory
+# measured on win_lab 2026-09-21 17:22, artifact from the C-2 windows run logged in c2_windows.txt
+# source file: C:\Users\jiwon\AppData\Local\Temp\q19b2win\work\demo\demo.vdtrace
+
+host        : win_lab (Windows 10 Pro 19045)
+size_bytes  : 39718
+member_count: 14
+sha256      : B0B2706FDADA1C1347047F60454531FB86B3283243DDF6E317F7AC1E62902EAA
+
+members (name, uncompressed bytes):
+  manifest.json                2531
+  channels/t.f64               960
+  channels/pose.f64            2880
+  channels/v_body.f64          1920
+  channels/yaw_rate.f64        960
+  channels/u_steer.f64         960
+  channels/u_fx.f64            960
+  channels/wheel_F.f64         11520
+  channels/wheel_mu.f64        3840
+  channels/wheel_kappa.f64     3840
+  channels/wheel_alpha.f64     3840
+  channels/a_body.f64          2880
+  overlays/mu_patch.json       122
+  overlays/intended_path.json  863
+
+note: the linux C-2 artifact was produced inside an ephemeral docker container
+      and was not retained, so no cross-OS sha256 comparison was performed.
+      c2_linux.txt records the linux side as 'trace bytes 39718 members 14'.
