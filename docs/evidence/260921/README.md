@@ -32,6 +32,7 @@ Pre-flight C-1 / C-2 실행 로그. Q19-b(wheel import 폐포 강화) 완결 근
 | `c2_linux.txt` | C-2 linux. docker `python:3.11-slim` clean env |
 | `c2_windows.txt` | C-2 windows. win_lab Python 3.12 신규 venv |
 | `driver_chain.txt` | 4단계 체인 전체 실행 로그 |
+| `c2_windows_harness.sh` | C-2 windows 실행 하네스. 선언된 콘솔 진입점 `vdsim-quickstart` 로 고친 판 |
 
 ## 판정 기준과 결과
 
@@ -49,12 +50,16 @@ Pre-flight C-1 / C-2 실행 로그. Q19-b(wheel import 폐포 강화) 완결 근
 | `demo_grip_loss.gif` | 2352713 B (120 frames) | 2386928 B (120 frames) |
 | 데모 벽시계 | 16.04 s | 42.90 s |
 
-- `demo.vdtrace` 바이트 수가 양 OS 동일 — 시뮬 결과는 OS 무관.
-- `run.csv`·GIF 바이트 차이는 부동소수 텍스트 표기와 GIF 인코더 차이이며 시뮬 결과 차이가 아님.
+- 두 OS 의 `demo.vdtrace` 는 크기가 같다(39718 B). 내용 동일성은 해시로 확인하지 않았다.
+  peak slip ratio 가 16.44(linux) / 16.42(windows) 로 다르므로 수치적으로 동일하지 않다(unknown).
+- `run.csv`·GIF 의 바이트 차이도 원인을 분리 측정하지 않았다. 부동소수 텍스트 표기·GIF 인코더 차이가 후보이나,
+  위 slip ratio 차이가 있으므로 시뮬 수치 차이가 섞였을 가능성을 배제하지 못한다(unknown).
 - 콘솔 진입점 3종(`vdsim-quickstart`, `vdsim-render`, `vdsim-render3d`) 양 OS 모두 설치 확인.
 
 ## 한계
 
 - 본 로그는 배포 가능성(import·실행)만 증명함. 수치 정확도 검증은 `docs/VALIDATION.md` 소관.
+- 크로스 OS 산출물의 비트 동일성은 주장하지 않는다. 해시 대조 상주 테스트가 없으므로 "byte-identical"·
+  "platform independent" 는 이 증거로 뒷받침되지 않는다(unknown).
 - 스모크는 install 목록에 **선언된** 모듈만 검사. 선언 자체가 누락된 모듈은 `tests/scripts/test_render_presets.py`
   의 소스트리 폐포 검사가 담당(두 검사가 짝).
