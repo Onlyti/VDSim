@@ -20,7 +20,7 @@ the last section.
 | ISO 7401 step-steer / 4138 understeer / 3888-2 DLC — run + measured | — |
 | L1↔L2↔L3 cross-model consistency where physics overlaps | Dependent axles (twist-beam / solid beam) — configs are stubs |
 | FMI round-trip Δ=0 (machine precision); ISO 8608 PSD RMS per class | L3 unsprung lateral-transfer term (small) |
-| Full suite: **PENDING** — re-measured by CI on this tree (`validation` preset — see the currency block below) | — |
+| Full suite: **505/505 ctest green (as of 2026-09-22)** (`validation` preset — see the currency block below) | — |
 | Drivetrain engine inertia (open-diff carrier coupling) | — |
 | **ISO step-steer signature gated in CI** (`ctest -R IsoBaseline`, sedan L2 LuGre) | DLC moose gate is a preset property, not a defect (see note) |
 
@@ -48,13 +48,11 @@ version and the new numbers have to land in the same commit.
 
 <!-- VALIDATION-CURRENCY BEGIN -->
 ```text
-tests:    PENDING
+tests:    505/505
 config:   cmake --preset validation && cmake --build --preset validation && ctest --preset validation
 presets:  CMakePresets.json@fb1f0c198a0201fcce2543a9f5b2242a255fb97a
 toolchain: cmake 3.31.10
-commit:   PENDING
-pending:  registration surface changed (python/CMakeLists.txt ships vdsim_guard.py);
-pending:  the canonical count is re-measured by CI on this tree before promotion.
+commit:   7b7947f
 date:     2026-09-22
 excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
