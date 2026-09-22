@@ -309,6 +309,39 @@ def test_level_axis_after_q20(tmp):
           "no trace is left behind for the refused L4 run")
 
 
+def test_l4_with_kinematics_from_config(tmp):
+    """Q20 (B): a declared ``kinematics`` block reaches the attach.
+
+    ``Experiment.from_config`` reads ``kinematics: {front, rear}``, so an L4
+    cell that names hardpoints runs as L4 physics. The L3 cell carries none;
+    the two must both complete and must not be bit-identical, otherwise the
+    block was dropped and L4 fell back to the bare-L3 trajectory.
+    """
+    spec = {"name": "kin", "base": "step_steer", "seed": 20260922,
+            "duration": DURATION,
+            "sweep": {"list": [
+                {"level": "L3"},
+                {"level": "L4", "kinematics.front": "mp_front_sedan",
+                 "kinematics.rear": "ta_rear_sedan"}]}}
+    out = Path(tmp) / "kin"
+    _run(_write(tmp, "kin", spec), out)
+    rows = {r["axes"]["level"]: r for r in vc.read_index(out / "kin")}
+    for lv in ("L3", "L4"):
+        check(rows[lv]["status"] == "ok",
+              "the %s cell completes (%s %s)"
+              % (lv, rows[lv]["status"], rows[lv].get("error") or ""))
+    if rows["L3"]["status"] != "ok" or rows["L4"]["status"] != "ok":
+        return
+    paths = {lv: out / "kin" / rows[lv]["trace_path"] for lv in ("L3", "L4")}
+    with vt.TraceReader(paths["L4"]) as tr:
+        check(tr.model_level == "L4" and tr.kinematics_attached is True,
+              "the L4 trace states the declared hardpoints were attached")
+    a, b = (_channels_digest(paths[lv]) for lv in ("L3", "L4"))
+    differ = sorted(k for k in a if k in b and a[k] != b[k])
+    print("      channels that differ L3 vs L4+kinematics: %s" % differ)
+    check(bool(differ), "L4 with hardpoints is not bit-identical to bare L3")
+
+
 # --------------------------------------------------------------------------- #
 # C-2: the friction-ellipse measurement is on the trace path, so it must run
 # --------------------------------------------------------------------------- #
@@ -361,6 +394,7 @@ def main():
         test_seed_is_a_function_of_the_declaration()
         test_contract_and_failure_isolation(tmp)
         test_level_axis_after_q20(tmp)
+        test_l4_with_kinematics_from_config(tmp)
         spec_path, out = test_determinism(tmp)
         test_resume(tmp, spec_path, out)
         test_render_connection(tmp)

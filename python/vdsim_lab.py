@@ -605,7 +605,9 @@ class Experiment:
     def from_config(cls, name_or_cfg):
         """Build an Experiment from an authored scenario YAML (configs/experiments/
         <name>.yaml or a dict): vehicle + tire + level + map(surface+driving line)
-        + maneuver + sensor suite. Closes the loop with the authoring tool."""
+        + maneuver + sensor suite (+ optional ``kinematics: {front, rear}``
+        hardpoint stems, required for ``level: L4``). Closes the loop with the
+        authoring tool."""
         import yaml
         cfg = name_or_cfg
         if isinstance(cfg, str):
@@ -613,6 +615,15 @@ class Experiment:
         exp = cls(level=cfg.get("level", "L2"))
         exp.vehicle(Vehicle.preset(cfg.get("vehicle", "sedan")))
         exp.tire(Tire.preset(cfg.get("tire", "default_pacejka")))
+        kin = cfg.get("kinematics")
+        if kin is not None:
+            # Stems or paths; resolve_susp_kinematics() resolves them at attach
+            # time, so a missing file raises there rather than being skipped.
+            if not isinstance(kin, dict) or set(kin) - {"front", "rear"}:
+                raise ValueError(
+                    "kinematics must be a mapping with keys 'front' and/or 'rear', "
+                    "got %r" % (kin,))
+            exp.kinematics(kin.get("front"), kin.get("rear"))
         line = None
         if cfg.get("map"):
             m = yaml.safe_load(open(_MAP / f"{cfg['map']}.yaml"))

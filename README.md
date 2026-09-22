@@ -166,14 +166,15 @@ path = plant.finalize_trace()
   it returns the written path (`None` when recording was never enabled).
 - The container is a zip: `manifest.json` + `channels/*.f64` + `overlays/*.json`.
   That one file is enough to render — no re-simulation, no results file.
-- The manifest declares `schema_version` `"0.2"` and a required `role`, either
+- The manifest declares `schema_version` (the writer emits `"0.4"`; the fields
+  each version added are listed below) and a required `role`, either
   `"plant"` (the simulator under verification) or `"predictor"` (the same code
   driven as an optimiser's internal model). `enable_trace` defaults to `plant`
   because `VDSimPlant` *is* the plant; a producer that builds a
   `vdsim_trace.TraceWriter` directly must pass `role=` — there is no default,
   so a predictor run cannot be recorded as plant evidence by omission.
   Reading a legacy `0.1` trace still works: a missing `role` resolves to
-  `plant` with one warning. A `0.2` trace without one is an error.
+  `plant` with one warning. A `0.2` or later trace without one is an error.
   The renderer prints the role in the HUD and never branches on it.
 
 ### Render presets
@@ -493,6 +494,23 @@ plant.finalize_trace()
 
 `0.1` and `0.2` traces stay readable. A `0.3` file that omits any of the
 required fields is an error, not a warning.
+
+### Trace schema `0.4` — whether hardpoints were attached
+
+`0.4` adds one required manifest field, `kinematics_attached` (bool). It is the
+value the suspension-hardpoint attach actually returned for that run, not a
+guess from which YAML files exist. The physics of L3 and L4 differ only when
+hardpoints are attached, so this field is what tells a reader whether an L3/L4
+trace carries suspension kinematics.
+
+- A `0.4` trace without `kinematics_attached` is an error.
+- A `0.3` or older trace reads with the value unknown (`None`) and one warning.
+  It is never read as `false`.
+- `level="L4"` with no hardpoints is refused when the session is built
+  (`ValueError`), so no L4 trace can carry L3 physics. `VDSimPlant` has no
+  hardpoint input and refuses `level="L4"` for the same reason. An
+  `Experiment` config gets hardpoints with
+  `kinematics: {front: mp_front_sedan, rear: ta_rear_sedan}`.
 
 ## Campaigns — many runs from one declaration
 

@@ -101,6 +101,8 @@ TRACE_TARGET_HZ = 100.0
 #: Ladder levels this plant can be built at. The control contract
 #: ``u = [delta_rad, Fx_total_N]`` is the same at every one of them; only the
 #: model behind the seam changes, and with it which trace channels exist.
+#: ``"L4"`` is listed so the name is recognised, and then refused in
+#: ``VDSimPlant.__init__``: without hardpoints it is L3 under another label.
 PLANT_LEVELS = ("L1", "L2", "L3", "L4")
 
 #: How far the road normal is coupled into the physics, per level
@@ -440,8 +442,9 @@ class VDSimPlant:
   """Pacejka plant with a direct Fx→torque path (no throttle map).
 
   ``level`` selects the model behind the seam — ``"L2"`` (7-DOF, the default and
-  the historical behaviour), ``"L3"``/``"L4"`` (14-DOF ride models), ``"L1"``
-  (bicycle). The control contract ``u = [delta_rad, Fx_total_N]`` does not
+  the historical behaviour), ``"L3"`` (14-DOF ride model), ``"L1"``
+  (bicycle). ``"L4"`` raises ``ValueError``: this plant cannot attach
+  suspension hardpoints, and without them L4 is L3 under another label. The control contract ``u = [delta_rad, Fx_total_N]`` does not
   change with the level; what changes is which quantities exist, and therefore
   which trace channels a run at that level is allowed to record.
   """
@@ -459,6 +462,15 @@ class VDSimPlant:
       if level not in PLANT_LEVELS:
           raise ValueError(
               f"level={level!r} is not one of {list(PLANT_LEVELS)}")
+      # This plant has no hardpoint input, so an L4 plant would be L3 physics
+      # recorded as model_level L4. Same refusal as vdsim_lab._build_session;
+      # the leading sentence is shared on purpose and a test compares the two.
+      if level == "L4":
+          raise ValueError(
+              "level='L4' with no suspension hardpoints attached is L3 under another "
+              "label (the two are bit-identical until an attach); VDSimPlant has no "
+              "hardpoint input -- use level='L3', or vdsim_lab.Experiment with "
+              "kinematics={'front': <stem>, 'rear': <stem>}")
       if not math.isfinite(base_mu) or not (0.0 < base_mu <= 1.2):
           raise ValueError(f"base_mu={base_mu} outside (0, 1.2]")
       if friction_map is not None and friction_map_2d is not None:

@@ -238,6 +238,26 @@ def test_bare_l4_is_refused():
     Sim(level="L3", road=Road.flat(), kinematics=HARDPOINTS)
 
 
+def test_plant_bare_l4_is_refused():
+    """Q20 (A): VDSimPlant cannot attach hardpoints, so its L4 is refused too."""
+    from vdsim_plant import VDSimPlant
+    try:
+        Sim(level="L4", road=Road.flat())
+    except ValueError as e:
+        lab_lead = str(e).split(";")[0]
+    try:
+        VDSimPlant(level="L4")
+    except ValueError as e:
+        msg = str(e)
+        print("plant L4 refusal: ValueError: %s" % msg)
+        assert msg.split(";")[0] == lab_lead, \
+            f"plant and _build_session must state the same reason: {msg!r} vs {lab_lead!r}"
+        assert "level='L3'" in msg, f"unexpected message: {msg}"
+    else:
+        raise AssertionError("VDSimPlant(level='L4') must be refused, not run as L3")
+    assert VDSimPlant(level="L3").level == "L3"
+
+
 def test_trace_states_the_attach():
     """Q20 (iii): the manifest records what the attach returned."""
     import vdsim_trace as vt
@@ -298,6 +318,7 @@ if __name__ == "__main__":
     test_level_label_alone_carries_no_suspension_physics()
     test_hardpoints_are_the_real_discriminator()
     test_bare_l4_is_refused()
+    test_plant_bare_l4_is_refused()
     test_trace_states_the_attach()
     test_hardpoints_refused_below_l3()
     test_missing_hardpoint_file_is_an_error()

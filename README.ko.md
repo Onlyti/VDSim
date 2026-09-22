@@ -161,13 +161,14 @@ path = plant.finalize_trace()
   기록한 경로를 돌려준다(기록을 켠 적이 없으면 `None`).
 - 컨테이너는 zip: `manifest.json` + `channels/*.f64` + `overlays/*.json`.
   이 파일 하나면 렌더가 되므로 재시뮬레이션도, 결과 파일 재파싱도 필요 없다.
-- manifest 는 `schema_version` `"0.2"` 와 필수 필드 `role` 을 선언한다. `role` 은
+- manifest 는 `schema_version`(writer 는 `"0.4"` 를 쓴다. 버전별 추가 필드는 아래
+  절 참조)과 필수 필드 `role` 을 선언한다. `role` 은
   검증 대상인 `"plant"` 또는 최적화·MPC 내부 예측 모델로 쓰인 `"predictor"` 다.
   `VDSimPlant` 은 그 자체가 플랜트이므로 `enable_trace` 의 기본값은 `plant` 이고,
   `vdsim_trace.TraceWriter` 를 직접 만드는 생산자는 `role=` 을 반드시 넘겨야 한다
   — 기본값이 없으므로 예측기 run 이 빠뜨림만으로 플랜트 근거가 되는 일이 없다.
   기존 `0.1` trace 도 그대로 읽힌다. `role` 이 없으면 경고 1회와 함께 `plant` 로
-  간주하고, `0.2` 에서 누락되면 에러다. 렌더러는 HUD 에 문자열로만 표시하고
+  간주하고, `0.2` 이상에서 누락되면 에러다. 렌더러는 HUD 에 문자열로만 표시하고
   이 값으로 화면 구성을 바꾸지 않는다.
 
 ### 렌더 프리셋
@@ -453,6 +454,21 @@ plant.finalize_trace()
 
 `0.1`·`0.2` trace는 계속 읽힌다. `0.3` 파일에서 필수 필드가 빠지면 경고가 아니라
 에러다.
+
+### trace 스키마 `0.4` — 하드포인트가 붙었는가
+
+`0.4` 는 manifest 필수 필드 `kinematics_attached`(bool) 1개를 더한다. 값은 그 run 에서
+서스펜션 하드포인트 attach 가 실제로 반환한 결과이며, 어떤 YAML 이 있는지로 추정하지
+않는다. L3 와 L4 의 물리는 하드포인트가 붙었을 때만 달라지므로, L3/L4 trace 에
+서스펜션 기구학이 들어 있는지는 이 필드로 판별한다.
+
+- `kinematics_attached` 가 없는 `0.4` trace 는 에러다.
+- `0.3` 이하 trace 는 값을 unknown(`None`)으로 읽고 경고 1회를 낸다. `false` 로
+  읽지 않는다.
+- 하드포인트 없는 `level="L4"` 는 세션을 만들 때 `ValueError` 로 거부되므로, L3
+  물리를 담은 L4 trace 는 생길 수 없다. `VDSimPlant` 는 하드포인트 입력이 없어서
+  같은 이유로 `level="L4"` 를 거부한다. `Experiment` 설정에서는
+  `kinematics: {front: mp_front_sedan, rear: ta_rear_sedan}` 로 하드포인트를 지정한다.
 
 ## campaign — 선언 1개로 여러 run 돌리기
 
