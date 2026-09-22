@@ -409,6 +409,22 @@ PYBIND11_MODULE(vdsim, m) {
               auto k = vdsim::create_lookup_kinematics(csv_path);
               return vdsim::attach_rear_kinematics(dyn, std::move(k));
           });
+    // Native hardpoint YAML (double_wishbone / macpherson / trailing_arm /
+    // 5link) instead of a lookup CSV.  Same dispatch the co-sim server uses in
+    // attach_susp_parts(), so the Python lab path and the realtime path resolve
+    // the same file to the same mechanism.
+    m.def("attach_front_kinematics_from_yaml",
+          [](vdsim::IVehicleDynamics& dyn, const std::string& yaml_path) {
+              return vdsim::attach_front_kinematics(
+                  dyn, vdsim::create_native_kinematics_from_yaml(yaml_path));
+          },
+          py::arg("dyn"), py::arg("yaml_path"));
+    m.def("attach_rear_kinematics_from_yaml",
+          [](vdsim::IVehicleDynamics& dyn, const std::string& yaml_path) {
+              return vdsim::attach_rear_kinematics(
+                  dyn, vdsim::create_native_kinematics_from_yaml(yaml_path));
+          },
+          py::arg("dyn"), py::arg("yaml_path"));
 
     py::class_<vdsim::mb::KcSweepSample>(m, "KcSweepSample")
         .def_readonly("abscissa", &vdsim::mb::KcSweepSample::abscissa)

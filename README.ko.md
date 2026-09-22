@@ -53,6 +53,10 @@ pip install "./vdsim-*.whl[plot]"
 vdsim-quickstart          # cwd 에 run.csv + run.png 생성
 ```
 
+깨끗한 환경에 설치할 것 — 최상위 `vdsim` 패키지를 제공하는 다른 배포판이 함께 설치되면
+그쪽이 import 를 가져간다. VDSim 은 이를 감지해 실제 로드된 파일 경로와 함께
+`CoreShadowedError` 를 던진다.
+
 측정 (clean conda, Python 3.11, Linux x86_64, 2026-06-25): **첫 결과까지 수 초** —
 pip install `[plot]` + `vdsim-quickstart` → `run.csv` + `run.png` **~6 s wall-clock**
 (cold; lab 네트워크, matplotlib wheel 포함). 재실행 ~1.5 s.
@@ -161,13 +165,14 @@ path = plant.finalize_trace()
   기록한 경로를 돌려준다(기록을 켠 적이 없으면 `None`).
 - 컨테이너는 zip: `manifest.json` + `channels/*.f64` + `overlays/*.json`.
   이 파일 하나면 렌더가 되므로 재시뮬레이션도, 결과 파일 재파싱도 필요 없다.
-- manifest 는 `schema_version` `"0.2"` 와 필수 필드 `role` 을 선언한다. `role` 은
+- manifest 는 `schema_version`(writer 는 `"0.4"` 를 쓴다. 버전별 추가 필드는 아래
+  절 참조)과 필수 필드 `role` 을 선언한다. `role` 은
   검증 대상인 `"plant"` 또는 최적화·MPC 내부 예측 모델로 쓰인 `"predictor"` 다.
   `VDSimPlant` 은 그 자체가 플랜트이므로 `enable_trace` 의 기본값은 `plant` 이고,
   `vdsim_trace.TraceWriter` 를 직접 만드는 생산자는 `role=` 을 반드시 넘겨야 한다
   — 기본값이 없으므로 예측기 run 이 빠뜨림만으로 플랜트 근거가 되는 일이 없다.
   기존 `0.1` trace 도 그대로 읽힌다. `role` 이 없으면 경고 1회와 함께 `plant` 로
-  간주하고, `0.2` 에서 누락되면 에러다. 렌더러는 HUD 에 문자열로만 표시하고
+  간주하고, `0.2` 이상에서 누락되면 에러다. 렌더러는 HUD 에 문자열로만 표시하고
   이 값으로 화면 구성을 바꾸지 않는다.
 
 ### 렌더 프리셋
@@ -453,6 +458,79 @@ plant.finalize_trace()
 
 `0.1`·`0.2` trace는 계속 읽힌다. `0.3` 파일에서 필수 필드가 빠지면 경고가 아니라
 에러다.
+
+### trace 스키마 `0.4` — 하드포인트가 붙었는가
+
+`0.4` 는 manifest 필수 필드 `kinematics_attached`(bool) 1개를 더한다. 값은 그 run 에서
+서스펜션 하드포인트 attach 가 실제로 반환한 결과이며, 어떤 YAML 이 있는지로 추정하지
+않는다. L3 와 L4 의 물리는 하드포인트가 붙었을 때만 달라지므로, L3/L4 trace 에
+서스펜션 기구학이 들어 있는지는 이 필드로 판별한다.
+
+- `kinematics_attached` 가 없는 `0.4` trace 는 에러다.
+- `0.3` 이하 trace 는 값을 unknown(`None`)으로 읽고 경고 1회를 낸다. `false` 로
+  읽지 않는다.
+- 하드포인트 없는 `level="L4"` 는 세션을 만들 때 `ValueError` 로 거부되므로, L3
+  물리를 담은 L4 trace 는 생길 수 없다. `VDSimPlant` 는 하드포인트 입력이 없어서
+  같은 이유로 `level="L4"` 를 거부한다. `Experiment` 설정에서는
+  `kinematics: {front: mp_front_sedan, rear: ta_rear_sedan}` 로 하드포인트를 지정한다.
+
+## campaign — 선언 1개로 여러 run 돌리기
+
+**run** 은 시뮬레이션 1회이자 `.vdtrace` 1개, **campaign** 은 YAML 선언 1개로
+정의되는 run 집합이다. runner 는 그 윗층만 담당한다 — trace 에 필드를 추가하지
+않고 렌더 CLI 도 그대로 호출한다.
+
+```yaml
+# campaign.yaml
+name: mu_sweep
+base: step_steer          # configs/experiments/<name>.yaml 또는 인라인 시나리오
+seed: 20260922            # 루트 시드. run 별 시드가 여기서 파생된다
+duration: 4.0             # 선택: 시나리오 duration 덮어쓰기 [s]
+sweep:
+  grid:                   # 직교곱. 조합을 직접 쓰려면 `list:`
+    mu: [0.9, 0.7, 0.5]
+  repeat: 1               # 조합별 반복. 시드만 달라진다
+```
+
+```sh
+vdsim-campaign run campaign.yaml --jobs 4 --render overview
+vdsim-campaign run campaign.yaml --resume      # 중단 지점부터 이어서
+vdsim-campaign run campaign.yaml --dry         # 전개 결과만 출력
+python3 tools/vdsim_batch.py run campaign.yaml # 같은 runner, 기존 경로
+```
+
+축 키는 시나리오 문서의 점표기 경로다(`mu`·`vehicle.*`·`tire.*` 는 프리셋 해석
+뒤에 적용). 산출물:
+
+```
+campaigns/mu_sweep/
+├── campaign.yaml      # 실제 실행된 선언 사본
+├── index.jsonl        # run_id · axes · seed · status · param_hash · role · trace_path · started_at · wall_s
+└── 000/run.vdtrace    # run 당 trace 1개. run_id 는 zero-padded 순번
+```
+
+```python
+import vdsim_campaign as vc
+for row in vc.read_index("campaigns/mu_sweep"):
+    print(row["run_id"], row["status"], row["axes"])
+```
+
+믿고 쓰기 전에 알아야 할 규칙:
+
+- **결정론.** `seed = derive(root_seed, run_index)` — 시계·PID 를 쓰지 않는다.
+  `--jobs 4` 의 채널 바이트가 `--jobs 1` 과 같다.
+- **실패는 격리하되 숨기지 않는다.** run 1개 = 자식 프로세스 1개이고, 발산하거나
+  죽은 run 은 `diverged`·`error`·`killed` 로 인덱스에 남는다. `--retry N` 을
+  명시하지 않으면 재시도는 없다.
+- **재개는 검증한다.** `--resume` 은 status 가 `ok` 이고 trace 가 남아 있고
+  `param_hash` 가 선언과 일치할 때만 건너뛴다. 선언이 바뀌었으면 거부한다.
+- **인덱스는 조회용이지 결과 DB 가 아니다.** 지표는 인덱스를 읽는 소비자
+  스크립트가 갖는다.
+- 렌더 실패는 run 실패가 아니다 — `status` 는 `ok` 이고 `render_status` 에
+  오류가 남는다.
+
+전체 스키마·인덱스 키·기존 runner 이관 안내:
+[BATCH_RUNNER](docs/design/BATCH_RUNNER.md).
 
 ## 설정 — parts catalog & scene (v0.3)
 

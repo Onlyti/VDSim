@@ -24,3 +24,11 @@ body:
   wheel_radius_nominal: 0.32
   cg_height: 0.55
   cg_to_rear: 1.5
+  # Placeholder body box and wheel width for the 3D replay renderer (trace
+  # schema 0.3, 11_trace_contract_spec 3.1.1). No source: these are not the
+  # dimensions of any vehicle and must not be quoted as a specification. They
+  # were picked to look consistent with this preset's own wheelbase and track
+  # so the drawn primitives do not float away from the wheels. Nothing but the
+  # renderer reads them -- no equation does.
+  body_lwh_m: [4.60, 1.80, 1.45]
+  wheel_width_m: 0.225

@@ -20,11 +20,9 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-try:
-    import vdsim
-except ImportError:
-    sys.path.insert(0, str(REPO / "build" / "python"))
-    import vdsim
+from vdsim_guard import load_core  # noqa: E402  (shadowed-core check, one place)
+
+vdsim = load_core([REPO / "build" / "python"])
 
 
 def _conf_root():
@@ -43,6 +41,93 @@ _MAP = _CONF / "maps"
 _SENS = _CONF / "sensors"
 _EXP = _CONF / "experiments"
 _ISO = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5, "G": 6, "H": 7}
+#: Native suspension-hardpoint YAMLs.  Resolution mirrors resolve_susp_yaml()
+#: in cosim/realtime_server.cpp (that path cannot call Python) -- keep the two
+#: in step: an existing path is taken as-is, a bare stem is looked up here.
+_SUSP_KIN = _CONF / "parts" / "susp_kinematics" / "kin"
+
+
+def resolve_susp_kinematics(ref):
+    """Resolve a suspension-kinematics reference to a hardpoint YAML path.
+
+    :param ref: an existing path, or a bare stem such as ``mp_front_sedan``.
+    :returns: :class:`pathlib.Path` of the hardpoint YAML.
+    :raises FileNotFoundError: when neither form resolves.  A silently skipped
+        attach is what left level ``L4`` with no suspension physics behind it.
+    """
+    p = Path(ref)
+    if p.is_file():
+        return p
+    cand = _SUSP_KIN / (p.stem + ".yaml")
+    if cand.is_file():
+        return cand
+    raise FileNotFoundError(
+        "suspension kinematics %r not found (looked at %s and %s)" % (ref, p, cand))
+
+
+def attach_kinematics(sess, front=None, rear=None):
+    """Attach native suspension kinematics to a session's plant.
+
+    Only Ld3 (``level`` ``L3`` or ``L4``) carries per-wheel suspension state;
+    the core returns false for anything else and this raises rather than
+    leaving a run labelled with physics it does not have.
+
+    :param sess: a ``vdsim.SimSession``.
+    :param front: front-axle hardpoint YAML (path or stem), or ``None``.
+    :param rear: rear-axle hardpoint YAML (path or stem), or ``None``.
+    :returns: provenance ``{"front": stem|None, "rear": stem|None,
+        "attached": bool}`` -- stems only, never absolute paths.
+    """
+    info = {"front": None, "rear": None, "attached": False}
+    for side, ref in (("front", front), ("rear", rear)):
+        if ref is None:
+            continue
+        path = resolve_susp_kinematics(ref)
+        fn = (vdsim.attach_front_kinematics_from_yaml if side == "front"
+              else vdsim.attach_rear_kinematics_from_yaml)
+        if not fn(sess.dynamics(), str(path)):
+            raise RuntimeError(
+                "%s suspension kinematics refused by the plant -- L3/L4 only "
+                "(%s)" % (side, path.name))
+        info[side] = path.stem
+        info["attached"] = True
+    return info
+
+
+def _kin_spec(kin):
+    """Normalize a kinematics argument to a ``(front, rear)`` pair."""
+    if kin is None:
+        return (None, None)
+    if isinstance(kin, dict):
+        return (kin.get("front"), kin.get("rear"))
+    front, rear = kin
+    return (front, rear)
+
+
+def _build_session(road, vp, tp, level, dt, sensors, kin=None):
+    """Build a session and attach suspension hardpoints -- the single seam.
+
+    Experiment.run, Simulation and Sim all go through here so they cannot drift
+    into three different notions of what a level label means.
+
+    It is also where a false ``L4`` label is refused.  The L4 class differs
+    from L3 only in ``level()``; without hardpoints an ``L4`` session *is* L3,
+    and any comparison or trace labelled L4 would misreport the physics.
+    Refusing here, where the session first exists, covers traced and untraced
+    runs alike.
+
+    :returns: ``(session, kinematics_provenance)``.
+    :raises ValueError: for ``level="L4"`` with no hardpoints attached.
+    """
+    sess = road._session(vp, tp, level, dt, sensors)
+    front, rear = _kin_spec(kin)
+    info = attach_kinematics(sess, front, rear)
+    if level == "L4" and not info["attached"]:
+        raise ValueError(
+            "level='L4' with no suspension hardpoints attached is L3 under another "
+            "label (the two are bit-identical until an attach); pass kin=... "
+            "(kinematics={'front': <stem>, 'rear': <stem>}) or use level='L3'")
+    return sess, info
 
 
 def resolve_line(dl):
@@ -100,29 +185,34 @@ def _resolve_preset(vehicle="sedan", tire="default_pacejka"):
             sys.path.insert(0, sp)
     from catalog import CatalogResolver
     from catalog.ids import blueprint_for_vehicle, tire_id_from_stem
-    cache = _CONF / ".resolve_cache" / f"{vehicle}_{tire}"
-    cache.mkdir(parents=True, exist_ok=True)
+    # No out_dir: the resolver writes into a fresh temp dir of its own, so the
+    # YAML we hand back is private to this call. A shared per-preset directory
+    # was rewritten in place by every process resolving the same preset, and a
+    # concurrent reader could parse a truncated file and silently get the C++
+    # defaults instead (Q10-c; broke EG3 under --jobs).
     r = CatalogResolver(_catalog_root())
     rv = r.resolve_blueprint(
         blueprint_for_vehicle(vehicle),
         instance_parts={"tire": tire_id_from_stem(tire)},
-        out_dir=cache,
     )
     return rv.vehicle_yaml, rv.tire_yaml
 
 
 class Vehicle:
-    def __init__(self, vp):
+    def __init__(self, vp, path=None):
         self.vp = vp
+        #: YAML the params were read from. Trace recording needs it for the
+        #: body/wheel dimensions, which are not on VehicleParams.
+        self.path = Path(path) if path else None
 
     @classmethod
     def preset(cls, name="sedan"):
         vp_path, _ = _resolve_preset(name)
-        return cls(vdsim.VehicleParams.from_yaml(str(vp_path)))
+        return cls(vdsim.VehicleParams.from_yaml(str(vp_path)), vp_path)
 
     @classmethod
     def from_yaml(cls, path):
-        return cls(vdsim.VehicleParams.from_yaml(str(path)))
+        return cls(vdsim.VehicleParams.from_yaml(str(path)), path)
 
     def set(self, **kw):
         for k, v in kw.items():
@@ -482,6 +572,17 @@ class Experiment:
         self._road = Road.flat()
         self._man = Maneuver.constant_speed(15.0)
         self._sensors = None
+        # Suspension hardpoints are opt-in: a bare L3/L4 plant uses the lumped
+        # camber_per_roll heuristic, so `level` alone says nothing about them.
+        self._kin = None
+        self._kin_info = {"front": None, "rear": None, "attached": False}
+        # Trace recording is opt-in; `_trace is None` is the OFF fast path.
+        # enable_trace() only stages the writer arguments: kinematics_attached
+        # is what the attach returned, which run() learns when it builds the
+        # session, so the writer cannot exist before then.
+        self._trace = None
+        self._trace_pending = None
+        self._channels = ()
 
     def vehicle(self, v): self._veh = v; return self
     def tire(self, t): self._tire = t; return self
@@ -489,11 +590,22 @@ class Experiment:
     def maneuver(self, m): self._man = m; return self
     def sensors(self, s): self._sensors = s; return self
 
+    def kinematics(self, front=None, rear=None):
+        """Attach per-axle suspension hardpoints (L3/L4 only).
+
+        :param front: front hardpoint YAML path or stem (``mp_front_sedan``).
+        :param rear: rear hardpoint YAML path or stem (``ta_rear_sedan``).
+        """
+        self._kin = (front, rear)
+        return self
+
     @classmethod
     def from_config(cls, name_or_cfg):
         """Build an Experiment from an authored scenario YAML (configs/experiments/
         <name>.yaml or a dict): vehicle + tire + level + map(surface+driving line)
-        + maneuver + sensor suite. Closes the loop with the authoring tool."""
+        + maneuver + sensor suite (+ optional ``kinematics: {front, rear}``
+        hardpoint stems, required for ``level: L4``). Closes the loop with the
+        authoring tool."""
         import yaml
         cfg = name_or_cfg
         if isinstance(cfg, str):
@@ -501,6 +613,15 @@ class Experiment:
         exp = cls(level=cfg.get("level", "L2"))
         exp.vehicle(Vehicle.preset(cfg.get("vehicle", "sedan")))
         exp.tire(Tire.preset(cfg.get("tire", "default_pacejka")))
+        kin = cfg.get("kinematics")
+        if kin is not None:
+            # Stems or paths; resolve_susp_kinematics() resolves them at attach
+            # time, so a missing file raises there rather than being skipped.
+            if not isinstance(kin, dict) or set(kin) - {"front", "rear"}:
+                raise ValueError(
+                    "kinematics must be a mapping with keys 'front' and/or 'rear', "
+                    "got %r" % (kin,))
+            exp.kinematics(kin.get("front"), kin.get("rear"))
         line = None
         if cfg.get("map"):
             m = yaml.safe_load(open(_MAP / f"{cfg['map']}.yaml"))
@@ -542,12 +663,152 @@ class Experiment:
                 exp._road.p["mu"] = v
         return exp
 
+    # -- trace recording (opt-in; the run contract is untouched) -----------
+    def enable_trace(self, path, decimation=None, seed=None, run_id=None,
+                     producer=None, tags=None, role="plant", params=None):
+        """Record this run to a ``.vdtrace`` (11_trace_contract_spec).
+
+        Opt-in for the same reason as on the plant path: a lab run that always
+        recorded would hand every caller the write cost. The command on this
+        path is a pedal command, so ``u_fx`` is *not* recorded -- writing a
+        zero for a quantity this producer does not have is exactly what 3.2.1
+        forbids. The renderer draws a missing command series as zeros.
+
+        :param path: output ``.vdtrace`` path.
+        :param decimation: keep 1 sample of every N. ``None`` picks the
+            smallest N whose record rate stays at or above 100 Hz.
+        :param seed: run seed, recorded for replay.
+        :param run_id: run identifier; defaults to the trace file stem.
+        :param producer: ``{"name", "version"}`` of the calling script.
+        :param tags: free-form dict merged into the manifest as ``tags``.
+        :param role: manifest ``role``; this object is the plant.
+        :param params: dict hashed into ``repro.param_hash``. Defaults to this
+            experiment's resolved settings; a campaign passes its declaration
+            so the hash is a function of the declaration and nothing else.
+        :returns: the resolved decimation.
+        """
+        import vdsim_trace
+        import vdsim_plant
+
+        if self._trace is not None or self._trace_pending is not None:
+            raise RuntimeError("trace already enabled; call finalize_trace() first")
+        if decimation is None:
+            decimation = max(1, int(round(1.0 / (vdsim_plant.TRACE_TARGET_HZ * self.dt))))
+        decimation = int(decimation)
+        vp_path = self._veh.path
+        if vp_path is None:
+            raise RuntimeError(
+                "enable_trace needs the vehicle YAML the params came from; "
+                "build the vehicle with Vehicle.preset() or Vehicle.from_yaml()")
+        vp = self._veh.vp
+        shape, aniso = vdsim_plant.measure_mu_aniso(self._tire.tp)
+        body_lwh, wheel_width = vdsim_plant.body_dimensions(vp_path)
+        path = Path(path)
+        geometry = {
+            "wheelbase_m": float(vp.wheelbase),
+            "track_m": float(vp.track_front),
+            "steer_ratio": float(vp.steering_ratio),
+            "track_front_m": float(vp.track_front),
+            "track_rear_m": float(vp.track_rear),
+            "cg_to_front_m": float(vp.cg_to_front),
+            "cg_to_rear_m": float(vp.cg_to_rear),
+            "wheel_radius_m": float(vp.wheel_radius_nominal),
+            "mass_kg": float(vp.mass),
+            "cg_height_m": float(vp.cg_height),
+            "wheel_width_m": wheel_width,
+            "body_lwh_m": body_lwh,
+        }
+        if params is None:
+            params = {
+                "level": self.level,
+                "dt": float(self.dt),
+                "vehicle_config": Path(vp_path).name,
+                "road": {"kind": self._road.kind, "params": self._road.p},
+                "vehicle": {"mass": float(vp.mass),
+                            "wheelbase": float(vp.wheelbase),
+                            "cg_height": float(vp.cg_height),
+                            "steering_ratio": float(vp.steering_ratio)},
+            }
+        repro = {
+            "vdsim_version": vdsim_plant._vdsim_version(),
+            "git_sha": vdsim_plant._git_sha(),
+            "param_hash": vdsim_trace.param_hash(params),
+            "seed": seed,
+            "dt_s": float(self.dt * decimation),
+            "run_id": run_id or path.stem,
+            "control_dt_s": float(self.dt),
+            "substep_dt_s": float(self.dt),
+            "decimation": decimation,
+        }
+        base = tuple(n for n in vdsim_trace.BASE_CHANNELS if n != "u_fx")
+        self._channels = vdsim_trace.channels_for_level(self.level, base=base)
+        self._sample = vdsim_plant.trace_sample
+        self._trace_pending = dict(
+            path=path,
+            geometry=geometry,
+            model_level=self.level,
+            contact_scope=vdsim_plant.CONTACT_SCOPE_BY_LEVEL[self.level],
+            channels=self._channels,
+            tire={"friction_shape": shape, "mu_aniso": aniso,
+                  "mu_aniso_source": "measured"},
+            repro=repro,
+            producer=producer or {"name": Path(sys.argv[0]).name or "python",
+                                  "version": vdsim_plant._vdsim_version()},
+            decimation=decimation,
+            extra={"tags": dict(tags or {})},
+            role=role,
+        )
+        return decimation
+
+    def finalize_trace(self):
+        """Flush channels, freeze the manifest and close the trace.
+
+        :returns: the written path, or ``None`` when recording was never on.
+        :raises RuntimeError: when a trace was enabled but :meth:`run` never
+            built the session, so ``kinematics_attached`` was never observed.
+        """
+        if self._trace is None:
+            if self._trace_pending is not None:
+                self._trace_pending = None
+                raise RuntimeError(
+                    "finalize_trace() before run(): kinematics_attached is what the "
+                    "hardpoint attach returns, and no session was built to ask")
+            return None
+        writer, self._trace = self._trace, None
+        return writer.finalize()
+
+    @property
+    def trace_path(self):
+        """Path of the trace being recorded, or ``None``."""
+        if self._trace is not None:
+            return self._trace.path
+        if self._trace_pending is not None:
+            return self._trace_pending["path"]
+        return None
+
+    def _open_trace(self):
+        """Create the staged writer now that the attach outcome is known."""
+        import vdsim_trace
+
+        spec, self._trace_pending = self._trace_pending, None
+        self._trace = vdsim_trace.TraceWriter(
+            kinematics_attached=bool(self._kin_info["attached"]), **spec)
+
+    def _record(self, o, cmd):
+        """Offer one sample of the pre-step state to the writer."""
+        self._trace.append(self._sample(o, o.sim_time,
+                                        float(cmd.steer_angle_wheel), None,
+                                        self._channels))
+
     def run(self, duration=None):
         if duration is None:
             duration = getattr(self, "_duration", 10.0)
         vp, tp = self._veh.vp, self._tire.tp
         sp = self._sensors.sp if self._sensors else vdsim.SensorParams()
-        sess = self._road._session(vp, tp, self.level, self.dt, sp)
+        sess, self._kin_info = _build_session(
+            self._road, vp, tp, self.level, self.dt, sp, self._kin)
+        if self._trace_pending is not None:
+            self._open_trace()
         x0, y0 = getattr(self._man, "start", (0.0, 0.0))
         s0 = vdsim.make_init_state(vp, tp, x=x0, y=y0, yaw=self._man.init_yaw,
                                    v=self._man.init_v)
@@ -555,7 +816,15 @@ class Experiment:
         rows, n = [], int(duration / self.dt)
         for k in range(n):
             o = sess.output()
-            sess.set_input(self._man.driver(k, o, vp))
+            cmd = self._man.driver(k, o, vp)
+            sess.set_input(cmd)
+            if self._trace is not None:
+                # Ask before building the sample: on a decimated step the dict
+                # construction is the whole cost, so skipping it is the saving.
+                if self._trace.due:
+                    self._record(o, cmd)
+                else:
+                    self._trace.skip()
             sess.tick(self.dt)
             o = sess.output(); st = o.state
             Ft = o.tire_forces
@@ -584,7 +853,9 @@ class Simulation:
         sp = exp._sensors.sp if exp._sensors else vdsim.SensorParams()
         self.dt = dt or exp.dt
         self.duration = duration if duration is not None else getattr(exp, "_duration", 1e18)
-        self.sess = exp._road._session(self._vp, exp._tire.tp, exp.level, self.dt, sp)
+        self.sess, self._kin_info = _build_session(
+            exp._road, self._vp, exp._tire.tp, exp.level, self.dt, sp,
+            getattr(exp, "_kin", None))
         man = exp._man
         x0, y0 = getattr(man, "start", (0.0, 0.0))
         self.sess.reset(vdsim.make_init_state(self._vp, exp._tire.tp,
@@ -756,7 +1027,7 @@ class Sim:
     def __init__(self, vehicle="sedan", tire="default_pacejka", level="L2",
                  road=None, sensors=None, dt=0.005,
                  x0=0.0, y0=0.0, yaw0=0.0, v0=0.0, sensor_mounts=None,
-                 ref_point=None):
+                 ref_point=None, kinematics=None):
         self._veh = _as_vehicle(vehicle)
         self._tire = _as_tire(tire)
         self._road = road or Road.flat()
@@ -768,7 +1039,8 @@ class Sim:
             sp = vdsim.SensorParams()
         else:
             sp = sensors                           # raw vdsim.SensorParams
-        self.sess = self._road._session(vp, tp, level, dt, sp)
+        self.sess, self._kin_info = _build_session(
+            self._road, vp, tp, level, dt, sp, kinematics)
         self.sess.reset(vdsim.make_init_state(vp, tp, x=x0, y=y0, yaw=yaw0, v=v0))
         self._vp = vp
         self._tp = tp

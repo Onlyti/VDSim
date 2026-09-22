@@ -10,7 +10,8 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO / "python"), str(REPO / "build" / "python")]
 
-from vdsim_lab import Sim, Road, Sensors
+import vdsim_lab
+from vdsim_lab import Sim, Road, Sensors, Experiment
 
 
 def test_throttle_then_brake():
@@ -147,6 +148,229 @@ def test_ref_point_position():
     assert sim_u._ref == [1.0, 0.5]
 
 
+# --- Q20 (i): what actually discriminates L3 from L4 ------------------------
+# KinematicFourteenDOFDynamics (core/src/fourteen_dof_dynamics.cpp) overrides
+# level() and nothing else, and attach_front/rear_kinematics dynamic_cast to
+# the shared base.  So the level label is not the discriminator -- the attach
+# is.  These tests keep that fact from being rediscovered as a surprise, and
+# are why a trace manifest needs kinematics provenance next to model_level.
+HARDPOINTS = {"front": "mp_front_sedan", "rear": "ta_rear_sedan"}
+
+
+def _tape(k):
+    return 0.03 * math.sin(0.02 * k), 0.15
+
+
+def _l3_l4_rows(kin, n=300):
+    """Run one identical input tape on L3 and L4 through Sim; return both tables."""
+    out = {}
+    for level in ("L3", "L4"):
+        sim = Sim(level=level, road=Road.flat(mu=1.0), v0=15.0, kinematics=kin)
+        for k in range(n):
+            steer, throttle = _tape(k)
+            sim.set_input(steer=steer, throttle=throttle)
+            sim.run_core_dt()
+        out[level] = [list(r) for r in sim.rows]
+    return out
+
+
+def _bare_core_rows(level, n=300, dt=0.005):
+    """Same tape on a raw core session with no attach -- below the seam.
+
+    Sim refuses a bare L4 (the H1 guard), so the "label carries no physics"
+    fact is measured one layer down, on the session factory _build_session
+    itself calls.  Row layout is vdsim_lab's, so it compares with Sim rows.
+    """
+    import vdsim
+    veh, tire = vdsim_lab._as_vehicle("sedan"), vdsim_lab._as_tire("default_pacejka")
+    sess = Road.flat(mu=1.0)._session(veh.vp, tire.tp, level, dt, vdsim.SensorParams())
+    sess.reset(vdsim.make_init_state(veh.vp, tire.tp, x=0.0, y=0.0, yaw=0.0, v=15.0))
+    rows = []
+    for k in range(n):
+        steer, throttle = _tape(k)
+        c = vdsim.CmdL4()
+        c.steer_angle_wheel = steer
+        c.throttle = throttle
+        c.gear = 1
+        sess.set_input(c)
+        sess.tick(dt)
+        rows.append(list(vdsim_lab._make_row(sess.output())))
+    return rows
+
+
+def test_level_label_alone_carries_no_suspension_physics():
+    bare = {lv: _bare_core_rows(lv) for lv in ("L3", "L4")}
+    assert bare["L3"] == bare["L4"], "bare L4 must be bit-identical to bare L3"
+    via_sim = Sim(level="L3", road=Road.flat(mu=1.0), v0=15.0)
+    for k in range(300):
+        steer, throttle = _tape(k)
+        via_sim.set_input(steer=steer, throttle=throttle)
+        via_sim.run_core_dt()
+    assert [list(r) for r in via_sim.rows] == bare["L3"],         "the raw-session probe must reproduce Sim exactly, or it proves nothing"
+    kin = _l3_l4_rows(HARDPOINTS)
+    assert kin["L3"] == kin["L4"], \
+        "hardpoints attach to both levels -- level() is a label, not physics"
+    return bare, kin
+
+
+def test_hardpoints_are_the_real_discriminator():
+    bare, kin = test_level_label_alone_carries_no_suspension_physics()
+    d = max(abs(a[i] - b[i])
+            for a, b in zip(bare["L4"], kin["L4"]) for i in range(len(a)))
+    assert d > 1e-9, \
+        f"attaching hardpoints must change the trajectory (max |delta| = {d:.3e})"
+
+
+def test_bare_l4_is_refused():
+    """H1: L4 with no hardpoints is L3 under a false label -- refuse it."""
+    for build in (lambda: Sim(level="L4", road=Road.flat()),
+                  lambda: Experiment(level="L4").run(0.05)):
+        try:
+            build()
+        except ValueError as e:
+            msg = str(e)
+            print("H1 refusal: ValueError: %s" % msg)
+            assert "kin=" in msg and "level='L3'" in msg, f"unexpected message: {msg}"
+        else:
+            raise AssertionError("bare L4 must be refused, not run as L3")
+    # With hardpoints both labels are allowed, and L3 + hardpoints stays legal.
+    Sim(level="L4", road=Road.flat(), kinematics=HARDPOINTS)
+    Sim(level="L3", road=Road.flat(), kinematics=HARDPOINTS)
+
+
+def test_plant_bare_l4_is_refused():
+    """Q20 (A): VDSimPlant cannot attach hardpoints, so its L4 is refused too."""
+    from vdsim_plant import VDSimPlant
+    try:
+        Sim(level="L4", road=Road.flat())
+    except ValueError as e:
+        lab_lead = str(e).split(";")[0]
+    try:
+        VDSimPlant(level="L4")
+    except ValueError as e:
+        msg = str(e)
+        print("plant L4 refusal: ValueError: %s" % msg)
+        assert msg.split(";")[0] == lab_lead, \
+            f"plant and _build_session must state the same reason: {msg!r} vs {lab_lead!r}"
+        assert "level='L3'" in msg, f"unexpected message: {msg}"
+    else:
+        raise AssertionError("VDSimPlant(level='L4') must be refused, not run as L3")
+    assert VDSimPlant(level="L3").level == "L3"
+
+
+def test_trace_states_the_attach():
+    """Q20 (iii): the manifest records what the attach returned."""
+    import vdsim_trace as vt
+    with tempfile.TemporaryDirectory() as td:
+        got = {}
+        for name, kin in (("bare", None), ("kin", HARDPOINTS)):
+            exp = Experiment(level="L3")
+            if kin:
+                exp.kinematics(**kin)
+            p = Path(td) / (name + ".vdtrace")
+            exp.enable_trace(p, seed=0, run_id=name)
+            exp.run(0.2)
+            exp.finalize_trace()
+            with vt.TraceReader(p) as tr:
+                got[name] = (tr.manifest["schema_version"], tr.kinematics_attached)
+        assert got["bare"] == (vt.SCHEMA_VERSION, False), got
+        assert got["kin"] == (vt.SCHEMA_VERSION, True), got
+        exp = Experiment(level="L3")
+        exp.enable_trace(Path(td) / "never.vdtrace")
+        try:
+            exp.finalize_trace()
+        except RuntimeError:
+            pass
+        else:
+            raise AssertionError("finalize before run must not invent an attach state")
+
+
+def test_hardpoints_refused_below_l3():
+    try:
+        Sim(level="L2", road=Road.flat(), kinematics=HARDPOINTS)
+    except RuntimeError as e:
+        assert "L3/L4" in str(e), f"unexpected message: {e}"
+    else:
+        raise AssertionError("L2 must refuse hardpoints, not silently ignore them")
+
+
+def test_missing_hardpoint_file_is_an_error():
+    try:
+        Sim(level="L3", road=Road.flat(), kinematics={"front": "no_such_kin"})
+    except FileNotFoundError:
+        pass
+    else:
+        raise AssertionError("a missing hardpoint YAML must raise, not skip the attach")
+
+
+# --- Q21: the name `vdsim` must resolve to the compiled core -----------------
+# An unrelated distribution ships a top-level `vdsim/` package; installed beside
+# our wheel it wins the import silently.  vdsim_guard makes that an error.
+
+def _shadow_probe(body, shadow_dir, extra_path=()):
+    """Run *body* in a child whose sys.path starts with a fake `vdsim` package."""
+    import os
+    import subprocess
+    env = dict(os.environ)
+    env["PYTHONPATH"] = os.pathsep.join(
+        [str(shadow_dir), str(REPO / "python")] + [str(p) for p in extra_path])
+    return subprocess.run([sys.executable, "-c", body], env=env,
+                          capture_output=True, text=True)
+
+
+def _make_shadow(td):
+    pkg = Path(td) / "vdsim"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("VERSION = 'foreign package'\n")
+    return Path(td)
+
+
+def test_shadowed_core_is_rejected():
+    body = ("import sys, vdsim_guard\n"
+            "try:\n"
+            "    vdsim_guard.load_core([])\n"
+            "except vdsim_guard.CoreShadowedError as exc:\n"
+            "    print(exc); sys.exit(0)\n"
+            "sys.exit('no error raised')\n")
+    with tempfile.TemporaryDirectory() as td:
+        shadow = _make_shadow(td)
+        r = _shadow_probe(body, shadow)
+        assert r.returncode == 0, f"shadowed vdsim was accepted: {r.stdout}{r.stderr}"
+        msg = r.stdout
+        assert str(shadow / "vdsim") in msg, f"message must name the real load path: {msg}"
+        assert "Cause:" in msg and "Fix:" in msg, f"message needs cause + remedy: {msg}"
+
+
+def test_shadowed_core_recovers_from_build_dir():
+    """A dev checkout still works: the explicit build path wins over the shadow."""
+    import os
+    build = Path(os.environ.get("VDSIM_BUILD_DIR", REPO / "build")) / "python"
+    if not build.is_dir():
+        build = REPO / "build" / "python"
+    assert build.is_dir(), f"no compiled core to fall back to ({build})"
+    body = ("import sys, vdsim_guard\n"
+            "m = vdsim_guard.load_core([sys.argv[1]])\n"
+            "assert hasattr(m, 'SimSession'), m\n"
+            "print(m.__file__)\n")
+    with tempfile.TemporaryDirectory() as td:
+        shadow = _make_shadow(td)
+        import os as _os
+        import subprocess
+        env = dict(_os.environ)
+        env["PYTHONPATH"] = _os.pathsep.join([str(shadow), str(REPO / "python")])
+        r = subprocess.run([sys.executable, "-c", body, str(build)],
+                           env=env, capture_output=True, text=True)
+        assert r.returncode == 0, f"fallback failed: {r.stdout}{r.stderr}"
+        assert str(shadow) not in r.stdout, r.stdout
+
+
+def test_real_core_passes_the_check():
+    import vdsim
+    import vdsim_guard
+    assert vdsim_guard.diagnose(vdsim) is None, vdsim.__file__
+    assert vdsim_guard.check_core(vdsim) is vdsim
+
+
 if __name__ == "__main__":
     test_throttle_then_brake()
     test_step_steer_yaws()
@@ -159,4 +383,14 @@ if __name__ == "__main__":
     test_register_metric()
     test_plot_comparison()
     test_ref_point_position()
+    test_level_label_alone_carries_no_suspension_physics()
+    test_hardpoints_are_the_real_discriminator()
+    test_bare_l4_is_refused()
+    test_plant_bare_l4_is_refused()
+    test_trace_states_the_attach()
+    test_hardpoints_refused_below_l3()
+    test_missing_hardpoint_file_is_an_error()
+    test_shadowed_core_is_rejected()
+    test_shadowed_core_recovers_from_build_dir()
+    test_real_core_passes_the_check()
     print("OK test_experiment_api")

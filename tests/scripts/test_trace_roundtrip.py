@@ -53,6 +53,7 @@ def _minimal_writer(path, **kw):
         role="plant",
         model_level="L2",
         contact_scope="C2",
+        kinematics_attached=False,
         # 2D-only synthetic samples: the 0.3 channels are additive optional
         # (11 3.2.1), so this fixture declares the base set rather than
         # fabricating an a_body it never computed.

@@ -1,0 +1,31 @@
+# mu_sweep — the smallest useful campaign: one scenario, one friction axis.
+#
+# Run it with:
+#     vdsim-campaign run configs/campaigns/mu_sweep.yaml --jobs 4 --render overview
+#
+# Products land in ./campaigns/mu_sweep/ — one directory per run holding
+# run.vdtrace, plus index.jsonl listing the axis values and each run's
+# disposition. See docs/design/BATCH_RUNNER.md.
+name: mu_sweep
+
+# Scenario every run starts from: configs/experiments/<name>.yaml.
+base: step_steer
+
+# Root seed. Per-run seeds derive from it, so the campaign is reproducible
+# without recording wall-clock or pid anywhere.
+seed: 20260922
+
+# Optional override of the scenario's own duration [s].
+duration: 4.0
+
+sweep:
+  # Orthogonal product of the listed axes. Keys are dotted paths into the
+  # scenario document; `mu`, `vehicle.*` and `tire.*` are applied after the
+  # preset is resolved.
+  grid:
+    mu: [0.9, 0.7, 0.5]
+
+# Note: `level` is a sweepable axis since Q20. An `L4` run needs suspension
+# hardpoints; without them it is refused (index status `error`) rather than
+# run as L3 under an L4 label, and every trace states `kinematics_attached`
+# (18_dev_briefing_0903 §51).

@@ -29,11 +29,9 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-try:
-    import vdsim
-except ImportError:
-    sys.path.insert(0, str(REPO / "build" / "python"))
-    import vdsim
+from vdsim_guard import load_core  # noqa: E402  (shadowed-core check, one place)
+
+vdsim = load_core([REPO / "build" / "python"])
 
 def _conf_root():
     for c in (REPO / "configs", Path.cwd() / "configs",
@@ -101,6 +99,8 @@ TRACE_TARGET_HZ = 100.0
 #: Ladder levels this plant can be built at. The control contract
 #: ``u = [delta_rad, Fx_total_N]`` is the same at every one of them; only the
 #: model behind the seam changes, and with it which trace channels exist.
+#: ``"L4"`` is listed so the name is recognised, and then refused in
+#: ``VDSimPlant.__init__``: without hardpoints it is L3 under another label.
 PLANT_LEVELS = ("L1", "L2", "L3", "L4")
 
 #: How far the road normal is coupled into the physics, per level
@@ -175,7 +175,9 @@ def measure_mu_aniso(tp: vdsim.TireParams, Fz: float = None, n: int = 601):
     if getattr(tp, "tir_path", ""):
         model = vdsim.create_magic_formula_tire_from_tir(tp.tir_path)
     else:
-        model = vdsim.create_pacejka_mf96(tp)
+        # The binding takes no argument; the parameter set is applied by
+        # `initialize` below, exactly as for the TIR-backed model.
+        model = vdsim.create_pacejka_mf96()
     model.initialize(tp)
 
     def _peak(kappa_max, alpha_max, pick):
@@ -338,6 +340,62 @@ def _fx_to_cmdl1(vp: vdsim.VehicleParams, delta: float, fx: float) -> vdsim.CmdL
     return cmd
 
 
+def trace_sample(o, t, u_steer, u_fx, channels):
+  """Map one session output onto a trace sample (3.2 / 3.2.1).
+
+  Shared by the plant path (:class:`VDSimPlant`) and the scenario path
+  (``vdsim_lab.Experiment``) so the channel mapping has a single definition.
+  ``channels`` decides what is written: a quantity the producer does not have
+  is left out rather than zero-filled.
+
+  :param o: ``vdsim.SimOutput`` at time ``t``.
+  :param t: sample time [s].
+  :param u_steer: commanded road-wheel steer [rad].
+  :param u_fx: commanded total longitudinal force [N]; ignored when ``u_fx``
+      is not in ``channels`` (pedal-commanded producers have no such value).
+  :param channels: channel names this run records.
+  :returns: sample dict accepted by ``vdsim_trace.TraceWriter.append``.
+  """
+  st = o.state
+  sample = {
+      "t": float(t),
+      "pose": (float(st.position[0]), float(st.position[1]), float(st.yaw())),
+      "v_body": (float(st.vx()), float(st.vy())),
+      "yaw_rate": float(st.yaw_rate()),
+      "u_steer": float(u_steer),
+      "wheel_F": [(float(o.tire_forces_wheel[i][0]),
+                   float(o.tire_forces_wheel[i][1]),
+                   float(o.Fz[i])) for i in range(4)],
+      "wheel_mu": [float(o.wheel_mu[i]) for i in range(4)],
+      "wheel_kappa": [float(o.slip_ratio[i]) for i in range(4)],
+      "wheel_alpha": [float(o.slip_angle[i]) for i in range(4)],
+  }
+  if "u_fx" in channels:
+      sample["u_fx"] = float(u_fx)
+  # 0.3 channels. `channels` already excludes anything this level does not
+  # produce, so no branch here can write a zero standing in for a quantity the
+  # model does not have (3.2.1).
+  if "a_body" in channels:
+      # Straight from the dynamics -- never a difference of `v_body`, which at
+      # dt=1 ms would hand the CG vector a noise floor larger than the signal
+      # and would change size with `decimation`.
+      sample["a_body"] = (float(o.ax), float(o.ay), float(o.az))
+  if "pose_zrp" in channels:
+      # z = settled CG height + the ride model's heave about it.
+      sample["pose_zrp"] = (float(st.position[2]) + float(o.heave_z),
+                            float(o.roll), float(o.pitch))
+  if "wheel_road_dz" in channels:
+      sample["wheel_road_dz"] = [float(o.contacts[i].road_dz) for i in range(4)]
+  if "wheel_road_normal" in channels:
+      sample["wheel_road_normal"] = [
+          (float(o.contacts[i].normal[0]),
+           float(o.contacts[i].normal[1]),
+           float(o.contacts[i].normal[2])) for i in range(4)]
+  if "wheel_travel" in channels:
+      sample["wheel_travel"] = [float(st.susp_compression[i]) for i in range(4)]
+  return sample
+
+
 class _TireView:
     def __init__(self, dyn, ts: vdsim.TireSetup, wheel: int = 0):
         self._dyn = dyn
@@ -382,8 +440,9 @@ class VDSimPlant:
   """Pacejka plant with a direct Fx→torque path (no throttle map).
 
   ``level`` selects the model behind the seam — ``"L2"`` (7-DOF, the default and
-  the historical behaviour), ``"L3"``/``"L4"`` (14-DOF ride models), ``"L1"``
-  (bicycle). The control contract ``u = [delta_rad, Fx_total_N]`` does not
+  the historical behaviour), ``"L3"`` (14-DOF ride model), ``"L1"``
+  (bicycle). ``"L4"`` raises ``ValueError``: this plant cannot attach
+  suspension hardpoints, and without them L4 is L3 under another label. The control contract ``u = [delta_rad, Fx_total_N]`` does not
   change with the level; what changes is which quantities exist, and therefore
   which trace channels a run at that level is allowed to record.
   """
@@ -401,6 +460,15 @@ class VDSimPlant:
       if level not in PLANT_LEVELS:
           raise ValueError(
               f"level={level!r} is not one of {list(PLANT_LEVELS)}")
+      # This plant has no hardpoint input, so an L4 plant would be L3 physics
+      # recorded as model_level L4. Same refusal as vdsim_lab._build_session;
+      # the leading sentence is shared on purpose and a test compares the two.
+      if level == "L4":
+          raise ValueError(
+              "level='L4' with no suspension hardpoints attached is L3 under another "
+              "label (the two are bit-identical until an attach); VDSimPlant has no "
+              "hardpoint input -- use level='L3', or vdsim_lab.Experiment with "
+              "kinematics={'front': <stem>, 'rear': <stem>}")
       if not math.isfinite(base_mu) or not (0.0 < base_mu <= 1.2):
           raise ValueError(f"base_mu={base_mu} outside (0, 1.2]")
       if friction_map is not None and friction_map_2d is not None:
@@ -578,6 +646,9 @@ class VDSimPlant:
           geometry=geometry,
           model_level=self.level,
           contact_scope=CONTACT_SCOPE_BY_LEVEL[self.level],
+          # This plant builds a direct-control session and has no attach call,
+          # so no hardpoints are ever behind it; the manifest must say so.
+          kinematics_attached=False,
           channels=self._channels,
           tire={"friction_shape": shape, "mu_aniso": aniso,
                 "mu_aniso_source": "measured"},
@@ -606,45 +677,9 @@ class VDSimPlant:
       return None if self._trace is None else self._trace.path
 
   def _record(self, delta: float, fx: float):
-      o = self._sess.output()
-      st = o.state
-      sample = {
-          "t": self._t,
-          "pose": (float(st.position[0]), float(st.position[1]), float(st.yaw())),
-          "v_body": (float(st.vx()), float(st.vy())),
-          "yaw_rate": float(st.yaw_rate()),
-          "u_steer": delta,
-          "u_fx": fx,
-          "wheel_F": [(float(o.tire_forces_wheel[i][0]),
-                       float(o.tire_forces_wheel[i][1]),
-                       float(o.Fz[i])) for i in range(4)],
-          "wheel_mu": [float(o.wheel_mu[i]) for i in range(4)],
-          "wheel_kappa": [float(o.slip_ratio[i]) for i in range(4)],
-          "wheel_alpha": [float(o.slip_angle[i]) for i in range(4)],
-      }
-      # 0.3 channels. `self._channels` already excludes anything this level does
-      # not produce, so no branch here can write a zero standing in for a
-      # quantity the model does not have (§3.2.1).
-      ch = self._channels
-      if "a_body" in ch:
-          # Straight from the dynamics — never a difference of `v_body`, which
-          # at dt=1 ms would hand the CG vector a noise floor larger than the
-          # signal and would change size with `decimation`.
-          sample["a_body"] = (float(o.ax), float(o.ay), float(o.az))
-      if "pose_zrp" in ch:
-          # z = settled CG height + the ride model's heave about it.
-          sample["pose_zrp"] = (float(st.position[2]) + float(o.heave_z),
-                                float(o.roll), float(o.pitch))
-      if "wheel_road_dz" in ch:
-          sample["wheel_road_dz"] = [float(o.contacts[i].road_dz) for i in range(4)]
-      if "wheel_road_normal" in ch:
-          sample["wheel_road_normal"] = [
-              (float(o.contacts[i].normal[0]),
-               float(o.contacts[i].normal[1]),
-               float(o.contacts[i].normal[2])) for i in range(4)]
-      if "wheel_travel" in ch:
-          sample["wheel_travel"] = [float(st.susp_compression[i]) for i in range(4)]
-      self._trace.append(sample)
+      """Offer one sample of the current state to the writer."""
+      self._trace.append(trace_sample(self._sess.output(), self._t, delta, fx,
+                                      self._channels))
 
   @property
   def vehicle(self):
