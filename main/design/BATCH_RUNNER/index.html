@@ -2478,10 +2478,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#7-a-level-axis-is-refused" class="md-nav__link">
+  <a href="#7-a-level-axis-and-the-bare-l4-refusal" class="md-nav__link">
     <span class="md-ellipsis">
       
-        7. A level axis is refused
+        7. A level axis and the bare-L4 refusal
       
     </span>
   </a>
@@ -2709,19 +2709,21 @@ Q0 is the case in point.</p>
 <li><strong>Overlay rendering and aggregate plots.</strong> Those stay where they are; a
   consumer script that reads the index is the place for them.</li>
 </ul>
-<h2 id="7-a-level-axis-is-refused">7. A <code>level</code> axis is refused<a class="headerlink" href="#7-a-level-axis-is-refused" title="Permanent link">&para;</a></h2>
-<p><code>L4</code> and <code>L3</code> are the same physics unless suspension hardpoints are attached,
-and the scenario path attaches none. A level sweep would therefore produce
-identical runs whose manifests disagree about which model produced them, and
-the false <code>model_level</code> outlives any warning printed at run time. So the runner
-refuses the axis outright, on every declaration form:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>CampaignError: 'level' is not a campaign axis until Q20: L4 is identical to L3
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>unless suspension hardpoints are attached, so a level sweep records traces
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>whose manifest model_level is false. Declare one level per campaign.
+<h2 id="7-a-level-axis-and-the-bare-l4-refusal">7. A <code>level</code> axis and the bare-L4 refusal<a class="headerlink" href="#7-a-level-axis-and-the-bare-l4-refusal" title="Permanent link">&para;</a></h2>
+<p><code>L4</code> and <code>L3</code> are the same physics unless suspension hardpoints are attached.
+Until Q20 a level sweep therefore produced identical runs whose manifests
+disagreed about which model produced them, and the runner refused the axis.</p>
+<p>Q20 moved the refusal to where the false label is born: building an <code>L4</code>
+session with no hardpoints attached raises, on every path (campaign, <code>Sim</code>,
+<code>Experiment</code>), whether or not a trace is recorded. In a campaign that run
+becomes an <code>error</code> row with no trace:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>ValueError: level='L4' with no suspension hardpoints attached is L3 under another
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>label (the two are bit-identical until an attach); pass kin=...
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>(kinematics={'front': &lt;stem&gt;, 'rear': &lt;stem&gt;}) or use level='L3'
 </span></code></pre></div>
-<p>Declare one level per campaign instead. The refusal is lifted by Q20, which
-attaches the hardpoints and adds a <code>kinematics_attached</code> field to the manifest
-so a reader can tell the two apart. See 18_dev_briefing_0903 §30.4, §31 C-1.</p>
+<p>A <code>level</code> axis is accepted again, and every trace written from schema 0.4 on
+states <code>kinematics_attached</code>, so a reader can tell the two apart. See
+18_dev_briefing_0903 §30.4, §31 C-1, §51.</p>
 <h2 id="8-cli">8. CLI<a class="headerlink" href="#8-cli" title="Permanent link">&para;</a></h2>
 <div class="language-sh highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>vdsim-campaign<span class="w"> </span>run<span class="w"> </span>campaign.yaml<span class="w">                      </span><span class="c1"># sequential</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>vdsim-campaign<span class="w"> </span>run<span class="w"> </span>campaign.yaml<span class="w"> </span>--jobs<span class="w"> </span><span class="m">4</span><span class="w">             </span><span class="c1"># four at a time</span>
