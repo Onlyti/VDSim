@@ -15,7 +15,35 @@ from vdsim_rl import (EnvConfig, VDSimVecEnv, VDSimEnv,
 
 res = {}
 G = 9.81
-IONIQ5 = yaml.safe_load((REPO / "configs/vehicles/ioniq5_awd.yaml").read_text())
+GENERIC = yaml.safe_load((REPO / "configs/vehicles/generic_sedan.yaml").read_text())
+
+# A synthetic probe car, injected the way a preset with non-public specs is
+# injected ($VDSIM_PRIVATE_CONFIGS -> vehicles/<stem>.yaml).  Every shipped car
+# carries the C++ default values, so "the YAML reached the plant" checked
+# against one of them would be vacuous; Q23-1 asserts the fixture actually
+# differs.  These numbers are invented for this test and describe no vehicle.
+import contextlib, shutil, tempfile
+PROBE_NAME = "probe_car"
+PROBE = {**GENERIC, "mass": 1750.0, "mass_sprung": 1580.0, "wheelbase": 2.6,
+         "cg_to_front": 1.15, "cg_to_rear": 1.45, "cg_height": 0.58,
+         "track_front": 1.58, "track_rear": 1.58, "wheel_radius_nominal": 0.33}
+PROBE_ROOT = Path(tempfile.mkdtemp(prefix="vdsim_probe_"))
+(PROBE_ROOT / "vehicles").mkdir()
+(PROBE_ROOT / "vehicles" / f"{PROBE_NAME}.yaml").write_text(yaml.safe_dump(PROBE))
+
+
+@contextlib.contextmanager
+def probe_root():
+    """Expose the probe car only where it is used.
+
+    A private root left set would also resolve the shipped tyre privately and
+    flip ``info["source"]`` for the public declarations checked in Q23-2.
+    """
+    os.environ[vdsim_rl.PRIVATE_ROOT_ENV] = str(PROBE_ROOT)
+    try:
+        yield
+    finally:
+        os.environ.pop(vdsim_rl.PRIVATE_ROOT_ENV, None)
 
 
 def plant_weight_kg(cfg, n=2):
@@ -39,19 +67,21 @@ def plant_weight_kg(cfg, n=2):
     return o[:, cols].sum(axis=1) / G
 
 
-# ---- Q23-1: vehicle="ioniq5_awd" -> the plant carries the YAML car ----
-vp, tp, prov = load_vehicle_preset("ioniq5_awd", "ioniq5_pac2002")
-for key in ("mass", "wheelbase", "cg_to_front", "cg_to_rear", "cg_height",
-            "track_front", "wheel_radius_nominal"):
-    assert abs(getattr(vp, key) - IONIQ5[key]) < 1e-9, key
-w = plant_weight_kg(EnvConfig(vehicle="ioniq5_awd", tire="ioniq5_pac2002"))
-print(f"Q23-1 ioniq5 plant weight {w.round(1)} kg vs YAML mass {IONIQ5['mass']}")
-assert np.all(np.abs(w / IONIQ5["mass"] - 1.0) < 0.01), w
-res["q23_ioniq5_weight_kg"] = w.tolist()
+# ---- Q23-1: a named preset -> the plant carries that YAML's car ----
+with probe_root():
+    vp, tp, prov = load_vehicle_preset(PROBE_NAME, "generic_pacejka")
+    for key in ("mass", "wheelbase", "cg_to_front", "cg_to_rear", "cg_height",
+                "track_front", "wheel_radius_nominal"):
+        assert abs(PROBE[key] - GENERIC[key]) > 1e-9, f"{key} cannot discriminate"
+        assert abs(getattr(vp, key) - PROBE[key]) < 1e-9, key
+    assert prov["source"] == "private" and prov["vehicle"] == PROBE_NAME, prov
+    w = plant_weight_kg(EnvConfig(vehicle=PROBE_NAME, tire="generic_pacejka"))
+print(f"Q23-1 probe plant weight {w.round(1)} kg vs YAML mass {PROBE['mass']}")
+assert np.all(np.abs(w / PROBE["mass"] - 1.0) < 0.01), w
+res["q23_probe_weight_kg"] = w.tolist()
 
 # ---- Q23-2 (Q23-f): both shipped RL declarations select the public generic
 #      car, name it, and do not warn (PO decision 78) ----
-GENERIC = yaml.safe_load((REPO / "configs/vehicles/generic_sedan.yaml").read_text())
 for name in ("default_env.yaml", "fast_env.yaml"):
     c = EnvConfig.from_yaml(str(REPO / "configs/rl" / name))
     assert (c.vehicle, c.tire) == ("generic_sedan", "generic_pacejka"), \
@@ -83,11 +113,13 @@ assert vdsim_rl.BUILTIN_WARNING in msgs, msgs
 assert e.reset(seed=0)[1]["vehicle"] is None
 print(f"Q23-3 vehicle=None warns: {msgs}")
 
-# ---- Q23-4: domain randomization scales the Ioniq5 baseline ----
-w = plant_weight_kg(EnvConfig(vehicle="ioniq5_awd", tire="ioniq5_pac2002",
-                              mass_scale_range=(1.1, 1.1)))
-print(f"Q23-4 mass_scale 1.1 -> {w.round(1)} kg (expect {1.1 * IONIQ5['mass']:.1f})")
-assert np.all(np.abs(w / (1.1 * IONIQ5["mass"]) - 1.0) < 0.01), w
+# ---- Q23-4: domain randomization scales the loaded preset, not the default ----
+with probe_root():
+    w = plant_weight_kg(EnvConfig(vehicle=PROBE_NAME, tire="generic_pacejka",
+                                  mass_scale_range=(1.1, 1.1)))
+print(f"Q23-4 mass_scale 1.1 -> {w.round(1)} kg (expect {1.1 * PROBE['mass']:.1f})")
+assert np.all(np.abs(w / (1.1 * PROBE["mass"]) - 1.0) < 0.01), w
+assert np.all(np.abs(w / (1.1 * GENERIC["mass"]) - 1.0) > 0.05), w
 
 # ---- Q23-5: loading writes nothing ----
 def tree(root):
@@ -119,8 +151,8 @@ import tempfile
 from vdsim_rl import _check_keys, VEHICLE_SIDECAR_KEYS, VEHICLE_PARSED_UNBOUND, \
     VEHICLE_REQUIRED_KEYS
 extra = VEHICLE_SIDECAR_KEYS | VEHICLE_PARSED_UNBOUND
-for bad, want in (({**IONIQ5, "masss": 1.0}, "does not know"),
-                  ({k: v for k, v in IONIQ5.items() if k != "cg_height"}, "missing")):
+for bad, want in (({**PROBE, "masss": 1.0}, "does not know"),
+                  ({k: v for k, v in PROBE.items() if k != "cg_height"}, "missing")):
     try:
         _check_keys(bad, vdsim.VehicleParams(), extra, VEHICLE_REQUIRED_KEYS, "probe")
     except ValueError as exc:
@@ -133,11 +165,13 @@ for bad, want in (({**IONIQ5, "masss": 1.0}, "does not know"),
 for tyre in sorted((REPO / "configs/parts/tire").glob("*.yaml")):
     catalog = "schema" in (yaml.safe_load(tyre.read_text()) or {})
     try:
-        load_vehicle_preset("ioniq5_awd", tyre.stem)
+        with probe_root():
+            load_vehicle_preset(PROBE_NAME, tyre.stem)
         assert not catalog, f"catalog part {tyre.name} was accepted"
     except ValueError as exc:
         assert catalog and "catalog part" in str(exc), exc
     print(f"Q23-6 tyre {tyre.stem:20s} {'refused (catalog part)' if catalog else 'loads'}")
+shutil.rmtree(PROBE_ROOT)
 # ---- Q23-f1: generic_sedan/generic_pacejka == the C++ built-in defaults ----
 #      Field-by-field, so a change to either the YAML or the C++ default that
 #      is not mirrored in the other one fails here instead of silently

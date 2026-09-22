@@ -1,12 +1,13 @@
 # vdsim_rl training preset: fast prototyping on the C++ built-in generic car at
-# a coarser substep.  default_env.yaml keeps the Ioniq 5 preset at 1 ms.
+# a coarser substep.  default_env.yaml keeps the same car at 1 ms.
 #
 # G1 gate, outer tick 5 ms, reference = same plant at max_substep_dt 0.1 ms.
 # Worst max-relative error over the manoeuvre, throughput = 64 envs on 22
 # threads of an i7-13700K.  Reproduce: tests/rl/gate_g1_substep_accuracy.py.
+# Criterion fixed before the measurement: ay and yaw <= 2 %, Fz_FL <= 5 %.
 #
-# (a) C++ built-in generic car (vehicle/tire unset), L3, 2026-09-17.
-#     This is the table the 2.5 ms choice below was made on.
+# (a) C++ built-in generic car (= configs/vehicles/generic_sedan.yaml), L3,
+#     2026-09-17.  This is the table the 2.5 ms choice below was made on.
 #
 #   substep   step-steer ay   step-steer yaw   brake Fz_FL   throughput
 #   0.50 ms       0.23 %          0.08 %          0.51 %       80 k steps/s
@@ -20,40 +21,21 @@
 #     (not in the criterion: brake pitch 30.6 % and step-steer roll 8.4 % at
 #     2.5 ms, 9.2 % / 1.5 % at 1 ms - do not build a reward on pitch or roll.)
 #
-# Adopted: 2.5 ms for training (2.4x throughput, trajectory signals within
-# 1.4 %).  Keep default_env.yaml (1 ms) for evaluation and for any reward that
-# reads per-wheel load - Fz is the signal that degrades first.  5 ms is not
-# adopted: ay and Fz both pass 6 %.
-#
-#
-# (b) The Ioniq 5 preset (vehicle ioniq5_awd + tire ioniq5_pac2002,
-#     param_hash 046526872cfa71dabeb5b765040a42a340db2059ddfe042644ba483bf0be984b,
-#     2026-09-22, L2 (this file's level).  At L3 the three error columns move
-#     by at most 0.03 percentage points (2.5 ms: ay 0.26 %, Fz_FL 7.56 %).
-#
-#   substep   step-steer ay   step-steer yaw   brake Fz_FL   throughput
-#   0.50 ms       0.05 %          0.02 %          1.11 %       26 k steps/s
-#   1.00 ms       0.12 %          0.04 %          2.62 %       51 k steps/s   <- default_env.yaml
-#   2.50 ms       0.27 %          0.12 %          7.56 %      125 k steps/s   <- this file
-#   5.00 ms       2.29 %          0.33 %         11.22 %      247 k steps/s
-#
-# With this car, 2.5 ms FAILS the Fz criterion fixed before the measurement
-# (ay, yaw <= 2 %, Fz_FL <= 5 %): 7.56 % peak error, a transient at brake onset
-# (RMSE 21.8 N against a 7651 N peak).  Throughput is ~2.7x lower than (a)
-# because of the MF2002 tyre evaluation (tests/rl/bench_preset_cost.py), not
-# the vehicle parameters.
-#
-# Choice (PO decision 69, 2026-09-22): the two combinations that pass the
-# criterion are Ioniq 5 at 1.0 ms (Fz_FL 2.62 %, 51 k steps/s) and the generic
-# car at 2.5 ms (Fz_FL 4.07 %, 326 k steps/s).  This file takes the generic car:
-# 6.4x the throughput, and Ioniq 5 at 1.0 ms is the same plant and substep as
-# default_env.yaml, so it would leave no fast preset.
+# Adopted (PO decision 69, 2026-09-22): 2.5 ms for training - 2.4x the
+# throughput of 1 ms with trajectory signals within 1.5 % and Fz_FL 4.07 %.
+# Keep default_env.yaml (1 ms) for evaluation and for any reward that reads
+# per-wheel load - Fz is the signal that degrades first.  5 ms is not adopted:
+# ay and Fz both pass 6 %.
 #
 # Both RL declarations name the generic car explicitly since PO decision 78:
-# configs/vehicles/generic_sedan.yaml carries the same values the C++
-# defaults compile in, so table (a) still describes this file.  The Ioniq 5
-# preset stays selectable by stem, but at 1.0 ms only - default_env.yaml's
-# substep, not this file's.
+# configs/vehicles/generic_sedan.yaml carries the same values the C++ defaults
+# compile in, so table (a) describes both files.
+#
+# A substep is a property of the car, not of the solver.  Presets whose specs
+# are not public are selected by the same keys but injected from outside the
+# repository ($VDSIM_PRIVATE_CONFIGS); their G1 tables are kept with them, not
+# here.  Re-run the script above for any preset you swap in - do not carry this
+# file's 2.5 ms over to it.
 #
 # max_substeps must stay above outer_dt / max_substep_dt, otherwise the solver
 # silently clamps and runs a coarser step than requested.

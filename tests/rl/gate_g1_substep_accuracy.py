@@ -11,8 +11,11 @@ so the printed ``param_hash`` is the one an env built from that YAML reports.
 Without ``--vehicle`` the C++ built-in generic car is used (the 2026-09-17
 table in configs/rl/fast_env.yaml was measured that way, at L3).
 
-    python3 tests/rl/gate_g1_substep_accuracy.py --vehicle ioniq5_awd \\
-        --tire ioniq5_pac2002 --level L2 --out /tmp/g1_ioniq5_L2.json
+    python3 tests/rl/gate_g1_substep_accuracy.py --vehicle generic_sedan \\
+        --tire generic_pacejka --level L2 --out /tmp/g1_generic_L2.json
+
+A preset that lives outside the repository is measured the same way: point
+$VDSIM_PRIVATE_CONFIGS at its directory and pass its stems.
 
 Python paths: VDSIM_BUILD_PY (compiled module dir) and VDSIM_PY (repo python/)
 default to the in-repo build tree.

@@ -137,8 +137,8 @@ friction), `tire_stiffness_scale_range` (tyre B coefficients and cornering
 stiffness), `tire_mu_scale_range` (tyre peak mu), and
 `sensor_delay_range` [s] (`< 0` keeps the configured delay). The multipliers
 scale the **loaded preset** — with `vehicle: generic_sedan`, `mass_scale 1.1`
-means 1.1 × 1500 kg; with `vehicle: ioniq5_awd` it is 1.1 × that preset's
-mass, never 1.1 × the built-in default.
+means 1.1 × 1500 kg; with any other preset it is 1.1 × that preset's mass,
+never 1.1 × the built-in default.
 
 ### 2.8 Parallelism and seeds
 
@@ -173,7 +173,7 @@ for _ in range(200):
 ```python
 from vdsim_rl import EnvConfig, VDSimVecEnv
 
-cfg = EnvConfig.from_yaml("configs/rl/default_env.yaml")    # Ioniq 5
+cfg = EnvConfig.from_yaml("configs/rl/default_env.yaml")    # generic car, 1 ms
 env = VDSimVecEnv(16, cfg, seed=0)
 obs, info = env.reset(seed=0)                                # obs: (16, obs_dim)
 for _ in range(500):
@@ -261,10 +261,9 @@ python examples/rl/render_vec_grid.py /tmp/rl_overlay.npz --overlay \
     --out docs/assets/rl/vec_overlay.mp4
 ```
 
-Both videos were recorded at commit 8135a76 (their caption), when
-`fast_env.yaml` still selected the Ioniq 5 preset; run the commands above at
-that commit to reproduce them. On later commits the same commands record the
-generic car.
+Both videos ship as recorded by those two commands on the generic car of
+`fast_env.yaml`. The caption carries the commit of the tree they were recorded
+from, so running the commands at that commit reproduces them.
 
 `record_vec_demo.py --trace-dir` writes one `.vdtrace` per env instead, which
 `vdsim-render` overlays with its full per-run panels; that view reads well for
@@ -279,32 +278,33 @@ Throughput below is in **physics ticks per second summed over all envs**
   threads with the C++ generic car, 93.7 % of it retained through the Python
   adapter; end-to-end PPO reaches 61 k ticks/s because the CPU policy update
   dominates (`docs/ROADMAP.md` §10, `tests/rl/bench_throughput_layers.py`).
-- **The Ioniq 5 preset is slower than the generic car.** Measured 2026-09-22 on
-  ailab-12 (22 threads), 64 envs, `fast_env.yaml`, best of 3 × 300 control
-  steps: L2 122 k vs 327 k ticks/s, L3 119 k vs 319 k ticks/s. Changing one
-  factor at a time (`tests/rl/bench_preset_cost.py`, core only, L2) puts the
-  whole gap on the tyre model: the MF2002 backend reading `ioniq5_pac2002.tir`
-  is 2.72× slower than the built-in MF96, while the Ioniq 5 vehicle parameters
-  and `plant_path` change throughput by less than 6 %.
-- **`fast_env.yaml` runs the generic car, not the Ioniq 5.** The G1 substep
-  gate (criterion fixed before measuring: ay and yaw-rate ≤ 2 %, front-left
-  vertical load ≤ 5 % worst error against a 0.1 ms reference, L2, 5 ms tick):
+- **`fast_env.yaml`'s substep was chosen on a criterion fixed before the
+  measurement:** ay and yaw-rate ≤ 2 %, front-left vertical load ≤ 5 % worst
+  error against a 0.1 ms reference (L2, 5 ms tick, 2026-09-22):
 
   | car | substep | ay | yaw rate | Fz_FL | throughput (64 envs) | verdict |
   |---|---|---|---|---|---|---|
-  | Ioniq 5 preset | 2.5 ms | 0.27 % | 0.12 % | 7.56 % | 125 k steps/s | fails Fz |
-  | Ioniq 5 preset | 1.0 ms | 0.12 % | 0.04 % | 2.62 % | 51 k steps/s | passes = `default_env.yaml` |
+  | generic car | 1.0 ms | 0.55 % | 0.20 % | 1.22 % | 131 k steps/s | passes = `default_env.yaml` |
   | generic car | 2.5 ms | 1.45 % | 0.53 % | 4.07 % | 326 k steps/s | passes = `fast_env.yaml` |
 
-  `fast_env.yaml` takes the last row: 6.4× the throughput, and the passing
-  Ioniq 5 row is already `default_env.yaml`'s substep. Both files now name the
-  generic car (`generic_sedan` + `generic_pacejka`), which is why neither warns
-  about unnamed parameters; select the Ioniq 5 preset explicitly, and at 1 ms,
-  if you want that car. Pitch and roll are not in the criterion and are coarse
-  at 2.5 ms (generic car: brake pitch 30.6 %, step-steer roll 8.4 %); do not
-  build a reward on them with `fast_env.yaml`.
-- **The Ioniq 5 preset is not a validated Ioniq 5.** The repository carries no
-  measured tyre data for it; `ackerman_percent: 0.0`; suspension keys the YAML
-  does not state fall back to the C++ defaults. Use it as "an Ioniq 5-class
-  car". This guide makes no claim about where its numbers came from.
+  `fast_env.yaml` takes the second row for 2.4× the throughput; 5 ms was
+  rejected on the L3 table in `configs/rl/fast_env.yaml` (ay 6.82 %, Fz
+  6.69 %). Both shipped files name the generic car (`generic_sedan` +
+  `generic_pacejka`), which is why neither warns about unnamed parameters.
+  Pitch and roll are not in the criterion and are coarse at 2.5 ms (brake pitch
+  30.6 %, step-steer roll 8.4 %); do not build a reward on them with
+  `fast_env.yaml`.
+- **A different car changes both accuracy and throughput, so the substep does
+  not transfer.** A preset that evaluates a measured `.tir` file through the
+  MF2002 backend instead of the built-in MF96 has been measured ≈ 2.7× slower
+  at the same substep, with a larger vertical-load error at 2.5 ms. Run
+  `tests/rl/gate_g1_substep_accuracy.py --vehicle <stem> --tire <stem>` on any
+  preset you swap in before training on it.
+- **Presets whose specs are not public.** Point `VDSIM_PRIVATE_CONFIGS` at a
+  directory outside the repository (`vehicles/<stem>.yaml`,
+  `parts/tire/<stem>.yaml`), or pass `vehicle_file=` an absolute path. The
+  private copy wins over a repository file of the same stem, and `info`
+  records only the stem, the parameter hash and `source: private` — never the
+  path. Accuracy and throughput tables for those presets belong with them, not
+  in this guide.
 - The road is straight and flat; there is no track or traffic yet.

@@ -243,7 +243,7 @@ def main(argv=None) -> int:
     ap.add_argument("--policy", choices=("random", "lanekeep"), default="random")
     ap.add_argument("--k-y", type=float, default=0.02, help="lanekeep [rad/m]")
     ap.add_argument("--k-yaw", type=float, default=0.3, help="lanekeep [rad/rad]")
-    ap.add_argument("--vehicle-note", default="public approximation",
+    ap.add_argument("--vehicle-note", default="",
                     help="shown after the vehicle name in the caption")
     ap.add_argument("--npz", type=Path)
     ap.add_argument("--trace-dir", type=Path)
