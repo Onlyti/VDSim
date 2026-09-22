@@ -44,13 +44,16 @@ import numpy as np
 #: Container schema version written by this module. ``0.x`` is unstable —
 #: see the release notes. ``0.2`` added the required ``role`` field (§3.1);
 #: ``0.3`` added ``model_level``, ``contact_scope``, the 3D geometry block and
-#: the five 3D channels of §3.2.1.
-SCHEMA_VERSION = "0.3"
+#: the five 3D channels of §3.2.1; ``0.4`` added the required
+#: ``kinematics_attached`` (§13).
+SCHEMA_VERSION = "0.4"
 
 #: ``0.x`` minors this reader accepts. Each ``0.x`` minor is its own line, so
 #: readability is opt-in rather than inferred: ``0.1`` stays readable only
-#: because :func:`_resolve_role` defines a fallback for its missing ``role``.
-READABLE_SCHEMA_VERSIONS = ("0.1", "0.2", "0.3")
+#: because :func:`_resolve_role` defines a fallback for its missing ``role``,
+#: and ``0.1``–``0.3`` only because :attr:`TraceReader.kinematics_attached`
+#: defines one (unknown, never ``False``) for theirs.
+READABLE_SCHEMA_VERSIONS = ("0.1", "0.2", "0.3", "0.4")
 
 #: Declared role of the run a trace records (§3.1, decided 2026-09-02).
 #: ``plant`` is the simulator under verification; ``predictor`` is the same
@@ -167,6 +170,10 @@ _REQUIRED_GEOMETRY_KEYS_0_3 = (
     "mass_kg", "cg_height_m", "wheel_radius_m", "wheel_width_m", "body_lwh_m")
 #: Manifest keys 0.3 adds on top of :data:`_REQUIRED_MANIFEST_KEYS`.
 _REQUIRED_MANIFEST_KEYS_0_3 = ("model_level", "contact_scope")
+#: Manifest key 0.4 adds. ``model_level`` alone cannot say whether an L3/L4 run
+#: had suspension hardpoints behind it: the two levels are bit-identical with
+#: or without them, and the attach is the only physical discriminator.
+_REQUIRED_MANIFEST_KEYS_0_4 = ("kinematics_attached",)
 
 
 class TraceError(ValueError):
@@ -222,6 +229,24 @@ def _schema_compatible(found: str) -> bool:
     if c_major == 0:
         return "%d.%d" % (f_major, f_minor) in READABLE_SCHEMA_VERSIONS
     return f_minor <= c_minor
+
+
+def _at_least(version, floor: str) -> bool:
+    """Return True if schema ``version`` is ``floor`` or newer.
+
+    A requirement added at one minor applies to every later one; comparing
+    with ``==`` would silently drop the 0.3 checks the moment 0.4 shipped.
+
+    :param version: declared ``schema_version`` (string or anything str-able).
+    :param floor: ``"major.minor"`` the requirement was introduced at.
+    :returns: False for an unparseable version (it is rejected elsewhere).
+    """
+    try:
+        found = tuple(int(p) for p in str(version).split(".")[:2])
+        need = tuple(int(p) for p in floor.split(".")[:2])
+    except (ValueError, TypeError):
+        return False
+    return found >= need
 
 
 def _resolve_role(manifest) -> str:
@@ -346,12 +371,20 @@ class TraceWriter:
         :data:`CONTACT_SCOPES`. Declare what the core consumes, not what the
         picture implies; a run whose renderer tilts the road while the physics
         stays flat is exactly what this field exposes.
+    :param kinematics_attached: keyword-only and **required** at schema 0.4 —
+        a real ``bool``: whether suspension hardpoints were attached to the
+        plant. Pass what the attach call returned, never what a config file
+        suggests; ``L4`` without it is ``L3`` under another name.
     """
 
     def __init__(self, path, geometry, tire, repro, producer=None,
                  decimation: int = 1, channels=None, extra=None, *, role,
-                 model_level, contact_scope):
+                 model_level, contact_scope, kinematics_attached):
         decimation = int(decimation)
+        if not isinstance(kinematics_attached, bool):
+            raise TraceError(
+                "kinematics_attached must be True or False, got %r"
+                % (kinematics_attached,))
         if decimation < 1:
             raise TraceError("decimation must be >= 1, got %r" % (decimation,))
         if model_level not in MODEL_LEVELS:
@@ -380,6 +413,7 @@ class TraceWriter:
         self.role = role
         self.model_level = model_level
         self.contact_scope = contact_scope
+        self.kinematics_attached = kinematics_attached
         self.decimation = decimation
         self.geometry = dict(geometry)
         self.tire = dict(tire)
@@ -468,6 +502,7 @@ class TraceWriter:
             "role": self.role,
             "model_level": self.model_level,
             "contact_scope": self.contact_scope,
+            "kinematics_attached": self.kinematics_attached,
             "repro": self.repro,
             "n_steps": int(n),
             "wheels": list(WHEELS),
@@ -491,7 +526,7 @@ class TraceWriter:
 def _validate_geometry(geometry, schema_version=None):
     """Validate the geometry block for the schema version that declared it.
 
-    The 0.3 keys are checked only on a 0.3 manifest: a 0.2 trace predates them
+    The 0.3 keys are checked only on a 0.3+ manifest: a 0.2 trace predates them
     and stays readable, which is what keeps old fixtures alive.
     """
     if not isinstance(geometry, dict):
@@ -502,7 +537,7 @@ def _validate_geometry(geometry, schema_version=None):
             "manifest.geometry is missing %s — the renderer draws the body "
             "rectangle, front-wheel position and steering angle from this block "
             "and must never guess vehicle parameters" % (", ".join(missing),))
-    if str(schema_version) != "0.3":
+    if not _at_least(schema_version, "0.3"):
         return
     missing = [k for k in _REQUIRED_GEOMETRY_KEYS_0_3 if k not in geometry]
     if missing:
@@ -561,8 +596,30 @@ def _validate_manifest(manifest):
     _validate_tire(manifest["tire"])
     if not isinstance(manifest["channels"], list) or not manifest["channels"]:
         raise TraceSchemaError("manifest.channels must be a non-empty list")
-    if version == "0.3":
+    if _at_least(version, "0.3"):
         _validate_manifest_0_3(manifest)
+    if _at_least(version, "0.4"):
+        _validate_manifest_0_4(manifest)
+
+
+def _validate_manifest_0_4(manifest):
+    """Enforce the 0.4 addition — ``kinematics_attached`` must be stated.
+
+    Missing is an error, not ``False``: a 0.4 producer that forgot the field is
+    exactly the one whose ``model_level`` cannot be trusted, and defaulting it
+    would hide that behind a plausible value.
+    """
+    missing = [k for k in _REQUIRED_MANIFEST_KEYS_0_4 if k not in manifest]
+    if missing:
+        raise TraceSchemaError(
+            "manifest is missing %s — schema 0.4 requires it (§13): L3 and L4 "
+            "are bit-identical until suspension hardpoints are attached, so "
+            "model_level alone does not say which physics produced the run"
+            % (", ".join(missing),))
+    if not isinstance(manifest["kinematics_attached"], bool):
+        raise TraceSchemaError(
+            "manifest.kinematics_attached must be true or false, got %r"
+            % (manifest["kinematics_attached"],))
 
 
 def _validate_manifest_0_3(manifest):
@@ -647,6 +704,7 @@ class TraceReader:
             raise
         self.manifest = manifest
         self._role = role
+        self._kin_warned = False
         self._cache = {}
 
     # -- lifecycle ---------------------------------------------------------
@@ -704,6 +762,28 @@ class TraceReader:
     def contact_scope(self):
         """Declared road-normal coupling (§3.1.1), or ``None`` before 0.3."""
         return self.manifest.get("contact_scope")
+
+    @property
+    def kinematics_attached(self):
+        """Whether suspension hardpoints were attached (§13), or ``None``.
+
+        ``None`` means *unknown*: a 0.1–0.3 trace predates the field, and
+        ``False`` would be a claim the file never made. The first read of an
+        unknown value warns once; the warning is raised here rather than at
+        open time so a consumer that never asks is not told about it.
+        """
+        if "kinematics_attached" in self.manifest:
+            return bool(self.manifest["kinematics_attached"])
+        if not self._kin_warned:
+            self._kin_warned = True
+            warnings.warn(
+                "trace schema_version %s declares no 'kinematics_attached'; "
+                "treating it as unknown (not False). Re-record with vdsim_trace "
+                "%s to tell an L4 run with suspension hardpoints from an L3 run "
+                "under the L4 label."
+                % (self.manifest.get("schema_version"), SCHEMA_VERSION),
+                UserWarning, stacklevel=2)
+        return None
 
     @property
     def normal_is_display_only(self) -> bool:

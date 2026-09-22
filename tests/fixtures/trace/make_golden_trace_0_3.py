@@ -56,6 +56,17 @@ def bank_at(t: float) -> float:
 
 
 def build():
+    """Write the fixture. Refuses once the module has moved past ``0.3``.
+
+    ``golden_v0_3.vdtrace`` is what keeps the 0.3 read path — including the
+    unknown ``kinematics_attached`` fallback — exercised; regenerating it at a
+    newer schema would delete that coverage behind a passing run.
+    """
+    if vdsim_trace.SCHEMA_VERSION != "0.3":
+        raise SystemExit(
+            "vdsim_trace is at %s; golden_v0_3.vdtrace is frozen. Use "
+            "make_golden_trace_0_4.py for the current schema."
+            % vdsim_trace.SCHEMA_VERSION)
     plant_params = {
         "config": "fixture_vehicle_l3.yaml", "base_mu": MU, "substep_dt": 5e-4,
         "level": "L3",

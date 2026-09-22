@@ -27,6 +27,7 @@ import vdsim_trace as vt  # noqa: E402
 
 FIXTURE_0_3 = REPO / "tests" / "fixtures" / "trace" / "golden_v0_3.vdtrace"
 FIXTURE_0_2 = REPO / "tests" / "fixtures" / "trace" / "golden_v0_2.vdtrace"
+FIXTURE_0_4 = REPO / "tests" / "fixtures" / "trace" / "golden_v0_4.vdtrace"
 
 FAILURES = []
 
@@ -54,6 +55,7 @@ def _writer(path, **kw):
                "seed": 1, "dt_s": 0.01, "run_id": "t"},
         producer={"name": "test_trace_0_3", "version": "0"},
         role="plant", model_level="L3", contact_scope="C2",
+        kinematics_attached=False,
     )
     args.update(kw)
     return vt.TraceWriter(path=path, **args)
@@ -281,6 +283,105 @@ def test_declared_contact_scope_matches_the_core():
               % (level, declared, observed, moved))
 
 
+# ------------------------------------------------ 4. schema 0.4 (11 §13)
+def _rewrite(src, dst, mutate):
+    """Copy a trace with its manifest passed through ``mutate``."""
+    import json
+    import zipfile
+    with zipfile.ZipFile(src) as zin, zipfile.ZipFile(dst, "w") as zout:
+        for info in zin.infolist():
+            data = zin.read(info.filename)
+            if info.filename == "manifest.json":
+                m = json.loads(data.decode())
+                mutate(m)
+                data = json.dumps(m).encode()
+            zout.writestr(info.filename, data)
+    return dst
+
+
+def test_fixture_0_4():
+    """The committed 0.4 fixture states kinematics_attached as a real bool."""
+    import warnings
+    check(FIXTURE_0_4.is_file(), "0.4 fixture is committed")
+    if not FIXTURE_0_4.is_file():
+        return
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        with vt.TraceReader(FIXTURE_0_4) as tr:
+            check(tr.manifest["schema_version"] == "0.4", "fixture declares schema 0.4")
+            check(tr.kinematics_attached is False,
+                  "fixture declares kinematics_attached false (%r)" % tr.kinematics_attached)
+            for name in vt.CHANNEL_MIN_LEVEL:
+                check(tr.has(name), "0.4 fixture keeps 0.3 channel %r" % name)
+    check(not caught, "a 0.4 trace reads without warnings (%d)" % len(caught))
+
+
+def test_0_4_requires_kinematics_attached():
+    """0.4 without kinematics_attached is an error, never a silent False."""
+    with tempfile.TemporaryDirectory() as td:
+        d = Path(td)
+        try:
+            kw = dict(geometry=dict(GEOMETRY_0_3),
+                      tire={"friction_shape": "circle", "mu_aniso": [1.0, 1.0]},
+                      repro={"vdsim_version": "t", "git_sha": "x", "param_hash": "sha256:x",
+                             "seed": 1, "dt_s": 0.01, "run_id": "t"},
+                      role="plant", model_level="L3", contact_scope="C2")
+            vt.TraceWriter(path=d / "x.vdtrace", **kw)
+            check(False, "kinematics_attached is a required TraceWriter argument")
+        except TypeError:
+            check(True, "kinematics_attached is a required TraceWriter argument")
+        for bad in (None, 0, "false"):
+            try:
+                _writer(d / "x.vdtrace", kinematics_attached=bad)
+                check(False, "kinematics_attached %r is rejected" % (bad,))
+            except vt.TraceError:
+                check(True, "kinematics_attached %r is rejected at write time" % (bad,))
+
+        good = d / "good.vdtrace"
+        names = vt.channels_for_level("L3")
+        w = _writer(good, channels=names)
+        for i in range(3):
+            w.append(_sample(i, names))
+        w.finalize()
+        missing = _rewrite(good, d / "missing.vdtrace",
+                           lambda m: m.pop("kinematics_attached"))
+        try:
+            vt.TraceReader(missing)
+            check(False, "a 0.4 manifest without kinematics_attached is rejected")
+        except vt.TraceSchemaError as exc:
+            print("      0.4 missing -> TraceSchemaError: %s" % exc)
+            check("kinematics_attached" in str(exc),
+                  "a 0.4 manifest without kinematics_attached is rejected")
+        wrong = _rewrite(good, d / "wrong.vdtrace",
+                         lambda m: m.__setitem__("kinematics_attached", "yes"))
+        try:
+            vt.TraceReader(wrong)
+            check(False, "a non-bool kinematics_attached is rejected on read")
+        except vt.TraceSchemaError:
+            check(True, "a non-bool kinematics_attached is rejected on read")
+
+
+def test_0_3_kinematics_is_unknown_with_one_warning():
+    """A 0.3 trace predates the field: unknown (None), warned about once."""
+    import warnings
+    if not FIXTURE_0_3.is_file():
+        check(False, "0.3 fixture present")
+        return
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        with vt.TraceReader(FIXTURE_0_3) as tr:
+            first = tr.kinematics_attached
+            again = tr.kinematics_attached
+    msgs = [str(x.message) for x in caught if issubclass(x.category, UserWarning)]
+    for m in msgs:
+        print("      0.3 fallback -> UserWarning: %s" % m)
+    check(first is None and again is None,
+          "a 0.3 trace reports kinematics_attached None, not False (%r)" % (first,))
+    check(len(msgs) == 1, "exactly one warning across two reads (got %d)" % len(msgs))
+    check(msgs and "0.3" in msgs[0] and "kinematics_attached" in msgs[0],
+          "the warning names the version and the field")
+
+
 def test_plant_records_0_3():
     """An L3 plant run produces a 0.3 trace that a reader can use as-is."""
     try:
@@ -300,6 +401,8 @@ def test_plant_records_0_3():
         with vt.TraceReader(p) as tr:
             check(tr.model_level == "L3", "recorded manifest declares L3")
             check(tr.contact_scope == "C2", "recorded manifest declares the measured scope")
+            check(tr.kinematics_attached is False,
+                  "the plant, which never attaches hardpoints, records false")
             for name in vt.CHANNEL_MIN_LEVEL:
                 check(tr.has(name), "L3 run records %r" % name)
             zrp = np.asarray(tr.channel("pose_zrp"))
@@ -335,6 +438,9 @@ def main():
     test_no_zero_fill()
     test_display_only_label_rule()
     test_declared_contact_scope_matches_the_core()
+    test_fixture_0_4()
+    test_0_4_requires_kinematics_attached()
+    test_0_3_kinematics_is_unknown_with_one_warning()
     test_plant_records_0_3()
     print("\n%d checks failed" % len(FAILURES))
     return 1 if FAILURES else 0

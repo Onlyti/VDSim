@@ -143,7 +143,7 @@ def test_series_selection_is_manifest_driven():
             tire={"friction_shape": "circle", "mu_aniso": [1.0, 1.0]},
             repro={"vdsim_version": "t", "git_sha": "x", "param_hash": "sha256:x",
                    "seed": 0, "dt_s": 0.05, "run_id": "partial"},
-            role="plant", model_level="L2", contact_scope="C2",
+            role="plant", model_level="L2", contact_scope="C2", kinematics_attached=False,
             channels=["t", "pose", "yaw_rate", "u_steer"])
         for i in range(20):
             w.append({"t": i * 0.05, "pose": (i * 0.5, 0.0, 0.0),

@@ -268,38 +268,78 @@ def test_superseded_entry_points():
 
 
 # --------------------------------------------------------------------------- #
-# C-1: a level axis must be refused, on every expansion form
+# C-1 (v): a level axis is accepted; a bare L4 run is refused by the seam
 # --------------------------------------------------------------------------- #
-def test_level_axis_refused():
-    """``level`` is not sweepable until the manifest can tell the truth.
+def test_level_axis_after_q20(tmp):
+    """``level`` sweeps, and cannot archive a false L4 label.
 
-    L4 differs from L3 only in ``level()`` until suspension hardpoints are
-    attached, so a level sweep would archive traces whose ``model_level`` names
-    a model the run did not use. The refusal is checked on the grid, list and
-    legacy forms because each builds its axis dict differently.
+    The axis was refused while a bare L4 run recorded ``model_level: L4`` with
+    L3 physics. Q20 moved the refusal to the session seam, so the axis is
+    expanded on every form, the L3 run records ``kinematics_attached: false``
+    and the bare L4 run is an ``error`` row with no trace at all.
     """
     forms = {
         "grid": {"base": "step_steer", "sweep": {"grid": {"level": ["L3", "L4"]}}},
         "list": {"base": "step_steer", "sweep": {"list": [{"level": "L4"}]}},
         "legacy": {"runs": [{"sweep": {"base": "step_steer",
                                        "grid": {"level": ["L3", "L4"]}}}]},
-        "monte_carlo": {"runs": [{"monte_carlo": {
-            "base": "step_steer", "n": 1,
-            "vary": {"level": {"lo": 3, "hi": 4}}}}]},
     }
     for name, spec in forms.items():
         try:
-            vc.expand(spec)
+            runs = vc.expand(spec)
+            check(len(runs) >= 1, "%s form expands a level axis" % name)
         except vc.CampaignError as exc:
-            check("level" in str(exc) and "Q20" in str(exc),
-                  "%s form refuses a level axis and says why (%s)"
-                  % (name, str(exc)[:48]))
-        else:
-            check(False, "%s form accepted a level axis" % name)
+            check(False, "%s form still refuses a level axis (%s)" % (name, exc))
 
-    check(vc.expand({"base": "step_steer",
-                     "sweep": {"grid": {"mu": [0.9, 0.6]}}}) != [],
-          "the refusal does not catch ordinary axes")
+    spec = {"name": "levels", "base": "step_steer", "seed": 20260922,
+            "duration": DURATION, "sweep": {"grid": {"level": ["L3", "L4"]}}}
+    out = Path(tmp) / "levels"
+    _run(_write(tmp, "levels", spec), out)
+    rows = {r["axes"]["level"]: r for r in vc.read_index(out / "levels")}
+    check(rows["L3"]["status"] == "ok", "the L3 run completes (%s)" % rows["L3"]["status"])
+    l3_trace = out / "levels" / rows["L3"]["trace_path"]
+    with vt.TraceReader(l3_trace) as tr:
+        check(tr.model_level == "L3" and tr.kinematics_attached is False,
+              "the L3 trace states no hardpoints were attached")
+    err = rows["L4"].get("error") or ""
+    print("      bare L4 row: status=%s error=%s" % (rows["L4"]["status"], err))
+    check(rows["L4"]["status"] == "error" and "level='L4'" in err,
+          "the bare L4 run is refused by the seam, not run as L3")
+    check(rows["L4"]["trace_path"] is None,
+          "no trace is left behind for the refused L4 run")
+
+
+def test_l4_with_kinematics_from_config(tmp):
+    """Q20 (B): a declared ``kinematics`` block reaches the attach.
+
+    ``Experiment.from_config`` reads ``kinematics: {front, rear}``, so an L4
+    cell that names hardpoints runs as L4 physics. The L3 cell carries none;
+    the two must both complete and must not be bit-identical, otherwise the
+    block was dropped and L4 fell back to the bare-L3 trajectory.
+    """
+    spec = {"name": "kin", "base": "step_steer", "seed": 20260922,
+            "duration": DURATION,
+            "sweep": {"list": [
+                {"level": "L3"},
+                {"level": "L4", "kinematics.front": "mp_front_sedan",
+                 "kinematics.rear": "ta_rear_sedan"}]}}
+    out = Path(tmp) / "kin"
+    _run(_write(tmp, "kin", spec), out)
+    rows = {r["axes"]["level"]: r for r in vc.read_index(out / "kin")}
+    for lv in ("L3", "L4"):
+        check(rows[lv]["status"] == "ok",
+              "the %s cell completes (%s %s)"
+              % (lv, rows[lv]["status"], rows[lv].get("error") or ""))
+    if rows["L3"]["status"] != "ok" or rows["L4"]["status"] != "ok":
+        return
+    paths = {lv: out / "kin" / rows[lv]["trace_path"] for lv in ("L3", "L4")}
+    with vt.TraceReader(paths["L4"]) as tr:
+        check(tr.model_level == "L4" and tr.kinematics_attached is True,
+              "the L4 trace states the declared hardpoints were attached")
+    a, b = (_channels_digest(paths[lv]) for lv in ("L3", "L4"))
+    differ = sorted(k for k in a if k in b and a[k] != b[k])
+    print("      channels that differ L3 vs L4+kinematics: %s" % differ)
+    check(bool(differ), "L4 with hardpoints is not bit-identical to bare L3")
 
 
 # --------------------------------------------------------------------------- #
@@ -349,11 +389,12 @@ def test_resolved_preset_is_private():
 def main():
     with tempfile.TemporaryDirectory(prefix="vdsim_campaign_") as tmp:
         test_axis_expansion()
-        test_level_axis_refused()
         test_mu_aniso_measurement_runs()
         test_resolved_preset_is_private()
         test_seed_is_a_function_of_the_declaration()
         test_contract_and_failure_isolation(tmp)
+        test_level_axis_after_q20(tmp)
+        test_l4_with_kinematics_from_config(tmp)
         spec_path, out = test_determinism(tmp)
         test_resume(tmp, spec_path, out)
         test_render_connection(tmp)

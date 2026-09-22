@@ -39,11 +39,11 @@ Directory layout (EX3)::
 The index is a lookup table, not a result database: it carries the axis values
 and the run's disposition, never metrics (EX3).
 
-A ``level`` axis is refused, not merely discouraged: ``L4`` is identical to
-``L3`` unless suspension hardpoints are attached, the scenario path attaches
-none, and the manifest would still claim ``model_level: L4``
-(18_dev_briefing_0903 30.4, 31 C-1). Declare one level per campaign. Q20 lifts
-the refusal once the manifest carries ``kinematics_attached``.
+A ``level`` axis is allowed since Q20 (18_dev_briefing_0903 §51). It was
+refused while an ``L4`` run with no suspension hardpoints still produced a
+trace claiming ``model_level: L4``; now the session seam refuses such a run
+(it lands in the index as ``error``) and every trace states
+``kinematics_attached``, so a level sweep can no longer archive a false label.
 """
 import argparse
 import copy
@@ -76,18 +76,11 @@ STATUSES = ("ok", "diverged", "error", "killed", "skipped")
 DEFAULT_ROOT_SEED = 1000
 
 #: Axes a campaign may not sweep, with the message the refusal carries.
-#: ``level`` is here because sweeping it would mass-produce traces whose
-#: ``model_level`` names a model the run did not use: the L4 class differs from
-#: L3 only in ``level()`` until suspension hardpoints are attached, and nothing
-#: on the scenario path attaches them. The alternative -- letting the sweep run
-#: and warning -- was rejected because the false provenance survives in the
-#: archived trace long after the warning has scrolled away.
-FORBIDDEN_AXES = {
-    "level": ("'level' is not a campaign axis until Q20: L4 is identical to L3 "
-              "unless suspension hardpoints are attached, so a level sweep "
-              "records traces whose manifest model_level is false. Declare one "
-              "level per campaign."),
-}
+#: Empty since Q20 lifted ``level`` (C-1 condition v): the refusal existed
+#: because a bare L4 run recorded a false ``model_level``, and that run is now
+#: rejected where the session is built. The mechanism stays so a future axis
+#: with the same property is refused in the one place every form goes through.
+FORBIDDEN_AXES = {}
 
 #: Trace file name inside a run directory. Fixed, so a consumer can find the
 #: artefact from the run id alone.

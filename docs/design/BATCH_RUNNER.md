@@ -156,23 +156,26 @@ Q0 is the case in point.
 - **Overlay rendering and aggregate plots.** Those stay where they are; a
   consumer script that reads the index is the place for them.
 
-## 7. A `level` axis is refused
+## 7. A `level` axis and the bare-L4 refusal
 
-`L4` and `L3` are the same physics unless suspension hardpoints are attached,
-and the scenario path attaches none. A level sweep would therefore produce
-identical runs whose manifests disagree about which model produced them, and
-the false `model_level` outlives any warning printed at run time. So the runner
-refuses the axis outright, on every declaration form:
+`L4` and `L3` are the same physics unless suspension hardpoints are attached.
+Until Q20 a level sweep therefore produced identical runs whose manifests
+disagreed about which model produced them, and the runner refused the axis.
+
+Q20 moved the refusal to where the false label is born: building an `L4`
+session with no hardpoints attached raises, on every path (campaign, `Sim`,
+`Experiment`), whether or not a trace is recorded. In a campaign that run
+becomes an `error` row with no trace:
 
 ```
-CampaignError: 'level' is not a campaign axis until Q20: L4 is identical to L3
-unless suspension hardpoints are attached, so a level sweep records traces
-whose manifest model_level is false. Declare one level per campaign.
+ValueError: level='L4' with no suspension hardpoints attached is L3 under another
+label (the two are bit-identical until an attach); pass kin=...
+(kinematics={'front': <stem>, 'rear': <stem>}) or use level='L3'
 ```
 
-Declare one level per campaign instead. The refusal is lifted by Q20, which
-attaches the hardpoints and adds a `kinematics_attached` field to the manifest
-so a reader can tell the two apart. See 18_dev_briefing_0903 §30.4, §31 C-1.
+A `level` axis is accepted again, and every trace written from schema 0.4 on
+states `kinematics_attached`, so a reader can tell the two apart. See
+18_dev_briefing_0903 §30.4, §31 C-1, §51.
 
 ## 8. CLI
 
