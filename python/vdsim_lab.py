@@ -100,29 +100,34 @@ def _resolve_preset(vehicle="sedan", tire="default_pacejka"):
             sys.path.insert(0, sp)
     from catalog import CatalogResolver
     from catalog.ids import blueprint_for_vehicle, tire_id_from_stem
-    cache = _CONF / ".resolve_cache" / f"{vehicle}_{tire}"
-    cache.mkdir(parents=True, exist_ok=True)
+    # No out_dir: the resolver writes into a fresh temp dir of its own, so the
+    # YAML we hand back is private to this call. A shared per-preset directory
+    # was rewritten in place by every process resolving the same preset, and a
+    # concurrent reader could parse a truncated file and silently get the C++
+    # defaults instead (Q10-c; broke EG3 under --jobs).
     r = CatalogResolver(_catalog_root())
     rv = r.resolve_blueprint(
         blueprint_for_vehicle(vehicle),
         instance_parts={"tire": tire_id_from_stem(tire)},
-        out_dir=cache,
     )
     return rv.vehicle_yaml, rv.tire_yaml
 
 
 class Vehicle:
-    def __init__(self, vp):
+    def __init__(self, vp, path=None):
         self.vp = vp
+        #: YAML the params were read from. Trace recording needs it for the
+        #: body/wheel dimensions, which are not on VehicleParams.
+        self.path = Path(path) if path else None
 
     @classmethod
     def preset(cls, name="sedan"):
         vp_path, _ = _resolve_preset(name)
-        return cls(vdsim.VehicleParams.from_yaml(str(vp_path)))
+        return cls(vdsim.VehicleParams.from_yaml(str(vp_path)), vp_path)
 
     @classmethod
     def from_yaml(cls, path):
-        return cls(vdsim.VehicleParams.from_yaml(str(path)))
+        return cls(vdsim.VehicleParams.from_yaml(str(path)), path)
 
     def set(self, **kw):
         for k, v in kw.items():
@@ -482,6 +487,9 @@ class Experiment:
         self._road = Road.flat()
         self._man = Maneuver.constant_speed(15.0)
         self._sensors = None
+        # Trace recording is opt-in; `_trace is None` is the OFF fast path.
+        self._trace = None
+        self._channels = ()
 
     def vehicle(self, v): self._veh = v; return self
     def tire(self, t): self._tire = t; return self
@@ -542,6 +550,124 @@ class Experiment:
                 exp._road.p["mu"] = v
         return exp
 
+    # -- trace recording (opt-in; the run contract is untouched) -----------
+    def enable_trace(self, path, decimation=None, seed=None, run_id=None,
+                     producer=None, tags=None, role="plant", params=None):
+        """Record this run to a ``.vdtrace`` (11_trace_contract_spec).
+
+        Opt-in for the same reason as on the plant path: a lab run that always
+        recorded would hand every caller the write cost. The command on this
+        path is a pedal command, so ``u_fx`` is *not* recorded -- writing a
+        zero for a quantity this producer does not have is exactly what 3.2.1
+        forbids. The renderer draws a missing command series as zeros.
+
+        :param path: output ``.vdtrace`` path.
+        :param decimation: keep 1 sample of every N. ``None`` picks the
+            smallest N whose record rate stays at or above 100 Hz.
+        :param seed: run seed, recorded for replay.
+        :param run_id: run identifier; defaults to the trace file stem.
+        :param producer: ``{"name", "version"}`` of the calling script.
+        :param tags: free-form dict merged into the manifest as ``tags``.
+        :param role: manifest ``role``; this object is the plant.
+        :param params: dict hashed into ``repro.param_hash``. Defaults to this
+            experiment's resolved settings; a campaign passes its declaration
+            so the hash is a function of the declaration and nothing else.
+        :returns: the resolved decimation.
+        """
+        import vdsim_trace
+        import vdsim_plant
+
+        if self._trace is not None:
+            raise RuntimeError("trace already enabled; call finalize_trace() first")
+        if decimation is None:
+            decimation = max(1, int(round(1.0 / (vdsim_plant.TRACE_TARGET_HZ * self.dt))))
+        decimation = int(decimation)
+        vp_path = self._veh.path
+        if vp_path is None:
+            raise RuntimeError(
+                "enable_trace needs the vehicle YAML the params came from; "
+                "build the vehicle with Vehicle.preset() or Vehicle.from_yaml()")
+        vp = self._veh.vp
+        shape, aniso = vdsim_plant.measure_mu_aniso(self._tire.tp)
+        body_lwh, wheel_width = vdsim_plant.body_dimensions(vp_path)
+        path = Path(path)
+        geometry = {
+            "wheelbase_m": float(vp.wheelbase),
+            "track_m": float(vp.track_front),
+            "steer_ratio": float(vp.steering_ratio),
+            "track_front_m": float(vp.track_front),
+            "track_rear_m": float(vp.track_rear),
+            "cg_to_front_m": float(vp.cg_to_front),
+            "cg_to_rear_m": float(vp.cg_to_rear),
+            "wheel_radius_m": float(vp.wheel_radius_nominal),
+            "mass_kg": float(vp.mass),
+            "cg_height_m": float(vp.cg_height),
+            "wheel_width_m": wheel_width,
+            "body_lwh_m": body_lwh,
+        }
+        if params is None:
+            params = {
+                "level": self.level,
+                "dt": float(self.dt),
+                "vehicle_config": Path(vp_path).name,
+                "road": {"kind": self._road.kind, "params": self._road.p},
+                "vehicle": {"mass": float(vp.mass),
+                            "wheelbase": float(vp.wheelbase),
+                            "cg_height": float(vp.cg_height),
+                            "steering_ratio": float(vp.steering_ratio)},
+            }
+        repro = {
+            "vdsim_version": vdsim_plant._vdsim_version(),
+            "git_sha": vdsim_plant._git_sha(),
+            "param_hash": vdsim_trace.param_hash(params),
+            "seed": seed,
+            "dt_s": float(self.dt * decimation),
+            "run_id": run_id or path.stem,
+            "control_dt_s": float(self.dt),
+            "substep_dt_s": float(self.dt),
+            "decimation": decimation,
+        }
+        base = tuple(n for n in vdsim_trace.BASE_CHANNELS if n != "u_fx")
+        self._channels = vdsim_trace.channels_for_level(self.level, base=base)
+        self._sample = vdsim_plant.trace_sample
+        self._trace = vdsim_trace.TraceWriter(
+            path=path,
+            geometry=geometry,
+            model_level=self.level,
+            contact_scope=vdsim_plant.CONTACT_SCOPE_BY_LEVEL[self.level],
+            channels=self._channels,
+            tire={"friction_shape": shape, "mu_aniso": aniso,
+                  "mu_aniso_source": "measured"},
+            repro=repro,
+            producer=producer or {"name": Path(sys.argv[0]).name or "python",
+                                  "version": vdsim_plant._vdsim_version()},
+            decimation=decimation,
+            extra={"tags": dict(tags or {})},
+            role=role,
+        )
+        return decimation
+
+    def finalize_trace(self):
+        """Flush channels, freeze the manifest and close the trace.
+
+        :returns: the written path, or ``None`` when recording was never on.
+        """
+        if self._trace is None:
+            return None
+        writer, self._trace = self._trace, None
+        return writer.finalize()
+
+    @property
+    def trace_path(self):
+        """Path of the trace being recorded, or ``None``."""
+        return None if self._trace is None else self._trace.path
+
+    def _record(self, o, cmd):
+        """Offer one sample of the pre-step state to the writer."""
+        self._trace.append(self._sample(o, o.sim_time,
+                                        float(cmd.steer_angle_wheel), None,
+                                        self._channels))
+
     def run(self, duration=None):
         if duration is None:
             duration = getattr(self, "_duration", 10.0)
@@ -555,7 +681,15 @@ class Experiment:
         rows, n = [], int(duration / self.dt)
         for k in range(n):
             o = sess.output()
-            sess.set_input(self._man.driver(k, o, vp))
+            cmd = self._man.driver(k, o, vp)
+            sess.set_input(cmd)
+            if self._trace is not None:
+                # Ask before building the sample: on a decimated step the dict
+                # construction is the whole cost, so skipping it is the saving.
+                if self._trace.due:
+                    self._record(o, cmd)
+                else:
+                    self._trace.skip()
             sess.tick(self.dt)
             o = sess.output(); st = o.state
             Ft = o.tire_forces

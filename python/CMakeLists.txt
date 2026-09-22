@@ -27,6 +27,7 @@ if(pybind11_FOUND)
             ${CMAKE_SOURCE_DIR}/python/vdsim_render.py
             ${CMAKE_SOURCE_DIR}/python/vdsim_render3d.py
             ${CMAKE_SOURCE_DIR}/python/vdsim_preset.py
+            ${CMAKE_SOURCE_DIR}/python/vdsim_campaign.py
             ${CMAKE_SOURCE_DIR}/cosim/protocol.py
             ${CMAKE_SOURCE_DIR}/examples/opendrive.py
             ${CMAKE_SOURCE_DIR}/examples/rd5_route.py

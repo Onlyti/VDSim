@@ -1,109 +1,56 @@
 #!/usr/bin/env python3
-"""VDSim campaign runner — run a list of experiments and collect results.
+"""Deprecated: superseded by the campaign runner (``vdsim-campaign``).
 
-Usage:
-    python3 tools/campaign_runner.py [experiments...] [--out=results/campaign]
-    python3 tools/campaign_runner.py accel_brake step_steer oval_lap rough_road
-    python3 tools/campaign_runner.py --all           # run every *.yaml in configs/experiments/
+This script ran a hand-written list of scenario names and reduced each to a
+metrics CSV. The run-set layer it belonged to is now one contract
+(21_experiment_runner_spec, 18_dev_briefing_0903 30.1): a campaign is declared
+in one YAML, each run records a ``.vdtrace``, and the run list lives in
+``index.jsonl`` rather than in a summary table.
 
-Each experiment reads configs/experiments/<name>.yaml (vehicle + tire + level +
-map + maneuver + sensors + duration) via Experiment.from_config(), then runs
-Simulation which applies the scenario autopilot automatically.
+Replacement -- write the scenario list as a campaign declaration::
 
-Output:
-    <out>/<name>/run.csv          ground-truth + per-wheel time series
-    <out>/<name>/metrics.json     scalar reductions
-    <out>/summary.csv             one row per experiment, all metrics
+    # campaign.yaml
+    name: nightly
+    base: step_steer
+    sweep:
+      list:
+        - {}                       # the scenario as authored
+        - {maneuver.v: 15.0}
+
+    vdsim-campaign run campaign.yaml --jobs 4
+
+Per-run metrics are not part of that contract: the index is a lookup table, not
+a result database (EX3). Compute metrics in a consumer script that reads the
+index with ``vdsim_campaign.read_index``.
+
+The file is kept rather than deleted because callers outside this repository
+cannot be found by grep; it will be removed after the P0 release.
 """
-import argparse
-import csv
-import json
 import sys
-import time
-from pathlib import Path
+import warnings
 
-REPO = Path(__file__).resolve().parent.parent
-sys.path[:0] = [str(REPO / "python"), str(REPO / "build" / "python")]
-
-from vdsim_lab import Simulation  # noqa: E402
-
-DEFAULT_METRICS = ["peak_ay", "vmax", "dist", "cte_rms", "cte_max", "lap_time"]
-
-
-def run_experiment(name: str, out_dir: Path) -> dict:
-    print(f"  [{name}] loading ...", flush=True)
-    sim = Simulation(name)
-    duration = sim.duration
-
-    t0 = time.monotonic()
-    while not sim.done():
-        sim.step()
-    elapsed = time.monotonic() - t0
-
-    # which metrics are meaningful
-    has_path = getattr(sim.exp, "_line", None) is not None
-    mnames = [m for m in DEFAULT_METRICS
-              if m not in ("cte_rms", "cte_max", "lap_time") or has_path]
-    metrics = sim.metrics(mnames)
-    metrics["wall_time_s"] = round(elapsed, 2)
-    metrics["steps"] = sim._k
-
-    out_dir.mkdir(parents=True, exist_ok=True)
-    sim.to_csv(out_dir / "run.csv")
-    (out_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
-    try:
-        sim.plot(out_dir / "run.png", signals=("vx", "ay", "r", "xy"))
-    except Exception:
-        pass
-
-    vmax    = metrics.get("vmax",    float("nan"))
-    peak_ay = metrics.get("peak_ay", float("nan"))
-    print(f"  [{name}] done  {elapsed:.1f}s wall | "
-          f"vmax={vmax:.1f} m/s  peak_ay={peak_ay:.2f} m/s²  steps={sim._k}")
-    return {"experiment": name, **metrics}
+MESSAGE = (
+    "tools/campaign_runner.py is deprecated and does nothing. Use the campaign "
+    "runner instead:\n"
+    "    vdsim-campaign run <campaign.yaml> [--jobs N] [--render overview]\n"
+    "Declaration schema and index keys: docs/design/BATCH_RUNNER.md"
+)
 
 
-def main():
-    p = argparse.ArgumentParser(description="VDSim campaign runner")
-    p.add_argument("experiments", nargs="*", help="experiment names (no .yaml extension)")
-    p.add_argument("--all", action="store_true", help="run all configs/experiments/*.yaml")
-    p.add_argument("--out", default="results/campaign", help="output root directory")
-    args = p.parse_args()
+def main(argv=None):
+    """Warn, print the replacement command and fail.
 
-    exp_dir = REPO / "configs" / "experiments"
-    if args.all:
-        names = sorted(f.stem for f in exp_dir.glob("*.yaml"))
-    elif args.experiments:
-        names = args.experiments
-    else:
-        p.print_help(); sys.exit(1)
+    Failing rather than silently forwarding is deliberate: the old CLI took a
+    list of scenario names and produced a metrics table, and the new one takes
+    a declaration file and produces traces. A silent forward would hand the
+    caller a different artefact under the same command.
 
-    if not names:
-        print("No experiments found in configs/experiments/ — check --all or names."); sys.exit(1)
-
-    out = Path(args.out)
-    print(f"\nCampaign: {len(names)} experiment(s)  →  {out}/")
-    rows = []
-    for name in names:
-        try:
-            row = run_experiment(name, out / name)
-        except Exception as e:
-            print(f"  [{name}] FAILED: {e}")
-            row = {"experiment": name, "error": str(e)}
-        rows.append(row)
-
-    # summary CSV (all experiments, all metrics)
-    all_keys = ["experiment"]
-    for r in rows:
-        for k in r:
-            if k not in all_keys:
-                all_keys.append(k)
-    out.mkdir(parents=True, exist_ok=True)
-    with open(out / "summary.csv", "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=all_keys, extrasaction="ignore")
-        w.writeheader(); w.writerows(rows)
-    print(f"\nSummary  →  {out / 'summary.csv'}")
+    :returns: exit code 2.
+    """
+    warnings.warn(MESSAGE, DeprecationWarning, stacklevel=2)
+    sys.stderr.write(MESSAGE + "\n")
+    return 2
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

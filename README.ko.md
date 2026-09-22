@@ -454,6 +454,64 @@ plant.finalize_trace()
 `0.1`·`0.2` trace는 계속 읽힌다. `0.3` 파일에서 필수 필드가 빠지면 경고가 아니라
 에러다.
 
+## campaign — 선언 1개로 여러 run 돌리기
+
+**run** 은 시뮬레이션 1회이자 `.vdtrace` 1개, **campaign** 은 YAML 선언 1개로
+정의되는 run 집합이다. runner 는 그 윗층만 담당한다 — trace 에 필드를 추가하지
+않고 렌더 CLI 도 그대로 호출한다.
+
+```yaml
+# campaign.yaml
+name: mu_sweep
+base: step_steer          # configs/experiments/<name>.yaml 또는 인라인 시나리오
+seed: 20260922            # 루트 시드. run 별 시드가 여기서 파생된다
+duration: 4.0             # 선택: 시나리오 duration 덮어쓰기 [s]
+sweep:
+  grid:                   # 직교곱. 조합을 직접 쓰려면 `list:`
+    mu: [0.9, 0.7, 0.5]
+  repeat: 1               # 조합별 반복. 시드만 달라진다
+```
+
+```sh
+vdsim-campaign run campaign.yaml --jobs 4 --render overview
+vdsim-campaign run campaign.yaml --resume      # 중단 지점부터 이어서
+vdsim-campaign run campaign.yaml --dry         # 전개 결과만 출력
+python3 tools/vdsim_batch.py run campaign.yaml # 같은 runner, 기존 경로
+```
+
+축 키는 시나리오 문서의 점표기 경로다(`mu`·`vehicle.*`·`tire.*` 는 프리셋 해석
+뒤에 적용). 산출물:
+
+```
+campaigns/mu_sweep/
+├── campaign.yaml      # 실제 실행된 선언 사본
+├── index.jsonl        # run_id · axes · seed · status · param_hash · role · trace_path · started_at · wall_s
+└── 000/run.vdtrace    # run 당 trace 1개. run_id 는 zero-padded 순번
+```
+
+```python
+import vdsim_campaign as vc
+for row in vc.read_index("campaigns/mu_sweep"):
+    print(row["run_id"], row["status"], row["axes"])
+```
+
+믿고 쓰기 전에 알아야 할 규칙:
+
+- **결정론.** `seed = derive(root_seed, run_index)` — 시계·PID 를 쓰지 않는다.
+  `--jobs 4` 의 채널 바이트가 `--jobs 1` 과 같다.
+- **실패는 격리하되 숨기지 않는다.** run 1개 = 자식 프로세스 1개이고, 발산하거나
+  죽은 run 은 `diverged`·`error`·`killed` 로 인덱스에 남는다. `--retry N` 을
+  명시하지 않으면 재시도는 없다.
+- **재개는 검증한다.** `--resume` 은 status 가 `ok` 이고 trace 가 남아 있고
+  `param_hash` 가 선언과 일치할 때만 건너뛴다. 선언이 바뀌었으면 거부한다.
+- **인덱스는 조회용이지 결과 DB 가 아니다.** 지표는 인덱스를 읽는 소비자
+  스크립트가 갖는다.
+- 렌더 실패는 run 실패가 아니다 — `status` 는 `ok` 이고 `render_status` 에
+  오류가 남는다.
+
+전체 스키마·인덱스 키·기존 runner 이관 안내:
+[BATCH_RUNNER](docs/design/BATCH_RUNNER.md).
+
 ## 설정 — parts catalog & scene (v0.3)
 
 차량 = `configs/parts/` 조합 **blueprint**, 실행 = `fleet[]`가 있는 **scene**
