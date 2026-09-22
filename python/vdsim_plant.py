@@ -175,7 +175,9 @@ def measure_mu_aniso(tp: vdsim.TireParams, Fz: float = None, n: int = 601):
     if getattr(tp, "tir_path", ""):
         model = vdsim.create_magic_formula_tire_from_tir(tp.tir_path)
     else:
-        model = vdsim.create_pacejka_mf96(tp)
+        # The binding takes no argument; the parameter set is applied by
+        # `initialize` below, exactly as for the TIR-backed model.
+        model = vdsim.create_pacejka_mf96()
     model.initialize(tp)
 
     def _peak(kappa_max, alpha_max, pick):
@@ -336,6 +338,62 @@ def _fx_to_cmdl1(vp: vdsim.VehicleParams, delta: float, fx: float) -> vdsim.CmdL
         cmd.motor_torque = [0.0, 0.0, 0.0, 0.0]
         cmd.brake_torque = [abs(float(t)) for t in taus]
     return cmd
+
+
+def trace_sample(o, t, u_steer, u_fx, channels):
+  """Map one session output onto a trace sample (3.2 / 3.2.1).
+
+  Shared by the plant path (:class:`VDSimPlant`) and the scenario path
+  (``vdsim_lab.Experiment``) so the channel mapping has a single definition.
+  ``channels`` decides what is written: a quantity the producer does not have
+  is left out rather than zero-filled.
+
+  :param o: ``vdsim.SimOutput`` at time ``t``.
+  :param t: sample time [s].
+  :param u_steer: commanded road-wheel steer [rad].
+  :param u_fx: commanded total longitudinal force [N]; ignored when ``u_fx``
+      is not in ``channels`` (pedal-commanded producers have no such value).
+  :param channels: channel names this run records.
+  :returns: sample dict accepted by ``vdsim_trace.TraceWriter.append``.
+  """
+  st = o.state
+  sample = {
+      "t": float(t),
+      "pose": (float(st.position[0]), float(st.position[1]), float(st.yaw())),
+      "v_body": (float(st.vx()), float(st.vy())),
+      "yaw_rate": float(st.yaw_rate()),
+      "u_steer": float(u_steer),
+      "wheel_F": [(float(o.tire_forces_wheel[i][0]),
+                   float(o.tire_forces_wheel[i][1]),
+                   float(o.Fz[i])) for i in range(4)],
+      "wheel_mu": [float(o.wheel_mu[i]) for i in range(4)],
+      "wheel_kappa": [float(o.slip_ratio[i]) for i in range(4)],
+      "wheel_alpha": [float(o.slip_angle[i]) for i in range(4)],
+  }
+  if "u_fx" in channels:
+      sample["u_fx"] = float(u_fx)
+  # 0.3 channels. `channels` already excludes anything this level does not
+  # produce, so no branch here can write a zero standing in for a quantity the
+  # model does not have (3.2.1).
+  if "a_body" in channels:
+      # Straight from the dynamics -- never a difference of `v_body`, which at
+      # dt=1 ms would hand the CG vector a noise floor larger than the signal
+      # and would change size with `decimation`.
+      sample["a_body"] = (float(o.ax), float(o.ay), float(o.az))
+  if "pose_zrp" in channels:
+      # z = settled CG height + the ride model's heave about it.
+      sample["pose_zrp"] = (float(st.position[2]) + float(o.heave_z),
+                            float(o.roll), float(o.pitch))
+  if "wheel_road_dz" in channels:
+      sample["wheel_road_dz"] = [float(o.contacts[i].road_dz) for i in range(4)]
+  if "wheel_road_normal" in channels:
+      sample["wheel_road_normal"] = [
+          (float(o.contacts[i].normal[0]),
+           float(o.contacts[i].normal[1]),
+           float(o.contacts[i].normal[2])) for i in range(4)]
+  if "wheel_travel" in channels:
+      sample["wheel_travel"] = [float(st.susp_compression[i]) for i in range(4)]
+  return sample
 
 
 class _TireView:
@@ -606,45 +664,9 @@ class VDSimPlant:
       return None if self._trace is None else self._trace.path
 
   def _record(self, delta: float, fx: float):
-      o = self._sess.output()
-      st = o.state
-      sample = {
-          "t": self._t,
-          "pose": (float(st.position[0]), float(st.position[1]), float(st.yaw())),
-          "v_body": (float(st.vx()), float(st.vy())),
-          "yaw_rate": float(st.yaw_rate()),
-          "u_steer": delta,
-          "u_fx": fx,
-          "wheel_F": [(float(o.tire_forces_wheel[i][0]),
-                       float(o.tire_forces_wheel[i][1]),
-                       float(o.Fz[i])) for i in range(4)],
-          "wheel_mu": [float(o.wheel_mu[i]) for i in range(4)],
-          "wheel_kappa": [float(o.slip_ratio[i]) for i in range(4)],
-          "wheel_alpha": [float(o.slip_angle[i]) for i in range(4)],
-      }
-      # 0.3 channels. `self._channels` already excludes anything this level does
-      # not produce, so no branch here can write a zero standing in for a
-      # quantity the model does not have (§3.2.1).
-      ch = self._channels
-      if "a_body" in ch:
-          # Straight from the dynamics — never a difference of `v_body`, which
-          # at dt=1 ms would hand the CG vector a noise floor larger than the
-          # signal and would change size with `decimation`.
-          sample["a_body"] = (float(o.ax), float(o.ay), float(o.az))
-      if "pose_zrp" in ch:
-          # z = settled CG height + the ride model's heave about it.
-          sample["pose_zrp"] = (float(st.position[2]) + float(o.heave_z),
-                                float(o.roll), float(o.pitch))
-      if "wheel_road_dz" in ch:
-          sample["wheel_road_dz"] = [float(o.contacts[i].road_dz) for i in range(4)]
-      if "wheel_road_normal" in ch:
-          sample["wheel_road_normal"] = [
-              (float(o.contacts[i].normal[0]),
-               float(o.contacts[i].normal[1]),
-               float(o.contacts[i].normal[2])) for i in range(4)]
-      if "wheel_travel" in ch:
-          sample["wheel_travel"] = [float(st.susp_compression[i]) for i in range(4)]
-      self._trace.append(sample)
+      """Offer one sample of the current state to the writer."""
+      self._trace.append(trace_sample(self._sess.output(), self._t, delta, fx,
+                                      self._channels))
 
   @property
   def vehicle(self):

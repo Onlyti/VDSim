@@ -1,82 +1,175 @@
-# Design: experiment batch runner
+# Design: campaign runner
 
-Status: DRAFT for alignment. Run many experiments headless (explicit scenarios +
-parameter sweeps + Monte Carlo), collect per-run data and a metrics table.
+Status: **implemented, contract-bound**. The open decisions of the DRAFT are
+closed by [21_experiment_runner_spec] §3 (EX1–EX8) and §11, and by
+18_dev_briefing_0903 §30. This page documents what was built; the contract
+document is the source of truth if the two ever disagree.
 
-## 1. Why / what's already there
+## 1. What this layer is
 
-The builder authors `configs/experiments/*.yaml` and `vdsim_lab.Experiment.
-from_config(name)` runs ONE. We have, but fragmented and not on the authored
-configs:
-- `python/sweep_runner.py` — cartesian sweep over a **C++ binary**, dotted-path params.
-- `apps/doe/` — `metrics.py` (peak_yaw_rate, ss_yaw, …), `scenarios.py`, a DoE harness.
-- `examples/monte_carlo.py` (#127) — stochastic sampling.
+- A **run** is one simulation. Its product is one `.vdtrace`, and that artefact
+  is the renderer's only input unit.
+- A **campaign** is a set of runs declared by one YAML file.
+- Before this layer existed the same question ("run many, how?") had three
+  answers in the tree — `tools/vdsim_batch.py`, `tools/campaign_runner.py`,
+  `python/sweep_runner.py`. They are now one: `python/vdsim_campaign.py`.
 
-Gap: a **campaign runner** that expands explicit + swept + MC runs of the authored
-experiment configs, runs them in parallel headless, and reduces each to metrics.
+| file | today |
+|---|---|
+| `python/vdsim_campaign.py` | the runner — expansion, seeds, index, resume, render hook |
+| `tools/vdsim_batch.py` | entry point kept at its historical path; forwards, translating `--parallel` to `--jobs` |
+| `tools/campaign_runner.py` | `DeprecationWarning` shim; fails and names the replacement |
+| `python/sweep_runner.py` | `DeprecationWarning` shim; C++ binary sweeps are out of scope |
+| `tools/vdsim_compare.py` | untouched — its axis is vehicle preset and its product a comparison table, a different layer |
 
-## 2. Campaign spec (one YAML)
+The two shims are kept rather than deleted because callers outside this
+repository cannot be found by grep. Deletion is a post-P0 item.
+
+## 2. Declaration
 
 ```yaml
-name: fdr_vs_surface
-runs:
-  - scenario: yongin_lap                    # configs/experiments/*.yaml, run as-is
-  - sweep:                                  # base + grid -> cartesian product
-      base: yongin_lap
-      grid:
-        vehicle.final_drive_ratio: [4.0, 5.0, 6.0]
-        road.surface: [minor_road, belgian_pave]
-        maneuver.v: [25, 30]
-  - monte_carlo:                            # base + stochastic samples
-      base: skidpad
-      n: 200
-      vary:
-        vehicle.mass: { dist: normal, mean: 1500, std: 50 }
-        mu:           { dist: uniform, lo: 0.7, hi: 1.0 }
-metrics: [lap_time, peak_ay, understeer_K, max_Fz, dist]
-output: results/fdr_vs_surface/             # per-run CSV + summary.csv + resolved/
-parallel: 8
-duration: 40
+name: mu_sweep                # campaign id, and the directory name
+base: step_steer              # configs/experiments/<name>.yaml, or an inline dict
+seed: 20260922                # root seed; per-run seeds derive from it
+duration: 4.0                 # optional override of the scenario duration [s]
+jobs: 4                       # default concurrency
+render: overview              # optional; one render CLI call per finished run
+out: campaigns                # optional; default is ./campaigns
+sweep:
+  grid:                       # orthogonal product
+    mu: [0.9, 0.7, 0.5]
+    vehicle.mass: [1500, 1700]
+  # or: list: [{mu: 0.9}, {mu: 0.5, maneuver.v: 12.0}]
+  repeat: 2                   # each combination repeated; only the seed moves
 ```
 
-Overrides use **dotted paths** on the experiment config (`vehicle.*` / `tire.*` /
-`road.*` / `maneuver.*` / `mu` / `level`). `vehicle.X` loads the vehicle preset,
-overrides field X in-memory, runs.
+- Axis kinds are the three of EX2 and no more: `grid`, `list`, `repeat`.
+  Random sampling is not an axis kind — it lives in the legacy `monte_carlo`
+  block below.
+- Axis keys are dotted paths into the scenario document. `mu`, `vehicle.*` and
+  `tire.*` are applied after the preset resolves; everything else is a plain
+  key path. There is no alias dictionary.
+- YAML only (§10-1). Output is cwd-relative with `--out` overriding it (§10-2).
 
-## 3. Execution
+The pre-promotion `runs:` block still works unchanged, including Monte Carlo:
 
-1. **Expand** `runs` -> a flat list of `(run_id, resolved_config, params)`:
-   sweep = itertools.product of the grid; monte_carlo = N seeded samples.
-2. **Run** each with `vdsim_lab.Experiment.from_config(cfg, overrides=...)`, headless,
-   in a `multiprocessing.Pool(parallel)` — runs are independent (embarrassingly
-   parallel). Each worker writes `results/<name>/<run_id>.csv` (Result.to_csv) +
-   the resolved config to `resolved/<run_id>.yaml` (reproducibility).
-3. **Reduce** each Result to the requested `metrics` (registry name -> fn(Result)).
-4. **Aggregate** -> `summary.csv`: one row per run = {run_id, params…, metrics…}.
-   Failures are captured (error logged, row marked failed) and don't kill the batch.
+```yaml
+runs:
+  - scenario: step_steer
+  - sweep:       { base: step_steer, grid: { mu: [0.9, 0.6] } }
+  - monte_carlo: { base: step_steer, n: 50,
+                   vary: { vehicle.mass: {dist: normal, mean: 1500, std: 50} } }
+```
 
-## 4. Metrics
+The Monte Carlo draw sequence is unchanged (`random.Random(seed + i)`, default
+root seed 1000), so campaigns written against the old tool produce the same
+run set.
 
-A name->function registry reusing/extending `apps/doe/metrics.py` on the `Result`:
-`lap_time` (closed-loop return-to-start), `peak_ay`, `understeer_K`, `max_Fz`,
-`dist`, `rms_slip`, `vmax`, `min_mu_margin`, … Users add their own.
+## 3. Layout
 
-## 5. CLI
+```
+campaigns/<campaign_id>/
+├── campaign.yaml          # copy of the declaration actually executed
+├── index.jsonl            # one line per run
+└── <run_id>/
+    ├── run.vdtrace        # the run's product
+    ├── job.json           # what the child process was handed
+    ├── run.log            # that run's stdout/stderr, never interleaved
+    ├── result.json        # the child's own report
+    └── preview.png        # only with --render
+```
+
+`run_id` is a zero-padded ordinal (`000`, `001`, …): sortable and readable.
+Axis values are **not** encoded in the directory name — the index holds the
+mapping.
+
+## 4. Index keys
+
+One JSON object per line. Required keys (EX3):
+
+| key | meaning |
+|---|---|
+| `run_id` | zero-padded ordinal |
+| `axes` | the axis values of this run |
+| `seed` | derived seed, `derive(root_seed, run_index)` |
+| `status` | `ok` \| `diverged` \| `error` \| `killed` \| `skipped` |
+| `param_hash` | read back from the trace manifest, not recomputed |
+| `role` | trace manifest role (`plant`) |
+| `trace_path` | campaign-relative path, `null` when no trace was produced |
+| `started_at` | UTC ISO-8601 |
+| `wall_s` | run wall time [s] |
+
+Also written: `attempt` (EX5), `render_status` (EX7), `error`, `resumed_from`.
+
+**The index is a lookup table, not a result database.** Metrics do not belong
+here (EX3, and §2 of the contract puts experiment tracking out of scope).
+Compute them in a consumer that reads `vdsim_campaign.read_index(path)`.
+
+## 5. Execution
+
+1. Expand the declaration into an ordered run list; number and seed each run.
+2. Run each one **in its own child process**, up to `--jobs` at a time
+   (default 1). Process isolation, not threads: it keeps the C++ core's
+   process state out of the question, and a run that takes the interpreter
+   down costs one index line instead of the campaign (EX5, EX8).
+3. Each child records its `.vdtrace` through the ordinary opt-in trace API and
+   reports back in `result.json`.
+4. Optionally call the existing render CLI on that one trace (EX7). A render
+   failure is a render failure: `status` stays `ok` and `render_status`
+   carries the error.
+5. Write `index.jsonl` in **declaration order**, not completion order.
+
+### Determinism
+
+`seed = derive(root_seed, run_index)` — no wall clock, no pid, no address.
+The same declaration yields the same seeds and the same channel bytes whether
+it runs with `--jobs 1` or `--jobs 4`.
+
+Caveat worth knowing: on the scenario path the seed currently reaches only the
+sensor noise model, and the scenario autopilots steer from ground truth rather
+than from measurements. A `repeat` axis therefore produces identical traces
+today. The seed is still derived and recorded, so nothing has to change here
+when a stochastic input is added.
+
+### Resume
+
+`--resume` skips a run only when all three of EX6 hold: the recorded status is
+`ok`, the trace file is still there, and its `param_hash` matches what the
+declaration now asks for. If the declaration itself moved since
+`campaign.yaml` was written, the resume is refused outright — two parameter
+sets must not end up mixed in one campaign directory.
+
+### Retries
+
+None by default. `--retry N` opts in and records `attempt`. Silent retries
+would bias a campaign toward the runs that happen to pass; the SIGFPE hunt of
+Q0 is the case in point.
+
+## 6. What this layer does not touch
+
+- **The trace contract.** No field is added. The campaign context (axis values,
+  campaign id) lives in the index, never in the manifest. The one allowed
+  mention is `producer.name = "vdsim_campaign"`, which the manifest already
+  required (EX1).
+- **The render CLI.** The runner owns no render code; it calls the CLI on one
+  trace (EX7).
+- **Overlay rendering and aggregate plots.** Those stay where they are; a
+  consumer script that reads the index is the place for them.
+
+## 7. Note on a `level` axis
+
+`L4` and `L3` are the same physics unless suspension hardpoints are attached,
+and the scenario path attaches none. Sweeping `level` across the two therefore
+produces identical runs today. The runner does not detect or warn about this —
+that would be guessing on the user's behalf. See 18_dev_briefing_0903 §30.4.
+
+## 8. CLI
 
 ```sh
-python tools/vdsim_batch.py run campaign.yaml          # run the campaign
-python tools/vdsim_batch.py run campaign.yaml --dry    # list the expanded runs
+vdsim-campaign run campaign.yaml                      # sequential
+vdsim-campaign run campaign.yaml --jobs 4             # four at a time
+vdsim-campaign run campaign.yaml --resume             # continue a campaign
+vdsim-campaign run campaign.yaml --render overview    # render each run
+vdsim-campaign run campaign.yaml --dry                # list the expansion only
+python3 tools/vdsim_batch.py run campaign.yaml        # same, historical path
 ```
-(Builder web-tool "Batch" tab is a later add; batch is headless automation first.)
-
-## 6. Open decisions
-
-1. **Run path = vdsim_lab Python + multiprocessing** (reuses authored configs; sim
-   core is C++; perf fine) — agree? (vs the C++ sweep_runner binary path.)
-2. **Output**: per-run CSV + summary.csv (metrics table) + resolved config per run.
-   Add parquet later? CSV first — agree?
-3. **Parallelism**: `multiprocessing.Pool(parallel)`, default = cpu_count. OK?
-4. **Monte Carlo** folded into the same spec (reuse #127's sampling), or keep
-   `examples/monte_carlo.py` separate and only do explicit+sweep here?
-5. **CLI-first**, builder "Batch" tab later — agree?
-6. Need **resume / caching** (skip runs whose output exists) in v1, or later?

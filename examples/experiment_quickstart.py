@@ -7,6 +7,9 @@ state() -> set_input() -> run_core_dt(), then to_csv().
     PYTHONPATH=build/python:python python3 examples/experiment_quickstart.py
 
 Pip installs: use examples/quickstart.py or vdsim-quickstart instead.
+
+For many runs, do not wrap this in a for-loop: examples/campaign_quickstart.py
+and `vdsim-campaign` own that layer (docs/design/BATCH_RUNNER.md).
 """
 import sys
 from pathlib import Path

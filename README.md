@@ -494,6 +494,65 @@ plant.finalize_trace()
 `0.1` and `0.2` traces stay readable. A `0.3` file that omits any of the
 required fields is an error, not a warning.
 
+## Campaigns — many runs from one declaration
+
+A **run** is one simulation and one `.vdtrace`. A **campaign** is a set of runs
+declared in a single YAML file. The runner owns only that upper layer: it adds
+no field to the trace and calls the render CLI unchanged.
+
+```yaml
+# campaign.yaml
+name: mu_sweep
+base: step_steer          # configs/experiments/<name>.yaml, or an inline scenario
+seed: 20260922            # root seed; each run's seed derives from it
+duration: 4.0             # optional override [s]
+sweep:
+  grid:                   # orthogonal product; `list:` names combinations instead
+    mu: [0.9, 0.7, 0.5]
+  repeat: 1               # repeat each combination; only the seed moves
+```
+
+```sh
+vdsim-campaign run campaign.yaml --jobs 4 --render overview
+vdsim-campaign run campaign.yaml --resume      # continue where it stopped
+vdsim-campaign run campaign.yaml --dry         # print the expansion, run nothing
+python3 tools/vdsim_batch.py run campaign.yaml # same runner, historical path
+```
+
+Axis keys are dotted paths into the scenario document (`mu`, `vehicle.*`,
+`tire.*` are applied after the preset resolves). Products:
+
+```
+campaigns/mu_sweep/
+├── campaign.yaml      # the declaration as executed
+├── index.jsonl        # run_id · axes · seed · status · param_hash · role · trace_path · started_at · wall_s
+└── 000/run.vdtrace    # one trace per run; run_id is a zero-padded ordinal
+```
+
+```python
+import vdsim_campaign as vc
+for row in vc.read_index("campaigns/mu_sweep"):
+    print(row["run_id"], row["status"], row["axes"])
+```
+
+Rules worth knowing before you rely on them:
+
+- **Deterministic.** `seed = derive(root_seed, run_index)` — no wall clock, no
+  pid. `--jobs 4` produces the same channel bytes as `--jobs 1`.
+- **Failures are isolated, not hidden.** One run is one child process; a run
+  that diverges or crashes costs one index line with `status` `diverged` /
+  `error` / `killed`. There are no retries unless you ask for `--retry N`.
+- **Resume verifies.** `--resume` skips a run only when its status is `ok`, its
+  trace still exists, and its `param_hash` matches the declaration. If the
+  declaration changed, the resume is refused.
+- **The index is a lookup table, not a result database.** Metrics belong in a
+  consumer script that reads the index.
+- A render failure is not a run failure: `status` stays `ok` and
+  `render_status` carries the error.
+
+Full schema, index keys and the migration notes for the superseded runners:
+[BATCH_RUNNER](docs/design/BATCH_RUNNER.md).
+
 ## Config — parts catalog & scenes (v0.3)
 
 Vehicles are **blueprints** over `configs/parts/` (chassis, tire, drivetrain, …).
