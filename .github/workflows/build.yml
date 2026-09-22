@@ -43,10 +43,11 @@ jobs:
       # bindings must be built or every one of them fails with
       # ModuleNotFoundError. pybind11 is pinned: it decides how the module is
       # compiled, so an unpinned bump is a silent toolchain change.
+      # gymnasium is pinned for ctest rl_env (vdsim_rl); a missing import fails.
       - name: Install Python dependencies
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install "pybind11==2.13.6" numpy pyyaml matplotlib pillow
+          python3 -m pip install "pybind11==2.13.6" numpy pyyaml matplotlib pillow "gymnasium==0.29.1"
 
       - name: Report toolchain
         run: |
@@ -121,7 +122,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install "pybind11==2.13.6" numpy pyyaml matplotlib pillow
+          python3 -m pip install "pybind11==2.13.6" numpy pyyaml matplotlib pillow "gymnasium==0.29.1"
 
       - name: Pin CMake
         # CMakePresets.json is version 3, which needs CMake >= 3.21, so the

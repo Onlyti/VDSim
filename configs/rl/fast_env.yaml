@@ -1,8 +1,11 @@
 # vdsim_rl training preset: same plant as default_env.yaml, coarser substep.
 #
-# G1 gate (2026-09-17, L3, outer tick 5 ms, reference = same plant at
-# max_substep_dt 0.1 ms).  Worst max-relative error over the manoeuvre,
-# throughput = 64 envs on 22 threads of an i7-13700K:
+# G1 gate, outer tick 5 ms, reference = same plant at max_substep_dt 0.1 ms.
+# Worst max-relative error over the manoeuvre, throughput = 64 envs on 22
+# threads of an i7-13700K.  Reproduce: tests/rl/gate_g1_substep_accuracy.py.
+#
+# (a) C++ built-in generic car (vehicle/tire unset), L3, 2026-09-17.
+#     This is the table the 2.5 ms choice below was made on.
 #
 #   substep   step-steer ay   step-steer yaw   brake Fz_FL   throughput
 #   0.50 ms       0.23 %          0.08 %          0.51 %       80 k steps/s
@@ -14,6 +17,25 @@
 # 1.4 %).  Keep default_env.yaml (1 ms) for evaluation and for any reward that
 # reads per-wheel load - Fz is the signal that degrades first.  5 ms is not
 # adopted: ay and Fz both pass 6 %.
+#
+#
+# (b) The car this file selects: vehicle ioniq5_awd + tire ioniq5_pac2002,
+#     param_hash 046526872cfa71dabeb5b765040a42a340db2059ddfe042644ba483bf0be984b,
+#     2026-09-22, L2 (this file's level).  At L3 the three error columns move
+#     by at most 0.03 percentage points (2.5 ms: ay 0.26 %, Fz_FL 7.56 %).
+#
+#   substep   step-steer ay   step-steer yaw   brake Fz_FL   throughput
+#   0.50 ms       0.05 %          0.02 %          1.11 %       26 k steps/s
+#   1.00 ms       0.12 %          0.04 %          2.62 %       51 k steps/s   <- default_env.yaml
+#   2.50 ms       0.27 %          0.12 %          7.56 %      125 k steps/s   <- this file
+#   5.00 ms       2.29 %          0.33 %         11.22 %      247 k steps/s
+#
+# With this car, 2.5 ms FAILS the Fz criterion fixed before the measurement
+# (ay, yaw <= 2 %, Fz_FL <= 5 %): 7.56 % peak error, a transient at brake onset
+# (RMSE 21.8 N against a 7651 N peak).  The value below is unchanged pending a
+# decision; do not read per-wheel load from this preset.  Throughput is ~2.7x
+# lower than (a) because of the MF2002 tyre evaluation
+# (tests/rl/bench_preset_cost.py), not the vehicle parameters.
 #
 # max_substeps must stay above outer_dt / max_substep_dt, otherwise the solver
 # silently clamps and runs a coarser step than requested.

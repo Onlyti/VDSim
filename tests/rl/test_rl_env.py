@@ -10,7 +10,7 @@ import numpy as np
 import yaml
 import vdsim
 import vdsim_rl
-from vdsim_rl import (EnvConfig, VDSimVecEnv, VDSimEnv, make_sb3_vec_env,
+from vdsim_rl import (EnvConfig, VDSimVecEnv, VDSimEnv,
                       expand_obs_fields, TERM_NAMES, load_vehicle_preset)
 
 res = {}
@@ -223,19 +223,8 @@ res["auto_resets"] = n_done
 print(f"VDSimVecEnv 16 envs x 500 control steps: {sps:,.0f} physics ticks/s, "
       f"{n_done} auto-resets")
 
-# ---- R2: SB3 PPO smoke ----
-from stable_baselines3 import PPO
-venv = make_sb3_vec_env(8, cfg, seed=11)
-t0 = time.perf_counter()
-model = PPO("MlpPolicy", venv, n_steps=64, batch_size=64, n_epochs=2, verbose=0,
-            device="cpu")
-model.learn(total_timesteps=2048)
-el = time.perf_counter() - t0
-obs = venv.reset()
-act, _ = model.predict(obs, deterministic=True)
-res["sb3"] = {"seconds": el, "action_shape": list(np.asarray(act).shape)}
-print(f"SB3 PPO learn(2048) on 8 envs: {el:.1f} s, predict -> {np.asarray(act).shape}")
-venv.close()
+# The SB3 PPO smoke (torch) lives in smoke_sb3_ppo.py, outside ctest: this
+# file is the ctest target rl_env and needs gymnasium but not torch/SB3.
 
 json.dump(res, open("/tmp/rl_smoke.json", "w"), indent=1, default=str)
 print("ALL CHECKS PASSED")

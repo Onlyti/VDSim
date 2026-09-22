@@ -16,15 +16,17 @@ Example::
     python examples/rl/record_vec_demo.py --config configs/rl/fast_env.yaml \\
         --num-envs 16 --seconds 20 --npz /tmp/rl_grid.npz
     python examples/rl/record_vec_demo.py --config configs/rl/fast_env.yaml \\
-        --num-envs 64 --seconds 15 --seed 3 --policy lanekeep --steer-scale 0.3 --shared-actions \\
+        --num-envs 64 --seconds 15 --seed 3 --policy lanekeep --steer-scale 0.3 \\
         --hold 1.0 --npz /tmp/rl_overlay.npz
 
 The policy is piecewise-constant uniform random: a new action is drawn from
 the action space every ``--hold`` seconds and held in between (a per-step
 uniform draw averages out to driving straight and shows nothing).  The steer
-component is multiplied by ``--steer-scale``.  With ``--shared-actions`` every
-env receives the *same* action sequence, so any spread between the envs comes
-from reset randomization and domain randomization alone.
+component is multiplied by ``--steer-scale``.  By default every env draws from
+its own generator (``SeedSequence(seed).spawn(num_envs)``), so no two envs
+share a disturbance and env i sees the same one whatever ``--num-envs`` is.
+With ``--shared-actions`` every env receives the *same* action sequence
+instead, so any spread comes from reset and domain randomization alone.
 
 ``--policy lanekeep`` replaces the random steer by one fixed proportional
 lane-keeping law for every env, ``steer = -(k_y*y + k_yaw*yaw)`` on the env's
@@ -51,10 +53,16 @@ from vdsim_rl import TERM_NAMES, EnvConfig, VDSimVecEnv  # noqa: E402
 
 
 def git_sha() -> str:
-    """Short commit of the tree the demo ran from, or ``"unknown"``."""
+    """Short commit of the tree the demo ran from, or ``"unknown"``.
+
+    ``-dirty`` is appended when the work tree differs from that commit
+    (modified or untracked files): the commit alone would then not reproduce
+    the recording.
+    """
     try:
-        return subprocess.run(["git", "-C", str(REPO), "rev-parse", "--short", "HEAD"],
-                              capture_output=True, text=True, check=True).stdout.strip()
+        run = lambda *a: subprocess.run(["git", "-C", str(REPO), *a], capture_output=True,
+                                        text=True, check=True).stdout.strip()
+        return run("rev-parse", "--short", "HEAD") + ("-dirty" if run("status", "--porcelain") else "")
     except Exception:
         return "unknown"
 
@@ -64,15 +72,18 @@ def random_policy(num_envs: int, hold_steps: int, seed: int,
     """Piecewise-constant uniform random actions in [-1, 1]^2.
 
     :param steer_scale: multiplier on the steer component.
-    :param shared: one draw broadcast to every env instead of one per env.
+    :param shared: one draw broadcast to every env instead of one generator per env.
     :returns: callable ``k -> (num_envs, 2)`` float32 action for control step k.
     """
-    rng = np.random.default_rng(seed)
+    if shared:
+        rngs = [np.random.default_rng(seed)]
+    else:
+        rngs = [np.random.default_rng(c) for c in np.random.SeedSequence(seed).spawn(num_envs)]
     held = np.zeros((num_envs, 2), dtype=np.float32)
 
     def act(k: int) -> np.ndarray:
         if k % hold_steps == 0:
-            held[:] = rng.uniform(-1.0, 1.0, size=(1 if shared else num_envs, 2))
+            held[:] = np.stack([r.uniform(-1.0, 1.0, size=2) for r in rngs])
             held[:, 0] *= steer_scale
         return held.copy()
     return act
@@ -232,6 +243,8 @@ def main(argv=None) -> int:
     ap.add_argument("--policy", choices=("random", "lanekeep"), default="random")
     ap.add_argument("--k-y", type=float, default=0.02, help="lanekeep [rad/m]")
     ap.add_argument("--k-yaw", type=float, default=0.3, help="lanekeep [rad/rad]")
+    ap.add_argument("--vehicle-note", default="public approximation",
+                    help="shown after the vehicle name in the caption")
     ap.add_argument("--npz", type=Path)
     ap.add_argument("--trace-dir", type=Path)
     args = ap.parse_args(argv)
@@ -246,12 +259,13 @@ def main(argv=None) -> int:
     codes = np.array([s["code"] for s in steps[1:]])
     reasons = {TERM_NAMES[c]: int((codes == c).sum()) for c in np.unique(codes)
                if c != vdsim.TERM_NONE}
-    meta = {"vehicle": prov["vehicle"], "tire": prov["tire"],
+    meta = {"vehicle": prov["vehicle"], "vehicle_note": args.vehicle_note,
+            "tire": prov["tire"],
             "param_hash": prov["param_hash"], "level": cfg.level,
             "num_envs": args.num_envs, "seconds": args.seconds, "seed": args.seed,
             "policy": ((f"lanekeep P k_y={args.k_y:g} k_yaw={args.k_yaw:g} + random"
                         if args.policy == "lanekeep" else "random")
-                       + (" shared" if args.shared_actions else "")
+                       + (" shared" if args.shared_actions else " per-env")
                        + f", hold {args.hold:g} s"
                        + (f", steer x{args.steer_scale:g}" if args.steer_scale != 1.0 else "")),
             "control_dt_s": cfg.dt * cfg.action_repeat, "config": Path(args.config).name,

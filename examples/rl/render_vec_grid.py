@@ -8,8 +8,9 @@ seconds over the freshly reset car.
 
 Overlay (``--overlay``): every env's *first* episode on one road, cars as
 translucent markers with their trails.  An env whose episode has ended keeps
-its terminal marker, greyed.  Use with ``--shared-actions`` recordings to see
-the spread that reset and domain randomization alone produce.
+its terminal marker, greyed.  A default (per-env disturbance) recording shows
+independent inputs on top of reset and domain randomization; a
+``--shared-actions`` recording isolates the randomization alone.
 
 A frame is drawn only at a recorded control step (``--every`` picks every n-th
 one); nothing is interpolated.  Encoding uses the system ``ffmpeg`` (not
@@ -54,7 +55,8 @@ def body_corners(x: float, y: float, yaw: float, length: float, width: float):
 
 def caption(meta: dict, n: int, extra: str = "") -> str:
     """Provenance line burnt into every frame."""
-    return (f"vdsim_rl VDSimVecEnv  N={n}  vehicle={meta['vehicle']}  "
+    note = f" ({meta['vehicle_note']})" if meta.get("vehicle_note") else ""
+    return (f"vdsim_rl VDSimVecEnv  N={n}  vehicle={meta['vehicle']}{note}  "
             f"tire={meta['tire']}  level={meta['level']}  policy={meta['policy']}  "
             f"seed={meta['seed']}  config={meta['config']}  commit={meta['commit']}"
             + extra)

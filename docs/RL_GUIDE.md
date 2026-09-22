@@ -226,23 +226,24 @@ python examples/rl/render_vec_grid.py /tmp/rl_grid.npz --out docs/assets/rl/vec_
 ```
 
 **B — one road, 64 cars** ([`assets/rl/vec_overlay.mp4`](assets/rl/vec_overlay.mp4)):
-the first episode of 64 envs overlaid, 15 s. Every env receives the *same*
-action sequence (a fixed proportional lane-keeper plus one shared random steer
-disturbance and pedal — a scripted baseline, not a trained policy), so the
-fan-out comes only from reset randomization and the `fast_env.yaml` domain
-randomization.
+the first episode of 64 envs overlaid, 15 s. Every env runs the same fixed
+proportional lane-keeper (a scripted baseline, not a trained policy) plus its
+*own* random steer disturbance and pedal, drawn from a per-env generator
+(`SeedSequence(seed).spawn(64)`), on top of reset randomization and the
+`fast_env.yaml` domain randomization.
 
 <video src="../assets/rl/vec_overlay.mp4" controls muted width="100%"
        poster="../assets/rl/vec_overlay_end.png"></video>
 
-What to look at: identical inputs, different cars — some leave the road
-(grey marker = episode ended), the rest settle at different distances because
-their initial speed and friction differ.
+What to look at: 64 independent rollouts — cars that leave the road (grey
+marker = episode ended) do so on both sides, and the rest settle at different
+distances because their inputs, initial speed and friction differ. For the
+spread from randomization alone, record with `--shared-actions`.
 
 ```bash
 python examples/rl/record_vec_demo.py --config configs/rl/fast_env.yaml \
     --num-envs 64 --seconds 15 --seed 3 --policy lanekeep --steer-scale 0.3 \
-    --shared-actions --hold 1.0 --npz /tmp/rl_overlay.npz
+    --hold 1.0 --npz /tmp/rl_overlay.npz
 python examples/rl/render_vec_grid.py /tmp/rl_overlay.npz --overlay \
     --out docs/assets/rl/vec_overlay.mp4
 ```
@@ -262,12 +263,18 @@ Throughput below is in **physics ticks per second summed over all envs**
   dominates (`docs/ROADMAP.md` §10, `tests/rl/bench_throughput_layers.py`).
 - **The Ioniq 5 preset is slower than the generic car.** Measured 2026-09-22 on
   ailab-12 (22 threads), 64 envs, `fast_env.yaml`, best of 3 × 300 control
-  steps: L2 122 k vs 327 k ticks/s, L3 119 k vs 319 k ticks/s. The MF2002 tyre
-  (`ioniq5_pac2002.tir`) costs more per evaluation than the generic Pacejka.
-- **Substep accuracy was gated on the generic car.** The G1 table in
-  `configs/rl/fast_env.yaml` (2.5 ms substep, ≤ 1.4 % trajectory error) was
-  measured before the preset input existed; it has not been repeated with the
-  Ioniq 5 preset.
+  steps: L2 122 k vs 327 k ticks/s, L3 119 k vs 319 k ticks/s. Changing one
+  factor at a time (`tests/rl/bench_preset_cost.py`, core only, L2) puts the
+  whole gap on the tyre model: the MF2002 backend reading `ioniq5_pac2002.tir`
+  is 2.72× slower than the built-in MF96, while the Ioniq 5 vehicle parameters
+  and `plant_path` change throughput by less than 6 %.
+- **The 2.5 ms substep fails the load criterion with the Ioniq 5 preset.**
+  `configs/rl/fast_env.yaml` carries two G1 tables: the generic car (the one
+  the 2.5 ms choice was made on) and the Ioniq 5 preset. With the Ioniq 5,
+  2.5 ms keeps ay and yaw-rate error at 0.27 % and 0.12 % but front-left
+  vertical load reaches 7.56 % peak error against a 5 % limit (a transient at
+  brake onset). The value is unchanged pending a decision; do not build a
+  reward on per-wheel load with `fast_env.yaml`.
 - **The Ioniq 5 preset is a public approximation.** No measured tyre data;
   `ackerman_percent: 0.0`; suspension keys not stated in the YAML use the C++
   defaults. Use it as "an Ioniq 5-class car", not as a validated Ioniq 5.
