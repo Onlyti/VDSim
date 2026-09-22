@@ -2,6 +2,18 @@
 # Observation layout is this list, left to right; a bare per-wheel name expands
 # to four columns in FL, FR, RL, RR order.
 level: L2
+# car: configs/vehicles/<stem>.yaml + configs/parts/tire/<stem>.yaml.
+# generic_sedan + generic_pacejka are the C++ built-in defaults written out
+# as files, so a run records the car it used instead of leaving it unnamed
+# (PO decision 78).  G1 substep accuracy at the 1 ms below, same table as
+# fast_env.yaml (a): ay 0.55 %, yaw 0.20 %, Fz_FL 1.22 %.
+#
+# To run a car whose parameters are not in this repository, put it under
+# $VDSIM_PRIVATE_CONFIGS/vehicles/<stem>.yaml (tyre under
+# $VDSIM_PRIVATE_CONFIGS/parts/tire/) and name the stem here, or pass an
+# absolute vehicle_file / tire_file.  reset() then reports source=private.
+vehicle: generic_sedan
+tire: generic_pacejka
 dt: 0.005
 action_repeat: 4          # control interval = 20 ms
 max_steer: 0.5            # [rad] at the wheel

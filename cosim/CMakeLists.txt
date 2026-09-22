@@ -147,6 +147,16 @@ if(Python3_FOUND)
     set_tests_properties(vla_plant_demo PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
+    # vdsim_rl: torch-free checks only (gymnasium API, termination codes, obs
+    # buffer, vehicle preset input).  A missing gymnasium fails the test; the
+    # SB3 PPO smoke (tests/rl/smoke_sb3_ppo.py) stays outside ctest.
+    add_test(NAME rl_env
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/rl/test_rl_env.py)
+    set_tests_properties(rl_env PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 300
+        ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};VDSIM_BUILD_PY=${CMAKE_BINARY_DIR}/python;PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
     add_test(NAME control_ladder
         COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_SOURCE_DIR}/examples/control_ladder_demo.py)

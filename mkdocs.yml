@@ -135,6 +135,7 @@ nav:
       - "Product roadmap": ROADMAP.md
       - "Catalog, scenes & physics": CATALOG_AND_PHYSICS.md
       - Running VDSim: RUNNING.md
+      - "RL environment (vdsim_rl)": RL_GUIDE.md
       - Validation: VALIDATION.md
   - References:
       - "Actuator/sensor nonlinearity & delay": references/actuator_nonlinearity.md

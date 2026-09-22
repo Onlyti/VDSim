@@ -1,8 +1,14 @@
-# vdsim_rl training preset: same plant as default_env.yaml, coarser substep.
+# vdsim_rl training preset: fast prototyping on the C++ built-in generic car at
+# a coarser substep.  default_env.yaml keeps the same car at 1 ms.
 #
-# G1 gate (2026-09-17, L3, outer tick 5 ms, reference = same plant at
-# max_substep_dt 0.1 ms).  Worst max-relative error over the manoeuvre,
-# throughput = 64 envs on 22 threads of an i7-13700K:
+# G1 gate, outer tick 5 ms, reference = same plant at a finer max_substep_dt
+# (0.1 ms for the rows marked [ref 0.1 ms], 1 us for [ref 1 us]).
+# Worst max-relative error over the manoeuvre, throughput = 64 envs on 22
+# threads of an i7-13700K.  Reproduce: tests/rl/gate_g1_substep_accuracy.py.
+# Criterion fixed before the measurement: ay and yaw <= 2 %, Fz_FL <= 5 %.
+#
+# (a) C++ built-in generic car (= configs/vehicles/generic_sedan.yaml), L3,
+#     2026-09-17.  This is the table the 2.5 ms choice below was made on.
 #
 #   substep   step-steer ay   step-steer yaw   brake Fz_FL   throughput
 #   0.50 ms       0.23 %          0.08 %          0.51 %       80 k steps/s
@@ -10,14 +16,48 @@
 #   2.50 ms       1.38 %          0.37 %          4.07 %      377 k steps/s   <- this file
 #   5.00 ms       6.82 %          0.82 %          6.69 %      722 k steps/s   (rejected)
 #
-# Adopted: 2.5 ms for training (2.4x throughput, trajectory signals within
-# 1.4 %).  Keep default_env.yaml (1 ms) for evaluation and for any reward that
-# reads per-wheel load - Fz is the signal that degrades first.  5 ms is not
-# adopted: ay and Fz both pass 6 %.
+#     Same car at L2 (this file's level), 2026-09-22, same script:
+#   2.50 ms       1.45 %          0.53 %          4.07 %      326 k steps/s   <- this file
+#   1.00 ms       0.55 %          0.20 %          1.22 %      131 k steps/s
+#     (not in the criterion: brake pitch 30.6 % and step-steer roll 8.4 % at
+#     2.5 ms, 9.2 % / 1.5 % at 1 ms - do not build a reward on pitch or roll.)
+#
+#     Rows above are [ref 0.1 ms]. Same car, L2, same manoeuvres and error
+#     definition, reference re-integrated at 1 us (Q23-h, 2026-09-22,
+#     solver_substep_clamp_count() == 0) [ref 1 us]:
+#   substep   step-steer ay   step-steer yaw   brake Fz_FL   pitch    roll
+#   0.01 ms       0.005 %         0.002 %         0.010 %    0.08 %   0.01 %
+#   0.10 ms       0.059 %         0.022 %         0.117 %    0.88 %   0.16 %
+#   1.00 ms       0.61 %          0.22 %          1.34 %    10.1 %    1.7 %
+#   2.50 ms       1.51 %          0.55 %          4.19 %    31.5 %    8.5 %  <- this file
+#     Observed order p = log10(E(h)/E(h/10)) is 1.01-1.06 between 1 and
+#     0.1 ms and 1.04-1.05 between 0.1 and 0.01 ms (first order, monotone),
+#     so the 1 us reference is sound and the old 0.1 ms reference was
+#     itself off by the 0.10 ms row: the [ref 0.1 ms] rows read about 3-11 %
+#     (relative) too optimistic. The 2.5 ms row still passes the criterion.
+#
+# Adopted (PO decision 69, 2026-09-22): 2.5 ms for training - 2.4x the
+# throughput of 1 ms with trajectory signals within 1.5 % and Fz_FL 4.07 %.
+# Keep default_env.yaml (1 ms) for evaluation and for any reward that reads
+# per-wheel load - Fz is the signal that degrades first.  5 ms is not adopted:
+# ay and Fz both pass 6 %.
+#
+# Both RL declarations name the generic car explicitly since PO decision 78:
+# configs/vehicles/generic_sedan.yaml carries the same values the C++ defaults
+# compile in, so table (a) describes both files.
+#
+# A substep is a property of the car, not of the solver.  Presets whose specs
+# are not public are selected by the same keys but injected from outside the
+# repository ($VDSIM_PRIVATE_CONFIGS); their G1 tables are kept with them, not
+# here.  Re-run the script above for any preset you swap in - do not carry this
+# file's 2.5 ms over to it.
 #
 # max_substeps must stay above outer_dt / max_substep_dt, otherwise the solver
 # silently clamps and runs a coarser step than requested.
 level: L2
+# car: the generic car of table (a), named rather than left unset.
+vehicle: generic_sedan
+tire: generic_pacejka
 dt: 0.005
 action_repeat: 4
 max_steer: 0.5
