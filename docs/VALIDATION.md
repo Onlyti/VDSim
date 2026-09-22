@@ -52,7 +52,7 @@ tests:    505/505
 config:   cmake --preset validation && cmake --build --preset validation && ctest --preset validation
 presets:  CMakePresets.json@fb1f0c198a0201fcce2543a9f5b2242a255fb97a
 toolchain: cmake 3.31.10
-commit:   3a72f3c
+commit:   7b7947f
 date:     2026-09-22
 excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)

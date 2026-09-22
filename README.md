@@ -55,6 +55,10 @@ pip install "./vdsim-*.whl[plot]"
 vdsim-quickstart          # writes run.csv + run.png in the current directory
 ```
 
+Install into a clean environment: another distribution also provides a top-level
+`vdsim` package, and if both are present that one wins the import. VDSim detects
+this and raises `CoreShadowedError` naming the file that was loaded.
+
 Measured on a clean conda env (Python 3.11, Linux x86_64, 2026-06-25): **first result in
 seconds** — pip install `[plot]` + `vdsim-quickstart` → `run.csv` + `run.png` in **~6 s
 wall-clock** (cold; lab network, matplotlib wheel included). Repeat quickstart ~1.5 s.

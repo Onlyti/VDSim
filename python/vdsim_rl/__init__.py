@@ -24,7 +24,9 @@ from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 
-import vdsim
+from vdsim_guard import load_core
+
+vdsim = load_core()
 
 __all__ = [
     "EnvConfig", "VDSimVecEnv", "VDSimEnv", "make_sb3_vec_env",
