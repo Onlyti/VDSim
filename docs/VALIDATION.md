@@ -54,7 +54,7 @@ presets:  CMakePresets.json@fb1f0c198a0201fcce2543a9f5b2242a255fb97a
 toolchain: cmake 3.31.10
 commit:   PENDING
 date:     2026-09-22
-pending:  Q20 adds one discriminating gtest, so the 505/505 measured at 3a72f3c
+pending:  Q20 adds one discriminating gtest, so the 505/505 measured at 7b7947f
 pending:  no longer describes this tree.  Filled from the CI canonical job on
 pending:  this branch (3 consecutive equal runs) before merge.
 excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)

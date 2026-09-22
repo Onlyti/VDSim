@@ -29,11 +29,9 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-try:
-    import vdsim
-except ImportError:
-    sys.path.insert(0, str(REPO / "build" / "python"))
-    import vdsim
+from vdsim_guard import load_core  # noqa: E402  (shadowed-core check, one place)
+
+vdsim = load_core([REPO / "build" / "python"])
 
 def _conf_root():
     for c in (REPO / "configs", Path.cwd() / "configs",
