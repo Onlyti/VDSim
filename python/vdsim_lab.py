@@ -100,13 +100,15 @@ def _resolve_preset(vehicle="sedan", tire="default_pacejka"):
             sys.path.insert(0, sp)
     from catalog import CatalogResolver
     from catalog.ids import blueprint_for_vehicle, tire_id_from_stem
-    cache = _CONF / ".resolve_cache" / f"{vehicle}_{tire}"
-    cache.mkdir(parents=True, exist_ok=True)
+    # No out_dir: the resolver writes into a fresh temp dir of its own, so the
+    # YAML we hand back is private to this call. A shared per-preset directory
+    # was rewritten in place by every process resolving the same preset, and a
+    # concurrent reader could parse a truncated file and silently get the C++
+    # defaults instead (Q10-c; broke EG3 under --jobs).
     r = CatalogResolver(_catalog_root())
     rv = r.resolve_blueprint(
         blueprint_for_vehicle(vehicle),
         instance_parts={"tire": tire_id_from_stem(tire)},
-        out_dir=cache,
     )
     return rv.vehicle_yaml, rv.tire_yaml
 

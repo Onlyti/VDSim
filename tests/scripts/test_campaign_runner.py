@@ -327,11 +327,31 @@ def test_mu_aniso_measurement_runs():
           "a 'circle' verdict means the two multipliers agree to 1 %")
 
 
+def test_resolved_preset_is_private():
+    """Two resolutions of one preset must not share files (Q10-c).
+
+    Every run process resolves its vehicle and tire preset to YAML and reads it
+    straight back. When those files lived at one path per preset, a second
+    process rewriting them could hand the first a truncated file, parsed as
+    C++ defaults -- EG3 then failed only when the timing lined up. A parallel
+    stress check would pass most of the time on a broken tree, so this pins the
+    structure instead: each call gets its own non-empty files.
+    """
+    import vdsim_lab as vl
+    first = [Path(p) for p in vl._resolve_preset()]
+    second = [Path(p) for p in vl._resolve_preset()]
+    check(not {str(p) for p in first} & {str(p) for p in second},
+          "each preset resolution writes its own files, none shared (Q10-c)")
+    check(all(p.is_file() and p.stat().st_size > 0 for p in first + second),
+          "every resolved preset file exists and is non-empty")
+
+
 def main():
     with tempfile.TemporaryDirectory(prefix="vdsim_campaign_") as tmp:
         test_axis_expansion()
         test_level_axis_refused()
         test_mu_aniso_measurement_runs()
+        test_resolved_preset_is_private()
         test_seed_is_a_function_of_the_declaration()
         test_contract_and_failure_isolation(tmp)
         spec_path, out = test_determinism(tmp)
