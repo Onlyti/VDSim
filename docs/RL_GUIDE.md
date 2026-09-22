@@ -248,6 +248,11 @@ python examples/rl/render_vec_grid.py /tmp/rl_overlay.npz --overlay \
     --out docs/assets/rl/vec_overlay.mp4
 ```
 
+Both videos were recorded at commit 8135a76 (their caption), when
+`fast_env.yaml` still selected the Ioniq 5 preset; run the commands above at
+that commit to reproduce them. On later commits the same commands record the
+generic car.
+
 `record_vec_demo.py --trace-dir` writes one `.vdtrace` per env instead, which
 `vdsim-render` overlays with its full per-run panels; that view reads well for
 a handful of runs, not for 64.
@@ -268,13 +273,22 @@ Throughput below is in **physics ticks per second summed over all envs**
   whole gap on the tyre model: the MF2002 backend reading `ioniq5_pac2002.tir`
   is 2.72× slower than the built-in MF96, while the Ioniq 5 vehicle parameters
   and `plant_path` change throughput by less than 6 %.
-- **The 2.5 ms substep fails the load criterion with the Ioniq 5 preset.**
-  `configs/rl/fast_env.yaml` carries two G1 tables: the generic car (the one
-  the 2.5 ms choice was made on) and the Ioniq 5 preset. With the Ioniq 5,
-  2.5 ms keeps ay and yaw-rate error at 0.27 % and 0.12 % but front-left
-  vertical load reaches 7.56 % peak error against a 5 % limit (a transient at
-  brake onset). The value is unchanged pending a decision; do not build a
-  reward on per-wheel load with `fast_env.yaml`.
+- **`fast_env.yaml` runs the generic car, not the Ioniq 5.** The G1 substep
+  gate (criterion fixed before measuring: ay and yaw-rate ≤ 2 %, front-left
+  vertical load ≤ 5 % worst error against a 0.1 ms reference, L2, 5 ms tick):
+
+  | car | substep | ay | yaw rate | Fz_FL | throughput (64 envs) | verdict |
+  |---|---|---|---|---|---|---|
+  | Ioniq 5 preset | 2.5 ms | 0.27 % | 0.12 % | 7.56 % | 125 k steps/s | fails Fz |
+  | Ioniq 5 preset | 1.0 ms | 0.12 % | 0.04 % | 2.62 % | 51 k steps/s | passes = `default_env.yaml` |
+  | generic car | 2.5 ms | 1.45 % | 0.53 % | 4.07 % | 326 k steps/s | passes = `fast_env.yaml` |
+
+  `fast_env.yaml` takes the last row: 6.4× the throughput, and the passing
+  Ioniq 5 row is already `default_env.yaml`. It leaves `vehicle`/`tire` unset,
+  so the env warns once that it runs the C++ built-in generic parameters. Train
+  and evaluate on the Ioniq 5 with `default_env.yaml`. Pitch and roll are not in
+  the criterion and are coarse at 2.5 ms (generic car: brake pitch 30.6 %,
+  step-steer roll 8.4 %); do not build a reward on them with `fast_env.yaml`.
 - **The Ioniq 5 preset is a public approximation.** No measured tyre data;
   `ackerman_percent: 0.0`; suspension keys not stated in the YAML use the C++
   defaults. Use it as "an Ioniq 5-class car", not as a validated Ioniq 5.

@@ -1,4 +1,5 @@
-# vdsim_rl training preset: same plant as default_env.yaml, coarser substep.
+# vdsim_rl training preset: fast prototyping on the C++ built-in generic car at
+# a coarser substep.  default_env.yaml keeps the Ioniq 5 preset at 1 ms.
 #
 # G1 gate, outer tick 5 ms, reference = same plant at max_substep_dt 0.1 ms.
 # Worst max-relative error over the manoeuvre, throughput = 64 envs on 22
@@ -13,13 +14,19 @@
 #   2.50 ms       1.38 %          0.37 %          4.07 %      377 k steps/s   <- this file
 #   5.00 ms       6.82 %          0.82 %          6.69 %      722 k steps/s   (rejected)
 #
+#     Same car at L2 (this file's level), 2026-09-22, same script:
+#   2.50 ms       1.45 %          0.53 %          4.07 %      326 k steps/s   <- this file
+#   1.00 ms       0.55 %          0.20 %          1.22 %      131 k steps/s
+#     (not in the criterion: brake pitch 30.6 % and step-steer roll 8.4 % at
+#     2.5 ms, 9.2 % / 1.5 % at 1 ms - do not build a reward on pitch or roll.)
+#
 # Adopted: 2.5 ms for training (2.4x throughput, trajectory signals within
 # 1.4 %).  Keep default_env.yaml (1 ms) for evaluation and for any reward that
 # reads per-wheel load - Fz is the signal that degrades first.  5 ms is not
 # adopted: ay and Fz both pass 6 %.
 #
 #
-# (b) The car this file selects: vehicle ioniq5_awd + tire ioniq5_pac2002,
+# (b) The Ioniq 5 preset (vehicle ioniq5_awd + tire ioniq5_pac2002,
 #     param_hash 046526872cfa71dabeb5b765040a42a340db2059ddfe042644ba483bf0be984b,
 #     2026-09-22, L2 (this file's level).  At L3 the three error columns move
 #     by at most 0.03 percentage points (2.5 ms: ay 0.26 %, Fz_FL 7.56 %).
@@ -32,17 +39,23 @@
 #
 # With this car, 2.5 ms FAILS the Fz criterion fixed before the measurement
 # (ay, yaw <= 2 %, Fz_FL <= 5 %): 7.56 % peak error, a transient at brake onset
-# (RMSE 21.8 N against a 7651 N peak).  The value below is unchanged pending a
-# decision; do not read per-wheel load from this preset.  Throughput is ~2.7x
-# lower than (a) because of the MF2002 tyre evaluation
-# (tests/rl/bench_preset_cost.py), not the vehicle parameters.
+# (RMSE 21.8 N against a 7651 N peak).  Throughput is ~2.7x lower than (a)
+# because of the MF2002 tyre evaluation (tests/rl/bench_preset_cost.py), not
+# the vehicle parameters.
+#
+# Choice (PO decision 69, 2026-09-22): the two combinations that pass the
+# criterion are Ioniq 5 at 1.0 ms (Fz_FL 2.62 %, 51 k steps/s) and the generic
+# car at 2.5 ms (Fz_FL 4.07 %, 326 k steps/s).  This file takes the generic car:
+# 6.4x the throughput, and Ioniq 5 at 1.0 ms is the same plant and substep as
+# default_env.yaml, so it would leave no fast preset.  Train or evaluate on the
+# Ioniq 5 with default_env.yaml.  vehicle/tire are left unset on purpose; the
+# env warns once that it runs the C++ built-in generic parameters.
 #
 # max_substeps must stay above outer_dt / max_substep_dt, otherwise the solver
 # silently clamps and runs a coarser step than requested.
 level: L2
-# car: configs/vehicles/<stem>.yaml + configs/parts/tire/<stem>.yaml
-vehicle: ioniq5_awd
-tire: ioniq5_pac2002
+# car: unset = C++ built-in generic car (see choice above).  To set one:
+# vehicle: <configs/vehicles/<stem>.yaml>, tire: <configs/parts/tire/<stem>.yaml>
 dt: 0.005
 action_repeat: 4
 max_steer: 0.5

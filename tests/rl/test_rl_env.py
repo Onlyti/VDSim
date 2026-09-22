@@ -49,8 +49,9 @@ print(f"Q23-1 ioniq5 plant weight {w.round(1)} kg vs YAML mass {IONIQ5['mass']}"
 assert np.all(np.abs(w / IONIQ5["mass"] - 1.0) < 0.01), w
 res["q23_ioniq5_weight_kg"] = w.tolist()
 
-# ---- Q23-2: the shipped RL YAMLs select Ioniq5 ----
-for name in ("default_env.yaml", "fast_env.yaml"):
+# ---- Q23-2: default_env.yaml selects Ioniq5; fast_env.yaml the generic car
+#      (PO decision 69: Ioniq5 fails the G1 Fz criterion at fast_env's 2.5 ms) ----
+for name in ("default_env.yaml",):
     c = EnvConfig.from_yaml(str(REPO / "configs/rl" / name))
     assert (c.vehicle, c.tire) == ("ioniq5_awd", "ioniq5_pac2002"), name
     e = VDSimVecEnv(2, c, seed=0)
@@ -62,6 +63,14 @@ for name in ("default_env.yaml", "fast_env.yaml"):
     print(f"Q23-2 {name}: info {info['vehicle']}/{info['tire']} "
           f"hash {info['param_hash'][:12]}, weight {w.round(1)} kg")
 res["q23_yaml_info"] = info
+c = EnvConfig.from_yaml(str(REPO / "configs/rl/fast_env.yaml"))
+assert (c.vehicle, c.tire) == (None, None) and c.max_substep_dt == 0.0025, c
+with warnings.catch_warnings(record=True) as caught:
+    warnings.simplefilter("always")
+    e = VDSimVecEnv(2, c, seed=0)
+assert vdsim_rl.BUILTIN_WARNING in [str(x.message) for x in caught], caught
+assert e.reset(seed=0)[1]["vehicle"] is None
+print("Q23-2 fast_env.yaml: generic car at 2.5 ms, warns")
 
 # ---- Q23-3: vehicle=None still works but says so ----
 with warnings.catch_warnings(record=True) as caught:
