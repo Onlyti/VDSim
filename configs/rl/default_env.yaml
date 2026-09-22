@@ -2,6 +2,9 @@
 # Observation layout is this list, left to right; a bare per-wheel name expands
 # to four columns in FL, FR, RL, RR order.
 level: L2
+# car: configs/vehicles/<stem>.yaml + configs/parts/tire/<stem>.yaml
+vehicle: ioniq5_awd
+tire: ioniq5_pac2002
 dt: 0.005
 action_repeat: 4          # control interval = 20 ms
 max_steer: 0.5            # [rad] at the wheel

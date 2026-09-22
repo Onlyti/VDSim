@@ -6,7 +6,7 @@ evaluates the termination conditions and writes the flat float32 observation
 rows in place.  Python never touches per-tick data.
 
     from vdsim_rl import EnvConfig, VDSimVecEnv
-    env = VDSimVecEnv(64, EnvConfig())
+    env = VDSimVecEnv(64, EnvConfig(vehicle="ioniq5_awd", tire="ioniq5_pac2002"))
     obs, info = env.reset(seed=0)
     obs, rew, term, trunc, info = env.step(env.action_space.sample())
 
@@ -20,6 +20,10 @@ expands to four columns in FL, FR, RL, RR order.
 from __future__ import annotations
 
 import dataclasses
+import hashlib
+import json
+import warnings
+from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
@@ -28,7 +32,7 @@ import vdsim
 
 __all__ = [
     "EnvConfig", "VDSimVecEnv", "VDSimEnv", "make_sb3_vec_env",
-    "expand_obs_fields", "TERM_NAMES", "default_reward",
+    "expand_obs_fields", "TERM_NAMES", "default_reward", "load_vehicle_preset",
 ]
 
 # Per-wheel fields in core/src/vec_session.cpp; a bare name expands to 4 columns.
@@ -66,10 +70,166 @@ def expand_obs_fields(fields: Sequence[str]) -> List[str]:
     return out
 
 
+#: Keys a vehicle preset YAML may carry that VehicleParams does not bind, each
+#: with the consumer that reads it.  Anything else unbound is an error.
+VEHICLE_SIDECAR_KEYS = frozenset({
+    "tire_yaml",        # vdsim_plant._load_tire_setup_for_vehicle, load_vehicle_preset
+    "body_lwh_m",       # trace 0.3 geometry (vdsim_render3d)
+    "wheel_width_m",    # trace 0.3 geometry (vdsim_render3d)
+})
+
+#: Keys core/src/params.cpp parses that the bindings expose under another shape,
+#: so they are not attribute names of the bound struct.
+VEHICLE_PARSED_UNBOUND = frozenset({
+    "inertia_diag",     # parsed as Vector3, bound as ixx / iyy / izz
+    "powertrain",       # nested block (parse_powertrain), not bound
+})
+TIRE_PARSED_UNBOUND = frozenset({
+    "belt",             # nested block, not bound
+})
+
+#: Keys a preset must state.  VehicleParams/TireParams.from_yaml keep the C++
+#: generic default for a missing key, so a preset that omits one of these would
+#: silently train a different car.
+VEHICLE_REQUIRED_KEYS = ("mass", "wheelbase", "cg_to_front", "cg_to_rear",
+                         "track_front", "track_rear", "cg_height",
+                         "wheel_radius_nominal")
+TIRE_REQUIRED_KEYS = ("mu_nominal", "Fz_nominal")
+
+BUILTIN_WARNING = "vehicle=None: C++ built-in generic parameters"
+
+
+def _bound_fields(obj) -> List[str]:
+    """Data members a pybind11 params struct exposes (methods excluded)."""
+    return sorted(n for n in dir(obj)
+                  if not n.startswith("_") and not callable(getattr(obj, n)))
+
+
+def _check_keys(raw: dict, proto, extra, required, where: str) -> None:
+    """Reject keys the C++ parser would ignore and required keys that are missing.
+
+    The allowed set is read from the bound struct itself (the YAML schema rule
+    in core/src/params.cpp maps top-level keys 1:1 to member names), so this is
+    not a second copy of the parser's key list; ``extra`` holds only the
+    exceptions (sidecar keys and keys bound under another shape).  Nested maps
+    (e.g. ``lugre``) are checked against the nested struct the same way.
+    """
+    allowed = set(_bound_fields(proto)) | set(extra)
+    unknown = sorted(set(raw) - allowed)
+    if unknown:
+        raise ValueError(f"{where}: keys the parser does not know: {unknown}")
+    missing = [k for k in required if k not in raw]
+    if missing:
+        raise ValueError(f"{where}: required keys missing: {missing}")
+    for key, val in raw.items():
+        if isinstance(val, dict) and key not in extra:
+            sub_unknown = sorted(set(val) - set(_bound_fields(getattr(proto, key))))
+            if sub_unknown:
+                raise ValueError(f"{where}: keys under '{key}' the parser does "
+                                 f"not know: {sub_unknown}")
+
+
+def _digest_value(v):
+    if isinstance(v, (bool, int, float, str)) or v is None:
+        return v
+    if isinstance(v, (list, tuple)):
+        return [_digest_value(x) for x in v]
+    if isinstance(v, np.ndarray):
+        return v.tolist()
+    if hasattr(type(v), "__members__"):     # pybind11 enum
+        return str(v)
+    fields = _bound_fields(v)
+    if fields:
+        return {f: _digest_value(getattr(v, f)) for f in fields}
+    return repr(v)
+
+
+def _params_hash(vp, tp, tir_file: Optional[Path]) -> str:
+    """sha256 over the parameters as the core receives them (+ the .tir bytes)."""
+    blob = {"vehicle": _digest_value(vp), "tire": _digest_value(tp),
+            "tir_sha256": (hashlib.sha256(tir_file.read_bytes()).hexdigest()
+                           if tir_file is not None else None)}
+    text = json.dumps(blob, sort_keys=True, separators=(",", ":"), default=repr)
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
+def _read_yaml(path: Path) -> dict:
+    import yaml
+    raw = yaml.safe_load(path.read_text()) or {}
+    if not isinstance(raw, dict):
+        raise ValueError(f"{path}: top level must be a mapping")
+    return raw
+
+
+def load_vehicle_preset(vehicle: Optional[str], tire: Optional[str]):
+    """Build VehicleParams/TireParams from preset stems; reads files, writes none.
+
+    ``vehicle`` is a stem under ``configs/vehicles/``, ``tire`` a stem under
+    ``configs/parts/tire/``.  ``tire=None`` with a vehicle takes the vehicle's
+    ``tire_yaml``.  ``vehicle=None`` keeps the C++ built-in generic car and
+    warns.  Unknown keys or missing required keys raise ``ValueError``.
+
+    Returns ``(VehicleParams, TireParams, provenance)``; provenance is
+    ``{"vehicle", "tire", "param_hash"}``.
+    """
+    from vdsim_plant import _conf_root, _resolve_tir_path, resolve_vehicle_config
+
+    if vehicle is None:
+        warnings.warn(BUILTIN_WARNING, UserWarning, stacklevel=3)
+        vp = vdsim.VehicleParams()
+        tire_rel = None
+    else:
+        vp_path = resolve_vehicle_config(vehicle)
+        raw = _read_yaml(vp_path)
+        _check_keys(raw, vdsim.VehicleParams(),
+                    VEHICLE_SIDECAR_KEYS | VEHICLE_PARSED_UNBOUND,
+                    VEHICLE_REQUIRED_KEYS, str(vp_path))
+        vp = vdsim.VehicleParams.from_yaml(str(vp_path))
+        tire_rel = raw.get("tire_yaml")
+
+    if tire is not None:
+        tp_path = _conf_root() / "parts" / "tire" / f"{Path(tire).stem}.yaml"
+    elif tire_rel:
+        tp_path = _conf_root() / tire_rel
+    elif vehicle is not None:
+        raise ValueError(f"vehicle '{vehicle}' names no tire_yaml; pass tire=")
+    else:
+        tp_path = None
+
+    tir_file = None
+    if tp_path is None:
+        tp = vdsim.TireParams()
+    else:
+        if not tp_path.is_file():
+            raise FileNotFoundError(f"tire preset not found: {tp_path}")
+        raw_tp = _read_yaml(tp_path)
+        if "schema" in raw_tp and "body" in raw_tp:
+            raise ValueError(f"{tp_path}: catalog part (schema/body); vdsim_rl reads "
+                             f"flat TireParams files only")
+        _check_keys(raw_tp, vdsim.TireParams(), TIRE_PARSED_UNBOUND,
+                    TIRE_REQUIRED_KEYS, str(tp_path))
+        tp = vdsim.TireParams.from_yaml(str(tp_path))
+        if tp.tir_path:
+            tp.tir_path = _resolve_tir_path(tp_path, tp.tir_path)
+            tir_file = Path(tp.tir_path)
+            if not tir_file.is_file():
+                raise FileNotFoundError(f"{tp_path}: tir_path not found: {tir_file}")
+
+    provenance = {
+        "vehicle": None if vehicle is None else Path(vehicle).stem,
+        "tire": None if tp_path is None else tp_path.stem,
+        "param_hash": _params_hash(vp, tp, tir_file),
+    }
+    return vp, tp, provenance
+
+
 @dataclasses.dataclass
 class EnvConfig:
     """Everything the env needs; ``from_yaml`` loads the same keys from a file."""
     level: str = "L2"                 # plant fidelity (L1 bicycle .. L3 14-DOF)
+    # car: preset stems (configs/vehicles, configs/parts/tire); None = C++ built-in
+    vehicle: Optional[str] = None
+    tire: Optional[str] = None
     dt: float = 0.005                 # physics tick [s]
     action_repeat: int = 4            # control interval = dt * action_repeat
     max_steer: float = 0.5            # action scale, wheel steer [rad]
@@ -152,8 +312,11 @@ class _Core:
         solver.max_substep_dt = cfg.max_substep_dt
         solver.max_substeps = cfg.max_substeps
 
+        # Parsed once here in the parent; every env shares these values and no
+        # file is written, so the Q10-c shared-cache race has no path in.
+        vp, tp, self.provenance = load_vehicle_preset(cfg.vehicle, cfg.tire)
         self.vs = vdsim.make_vec_session(
-            num_envs, vdsim.VehicleParams(), vdsim.TireParams(),
+            num_envs, vp, tp,
             level=cfg.level, nominal_dt=cfg.dt, mu=cfg.mu,
             solver=solver, threads=cfg.threads)
 
@@ -307,6 +470,7 @@ class VDSimVecEnv:
             self.single_observation_space, num_envs)
         self.action_space = gym.vector.utils.batch_space(
             self.single_action_space, num_envs)
+        self.metadata = {**type(self).metadata, "vdsim": dict(self.core.provenance)}
         self.closed = False
 
     @property
@@ -317,7 +481,7 @@ class VDSimVecEnv:
         if seed is not None:
             self.core.seed(seed)
         obs = self.core.reset_all().copy()
-        return obs, {}
+        return obs, dict(self.core.provenance)
 
     def step(self, actions):
         obs, rew, terminated, truncated, codes = self.core.step(actions)
@@ -355,6 +519,7 @@ class VDSimEnv:
                  reward_fn: Optional[Callable] = None, seed: Optional[int] = None):
         self.core = _Core(1, cfg or EnvConfig(), reward_fn, seed)
         self.observation_space, self.action_space = _spaces(self.core.vs.obs_dim)
+        self.metadata = {**type(self).metadata, "vdsim": dict(self.core.provenance)}
 
     @property
     def obs_columns(self) -> List[str]:
@@ -363,7 +528,7 @@ class VDSimEnv:
     def reset(self, *, seed: Optional[int] = None, options=None):
         if seed is not None:
             self.core.seed(seed)
-        return self.core.reset_all()[0].copy(), {}
+        return self.core.reset_all()[0].copy(), dict(self.core.provenance)
 
     def step(self, action):
         a = np.asarray(action, dtype=np.float32).reshape(1, 2)
@@ -387,6 +552,8 @@ def make_sb3_vec_env(num_envs: int, cfg: Optional[EnvConfig] = None,
             self.core = _Core(num_envs, cfg or EnvConfig(), reward_fn, seed)
             obs_space, act_space = _spaces(self.core.vs.obs_dim)
             super().__init__(num_envs, obs_space, act_space)
+            self.metadata = {**getattr(self, "metadata", {}),
+                             "vdsim": dict(self.core.provenance)}
             self._actions = np.zeros((num_envs, 2), dtype=np.float32)
 
         def reset(self):

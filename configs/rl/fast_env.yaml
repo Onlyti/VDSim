@@ -18,6 +18,9 @@
 # max_substeps must stay above outer_dt / max_substep_dt, otherwise the solver
 # silently clamps and runs a coarser step than requested.
 level: L2
+# car: configs/vehicles/<stem>.yaml + configs/parts/tire/<stem>.yaml
+vehicle: ioniq5_awd
+tire: ioniq5_pac2002
 dt: 0.005
 action_repeat: 4
 max_steer: 0.5
