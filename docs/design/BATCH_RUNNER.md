@@ -156,12 +156,23 @@ Q0 is the case in point.
 - **Overlay rendering and aggregate plots.** Those stay where they are; a
   consumer script that reads the index is the place for them.
 
-## 7. Note on a `level` axis
+## 7. A `level` axis is refused
 
 `L4` and `L3` are the same physics unless suspension hardpoints are attached,
-and the scenario path attaches none. Sweeping `level` across the two therefore
-produces identical runs today. The runner does not detect or warn about this —
-that would be guessing on the user's behalf. See 18_dev_briefing_0903 §30.4.
+and the scenario path attaches none. A level sweep would therefore produce
+identical runs whose manifests disagree about which model produced them, and
+the false `model_level` outlives any warning printed at run time. So the runner
+refuses the axis outright, on every declaration form:
+
+```
+CampaignError: 'level' is not a campaign axis until Q20: L4 is identical to L3
+unless suspension hardpoints are attached, so a level sweep records traces
+whose manifest model_level is false. Declare one level per campaign.
+```
+
+Declare one level per campaign instead. The refusal is lifted by Q20, which
+attaches the hardpoints and adds a `kinematics_attached` field to the manifest
+so a reader can tell the two apart. See 18_dev_briefing_0903 §30.4, §31 C-1.
 
 ## 8. CLI
 

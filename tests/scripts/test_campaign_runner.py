@@ -267,9 +267,71 @@ def test_superseded_entry_points():
           "the binary sweep is stated to be out of scope, not silently dropped")
 
 
+# --------------------------------------------------------------------------- #
+# C-1: a level axis must be refused, on every expansion form
+# --------------------------------------------------------------------------- #
+def test_level_axis_refused():
+    """``level`` is not sweepable until the manifest can tell the truth.
+
+    L4 differs from L3 only in ``level()`` until suspension hardpoints are
+    attached, so a level sweep would archive traces whose ``model_level`` names
+    a model the run did not use. The refusal is checked on the grid, list and
+    legacy forms because each builds its axis dict differently.
+    """
+    forms = {
+        "grid": {"base": "step_steer", "sweep": {"grid": {"level": ["L3", "L4"]}}},
+        "list": {"base": "step_steer", "sweep": {"list": [{"level": "L4"}]}},
+        "legacy": {"runs": [{"sweep": {"base": "step_steer",
+                                       "grid": {"level": ["L3", "L4"]}}}]},
+        "monte_carlo": {"runs": [{"monte_carlo": {
+            "base": "step_steer", "n": 1,
+            "vary": {"level": {"lo": 3, "hi": 4}}}}]},
+    }
+    for name, spec in forms.items():
+        try:
+            vc.expand(spec)
+        except vc.CampaignError as exc:
+            check("level" in str(exc) and "Q20" in str(exc),
+                  "%s form refuses a level axis and says why (%s)"
+                  % (name, str(exc)[:48]))
+        else:
+            check(False, "%s form accepted a level axis" % name)
+
+    check(vc.expand({"base": "step_steer",
+                     "sweep": {"grid": {"mu": [0.9, 0.6]}}}) != [],
+          "the refusal does not catch ordinary axes")
+
+
+# --------------------------------------------------------------------------- #
+# C-2: the friction-ellipse measurement is on the trace path, so it must run
+# --------------------------------------------------------------------------- #
+def test_mu_aniso_measurement_runs():
+    """Execute ``measure_mu_aniso`` rather than only reading its source.
+
+    This path had a latent call-signature fault that survived because nothing
+    executed it: ``vdsim.create_pacejka_mf96`` takes no argument. A test that
+    merely imports the module would not have caught it, so this one calls the
+    function and uses its result.
+    """
+    import vdsim_lab as vl
+    import vdsim_plant as vplant
+
+    shape, aniso = vplant.measure_mu_aniso(vl.Tire.preset().tp)
+    check(shape in ("circle", "ellipse"),
+          "measure_mu_aniso returns a friction shape the manifest accepts (%s)"
+          % shape)
+    check(len(aniso) == 2 and all(np.isfinite(v) and v > 0.0 for v in aniso),
+          "both mu multipliers are finite and positive (%r)" % (aniso,))
+    check(abs(aniso[0] - aniso[1]) <= 0.01 * max(aniso)
+          if shape == "circle" else True,
+          "a 'circle' verdict means the two multipliers agree to 1 %")
+
+
 def main():
     with tempfile.TemporaryDirectory(prefix="vdsim_campaign_") as tmp:
         test_axis_expansion()
+        test_level_axis_refused()
+        test_mu_aniso_measurement_runs()
         test_seed_is_a_function_of_the_declaration()
         test_contract_and_failure_isolation(tmp)
         spec_path, out = test_determinism(tmp)

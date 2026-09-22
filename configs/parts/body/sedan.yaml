@@ -24,14 +24,11 @@ body:
   wheel_radius_nominal: 0.32
   cg_height: 0.55
   cg_to_rear: 1.5
-  # Body box and wheel width, for the 3D replay renderer (trace schema 0.3,
-  # 11_trace_contract_spec 3.1.1). This preset is a generic 1500 kg sedan with
-  # no real-vehicle source, so the box is derived from the preset's own
-  # geometry rather than measured: length = wheelbase 2.70 m plus 0.95 m of
-  # combined overhang, width = track 1.55 m plus 0.25 m of body outboard of the
-  # wheel centres, height typical of a saloon with this 0.55 m CG height.
-  # wheel_width_m is the section width of a 225/50R17 tyre, which matches
-  # wheel_radius_nominal 0.32 m. These size drawn primitives only -- no
-  # equation reads them.
+  # Placeholder body box and wheel width for the 3D replay renderer (trace
+  # schema 0.3, 11_trace_contract_spec 3.1.1). No source: these are not the
+  # dimensions of any vehicle and must not be quoted as a specification. They
+  # were picked to look consistent with this preset's own wheelbase and track
+  # so the drawn primitives do not float away from the wheels. Nothing but the
+  # renderer reads them -- no equation does.
   body_lwh_m: [4.60, 1.80, 1.45]
   wheel_width_m: 0.225

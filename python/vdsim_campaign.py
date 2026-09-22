@@ -39,9 +39,11 @@ Directory layout (EX3)::
 The index is a lookup table, not a result database: it carries the axis values
 and the run's disposition, never metrics (EX3).
 
-Note on a ``level`` axis: ``L4`` is identical to ``L3`` unless suspension
-hardpoints are attached, and the scenario path attaches none
-(18_dev_briefing_0903 30.4).
+A ``level`` axis is refused, not merely discouraged: ``L4`` is identical to
+``L3`` unless suspension hardpoints are attached, the scenario path attaches
+none, and the manifest would still claim ``model_level: L4``
+(18_dev_briefing_0903 30.4, 31 C-1). Declare one level per campaign. Q20 lifts
+the refusal once the manifest carries ``kinematics_attached``.
 """
 import argparse
 import copy
@@ -72,6 +74,20 @@ STATUSES = ("ok", "diverged", "error", "killed", "skipped")
 #: Monte Carlo stream of the pre-promotion ``tools/vdsim_batch.py``
 #: (``random.Random(1000 + i)``) so existing campaigns do not move.
 DEFAULT_ROOT_SEED = 1000
+
+#: Axes a campaign may not sweep, with the message the refusal carries.
+#: ``level`` is here because sweeping it would mass-produce traces whose
+#: ``model_level`` names a model the run did not use: the L4 class differs from
+#: L3 only in ``level()`` until suspension hardpoints are attached, and nothing
+#: on the scenario path attaches them. The alternative -- letting the sweep run
+#: and warning -- was rejected because the false provenance survives in the
+#: archived trace long after the warning has scrolled away.
+FORBIDDEN_AXES = {
+    "level": ("'level' is not a campaign axis until Q20: L4 is identical to L3 "
+              "unless suspension hardpoints are attached, so a level sweep "
+              "records traces whose manifest model_level is false. Declare one "
+              "level per campaign."),
+}
 
 #: Trace file name inside a run directory. Fixed, so a consumer can find the
 #: artefact from the run id alone.
@@ -120,7 +136,12 @@ def _set(cfg, key, val):
     :param cfg: scenario config dict, mutated in place.
     :param key: dotted key path, e.g. ``vehicle.mass`` or ``maneuver.v``.
     :param val: value to set.
+    :raises CampaignError: if the key names a forbidden axis
+        (:data:`FORBIDDEN_AXES`). Every expansion form routes its axis values
+        through here, so the refusal cannot be reached around.
     """
+    if key in FORBIDDEN_AXES:
+        raise CampaignError(FORBIDDEN_AXES[key])
     if key.startswith(("vehicle.", "tire.")) or key == "mu":
         cfg.setdefault("_overrides", {})[key] = val
     else:
