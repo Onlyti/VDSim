@@ -277,7 +277,8 @@ def test_display_only_badge():
                 tire={"friction_shape": "circle", "mu_aniso": [1.0, 1.0]},
                 repro={"vdsim_version": "t", "git_sha": "x", "param_hash": "sha256:x",
                        "seed": 0, "dt_s": 0.05, "run_id": "scope_" + scope},
-                role="plant", model_level="L3", contact_scope=scope, channels=names)
+                role="plant", model_level="L3", contact_scope=scope, kinematics_attached=False,
+                channels=names)
             for i in range(6):
                 w.append({
                     "t": i * 0.05, "pose": (i * 0.5, 0.0, 0.0),

@@ -112,11 +112,24 @@ def _build_session(road, vp, tp, level, dt, sensors, kin=None):
     Experiment.run, Simulation and Sim all go through here so they cannot drift
     into three different notions of what a level label means.
 
+    It is also where a false ``L4`` label is refused.  The L4 class differs
+    from L3 only in ``level()``; without hardpoints an ``L4`` session *is* L3,
+    and any comparison or trace labelled L4 would misreport the physics.
+    Refusing here, where the session first exists, covers traced and untraced
+    runs alike.
+
     :returns: ``(session, kinematics_provenance)``.
+    :raises ValueError: for ``level="L4"`` with no hardpoints attached.
     """
     sess = road._session(vp, tp, level, dt, sensors)
     front, rear = _kin_spec(kin)
-    return sess, attach_kinematics(sess, front, rear)
+    info = attach_kinematics(sess, front, rear)
+    if level == "L4" and not info["attached"]:
+        raise ValueError(
+            "level='L4' with no suspension hardpoints attached is L3 under another "
+            "label (the two are bit-identical until an attach); pass kin=... "
+            "(kinematics={'front': <stem>, 'rear': <stem>}) or use level='L3'")
+    return sess, info
 
 
 def resolve_line(dl):
@@ -566,7 +579,11 @@ class Experiment:
         self._kin = None
         self._kin_info = {"front": None, "rear": None, "attached": False}
         # Trace recording is opt-in; `_trace is None` is the OFF fast path.
+        # enable_trace() only stages the writer arguments: kinematics_attached
+        # is what the attach returned, which run() learns when it builds the
+        # session, so the writer cannot exist before then.
         self._trace = None
+        self._trace_pending = None
         self._channels = ()
 
     def vehicle(self, v): self._veh = v; return self
@@ -664,7 +681,7 @@ class Experiment:
         import vdsim_trace
         import vdsim_plant
 
-        if self._trace is not None:
+        if self._trace is not None or self._trace_pending is not None:
             raise RuntimeError("trace already enabled; call finalize_trace() first")
         if decimation is None:
             decimation = max(1, int(round(1.0 / (vdsim_plant.TRACE_TARGET_HZ * self.dt))))
@@ -717,7 +734,7 @@ class Experiment:
         base = tuple(n for n in vdsim_trace.BASE_CHANNELS if n != "u_fx")
         self._channels = vdsim_trace.channels_for_level(self.level, base=base)
         self._sample = vdsim_plant.trace_sample
-        self._trace = vdsim_trace.TraceWriter(
+        self._trace_pending = dict(
             path=path,
             geometry=geometry,
             model_level=self.level,
@@ -738,8 +755,15 @@ class Experiment:
         """Flush channels, freeze the manifest and close the trace.
 
         :returns: the written path, or ``None`` when recording was never on.
+        :raises RuntimeError: when a trace was enabled but :meth:`run` never
+            built the session, so ``kinematics_attached`` was never observed.
         """
         if self._trace is None:
+            if self._trace_pending is not None:
+                self._trace_pending = None
+                raise RuntimeError(
+                    "finalize_trace() before run(): kinematics_attached is what the "
+                    "hardpoint attach returns, and no session was built to ask")
             return None
         writer, self._trace = self._trace, None
         return writer.finalize()
@@ -747,7 +771,19 @@ class Experiment:
     @property
     def trace_path(self):
         """Path of the trace being recorded, or ``None``."""
-        return None if self._trace is None else self._trace.path
+        if self._trace is not None:
+            return self._trace.path
+        if self._trace_pending is not None:
+            return self._trace_pending["path"]
+        return None
+
+    def _open_trace(self):
+        """Create the staged writer now that the attach outcome is known."""
+        import vdsim_trace
+
+        spec, self._trace_pending = self._trace_pending, None
+        self._trace = vdsim_trace.TraceWriter(
+            kinematics_attached=bool(self._kin_info["attached"]), **spec)
 
     def _record(self, o, cmd):
         """Offer one sample of the pre-step state to the writer."""
@@ -762,6 +798,8 @@ class Experiment:
         sp = self._sensors.sp if self._sensors else vdsim.SensorParams()
         sess, self._kin_info = _build_session(
             self._road, vp, tp, self.level, self.dt, sp, self._kin)
+        if self._trace_pending is not None:
+            self._open_trace()
         x0, y0 = getattr(self._man, "start", (0.0, 0.0))
         s0 = vdsim.make_init_state(vp, tp, x=x0, y=y0, yaw=self._man.init_yaw,
                                    v=self._man.init_v)

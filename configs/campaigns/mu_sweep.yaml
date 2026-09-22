@@ -25,8 +25,7 @@ sweep:
   grid:
     mu: [0.9, 0.7, 0.5]
 
-# Note: `level` is not a sweepable axis. L3 and L4 differ only once suspension
-# hardpoints are attached and the scenario path attaches none, so the runner
-# refuses the axis rather than archive traces whose manifest model_level is
-# false. Declare one level per campaign; Q20 lifts the refusal
-# (18_dev_briefing_0903 §30.4, §31 C-1).
+# Note: `level` is a sweepable axis since Q20. An `L4` run needs suspension
+# hardpoints; without them it is refused (index status `error`) rather than
+# run as L3 under an L4 label, and every trace states `kinematics_attached`
+# (18_dev_briefing_0903 §51).

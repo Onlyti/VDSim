@@ -636,6 +636,9 @@ class VDSimPlant:
           geometry=geometry,
           model_level=self.level,
           contact_scope=CONTACT_SCOPE_BY_LEVEL[self.level],
+          # This plant builds a direct-control session and has no attach call,
+          # so no hardpoints are ever behind it; the manifest must say so.
+          kinematics_attached=False,
           channels=self._channels,
           tire={"friction_shape": shape, "mu_aniso": aniso,
                 "mu_aniso_source": "measured"},
