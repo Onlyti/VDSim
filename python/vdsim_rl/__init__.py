@@ -6,7 +6,7 @@ evaluates the termination conditions and writes the flat float32 observation
 rows in place.  Python never touches per-tick data.
 
     from vdsim_rl import EnvConfig, VDSimVecEnv
-    env = VDSimVecEnv(64, EnvConfig(vehicle="ioniq5_awd", tire="ioniq5_pac2002"))
+    env = VDSimVecEnv(64, EnvConfig(vehicle="generic_sedan", tire="generic_pacejka"))
     obs, info = env.reset(seed=0)
     obs, rew, term, trunc, info = env.step(env.action_space.sample())
 
@@ -22,6 +22,7 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import json
+import os
 import warnings
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
@@ -161,25 +162,91 @@ def _read_yaml(path: Path) -> dict:
     return raw
 
 
-def load_vehicle_preset(vehicle: Optional[str], tire: Optional[str]):
-    """Build VehicleParams/TireParams from preset stems; reads files, writes none.
+#: Environment variable naming a preset root outside the repository, for cars
+#: whose parameters must not be published.  Same layout as ``configs/``:
+#: ``<root>/vehicles/<stem>.yaml``, ``<root>/parts/tire/<stem>.yaml``.
+PRIVATE_ROOT_ENV = "VDSIM_PRIVATE_CONFIGS"
+
+
+def _private_root() -> Optional[Path]:
+    """``$VDSIM_PRIVATE_CONFIGS`` as a directory, or None when it is unset."""
+    raw = os.environ.get(PRIVATE_ROOT_ENV, "").strip()
+    if not raw:
+        return None
+    root = Path(raw).expanduser()
+    if not root.is_dir():
+        raise FileNotFoundError(f"{PRIVATE_ROOT_ENV}={raw!r} is not a directory")
+    return root
+
+
+def _preset_source(path: Path) -> str:
+    """``"public"`` for a file under the repo's ``configs/``, else ``"private"``."""
+    from vdsim_plant import _conf_root
+    try:
+        path.resolve().relative_to(_conf_root().resolve())
+        return "public"
+    except ValueError:
+        return "private"
+
+
+def _resolve_preset_path(rel: str, explicit: Optional[str], what: str) -> Path:
+    """Locate one preset file, in a fixed order.
+
+    ``<what>_file`` (an absolute path) wins over ``$VDSIM_PRIVATE_CONFIGS/<rel>``,
+    which wins over the repository's ``configs/<rel>``.  ``rel`` is the path
+    inside a preset root (``vehicles/x.yaml``, ``parts/tire/x.yaml``).  A
+    relative ``<what>_file`` is refused: it would resolve against the working
+    directory, so one declaration would load different cars depending on where
+    the run was started.
+    """
+    from vdsim_plant import _conf_root
+
+    if explicit:
+        p = Path(explicit).expanduser()
+        if not p.is_absolute():
+            raise ValueError(f"{what}_file must be an absolute path: {explicit!r}")
+        if not p.is_file():
+            raise FileNotFoundError(f"{what}_file not found: {p}")
+        return p
+    roots = [r for r in (_private_root(), _conf_root()) if r is not None]
+    for root in roots:
+        if (root / rel).is_file():
+            return root / rel
+    raise FileNotFoundError(f"{what} preset '{rel}' not found under "
+                            + ", ".join(str(r) for r in roots))
+
+
+def load_vehicle_preset(vehicle: Optional[str], tire: Optional[str], *,
+                        vehicle_file: Optional[str] = None,
+                        tire_file: Optional[str] = None):
+    """Build VehicleParams/TireParams from preset names; reads files, writes none.
 
     ``vehicle`` is a stem under ``configs/vehicles/``, ``tire`` a stem under
-    ``configs/parts/tire/``.  ``tire=None`` with a vehicle takes the vehicle's
-    ``tire_yaml``.  ``vehicle=None`` keeps the C++ built-in generic car and
-    warns.  Unknown keys or missing required keys raise ``ValueError``.
+    ``configs/parts/tire/``; ``vehicle_file`` / ``tire_file`` give an absolute
+    path instead (search order in ``_resolve_preset_path``).  ``tire=None`` with
+    a vehicle takes that vehicle's ``tire_yaml``, resolved against the vehicle
+    file's own root first, so a private car can carry a private tyre.
+    ``vehicle=None`` keeps the C++ built-in generic car and warns.  Unknown keys
+    or missing required keys raise ``ValueError``.
 
     Returns ``(VehicleParams, TireParams, provenance)``; provenance is
-    ``{"vehicle", "tire", "param_hash"}``.
+    ``{"vehicle", "tire", "param_hash", "source"}``.  It carries names only --
+    no path, so a training log cannot leak a private directory layout.
     """
-    from vdsim_plant import _conf_root, _resolve_tir_path, resolve_vehicle_config
+    from vdsim_plant import _resolve_tir_path
 
+    used: List[Path] = []
     if vehicle is None:
+        if vehicle_file:
+            raise ValueError("vehicle_file needs vehicle= as the recorded name")
         warnings.warn(BUILTIN_WARNING, UserWarning, stacklevel=3)
         vp = vdsim.VehicleParams()
+        vp_path = None
         tire_rel = None
     else:
-        vp_path = resolve_vehicle_config(vehicle)
+        vp_path = _resolve_preset_path(f"vehicles/{Path(vehicle).stem}.yaml",
+                                       vehicle_file, "vehicle")
+        used.append(vp_path)
         raw = _read_yaml(vp_path)
         _check_keys(raw, vdsim.VehicleParams(),
                     VEHICLE_SIDECAR_KEYS | VEHICLE_PARSED_UNBOUND,
@@ -188,20 +255,24 @@ def load_vehicle_preset(vehicle: Optional[str], tire: Optional[str]):
         tire_rel = raw.get("tire_yaml")
 
     if tire is not None:
-        tp_path = _conf_root() / "parts" / "tire" / f"{Path(tire).stem}.yaml"
+        tp_path = _resolve_preset_path(f"parts/tire/{Path(tire).stem}.yaml",
+                                       tire_file, "tire")
     elif tire_rel:
-        tp_path = _conf_root() / tire_rel
+        sibling = vp_path.parent.parent / tire_rel
+        tp_path = (sibling if sibling.is_file()
+                   else _resolve_preset_path(tire_rel, None, "tire"))
     elif vehicle is not None:
         raise ValueError(f"vehicle '{vehicle}' names no tire_yaml; pass tire=")
     else:
+        if tire_file:
+            raise ValueError("tire_file needs tire= as the recorded name")
         tp_path = None
 
     tir_file = None
     if tp_path is None:
         tp = vdsim.TireParams()
     else:
-        if not tp_path.is_file():
-            raise FileNotFoundError(f"tire preset not found: {tp_path}")
+        used.append(tp_path)
         raw_tp = _read_yaml(tp_path)
         if "schema" in raw_tp and "body" in raw_tp:
             raise ValueError(f"{tp_path}: catalog part (schema/body); vdsim_rl reads "
@@ -219,6 +290,8 @@ def load_vehicle_preset(vehicle: Optional[str], tire: Optional[str]):
         "vehicle": None if vehicle is None else Path(vehicle).stem,
         "tire": None if tp_path is None else tp_path.stem,
         "param_hash": _params_hash(vp, tp, tir_file),
+        "source": ("private" if any(_preset_source(q) == "private" for q in used)
+                   else "public"),
     }
     return vp, tp, provenance
 
@@ -230,6 +303,10 @@ class EnvConfig:
     # car: preset stems (configs/vehicles, configs/parts/tire); None = C++ built-in
     vehicle: Optional[str] = None
     tire: Optional[str] = None
+    # absolute paths that win over both preset roots, for a car kept out of
+    # the repository; the stem above is still what gets recorded as its name
+    vehicle_file: Optional[str] = None
+    tire_file: Optional[str] = None
     dt: float = 0.005                 # physics tick [s]
     action_repeat: int = 4            # control interval = dt * action_repeat
     max_steer: float = 0.5            # action scale, wheel steer [rad]
@@ -314,7 +391,9 @@ class _Core:
 
         # Parsed once here in the parent; every env shares these values and no
         # file is written, so the Q10-c shared-cache race has no path in.
-        vp, tp, self.provenance = load_vehicle_preset(cfg.vehicle, cfg.tire)
+        vp, tp, self.provenance = load_vehicle_preset(
+            cfg.vehicle, cfg.tire,
+            vehicle_file=cfg.vehicle_file, tire_file=cfg.tire_file)
         self.vs = vdsim.make_vec_session(
             num_envs, vp, tp,
             level=cfg.level, nominal_dt=cfg.dt, mu=cfg.mu,

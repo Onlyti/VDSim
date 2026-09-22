@@ -49,28 +49,30 @@ print(f"Q23-1 ioniq5 plant weight {w.round(1)} kg vs YAML mass {IONIQ5['mass']}"
 assert np.all(np.abs(w / IONIQ5["mass"] - 1.0) < 0.01), w
 res["q23_ioniq5_weight_kg"] = w.tolist()
 
-# ---- Q23-2: default_env.yaml selects Ioniq5; fast_env.yaml the generic car
-#      (PO decision 69: Ioniq5 fails the G1 Fz criterion at fast_env's 2.5 ms) ----
-for name in ("default_env.yaml",):
+# ---- Q23-2 (Q23-f): both shipped RL declarations select the public generic
+#      car, name it, and do not warn (PO decision 78) ----
+GENERIC = yaml.safe_load((REPO / "configs/vehicles/generic_sedan.yaml").read_text())
+for name in ("default_env.yaml", "fast_env.yaml"):
     c = EnvConfig.from_yaml(str(REPO / "configs/rl" / name))
-    assert (c.vehicle, c.tire) == ("ioniq5_awd", "ioniq5_pac2002"), name
-    e = VDSimVecEnv(2, c, seed=0)
+    assert (c.vehicle, c.tire) == ("generic_sedan", "generic_pacejka"), \
+        (name, c.vehicle, c.tire)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        e = VDSimVecEnv(2, c, seed=0)
+    assert not [x for x in caught
+                if vdsim_rl.BUILTIN_WARNING in str(x.message)], (name, caught)
     _, info = e.reset(seed=0)
-    assert info["vehicle"] == "ioniq5_awd" and info["tire"] == "ioniq5_pac2002", info
+    assert info["vehicle"] == "generic_sedan", info
+    assert info["tire"] == "generic_pacejka" and info["source"] == "public", info
     assert len(info["param_hash"]) == 64 and e.metadata["vdsim"] == info
     w = plant_weight_kg(EnvConfig(**{**c.__dict__, "mass_scale_range": (1.0, 1.0)}))
-    assert np.all(np.abs(w / IONIQ5["mass"] - 1.0) < 0.01), (name, w)
+    assert np.all(np.abs(w / GENERIC["mass"] - 1.0) < 0.01), (name, w)
     print(f"Q23-2 {name}: info {info['vehicle']}/{info['tire']} "
-          f"hash {info['param_hash'][:12]}, weight {w.round(1)} kg")
+          f"({info['source']}) hash {info['param_hash'][:12]}, "
+          f"weight {w.round(1)} kg")
 res["q23_yaml_info"] = info
-c = EnvConfig.from_yaml(str(REPO / "configs/rl/fast_env.yaml"))
-assert (c.vehicle, c.tire) == (None, None) and c.max_substep_dt == 0.0025, c
-with warnings.catch_warnings(record=True) as caught:
-    warnings.simplefilter("always")
-    e = VDSimVecEnv(2, c, seed=0)
-assert vdsim_rl.BUILTIN_WARNING in [str(x.message) for x in caught], caught
-assert e.reset(seed=0)[1]["vehicle"] is None
-print("Q23-2 fast_env.yaml: generic car at 2.5 ms, warns")
+assert EnvConfig.from_yaml(str(REPO / "configs/rl/fast_env.yaml")).max_substep_dt \
+    == 0.0025
 
 # ---- Q23-3: vehicle=None still works but says so ----
 with warnings.catch_warnings(record=True) as caught:
@@ -136,6 +138,72 @@ for tyre in sorted((REPO / "configs/parts/tire").glob("*.yaml")):
     except ValueError as exc:
         assert catalog and "catalog part" in str(exc), exc
     print(f"Q23-6 tyre {tyre.stem:20s} {'refused (catalog part)' if catalog else 'loads'}")
+# ---- Q23-f1: generic_sedan/generic_pacejka == the C++ built-in defaults ----
+#      Field-by-field, so a change to either the YAML or the C++ default that
+#      is not mirrored in the other one fails here instead of silently
+#      training a different car than fast_env.yaml's G1 table (a) describes.
+def bound_fields(obj):
+    return sorted(n for n in dir(obj)
+                  if not n.startswith("_") and not callable(getattr(obj, n)))
+
+
+vp_g, tp_g, prov_g = load_vehicle_preset("generic_sedan", "generic_pacejka")
+drift = []
+for proto, got in ((vdsim.VehicleParams(), vp_g), (vdsim.TireParams(), tp_g)):
+    for f in bound_fields(proto):
+        a = vdsim_rl._digest_value(getattr(proto, f))
+        b = vdsim_rl._digest_value(getattr(got, f))
+        if a != b:
+            drift.append((type(proto).__name__, f, a, b))
+assert not drift, f"generic preset drifted from the C++ defaults: {drift}"
+with warnings.catch_warnings(record=True):
+    warnings.simplefilter("always")
+    _, _, prov_builtin = load_vehicle_preset(None, None)
+assert prov_g["param_hash"] == prov_builtin["param_hash"], (prov_g, prov_builtin)
+assert set(prov_g) == {"vehicle", "tire", "param_hash", "source"}, prov_g
+assert prov_g["source"] == "public", prov_g
+assert "/" not in prov_g["vehicle"] + prov_g["tire"], prov_g
+res["q23f_generic_param_hash"] = prov_g["param_hash"]
+print(f"Q23-f1 generic_sedan+generic_pacejka == C++ defaults on "
+      f"{len(bound_fields(vdsim.VehicleParams())) + len(bound_fields(vdsim.TireParams()))} "
+      f"fields, same param_hash {prov_g['param_hash'][:12]}")
+
+# ---- Q23-f2: search order vehicle_file -> $VDSIM_PRIVATE_CONFIGS -> repo ----
+import shutil
+_priv = Path(tempfile.mkdtemp(prefix="vdsim_priv_"))
+(_priv / "vehicles").mkdir()
+(_priv / "parts" / "tire").mkdir(parents=True)
+_shadow = {**GENERIC, "mass": 1750.0}
+(_priv / "vehicles" / "generic_sedan.yaml").write_text(yaml.safe_dump(_shadow))
+shutil.copy(REPO / "configs/parts/tire/generic_pacejka.yaml",
+            _priv / "parts" / "tire" / "generic_pacejka.yaml")
+_abs = Path(tempfile.mkdtemp(prefix="vdsim_abs_")) / "whatever.yaml"
+_abs.write_text(yaml.safe_dump({**GENERIC, "mass": 1900.0}))
+os.environ[vdsim_rl.PRIVATE_ROOT_ENV] = str(_priv)
+try:
+    vp_p, _, prov_p = load_vehicle_preset("generic_sedan", "generic_pacejka")
+    assert vp_p.mass == 1750.0 and prov_p["source"] == "private", (vp_p.mass, prov_p)
+    # the private vehicle's own tire_yaml resolves inside the private root
+    _, _, prov_pt = load_vehicle_preset("generic_sedan", None)
+    assert prov_pt["source"] == "private" and prov_pt["tire"] == "generic_pacejka", prov_pt
+    # an absolute file wins over the private root, and only the stem is recorded
+    vp_f, _, prov_f = load_vehicle_preset("generic_sedan", "generic_pacejka",
+                                          vehicle_file=str(_abs))
+    assert vp_f.mass == 1900.0 and prov_f["source"] == "private", (vp_f.mass, prov_f)
+    assert prov_f["vehicle"] == "generic_sedan", prov_f
+finally:
+    os.environ.pop(vdsim_rl.PRIVATE_ROOT_ENV)
+vp_r, _, prov_r = load_vehicle_preset("generic_sedan", "generic_pacejka")
+assert vp_r.mass == GENERIC["mass"] and prov_r["source"] == "public", (vp_r.mass, prov_r)
+try:
+    load_vehicle_preset("generic_sedan", "generic_pacejka",
+                        vehicle_file="configs/vehicles/generic_sedan.yaml")
+except ValueError as exc:
+    assert "absolute" in str(exc), exc
+else:
+    raise AssertionError("a relative vehicle_file was accepted")
+print("Q23-f2 search order: abs file 1900 kg > private root 1750 kg > repo "
+      f"{GENERIC['mass']:.0f} kg, relative vehicle_file refused")
 print("Q23 vehicle preset checks passed")
 
 # ---- R4a: YAML declaration -> layout, and the buffer is written in place ----

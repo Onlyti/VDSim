@@ -32,12 +32,17 @@ Higher levels are more faithful and slower; section 6 has measured throughput.
 `EnvConfig.vehicle` and `EnvConfig.tire` name preset files by stem:
 `configs/vehicles/<vehicle>.yaml` and `configs/parts/tire/<tire>.yaml`. The
 shipped RL configs (`configs/rl/default_env.yaml`, `configs/rl/fast_env.yaml`)
-select the Ioniq 5 preset:
+select the generic car:
 
 ```yaml
-vehicle: ioniq5_awd
-tire: ioniq5_pac2002
+vehicle: generic_sedan
+tire: generic_pacejka
 ```
+
+`generic_sedan` / `generic_pacejka` are the values `core/src/params.cpp`
+compiles in as `VehicleParams()` / `TireParams()`, written out as files so a
+run records the car it used. They are a solver default set, not a measured
+vehicle.
 
 - The preset is read **once, in the parent process**, and shared by every env.
   No file is written.
@@ -48,10 +53,17 @@ tire: ioniq5_pac2002
 - `vehicle=None` (the `EnvConfig()` dataclass default, kept for old code) uses
   the C++ built-in generic car and emits
   `UserWarning: vehicle=None: C++ built-in generic parameters`.
-- `reset()` returns `info = {"vehicle", "tire", "param_hash"}` and the same dict
-  is in `env.metadata["vdsim"]`. `param_hash` is a sha256 over the parameters
-  the core actually received (plus the `.tir` file bytes), so a training log
-  can prove which car it trained on.
+- A car whose parameters must stay out of this repository goes in a private
+  root with the same layout: set `VDSIM_PRIVATE_CONFIGS=/abs/root` and keep
+  `<root>/vehicles/<stem>.yaml` (+ `<root>/parts/tire/<stem>.yaml`), or pass
+  `EnvConfig(vehicle="<stem>", vehicle_file="/abs/path.yaml")`. Search order:
+  `vehicle_file` (absolute only) -> `$VDSIM_PRIVATE_CONFIGS` -> `configs/`.
+- `reset()` returns `info = {"vehicle", "tire", "param_hash", "source"}` and
+  the same dict is in `env.metadata["vdsim"]`. `param_hash` is a sha256 over
+  the parameters the core actually received (plus the `.tir` file bytes), so a
+  training log can prove which car it trained on; `source` is `public` for a
+  preset read from `configs/` and `private` for anything else. Neither the
+  info dict nor the metadata carries a path.
 
 ### 2.2 Observation
 
@@ -124,8 +136,9 @@ offset `±lateral_range` [m] and heading `±yaw_range` [rad].
 friction), `tire_stiffness_scale_range` (tyre B coefficients and cornering
 stiffness), `tire_mu_scale_range` (tyre peak mu), and
 `sensor_delay_range` [s] (`< 0` keeps the configured delay). The multipliers
-scale the **loaded preset** — with `vehicle: ioniq5_awd`, `mass_scale 1.1`
-means 1.1 × 2359 kg, not 1.1 × the generic car.
+scale the **loaded preset** — with `vehicle: generic_sedan`, `mass_scale 1.1`
+means 1.1 × 1500 kg; with `vehicle: ioniq5_awd` it is 1.1 × that preset's
+mass, never 1.1 × the built-in default.
 
 ### 2.8 Parallelism and seeds
 
@@ -143,7 +156,7 @@ pip install vdsim gymnasium        # or a locally built wheel; add stable-baseli
 ```python
 from vdsim_rl import EnvConfig, VDSimEnv
 
-env = VDSimEnv(EnvConfig(vehicle="ioniq5_awd", tire="ioniq5_pac2002"), seed=0)
+env = VDSimEnv(EnvConfig(vehicle="generic_sedan", tire="generic_pacejka"), seed=0)
 obs, info = env.reset(seed=0)
 print(info["vehicle"], env.obs_columns)
 for _ in range(200):
@@ -179,7 +192,7 @@ cfg = EnvConfig.from_yaml("configs/rl/fast_env.yaml")
 venv = make_sb3_vec_env(16, cfg, seed=0)
 model = PPO("MlpPolicy", venv, n_steps=256, batch_size=1024, verbose=1, device="cpu")
 model.learn(total_timesteps=100_000)
-model.save("ppo_ioniq5_lanekeep")
+model.save("ppo_lanekeep")
 ```
 
 `make_sb3_vec_env` implements SB3's own `VecEnv` protocol directly, so no
@@ -284,12 +297,14 @@ Throughput below is in **physics ticks per second summed over all envs**
   | generic car | 2.5 ms | 1.45 % | 0.53 % | 4.07 % | 326 k steps/s | passes = `fast_env.yaml` |
 
   `fast_env.yaml` takes the last row: 6.4× the throughput, and the passing
-  Ioniq 5 row is already `default_env.yaml`. It leaves `vehicle`/`tire` unset,
-  so the env warns once that it runs the C++ built-in generic parameters. Train
-  and evaluate on the Ioniq 5 with `default_env.yaml`. Pitch and roll are not in
-  the criterion and are coarse at 2.5 ms (generic car: brake pitch 30.6 %,
-  step-steer roll 8.4 %); do not build a reward on them with `fast_env.yaml`.
-- **The Ioniq 5 preset is a public approximation.** No measured tyre data;
-  `ackerman_percent: 0.0`; suspension keys not stated in the YAML use the C++
-  defaults. Use it as "an Ioniq 5-class car", not as a validated Ioniq 5.
+  Ioniq 5 row is already `default_env.yaml`'s substep. Both files now name the
+  generic car (`generic_sedan` + `generic_pacejka`), which is why neither warns
+  about unnamed parameters; select the Ioniq 5 preset explicitly, and at 1 ms,
+  if you want that car. Pitch and roll are not in the criterion and are coarse
+  at 2.5 ms (generic car: brake pitch 30.6 %, step-steer roll 8.4 %); do not
+  build a reward on them with `fast_env.yaml`.
+- **The Ioniq 5 preset is not a validated Ioniq 5.** The repository carries no
+  measured tyre data for it; `ackerman_percent: 0.0`; suspension keys the YAML
+  does not state fall back to the C++ defaults. Use it as "an Ioniq 5-class
+  car". This guide makes no claim about where its numbers came from.
 - The road is straight and flat; there is no track or traffic yet.

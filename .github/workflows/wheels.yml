@@ -30,7 +30,7 @@ jobs:
           CIBW_TEST_COMMAND: >-
             python -c "import vdsim; print(vdsim.__file__)" &&
             python -c "from vdsim_lab import Sim; Sim(vehicle='sedan', level='L2'); print('sedan ok')" &&
-            python -c "from vdsim_lab import Sim; Sim(vehicle='ioniq5_awd', tire='ioniq5_pac2002', level='L2'); print('ioniq5 ok')" &&
+            python -c "from vdsim_lab import Sim; Sim(vehicle='generic_sedan', tire='generic_pacejka', level='L2'); print('generic ok')" &&
             python "{project}/tools/wheel_import_smoke.py"
       - uses: actions/upload-artifact@v4
         with:

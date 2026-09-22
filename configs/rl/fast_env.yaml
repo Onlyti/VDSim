@@ -47,15 +47,20 @@
 # criterion are Ioniq 5 at 1.0 ms (Fz_FL 2.62 %, 51 k steps/s) and the generic
 # car at 2.5 ms (Fz_FL 4.07 %, 326 k steps/s).  This file takes the generic car:
 # 6.4x the throughput, and Ioniq 5 at 1.0 ms is the same plant and substep as
-# default_env.yaml, so it would leave no fast preset.  Train or evaluate on the
-# Ioniq 5 with default_env.yaml.  vehicle/tire are left unset on purpose; the
-# env warns once that it runs the C++ built-in generic parameters.
+# default_env.yaml, so it would leave no fast preset.
+#
+# Both RL declarations name the generic car explicitly since PO decision 78:
+# configs/vehicles/generic_sedan.yaml carries the same values the C++
+# defaults compile in, so table (a) still describes this file.  The Ioniq 5
+# preset stays selectable by stem, but at 1.0 ms only - default_env.yaml's
+# substep, not this file's.
 #
 # max_substeps must stay above outer_dt / max_substep_dt, otherwise the solver
 # silently clamps and runs a coarser step than requested.
 level: L2
-# car: unset = C++ built-in generic car (see choice above).  To set one:
-# vehicle: <configs/vehicles/<stem>.yaml>, tire: <configs/parts/tire/<stem>.yaml>
+# car: the generic car of table (a), named rather than left unset.
+vehicle: generic_sedan
+tire: generic_pacejka
 dt: 0.005
 action_repeat: 4
 max_steer: 0.5
