@@ -280,14 +280,23 @@ Throughput below is in **physics ticks per second summed over all envs**
   dominates (`docs/ROADMAP.md` §10, `tests/rl/bench_throughput_layers.py`).
 - **`fast_env.yaml`'s substep was chosen on a criterion fixed before the
   measurement:** ay and yaw-rate ≤ 2 %, front-left vertical load ≤ 5 % worst
-  error against a 0.1 ms reference (L2, 5 ms tick, 2026-09-22):
+  error against a finer-step reference of the same plant (L2, 5 ms tick,
+  2026-09-22). The reference was first 0.1 ms, then re-integrated at
+  1 µs; both are shown:
 
-  | car | substep | ay | yaw rate | Fz_FL | throughput (64 envs) | verdict |
-  |---|---|---|---|---|---|---|
-  | generic car | 1.0 ms | 0.55 % | 0.20 % | 1.22 % | 131 k steps/s | passes = `default_env.yaml` |
-  | generic car | 2.5 ms | 1.45 % | 0.53 % | 4.07 % | 326 k steps/s | passes = `fast_env.yaml` |
+  | car | reference | substep | ay | yaw rate | Fz_FL | throughput (64 envs) | verdict |
+  |---|---|---|---|---|---|---|---|
+  | generic car | 0.1 ms | 1.0 ms | 0.55 % | 0.20 % | 1.22 % | 131 k steps/s | passes = `default_env.yaml` |
+  | generic car | 0.1 ms | 2.5 ms | 1.45 % | 0.53 % | 4.07 % | 326 k steps/s | passes = `fast_env.yaml` |
+  | generic car | 1 µs | 1.0 ms | 0.61 % | 0.22 % | 1.34 % | (as above) | passes |
+  | generic car | 1 µs | 2.5 ms | 1.51 % | 0.55 % | 4.19 % | (as above) | passes |
 
-  `fast_env.yaml` takes the second row for 2.4× the throughput; 5 ms was
+  The error falls first-order with the substep (observed order 1.01–1.06
+  from 1 ms down to 0.01 ms, against the 1 µs reference), so the 0.1 ms
+  reference carried its own 0.06 % (ay) / 0.12 % (Fz_FL) error and the
+  0.1 ms rows are slightly optimistic; the verdicts do not change.
+
+  `fast_env.yaml` takes the 2.5 ms rows for 2.4× the throughput; 5 ms was
   rejected on the L3 table in `configs/rl/fast_env.yaml` (ay 6.82 %, Fz
   6.69 %). Both shipped files name the generic car (`generic_sedan` +
   `generic_pacejka`), which is why neither warns about unnamed parameters.
