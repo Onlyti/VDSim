@@ -43,6 +43,80 @@ _MAP = _CONF / "maps"
 _SENS = _CONF / "sensors"
 _EXP = _CONF / "experiments"
 _ISO = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5, "G": 6, "H": 7}
+#: Native suspension-hardpoint YAMLs.  Resolution mirrors resolve_susp_yaml()
+#: in cosim/realtime_server.cpp (that path cannot call Python) -- keep the two
+#: in step: an existing path is taken as-is, a bare stem is looked up here.
+_SUSP_KIN = _CONF / "parts" / "susp_kinematics" / "kin"
+
+
+def resolve_susp_kinematics(ref):
+    """Resolve a suspension-kinematics reference to a hardpoint YAML path.
+
+    :param ref: an existing path, or a bare stem such as ``mp_front_sedan``.
+    :returns: :class:`pathlib.Path` of the hardpoint YAML.
+    :raises FileNotFoundError: when neither form resolves.  A silently skipped
+        attach is what left level ``L4`` with no suspension physics behind it.
+    """
+    p = Path(ref)
+    if p.is_file():
+        return p
+    cand = _SUSP_KIN / (p.stem + ".yaml")
+    if cand.is_file():
+        return cand
+    raise FileNotFoundError(
+        "suspension kinematics %r not found (looked at %s and %s)" % (ref, p, cand))
+
+
+def attach_kinematics(sess, front=None, rear=None):
+    """Attach native suspension kinematics to a session's plant.
+
+    Only Ld3 (``level`` ``L3`` or ``L4``) carries per-wheel suspension state;
+    the core returns false for anything else and this raises rather than
+    leaving a run labelled with physics it does not have.
+
+    :param sess: a ``vdsim.SimSession``.
+    :param front: front-axle hardpoint YAML (path or stem), or ``None``.
+    :param rear: rear-axle hardpoint YAML (path or stem), or ``None``.
+    :returns: provenance ``{"front": stem|None, "rear": stem|None,
+        "attached": bool}`` -- stems only, never absolute paths.
+    """
+    info = {"front": None, "rear": None, "attached": False}
+    for side, ref in (("front", front), ("rear", rear)):
+        if ref is None:
+            continue
+        path = resolve_susp_kinematics(ref)
+        fn = (vdsim.attach_front_kinematics_from_yaml if side == "front"
+              else vdsim.attach_rear_kinematics_from_yaml)
+        if not fn(sess.dynamics(), str(path)):
+            raise RuntimeError(
+                "%s suspension kinematics refused by the plant -- L3/L4 only "
+                "(%s)" % (side, path.name))
+        info[side] = path.stem
+        info["attached"] = True
+    return info
+
+
+def _kin_spec(kin):
+    """Normalize a kinematics argument to a ``(front, rear)`` pair."""
+    if kin is None:
+        return (None, None)
+    if isinstance(kin, dict):
+        return (kin.get("front"), kin.get("rear"))
+    front, rear = kin
+    return (front, rear)
+
+
+def _build_session(road, vp, tp, level, dt, sensors, kin=None):
+    """Build a session and attach suspension hardpoints -- the single seam.
+
+    Experiment.run, Simulation and Sim all go through here so they cannot drift
+    into three different notions of what a level label means.
+
+    :returns: ``(session, kinematics_provenance)``.
+    """
+    sess = road._session(vp, tp, level, dt, sensors)
+    front, rear = _kin_spec(kin)
+    return sess, attach_kinematics(sess, front, rear)
 
 
 def resolve_line(dl):
@@ -487,6 +561,10 @@ class Experiment:
         self._road = Road.flat()
         self._man = Maneuver.constant_speed(15.0)
         self._sensors = None
+        # Suspension hardpoints are opt-in: a bare L3/L4 plant uses the lumped
+        # camber_per_roll heuristic, so `level` alone says nothing about them.
+        self._kin = None
+        self._kin_info = {"front": None, "rear": None, "attached": False}
         # Trace recording is opt-in; `_trace is None` is the OFF fast path.
         self._trace = None
         self._channels = ()
@@ -496,6 +574,15 @@ class Experiment:
     def road(self, r): self._road = r; return self
     def maneuver(self, m): self._man = m; return self
     def sensors(self, s): self._sensors = s; return self
+
+    def kinematics(self, front=None, rear=None):
+        """Attach per-axle suspension hardpoints (L3/L4 only).
+
+        :param front: front hardpoint YAML path or stem (``mp_front_sedan``).
+        :param rear: rear hardpoint YAML path or stem (``ta_rear_sedan``).
+        """
+        self._kin = (front, rear)
+        return self
 
     @classmethod
     def from_config(cls, name_or_cfg):
@@ -673,7 +760,8 @@ class Experiment:
             duration = getattr(self, "_duration", 10.0)
         vp, tp = self._veh.vp, self._tire.tp
         sp = self._sensors.sp if self._sensors else vdsim.SensorParams()
-        sess = self._road._session(vp, tp, self.level, self.dt, sp)
+        sess, self._kin_info = _build_session(
+            self._road, vp, tp, self.level, self.dt, sp, self._kin)
         x0, y0 = getattr(self._man, "start", (0.0, 0.0))
         s0 = vdsim.make_init_state(vp, tp, x=x0, y=y0, yaw=self._man.init_yaw,
                                    v=self._man.init_v)
@@ -718,7 +806,9 @@ class Simulation:
         sp = exp._sensors.sp if exp._sensors else vdsim.SensorParams()
         self.dt = dt or exp.dt
         self.duration = duration if duration is not None else getattr(exp, "_duration", 1e18)
-        self.sess = exp._road._session(self._vp, exp._tire.tp, exp.level, self.dt, sp)
+        self.sess, self._kin_info = _build_session(
+            exp._road, self._vp, exp._tire.tp, exp.level, self.dt, sp,
+            getattr(exp, "_kin", None))
         man = exp._man
         x0, y0 = getattr(man, "start", (0.0, 0.0))
         self.sess.reset(vdsim.make_init_state(self._vp, exp._tire.tp,
@@ -890,7 +980,7 @@ class Sim:
     def __init__(self, vehicle="sedan", tire="default_pacejka", level="L2",
                  road=None, sensors=None, dt=0.005,
                  x0=0.0, y0=0.0, yaw0=0.0, v0=0.0, sensor_mounts=None,
-                 ref_point=None):
+                 ref_point=None, kinematics=None):
         self._veh = _as_vehicle(vehicle)
         self._tire = _as_tire(tire)
         self._road = road or Road.flat()
@@ -902,7 +992,8 @@ class Sim:
             sp = vdsim.SensorParams()
         else:
             sp = sensors                           # raw vdsim.SensorParams
-        self.sess = self._road._session(vp, tp, level, dt, sp)
+        self.sess, self._kin_info = _build_session(
+            self._road, vp, tp, level, dt, sp, kinematics)
         self.sess.reset(vdsim.make_init_state(vp, tp, x=x0, y=y0, yaw=yaw0, v=v0))
         self._vp = vp
         self._tp = tp

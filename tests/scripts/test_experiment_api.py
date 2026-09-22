@@ -147,6 +147,62 @@ def test_ref_point_position():
     assert sim_u._ref == [1.0, 0.5]
 
 
+# --- Q20 (i): what actually discriminates L3 from L4 ------------------------
+# KinematicFourteenDOFDynamics (core/src/fourteen_dof_dynamics.cpp) overrides
+# level() and nothing else, and attach_front/rear_kinematics dynamic_cast to
+# the shared base.  So the level label is not the discriminator -- the attach
+# is.  These tests keep that fact from being rediscovered as a surprise, and
+# are why a trace manifest needs kinematics provenance next to model_level.
+HARDPOINTS = {"front": "mp_front_sedan", "rear": "ta_rear_sedan"}
+
+
+def _l3_l4_rows(kin=None, n=300):
+    """Run one identical input tape on L3 and L4; return both logged tables."""
+    out = {}
+    for level in ("L3", "L4"):
+        sim = Sim(level=level, road=Road.flat(mu=1.0), v0=15.0, kinematics=kin)
+        for k in range(n):
+            sim.set_input(steer=0.03 * math.sin(0.02 * k), throttle=0.15)
+            sim.run_core_dt()
+        out[level] = [list(r) for r in sim.rows]
+    return out
+
+
+def test_level_label_alone_carries_no_suspension_physics():
+    bare = _l3_l4_rows(None)
+    assert bare["L3"] == bare["L4"], "bare L4 must be bit-identical to bare L3"
+    kin = _l3_l4_rows(HARDPOINTS)
+    assert kin["L3"] == kin["L4"], \
+        "hardpoints attach to both levels -- level() is a label, not physics"
+    return bare, kin
+
+
+def test_hardpoints_are_the_real_discriminator():
+    bare, kin = test_level_label_alone_carries_no_suspension_physics()
+    d = max(abs(a[i] - b[i])
+            for a, b in zip(bare["L4"], kin["L4"]) for i in range(len(a)))
+    assert d > 1e-9, \
+        f"attaching hardpoints must change the trajectory (max |delta| = {d:.3e})"
+
+
+def test_hardpoints_refused_below_l3():
+    try:
+        Sim(level="L2", road=Road.flat(), kinematics=HARDPOINTS)
+    except RuntimeError as e:
+        assert "L3/L4" in str(e), f"unexpected message: {e}"
+    else:
+        raise AssertionError("L2 must refuse hardpoints, not silently ignore them")
+
+
+def test_missing_hardpoint_file_is_an_error():
+    try:
+        Sim(level="L3", road=Road.flat(), kinematics={"front": "no_such_kin"})
+    except FileNotFoundError:
+        pass
+    else:
+        raise AssertionError("a missing hardpoint YAML must raise, not skip the attach")
+
+
 if __name__ == "__main__":
     test_throttle_then_brake()
     test_step_steer_yaws()
@@ -159,4 +215,8 @@ if __name__ == "__main__":
     test_register_metric()
     test_plot_comparison()
     test_ref_point_position()
+    test_level_label_alone_carries_no_suspension_physics()
+    test_hardpoints_are_the_real_discriminator()
+    test_hardpoints_refused_below_l3()
+    test_missing_hardpoint_file_is_an_error()
     print("OK test_experiment_api")

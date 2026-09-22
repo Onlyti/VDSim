@@ -695,3 +695,24 @@ TEST(MultiVehicle, IndependentStateAndCommandRouting) {
     EXPECT_GT(std::abs(v1->state().yaw_rate()), 1e-3) << "vehicle 1 should yaw";
     EXPECT_LT(std::abs(v0->state().yaw_rate()), 1e-3) << "vehicle 0 must stay straight";
 }
+
+// Q20 H2: the shipped L4 demo scene declares `level: L4` through a blueprint.
+// load_scene() materializes the scene through python/catalog/materialize.py,
+// which maps the blueprint's front_chassis/rear_chassis parts onto
+// front_susp/rear_susp, so realtime_server's attach_susp_parts() receives real
+// hardpoint YAMLs and that L4 label is backed by suspension physics.
+// Measured, not assumed: reading cosim/world_scenario.cpp alone says the
+// opposite, because it only parses an explicit `front_susp:` key.  If
+// materialization ever stops carrying those parts, the label silently loses
+// its physics -- that regression fails here.
+TEST(MultiVehicle, BlueprintSceneCarriesSuspensionHardpoints) {
+    const std::string scene = std::string(VDSIM_SOURCE_DIR)
+        + "/configs/scenes/l4_sedan_kinematics.yaml";
+    const auto w = vdsim::cosim::load_scene(scene);
+    ASSERT_EQ(w.vehicles.size(), 1u);
+    EXPECT_EQ(w.vehicles[0].level, "L4");
+    EXPECT_NE(w.vehicles[0].front_susp.find("mp_front_sedan"), std::string::npos)
+        << "front_susp = " << w.vehicles[0].front_susp;
+    EXPECT_NE(w.vehicles[0].rear_susp.find("ta_rear_sedan"), std::string::npos)
+        << "rear_susp = " << w.vehicles[0].rear_susp;
+}
