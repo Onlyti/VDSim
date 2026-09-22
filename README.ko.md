@@ -53,6 +53,10 @@ pip install "./vdsim-*.whl[plot]"
 vdsim-quickstart          # cwd 에 run.csv + run.png 생성
 ```
 
+깨끗한 환경에 설치할 것 — 최상위 `vdsim` 패키지를 제공하는 다른 배포판이 함께 설치되면
+그쪽이 import 를 가져간다. VDSim 은 이를 감지해 실제 로드된 파일 경로와 함께
+`CoreShadowedError` 를 던진다.
+
 측정 (clean conda, Python 3.11, Linux x86_64, 2026-06-25): **첫 결과까지 수 초** —
 pip install `[plot]` + `vdsim-quickstart` → `run.csv` + `run.png` **~6 s wall-clock**
 (cold; lab 네트워크, matplotlib wheel 포함). 재실행 ~1.5 s.

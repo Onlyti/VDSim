@@ -147,6 +147,74 @@ def test_ref_point_position():
     assert sim_u._ref == [1.0, 0.5]
 
 
+# --- Q21: the name `vdsim` must resolve to the compiled core -----------------
+# An unrelated distribution ships a top-level `vdsim/` package; installed beside
+# our wheel it wins the import silently.  vdsim_guard makes that an error.
+
+def _shadow_probe(body, shadow_dir, extra_path=()):
+    """Run *body* in a child whose sys.path starts with a fake `vdsim` package."""
+    import os
+    import subprocess
+    env = dict(os.environ)
+    env["PYTHONPATH"] = os.pathsep.join(
+        [str(shadow_dir), str(REPO / "python")] + [str(p) for p in extra_path])
+    return subprocess.run([sys.executable, "-c", body], env=env,
+                          capture_output=True, text=True)
+
+
+def _make_shadow(td):
+    pkg = Path(td) / "vdsim"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("VERSION = 'foreign package'\n")
+    return Path(td)
+
+
+def test_shadowed_core_is_rejected():
+    body = ("import sys, vdsim_guard\n"
+            "try:\n"
+            "    vdsim_guard.load_core([])\n"
+            "except vdsim_guard.CoreShadowedError as exc:\n"
+            "    print(exc); sys.exit(0)\n"
+            "sys.exit('no error raised')\n")
+    with tempfile.TemporaryDirectory() as td:
+        shadow = _make_shadow(td)
+        r = _shadow_probe(body, shadow)
+        assert r.returncode == 0, f"shadowed vdsim was accepted: {r.stdout}{r.stderr}"
+        msg = r.stdout
+        assert str(shadow / "vdsim") in msg, f"message must name the real load path: {msg}"
+        assert "Cause:" in msg and "Fix:" in msg, f"message needs cause + remedy: {msg}"
+
+
+def test_shadowed_core_recovers_from_build_dir():
+    """A dev checkout still works: the explicit build path wins over the shadow."""
+    import os
+    build = Path(os.environ.get("VDSIM_BUILD_DIR", REPO / "build")) / "python"
+    if not build.is_dir():
+        build = REPO / "build" / "python"
+    assert build.is_dir(), f"no compiled core to fall back to ({build})"
+    body = ("import sys, vdsim_guard\n"
+            "m = vdsim_guard.load_core([sys.argv[1]])\n"
+            "assert hasattr(m, 'SimSession'), m\n"
+            "print(m.__file__)\n")
+    with tempfile.TemporaryDirectory() as td:
+        shadow = _make_shadow(td)
+        import os as _os
+        import subprocess
+        env = dict(_os.environ)
+        env["PYTHONPATH"] = _os.pathsep.join([str(shadow), str(REPO / "python")])
+        r = subprocess.run([sys.executable, "-c", body, str(build)],
+                           env=env, capture_output=True, text=True)
+        assert r.returncode == 0, f"fallback failed: {r.stdout}{r.stderr}"
+        assert str(shadow) not in r.stdout, r.stdout
+
+
+def test_real_core_passes_the_check():
+    import vdsim
+    import vdsim_guard
+    assert vdsim_guard.diagnose(vdsim) is None, vdsim.__file__
+    assert vdsim_guard.check_core(vdsim) is vdsim
+
+
 if __name__ == "__main__":
     test_throttle_then_brake()
     test_step_steer_yaws()
@@ -159,4 +227,7 @@ if __name__ == "__main__":
     test_register_metric()
     test_plot_comparison()
     test_ref_point_position()
+    test_shadowed_core_is_rejected()
+    test_shadowed_core_recovers_from_build_dir()
+    test_real_core_passes_the_check()
     print("OK test_experiment_api")

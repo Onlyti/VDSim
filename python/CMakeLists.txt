@@ -21,6 +21,7 @@ if(pybind11_FOUND)
     if(DEFINED SKBUILD)
         install(TARGETS vdsim_py LIBRARY DESTINATION ".")
         install(FILES
+            ${CMAKE_SOURCE_DIR}/python/vdsim_guard.py
             ${CMAKE_SOURCE_DIR}/python/vdsim_lab.py
             ${CMAKE_SOURCE_DIR}/python/vdsim_plant.py
             ${CMAKE_SOURCE_DIR}/python/vdsim_trace.py
