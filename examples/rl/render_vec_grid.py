@@ -54,12 +54,12 @@ def body_corners(x: float, y: float, yaw: float, length: float, width: float):
 
 
 def caption(meta: dict, n: int, extra: str = "") -> str:
-    """Provenance line burnt into every frame."""
+    """Provenance burnt into every frame, two lines so it fits a 1280 px frame."""
     note = f" ({meta['vehicle_note']})" if meta.get("vehicle_note") else ""
     return (f"vdsim_rl VDSimVecEnv  N={n}  vehicle={meta['vehicle']}{note}  "
-            f"tire={meta['tire']}  level={meta['level']}  policy={meta['policy']}  "
-            f"seed={meta['seed']}  config={meta['config']}  commit={meta['commit']}"
-            + extra)
+            f"tire={meta['tire']}  level={meta['level']}\n"
+            f"policy={meta['policy']}  seed={meta['seed']}  config={meta['config']}  "
+            f"commit={meta['commit']}" + extra)
 
 
 class Sink:
