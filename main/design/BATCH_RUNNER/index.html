@@ -23,7 +23,7 @@
     
     
       
-        <title>Design: experiment batch runner - VDSim</title>
+        <title>Design: campaign runner - VDSim</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#design-experiment-batch-runner" class="md-skip">
+        <a href="#design-campaign-runner" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Design: experiment batch runner
+              Design: campaign runner
             
           </span>
         </div>
@@ -2373,10 +2373,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-why-whats-already-there" class="md-nav__link">
+  <a href="#1-what-this-layer-is" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Why / what's already there
+        1. What this layer is
       
     </span>
   </a>
@@ -2384,10 +2384,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-campaign-spec-one-yaml" class="md-nav__link">
+  <a href="#2-declaration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Campaign spec (one YAML)
+        2. Declaration
       
     </span>
   </a>
@@ -2395,10 +2395,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-execution" class="md-nav__link">
+  <a href="#3-layout" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Execution
+        3. Layout
       
     </span>
   </a>
@@ -2406,10 +2406,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-metrics" class="md-nav__link">
+  <a href="#4-index-keys" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Metrics
+        4. Index keys
       
     </span>
   </a>
@@ -2417,10 +2417,60 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#5-cli" class="md-nav__link">
+  <a href="#5-execution" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. CLI
+        5. Execution
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Execution">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#determinism" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Determinism
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#resume" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resume
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#retries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retries
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-what-this-layer-does-not-touch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. What this layer does not touch
       
     </span>
   </a>
@@ -2428,10 +2478,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#6-open-decisions" class="md-nav__link">
+  <a href="#7-a-level-axis-is-refused" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6. Open decisions
+        7. A level axis is refused
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. CLI
       
     </span>
   </a>
@@ -2458,75 +2519,217 @@
   
 
 
-<h1 id="design-experiment-batch-runner">Design: experiment batch runner<a class="headerlink" href="#design-experiment-batch-runner" title="Permanent link">&para;</a></h1>
-<p>Status: DRAFT for alignment. Run many experiments headless (explicit scenarios +
-parameter sweeps + Monte Carlo), collect per-run data and a metrics table.</p>
-<h2 id="1-why-whats-already-there">1. Why / what's already there<a class="headerlink" href="#1-why-whats-already-there" title="Permanent link">&para;</a></h2>
-<p>The builder authors <code>configs/experiments/*.yaml</code> and <code>vdsim_lab.Experiment.
-from_config(name)</code> runs ONE. We have, but fragmented and not on the authored
-configs:
-- <code>python/sweep_runner.py</code> — cartesian sweep over a <strong>C++ binary</strong>, dotted-path params.
-- <code>apps/doe/</code> — <code>metrics.py</code> (peak_yaw_rate, ss_yaw, …), <code>scenarios.py</code>, a DoE harness.
-- <code>examples/monte_carlo.py</code> (#127) — stochastic sampling.</p>
-<p>Gap: a <strong>campaign runner</strong> that expands explicit + swept + MC runs of the authored
-experiment configs, runs them in parallel headless, and reduces each to metrics.</p>
-<h2 id="2-campaign-spec-one-yaml">2. Campaign spec (one YAML)<a class="headerlink" href="#2-campaign-spec-one-yaml" title="Permanent link">&para;</a></h2>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fdr_vs_surface</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">runs</span><span class="p">:</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">scenario</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">yongin_lap</span><span class="w">                    </span><span class="c1"># configs/experiments/*.yaml, run as-is</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">sweep</span><span class="p">:</span><span class="w">                                  </span><span class="c1"># base + grid -&gt; cartesian product</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">      </span><span class="nt">base</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">yongin_lap</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">      </span><span class="nt">grid</span><span class="p">:</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">        </span><span class="nt">vehicle.final_drive_ratio</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">4.0</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">5.0</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">6.0</span><span class="p p-Indicator">]</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">        </span><span class="nt">road.surface</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">minor_road</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">belgian_pave</span><span class="p p-Indicator">]</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">        </span><span class="nt">maneuver.v</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">25</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">30</span><span class="p p-Indicator">]</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">monte_carlo</span><span class="p">:</span><span class="w">                            </span><span class="c1"># base + stochastic samples</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">      </span><span class="nt">base</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">skidpad</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">      </span><span class="nt">n</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">200</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">      </span><span class="nt">vary</span><span class="p">:</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">        </span><span class="nt">vehicle.mass</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> dist</span><span class="p">:</span><span class="w"> </span><span class="nv">normal</span><span class="p p-Indicator">,</span><span class="nt"> mean</span><span class="p">:</span><span class="w"> </span><span class="nv">1500</span><span class="p p-Indicator">,</span><span class="nt"> std</span><span class="p">:</span><span class="w"> </span><span class="nv">50</span><span class="w"> </span><span class="p p-Indicator">}</span>
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">        </span><span class="nt">mu</span><span class="p">:</span><span class="w">           </span><span class="p p-Indicator">{</span><span class="nt"> dist</span><span class="p">:</span><span class="w"> </span><span class="nv">uniform</span><span class="p p-Indicator">,</span><span class="nt"> lo</span><span class="p">:</span><span class="w"> </span><span class="nv">0.7</span><span class="p p-Indicator">,</span><span class="nt"> hi</span><span class="p">:</span><span class="w"> </span><span class="nv">1.0</span><span class="w"> </span><span class="p p-Indicator">}</span>
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="nt">metrics</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">lap_time</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">peak_ay</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">understeer_K</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">max_Fz</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">dist</span><span class="p p-Indicator">]</span>
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="nt">output</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">results/fdr_vs_surface/</span><span class="w">             </span><span class="c1"># per-run CSV + summary.csv + resolved/</span>
-</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="nt">parallel</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
-</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">40</span>
+<h1 id="design-campaign-runner">Design: campaign runner<a class="headerlink" href="#design-campaign-runner" title="Permanent link">&para;</a></h1>
+<p>Status: <strong>implemented, contract-bound</strong>. The open decisions of the DRAFT are
+closed by [21_experiment_runner_spec] §3 (EX1–EX8) and §11, and by
+18_dev_briefing_0903 §30. This page documents what was built; the contract
+document is the source of truth if the two ever disagree.</p>
+<h2 id="1-what-this-layer-is">1. What this layer is<a class="headerlink" href="#1-what-this-layer-is" title="Permanent link">&para;</a></h2>
+<ul>
+<li>A <strong>run</strong> is one simulation. Its product is one <code>.vdtrace</code>, and that artefact
+  is the renderer's only input unit.</li>
+<li>A <strong>campaign</strong> is a set of runs declared by one YAML file.</li>
+<li>Before this layer existed the same question ("run many, how?") had three
+  answers in the tree — <code>tools/vdsim_batch.py</code>, <code>tools/campaign_runner.py</code>,
+  <code>python/sweep_runner.py</code>. They are now one: <code>python/vdsim_campaign.py</code>.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>file</th>
+<th>today</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>python/vdsim_campaign.py</code></td>
+<td>the runner — expansion, seeds, index, resume, render hook</td>
+</tr>
+<tr>
+<td><code>tools/vdsim_batch.py</code></td>
+<td>entry point kept at its historical path; forwards, translating <code>--parallel</code> to <code>--jobs</code></td>
+</tr>
+<tr>
+<td><code>tools/campaign_runner.py</code></td>
+<td><code>DeprecationWarning</code> shim; fails and names the replacement</td>
+</tr>
+<tr>
+<td><code>python/sweep_runner.py</code></td>
+<td><code>DeprecationWarning</code> shim; C++ binary sweeps are out of scope</td>
+</tr>
+<tr>
+<td><code>tools/vdsim_compare.py</code></td>
+<td>untouched — its axis is vehicle preset and its product a comparison table, a different layer</td>
+</tr>
+</tbody>
+</table>
+<p>The two shims are kept rather than deleted because callers outside this
+repository cannot be found by grep. Deletion is a post-P0 item.</p>
+<h2 id="2-declaration">2. Declaration<a class="headerlink" href="#2-declaration" title="Permanent link">&para;</a></h2>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mu_sweep</span><span class="w">                </span><span class="c1"># campaign id, and the directory name</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">base</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">step_steer</span><span class="w">              </span><span class="c1"># configs/experiments/&lt;name&gt;.yaml, or an inline dict</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">seed</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20260922</span><span class="w">                </span><span class="c1"># root seed; per-run seeds derive from it</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4.0</span><span class="w">                 </span><span class="c1"># optional override of the scenario duration [s]</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nt">jobs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span><span class="w">                       </span><span class="c1"># default concurrency</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nt">render</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">overview</span><span class="w">              </span><span class="c1"># optional; one render CLI call per finished run</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="nt">out</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">campaigns</span><span class="w">                </span><span class="c1"># optional; default is ./campaigns</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="nt">sweep</span><span class="p">:</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">  </span><span class="nt">grid</span><span class="p">:</span><span class="w">                       </span><span class="c1"># orthogonal product</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="nt">mu</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.9</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.7</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.5</span><span class="p p-Indicator">]</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="nt">vehicle.mass</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1500</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">1700</span><span class="p p-Indicator">]</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">  </span><span class="c1"># or: list: [{mu: 0.9}, {mu: 0.5, maneuver.v: 12.0}]</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">  </span><span class="nt">repeat</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span><span class="w">                   </span><span class="c1"># each combination repeated; only the seed moves</span>
 </span></code></pre></div>
-<p>Overrides use <strong>dotted paths</strong> on the experiment config (<code>vehicle.*</code> / <code>tire.*</code> /
-<code>road.*</code> / <code>maneuver.*</code> / <code>mu</code> / <code>level</code>). <code>vehicle.X</code> loads the vehicle preset,
-overrides field X in-memory, runs.</p>
-<h2 id="3-execution">3. Execution<a class="headerlink" href="#3-execution" title="Permanent link">&para;</a></h2>
-<ol>
-<li><strong>Expand</strong> <code>runs</code> -&gt; a flat list of <code>(run_id, resolved_config, params)</code>:
-   sweep = itertools.product of the grid; monte_carlo = N seeded samples.</li>
-<li><strong>Run</strong> each with <code>vdsim_lab.Experiment.from_config(cfg, overrides=...)</code>, headless,
-   in a <code>multiprocessing.Pool(parallel)</code> — runs are independent (embarrassingly
-   parallel). Each worker writes <code>results/&lt;name&gt;/&lt;run_id&gt;.csv</code> (Result.to_csv) +
-   the resolved config to <code>resolved/&lt;run_id&gt;.yaml</code> (reproducibility).</li>
-<li><strong>Reduce</strong> each Result to the requested <code>metrics</code> (registry name -&gt; fn(Result)).</li>
-<li><strong>Aggregate</strong> -&gt; <code>summary.csv</code>: one row per run = {run_id, params…, metrics…}.
-   Failures are captured (error logged, row marked failed) and don't kill the batch.</li>
-</ol>
-<h2 id="4-metrics">4. Metrics<a class="headerlink" href="#4-metrics" title="Permanent link">&para;</a></h2>
-<p>A name-&gt;function registry reusing/extending <code>apps/doe/metrics.py</code> on the <code>Result</code>:
-<code>lap_time</code> (closed-loop return-to-start), <code>peak_ay</code>, <code>understeer_K</code>, <code>max_Fz</code>,
-<code>dist</code>, <code>rms_slip</code>, <code>vmax</code>, <code>min_mu_margin</code>, … Users add their own.</p>
-<h2 id="5-cli">5. CLI<a class="headerlink" href="#5-cli" title="Permanent link">&para;</a></h2>
-<p><div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python<span class="w"> </span>tools/vdsim_batch.py<span class="w"> </span>run<span class="w"> </span>campaign.yaml<span class="w">          </span><span class="c1"># run the campaign</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>python<span class="w"> </span>tools/vdsim_batch.py<span class="w"> </span>run<span class="w"> </span>campaign.yaml<span class="w"> </span>--dry<span class="w">    </span><span class="c1"># list the expanded runs</span>
+<ul>
+<li>Axis kinds are the three of EX2 and no more: <code>grid</code>, <code>list</code>, <code>repeat</code>.
+  Random sampling is not an axis kind — it lives in the legacy <code>monte_carlo</code>
+  block below.</li>
+<li>Axis keys are dotted paths into the scenario document. <code>mu</code>, <code>vehicle.*</code> and
+  <code>tire.*</code> are applied after the preset resolves; everything else is a plain
+  key path. There is no alias dictionary.</li>
+<li>YAML only (§10-1). Output is cwd-relative with <code>--out</code> overriding it (§10-2).</li>
+</ul>
+<p>The pre-promotion <code>runs:</code> block still works unchanged, including Monte Carlo:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">runs</span><span class="p">:</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">scenario</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">step_steer</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">sweep</span><span class="p">:</span><span class="w">       </span><span class="p p-Indicator">{</span><span class="nt"> base</span><span class="p">:</span><span class="w"> </span><span class="nv">step_steer</span><span class="p p-Indicator">,</span><span class="nt"> grid</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> mu</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.9</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.6</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">monte_carlo</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> base</span><span class="p">:</span><span class="w"> </span><span class="nv">step_steer</span><span class="p p-Indicator">,</span><span class="nt"> n</span><span class="p">:</span><span class="w"> </span><span class="nv">50</span><span class="p p-Indicator">,</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nt">                   vary</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> vehicle.mass</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dist</span><span class="p">:</span><span class="w"> </span><span class="nv">normal</span><span class="p p-Indicator">,</span><span class="nt"> mean</span><span class="p">:</span><span class="w"> </span><span class="nv">1500</span><span class="p p-Indicator">,</span><span class="nt"> std</span><span class="p">:</span><span class="w"> </span><span class="nv">50</span><span class="p p-Indicator">}</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w"> </span><span class="p p-Indicator">}</span>
 </span></code></pre></div>
-(Builder web-tool "Batch" tab is a later add; batch is headless automation first.)</p>
-<h2 id="6-open-decisions">6. Open decisions<a class="headerlink" href="#6-open-decisions" title="Permanent link">&para;</a></h2>
+<p>The Monte Carlo draw sequence is unchanged (<code>random.Random(seed + i)</code>, default
+root seed 1000), so campaigns written against the old tool produce the same
+run set.</p>
+<h2 id="3-layout">3. Layout<a class="headerlink" href="#3-layout" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>campaigns/&lt;campaign_id&gt;/
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>├── campaign.yaml          # copy of the declaration actually executed
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>├── index.jsonl            # one line per run
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>└── &lt;run_id&gt;/
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    ├── run.vdtrace        # the run's product
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    ├── job.json           # what the child process was handed
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    ├── run.log            # that run's stdout/stderr, never interleaved
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    ├── result.json        # the child's own report
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    └── preview.png        # only with --render
+</span></code></pre></div>
+<p><code>run_id</code> is a zero-padded ordinal (<code>000</code>, <code>001</code>, …): sortable and readable.
+Axis values are <strong>not</strong> encoded in the directory name — the index holds the
+mapping.</p>
+<h2 id="4-index-keys">4. Index keys<a class="headerlink" href="#4-index-keys" title="Permanent link">&para;</a></h2>
+<p>One JSON object per line. Required keys (EX3):</p>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>run_id</code></td>
+<td>zero-padded ordinal</td>
+</tr>
+<tr>
+<td><code>axes</code></td>
+<td>the axis values of this run</td>
+</tr>
+<tr>
+<td><code>seed</code></td>
+<td>derived seed, <code>derive(root_seed, run_index)</code></td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td><code>ok</code> | <code>diverged</code> | <code>error</code> | <code>killed</code> | <code>skipped</code></td>
+</tr>
+<tr>
+<td><code>param_hash</code></td>
+<td>read back from the trace manifest, not recomputed</td>
+</tr>
+<tr>
+<td><code>role</code></td>
+<td>trace manifest role (<code>plant</code>)</td>
+</tr>
+<tr>
+<td><code>trace_path</code></td>
+<td>campaign-relative path, <code>null</code> when no trace was produced</td>
+</tr>
+<tr>
+<td><code>started_at</code></td>
+<td>UTC ISO-8601</td>
+</tr>
+<tr>
+<td><code>wall_s</code></td>
+<td>run wall time [s]</td>
+</tr>
+</tbody>
+</table>
+<p>Also written: <code>attempt</code> (EX5), <code>render_status</code> (EX7), <code>error</code>, <code>resumed_from</code>.</p>
+<p><strong>The index is a lookup table, not a result database.</strong> Metrics do not belong
+here (EX3, and §2 of the contract puts experiment tracking out of scope).
+Compute them in a consumer that reads <code>vdsim_campaign.read_index(path)</code>.</p>
+<h2 id="5-execution">5. Execution<a class="headerlink" href="#5-execution" title="Permanent link">&para;</a></h2>
 <ol>
-<li><strong>Run path = vdsim_lab Python + multiprocessing</strong> (reuses authored configs; sim
-   core is C++; perf fine) — agree? (vs the C++ sweep_runner binary path.)</li>
-<li><strong>Output</strong>: per-run CSV + summary.csv (metrics table) + resolved config per run.
-   Add parquet later? CSV first — agree?</li>
-<li><strong>Parallelism</strong>: <code>multiprocessing.Pool(parallel)</code>, default = cpu_count. OK?</li>
-<li><strong>Monte Carlo</strong> folded into the same spec (reuse #127's sampling), or keep
-   <code>examples/monte_carlo.py</code> separate and only do explicit+sweep here?</li>
-<li><strong>CLI-first</strong>, builder "Batch" tab later — agree?</li>
-<li>Need <strong>resume / caching</strong> (skip runs whose output exists) in v1, or later?</li>
+<li>Expand the declaration into an ordered run list; number and seed each run.</li>
+<li>Run each one <strong>in its own child process</strong>, up to <code>--jobs</code> at a time
+   (default 1). Process isolation, not threads: it keeps the C++ core's
+   process state out of the question, and a run that takes the interpreter
+   down costs one index line instead of the campaign (EX5, EX8).</li>
+<li>Each child records its <code>.vdtrace</code> through the ordinary opt-in trace API and
+   reports back in <code>result.json</code>.</li>
+<li>Optionally call the existing render CLI on that one trace (EX7). A render
+   failure is a render failure: <code>status</code> stays <code>ok</code> and <code>render_status</code>
+   carries the error.</li>
+<li>Write <code>index.jsonl</code> in <strong>declaration order</strong>, not completion order.</li>
 </ol>
+<h3 id="determinism">Determinism<a class="headerlink" href="#determinism" title="Permanent link">&para;</a></h3>
+<p><code>seed = derive(root_seed, run_index)</code> — no wall clock, no pid, no address.
+The same declaration yields the same seeds and the same channel bytes whether
+it runs with <code>--jobs 1</code> or <code>--jobs 4</code>.</p>
+<p>Caveat worth knowing: on the scenario path the seed currently reaches only the
+sensor noise model, and the scenario autopilots steer from ground truth rather
+than from measurements. A <code>repeat</code> axis therefore produces identical traces
+today. The seed is still derived and recorded, so nothing has to change here
+when a stochastic input is added.</p>
+<h3 id="resume">Resume<a class="headerlink" href="#resume" title="Permanent link">&para;</a></h3>
+<p><code>--resume</code> skips a run only when all three of EX6 hold: the recorded status is
+<code>ok</code>, the trace file is still there, and its <code>param_hash</code> matches what the
+declaration now asks for. If the declaration itself moved since
+<code>campaign.yaml</code> was written, the resume is refused outright — two parameter
+sets must not end up mixed in one campaign directory.</p>
+<h3 id="retries">Retries<a class="headerlink" href="#retries" title="Permanent link">&para;</a></h3>
+<p>None by default. <code>--retry N</code> opts in and records <code>attempt</code>. Silent retries
+would bias a campaign toward the runs that happen to pass; the SIGFPE hunt of
+Q0 is the case in point.</p>
+<h2 id="6-what-this-layer-does-not-touch">6. What this layer does not touch<a class="headerlink" href="#6-what-this-layer-does-not-touch" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>The trace contract.</strong> No field is added. The campaign context (axis values,
+  campaign id) lives in the index, never in the manifest. The one allowed
+  mention is <code>producer.name = "vdsim_campaign"</code>, which the manifest already
+  required (EX1).</li>
+<li><strong>The render CLI.</strong> The runner owns no render code; it calls the CLI on one
+  trace (EX7).</li>
+<li><strong>Overlay rendering and aggregate plots.</strong> Those stay where they are; a
+  consumer script that reads the index is the place for them.</li>
+</ul>
+<h2 id="7-a-level-axis-is-refused">7. A <code>level</code> axis is refused<a class="headerlink" href="#7-a-level-axis-is-refused" title="Permanent link">&para;</a></h2>
+<p><code>L4</code> and <code>L3</code> are the same physics unless suspension hardpoints are attached,
+and the scenario path attaches none. A level sweep would therefore produce
+identical runs whose manifests disagree about which model produced them, and
+the false <code>model_level</code> outlives any warning printed at run time. So the runner
+refuses the axis outright, on every declaration form:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>CampaignError: 'level' is not a campaign axis until Q20: L4 is identical to L3
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>unless suspension hardpoints are attached, so a level sweep records traces
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>whose manifest model_level is false. Declare one level per campaign.
+</span></code></pre></div>
+<p>Declare one level per campaign instead. The refusal is lifted by Q20, which
+attaches the hardpoints and adds a <code>kinematics_attached</code> field to the manifest
+so a reader can tell the two apart. See 18_dev_briefing_0903 §30.4, §31 C-1.</p>
+<h2 id="8-cli">8. CLI<a class="headerlink" href="#8-cli" title="Permanent link">&para;</a></h2>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>vdsim-campaign<span class="w"> </span>run<span class="w"> </span>campaign.yaml<span class="w">                      </span><span class="c1"># sequential</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>vdsim-campaign<span class="w"> </span>run<span class="w"> </span>campaign.yaml<span class="w"> </span>--jobs<span class="w"> </span><span class="m">4</span><span class="w">             </span><span class="c1"># four at a time</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>vdsim-campaign<span class="w"> </span>run<span class="w"> </span>campaign.yaml<span class="w"> </span>--resume<span class="w">             </span><span class="c1"># continue a campaign</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>vdsim-campaign<span class="w"> </span>run<span class="w"> </span>campaign.yaml<span class="w"> </span>--render<span class="w"> </span>overview<span class="w">    </span><span class="c1"># render each run</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>vdsim-campaign<span class="w"> </span>run<span class="w"> </span>campaign.yaml<span class="w"> </span>--dry<span class="w">                </span><span class="c1"># list the expansion only</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>python3<span class="w"> </span>tools/vdsim_batch.py<span class="w"> </span>run<span class="w"> </span>campaign.yaml<span class="w">        </span><span class="c1"># same, historical path</span>
+</span></code></pre></div>
 
 
 
