@@ -88,6 +88,84 @@ Verify all levels end-to-end:
 PYTHONPATH=build/python:python python3 examples/control_ladder_demo.py
 ```
 
+## Command & observation reference
+
+What you command each step, and what the plant returns. The per-wheel block is the part
+a kinematic model cannot give you. Axes and signs follow ISO 8855
+([Frames & conventions](theory/01_frames_and_conventions.md)): x forward, y left,
+z up, positive yaw counter-clockwise; angles in rad, everything else SI. Wheel arrays are
+ordered FL, FR, RL, RR.
+
+### Commands
+
+Every command below is a `vdsim` object accepted by `sim.set_input(cmd)`.
+
+| Command | Fields | Units | Notes |
+|---|---|---|---|
+| `CmdL1` | `motor_torque[4]`, `brake_torque[4]`, `steer_angle_wheel` | N·m, N·m (≥ 0), rad | per-wheel torque; the direct path of `VDSimPlant` |
+| `CmdL3` | `Fx_total`, `steer_angle_wheel` | N (+ drive / − brake), rad | total longitudinal force |
+| `CmdL4` | `throttle`, `brake`, `steer_angle_wheel`, `gear` | [0, 1], [0, 1], rad, +1 fwd / 0 N / −1 rev | the default; `set_input(steer=, throttle=, brake=, gear=)` builds one |
+| `CmdL5` | `ax_target`, `steer_angle_wheel` | m/s², rad | longitudinal acceleration target |
+| `CmdL6` | `v_target`, `steer_angle_wheel` | m/s, rad | speed target |
+| `CmdL7` | `v_target`, `kappa` | m/s, 1/m | speed target + path curvature |
+| `CmdSplit` | `lon` (`LcLonL4`–`LcLonL6`), `lat` (`LcLatL1`–`LcLatL7`) | per axis level | independent axes; see [Control ladder](#control-ladder-command-at-any-abstraction-level) |
+
+`steer_angle_wheel` is the road-wheel angle, not the hand-wheel angle.
+
+### Body state
+
+| Field | Symbol | Units | Frame | Available from |
+|---|---|---|---|---|
+| `t` | $t$ | s | — | `sim.state()` |
+| `x`, `y` | $x, y$ | m | earth-fixed | `sim.state()` |
+| `yaw` | $\psi$ | rad | earth-fixed | `sim.state()` |
+| `vx`, `vy` | $v_x, v_y$ | m/s | body | `sim.state()` |
+| `r` | $r$ | rad/s | body z | `sim.state()` |
+| `beta` | $\beta = \operatorname{atan2}(v_y, v_x)$ | rad | body | `Sim.state()` |
+| `ax`, `ay` | $a_x, a_y$ | m/s² | body | `sim.state()`; `SimOutput.ax`, `.ay` |
+| `roll`, `pitch` | $\phi, \theta$ | rad | body | `SimOutput`; 0 on Ld1, quasi-static on Ld2, state on Ld3 |
+| `az` | $a_z$ | m/s² | body | `SimOutput`; Ld3 only (0 elsewhere) |
+| `heave_z` | $z_s$ | m | about the settled ride height | `SimOutput`; Ld3 only (0 elsewhere) |
+
+Position, velocity and acceleration refer to the centre of gravity. When `Sim` is built
+with a reference point, `Sim.state()` transports them to that point (lever arm through
+yaw rate and yaw acceleration); `SimOutput` always stays at the CG.
+
+### Per-wheel state (FL, FR, RL, RR)
+
+| Field | Symbol | Units | Frame | Available from |
+|---|---|---|---|---|
+| `slip_angle` | $\alpha$ | rad | wheel | `sim.state()`; `SimOutput` |
+| `slip_ratio` | $\kappa$ | — | wheel | `sim.state()`; `SimOutput` |
+| `Fz` | $F_z$ | N | normal load | `sim.state()`; `SimOutput` |
+| `tire_forces` | $(F_x, F_y, F_z)$ | N | body | `SimOutput` |
+| `tire_forces_wheel` | $(F_x, F_y, F_z)$ | N | contact / wheel | `SimOutput` |
+| `wheel_spin` | $\omega$ | rad/s | wheel axis | `SimOutput.state.wheel_spin` |
+| `wheel_mu` | $\mu$ | — | — | `SimOutput` |
+| `wheel_mu_peak` | $\mu_\text{peak}$ | — | — | `SimOutput` |
+| `wheel_alpha_peak` | $\alpha_\text{peak}$ | rad | wheel | `SimOutput` |
+| `wheel_kappa_peak` | $\kappa_\text{peak}$ | — | wheel | `SimOutput` |
+
+Friction utilisation is **derived**, not a plant output: `vdsim_trace.utilization()`
+computes it from the per-wheel force, μ and the `mu_aniso` ellipse.
+
+!!! note "Why the per-wheel block matters"
+    Per-wheel slip angle, slip ratio and normal load, and the slip at which force
+    peaks, are what make VDSim a control-research plant rather than a trajectory model.
+
+### Where the same fields appear
+
+- **Step output** — `sim.run_core_dt()` returns the `SimOutput` above; `sim.state()` is
+  the dict view (`t, x, y, yaw, vx, vy, r, beta, ax, ay, Fz, slip_angle, slip_ratio`).
+- **RL observations** — `EnvConfig.obs_fields` takes the names `x, y, z, yaw, roll,
+  pitch, vx, vy, vz, speed, beta, yaw_rate, roll_rate, pitch_rate, ax, ay, sim_time,
+  steer_applied, throttle_applied, brake_applied, rack_travel, rack_velocity` and the
+  per-wheel `wheel_spin, slip_ratio, slip_angle, fz, susp_compression, susp_velocity,
+  wheel_mu, tire_fx, tire_fy`; see the [RL guide](RL_GUIDE.md).
+- **`.vdtrace` channels** (schema 0.4) — `t, pose, v_body, yaw_rate, u_steer, u_fx,
+  wheel_F, wheel_mu, wheel_kappa, wheel_alpha`, plus `a_body` (Ld2 and up) and
+  `pose_zrp, wheel_road_dz, wheel_road_normal, wheel_travel` (Ld3 and up).
+
 ## Building the plant — `Sim(...)`
 
 | arg | values |
