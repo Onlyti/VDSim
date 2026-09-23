@@ -298,6 +298,9 @@ def load_vehicle_preset(vehicle: Optional[str], tire: Optional[str], *,
     return vp, tp, provenance
 
 
+ACTION_MODES = ("pedal", "accel")
+
+
 @dataclasses.dataclass
 class EnvConfig:
     """Everything the env needs; ``from_yaml`` loads the same keys from a file."""
@@ -312,6 +315,12 @@ class EnvConfig:
     dt: float = 0.005                 # physics tick [s]
     action_repeat: int = 4            # control interval = dt * action_repeat
     max_steer: float = 0.5            # action scale, wheel steer [rad]
+    # action[1]: "pedal" = throttle (+) / brake (-) fraction, CmdL4.
+    # "accel" = longitudinal acceleration target action[1] * max_accel [m/s^2],
+    # CmdL5; each env's own plant-side PI cascade turns it into pedals, so the
+    # realised a_x lags the target and saturates at the pedal limits.
+    action_mode: str = "pedal"
+    max_accel: float = 4.0            # action scale in accel mode [m/s^2]
     mu: float = 1.0
     obs_fields: List[str] = dataclasses.field(
         default_factory=lambda: list(DEFAULT_OBS_FIELDS))
@@ -345,6 +354,14 @@ class EnvConfig:
     # --- reward shaping ---
     crash_penalty: float = 10.0
     speed_target: float = 15.0        # [m/s]
+
+    def __post_init__(self):
+        """Reject an unknown action mode or a non-positive accel scale."""
+        if self.action_mode not in ACTION_MODES:
+            raise ValueError(f"action_mode must be one of {ACTION_MODES}, "
+                             f"got {self.action_mode!r}")
+        if not self.max_accel > 0.0:
+            raise ValueError(f"max_accel must be > 0 [m/s^2], got {self.max_accel}")
 
     @classmethod
     def from_yaml(cls, path: str) -> "EnvConfig":
@@ -433,7 +450,8 @@ class _Core:
         self.prev_action = np.zeros((num_envs, 2), dtype=np.float32)
         self.ep_len = np.zeros(num_envs, dtype=np.int64)
         self.ep_ret = np.zeros(num_envs, dtype=np.float64)
-        self._cmds = [vdsim.CmdL4() for _ in range(num_envs)]
+        cmd_type = vdsim.CmdL5 if cfg.action_mode == "accel" else vdsim.CmdL4
+        self._cmds = [cmd_type() for _ in range(num_envs)]
         self.seed(seed)
 
     # --- R6: one independent stream per env, python side and core side ---
@@ -485,6 +503,13 @@ class _Core:
     def _apply(self, actions: np.ndarray) -> None:
         cfg = self.cfg
         a = np.clip(np.asarray(actions, dtype=np.float32), -1.0, 1.0)
+        if cfg.action_mode == "accel":
+            for i in range(self.num_envs):
+                c = self._cmds[i]
+                c.steer_angle_wheel = float(a[i, 0]) * cfg.max_steer
+                c.ax_target = float(a[i, 1]) * cfg.max_accel
+            self.vs.set_inputs(self._cmds)
+            return
         for i in range(self.num_envs):
             c = self._cmds[i]
             c.steer_angle_wheel = float(a[i, 0]) * cfg.max_steer

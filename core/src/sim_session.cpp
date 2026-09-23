@@ -63,14 +63,21 @@ SessionSnapshot SimSession::snapshot() const {
     std::lock_guard<std::mutex> lk(mtx_);
     SessionSnapshot s;
     auto& v = s.d;
+    snap::put_header(v);
     snap::put_state(v, true_state_);
     snap::put_state(v, meas_state_);
     v.push_back(sim_time_);
 
-    // Latched command.  The RL / direct path latches CmdL4; a higher ladder
-    // level is flagged (tag 0) and restored as the default CmdL4 rather than
-    // silently pretending it round-tripped.
-    if (std::holds_alternative<CmdL4>(latched_)) {
+    // Latched command.  Tag 1 = CmdL4 (RL pedal / direct path), tag 2 = CmdL5
+    // (RL accel path, first two slots); any other ladder level is flagged (tag 0)
+    // and restored as the default CmdL4 rather than silently pretending it
+    // round-tripped.
+    if (std::holds_alternative<CmdL5>(latched_)) {
+        const CmdL5& u = std::get<CmdL5>(latched_);
+        v.push_back(2.0);
+        v.push_back(u.ax_target); v.push_back(u.steer_angle_wheel);
+        for (int k = 0; k < 5; ++k) v.push_back(0.0);
+    } else if (std::holds_alternative<CmdL4>(latched_)) {
         const CmdL4& u = std::get<CmdL4>(latched_);
         v.push_back(1.0);
         v.push_back(u.throttle); v.push_back(u.brake);
@@ -113,6 +120,7 @@ SessionSnapshot SimSession::snapshot() const {
     sensor_.save_aux(v);
     sensors_.save_aux(v, s.rng);
     dyn_->save_aux(v);
+    cascade_.save_state(v);
     return s;
 }
 
@@ -120,6 +128,7 @@ void SimSession::restore(const SessionSnapshot& s) {
     std::lock_guard<std::mutex> lk(mtx_);
     const auto& v = s.d;
     std::size_t p = 0;
+    snap::check_header(v, p);
     true_state_ = snap::get_state(v, p);
     meas_state_ = snap::get_state(v, p);
     sim_time_   = snap::get(v, p);
@@ -133,7 +142,14 @@ void SimSession::restore(const SessionSnapshot& s) {
     u.handbrake         = snap::get(v, p) != 0.0;
     u.steer_mode        = static_cast<SteerMode>(static_cast<int>(snap::get(v, p)));
     u.steer_actuator    = snap::get(v, p);
-    latched_ = (tag != 0.0) ? ControlInput{u} : ControlInput{CmdL4{}};
+    if (tag == 2.0) {
+        CmdL5 u5;
+        u5.ax_target         = u.throttle;           // same slots, see snapshot()
+        u5.steer_angle_wheel = u.brake;
+        latched_ = ControlInput{u5};
+    } else {
+        latched_ = (tag != 0.0) ? ControlInput{u} : ControlInput{CmdL4{}};
+    }
 
     ax_ = snap::get(v, p); ay_ = snap::get(v, p); roll_ = snap::get(v, p);
     pitch_ = snap::get(v, p); rack_ = snap::get(v, p);
@@ -167,6 +183,7 @@ void SimSession::restore(const SessionSnapshot& s) {
     // transients, so the aux block is replayed after it, not before.
     dyn_->reset(true_state_);
     dyn_->restore_aux(v, p);
+    cascade_.restore_state(v, p);
 }
 
 void SimSession::settle_on_ground(State& s) {

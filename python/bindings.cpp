@@ -1208,8 +1208,17 @@ PYBIND11_MODULE(vdsim, m) {
         .def("at", &vdsim::VecSession::at, py::arg("index"),
              py::return_value_policy::reference_internal,
              "Borrow env i as a SimSession (do NOT tick it while tick() runs).")
-        .def("set_inputs", &vdsim::VecSession::set_inputs, py::arg("commands"),
+        .def("set_inputs",
+             py::overload_cast<const std::vector<vdsim::CmdL4>&>(
+                 &vdsim::VecSession::set_inputs),
+             py::arg("commands"),
              "Latch one CmdL4 per env (a list of length 1 broadcasts).")
+        .def("set_inputs",
+             py::overload_cast<const std::vector<vdsim::CmdL5>&>(
+                 &vdsim::VecSession::set_inputs),
+             py::arg("commands"),
+             "Latch one CmdL5 (ax target + wheel steer) per env; each env's "
+             "cascade PI turns it into pedals (a list of length 1 broadcasts).")
         .def("set_input_all", &vdsim::VecSession::set_input_all, py::arg("command"))
         .def("reset_all", &vdsim::VecSession::reset_all, py::arg("states"),
              py::arg("settle") = false,

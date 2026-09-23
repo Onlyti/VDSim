@@ -192,6 +192,14 @@ void VecSession::set_inputs(const std::vector<CmdL4>& u) {
         sessions_[i]->set_input(bcast ? u[0] : u[i]);
 }
 
+void VecSession::set_inputs(const std::vector<CmdL5>& u) {
+    if (u.size() != sessions_.size() && u.size() != 1)
+        throw std::invalid_argument("VecSession.set_inputs: expected 1 or size() commands");
+    const bool bcast = (u.size() == 1);
+    for (std::size_t i = 0; i < sessions_.size(); ++i)
+        sessions_[i]->set_input(ControlInput{bcast ? u[0] : u[i]});
+}
+
 void VecSession::set_input_all(const CmdL4& u) {
     for (auto& s : sessions_) s->set_input(u);
 }

@@ -45,6 +45,19 @@ public:
     double last_error()    const noexcept { return prev_err_; }
     double integrator()    const noexcept { return integ_; }
 
+    /**
+     * @brief Append the controller memory (integrator, previous error, first-step
+     *        flag) to a session snapshot blob. Gains are configuration, not state.
+     * @param v snapshot blob to append to
+     */
+    void save_state(std::vector<double>& v) const;
+    /**
+     * @brief Read back what save_state() wrote, in the same order.
+     * @param v snapshot blob
+     * @param p read cursor, advanced past the consumed entries
+     */
+    void restore_state(const std::vector<double>& v, std::size_t& p);
+
 private:
     Gains  g_;
     double integ_    {0.0};
@@ -68,6 +81,19 @@ public:
     double update(double v_target, double v_meas, double dt) noexcept;
 
     double integrator() const noexcept { return integ_; }
+
+    /**
+     * @brief Append the controller memory (integrator, first-step flag) to a
+     *        session snapshot blob.
+     * @param v snapshot blob to append to
+     */
+    void save_state(std::vector<double>& v) const;
+    /**
+     * @brief Read back what save_state() wrote, in the same order.
+     * @param v snapshot blob
+     * @param p read cursor, advanced past the consumed entries
+     */
+    void restore_state(const std::vector<double>& v, std::size_t& p);
 
 private:
     Gains  g_;
@@ -164,6 +190,19 @@ public:
     //   meas    : measured plant state (pose, vx for cascade)
     //   ax_meas : measured longitudinal accel [m/s²] (for L5/L6 inner loop)
     CmdL4 to_l4(const ControlInput& u, const State& meas, double ax_meas, double dt);
+
+    /**
+     * @brief Append every integrator this cascade carries between ticks (LongVx,
+     *        LongAx, pure-pursuit progress index, yaw-rate PI) to a snapshot blob.
+     * @param v snapshot blob to append to
+     */
+    void save_state(std::vector<double>& v) const;
+    /**
+     * @brief Read back what save_state() wrote, in the same order.
+     * @param v snapshot blob
+     * @param p read cursor, advanced past the consumed entries
+     */
+    void restore_state(const std::vector<double>& v, std::size_t& p);
 
 private:
     // Independent longitudinal cascade (LcLon → throttle/brake[/gear]).

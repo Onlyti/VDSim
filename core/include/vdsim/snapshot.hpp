@@ -11,12 +11,19 @@
 // The snapshot is an opaque blob: a flat double vector plus the sensor RNG
 // stream, written and read in a fixed order by the components themselves.
 //
-// Covered: State, session diagnostics, sim_time, the latched CmdL4, the
-// actuator, the sensor delay line, the sensor noise model and the dynamics
-// tire transients.
-// NOT covered: the CascadeController integrators (only carry state for L5+
-// ladder commands; the RL path latches CmdL4) and a non-identity ECU/CAN
-// network buffer.  Both are documented rather than silently approximated.
+// Covered: State, session diagnostics, sim_time, the latched CmdL4 or CmdL5,
+// the actuator, the sensor delay line, the sensor noise model, the dynamics
+// tire transients and the CascadeController integrators (LongVx, LongAx,
+// pure-pursuit index, yaw-rate PI) that L5+ ladder commands run through.
+// NOT covered: a latched CmdL1-L3 / CmdL6-L8 / CmdSplit (restored as the
+// default CmdL4) and a non-identity ECU/CAN network buffer.  Both are
+// documented rather than silently approximated.
+//
+// Format version: the blob opens with {kFormatMagic, kFormatVersion}.  A blob
+// written by another layout is refused with the two versions named, never
+// read field by field into the wrong slots.  Any change to the write order
+// in SimSession::snapshot() or a component's save_aux() must bump
+// kFormatVersion.  Version 1 is the unversioned layout before the header.
 #include <cstddef>
 #include <stdexcept>
 #include <string>
@@ -34,6 +41,23 @@ struct SessionSnapshot {
 };
 
 namespace snap {
+
+// A headerless (v1) blob starts with a State position; no physical state
+// takes this value, so v1 is told apart from a versioned blob by slot 0.
+constexpr double kFormatMagic   = -1.0e300;
+constexpr int    kFormatVersion = 2;
+
+/// @brief Write the format header {magic, version} at the start of a blob.
+/// @param v  Blob being written; must be empty.
+void put_header(std::vector<double>& v);
+
+/// @brief Read and check the format header; advances p past it.
+/// @param v  Blob being read.
+/// @param p  Read cursor, expected 0.
+/// @throws std::runtime_error naming the blob's format version and the
+///         version this build reads when they differ (a headerless blob is
+///         reported as format v1).
+void check_header(const std::vector<double>& v, std::size_t& p);
 
 inline void put(std::vector<double>& v, double x) { v.push_back(x); }
 

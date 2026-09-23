@@ -87,6 +87,14 @@ public:
 
     // Per-env command latch.  u.size() must be 1 (broadcast) or size().
     void set_inputs(const std::vector<CmdL4>& u);
+    /**
+     * @brief Latch one CmdL5 (longitudinal acceleration target + wheel steer) per
+     *        env. Each env's own CascadeController turns it into pedals every tick
+     *        from that env's measured state, so the controller memory is per env.
+     * @param u one command per env, or a single command broadcast to all envs
+     * @throws std::invalid_argument if the size is neither 1 nor size()
+     */
+    void set_inputs(const std::vector<CmdL5>& u);
     void set_input_all(const CmdL4& u);
 
     // Per-env reset.  s0.size() must be 1 (broadcast) or size().
