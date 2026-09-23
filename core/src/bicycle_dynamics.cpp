@@ -8,7 +8,8 @@
 //   omega_*  : wheel spin [rad/s] (front avg, rear avg)
 //
 // Tire forces from Pacejka MF96 with per-axle Fz.
-// Static Fz only (no longitudinal weight transfer in PoC bicycle).
+// Per-axle Fz = static share + quasi-static longitudinal weight transfer
+// (1-step lag on ax) + aerodynamic lift; no lateral load transfer.
 // Slip angle in ISO 8855 RH:  alpha_f = atan2(v_wheel_y, v_wheel_x)
 //                              alpha_r = atan2(vy - b*r, vx)
 // Note: this differs from Rajamani's "delta - atan(...)" which assumes
