@@ -16,7 +16,7 @@
         <link rel="prev" href="../RL_GUIDE/">
       
       
-        <link rel="next" href="../references/actuator_nonlinearity/">
+        <link rel="next" href="../ASSUMPTIONS/">
       
       
         
@@ -1347,6 +1347,14 @@
       
         
       
+        
+      
+        
+      
+        
+      
+        
+      
     
     
     
@@ -1585,6 +1593,39 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#verification-vs-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification vs validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-read-a-vdsim-result" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to read a VDSim result
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validation-tiers-bars-fixed-before-the-data-is-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation tiers — bars fixed before the data is run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#test-suite-currency" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1654,6 +1695,118 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ASSUMPTIONS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Assumptions & limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../POSITIONING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Positioning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/estimator_in_the_loop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pattern: estimator-in-the-loop
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/external_benchmark_ego_swap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pattern: VDSim as the ego plant in an external benchmark
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -2547,6 +2700,39 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#verification-vs-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification vs validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-read-a-vdsim-result" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to read a VDSim result
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validation-tiers-bars-fixed-before-the-data-is-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation tiers — bars fixed before the data is run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#test-suite-currency" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2674,7 +2860,7 @@ the last section.</p>
 <td>L3 unsprung lateral-transfer term (small)</td>
 </tr>
 <tr>
-<td>Full suite: <strong>507/507 ctest green (as of 2026-09-22)</strong> (<code>validation</code> preset — see the currency block below)</td>
+<td>Full suite: green in the canonical <code>validation</code> preset — the count is recorded only in the <a href="#test-suite-currency">currency block</a></td>
 <td>—</td>
 </tr>
 <tr>
@@ -2689,6 +2875,61 @@ the last section.</p>
 </table>
 <p>Note: ISO 3888-2 DLC@60 not meeting the 1.0 m gate is a default-preset
 vehicle/controller property, not a sim defect (see "Notes on specific results").</p>
+<h2 id="verification-vs-validation">Verification vs validation<a class="headerlink" href="#verification-vs-validation" title="Permanent link">&para;</a></h2>
+<p>Two words are routinely conflated; this document keeps them apart.</p>
+<ul>
+<li><strong>Verification</strong> — <em>does the code solve its equations correctly?</em> Checked against
+  analytic solutions, independent solvers and ISO manoeuvres. Everything under
+  "Validated (open, reproducible)" above is verification in this sense.</li>
+<li><strong>Validation</strong> — <em>do those equations match a real vehicle?</em> Checked against measured
+  vehicle data. VDSim has <strong>not</strong> published such a validation; see
+  <a href="#honest-limitations-what-is-not-validated">Honest limitations</a>.</li>
+</ul>
+<p>Agreement with a commercial tool on the same parameters is verification, not validation.</p>
+<h2 id="how-to-read-a-vdsim-result">How to read a VDSim result<a class="headerlink" href="#how-to-read-a-vdsim-result" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Which kind is it?</strong> Verified (reference, analytic, ISO) or validated (measured
+   vehicle data)? Each row of the benchmark matrix says which.</li>
+<li><strong>Does it reproduce?</strong> Re-run the stated command. If it does not reproduce, it is
+   not a result.</li>
+<li><strong>Which regime?</strong> Sub-limit agreement does not transfer to the saturated region
+   without separate evidence. Also check the rung's envelope in
+   <a href="../ASSUMPTIONS/">Assumptions &amp; limitations</a>.</li>
+</ol>
+<h2 id="validation-tiers-bars-fixed-before-the-data-is-run">Validation tiers — bars fixed before the data is run<a class="headerlink" href="#validation-tiers-bars-fixed-before-the-data-is-run" title="Permanent link">&para;</a></h2>
+<p>These tiers go beyond "the code is correct" to "the model matches reality". The
+acceptance bars are written down now, before any run, so that they cannot be tuned to
+the outcome. None of the tiers is complete.</p>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Reference</th>
+<th>Metric and bar</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A — full vehicle vs a commercial reference</td>
+<td>a commercial full-vehicle model over ISO 4138 / 7401 / 3888</td>
+<td>correlation &gt; 0.7; Theil's U &lt; 0.2; understeer-gradient match; Sprague-Geers magnitude / phase error</td>
+<td>not run</td>
+</tr>
+<tr>
+<td>B — full vehicle vs measured data, limit region</td>
+<td>instrumented vehicle runs, same-input playback</td>
+<td>trajectory, a_y and body-slip agreement in the limit region</td>
+<td>not published; data not redistributable</td>
+</tr>
+<tr>
+<td>C — tire force and moment</td>
+<td>force-moment rig or measured lateral force vs slip</td>
+<td>force-curve agreement over slip</td>
+<td>not run</td>
+</tr>
+</tbody>
+</table>
 <h2 id="test-suite-currency">Test-suite currency<a class="headerlink" href="#test-suite-currency" title="Permanent link">&para;</a></h2>
 <p>The suite count below is the only number in this document that is machine-checked
 (<code>scripts/check_validation_currency.py</code>, run as the <code>validation_currency</code> ctest).
