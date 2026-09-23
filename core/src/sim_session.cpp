@@ -63,6 +63,7 @@ SessionSnapshot SimSession::snapshot() const {
     std::lock_guard<std::mutex> lk(mtx_);
     SessionSnapshot s;
     auto& v = s.d;
+    snap::put_header(v);
     snap::put_state(v, true_state_);
     snap::put_state(v, meas_state_);
     v.push_back(sim_time_);
@@ -127,6 +128,7 @@ void SimSession::restore(const SessionSnapshot& s) {
     std::lock_guard<std::mutex> lk(mtx_);
     const auto& v = s.d;
     std::size_t p = 0;
+    snap::check_header(v, p);
     true_state_ = snap::get_state(v, p);
     meas_state_ = snap::get_state(v, p);
     sim_time_   = snap::get(v, p);

@@ -101,6 +101,24 @@ Frame: ISO 8855 (x forward, y left, z up), angles in radians.
     pedal limits; it is a tracked target, not an imposed acceleration. The
     cascade memory is part of the env snapshot.
 
+    Measured step response in `accel` mode (test `rl_env`, Q27-3; default
+    cascade gains, no tuning; one env, `default_env.yaml` vehicle
+    `generic_sedan`, straight spawn at 15 m/s, steer 0;
+    target held 4 s after a 1 s zero-target lead-in; steady state = mean
+    a_x over the last 1 s of each hold; latency = time from the step until
+    a_x first covers 63 % / 90 % of the change, sampled at the 20 ms control
+    interval):
+
+    | step | target [m/s²] | steady-state a_x [m/s²] | steady-state error [%] | 63 % reached [s] | 90 % reached [s] | pedal saturated |
+    |---|---|---|---|---|---|---|
+    | 0 → +1.0 | +1.0 | +0.975 | 2.53 | 0.02 (first control tick) | 1.58 | no |
+    | +1.0 → −2.0 | −2.0 | −1.959 | 2.08 | 0.02 (first control tick) | 1.16 | no |
+
+    The 63 % time equals the sampling interval, so it only bounds the fast
+    part of the response from above; the 90 % time is the settling-scale
+    figure. The residual steady-state error is left as measured rather than
+    removed by gain changes.
+
 Actions are clipped to `[-1, 1]`. One action is held for `action_repeat`
 physics ticks (default 4 × 5 ms = 20 ms control interval).
 

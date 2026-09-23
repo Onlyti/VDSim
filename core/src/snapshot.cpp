@@ -1,7 +1,29 @@
 #include "vdsim/snapshot.hpp"
 
+#include <string>
+
 namespace vdsim {
 namespace snap {
+
+void put_header(std::vector<double>& v) {
+    v.push_back(kFormatMagic);
+    v.push_back(static_cast<double>(kFormatVersion));
+}
+
+void check_header(const std::vector<double>& v, std::size_t& p) {
+    const std::string reads = "this build reads v" + std::to_string(kFormatVersion);
+    if (v.size() < 2 || v[0] != kFormatMagic)
+        throw std::runtime_error(
+            "SessionSnapshot: snapshot format v1 (no format header), " + reads +
+            "; re-take the snapshot with this build");
+    const double ver = v[1];
+    if (ver != static_cast<double>(kFormatVersion))
+        throw std::runtime_error(
+            "SessionSnapshot: snapshot format v" +
+            std::to_string(static_cast<long long>(ver)) + ", " + reads +
+            "; re-take the snapshot with this build");
+    p = 2;
+}
 
 // State is written field by field (not memcpy'd) so a snapshot stays readable
 // across compilers and padding changes.

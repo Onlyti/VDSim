@@ -404,6 +404,30 @@ print(f"Q27-2 restore twice: identical={np.array_equal(x1, x2)}; "
       f"cascade block cleared: max|diff| = {d_clear:.3e}")
 assert d_clear > 0.0, "clearing the cascade block changed nothing -- vacuous check"
 
+# Q27-4 snapshot format version: a blob from another layout is refused with
+# both versions named (no field-by-field read into the wrong slots).
+# v1 = the headerless layout before the version header; v3 = a future bump.
+def refused(data):
+    c = vdsim.SessionSnapshot()
+    c.data = data
+    c.rng = snap[0].rng
+    try:
+        ve.core.vs.restore([c] + list(snap[1:]))
+    except RuntimeError as e:
+        return str(e)
+    return None
+
+
+fmt_ver = int(snap[0].data[1])
+msg_v1 = refused(list(snap[0].data[2:]))
+msg_vn = refused([snap[0].data[0], float(fmt_ver + 1)] + list(snap[0].data[2:]))
+print(f"Q27-4 headerless blob refused: {msg_v1}")
+print(f"Q27-4 bumped-version blob refused: {msg_vn}")
+assert msg_v1 is not None and f"snapshot format v1 (no format header), this build reads v{fmt_ver}" in msg_v1, msg_v1
+assert msg_vn is not None and f"snapshot format v{fmt_ver + 1}, this build reads v{fmt_ver}" in msg_vn, msg_vn
+x4 = rollout(snap)                     # the current-version blob still restores
+assert np.array_equal(x1, x4), "current-format snapshot no longer round-trips"
+
 # Q27-3 a_x step: the realised a_x follows the target (discriminating test).
 # Steady state = mean over the last 1 s of each 4 s hold; latency = time from
 # the step to 63 % / 90 % of the change. Default cascade gains, no tuning.
