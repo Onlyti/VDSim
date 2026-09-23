@@ -17,8 +17,8 @@ Legend: **yes** = modeled, **no** = not modeled, text = modeled with the stated 
 | Path / heading kinematics | yes | yes | yes | theory 04–06 |
 | Tire lateral force from slip | yes | yes | yes | theory 03 |
 | Per-wheel forces | no | yes | yes | theory 05–06 |
-| Combined slip (friction ellipse) | <!-- PO-VERIFY: Ld1 combined slip yes/no --> | yes | yes | theory 03, 25 |
-| Load transfer | no | quasi-static | dynamic | theory 05–06 |
+| Combined slip (friction ellipse) | per axle: host friction-circle rescale of the axle force (skipped when the tyre model provides combined slip itself, e.g. MF2002 or LuGre) | yes | yes | theory 03, 04 §4.9, 25 |
+| Load transfer | longitudinal only (quasi-static, one-step lag on a_x); no lateral | quasi-static | dynamic | theory 04, 05–06 |
 | Roll / pitch / heave | no | quasi-static roll / pitch estimate; no attitude or heave state | yes | theory 05–06 |
 | Suspension transients | no | no | yes | theory 06 |
 | Suspension kinematics from hardpoints | no | no | only with Ld4 hardpoints attached | theory 13–14 |

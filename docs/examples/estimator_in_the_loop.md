@@ -9,9 +9,10 @@ the point is the experimental structure.
 
 A state estimator (for example a body-slip β or tire-force observer), and the controller
 that consumes it, are usually designed on a low-order model such as the
-[Ld1 bicycle](../theory/04_ld1_bicycle.md). That model is cheap and differentiable, but
-friction-blind. The question that decides whether the estimator is trustworthy is: *does
-it still track when the plant leaves the linear region?*
+[Ld1 bicycle](../theory/04_ld1_bicycle.md). That model is cheap, and it does saturate —
+but only per axle, with no lateral load transfer, so it cannot show which wheel reaches
+the friction limit first. The question that decides whether the estimator is trustworthy
+is: *does it still track when the plant leaves the linear region?*
 
 VDSim answers it by being the plant the estimator is graded against, with per-wheel
 ground truth the estimator never sees but you can score against.
@@ -29,8 +30,8 @@ flowchart LR
 ```
 
 1. **Design** the estimator and controller on Ld1 or a linear model.
-2. **Run** the closed loop with Ld3 as the plant (dynamic load transfer, combined-slip
-   saturation).
+2. **Run** the closed loop with Ld3 as the plant (dynamic load transfer, per-wheel
+   combined-slip saturation).
 3. **Measure** estimation error against the plant's true β, per-wheel slip angle,
    lateral force and normal load — quantities a test vehicle cannot observe cleanly but
    the simulator exposes exactly. Field names: [Experiment API](../EXPERIMENT_API.md).
