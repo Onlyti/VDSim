@@ -15,7 +15,7 @@ name commercial products.
 |---|---|---|---|
 | Commercial full-vehicle suites | — | production-validated full-vehicle fidelity, GUIs, vendor support | closed source, licensed, heavier to script and embed |
 | Open multibody dynamics | Project Chrono | general multibody, broad physics | not control-focused; VDSim uses it as an **independent cross-check** |
-| Game / AV simulation engines | CARLA and similar | sensors, rendering, scenarios, traffic | simplified vehicle dynamics; the ego is often friction-blind |
+| Game / AV simulation engines | CARLA and similar | sensors, rendering, scenarios, traffic | vehicle-dynamics fidelity is not their primary scope |
 | **VDSim** | — | deterministic, per-wheel ground truth, scriptable, open core, control-research focus | experimental, pre-validation, not a production reference |
 
 ## Where VDSim is the right choice
