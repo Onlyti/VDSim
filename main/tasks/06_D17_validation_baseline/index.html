@@ -2589,17 +2589,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#erg" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ERG 파일 접근
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -2690,7 +2679,7 @@
 </tbody>
 </table>
 <h2 id="1">1. 목적<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
-<p>vehicle dynamics 의 "맞다"를 무엇으로 증명할지 사전에 정의. 사후에 결과를 보고 통과 기준을 정하면 cherry-picking 위험. 사용자 결정: 해석해 + CarMaker ERG (ERGAccess C API), 4 시나리오.</p>
+<p>vehicle dynamics 의 "맞다"를 무엇으로 증명할지 사전에 정의. 사후에 결과를 보고 통과 기준을 정하면 cherry-picking 위험. 사용자 결정: 해석해, 4 시나리오.</p>
 <h2 id="2">2. 구현 방법<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
 <h3 id="4">시나리오 4종<a class="headerlink" href="#4" title="Permanent link">&para;</a></h3>
 <table>
@@ -2799,17 +2788,11 @@
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── integration/                   # task 11 첫 사용
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│   └── test_bicycle_steady_state.cpp
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>└── validation/                    # task 13 부터
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    ├── analytical/
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    │   ├── test_step_steer.cpp
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    │   ├── test_acceleration.cpp
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    │   └── test_brake.cpp
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    └── carmaker/                  # Phase 2 (ERGAccess license dependent)
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>        ├── data/                  # .erg files
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>        ├── erg_reader.{hpp,cpp}
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>        └── test_*.cpp
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    └── analytical/
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        ├── test_step_steer.cpp
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>        ├── test_acceleration.cpp
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>        └── test_brake.cpp
 </span></code></pre></div>
-<h3 id="erg">ERG 파일 접근<a class="headerlink" href="#erg" title="Permanent link">&para;</a></h3>
-<p>사용자 결정: <strong>ERGAccess (CarMaker 공식 C API)</strong>. Lab 의 CarMaker 라이선스 사용. CMake 옵션 <code>VDSIM_WITH_ERGACCESS=OFF</code> default. PoC 는 OFF, Phase 2 에 활성화.</p>
 <h2 id="3">3. 검증 방법 (근거)<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
 <p>명세 단계는 "통과 기준이 명확한가, cherry-picking 방지 가능한가" 검증.</p>
 <table>
@@ -2883,7 +2866,6 @@
 <li>Follow-up:</li>
 <li>Step steer (task 13).</li>
 <li>Acceleration / brake (task 13).</li>
-<li>CarMaker ERG 비교: Phase 2, lab 라이선스 + ERGAccess SDK 위치 확인 필요.</li>
 <li>L2 / L3 검증: W9-W12.</li>
 </ul>
 
