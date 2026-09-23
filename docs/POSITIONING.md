@@ -1,8 +1,8 @@
 # Positioning — when to use VDSim, and when not to
 
 This page helps you pick the right tool, including *not* VDSim when a production suite is
-what you need. It compares tool classes by **category and intent**, not by accuracy.
-For a feature-level matrix see the [competitive matrix report](tasks/69_competitive_matrix/README.md).
+what you need. It compares tool classes by **category and intent**, not by accuracy, and does not
+name commercial products.
 
 !!! warning "No parity claims"
     VDSim does not claim to match or replace commercial production tools. It makes no
@@ -13,7 +13,7 @@ For a feature-level matrix see the [competitive matrix report](tasks/69_competit
 
 | Tool class | Examples | Strengths | Trade-off vs. VDSim |
 |---|---|---|---|
-| Commercial full-vehicle suites | CarMaker, CarSim, VI-CarRealTime | production-validated full-vehicle fidelity, GUIs, vendor support | closed source, licensed, heavier to script and embed |
+| Commercial full-vehicle suites | — | production-validated full-vehicle fidelity, GUIs, vendor support | closed source, licensed, heavier to script and embed |
 | Open multibody dynamics | Project Chrono | general multibody, broad physics | not control-focused; VDSim uses it as an **independent cross-check** |
 | Game / AV simulation engines | CARLA and similar | sensors, rendering, scenarios, traffic | simplified vehicle dynamics; the ego is often friction-blind |
 | **VDSim** | — | deterministic, per-wheel ground truth, scriptable, open core, control-research focus | experimental, pre-validation, not a production reference |
@@ -42,7 +42,7 @@ For a feature-level matrix see the [competitive matrix report](tasks/69_competit
 ## Relationship, not rivalry
 
 VDSim's verification *uses* these tools: pure-slip tire forces are cross-checked against
-a commercial MF-Tyre implementation and against Chrono's independent Pac02 on the same
+a commercial Magic Formula tyre implementation and against Chrono's independent Pac02 on the same
 public `.tir` parameters ([Validation](VALIDATION.md)). The framing is complementary: VDSim
 is the open, deterministic, embeddable plant for control research, and it says so
 without overclaiming.
