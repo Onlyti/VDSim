@@ -99,4 +99,4 @@ PYTHONPATH=build/python:python python3 tools/tire_validation.py \
 
 1. **실차 `.tir` 비교** — 공개 데이터셋 (TNO sample, Delft-Tyre 공개 파라미터) 입수 후 `tire_validation.py` 실행
 2. **combined-slip 개선** — VDSim friction-ellipse vs Pac02 weighting 정렬 검토
-3. **ADMA/CarMaker ERG 대조** — TUR 실측 데이터 확보 시 `tools/campaign_runner.py` + 실차 Fz/ax/ay 비교
+3. **ADMA/상용 참조 도구 로그 대조** — TUR 실측 데이터 확보 시 `tools/campaign_runner.py` + 실차 Fz/ax/ay 비교

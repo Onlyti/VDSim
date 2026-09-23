@@ -47,7 +47,7 @@ PoC W1-W12 전체 **80% → 92% → 95%**.
 
 남은 5%:
 - 실제 CARLA UE5 연동 (skeleton 만 진행, RPC 통합 미)
-- CarMaker ERG 비교 (license + ERGAccess SDK 필요)
+- CarMaker ERG 비교 (license + vendor SDK 필요)
 - L3 의 unsprung damper 분리 (현 모델 한계 명시)
 
 ## 4. 사다리 구현 v3

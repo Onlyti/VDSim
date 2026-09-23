@@ -44,7 +44,7 @@ W1-W12 PoC 안에 **흡수된 Phase 2 항목 12개**:
 
 **Deferred 항목 3개**:
 - MPC / SMPC (SMPC paper 의 HPIPM 통합과 함께)
-- CarMaker ERG validation (license + ERGAccess SDK)
+- CarMaker ERG validation (license + vendor SDK)
 - Full unsprung damper split (W12 의 nominal damper coefficient 가 wheel hop 영역에서 너무 stiff)
 
 ## 4. 누적 산출물

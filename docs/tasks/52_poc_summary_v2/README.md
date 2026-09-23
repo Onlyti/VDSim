@@ -118,5 +118,4 @@ PoC W1-W12 의 **92%** 완성. dynamics + control + tire physics + external API 
 
 **다음 phase 시작 우선순위**:
 1. CARLA UE5 통합 (raycast → CARLA Sensor API)
-2. CarMaker ERG 비교 (license + ERGAccess SDK)
-3. SMPC paper 의 HPIPM 통합 (T-VT/T-IV/T-ITS target).
+2. SMPC paper 의 HPIPM 통합 (T-VT/T-IV/T-ITS target).

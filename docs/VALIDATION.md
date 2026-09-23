@@ -16,7 +16,7 @@ the last section.
 | Validated (open, reproducible) | NOT yet validated |
 |---|---|
 | L1–L3 dynamics vs analytic (linear-bicycle yaw, drag coast, weight transfer) | Full-vehicle cross-validation vs CarMaker/CarSim/Adams on real-vehicle data (data confidential, not redistributable) |
-| **Pure-slip tire force** (same public `.tir`, steady-state pure slip only): vs CarMaker MF-Tyre under **0.1%** (Fx/Fy); vs Chrono Pac02 **~0.8%** — *not* full-vehicle/product parity | Full-vehicle commercial cross-val (CarMaker/CarSim/Adams on real-vehicle data); tire thermal/wear; transient beyond first-order relaxation |
+| **Pure-slip tire force** (same public `.tir`, steady-state pure slip only): vs Chrono Pac02 **~0.8%** — *not* full-vehicle/product parity | Full-vehicle commercial cross-val (CarMaker/CarSim/Adams on real-vehicle data); tire thermal/wear; transient beyond first-order relaxation |
 | ISO 7401 step-steer / 4138 understeer / 3888-2 DLC — run + measured | — |
 | L1↔L2↔L3 cross-model consistency where physics overlaps | Dependent axles (twist-beam / solid beam) — configs are stubs |
 | FMI round-trip Δ=0 (machine precision); ISO 8608 PSD RMS per class | L3 unsprung lateral-transfer term (small) |
@@ -85,13 +85,12 @@ version and the new numbers have to land in the same commit.
 ```text
 tests:    507/507
 config:   cmake --preset validation && cmake --build --preset validation && ctest --preset validation
-presets:  CMakePresets.json@fb1f0c198a0201fcce2543a9f5b2242a255fb97a
+presets:  CMakePresets.json@53dec1158a6568e97fdf55c41e8ea0e14433a3cf
 toolchain: cmake 3.31.10
-commit:   1d20a34
-date:     2026-09-22
+commit:   85cf788
+date:     2026-09-23
 excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
-excluded: ergaccess (optional external dependency not installed -- VDSIM_WITH_ERGACCESS=OFF)
 ```
 <!-- VALIDATION-CURRENCY END -->
 
@@ -124,7 +123,6 @@ excluded: ergaccess (optional external dependency not installed -- VDSIM_WITH_ER
 | 12 | ISO 8608 roughness | PSD Gd(n)=Gd(n0)(n/n0)⁻² | RMS doubles/class: A 3.5, B 7.0, C 14.1, D 28 mm | 15% | `ctest -R Iso8608` |
 | 13 | **MF2002 vs Chrono Pac02** (BSD-3, independent) | same public `.tir` | pure-long Fx ~0.8% + pure-lat Fy ~0.7% (Fz 2–6 kN, mean); combined cross-terms differ (rig-frame, reported) | 6% | `ctest -R ChronoPac02Parity` · `tools/tire_validation.py` |
 | 14 | Control ladder (Lc1–Lc8 + split) | each level reaches target band | cruise/ax/yaw-rate/curvature + EPS torque verified | gated | `examples/control_ladder_demo.py` (ctest `control_ladder`) |
-| 15 | **Pure-slip vs CarMaker MF-Tyre/MF-Swift** (commercial tool, same `.tir`) | steady-state pure slip, Re-based κ | pure-long Fx **0.00%**, pure-lat Fy **0.09%** — *cross-check only*, not product parity | — | `external/carmaker_parity/compare_vdsim_carmaker.py` (needs a CarMaker license) |
 | 16 | **Effective rolling radius (Re) consistency** | reff-enabled tire, free-roll init via `free_roll_wheel_spin` | first-step \|κ\|<5e-4, no phantom Fx (L1/L2/L3) | gated | `ctest -R "EffectiveRollingRadius\|NoPhantom"` |
 | 17 | **Camber contact migration -> overturning** | crown_radius-enabled tire, camber input | Mx = Fz·crown_radius·sin γ per wheel; feeds L3 roll DOF; crown=0 -> Mx=0 | gated | `ctest -R CamberMigration` |
 
@@ -141,8 +139,8 @@ camber migration are opt-in (reff_*=0 / crown_radius=0 -> legacy behaviour), so 
 are unchanged.
 
 Slip now uses the load-dependent effective rolling radius Re(Fz) (Pacejka BREFF/DREFF/FREFF)
-across L1/L2/L3/L5 — slip = (ω·Re − vx)/vx, so a free-rolling loaded tire reports κ=0,
-matching MF-Tyre/CarMaker. Initial wheel spin is set per-wheel via `free_roll_wheel_spin`
+across L1/L2/L3/L5 — slip = (ω·Re − vx)/vx, so a free-rolling loaded tire reports κ=0.
+Initial wheel spin is set per-wheel via `free_roll_wheel_spin`
 (vx/Re at static load) so no phantom longitudinal force appears at t=0. Re is opt-in: tires
 without BREFF/DREFF/FREFF (reff_*=0) fall back to the unloaded radius R0 unchanged.
 
@@ -189,9 +187,9 @@ folded into the re-baselined table above.
 ## Honest limitations (what is NOT validated)
 
 - **No published cross-validation against a commercial reference (CarMaker /
-  CarSim / Adams) on real-vehicle data.** Such comparisons were run internally,
-  but the measured tire/vehicle data are confidential and cannot be redistributed,
-  so they are not part of this open benchmark. The open claims above rest on
+  CarSim / Adams) on real-vehicle data.** Cross-validation against commercial
+  reference tools is not published, and measured tire/vehicle data are
+  confidential and cannot be redistributed. The open claims above rest on
   analytic/standard/self-consistency evidence only.
 - **Tire model** is fitted Pacejka MF (and a linear fallback); no thermal,
   transient-relaxation beyond the first-order lag, or combined wear effects.

@@ -132,7 +132,7 @@ the now-dead belt/lugre/relaxation/slip blocks. 14-DOF wraps seven_dof — no se
 
 When the new evaluate/advance reproduce the old equations, these must stay byte-stable:
 `ctest -R "IsoBaseline|Lugre|Belt|ChronoPac02Parity|SevenDOF|BicycleSteadyState"` and full
-354/354. The MF-vs-CarMaker parity (benchmark #15) and LuGre ISO baseline are the canaries.
+354/354. The LuGre ISO baseline is the canary.
 Port one backend + one model first (seven_dof + pacejka), prove green, then the rest.
 
 ## Risks

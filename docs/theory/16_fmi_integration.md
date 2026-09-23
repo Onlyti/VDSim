@@ -117,7 +117,7 @@ VDSim ──┤
 |---|---|
 | native Ld1-Ld3 | 가벼움, 빠름, hardpoint 통합 |
 | Chrono Vehicle FMU | full multibody 정확도 |
-| CarMaker FMU | 산업 reference 검증 |
+| 상용 참조 도구 FMU | 산업 reference 검증 |
 
 정확도 약점은 FMI import 로 cover, 산업 진입은 FMI export 로 — 둘 다 같은 표준
 인터페이스다.
@@ -146,7 +146,7 @@ round-trip 의 max\|Δ\|=0 (수치 정밀도 한계) 은 export 경로가 native
 | Model Exchange | 미지원 (CS 만) |
 | GetAndSetFMUstate | false (체크포인트/롤백 없음) |
 | Directional derivative | 미지원 (linearization 불가) |
-| 외부 FMU 검증 | 자체 round-trip 만; Chrono/CarMaker 실측 대기 |
+| 외부 FMU 검증 | 자체 round-trip 만; Chrono/상용 참조 도구 실측 대기 |
 
 ---
 
