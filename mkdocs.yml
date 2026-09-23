@@ -137,6 +137,8 @@ nav:
       - Running VDSim: RUNNING.md
       - "RL environment (vdsim_rl)": RL_GUIDE.md
       - Validation: VALIDATION.md
+      - "Assumptions & limitations": ASSUMPTIONS.md
+      - Positioning: POSITIONING.md
   - References:
       - "Actuator/sensor nonlinearity & delay": references/actuator_nonlinearity.md
       - "GUI architecture": gui_architecture.md
@@ -162,3 +164,5 @@ nav:
       - L3 ride frequency limit: tasks/50_benchmark_matrix/README.md
   - Examples:
       - examples/README.md
+      - "Pattern: estimator-in-the-loop": examples/estimator_in_the_loop.md
+      - "Pattern: VDSim as the ego plant in an external benchmark": examples/external_benchmark_ego_swap.md

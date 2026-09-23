@@ -20,12 +20,47 @@ the last section.
 | ISO 7401 step-steer / 4138 understeer / 3888-2 DLC — run + measured | — |
 | L1↔L2↔L3 cross-model consistency where physics overlaps | Dependent axles (twist-beam / solid beam) — configs are stubs |
 | FMI round-trip Δ=0 (machine precision); ISO 8608 PSD RMS per class | L3 unsprung lateral-transfer term (small) |
-| Full suite: **507/507 ctest green (as of 2026-09-22)** (`validation` preset — see the currency block below) | — |
+| Full suite: green in the canonical `validation` preset — the count is recorded only in the [currency block](#test-suite-currency) | — |
 | Drivetrain engine inertia (open-diff carrier coupling) | — |
 | **ISO step-steer signature gated in CI** (`ctest -R IsoBaseline`, sedan L2 LuGre) | DLC moose gate is a preset property, not a defect (see note) |
 
 Note: ISO 3888-2 DLC@60 not meeting the 1.0 m gate is a default-preset
 vehicle/controller property, not a sim defect (see "Notes on specific results").
+
+## Verification vs validation
+
+Two words are routinely conflated; this document keeps them apart.
+
+- **Verification** — *does the code solve its equations correctly?* Checked against
+  analytic solutions, independent solvers and ISO manoeuvres. Everything under
+  "Validated (open, reproducible)" above is verification in this sense.
+- **Validation** — *do those equations match a real vehicle?* Checked against measured
+  vehicle data. VDSim has **not** published such a validation; see
+  [Honest limitations](#honest-limitations-what-is-not-validated).
+
+Agreement with a commercial tool on the same parameters is verification, not validation.
+
+## How to read a VDSim result
+
+1. **Which kind is it?** Verified (reference, analytic, ISO) or validated (measured
+   vehicle data)? Each row of the benchmark matrix says which.
+2. **Does it reproduce?** Re-run the stated command. If it does not reproduce, it is
+   not a result.
+3. **Which regime?** Sub-limit agreement does not transfer to the saturated region
+   without separate evidence. Also check the rung's envelope in
+   [Assumptions & limitations](ASSUMPTIONS.md).
+
+## Validation tiers — bars fixed before the data is run
+
+These tiers go beyond "the code is correct" to "the model matches reality". The
+acceptance bars are written down now, before any run, so that they cannot be tuned to
+the outcome. None of the tiers is complete.
+
+| Tier | Reference | Metric and bar | Status |
+|---|---|---|---|
+| A — full vehicle vs a commercial reference | a commercial full-vehicle model over ISO 4138 / 7401 / 3888 | correlation > 0.7; Theil's U < 0.2; understeer-gradient match; Sprague-Geers magnitude / phase error | not run |
+| B — full vehicle vs measured data, limit region | instrumented vehicle runs, same-input playback | trajectory, a_y and body-slip agreement in the limit region | not published; data not redistributable |
+| C — tire force and moment | force-moment rig or measured lateral force vs slip | force-curve agreement over slip | not run |
 
 ## Test-suite currency
 
