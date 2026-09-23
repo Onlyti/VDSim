@@ -92,7 +92,14 @@ Frame: ISO 8855 (x forward, y left, z up), angles in radians.
 `Box(-1, 1, shape=(2,))` per env:
 
 - `a[0]` steer, scaled to `±max_steer` rad at the wheel (default 0.5 rad);
-- `a[1]` pedal, `> 0` throttle, `< 0` brake.
+- `a[1]` depends on `action_mode`:
+  - `pedal` (default): `> 0` throttle, `< 0` brake.
+  - `accel`: longitudinal acceleration target `a[1] * max_accel` [m/s²]
+    (default `max_accel` 4.0). Each env's own plant-side PI cascade converts
+    the target into throttle / brake every tick from that env's measured
+    state. The realised a_x therefore lags the target and saturates at the
+    pedal limits; it is a tracked target, not an imposed acceleration. The
+    cascade memory is part of the env snapshot.
 
 Actions are clipped to `[-1, 1]`. One action is held for `action_repeat`
 physics ticks (default 4 × 5 ms = 20 ms control interval).

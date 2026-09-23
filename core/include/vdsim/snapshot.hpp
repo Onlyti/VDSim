@@ -11,12 +11,13 @@
 // The snapshot is an opaque blob: a flat double vector plus the sensor RNG
 // stream, written and read in a fixed order by the components themselves.
 //
-// Covered: State, session diagnostics, sim_time, the latched CmdL4, the
-// actuator, the sensor delay line, the sensor noise model and the dynamics
-// tire transients.
-// NOT covered: the CascadeController integrators (only carry state for L5+
-// ladder commands; the RL path latches CmdL4) and a non-identity ECU/CAN
-// network buffer.  Both are documented rather than silently approximated.
+// Covered: State, session diagnostics, sim_time, the latched CmdL4 or CmdL5,
+// the actuator, the sensor delay line, the sensor noise model, the dynamics
+// tire transients and the CascadeController integrators (LongVx, LongAx,
+// pure-pursuit index, yaw-rate PI) that L5+ ladder commands run through.
+// NOT covered: a latched CmdL1-L3 / CmdL6-L8 / CmdSplit (restored as the
+// default CmdL4) and a non-identity ECU/CAN network buffer.  Both are
+// documented rather than silently approximated.
 #include <cstddef>
 #include <stdexcept>
 #include <string>

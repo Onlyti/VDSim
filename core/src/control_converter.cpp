@@ -1,5 +1,6 @@
 #include "vdsim/control_converter.hpp"
 #include "vdsim/ladder_lowering.hpp"
+#include "vdsim/snapshot.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -16,6 +17,18 @@ void LongAxController::reset() noexcept {
     integ_    = 0.0;
     prev_err_ = 0.0;
     first_    = true;
+}
+
+void LongAxController::save_state(std::vector<double>& v) const {
+    v.push_back(integ_);
+    v.push_back(prev_err_);
+    v.push_back(first_ ? 1.0 : 0.0);
+}
+
+void LongAxController::restore_state(const std::vector<double>& v, std::size_t& p) {
+    integ_    = snap::get(v, p);
+    prev_err_ = snap::get(v, p);
+    first_    = snap::get(v, p) != 0.0;
 }
 
 std::pair<double, double> LongAxController::update(double ax_target,
@@ -49,6 +62,16 @@ void LongVxController::initialize(const Gains& g) noexcept {
 }
 void LongVxController::reset() noexcept {
     integ_ = 0.0; first_ = true;
+}
+
+void LongVxController::save_state(std::vector<double>& v) const {
+    v.push_back(integ_);
+    v.push_back(first_ ? 1.0 : 0.0);
+}
+
+void LongVxController::restore_state(const std::vector<double>& v, std::size_t& p) {
+    integ_ = snap::get(v, p);
+    first_ = snap::get(v, p) != 0.0;
 }
 double LongVxController::update(double v_target, double v_meas, double dt) noexcept {
     if (!(dt > 0.0)) return 0.0;
@@ -192,6 +215,20 @@ void CascadeController::reset() noexcept {
     axc_.reset();
     pp_idx_ = 0;
     r_integ_ = 0.0;
+}
+
+void CascadeController::save_state(std::vector<double>& v) const {
+    vxc_.save_state(v);
+    axc_.save_state(v);
+    v.push_back(static_cast<double>(pp_idx_));
+    v.push_back(r_integ_);
+}
+
+void CascadeController::restore_state(const std::vector<double>& v, std::size_t& p) {
+    vxc_.restore_state(v, p);
+    axc_.restore_state(v, p);
+    pp_idx_  = static_cast<int>(snap::get(v, p));
+    r_integ_ = snap::get(v, p);
 }
 
 // ---- Independent longitudinal cascade: LcLon → throttle/brake/gear ----

@@ -334,6 +334,119 @@ res["auto_resets"] = n_done
 print(f"VDSimVecEnv 16 envs x 500 control steps: {sps:,.0f} physics ticks/s, "
       f"{n_done} auto-resets")
 
+# ---- Q27: action_mode "accel" -> per-env CmdL5 through the plant PI cascade ----
+# Q27-1 the mode is declared, defaults to pedal, and a bad value is refused.
+assert EnvConfig().action_mode == "pedal"
+for bad in ({"action_mode": "torque"}, {"action_mode": "accel", "max_accel": 0.0}):
+    try:
+        EnvConfig(**bad)
+    except ValueError as exc:
+        print(f"Q27-1 refused {bad}: {exc}")
+    else:
+        raise AssertionError(f"EnvConfig accepted {bad}")
+
+
+def accel_cfg(**over):
+    """default_env.yaml in accel mode, straight spawn, no episode cut-offs."""
+    base = EnvConfig.from_yaml(str(REPO / "configs/rl/default_env.yaml"))
+    kw = {**base.__dict__, "action_mode": "accel", "speed_range": (15.0, 15.0),
+          "lateral_range": 0.0, "yaw_range": 0.0, "time_limit_s": -1.0,
+          "min_speed": -1.0, "obs_fields": ["vx", "ax", "throttle_applied",
+                                            "brake_applied"]}
+    kw.update(over)
+    return EnvConfig(**kw)
+
+
+def quiet_env(n, c, seed):
+    return VDSimVecEnv(n, c, seed=seed,
+                       reward_fn=lambda o, *_: np.zeros(len(o), np.float32))
+
+
+# Q27-2 snapshot carries the cascade memory, per env, bit for bit.
+# Four envs get different ax targets, so their integrators differ; the tape
+# after the snapshot is replayed twice from the same snapshot.
+ca = accel_cfg()
+ve = quiet_env(4, ca, seed=11)
+ve.reset(seed=11)
+warm = np.array([[0.0, 0.5], [0.0, -0.5], [0.0, 0.25], [0.0, -0.25]], np.float32)
+for _ in range(40):
+    ve.step(warm)
+snap = ve.core.vs.snapshots()
+tape = [np.array([[0.0, 0.3 * np.sin(0.2 * k + j)] for j in range(4)], np.float32)
+        for k in range(40)]
+
+
+def rollout(snaps):
+    ve.core.vs.restore(snaps)
+    rows = []
+    for a in tape:
+        o, *_ = ve.step(a)
+        rows.append(o.copy())
+    return np.stack(rows)
+
+
+x1 = rollout(snap)
+x2 = rollout(snap)
+assert np.array_equal(x1, x2), "accel-mode rollout not bit-identical after restore"
+# Non-vacuity: the same snapshot with the cascade block put back to its reset
+# values (LongVx integ/first, LongAx integ/prev_err/first, pp index, yaw PI --
+# the last 7 entries, see SimSession::snapshot) must give a different rollout,
+# i.e. the cascade memory is live at the snapshot and the round trip carries it.
+cleared = []
+for s in snap:
+    c = vdsim.SessionSnapshot()
+    c.data = list(s.data[:-7]) + [0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0]
+    c.rng = s.rng
+    cleared.append(c)
+x3 = rollout(cleared)
+d_clear = float(np.abs(x3 - x1).max())
+print(f"Q27-2 restore twice: identical={np.array_equal(x1, x2)}; "
+      f"cascade block cleared: max|diff| = {d_clear:.3e}")
+assert d_clear > 0.0, "clearing the cascade block changed nothing -- vacuous check"
+
+# Q27-3 a_x step: the realised a_x follows the target (discriminating test).
+# Steady state = mean over the last 1 s of each 4 s hold; latency = time from
+# the step to 63 % / 90 % of the change. Default cascade gains, no tuning.
+ce = accel_cfg()
+se = quiet_env(1, ce, seed=2)
+se.reset(seed=2)
+dt_ctrl = ce.dt * ce.action_repeat
+col = se.core.col
+holds = [(0.0, 1.0), (1.0, 4.0), (-2.0, 4.0)]      # (target [m/s^2], seconds)
+t, ax, thr, brk, tgt = [], [], [], [], []
+k = 0
+for target, secs in holds:
+    for _ in range(int(round(secs / dt_ctrl))):
+        o, *_ = se.step(np.array([[0.0, target / ce.max_accel]], np.float32))
+        k += 1
+        t.append(k * dt_ctrl); tgt.append(target)
+        ax.append(float(o[0, col["ax"]]))
+        thr.append(float(o[0, col["throttle_applied"]]))
+        brk.append(float(o[0, col["brake_applied"]]))
+t, ax, thr, brk, tgt = map(np.asarray, (t, ax, thr, brk, tgt))
+start = 0.0
+q27_step = {}
+for i, (target, secs) in enumerate(holds):
+    end = start + secs
+    if i > 0:
+        win = (t > end - 1.0) & (t <= end)
+        ss = float(ax[win].mean())
+        err = abs(ss - target) / abs(target)
+        sat = bool((thr[win] >= 0.999).any() or (brk[win] >= 0.999).any())
+        prev = holds[i - 1][0]
+        seg = (t > start) & (t <= end)
+        frac = (ax[seg] - prev) / (target - prev)
+        ts = t[seg] - start
+        t63 = float(ts[np.argmax(frac >= 0.63)]) if (frac >= 0.63).any() else float("nan")
+        t90 = float(ts[np.argmax(frac >= 0.90)]) if (frac >= 0.90).any() else float("nan")
+        q27_step[target] = dict(ss=ss, err=err, saturated=sat, t63=t63, t90=t90)
+        print(f"Q27-3 target {target:+.1f} m/s^2: steady {ss:+.4f} (err {100 * err:.2f} %), "
+              f"t63 {t63:.2f} s, t90 {t90:.2f} s, pedal saturated={sat}")
+        assert err <= 0.05 or sat, f"target {target}: {100 * err:.2f} % off, not saturated"
+    start = end
+res["q27_step"] = q27_step
+print("Q27 accel action checks passed")
+
 # The SB3 PPO smoke (torch) lives in smoke_sb3_ppo.py, outside ctest: this
 # file is the ctest target rl_env and needs gymnasium but not torch/SB3.
 
