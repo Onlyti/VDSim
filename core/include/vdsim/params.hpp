@@ -318,7 +318,7 @@ inline std::array<double, NUM_WHEELS> static_wheel_loads(const VehicleParams& vp
 }
 
 // Free-rolling wheel spin [rad/s] consistent with the effective rolling radius, so a
-// tire initialised at this spin reports slip=0 (matches MF-Tyre/CarMaker static init).
+// tire initialised at this spin reports slip=0.
 // Per-wheel because front/rear static load -> different Re. Falls back to vx/R0 when
 // the tire has no Re coefficients (reff_*=0).
 inline std::array<double, NUM_WHEELS> free_roll_wheel_spin(

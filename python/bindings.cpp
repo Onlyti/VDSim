@@ -522,7 +522,7 @@ PYBIND11_MODULE(vdsim, m) {
           py::arg("v") = 0.0, py::arg("wheel_radius") = 0.32);
 
     // Re-consistent overload: per-wheel wheel_spin = v/Re(static Fz) so a free-rolling
-    // tire reports slip=0 (matches MF-Tyre/CarMaker init). Identical to the radius
+    // tire reports slip=0. Identical to the radius
     // overload when the tire has no Re coefficients (reff_*=0).
     m.def("make_init_state",
           [](const vdsim::VehicleParams& vp, const vdsim::TireParams& tp,

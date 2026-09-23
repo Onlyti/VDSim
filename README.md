@@ -10,7 +10,7 @@
 > **Experimental / pre-release — not for production.** Evidence and limits:
 > [VALIDATION.md](docs/VALIDATION.md) (v0.5.1+).
 > **Validated:** analytic + ISO maneuvers + L1↔L3 self-consistency + pure-slip same-`.tir`
-> cross-check (CarMaker &lt;0.1%, Chrono Pac02 ~0.8%) — not MF-Tyre product parity.
+> cross-check (Chrono Pac02 ~0.8%) — not MF-Tyre product parity.
 > **NOT yet:** full-vehicle commercial cross-val, real-vehicle data, production sign-off.
 
 ![Grip-loss demo](docs/assets/demo_grip_loss.gif)
@@ -22,9 +22,8 @@ peak (drift>1) — real grip loss, not a soft-clamp.* Reproduce:
 > **Experimental / pre-release software — not for production use.**
 > What is verified, and what is *not yet*: see [docs/VALIDATION.md](docs/VALIDATION.md).
 
-**Verification scope.** VDSim's tire-force layer is cross-checked against two independent
-implementations driven by the same `.tir` parameter file: CarMaker MF-Tyre/MF-Swift
-(pure longitudinal 0.00%, pure lateral 0.09%) and Chrono Pac02 (BSD-3, ~0.8% / 0.7%).
+**Verification scope.** VDSim's tire-force layer is cross-checked against an independent
+implementation driven by the same `.tir` parameter file: Chrono Pac02 (BSD-3, ~0.8% / 0.7%).
 This is a pure-slip cross-check between implementations, not product parity.
 Full-vehicle behaviour (suspension, transient) and comparison against real-vehicle
 measurements are **not yet** covered.

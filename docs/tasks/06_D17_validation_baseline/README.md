@@ -10,7 +10,7 @@
 
 ## 1. 목적
 
-vehicle dynamics 의 "맞다"를 무엇으로 증명할지 사전에 정의. 사후에 결과를 보고 통과 기준을 정하면 cherry-picking 위험. 사용자 결정: 해석해 + CarMaker ERG (ERGAccess C API), 4 시나리오.
+vehicle dynamics 의 "맞다"를 무엇으로 증명할지 사전에 정의. 사후에 결과를 보고 통과 기준을 정하면 cherry-picking 위험. 사용자 결정: 해석해, 4 시나리오.
 
 ## 2. 구현 방법
 
@@ -49,19 +49,11 @@ tests/
 ├── integration/                   # task 11 첫 사용
 │   └── test_bicycle_steady_state.cpp
 └── validation/                    # task 13 부터
-    ├── analytical/
-    │   ├── test_step_steer.cpp
-    │   ├── test_acceleration.cpp
-    │   └── test_brake.cpp
-    └── carmaker/                  # Phase 2 (ERGAccess license dependent)
-        ├── data/                  # .erg files
-        ├── erg_reader.{hpp,cpp}
-        └── test_*.cpp
+    └── analytical/
+        ├── test_step_steer.cpp
+        ├── test_acceleration.cpp
+        └── test_brake.cpp
 ```
-
-### ERG 파일 접근
-
-사용자 결정: **ERGAccess (CarMaker 공식 C API)**. Lab 의 CarMaker 라이선스 사용. CMake 옵션 `VDSIM_WITH_ERGACCESS=OFF` default. PoC 는 OFF, Phase 2 에 활성화.
 
 ## 3. 검증 방법 (근거)
 
@@ -92,5 +84,4 @@ tests/
 - Follow-up:
   - Step steer (task 13).
   - Acceleration / brake (task 13).
-  - CarMaker ERG 비교: Phase 2, lab 라이선스 + ERGAccess SDK 위치 확인 필요.
   - L2 / L3 검증: W9-W12.

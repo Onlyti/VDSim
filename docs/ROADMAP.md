@@ -293,7 +293,7 @@ LuGre (contact bristle, presliding). See [`TIRE_ROADMAP.md`](design/TIRE_ROADMAP
 | [x] CARLA raycast ABI skeleton | Shipped | PoC ~45% |
 | [ ] CARLA UE5 full sensor bridge | Planned | PoC backlog |
 | [ ] External MF-Tyre / tire FMU co-sim | Planned | Tire T6 |
-| [ ] CarMaker ERG cross-validation | Planned | License + confidential data |
+| [ ] Commercial reference-tool cross-validation | Planned | License + confidential data |
 
 ---
 

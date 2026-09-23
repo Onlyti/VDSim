@@ -4,18 +4,17 @@
 Loads a driving log, replays its recorded commands (throttle/brake/steer)
 through VDSim with the vehicle's parameters, and scores sim-vs-measured signals
 (NRMSE, max error) so the model (and your estimator's plant) can be validated
-against real data — e.g. the lab's CarMaker ERG / ADMA / rosbag captures
+against real data — e.g. ADMA / rosbag captures
 (TUR targets NRMSE < 3%).
 
 Log format: a universal CSV with columns
     t, throttle, brake, steer, vx, yaw_rate, ax, ay
 (throttle/brake 0..1, steer [rad], the rest the measured signals to compare).
 Real captures plug in via thin loaders:
-    .erg  -> CarMaker (use `cmerg` / CarmakerErgDataViewer)        [stub]
     ADMA  -> INS/GNSS device export                                 [stub]
     .bag  -> ROS1 rosbag                                            [stub]
 
-Confidentiality: never commit measured tire/vehicle data or .erg/ADMA/bag files
+Confidentiality: never commit measured tire/vehicle data or ADMA/bag files
 (see .gitignore). This script only reads logs you point it at; the self-test
 below uses generic sedan params.
 
@@ -41,10 +40,6 @@ def load_log(path):
     ext = p.suffix.lower()
     if ext == ".csv":
         return _load_csv(p)
-    if ext == ".erg":
-        raise NotImplementedError(
-            "CarMaker .erg: parse with `cmerg` (see ~/git/CarmakerErgDataViewer) "
-            "and emit the universal CSV columns, then pass the CSV here.")
     if ext in (".bag",):
         raise NotImplementedError(
             "ROS1 rosbag: extract the command + state topics to the CSV columns.")
