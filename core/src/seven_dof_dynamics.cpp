@@ -12,7 +12,7 @@
 // Limitations (L3 territory):
 //   - No suspension dynamics (springs/dampers/unsprung).
 //   - No roll / pitch angle in pose; quasi-static transfer only.
-//   - Static Fz_z balance only; no aerodynamic lift, no anti-dive geometry.
+//   - Aerodynamic lift is applied per axle; no anti-dive geometry.
 
 #include "vdsim/snapshot.hpp"
 #include "vdsim/coordinate.hpp"
