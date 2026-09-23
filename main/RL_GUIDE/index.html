@@ -3158,7 +3158,60 @@ Frame: ISO 8855 (x forward, y left, z up), angles in radians.</p>
 <p><code>Box(-1, 1, shape=(2,))</code> per env:</p>
 <ul>
 <li><code>a[0]</code> steer, scaled to <code>±max_steer</code> rad at the wheel (default 0.5 rad);</li>
-<li><code>a[1]</code> pedal, <code>&gt; 0</code> throttle, <code>&lt; 0</code> brake.</li>
+<li><code>a[1]</code> depends on <code>action_mode</code>:</li>
+<li><code>pedal</code> (default): <code>&gt; 0</code> throttle, <code>&lt; 0</code> brake.</li>
+<li>
+<p><code>accel</code>: longitudinal acceleration target <code>a[1] * max_accel</code> [m/s²]
+    (default <code>max_accel</code> 4.0). Each env's own plant-side PI cascade converts
+    the target into throttle / brake every tick from that env's measured
+    state. The realised a_x therefore lags the target and saturates at the
+    pedal limits; it is a tracked target, not an imposed acceleration. The
+    cascade memory is part of the env snapshot.</p>
+<p>Measured step response in <code>accel</code> mode (test <code>rl_env</code>, Q27-3; default
+cascade gains, no tuning; one env, <code>default_env.yaml</code> vehicle
+<code>generic_sedan</code>, straight spawn at 15 m/s, steer 0;
+target held 4 s after a 1 s zero-target lead-in; steady state = mean
+a_x over the last 1 s of each hold; latency = time from the step until
+a_x first covers 63 % / 90 % of the change, sampled at the 20 ms control
+interval):</p>
+<table>
+<thead>
+<tr>
+<th>step</th>
+<th>target [m/s²]</th>
+<th>steady-state a_x [m/s²]</th>
+<th>steady-state error [%]</th>
+<th>63 % reached [s]</th>
+<th>90 % reached [s]</th>
+<th>pedal saturated</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0 → +1.0</td>
+<td>+1.0</td>
+<td>+0.975</td>
+<td>2.53</td>
+<td>0.02 (first control tick)</td>
+<td>1.58</td>
+<td>no</td>
+</tr>
+<tr>
+<td>+1.0 → −2.0</td>
+<td>−2.0</td>
+<td>−1.959</td>
+<td>2.08</td>
+<td>0.02 (first control tick)</td>
+<td>1.16</td>
+<td>no</td>
+</tr>
+</tbody>
+</table>
+<p>The 63 % time equals the sampling interval, so it only bounds the fast
+part of the response from above; the 90 % time is the settling-scale
+figure. The residual steady-state error is left as measured rather than
+removed by gain changes.</p>
+</li>
 </ul>
 <p>Actions are clipped to <code>[-1, 1]</code>. One action is held for <code>action_repeat</code>
 physics ticks (default 4 × 5 ms = 20 ms control interval).</p>
