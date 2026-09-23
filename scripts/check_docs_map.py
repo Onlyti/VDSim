@@ -8,7 +8,9 @@ scans those files for C++ ``#include "..."`` and Python imports, folds the
 file-level edges into module-level edges, and prints them.
 
 Modes
-    --emit-graph   print the mermaid graph and the per-module Uses / Used by lines
+    --emit-graph   print the mermaid graph, reverse-edge table, Uses / Used by lines,
+                   module cycles and rule-B1 violations
+    --write-edges  write the canonical edge list docs/modules/_graph_edges.txt
     --coverage     list source files under core/, python/, cosim/ that no module claims
 """
 import argparse
@@ -30,6 +32,12 @@ EXTERNAL_GROUPS = {
     "EXT_APPS": ("GUI and apps", ("gui/", "apps/", "builder/")),
     "EXT_CARLA": ("CARLA plugin", ("carla_integration/",)),
 }
+# Rule B2: M01+M02 are drawn as one foundation box.
+FOUNDATION = ("M01", "M02")
+FOUNDATION_ID = "BASE"
+# Rule B1: Python files importing the compiled vdsim extension stay out of M01..M13.
+CORE_LAYER = tuple("M%02d" % i for i in range(1, 14))
+EDGES_FILE = MODULE_DIR + "/_graph_edges.txt"
 INCLUDE_RE = re.compile(r'^\s*#\s*include\s*"([^"]+)"', re.M)
 
 
@@ -197,16 +205,18 @@ def external_group(rel):
     return None
 
 
-def module_edges(repo):
-    """Compute module-level dependency edges.
+def edge_evidence(repo):
+    """File-level evidence behind every module edge.
 
-    @return  (modules, edges) with edges a sorted list of (user, used) ids;
-             external surfaces appear only as users.
+    @param repo  Repository root.
+    @return      (modules, evidence) with evidence a sorted list of
+                 (user id, used id, user file, used file); external surfaces
+                 appear only as users.
     """
     files = tracked_files(repo)
     modules, owner = load_modules(repo, files)
     idx = python_index(files)
-    edges = set()
+    rows = set()
     for rel in sorted(files):
         if not rel.endswith(CODE_SUFFIXES):
             continue
@@ -216,22 +226,122 @@ def module_edges(repo):
         for dep in file_deps(repo, rel, files, idx):
             dst = owner.get(dep)
             if dst and dst != src:
-                edges.add((src, dst))
-    return modules, sorted(edges)
+                rows.add((src, dst, rel, dep))
+    return modules, sorted(rows)
+
+
+def module_edges(repo):
+    """Compute module-level dependency edges.
+
+    @return  (modules, edges) with edges a sorted list of (user, used) ids;
+             external surfaces appear only as users.
+    """
+    modules, rows = edge_evidence(repo)
+    return modules, sorted({(s, d) for s, d, _, _ in rows})
+
+
+def edges_text(rows):
+    """Canonical edge list (``docs/modules/_graph_edges.txt``): one ``Mxx -> Myy <file>`` per user file.
+
+    @param rows  edge_evidence() rows.
+    @return      Text with a trailing newline.
+    """
+    lines = sorted({"%s -> %s %s" % (s, d, f) for s, d, f, _ in rows})
+    return "\n".join(lines) + "\n"
 
 
 def mermaid(modules, edges):
-    """Render the module graph as a mermaid flowchart (deterministic order)."""
+    """Render the module graph as a mermaid flowchart (deterministic order).
+
+    M01 and M02 are drawn as one foundation box (rule B2): edges into it are
+    left out of the figure, edges out of it go to foundation_table().
+    """
     lines = ["```mermaid", "flowchart LR"]
+    lines.append('    %s["%s"]' % (FOUNDATION_ID, "<br/>".join(
+        "%s %s" % (m, modules[m]["name"]) for m in FOUNDATION if m in modules)))
     for mid in sorted(modules):
-        lines.append('    %s["%s %s"]' % (mid, mid, modules[mid]["name"]))
+        if mid not in FOUNDATION:
+            lines.append('    %s["%s %s"]' % (mid, mid, modules[mid]["name"]))
     used_ext = sorted({s for s, _ in edges if s.startswith("EXT_")})
     for gid in used_ext:
         lines.append('    %s(["%s"])' % (gid, EXTERNAL_GROUPS[gid][0]))
     for s, d in edges:
-        lines.append("    %s --> %s" % (s, d))
+        if s not in FOUNDATION and d not in FOUNDATION:
+            lines.append("    %s --> %s" % (s, d))
     lines.append("```")
     return "\n".join(lines)
+
+
+def foundation_note(edges):
+    """One-line sentence standing in for the omitted edges into the foundation box."""
+    users = sorted({s for s, d in edges if d in FOUNDATION and s not in FOUNDATION})
+    label = [EXTERNAL_GROUPS[u][0] if u.startswith("EXT_") else u for u in users]
+    return "Edges into %s are not drawn: %d modules/surfaces use it (%s)." % (
+        "+".join(FOUNDATION), len(users), ", ".join(label))
+
+
+def foundation_table(modules, rows):
+    """Markdown table of edges leaving the foundation layer (reverse dependencies).
+
+    @param rows  edge_evidence() rows.
+    """
+    out = ["| from | to | file | depends on |", "|---|---|---|---|"]
+    for s, d, f, dep in rows:
+        if s in FOUNDATION and d not in FOUNDATION:
+            out.append("| %s | %s %s | %s | %s |" % (s, d, modules[d]["name"], f, dep))
+    return "\n".join(out)
+
+
+def cycles(edges):
+    """Strongly connected components of size > 1 among modules (externals excluded).
+
+    @return  Sorted list of sorted module-id lists.
+    """
+    graph = {}
+    for s, d in edges:
+        if not s.startswith("EXT_"):
+            graph.setdefault(s, set()).add(d)
+            graph.setdefault(d, set())
+    index, low, stack, on, comps = {}, {}, [], set(), []
+
+    def visit(v):
+        index[v] = low[v] = len(index)
+        stack.append(v)
+        on.add(v)
+        for w in sorted(graph[v]):
+            if w not in index:
+                visit(w)
+                low[v] = min(low[v], low[w])
+            elif w in on:
+                low[v] = min(low[v], index[w])
+        if low[v] == index[v]:
+            comp = []
+            while True:
+                w = stack.pop()
+                on.discard(w)
+                comp.append(w)
+                if w == v:
+                    break
+            if len(comp) > 1:
+                comps.append(sorted(comp))
+
+    for v in sorted(graph):
+        if v not in index:
+            visit(v)
+    return sorted(comps)
+
+
+def b1_violations(repo):
+    """Python files claimed by M01..M13 that import the compiled ``vdsim`` extension (rule B1).
+
+    @return  Sorted list of (module id, file).
+    """
+    files = tracked_files(repo)
+    _, owner = load_modules(repo, files)
+    idx = python_index(files)
+    return sorted((m, f) for f, m in owner.items()
+                  if f.endswith(".py") and m in CORE_LAYER
+                  and idx["vdsim"] in file_deps(repo, f, files, idx))
 
 
 def uses_lines(modules, edges):
@@ -258,21 +368,39 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--repo", type=Path, default=REPO)
     ap.add_argument("--emit-graph", action="store_true")
+    ap.add_argument("--write-edges", action="store_true")
     ap.add_argument("--coverage", action="store_true")
     args = ap.parse_args(argv)
+    rc = 0
+    if args.emit_graph or args.write_edges:
+        modules, rows = edge_evidence(args.repo)
+        edges = sorted({(s, d) for s, d, _, _ in rows})
+    if args.write_edges:
+        (args.repo / EDGES_FILE).write_text(edges_text(rows), encoding="utf-8")
     if args.emit_graph:
-        modules, edges = module_edges(args.repo)
         print(mermaid(modules, edges))
+        print()
+        print(foundation_note(edges))
+        print()
+        print(foundation_table(modules, rows))
         print()
         for mid, line in uses_lines(modules, edges).items():
             print("%s %s" % (mid, line))
+        print()
+        for comp in cycles(edges):
+            print("cycle:", " ".join(comp))
+        bad = b1_violations(args.repo)
+        for mid, f in bad:
+            print("B1 violation: %s %s" % (mid, f))
+        print("B1 violations:", len(bad))
+        rc = 1 if bad else rc
     if args.coverage:
         missing = coverage(args.repo)
         for f in missing:
             print("unclaimed:", f)
         print("unclaimed files:", len(missing))
-        return 1 if missing else 0
-    return 0
+        rc = 1 if missing else rc
+    return rc
 
 
 if __name__ == "__main__":
