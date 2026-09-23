@@ -9,7 +9,8 @@ file-level edges into module-level edges, and prints them.
 
 Modes
     --emit-graph   print the mermaid graph, reverse-edge table, Uses / Used by lines,
-                   module cycles and rule-B1 violations
+                   external-surface table, module cycles with their edges, file-level
+                   cycles and rule-B1 violations (exit 1 on any file-level cycle)
     --write-edges  write the canonical edge list docs/modules/_graph_edges.txt
     --coverage     list source files under core/, python/, cosim/ that no module claims
 """
@@ -205,6 +206,22 @@ def external_group(rel):
     return None
 
 
+def file_graph(repo):
+    """File-level dependency graph over every code file owned by a module or an external surface.
+
+    @param repo  Repository root.
+    @return      (modules, owner, graph) with graph mapping file -> set of files it depends on.
+    """
+    files = tracked_files(repo)
+    modules, owner = load_modules(repo, files)
+    idx = python_index(files)
+    graph = {}
+    for rel in sorted(files):
+        if rel.endswith(CODE_SUFFIXES) and (rel in owner or external_group(rel)):
+            graph[rel] = file_deps(repo, rel, files, idx)
+    return modules, owner, graph
+
+
 def edge_evidence(repo):
     """File-level evidence behind every module edge.
 
@@ -213,17 +230,11 @@ def edge_evidence(repo):
                  (user id, used id, user file, used file); external surfaces
                  appear only as users.
     """
-    files = tracked_files(repo)
-    modules, owner = load_modules(repo, files)
-    idx = python_index(files)
+    modules, owner, graph = file_graph(repo)
     rows = set()
-    for rel in sorted(files):
-        if not rel.endswith(CODE_SUFFIXES):
-            continue
+    for rel, deps in graph.items():
         src = owner.get(rel) or external_group(rel)
-        if not src:
-            continue
-        for dep in file_deps(repo, rel, files, idx):
+        for dep in deps:
             dst = owner.get(dep)
             if dst and dst != src:
                 rows.add((src, dst, rel, dep))
@@ -255,6 +266,7 @@ def mermaid(modules, edges):
 
     M01 and M02 are drawn as one foundation box (rule B2): edges into it are
     left out of the figure, edges out of it go to foundation_table().
+    External surfaces are left out of the figure and listed by external_table().
     """
     lines = ["```mermaid", "flowchart LR"]
     lines.append('    %s["%s"]' % (FOUNDATION_ID, "<br/>".join(
@@ -262,11 +274,8 @@ def mermaid(modules, edges):
     for mid in sorted(modules):
         if mid not in FOUNDATION:
             lines.append('    %s["%s %s"]' % (mid, mid, modules[mid]["name"]))
-    used_ext = sorted({s for s, _ in edges if s.startswith("EXT_")})
-    for gid in used_ext:
-        lines.append('    %s(["%s"])' % (gid, EXTERNAL_GROUPS[gid][0]))
     for s, d in edges:
-        if s not in FOUNDATION and d not in FOUNDATION:
+        if s not in FOUNDATION and d not in FOUNDATION and not s.startswith("EXT_"):
             lines.append("    %s --> %s" % (s, d))
     lines.append("```")
     return "\n".join(lines)
@@ -292,6 +301,21 @@ def foundation_table(modules, rows):
     return "\n".join(out)
 
 
+def external_table(rows):
+    """Markdown table of edges from external surfaces into modules (README section 3).
+
+    @param rows  edge_evidence() rows.
+    """
+    files = {}
+    for s, d, f, _ in rows:
+        if s.startswith("EXT_"):
+            files.setdefault((s, d), set()).add(f)
+    out = ["| surface | uses | files |", "|---|---|---|"]
+    for (s, d), fs in sorted(files.items()):
+        out.append("| %s | %s | %d |" % (EXTERNAL_GROUPS[s][0], d, len(fs)))
+    return "\n".join(out)
+
+
 def cycles(edges):
     """Strongly connected components of size > 1 among modules (externals excluded).
 
@@ -302,6 +326,43 @@ def cycles(edges):
         if not s.startswith("EXT_"):
             graph.setdefault(s, set()).add(d)
             graph.setdefault(d, set())
+    return scc(graph)
+
+
+def cycle_table(modules, rows, comps):
+    """Markdown table of the edges that make up each module cycle, with their files (rule B3).
+
+    @param rows   edge_evidence() rows.
+    @param comps  cycles() result.
+    """
+    out = ["| cycle | from | to | file | depends on |", "|---|---|---|---|---|"]
+    for comp in comps:
+        tag = " ".join(comp)
+        for s, d, f, dep in rows:
+            if s in comp and d in comp:
+                out.append("| %s | %s | %s %s | %s | %s |" % (tag, s, d, modules[d]["name"], f, dep))
+    return "\n".join(out)
+
+
+def file_cycles(graph):
+    """File-level dependency cycles (code defects under rule B3; D7 fails if any exist).
+
+    A file depending on itself counts as a cycle of one.
+
+    @param graph  file_graph() graph.
+    @return       Sorted list of sorted file lists.
+    """
+    g = {f: {d for d in deps if d in graph} for f, deps in graph.items()}
+    selfloops = [[f] for f, deps in g.items() if f in deps]
+    return sorted(scc(g) + selfloops)
+
+
+def scc(graph):
+    """Strongly connected components of size > 1 (Tarjan).
+
+    @param graph  Dict node -> set of successor nodes; every successor must be a key.
+    @return       Sorted list of sorted node lists.
+    """
     index, low, stack, on, comps = {}, {}, [], set(), []
 
     def visit(v):
@@ -387,8 +448,19 @@ def main(argv=None):
         for mid, line in uses_lines(modules, edges).items():
             print("%s %s" % (mid, line))
         print()
-        for comp in cycles(edges):
+        print(external_table(rows))
+        print()
+        comps = cycles(edges)
+        for comp in comps:
             print("cycle:", " ".join(comp))
+        print()
+        print(cycle_table(modules, rows, comps))
+        print()
+        fcyc = file_cycles(file_graph(args.repo)[2])
+        for comp in fcyc:
+            print("file cycle:", " ".join(comp))
+        print("file-level cycles:", len(fcyc))
+        rc = 1 if fcyc else rc
         bad = b1_violations(args.repo)
         for mid, f in bad:
             print("B1 violation: %s %s" % (mid, f))
