@@ -83,14 +83,12 @@ version and the new numbers have to land in the same commit.
 
 <!-- VALIDATION-CURRENCY BEGIN -->
 ```text
-tests:    PENDING
+tests:    507/507
 config:   cmake --preset validation && cmake --build --preset validation && ctest --preset validation
-presets:  CMakePresets.json@fb1f0c198a0201fcce2543a9f5b2242a255fb97a
+presets:  CMakePresets.json@53dec1158a6568e97fdf55c41e8ea0e14433a3cf
 toolchain: cmake 3.31.10
-commit:   PENDING
-pending:  registration surface changed (build option removed from CMakeLists.txt and
-          CMakePresets.json); this tree has no canonical 3-run measurement yet
-date:     2026-09-22
+commit:   85cf788
+date:     2026-09-23
 excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 ```
