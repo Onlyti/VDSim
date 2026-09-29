@@ -278,6 +278,7 @@ def test_display_only_badge():
                 repro={"vdsim_version": "t", "git_sha": "x", "param_hash": "sha256:x",
                        "seed": 0, "dt_s": 0.05, "run_id": "scope_" + scope},
                 role="plant", model_level="L3", contact_scope=scope, kinematics_attached=False,
+                channel_validity={"rp_rate": "modeled", "wheel_travel": "modeled"},
                 channels=names)
             for i in range(6):
                 w.append({
@@ -289,7 +290,7 @@ def test_display_only_badge():
                     "wheel_kappa": [0.0] * 4, "wheel_alpha": [0.0] * 4,
                     "wheel_road_dz": [0.0] * 4,
                     "wheel_road_normal": [(0.0, -0.1, 0.995)] * 4,
-                    "wheel_travel": [0.06] * 4})
+                    "wheel_travel": [0.06] * 4, "rp_rate": (0.01, 0.0)})
             w.finalize()
             made[scope] = r3.Scene3D(p)
         check(made["C1"].normal_display_only is True,

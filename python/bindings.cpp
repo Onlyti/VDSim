@@ -204,6 +204,9 @@ PYBIND11_MODULE(vdsim, m) {
         .value("L4_Kinematic",   vdsim::IVehicleDynamics::Level::L4_Kinematic)
         .value("Lk_Kinematic",   vdsim::IVehicleDynamics::Level::Lk_Kinematic)
         .export_values();
+    py::enum_<vdsim::IVehicleDynamics::ModeledChannel>(m, "ModeledChannel")
+        .value("RollPitchRate", vdsim::IVehicleDynamics::ModeledChannel::RollPitchRate)
+        .value("WheelTravel",   vdsim::IVehicleDynamics::ModeledChannel::WheelTravel);
 
     // -------- VehicleParams --------
     py::class_<vdsim::VehicleParams>(m, "VehicleParams")
@@ -808,6 +811,10 @@ PYBIND11_MODULE(vdsim, m) {
 
     py::class_<vdsim::IVehicleDynamics>(m, "IVehicleDynamics")
         .def("level", &vdsim::IVehicleDynamics::level)
+        .def("models_channel", &vdsim::IVehicleDynamics::models_channel,
+             py::arg("channel"),
+             "True when the model computes this channel from its own state; "
+             "False when State holds a placeholder 0 for it.")
         .def("initialize",
              [](vdsim::IVehicleDynamics& self, const vdsim::VehicleParams& vp,
                 const vdsim::TireParams& tp, const vdsim::SolverParams& sp) {

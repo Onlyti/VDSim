@@ -169,7 +169,7 @@ path = plant.finalize_trace()
   it returns the written path (`None` when recording was never enabled).
 - The container is a zip: `manifest.json` + `channels/*.f64` + `overlays/*.json`.
   That one file is enough to render — no re-simulation, no results file.
-- The manifest declares `schema_version` (the writer emits `"0.4"`; the fields
+- The manifest declares `schema_version` (the writer emits `"0.5"`; the fields
   each version added are listed below) and a required `role`, either
   `"plant"` (the simulator under verification) or `"predictor"` (the same code
   driven as an optimiser's internal model). `enable_trace` defaults to `plant`
@@ -514,6 +514,28 @@ trace carries suspension kinematics.
   hardpoint input and refuses `level="L4"` for the same reason. An
   `Experiment` config gets hardpoints with
   `kinematics: {front: mp_front_sedan, rear: ta_rear_sedan}`.
+
+### Trace schema `0.5` — which channels the model actually computed
+
+`0.5` records two channels at every level, `rp_rate` (rad/s, `[n,2]` = roll
+rate, pitch rate) and `wheel_travel` (m, `[n,4]`), and adds one required manifest
+field, `channel_validity`, saying per channel whether the model computed it.
+
+- Values are `modeled` or `not_modeled@<level>`; the level must equal the
+  manifest `model_level`.
+- The source is `IVehicleDynamics::models_channel()`, a pure virtual every
+  dynamics model declares in the core. It is not derived from the level number:
+  L5 stroke exists only with `l5_spatial_suspension`.
+- L1 and L2 (and K/L0) model neither channel: both are recorded as exactly
+  `0.0` and marked `not_modeled@L1` / `not_modeled@L2`. A `0.0` there means
+  "not modeled", not "flat ride"; readers and renderers label it "not modeled".
+- L3 and above read the rates from the integrated roll and pitch states
+  (`state.angular_velocity`), never by numerically differentiating anything.
+- A `0.5` trace without `channel_validity` is an error, and the writer refuses
+  non-zero data under a `not_modeled` channel.
+- A `0.4` or older trace reads with validity `unknown` and one warning. It is
+  never read as `modeled`. The `0.1`–`0.4` fixtures are unchanged;
+  `golden_v0_5.vdtrace` is the `0.5` fixture.
 
 ## Campaigns — many runs from one declaration
 
