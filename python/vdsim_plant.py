@@ -340,7 +340,7 @@ def _fx_to_cmdl1(vp: vdsim.VehicleParams, delta: float, fx: float) -> vdsim.CmdL
     return cmd
 
 
-def trace_sample(o, t, u_steer, u_fx, channels):
+def trace_sample(o, t, u_steer, u_fx, channels, validity):
   """Map one session output onto a trace sample (3.2 / 3.2.1).
 
   Shared by the plant path (:class:`VDSimPlant`) and the scenario path
@@ -354,6 +354,9 @@ def trace_sample(o, t, u_steer, u_fx, channels):
   :param u_fx: commanded total longitudinal force [N]; ignored when ``u_fx``
       is not in ``channels`` (pedal-commanded producers have no such value).
   :param channels: channel names this run records.
+  :param validity: ``channel_validity`` of the run (see
+      :func:`channel_validity_from_dynamics`); a not-modeled channel is written
+      as exactly ``0.0``.
   :returns: sample dict accepted by ``vdsim_trace.TraceWriter.append``.
   """
   st = o.state
@@ -391,9 +394,59 @@ def trace_sample(o, t, u_steer, u_fx, channels):
           (float(o.contacts[i].normal[0]),
            float(o.contacts[i].normal[1]),
            float(o.contacts[i].normal[2])) for i in range(4)]
+  # 0.5 channels. Recorded at every level; a model that does not compute the
+  # quantity gets a literal 0.0 here, not whatever its state field happens to
+  # hold, so a stale value can never pass as a measurement.
   if "wheel_travel" in channels:
-      sample["wheel_travel"] = [float(st.susp_compression[i]) for i in range(4)]
+      if _is_modeled(validity, "wheel_travel"):
+          sample["wheel_travel"] = [float(st.susp_compression[i]) for i in range(4)]
+      else:
+          sample["wheel_travel"] = [0.0, 0.0, 0.0, 0.0]
+  if "rp_rate" in channels:
+      # State variables of the model (integrated roll/pitch rate), never a
+      # difference of successive roll/pitch samples.
+      if _is_modeled(validity, "rp_rate"):
+          sample["rp_rate"] = (float(st.angular_velocity[0]),
+                               float(st.angular_velocity[1]))
+      else:
+          sample["rp_rate"] = (0.0, 0.0)
   return sample
+
+
+_VALIDITY_CHANNEL_ENUM = {"rp_rate": "RollPitchRate", "wheel_travel": "WheelTravel"}
+
+
+def _is_modeled(validity, name):
+  """True when ``validity[name]`` is ``modeled``; a missing entry is an error."""
+  import vdsim_trace
+
+  return validity[name] == vdsim_trace.VALIDITY_MODELED
+
+
+def channel_validity_from_dynamics(dyn, model_level, channels):
+  """Build the manifest ``channel_validity`` from what the model itself declares.
+
+  Asks ``dyn.models_channel(...)`` -- the pure virtual each dynamics class in
+  the core implements -- and never derives the answer from ``model_level``.
+  ``not_modeled@<level>`` uses the run's own level so the marker and the
+  manifest cannot disagree.
+
+  :param dyn: ``vdsim.IVehicleDynamics`` of the built session.
+  :param model_level: the run's ladder level.
+  :param channels: channel names the trace records.
+  :returns: ``{channel: "modeled" | "not_modeled@<level>"}`` for the recorded
+      channels that carry a validity.
+  """
+  import vdsim_trace
+
+  out = {}
+  for name in vdsim_trace.VALIDITY_CHANNELS:
+      if name not in channels:
+          continue
+      which = getattr(vdsim.ModeledChannel, _VALIDITY_CHANNEL_ENUM[name])
+      out[name] = (vdsim_trace.VALIDITY_MODELED if dyn.models_channel(which)
+                   else vdsim_trace.not_modeled_marker(model_level))
+  return out
 
 
 class _TireView:
@@ -641,6 +694,8 @@ class VDSimPlant:
           "decimation": decimation,
       }
       self._channels = vdsim_trace.channels_for_level(self.level)
+      self._validity = channel_validity_from_dynamics(
+          self._dyn, self.level, self._channels)
       self._trace = vdsim_trace.TraceWriter(
           path=path,
           geometry=geometry,
@@ -649,6 +704,7 @@ class VDSimPlant:
           # This plant builds a direct-control session and has no attach call,
           # so no hardpoints are ever behind it; the manifest must say so.
           kinematics_attached=False,
+          channel_validity=self._validity,
           channels=self._channels,
           tire={"friction_shape": shape, "mu_aniso": aniso,
                 "mu_aniso_source": "measured"},
@@ -679,7 +735,7 @@ class VDSimPlant:
   def _record(self, delta: float, fx: float):
       """Offer one sample of the current state to the writer."""
       self._trace.append(trace_sample(self._sess.output(), self._t, delta, fx,
-                                      self._channels))
+                                      self._channels, self._validity))
 
   @property
   def vehicle(self):

@@ -51,9 +51,31 @@ public:
     enum class Level { L1_Bicycle, L2_SevenDOF, L3_FourteenDOF, L4_Kinematic,
                        L5_Stunt, Lk_Kinematic };
 
+    /**
+     * Output quantities a model may or may not compute.  A model that does not
+     * compute one publishes 0 in State for it; the trace layer needs to tell that
+     * "not modeled" 0 from a modeled quantity that happens to be 0.
+     */
+    enum class ModeledChannel {
+        RollPitchRate,   ///< State::angular_velocity x, y  [rad/s]
+        WheelTravel      ///< State::susp_compression      [m]
+    };
+
     virtual ~IVehicleDynamics() = default;
 
     virtual Level level() const noexcept = 0;
+
+    /**
+     * Whether this model itself computes @p channel from its own state
+     * variables.  Pure virtual on purpose: a new model must declare it, so a
+     * missing answer is a build error instead of a silent "not modeled" (or
+     * "modeled") default.  The answer is never derived from level().
+     *
+     * @param channel  quantity asked about
+     * @return true when State carries a computed value, false when the model
+     *         has no such quantity and State holds a placeholder 0
+     */
+    virtual bool models_channel(ModeledChannel channel) const noexcept = 0;
 
     // Setup (throw on invalid input)
     void initialize(const VehicleParams& vp, const TireParams& tp, const SolverParams& sp) {

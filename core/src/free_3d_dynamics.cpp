@@ -77,6 +77,15 @@ public:
         : inj_tire_(std::move(tire)) {}
 
     Level level() const noexcept override { return Level::L5_Stunt; }
+    bool models_channel(ModeledChannel c) const noexcept override {
+        switch (c) {
+            case ModeledChannel::RollPitchRate: return true;   // full 3D angular velocity is the integrated state
+            // Strut travel exists only on the spatial-suspension path; the penalty
+            // path rides the wheel rigidly and leaves susp_compression at 0.
+            case ModeledChannel::WheelTravel:   return sp_.l5_spatial_suspension;
+        }
+        return false;
+    }
 
     void initialize(const VehicleParams& vp,
                     const TireSetup& ts,

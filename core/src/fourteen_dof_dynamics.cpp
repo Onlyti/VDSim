@@ -79,6 +79,13 @@ public:
         : inner_(create_seven_dof(std::move(tire))) {}
 
     Level level() const noexcept override { return Level::L3_FourteenDOF; }
+    bool models_channel(ModeledChannel c) const noexcept override {
+        switch (c) {
+            case ModeledChannel::RollPitchRate: return true;   // phi_dot_/th_dot_ are integrated states
+            case ModeledChannel::WheelTravel:   return true;   // from z_s_, phi_, th_, z_u_
+        }
+        return false;
+    }
 
     void initialize(const VehicleParams& vp,
                     const TireSetup& ts,
