@@ -1166,7 +1166,8 @@ PYBIND11_MODULE(vdsim, m) {
     py::class_<vdsim::DirectControlSessionOptions>(m, "DirectControlSessionOptions")
         .def(py::init<>())
         .def_readwrite("friction", &vdsim::DirectControlSessionOptions::friction)
-        .def_readwrite("nominal_dt", &vdsim::DirectControlSessionOptions::nominal_dt);
+        .def_readwrite("nominal_dt", &vdsim::DirectControlSessionOptions::nominal_dt)
+        .def_readwrite("dynamics_level", &vdsim::DirectControlSessionOptions::dynamics_level);
 
     m.def("make_direct_control_session",
           [](const vdsim::VehicleParams& vp, const vdsim::TireSetup& ts,

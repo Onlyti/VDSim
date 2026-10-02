@@ -2,6 +2,7 @@
 #include "vdsim/sim_session.hpp"
 
 #include <cmath>
+#include <stdexcept>
 
 namespace vdsim {
 
@@ -268,6 +269,14 @@ std::unique_ptr<SimSession> make_direct_control_session(
     const TireSetup& ts,
     const SolverParams& sp,
     const DirectControlSessionOptions& opts) {
+    std::unique_ptr<IVehicleDynamics> dyn;
+    if (opts.dynamics_level == "7dof")      dyn = create_seven_dof();
+    else if (opts.dynamics_level == "L3")   dyn = create_fourteen_dof();
+    else if (opts.dynamics_level == "L4")   dyn = create_fourteen_dof_kinematic();
+    else
+        throw std::invalid_argument(
+            "make_direct_control_session: unsupported dynamics_level '"
+            + opts.dynamics_level + "' (allowed: \"7dof\", \"L3\", \"L4\")");
     SimConfig cfg;
     cfg.session_kind = SessionKind::DirectControl;
     cfg.nominal_dt = opts.nominal_dt;
@@ -276,7 +285,7 @@ std::unique_ptr<SimSession> make_direct_control_session(
     vp_dc.plant_path = true;
     auto ground = make_friction_ground(opts.friction);
     return std::make_unique<SimSession>(
-        create_seven_dof(), std::move(ground), vp_dc, ts, sp, cfg);
+        std::move(dyn), std::move(ground), vp_dc, ts, sp, cfg);
 }
 
 }  // namespace vdsim

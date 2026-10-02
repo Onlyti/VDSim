@@ -16,6 +16,7 @@
 #include <chrono>
 #include <memory>
 #include <mutex>
+#include <string>
 #include <tuple>
 #include <vector>
 
@@ -147,6 +148,9 @@ std::unique_ptr<IContactProvider> make_friction_ground(const FrictionMapConfig& 
 struct DirectControlSessionOptions {
     FrictionMapConfig friction;
     double nominal_dt {0.001};
+    // "7dof" (default) | "L3" (14-DOF) | "L4" (14-DOF + hardpoint kinematics).
+    // Any other value throws std::invalid_argument.
+    std::string dynamics_level {"7dof"};
 };
 
 std::unique_ptr<SimSession> make_direct_control_session(

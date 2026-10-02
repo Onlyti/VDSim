@@ -250,6 +250,7 @@ class VDSimPlant:
       base_mu: float = 0.9,
       control_dt: float = 0.05,
       substep_dt: float = 5e-4,
+      dynamics_level: str = "7dof",
   ):
       if not math.isfinite(base_mu) or not (0.0 < base_mu <= 1.2):
           raise ValueError(f"base_mu={base_mu} outside (0, 1.2]")
@@ -275,6 +276,7 @@ class VDSimPlant:
 
       opts = vdsim.DirectControlSessionOptions()
       opts.nominal_dt = float(substep_dt)
+      opts.dynamics_level = dynamics_level
       opts.friction.base_mu = float(base_mu)
       opts.friction.x_bands = patches
       opts.friction.polygons = poly_patches

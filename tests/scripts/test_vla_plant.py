@@ -198,7 +198,47 @@ def test_speed_budget():
     print("speed budget: ok ({:.3f} s for 5 s sim)".format(elapsed))
 
 
+def test_dynamics_level_rejects_and_default():
+    for bad in ("L5", "l4", "L2", ""):
+        try:
+            VDSimPlant(dynamics_level=bad)
+        except ValueError as e:
+            assert "dynamics_level" in str(e), str(e)
+        else:
+            raise AssertionError(f"dynamics_level={bad!r} should raise ValueError")
+    traj_u = [(0.03, 800.0)] * 20
+    runs = []
+    for kw in ({}, {"dynamics_level": "7dof"}):
+        plant = VDSimPlant(base_mu=0.9, control_dt=DT, substep_dt=SUB, **kw)
+        plant.reset([0.0, 0.0, 0.0, V0, 0.0, 0.0])
+        runs.append([tuple(plant.step(list(u))[k] for k in ("X", "Y", "psi", "vx", "vy", "r"))
+                     for u in traj_u])
+    assert runs[0] == runs[1], "default must equal explicit dynamics_level='7dof'"
+    print("smoke dynamics_level reject + default: ok")
+
+
+def test_dynamics_level_l3_l4_step_same_obs_format():
+    ref_keys = None
+    for lvl in ("7dof", "L3", "L4"):
+        plant = VDSimPlant(base_mu=0.9, control_dt=DT, substep_dt=SUB, dynamics_level=lvl)
+        obs = plant.reset([0.0, 0.0, 0.0, V0, 0.0, 0.0])
+        for _ in range(40):
+            obs = plant.step([0.03, 500.0])
+        keys = (sorted(obs.keys()), sorted(obs["wheel"][0].keys()), len(obs["wheel"]))
+        ref_keys = ref_keys or keys
+        assert keys == ref_keys, f"{lvl}: obs format differs from 7dof"
+        assert all(math.isfinite(v) for v in (obs["X"], obs["vx"], obs["r"])), lvl
+        assert obs["r"] > 0.01, f"{lvl}: expected positive yaw rate, r={obs['r']}"
+    level_enum = {"L3": vdsim.Level.L3_FourteenDOF, "L4": vdsim.Level.L4_Kinematic}
+    for lvl, expect in level_enum.items():
+        p = VDSimPlant(dynamics_level=lvl)
+        assert p._dyn.level() == expect, f"{lvl}: wrong dynamics object {p._dyn.level()}"
+    print("smoke dynamics_level L3/L4 step + obs format: ok")
+
+
 def main():
+    test_dynamics_level_rejects_and_default()
+    test_dynamics_level_l3_l4_step_same_obs_format()
     test_cmdl1_element_torque_assign()
     test_longitudinal_fx_accel()
     test_dry_qualitative_lane_change()

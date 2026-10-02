@@ -4,6 +4,8 @@
 #include <chrono>
 #include <cmath>
 #include <memory>
+#include <stdexcept>
+#include <string>
 #include <thread>
 
 #include "vdsim/realtime_runner.hpp"
@@ -128,4 +130,48 @@ TEST(SimSession, DynamicSteeringTorqueYaws) {
     // Steering lock: rack must not exceed max_steer · ratio.
     EXPECT_LE(std::abs(s->state().rack_travel),
               vp.max_steer_angle_wheel * vp.steering_ratio + 1e-6) << "rack clamps at lock";
+}
+
+// Direct-control session: dynamics_level selects the plant; default stays 7-DOF.
+static std::unique_ptr<SimSession> make_dc(const DirectControlSessionOptions& o) {
+    VehicleParams vp; TireParams tp; SolverParams sp;
+    return make_direct_control_session(vp, TireSetup(tp), sp, o);
+}
+
+TEST(DirectControlSession, DefaultLevelIsSevenDof) {
+    DirectControlSessionOptions o;
+    EXPECT_EQ(o.dynamics_level, "7dof");
+    EXPECT_EQ(make_dc(o)->dynamics().level(), IVehicleDynamics::Level::L2_SevenDOF);
+}
+
+TEST(DirectControlSession, RejectsUnsupportedLevels) {
+    for (const char* bad : {"L5", "l4", "L2", "7DOF", ""}) {
+        DirectControlSessionOptions o;
+        o.dynamics_level = bad;
+        try {
+            make_dc(o);
+            FAIL() << "dynamics_level='" << bad << "' should be rejected";
+        } catch (const std::invalid_argument& e) {
+            EXPECT_NE(std::string(e.what()).find("dynamics_level"), std::string::npos);
+        }
+    }
+}
+
+TEST(DirectControlSession, L3AndL4CreateAndTickFinite) {
+    const std::pair<const char*, IVehicleDynamics::Level> cases[] = {
+        {"L3", IVehicleDynamics::Level::L3_FourteenDOF},
+        {"L4", IVehicleDynamics::Level::L4_Kinematic}};
+    for (const auto& [name, lvl] : cases) {
+        DirectControlSessionOptions o;
+        o.dynamics_level = name;
+        auto s = make_dc(o);
+        EXPECT_EQ(s->dynamics().level(), lvl) << name;
+        EXPECT_TRUE(s->vehicle_params().plant_path) << name;
+        State s0; s0.velocity = {20.0, 0.0, 0.0};
+        s->reset(s0);
+        CmdL1 cmd; cmd.steer_angle_wheel = 0.02;
+        for (int i = 0; i < 2000; ++i) { s->set_input(cmd); s->tick(o.nominal_dt); }
+        EXPECT_TRUE(std::isfinite(s->state().vx())) << name;
+        EXPECT_GT(s->state().yaw_rate(), 1e-4) << name;
+    }
 }
