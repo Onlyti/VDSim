@@ -151,6 +151,9 @@ struct DirectControlSessionOptions {
     // "7dof" (default) | "L3" (14-DOF) | "L4" (14-DOF + hardpoint kinematics).
     // Any other value throws std::invalid_argument.
     std::string dynamics_level {"7dof"};
+    // Pure transport delay on the steering command [s], applied before the first-order
+    // lag (VehicleParams::steer_deadtime_s). 0 = none (default). Must be finite and >= 0.
+    double steer_dead_time_s {0.0};
 };
 
 std::unique_ptr<SimSession> make_direct_control_session(

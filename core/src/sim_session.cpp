@@ -277,9 +277,13 @@ std::unique_ptr<SimSession> make_direct_control_session(
         throw std::invalid_argument(
             "make_direct_control_session: unsupported dynamics_level '"
             + opts.dynamics_level + "' (allowed: \"7dof\", \"L3\", \"L4\")");
+    if (!std::isfinite(opts.steer_dead_time_s) || opts.steer_dead_time_s < 0.0)
+        throw std::invalid_argument(
+            "make_direct_control_session: steer_dead_time_s must be finite and >= 0");
     SimConfig cfg;
     cfg.session_kind = SessionKind::DirectControl;
     cfg.nominal_dt = opts.nominal_dt;
+    cfg.actuator.steer.ch.dead_time_s = opts.steer_dead_time_s;
     apply_vehicle_steer_deadtime(cfg, vp);
     VehicleParams vp_dc = vp;
     vp_dc.plant_path = true;
