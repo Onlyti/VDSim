@@ -81,6 +81,22 @@ def _counts():
     return threading.active_count(), _native_threads(), len(_child_processes())
 
 
+def _settled_counts(base, timeout=2.0):
+    """Poll _counts() until it equals base or timeout expires; return the last value.
+
+    join() returns once a thread has signalled exit, but the kernel may keep its
+    /proc/self/task entry (and the interpreter its OS thread) for a moment
+    longer, so a single read right after join can race.  A leaked thread never
+    goes away, so waiting a bounded time keeps the check strict.
+    """
+    deadline = time.perf_counter() + timeout
+    cur = _counts()
+    while cur != base and time.perf_counter() < deadline:
+        time.sleep(0.01)
+        cur = _counts()
+    return cur
+
+
 def test_s6_wallclock_rtf_and_jitter(duration=10.0):
     """S6: the sim tracks the wall clock; jitter and overruns are reported."""
     res = _eval(controller, duration).run()
@@ -151,7 +167,8 @@ def test_s8_threads_joined_on_every_exit():
     # Normal end.
     res = _eval(controller, 0.5).run()
     assert not res.stats["stopped_early"]
-    assert _counts() == base, ("normal", _counts(), base)
+    after = _settled_counts(base)
+    assert after == base, ("normal", after, base)
 
     # Controller exception: re-raised on the caller, threads joined.
     def bad(obs, t):
@@ -164,7 +181,8 @@ def test_s8_threads_joined_on_every_exit():
         assert "on purpose" in str(exc)
     else:
         raise AssertionError("controller exception was swallowed")
-    assert _counts() == base, ("exception", _counts(), base)
+    after = _settled_counts(base)
+    assert after == base, ("exception", after, base)
 
     # Early stop() from inside the controller.
     holder = [None]
@@ -179,7 +197,8 @@ def test_s8_threads_joined_on_every_exit():
     assert time.perf_counter() - t0 < 2.0
     assert res.stats["stopped_early"], res.stats
     assert res.stats["sim_ticks"] < res.stats["sim_ticks_planned"]
-    assert _counts() == base, ("stop", _counts(), base)
+    after = _settled_counts(base)
+    assert after == base, ("stop", after, base)
 
     # KeyboardInterrupt delivered to the caller's thread mid-run.
     fired = {"done": False}
@@ -195,7 +214,8 @@ def test_s8_threads_joined_on_every_exit():
         pass
     else:
         raise AssertionError("KeyboardInterrupt did not reach the caller")
-    assert _counts() == base, ("interrupt", _counts(), base)
+    after = _settled_counts(base)
+    assert after == base, ("interrupt", after, base)
     print(f"S8: python/native threads and children back to {base} after "
           "normal, exception, stop and KeyboardInterrupt")
 
