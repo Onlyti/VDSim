@@ -320,15 +320,38 @@ def test_watchdog_failsafe_counts():
     assert st["failsafe_latches"] == 0, st
 
 
-def main():
-    test_wallclock_argument_checks()
-    test_s6_wallclock_rtf_and_jitter()
-    test_s7_sim_runs_while_controller_blocks()
-    test_s8_threads_joined_on_every_exit()
-    test_s8_check_catches_a_leaked_thread()
-    test_s8_fresh_interpreter_exits()
-    test_watchdog_failsafe_counts()
-    print("test_closedloop_wallclock: all ok")
+#: Wall-clock pass/fail lines (S6 RTF band, S7 tick floor). Registered as the
+#: ctest ``closedloop_wallclock_timing`` with label ``timing``, which the
+#: ``validation`` preset excludes; their evidence is the local low-load run.
+TIMING_TESTS = (
+    test_s6_wallclock_rtf_and_jitter,
+    test_s7_sim_runs_while_controller_blocks,
+)
+
+#: Checks whose verdict does not depend on host load.
+CORE_TESTS = (
+    test_wallclock_argument_checks,
+    test_s8_threads_joined_on_every_exit,
+    test_s8_check_catches_a_leaked_thread,
+    test_s8_fresh_interpreter_exits,
+    test_watchdog_failsafe_counts,
+)
+
+
+def main(argv=None):
+    """Run one test group.
+
+    @param argv  ``["core"]``, ``["timing"]`` or empty for both.
+    """
+    argv = sys.argv[1:] if argv is None else argv
+    group = argv[0] if argv else "all"
+    groups = {"core": CORE_TESTS, "timing": TIMING_TESTS,
+              "all": CORE_TESTS + TIMING_TESTS}
+    if group not in groups:
+        raise SystemExit("usage: test_closedloop_wallclock.py [core|timing]")
+    for test in groups[group]:
+        test()
+    print("test_closedloop_wallclock %s: all ok" % group)
 
 
 if __name__ == "__main__":

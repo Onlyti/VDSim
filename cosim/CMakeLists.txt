@@ -131,15 +131,28 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 300
         ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
-    # Closed-loop mode C (wallclock): real-time pacing, GIL release and thread
-    # shutdown. Wall-clock timing, so it never shares the host with other tests.
+    # Closed-loop mode C (wallclock): thread shutdown, argument checks and the
+    # watchdog. Wall-clock pacing, so it never shares the host with other tests.
     add_test(NAME closedloop_wallclock
         COMMAND ${Python3_EXECUTABLE}
-            ${CMAKE_SOURCE_DIR}/tests/scripts/test_closedloop_wallclock.py)
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_closedloop_wallclock.py core)
     set_tests_properties(closedloop_wallclock PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 300
         RUN_SERIAL TRUE
+        ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
+    # Mode C timing verdicts (S6 real-time factor band, S7 tick floor). Their
+    # outcome depends on host load, so label `timing` keeps them out of the
+    # `validation` preset and the CI build steps; evidence is a local low-load
+    # run (`ctest -L timing`). Thresholds are not relaxed here.
+    add_test(NAME closedloop_wallclock_timing
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_closedloop_wallclock.py timing)
+    set_tests_properties(closedloop_wallclock_timing PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 300
+        RUN_SERIAL TRUE
+        LABELS timing
         ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
     # GUI v3 is a deferred (node-stack) component. Its tests are excluded from
     # the canonical `validation` preset as a component, not one target at a
