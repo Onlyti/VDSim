@@ -82,19 +82,23 @@ def _counts():
 
 
 def _settled_counts(base, timeout=2.0):
-    """Poll _counts() until it equals base or timeout expires; return the last value.
+    """Poll _counts() until it equals base or timeout expires.
 
     join() returns once a thread has signalled exit, but the kernel may keep its
     /proc/self/task entry (and the interpreter its OS thread) for a moment
     longer, so a single read right after join can race.  A leaked thread never
-    goes away, so waiting a bounded time keeps the check strict.
+    goes away, so waiting a bounded time keeps the check strict.  The poll
+    returns as soon as the counts match.
+
+    @return (last counts, seconds waited)
     """
-    deadline = time.perf_counter() + timeout
+    t0 = time.perf_counter()
+    deadline = t0 + timeout
     cur = _counts()
     while cur != base and time.perf_counter() < deadline:
         time.sleep(0.01)
         cur = _counts()
-    return cur
+    return cur, time.perf_counter() - t0
 
 
 def test_s6_wallclock_rtf_and_jitter(duration=10.0):
@@ -163,11 +167,12 @@ def test_s8_threads_joined_on_every_exit():
     """S8: normal / exception / stop() / KeyboardInterrupt leave nothing behind."""
     _eval(controller, 0.2).run()            # warm-up: lazy imports, pools
     base = _counts()
+    waits = {}
 
     # Normal end.
     res = _eval(controller, 0.5).run()
     assert not res.stats["stopped_early"]
-    after = _settled_counts(base)
+    after, waits["normal"] = _settled_counts(base)
     assert after == base, ("normal", after, base)
 
     # Controller exception: re-raised on the caller, threads joined.
@@ -181,7 +186,7 @@ def test_s8_threads_joined_on_every_exit():
         assert "on purpose" in str(exc)
     else:
         raise AssertionError("controller exception was swallowed")
-    after = _settled_counts(base)
+    after, waits["exception"] = _settled_counts(base)
     assert after == base, ("exception", after, base)
 
     # Early stop() from inside the controller.
@@ -197,7 +202,7 @@ def test_s8_threads_joined_on_every_exit():
     assert time.perf_counter() - t0 < 2.0
     assert res.stats["stopped_early"], res.stats
     assert res.stats["sim_ticks"] < res.stats["sim_ticks_planned"]
-    after = _settled_counts(base)
+    after, waits["stop"] = _settled_counts(base)
     assert after == base, ("stop", after, base)
 
     # KeyboardInterrupt delivered to the caller's thread mid-run.
@@ -214,10 +219,45 @@ def test_s8_threads_joined_on_every_exit():
         pass
     else:
         raise AssertionError("KeyboardInterrupt did not reach the caller")
-    after = _settled_counts(base)
+    after, waits["interrupt"] = _settled_counts(base)
     assert after == base, ("interrupt", after, base)
     print(f"S8: python/native threads and children back to {base} after "
-          "normal, exception, stop and KeyboardInterrupt")
+          "normal, exception, stop and KeyboardInterrupt; settle wait [s] = "
+          + ", ".join(f"{k} {v:.3f}" for k, v in waits.items()))
+
+
+def test_s8_check_catches_a_leaked_thread():
+    """S8 negative check: a thread leaked during a run still fails after the wait.
+
+    The controller starts one extra thread that outlives run().  The settled
+    counts must differ from the baseline after the full 2 s poll, which shows
+    the wait does not hide a real leak.  The thread is released afterwards and
+    the counts must then return to the baseline.
+    """
+    _eval(controller, 0.2).run()
+    base = _counts()
+    release = threading.Event()
+    leaked = []
+
+    def leaky(obs, t):
+        if not leaked:
+            th = threading.Thread(target=release.wait, daemon=True)
+            th.start()
+            leaked.append(th)
+        return controller(obs, t)
+    try:
+        _eval(leaky, 0.3).run()
+        after, waited = _settled_counts(base)
+        assert after != base, ("leak not detected", after, base)
+        assert waited >= 2.0, waited
+    finally:
+        release.set()
+        for th in leaked:
+            th.join(5.0)
+    restored, _ = _settled_counts(base)
+    assert restored == base, ("after release", restored, base)
+    print(f"S8 negative: leaked thread seen after {waited:.2f} s wait "
+          f"({after} vs baseline {base}); counts restored after release")
 
 
 _CHILD = r"""
@@ -285,6 +325,7 @@ def main():
     test_s6_wallclock_rtf_and_jitter()
     test_s7_sim_runs_while_controller_blocks()
     test_s8_threads_joined_on_every_exit()
+    test_s8_check_catches_a_leaked_thread()
     test_s8_fresh_interpreter_exits()
     test_watchdog_failsafe_counts()
     print("test_closedloop_wallclock: all ok")
