@@ -42,6 +42,13 @@ CmdL4 to_l4(const ControlInput& u) {
 class KinematicBicycle final : public IVehicleDynamics {
 public:
     Level level() const noexcept override { return Level::Lk_Kinematic; }
+    bool models_channel(ModeledChannel c) const noexcept override {
+        switch (c) {
+            case ModeledChannel::RollPitchRate: return false;  // yaw rate only
+            case ModeledChannel::WheelTravel:   return false;
+        }
+        return false;
+    }
 
     void initialize(const VehicleParams& vp, const TireSetup&,
                     const SolverParams& sp) override {

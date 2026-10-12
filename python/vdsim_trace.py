@@ -45,15 +45,18 @@ import numpy as np
 #: see the release notes. ``0.2`` added the required ``role`` field (§3.1);
 #: ``0.3`` added ``model_level``, ``contact_scope``, the 3D geometry block and
 #: the five 3D channels of §3.2.1; ``0.4`` added the required
-#: ``kinematics_attached`` (§13).
-SCHEMA_VERSION = "0.4"
+#: ``kinematics_attached`` (§13). ``0.5`` added the ``rp_rate`` channel, made
+#: ``wheel_travel`` recordable at every level and added the required
+#: ``channel_validity`` manifest field that says which of those two the model
+#: really computed.
+SCHEMA_VERSION = "0.5"
 
 #: ``0.x`` minors this reader accepts. Each ``0.x`` minor is its own line, so
 #: readability is opt-in rather than inferred: ``0.1`` stays readable only
 #: because :func:`_resolve_role` defines a fallback for its missing ``role``,
 #: and ``0.1``–``0.3`` only because :attr:`TraceReader.kinematics_attached`
 #: defines one (unknown, never ``False``) for theirs.
-READABLE_SCHEMA_VERSIONS = ("0.1", "0.2", "0.3", "0.4")
+READABLE_SCHEMA_VERSIONS = ("0.1", "0.2", "0.3", "0.4", "0.5")
 
 #: Declared role of the run a trace records (§3.1, decided 2026-09-02).
 #: ``plant`` is the simulator under verification; ``predictor`` is the same
@@ -85,6 +88,10 @@ CONTACT_SCOPES = ("C0", "C1", "C2")
 #: A level below this does not have the quantity, so the channel is *absent*
 #: rather than zero — "no channel" and "channel of zeros" must stay
 #: distinguishable for a consumer.
+#: This is the table of schema 0.3 and 0.4. From 0.5 on ``wheel_travel`` is
+#: recorded at every level and the manifest's ``channel_validity`` carries the
+#: "not modeled" fact instead, so only :data:`CHANNEL_MIN_LEVEL_0_5` applies to
+#: a 0.5 trace.
 CHANNEL_MIN_LEVEL = {
     "a_body":            "L2",
     "pose_zrp":          "L3",
@@ -92,6 +99,26 @@ CHANNEL_MIN_LEVEL = {
     "wheel_road_normal": "L3",
     "wheel_travel":      "L3",
 }
+
+#: Channels recorded at every level from 0.5 on. Below the level that models
+#: them they hold exactly ``0.0`` and ``channel_validity`` says
+#: ``not_modeled@<level>``, so a zero can never be read as a measurement.
+VALIDITY_CHANNELS = ("rp_rate", "wheel_travel")
+
+#: Level gate that still applies at 0.5 (everything 0.3 gated except the
+#: channels that moved to :data:`VALIDITY_CHANNELS`).
+CHANNEL_MIN_LEVEL_0_5 = {n: lvl for n, lvl in CHANNEL_MIN_LEVEL.items()
+                         if n not in VALIDITY_CHANNELS}
+
+#: ``channel_validity`` value of a channel the model computed.
+VALIDITY_MODELED = "modeled"
+#: Prefix of the value of a channel the model does not compute; the suffix is
+#: the model level, e.g. ``not_modeled@L2``.
+VALIDITY_NOT_MODELED_PREFIX = "not_modeled@"
+#: What a reader reports for a trace older than 0.5 (never assumed modeled).
+VALIDITY_UNKNOWN = "unknown"
+#: Text a renderer prints next to a channel whose validity is not ``modeled``.
+NOT_MODELED_LABEL = "not modeled"
 
 _MANIFEST_NAME = "manifest.json"
 _CHANNEL_DIR = "channels"
@@ -119,19 +146,25 @@ CHANNEL_SPECS = {
     "wheel_road_dz":     ("m",         (4,)),
     "wheel_road_normal": ("-",         (4, 3)),
     "wheel_travel":      ("m",         (4,)),
+    # -- 0.5 extension. roll_rate, pitch_rate; zero and marked not_modeled
+    # -- below the level whose state variables carry them.
+    "rp_rate":           ("rad/s",     (2,)),
 }
 
 #: Channels of the 0.1/0.2 contract — the set a trace records when no explicit
 #: subset is requested at those versions.
-BASE_CHANNELS = tuple(n for n in CHANNEL_SPECS if n not in CHANNEL_MIN_LEVEL)
+BASE_CHANNELS = tuple(n for n in CHANNEL_SPECS
+                      if n not in CHANNEL_MIN_LEVEL and n not in VALIDITY_CHANNELS)
 
 
 def channels_for_level(model_level, base=None):
     """Channel names a ``model_level`` run is allowed to record.
 
-    The 0.1 channels plus every 0.3 channel whose ``CHANNEL_MIN_LEVEL`` the
-    level reaches. Used by producers so the "do not zero-fill" rule of §3.2.1
-    is enforced by construction rather than by reviewer attention.
+    The 0.1 channels, every channel of :data:`VALIDITY_CHANNELS` (recorded at
+    every level, zero and marked ``not_modeled`` where the model lacks them)
+    and every other 0.3 channel whose :data:`CHANNEL_MIN_LEVEL_0_5` the level
+    reaches. Used by producers so the "do not zero-fill" rule of §3.2.1 is
+    enforced by construction rather than by reviewer attention.
 
     :param model_level: one of :data:`MODEL_LEVELS`.
     :param base: base channel names; defaults to :data:`BASE_CHANNELS`.
@@ -139,7 +172,8 @@ def channels_for_level(model_level, base=None):
     """
     rank = _level_rank(model_level)
     names = set(base if base is not None else BASE_CHANNELS)
-    for name, min_level in CHANNEL_MIN_LEVEL.items():
+    names.update(VALIDITY_CHANNELS)
+    for name, min_level in CHANNEL_MIN_LEVEL_0_5.items():
         if rank >= _level_rank(min_level):
             names.add(name)
     return tuple(n for n in CHANNEL_SPECS if n in names)
@@ -174,6 +208,9 @@ _REQUIRED_MANIFEST_KEYS_0_3 = ("model_level", "contact_scope")
 #: had suspension hardpoints behind it: the two levels are bit-identical with
 #: or without them, and the attach is the only physical discriminator.
 _REQUIRED_MANIFEST_KEYS_0_4 = ("kinematics_attached",)
+#: Manifest key 0.5 adds. A zero in ``rp_rate``/``wheel_travel`` is either a
+#: measurement or the absence of the quantity; only this field tells them apart.
+_REQUIRED_MANIFEST_KEYS_0_5 = ("channel_validity",)
 
 
 class TraceError(ValueError):
@@ -247,6 +284,24 @@ def _at_least(version, floor: str) -> bool:
     except (ValueError, TypeError):
         return False
     return found >= need
+
+
+def not_modeled_marker(model_level) -> str:
+    """The ``channel_validity`` value of a channel a ``model_level`` run lacks."""
+    _level_rank(model_level)
+    return VALIDITY_NOT_MODELED_PREFIX + str(model_level)
+
+
+def _check_validity_value(name, value, model_level):
+    """Raise unless ``value`` is ``modeled`` or ``not_modeled@<model_level>``."""
+    if value == VALIDITY_MODELED:
+        return
+    if value == not_modeled_marker(model_level):
+        return
+    raise TraceSchemaError(
+        "manifest.channel_validity[%r] must be %r or %r (the run's own "
+        "model_level), got %r"
+        % (name, VALIDITY_MODELED, not_modeled_marker(model_level), value))
 
 
 def _resolve_role(manifest) -> str:
@@ -375,11 +430,18 @@ class TraceWriter:
         a real ``bool``: whether suspension hardpoints were attached to the
         plant. Pass what the attach call returned, never what a config file
         suggests; ``L4`` without it is ``L3`` under another name.
+    :param channel_validity: keyword-only and **required** at schema 0.5 —
+        mapping from every recorded :data:`VALIDITY_CHANNELS` name to
+        ``"modeled"`` or ``not_modeled@<model_level>``. Take it from the
+        dynamics model's own declaration (``models_channel``), never from the
+        level number. A ``not_modeled`` channel must be recorded as exactly
+        ``0.0``; :meth:`finalize` refuses anything else.
     """
 
     def __init__(self, path, geometry, tire, repro, producer=None,
                  decimation: int = 1, channels=None, extra=None, *, role,
-                 model_level, contact_scope, kinematics_attached):
+                 model_level, contact_scope, kinematics_attached,
+                 channel_validity):
         decimation = int(decimation)
         if not isinstance(kinematics_attached, bool):
             raise TraceError(
@@ -408,8 +470,10 @@ class TraceWriter:
         _validate_tire(tire)
         if role not in ROLES:
             raise TraceError("role must be one of %s, got %r" % (list(ROLES), role))
+        _validate_channel_validity(channel_validity, names, model_level)
 
         self.path = Path(path)
+        self.channel_validity = dict(channel_validity)
         self.role = role
         self.model_level = model_level
         self.contact_scope = contact_scope
@@ -489,6 +553,12 @@ class TraceWriter:
         for name in self._names:
             unit, trailing = CHANNEL_SPECS[name]
             arr = np.asarray(self._buf[name], dtype=_DTYPE).reshape((n,) + trailing)
+            if self.channel_validity.get(name, VALIDITY_MODELED) != VALIDITY_MODELED \
+                    and bool(np.any(arr != 0.0)):
+                raise TraceError(
+                    "channel %r is declared %s but holds non-zero values; a "
+                    "not-modeled channel must be recorded as exactly 0.0"
+                    % (name, self.channel_validity[name]))
             arrays[name] = np.ascontiguousarray(arr)
             chan_meta.append({
                 "name": name, "unit": unit, "dtype": "<f8",
@@ -503,6 +573,7 @@ class TraceWriter:
             "model_level": self.model_level,
             "contact_scope": self.contact_scope,
             "kinematics_attached": self.kinematics_attached,
+            "channel_validity": self.channel_validity,
             "repro": self.repro,
             "n_steps": int(n),
             "wheels": list(WHEELS),
@@ -600,6 +671,8 @@ def _validate_manifest(manifest):
         _validate_manifest_0_3(manifest)
     if _at_least(version, "0.4"):
         _validate_manifest_0_4(manifest)
+    if _at_least(version, "0.5"):
+        _validate_manifest_0_5(manifest)
 
 
 def _validate_manifest_0_4(manifest):
@@ -644,14 +717,59 @@ def _validate_manifest_0_3(manifest):
             % (list(CONTACT_SCOPES), scope))
     rank = _level_rank(level)
     present = {c["name"] for c in manifest["channels"] if isinstance(c, dict)}
+    gate = (CHANNEL_MIN_LEVEL_0_5 if _at_least(manifest.get("schema_version"), "0.5")
+            else CHANNEL_MIN_LEVEL)
     too_high = sorted(
-        n for n in present & set(CHANNEL_MIN_LEVEL)
-        if rank < _level_rank(CHANNEL_MIN_LEVEL[n]))
+        n for n in present & set(gate)
+        if rank < _level_rank(gate[n]))
     if too_high:
         raise TraceSchemaError(
             "model_level %s does not have %s; recording the channel anyway would "
             "store zeros that read as measurements (§3.2.1 no zero-fill)"
-            % (level, ", ".join("%s (needs %s)" % (n, CHANNEL_MIN_LEVEL[n]) for n in too_high)))
+            % (level, ", ".join("%s (needs %s)" % (n, gate[n]) for n in too_high)))
+
+
+def _validate_channel_validity(validity, channel_names, model_level):
+    """Check a ``channel_validity`` block against the channels and level it describes.
+
+    Every recorded :data:`VALIDITY_CHANNELS` entry needs a value, and a value
+    for a channel that is not recorded is rejected: a marker that points at
+    nothing is a producer bug, not a harmless extra.
+    """
+    if not isinstance(validity, dict):
+        raise TraceSchemaError(
+            "manifest.channel_validity must be an object mapping channel -> "
+            "'modeled' | 'not_modeled@<level>', got %r" % (validity,))
+    recorded = [n for n in VALIDITY_CHANNELS if n in set(channel_names)]
+    missing = [n for n in recorded if n not in validity]
+    if missing:
+        raise TraceSchemaError(
+            "manifest.channel_validity is missing %s — schema 0.5 requires a "
+            "value for every recorded channel that a model may not compute; a "
+            "zero without it reads as a measurement" % (", ".join(missing),))
+    stray = sorted(n for n in validity if n not in recorded)
+    if stray:
+        raise TraceSchemaError(
+            "manifest.channel_validity names %s, which this trace does not "
+            "record (or which never carries a validity)" % (", ".join(stray),))
+    for name in recorded:
+        _check_validity_value(name, validity[name], model_level)
+
+
+def _validate_manifest_0_5(manifest):
+    """Enforce the 0.5 addition — ``channel_validity`` must be stated.
+
+    Missing is an error, not "everything modeled": a 0.5 producer that forgot
+    the field is the one whose zeros cannot be told from measurements.
+    """
+    missing = [k for k in _REQUIRED_MANIFEST_KEYS_0_5 if k not in manifest]
+    if missing:
+        raise TraceSchemaError(
+            "manifest is missing %s — schema 0.5 requires it: rp_rate and "
+            "wheel_travel are recorded at every level, so only this field says "
+            "whether a zero is a measurement" % (", ".join(missing),))
+    names = [c["name"] for c in manifest["channels"] if isinstance(c, dict)]
+    _validate_channel_validity(manifest["channel_validity"], names, manifest["model_level"])
 
 
 # --------------------------------------------------------------------------
@@ -705,6 +823,7 @@ class TraceReader:
         self.manifest = manifest
         self._role = role
         self._kin_warned = False
+        self._validity_warned = False
         self._cache = {}
 
     # -- lifecycle ---------------------------------------------------------
@@ -786,6 +905,54 @@ class TraceReader:
         return None
 
     @property
+    def channel_validity(self) -> dict:
+        """Per-channel model status: ``{channel: "modeled" | "not_modeled@<L>" | "unknown"}``.
+
+        Covers the recorded :data:`VALIDITY_CHANNELS`. A trace older than 0.5
+        predates the field, so every such channel reports ``"unknown"`` — never
+        ``"modeled"``, because that would be a claim the file never made. The
+        first read of an unknown value warns once, here rather than at open
+        time, so a consumer that never asks is not told about it.
+        """
+        names = [n for n in VALIDITY_CHANNELS if self.has(n)]
+        if "channel_validity" in self.manifest:
+            return {n: self.manifest["channel_validity"][n] for n in names}
+        if names and not self._validity_warned:
+            self._validity_warned = True
+            warnings.warn(
+                "trace schema_version %s declares no 'channel_validity'; "
+                "treating %s as unknown (not modeled=False). Re-record with "
+                "vdsim_trace %s to tell a computed value from a zero the model "
+                "never produced."
+                % (self.manifest.get("schema_version"), ", ".join(names),
+                   SCHEMA_VERSION),
+                UserWarning, stacklevel=2)
+        return {n: VALIDITY_UNKNOWN for n in names}
+
+    def validity(self, name: str) -> str:
+        """Model status of one channel — ``modeled``, ``not_modeled@<L>`` or ``unknown``.
+
+        A channel outside :data:`VALIDITY_CHANNELS` has no status of its own
+        and reports ``modeled``: its presence already means the level has it.
+        """
+        if name not in VALIDITY_CHANNELS:
+            return VALIDITY_MODELED
+        return self.channel_validity.get(name, VALIDITY_UNKNOWN)
+
+    def channel_label(self, name: str) -> str:
+        """Text a renderer prints next to a channel: ``""`` when modeled.
+
+        ``"not modeled"`` for a marked channel, ``"model status unknown"`` for
+        a pre-0.5 trace. One decision point, so renderers cannot drift apart.
+        """
+        status = self.validity(name)
+        if status == VALIDITY_MODELED:
+            return ""
+        if status == VALIDITY_UNKNOWN:
+            return "model status unknown"
+        return NOT_MODELED_LABEL
+
+    @property
     def normal_is_display_only(self) -> bool:
         """True when ``wheel_road_normal`` must be labelled display-only.
 
@@ -840,6 +1007,10 @@ class TraceReader:
                 "channel %r has %d values but manifest declares shape %s"
                 % (name, arr.size, shape))
         arr = arr.reshape(shape)
+        status = self.manifest.get("channel_validity", {}).get(name)
+        if status is not None and status != VALIDITY_MODELED and bool(np.any(arr != 0.0)):
+            raise TraceError(
+                "channel %r is declared %s but holds non-zero values" % (name, status))
         arr.flags.writeable = False
         self._cache[name] = arr
         return arr
