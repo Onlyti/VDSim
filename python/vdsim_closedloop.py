@@ -13,8 +13,12 @@ measured with everything else held equal:
   command is held until then (ZOH). ``c_k`` comes from a :class:`LatencyModel`.
   Deterministic latency models make the run bitwise reproducible.
 
-A wall-clock mode (C) is a later stage of the same work order and is not in
-this module yet.
+* ``"wallclock"`` (C) -- real time on two threads. A C++
+  ``vdsim.RealTimeRunner`` ticks the session every ``substep_dt`` of wall
+  clock with the GIL released, while a Python thread wakes every ``Tc``,
+  snapshots the session, calls the controller and latches its command. The
+  delay is whatever the host really took, OS jitter included, so a run is
+  reproducible only statistically.
 
 Model of the controller in B: one worker computes one sample at a time.
 Sample ``k`` starts computing at ``max(t_k, finish_{k-1})`` and finishes
@@ -29,22 +33,36 @@ fall due meanwhile:
 
 Times are kept as integer substep indices; ``c_k`` is the only real-valued
 time and is rounded up to the substep grid once, when it is drawn.
+
+In C the same two policies act on wall-clock slots ``w_k = w_0 + k*Tc``.
+``skip`` resumes at the first slot at or after the end of the late
+computation; ``queue`` takes every slot in order, back to back while behind.
+A real-time loop cannot read the past, so a queued sample is the state at the
+moment the controller thread gets to it, not the state at its slot.
 """
 from __future__ import annotations
 
 import math
+import os
+import threading
 import time
 from dataclasses import dataclass, field
 
 import numpy as np
 
+import vdsim
 from vdsim_plant import VDSimPlant, _fx_to_cmdl1, _obs_from_output
 
 #: Mode strings accepted by :class:`ClosedLoopEval`.
-MODES = ("sync", "virtual_async")
+MODES = ("sync", "virtual_async", "wallclock")
 
-#: Overrun policies accepted by :class:`ClosedLoopEval` in ``virtual_async``.
+#: Overrun policies accepted by :class:`ClosedLoopEval` in ``virtual_async``
+#: and ``wallclock``.
 OVERRUN_POLICIES = ("skip", "queue")
+
+#: How often [s] the waiting main thread wakes to notice a finished control
+#: thread or a KeyboardInterrupt in ``wallclock``.
+JOIN_POLL_S = 0.05
 
 #: Slack used when snapping a real time onto the substep grid. A latency that
 #: is an exact multiple of ``substep_dt`` in decimal (5 ms on a 0.5 ms grid)
@@ -202,14 +220,23 @@ class ClosedLoopEval:
     :param mode: one of :data:`MODES`.
     :param duration: simulated time [s]; rounded to whole periods.
     :param latency: :class:`LatencyModel`, ``virtual_async`` only.
-    :param overrun: one of :data:`OVERRUN_POLICIES`, ``virtual_async`` only.
+    :param overrun: one of :data:`OVERRUN_POLICIES`, ``virtual_async`` and
+        ``wallclock``.
     :param state0: ``[X, Y, psi, vx, vy, r]`` passed to :meth:`VDSimPlant.reset`.
     :param u0: command held before the first computed command is applied.
+    :param cpu_affinity: ``wallclock`` only. ``None`` (default) leaves both
+        threads on the process affinity, so ``taskset`` around the process
+        decides. ``{"sim": 2, "ctrl": [3]}`` pins the C++ sim thread to one
+        core and the Python control thread to a core set (Linux).
+    :param watchdog: ``wallclock`` only. ``None`` (default) disables it;
+        ``{"timeout_s": 0.1, "failsafe_u": (0.0, -2000.0)}`` latches
+        ``failsafe_u`` whenever no command arrived for ``timeout_s`` of wall
+        clock, counted in ``stats["failsafe_latches"]``.
     """
 
     def __init__(self, plant_kwargs, controller, control_period, mode="sync",
                  duration=10.0, latency=None, overrun="skip", state0=None,
-                 u0=(0.0, 0.0)):
+                 u0=(0.0, 0.0), cpu_affinity=None, watchdog=None):
         if mode not in MODES:
             raise ValueError(f"mode={mode!r} is not one of {MODES}")
         plant_kwargs = dict(plant_kwargs or {})
@@ -218,9 +245,11 @@ class ClosedLoopEval:
                              "not plant_kwargs['control_dt']")
         if not callable(controller):
             raise TypeError("controller must be callable(obs, t)")
-        if mode == "sync":
+        if mode in ("sync", "wallclock"):
             if latency is not None:
                 raise ValueError("latency applies to mode='virtual_async' only")
+            if mode == "wallclock" and overrun not in OVERRUN_POLICIES:
+                raise ValueError(f"overrun={overrun!r} is not one of {OVERRUN_POLICIES}")
         else:
             if latency is None:
                 raise ValueError("mode='virtual_async' needs a LatencyModel")
@@ -233,6 +262,10 @@ class ClosedLoopEval:
             raise ValueError("duration must be > 0")
         if len(u0) != 2 or not all(math.isfinite(float(v)) for v in u0):
             raise ValueError("u0 must be two finite numbers")
+        if mode != "wallclock" and (cpu_affinity is not None or watchdog is not None):
+            raise ValueError("cpu_affinity and watchdog apply to mode='wallclock' only")
+        self.cpu_affinity = _check_affinity(cpu_affinity)
+        self.watchdog = _check_watchdog(watchdog)
 
         self.plant_kwargs = plant_kwargs
         self.controller = controller
@@ -248,6 +281,8 @@ class ClosedLoopEval:
         self.substep_dt = self.plant.substep_dt
         self.n_sub = self.plant._n_sub
         self.n_steps = max(1, int(round(duration / self.control_period)))
+        self._stop = threading.Event()
+        self._runner = None
 
     # ------------------------------------------------------------------ run
     def run(self) -> EvalResult:
@@ -255,8 +290,10 @@ class ClosedLoopEval:
         obs = self.plant.reset(self.state0)
         if self.mode == "sync":
             res = self._run_sync(obs)
-        else:
+        elif self.mode == "virtual_async":
             res = self._run_virtual_async(obs)
+        else:
+            res = self._run_wallclock(obs)
         res.meta = {
             "eval_mode": self.mode,
             "control_period_s": self.control_period,
@@ -266,7 +303,27 @@ class ClosedLoopEval:
             "overrun_policy": self.overrun,
             "level": self.plant.level,
         }
+        if self.mode == "wallclock":
+            res.meta["cpu_affinity"] = self.cpu_affinity
+            res.meta["watchdog"] = self.watchdog
         return res
+
+    def stop(self):
+        """End a running ``wallclock`` run early.
+
+        Callable from any thread, the controller included; :meth:`run`
+        returns the partial result with ``stats["stopped_early"] = True``.
+        """
+        self._stop.set()
+
+    def sim_ticks(self) -> int:
+        """Substeps the wall-clock sim thread has taken in the current run.
+
+        A lock-free counter on the C++ side, so it keeps increasing while the
+        controller blocks or computes. ``0`` outside a ``wallclock`` run.
+        """
+        runner = self._runner
+        return 0 if runner is None else int(runner.ticks())
 
     def _call(self, obs, t):
         """Call the controller, check its output and time the call."""
@@ -360,6 +417,200 @@ class ClosedLoopEval:
         return EvalResult(trace=grid.arrays(), samples=samples.arrays(),
                           stats=samples.stats(Tc, skipped=skipped,
                                               unapplied=unapplied))
+
+
+    def _run_wallclock(self, obs) -> EvalResult:
+        """Mode C: C++ sim thread paced to the wall clock + Python control thread."""
+        Tc, h, n_sub = self.control_period, self.substep_dt, self.n_sub
+        sess, vp = self.plant._sess, self.plant._vp
+        total = self.n_steps * n_sub
+
+        cfg = vdsim.RealTimeRunnerConfig()
+        cfg.dt = h
+        cfg.max_ticks = total
+        cfg.cpu = -1 if self.cpu_affinity is None else self.cpu_affinity["sim"]
+        if self.watchdog is None:
+            cfg.cmd_timeout_s = 0.0
+        else:
+            cfg.cmd_timeout_s = self.watchdog["timeout_s"]
+            cfg.failsafe = _fx_to_cmdl1(vp, *self.watchdog["failsafe_u"])
+        sess.set_input(_fx_to_cmdl1(vp, *self.u0))
+        runner = vdsim.RealTimeRunner(sess, cfg)
+
+        rows = _RowRecorder()
+        samples = _SampleRecorder()
+        wall = {"slot": [], "sample": [], "apply": []}
+        box = {"exc": None, "skipped": 0, "ctrl_affinity": False}
+        self._stop.clear()
+        stop = self._stop
+        overrun_policy = self.overrun
+        ctrl_cpus = None if self.cpu_affinity is None else self.cpu_affinity["ctrl"]
+        clock = time.perf_counter
+
+        def control(w0):
+            """Control thread: wake on each slot, sample, compute, latch."""
+            try:
+                if ctrl_cpus is not None and hasattr(os, "sched_setaffinity"):
+                    os.sched_setaffinity(0, ctrl_cpus)   # 0 = this thread on Linux
+                    box["ctrl_affinity"] = True
+                k = 0
+                u_now = self.u0
+                while not stop.is_set() and not runner.finished():
+                    slot = w0 + k * Tc
+                    wait = slot - clock()
+                    if wait > 0.0:
+                        time.sleep(wait)
+                    if stop.is_set() or runner.finished():
+                        break
+                    w_sample = clock()
+                    out = sess.output()
+                    obs_k = _obs_from_output(out)
+                    t_s = float(out.sim_time)
+                    u, elapsed = self._call(obs_k, t_s)
+                    sess.set_input(_fx_to_cmdl1(vp, *u))
+                    w_apply = clock()
+                    t_a = float(sess.sim_time())
+                    late = 1 if (w_apply - slot) > Tc else 0
+                    rows.put(t_s, obs_k, u_now)
+                    samples.put(k, t_s, t_a, elapsed, late, u, applied=1,
+                                measured=elapsed)
+                    wall["slot"].append(slot - w0)
+                    wall["sample"].append(w_sample - w0)
+                    wall["apply"].append(w_apply - w0)
+                    u_now = u
+                    nxt = k + 1
+                    if overrun_policy == "skip":
+                        first_free = int(math.ceil((clock() - w0) / Tc - GRID_EPS))
+                        if first_free > nxt:
+                            box["skipped"] += first_free - nxt
+                            nxt = first_free
+                    k = nxt
+            except BaseException as exc:   # re-raised on the caller's thread
+                box["exc"] = exc
+                stop.set()
+
+        self._runner = runner
+        ctrl = None
+        try:
+            runner.start()
+            ctrl = threading.Thread(target=control, args=(clock(),),
+                                    name="vdsim-closedloop-ctrl")
+            ctrl.start()
+            while ctrl.is_alive():
+                ctrl.join(JOIN_POLL_S)
+        finally:
+            # Normal end, controller error, stop() or KeyboardInterrupt in the
+            # caller: every path stops the control thread first, then joins
+            # the C++ thread, so nothing outlives run().
+            stop.set()
+            if ctrl is not None:
+                ctrl.join()
+            runner.stop()
+            self._runner = None
+        if box["exc"] is not None:
+            raise box["exc"]
+        rs = runner.stats()
+        if rs.error:
+            raise RuntimeError(f"sim thread failed: {rs.error}")
+
+        out = sess.output()
+        rows.put(float(out.sim_time), _obs_from_output(out), None)
+        stats = samples.stats(Tc, skipped=box["skipped"], unapplied=0)
+        stats.update(_wall_stats(wall))
+        stats.update({
+            "rtf": (rs.sim_elapsed_s / rs.wall_elapsed_s
+                    if rs.wall_elapsed_s > 0.0 else float("nan")),
+            "sim_ticks": int(rs.ticks),
+            "sim_ticks_planned": int(total),
+            "sim_late_ticks": int(rs.late_ticks),
+            "sim_max_lag_s": float(rs.max_lag_s),
+            "sim_elapsed_s": float(rs.sim_elapsed_s),
+            "wall_elapsed_s": float(rs.wall_elapsed_s),
+            "failsafe_latches": int(rs.failsafe_latches),
+            "sim_affinity_applied": bool(rs.affinity_applied),
+            "ctrl_affinity_applied": bool(box["ctrl_affinity"]),
+            "stopped_early": bool(rs.ticks < total),
+        })
+        smp = samples.arrays()
+        for key, vals in wall.items():
+            smp[f"wall_{key}"] = np.asarray(vals, dtype=np.float64)
+        return EvalResult(trace=rows.arrays(), samples=smp, stats=stats)
+
+
+def _check_affinity(spec):
+    """Validate ``cpu_affinity``; returns ``None`` or ``{"sim": int, "ctrl": [int]}``."""
+    if spec is None:
+        return None
+    if not isinstance(spec, dict) or set(spec) != {"sim", "ctrl"}:
+        raise ValueError('cpu_affinity must be {"sim": core, "ctrl": [cores]}')
+    sim = spec["sim"]
+    ctrl = spec["ctrl"]
+    ctrl = [ctrl] if isinstance(ctrl, int) else list(ctrl)
+    if not (isinstance(sim, int) and sim >= 0 and ctrl
+            and all(isinstance(c, int) and c >= 0 for c in ctrl)):
+        raise ValueError("cpu_affinity cores must be non-negative integers")
+    return {"sim": int(sim), "ctrl": [int(c) for c in ctrl]}
+
+
+def _check_watchdog(spec):
+    """Validate ``watchdog``; returns ``None`` or ``{"timeout_s", "failsafe_u"}``."""
+    if spec is None:
+        return None
+    if not isinstance(spec, dict) or not set(spec) <= {"timeout_s", "failsafe_u"}:
+        raise ValueError('watchdog must be {"timeout_s": s, "failsafe_u": (delta, Fx)}')
+    timeout = float(spec.get("timeout_s", 0.0))
+    fs = tuple(float(v) for v in spec.get("failsafe_u", (0.0, 0.0)))
+    if not (math.isfinite(timeout) and timeout > 0.0):
+        raise ValueError("watchdog timeout_s must be > 0")
+    if len(fs) != 2 or not all(math.isfinite(v) for v in fs):
+        raise ValueError("watchdog failsafe_u must be two finite numbers")
+    return {"timeout_s": timeout, "failsafe_u": list(fs)}
+
+
+def _pct(x, q):
+    """Percentile of a possibly empty array (NaN when empty)."""
+    return float(np.percentile(x, q)) if x.size else float("nan")
+
+
+def _wall_stats(wall: dict) -> dict:
+    """Wall-clock period and wake-jitter summary [s] of a ``wallclock`` run.
+
+    ``period`` = time between consecutive wakes; ``wake_jitter`` = wake time
+    minus its scheduled slot (>= 0 up to the sleep resolution).
+    """
+    sample = np.asarray(wall["sample"], dtype=np.float64)
+    slot = np.asarray(wall["slot"], dtype=np.float64)
+    period = np.diff(sample)
+    jitter = sample - slot
+    return {
+        "period_p50_s": _pct(period, 50),
+        "period_p99_s": _pct(period, 99),
+        "period_max_s": float(period.max()) if period.size else float("nan"),
+        "wake_jitter_p50_s": _pct(jitter, 50),
+        "wake_jitter_p99_s": _pct(jitter, 99),
+        "wake_jitter_max_s": float(jitter.max()) if jitter.size else float("nan"),
+    }
+
+
+class _RowRecorder:
+    """State and in-force command at each wall-clock sample (variable length)."""
+
+    def __init__(self):
+        self._rows = {"t": [], "u_steer": [], "u_fx": []}
+        for key in TRACE_STATE_KEYS:
+            self._rows[key] = []
+
+    def put(self, t, obs, u):
+        """Append one row; ``u=None`` records the command as NaN."""
+        r = self._rows
+        r["t"].append(t)
+        for key in TRACE_STATE_KEYS:
+            r[key].append(obs[key])
+        r["u_steer"].append(float("nan") if u is None else u[0])
+        r["u_fx"].append(float("nan") if u is None else u[1])
+
+    def arrays(self) -> dict:
+        return {key: np.asarray(v, dtype=np.float64) for key, v in self._rows.items()}
 
 
 class _GridRecorder:

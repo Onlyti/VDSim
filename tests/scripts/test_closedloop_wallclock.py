@@ -1,0 +1,274 @@
+#!/usr/bin/env python3
+"""Closed-loop evaluation mode C (wallclock): S6-S8.
+
+Acceptance criteria of work order 31 (section 5):
+
+* S6 -- a 10 s run keeps the sim on the wall clock (RTF within 0.98-1.02)
+  and reports control-period jitter and overrun counts.
+* S7 -- while the controller blocks for ``3*Tc`` the C++ sim thread keeps
+  ticking, both when the controller sleeps and when it spins in Python with
+  the GIL held, and the late sample is counted as an overrun.
+* S8 -- normal end, a controller exception, an early ``stop()`` and a
+  KeyboardInterrupt in the caller all join both threads: the Python thread
+  count, the native thread count and the child-process count return to their
+  baseline, and a fresh interpreter running the mode exits on its own.
+
+Wall-clock results depend on the host; run this file serially (the ctest
+entry is RUN_SERIAL) and, on a host with faulty cores, under ``taskset``.
+"""
+import _thread
+import json
+import os
+import subprocess
+import sys
+import threading
+import time
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "build" / "python"))
+sys.path.insert(0, str(REPO / "python"))
+
+from vdsim_closedloop import ClosedLoopEval  # noqa: E402
+
+TC = 0.02            # control period [s]
+H = 5e-4             # substep [s]
+V0 = 16.7            # initial speed [m/s]
+STATE0 = [0.0, 0.0, 0.0, V0, 0.0, 0.0]
+PLANT = dict(level="L2", substep_dt=H)
+RTF_BAND = (0.98, 1.02)
+
+
+def controller(obs, t):
+    """Hold the lane (Y = 0) and the speed; cheap enough to never overrun."""
+    delta = max(-0.3, min(0.3, -0.08 * obs["Y"] - 0.9 * obs["psi"]))
+    return delta, 2000.0 * (V0 - obs["vx"])
+
+
+def _eval(ctrl, duration, overrun="skip", **kw):
+    return ClosedLoopEval(PLANT, ctrl, TC, mode="wallclock", duration=duration,
+                          overrun=overrun, state0=STATE0, **kw)
+
+
+def _native_threads():
+    """Kernel thread count of this process (Linux), else None."""
+    task = Path("/proc/self/task")
+    return len(os.listdir(task)) if task.is_dir() else None
+
+
+def _child_processes():
+    """PIDs whose parent is this process (Linux /proc scan), else []."""
+    me = os.getpid()
+    kids = []
+    proc = Path("/proc")
+    if not proc.is_dir():
+        return kids
+    for entry in proc.iterdir():
+        if not entry.name.isdigit():
+            continue
+        try:
+            stat = (entry / "stat").read_text()
+        except OSError:
+            continue
+        # Field 4 (ppid) follows the parenthesised command name.
+        ppid = int(stat.rsplit(")", 1)[1].split()[1])
+        if ppid == me:
+            kids.append(int(entry.name))
+    return kids
+
+
+def _counts():
+    return threading.active_count(), _native_threads(), len(_child_processes())
+
+
+def test_s6_wallclock_rtf_and_jitter(duration=10.0):
+    """S6: the sim tracks the wall clock; jitter and overruns are reported."""
+    res = _eval(controller, duration).run()
+    st = res.stats
+    report = {k: st[k] for k in (
+        "rtf", "sim_ticks", "sim_ticks_planned", "sim_late_ticks", "sim_max_lag_s",
+        "n_samples", "n_overrun", "n_skipped", "period_p50_s", "period_p99_s",
+        "period_max_s", "wake_jitter_p50_s", "wake_jitter_p99_s",
+        "wake_jitter_max_s", "compute_p99_s", "delay_p99_s")}
+    print("S6", json.dumps(report))
+    assert st["sim_ticks"] == st["sim_ticks_planned"], st
+    assert not st["stopped_early"]
+    assert RTF_BAND[0] <= st["rtf"] <= RTF_BAND[1], st["rtf"]
+    assert abs(st["period_p50_s"] - TC) < 0.1 * TC, st["period_p50_s"]
+    assert st["n_samples"] >= 0.9 * duration / TC, st["n_samples"]
+    return report
+
+
+def _blocking_controller(ev, block, log):
+    """Controller that blocks for 3*Tc on its third call and logs sim ticks."""
+    calls = {"n": 0}
+
+    def ctrl(obs, t):
+        calls["n"] += 1
+        if calls["n"] == 3:
+            before = ev[0].sim_ticks()
+            block(3.0 * TC)
+            log.append((before, ev[0].sim_ticks()))
+        return controller(obs, t)
+    return ctrl
+
+
+def _spin(seconds):
+    """Busy-wait in pure Python: holds the GIL except at interpreter switches."""
+    end = time.perf_counter() + seconds
+    x = 0
+    while time.perf_counter() < end:
+        x += 1
+    return x
+
+
+def test_s7_sim_runs_while_controller_blocks():
+    """S7: sim ticks advance during a 3*Tc block; the late sample is an overrun."""
+    expected = 3.0 * TC / H
+    for name, block in (("sleep", time.sleep), ("gil_spin", _spin)):
+        for overrun in ("skip", "queue"):
+            ev, log = [None], []
+            ev[0] = _eval(_blocking_controller(ev, block, log), 1.0, overrun=overrun)
+            st = ev[0].run().stats
+            assert len(log) == 1, log
+            advanced = log[0][1] - log[0][0]
+            print(f"S7 {name}/{overrun}: ticks during block = {advanced} "
+                  f"(nominal {expected:.0f}), overrun = {st['n_overrun']}, "
+                  f"skipped = {st['n_skipped']}")
+            assert advanced >= 0.8 * expected, (name, overrun, advanced)
+            assert st["n_overrun"] >= 1, st
+            if overrun == "skip":
+                assert st["n_skipped"] >= 2, st
+            else:
+                assert st["n_skipped"] == 0, st
+
+
+def test_s8_threads_joined_on_every_exit():
+    """S8: normal / exception / stop() / KeyboardInterrupt leave nothing behind."""
+    _eval(controller, 0.2).run()            # warm-up: lazy imports, pools
+    base = _counts()
+
+    # Normal end.
+    res = _eval(controller, 0.5).run()
+    assert not res.stats["stopped_early"]
+    assert _counts() == base, ("normal", _counts(), base)
+
+    # Controller exception: re-raised on the caller, threads joined.
+    def bad(obs, t):
+        if t > 0.1:
+            raise RuntimeError("controller failed on purpose")
+        return controller(obs, t)
+    try:
+        _eval(bad, 2.0).run()
+    except RuntimeError as exc:
+        assert "on purpose" in str(exc)
+    else:
+        raise AssertionError("controller exception was swallowed")
+    assert _counts() == base, ("exception", _counts(), base)
+
+    # Early stop() from inside the controller.
+    holder = [None]
+
+    def stopper(obs, t):
+        if t > 0.1:
+            holder[0].stop()
+        return controller(obs, t)
+    holder[0] = _eval(stopper, 5.0)
+    t0 = time.perf_counter()
+    res = holder[0].run()
+    assert time.perf_counter() - t0 < 2.0
+    assert res.stats["stopped_early"], res.stats
+    assert res.stats["sim_ticks"] < res.stats["sim_ticks_planned"]
+    assert _counts() == base, ("stop", _counts(), base)
+
+    # KeyboardInterrupt delivered to the caller's thread mid-run.
+    fired = {"done": False}
+
+    def interrupter(obs, t):
+        if t > 0.1 and not fired["done"]:
+            fired["done"] = True
+            _thread.interrupt_main()
+        return controller(obs, t)
+    try:
+        _eval(interrupter, 5.0).run()
+    except KeyboardInterrupt:
+        pass
+    else:
+        raise AssertionError("KeyboardInterrupt did not reach the caller")
+    assert _counts() == base, ("interrupt", _counts(), base)
+    print(f"S8: python/native threads and children back to {base} after "
+          "normal, exception, stop and KeyboardInterrupt")
+
+
+_CHILD = r"""
+import sys
+sys.path[:0] = sys.argv[1:3]
+from vdsim_closedloop import ClosedLoopEval
+def c(obs, t):
+    if t > 0.1:
+        raise RuntimeError("x")
+    return (0.0, 0.0)
+plant = dict(level="L2", substep_dt=5e-4)
+ClosedLoopEval(plant, lambda o, t: (0.0, 0.0), 0.02, mode="wallclock", duration=0.3).run()
+try:
+    ClosedLoopEval(plant, c, 0.02, mode="wallclock", duration=2.0).run()
+except RuntimeError:
+    pass
+print("child done")
+"""
+
+
+def test_s8_fresh_interpreter_exits():
+    """S8: a process that ran mode C (also with an error) exits by itself."""
+    proc = subprocess.run(
+        [sys.executable, "-c", _CHILD, str(REPO / "build" / "python"),
+         str(REPO / "python")],
+        capture_output=True, text=True, timeout=60)
+    assert proc.returncode == 0, proc.stderr
+    assert "child done" in proc.stdout
+
+
+def test_wallclock_argument_checks():
+    """Mode C rejects a latency model; affinity/watchdog are C-only."""
+    from vdsim_closedloop import LatencyModel
+    bad = [
+        dict(mode="wallclock", latency=LatencyModel.fixed(0.0)),
+        dict(mode="wallclock", overrun="drop"),
+        dict(mode="wallclock", cpu_affinity={"sim": -1, "ctrl": [0]}),
+        dict(mode="wallclock", cpu_affinity={"sim": 0}),
+        dict(mode="wallclock", watchdog={"timeout_s": 0.0}),
+        dict(mode="sync", cpu_affinity={"sim": 0, "ctrl": [1]}),
+        dict(mode="sync", watchdog={"timeout_s": 0.1}),
+    ]
+    for kw in bad:
+        try:
+            ClosedLoopEval(PLANT, controller, TC, duration=0.1, **kw)
+        except ValueError:
+            continue
+        raise AssertionError(f"accepted {kw}")
+
+
+def test_watchdog_failsafe_counts():
+    """A controller slower than the watchdog timeout triggers the fail-safe."""
+    def slow(obs, t):
+        time.sleep(0.06)
+        return controller(obs, t)
+    st = _eval(slow, 0.6, watchdog={"timeout_s": 0.03,
+                                    "failsafe_u": (0.0, -3000.0)}).run().stats
+    assert st["failsafe_latches"] >= 1, st
+    st = _eval(controller, 0.3, watchdog={"timeout_s": 0.2}).run().stats
+    assert st["failsafe_latches"] == 0, st
+
+
+def main():
+    test_wallclock_argument_checks()
+    test_s6_wallclock_rtf_and_jitter()
+    test_s7_sim_runs_while_controller_blocks()
+    test_s8_threads_joined_on_every_exit()
+    test_s8_fresh_interpreter_exits()
+    test_watchdog_failsafe_counts()
+    print("test_closedloop_wallclock: all ok")
+
+
+if __name__ == "__main__":
+    main()

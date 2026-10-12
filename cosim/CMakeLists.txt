@@ -131,6 +131,16 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 300
         ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
+    # Closed-loop mode C (wallclock): real-time pacing, GIL release and thread
+    # shutdown. Wall-clock timing, so it never shares the host with other tests.
+    add_test(NAME closedloop_wallclock
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_closedloop_wallclock.py)
+    set_tests_properties(closedloop_wallclock PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 300
+        RUN_SERIAL TRUE
+        ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
     # GUI v3 is a deferred (node-stack) component. Its tests are excluded from
     # the canonical `validation` preset as a component, not one target at a
     # time, and are listed by name on the `excluded:` lines of

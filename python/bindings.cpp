@@ -13,6 +13,7 @@
 #include "vdsim/interfaces.hpp"
 #include "vdsim/magic_formula.hpp"
 #include "vdsim/params.hpp"
+#include "vdsim/realtime_runner.hpp"
 #include "vdsim/sim_session.hpp"
 #include "vdsim/vec_session.hpp"
 #include "vdsim/scenario.hpp"
@@ -1120,12 +1121,17 @@ PYBIND11_MODULE(vdsim, m) {
 
     py::class_<vdsim::SimSession>(m, "SimSession")
         .def("reset",          &vdsim::SimSession::reset)
+        // set_input / output only touch the session mutex, so they drop the
+        // GIL: a Python controller thread waiting on a RealTimeRunner tick
+        // does not block other Python threads.
         .def("set_input",
              static_cast<void (vdsim::SimSession::*)(const vdsim::CmdL4&)>(
-                 &vdsim::SimSession::set_input))
+                 &vdsim::SimSession::set_input),
+             py::call_guard<py::gil_scoped_release>())
         .def("set_input",
              static_cast<void (vdsim::SimSession::*)(const vdsim::ControlInput&)>(
-                 &vdsim::SimSession::set_input))
+                 &vdsim::SimSession::set_input),
+             py::call_guard<py::gil_scoped_release>())
         .def("tick",           &vdsim::SimSession::tick)
         .def("snapshot", &vdsim::SimSession::snapshot,
              "Capture state + actuator + delay line + sensor + tire transients (R8).")
@@ -1146,11 +1152,51 @@ PYBIND11_MODULE(vdsim, m) {
         .def("randomization",  &vdsim::SimSession::randomization)
         .def("state",          &vdsim::SimSession::state)
         .def("measured_state", &vdsim::SimSession::measured_state)
-        .def("output",         &vdsim::SimSession::output)
+        .def("output",         &vdsim::SimSession::output,
+             py::call_guard<py::gil_scoped_release>())
         .def("sim_time",       &vdsim::SimSession::sim_time)
         .def("dynamics",       &vdsim::SimSession::dynamics,
              py::return_value_policy::reference_internal,
              "Access the plant to install subsystem modules (e.g. set_brake_module).");
+
+    // -------- RealTimeRunner: wall-clock pacing on a C++ thread --------
+    // The loop never calls into Python; start/stop release the GIL so the
+    // caller's other Python threads (e.g. a controller) keep running.
+    py::class_<vdsim::RealTimeRunner::Config>(m, "RealTimeRunnerConfig")
+        .def(py::init<>())
+        .def_readwrite("dt",            &vdsim::RealTimeRunner::Config::dt)
+        .def_readwrite("cmd_timeout_s", &vdsim::RealTimeRunner::Config::cmd_timeout_s)
+        .def_readwrite("failsafe",      &vdsim::RealTimeRunner::Config::failsafe)
+        .def_readwrite("max_ticks",     &vdsim::RealTimeRunner::Config::max_ticks)
+        .def_readwrite("cpu",           &vdsim::RealTimeRunner::Config::cpu);
+
+    py::class_<vdsim::RealTimeRunner::Stats>(m, "RealTimeRunnerStats")
+        .def_readonly("ticks",            &vdsim::RealTimeRunner::Stats::ticks)
+        .def_readonly("late_ticks",       &vdsim::RealTimeRunner::Stats::late_ticks)
+        .def_readonly("failsafe_latches", &vdsim::RealTimeRunner::Stats::failsafe_latches)
+        .def_readonly("max_lag_s",        &vdsim::RealTimeRunner::Stats::max_lag_s)
+        .def_readonly("wall_elapsed_s",   &vdsim::RealTimeRunner::Stats::wall_elapsed_s)
+        .def_readonly("sim_elapsed_s",    &vdsim::RealTimeRunner::Stats::sim_elapsed_s)
+        .def_readonly("finished",         &vdsim::RealTimeRunner::Stats::finished)
+        .def_readonly("affinity_applied", &vdsim::RealTimeRunner::Stats::affinity_applied)
+        .def_readonly("error",            &vdsim::RealTimeRunner::Stats::error);
+
+    py::class_<vdsim::RealTimeRunner>(m, "RealTimeRunner")
+        .def(py::init<vdsim::SimSession&, const vdsim::RealTimeRunner::Config&>(),
+             py::arg("session"), py::arg("config"),
+             py::keep_alive<1, 2>(),
+             "Pace session.tick(config.dt) to the wall clock on a C++ thread.")
+        .def("start",    &vdsim::RealTimeRunner::start,
+             py::call_guard<py::gil_scoped_release>())
+        .def("stop",     &vdsim::RealTimeRunner::stop,
+             py::call_guard<py::gil_scoped_release>(),
+             "Ask the loop to exit and join the thread.")
+        .def("running",  &vdsim::RealTimeRunner::running)
+        .def("finished", &vdsim::RealTimeRunner::finished,
+             "True once the loop exited by itself (max_ticks or an error).")
+        .def("ticks",    &vdsim::RealTimeRunner::ticks)
+        .def("stats",    &vdsim::RealTimeRunner::stats,
+             py::call_guard<py::gil_scoped_release>());
 
     // Factory: build a SimSession (flat ground) from level + params.
     m.def("make_sim_session",
