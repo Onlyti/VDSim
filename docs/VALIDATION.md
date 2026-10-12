@@ -88,7 +88,7 @@ config:   cmake --preset validation && cmake --build --preset validation && ctes
 presets:  CMakePresets.json@53dec1158a6568e97fdf55c41e8ea0e14433a3cf
 toolchain: cmake 3.31.10
 commit:   PENDING
-pending:  registration surface changed (cosim/CMakeLists.txt adds closedloop_eval);
+pending:  registration surface changed (closed-loop eval tests added on top of main);
           this tree has no canonical 3-run measurement yet
 date:     2026-10-13
 excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)

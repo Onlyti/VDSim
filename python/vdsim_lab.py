@@ -786,19 +786,23 @@ class Experiment:
             return self._trace_pending["path"]
         return None
 
-    def _open_trace(self):
+    def _open_trace(self, sess):
         """Create the staged writer now that the attach outcome is known."""
+        import vdsim_plant
         import vdsim_trace
 
         spec, self._trace_pending = self._trace_pending, None
+        self._validity = vdsim_plant.channel_validity_from_dynamics(
+            sess.dynamics(), spec["model_level"], spec["channels"])
         self._trace = vdsim_trace.TraceWriter(
-            kinematics_attached=bool(self._kin_info["attached"]), **spec)
+            kinematics_attached=bool(self._kin_info["attached"]),
+            channel_validity=self._validity, **spec)
 
     def _record(self, o, cmd):
         """Offer one sample of the pre-step state to the writer."""
         self._trace.append(self._sample(o, o.sim_time,
                                         float(cmd.steer_angle_wheel), None,
-                                        self._channels))
+                                        self._channels, self._validity))
 
     def run(self, duration=None):
         if duration is None:
@@ -808,7 +812,7 @@ class Experiment:
         sess, self._kin_info = _build_session(
             self._road, vp, tp, self.level, self.dt, sp, self._kin)
         if self._trace_pending is not None:
-            self._open_trace()
+            self._open_trace(sess)
         x0, y0 = getattr(self._man, "start", (0.0, 0.0))
         s0 = vdsim.make_init_state(vp, tp, x=x0, y=y0, yaw=self._man.init_yaw,
                                    v=self._man.init_v)

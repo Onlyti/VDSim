@@ -43,7 +43,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from vdsim_trace import TraceReader  # noqa: E402
+from vdsim_trace import NOT_MODELED_LABEL, TraceReader  # noqa: E402
 
 #: Wheel order of every per-wheel channel.
 WHEELS = ("FL", "FR", "RL", "RR")
@@ -292,6 +292,13 @@ class Scene3D:
                                 if tr.has("wheel_road_normal") else None)
             self.wheel_travel = (np.asarray(tr.channel("wheel_travel"))
                                  if tr.has("wheel_travel") else None)
+            # 0.5: channels the model never computed read as zeros; the HUD
+            # must say so. Pre-0.5 traces declare nothing, so nothing is shown
+            # (and the reader's one "unknown" warning is not triggered here).
+            self.not_modeled = (
+                tuple(n for n, v in tr.channel_validity.items() if v != "modeled")
+                if "channel_validity" in tr.manifest else ())
+            self.not_modeled_label = NOT_MODELED_LABEL
             self.overlays = [tr.overlay(nm) for nm in tr.overlay_names()]
 
         self.stride = stride
@@ -645,6 +652,8 @@ def draw_frame(ax, scene: Scene3D, prims, cam: Camera, tiers, scales,
                     prims["origin"][2])]
         if "normal" in tiers and scene.normal_display_only:
             lines.append("normal: display-only (%s)" % (scene.contact_scope or "pre-0.3",))
+        if scene.not_modeled:
+            lines.append("%s: %s" % (", ".join(scene.not_modeled), scene.not_modeled_label))
         if scene.degraded:
             lines.append("planar assumption: %s" % scene.degraded.split(":")[0])
         ax.text(0.012, 0.985, "\n".join(lines), transform=ax.transAxes,

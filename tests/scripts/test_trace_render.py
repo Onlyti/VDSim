@@ -144,6 +144,7 @@ def test_series_selection_is_manifest_driven():
             repro={"vdsim_version": "t", "git_sha": "x", "param_hash": "sha256:x",
                    "seed": 0, "dt_s": 0.05, "run_id": "partial"},
             role="plant", model_level="L2", contact_scope="C2", kinematics_attached=False,
+            channel_validity={},
             channels=["t", "pose", "yaw_rate", "u_steer"])
         for i in range(20):
             w.append({"t": i * 0.05, "pose": (i * 0.5, 0.0, 0.0),

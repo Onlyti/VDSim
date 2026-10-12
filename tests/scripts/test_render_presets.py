@@ -56,6 +56,7 @@ def _write_trace(path, channels=None, n=40):
                "seed": 1, "dt_s": 0.05, "run_id": "preset_test"},
         producer={"name": "test_render_presets", "version": "0"},
         role="plant", model_level="L2", contact_scope="C2", kinematics_attached=False,
+        channel_validity={},
         channels=names)
     full = {
         "t": 0.0, "pose": (0.0, 0.0, 0.0), "v_body": (12.0, 0.4),

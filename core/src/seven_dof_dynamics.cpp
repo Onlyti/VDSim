@@ -79,6 +79,13 @@ public:
         : inj_tire_(std::move(tire)) {}
 
     Level level() const noexcept override { return Level::L2_SevenDOF; }
+    bool models_channel(ModeledChannel c) const noexcept override {
+        switch (c) {
+            case ModeledChannel::RollPitchRate: return false;  // roll/pitch are quasi-static angles, no rate state
+            case ModeledChannel::WheelTravel:   return false;  // no suspension state
+        }
+        return false;
+    }
 
     void initialize(const VehicleParams& vp,
                     const TireSetup& ts,

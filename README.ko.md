@@ -164,7 +164,7 @@ path = plant.finalize_trace()
   기록한 경로를 돌려준다(기록을 켠 적이 없으면 `None`).
 - 컨테이너는 zip: `manifest.json` + `channels/*.f64` + `overlays/*.json`.
   이 파일 하나면 렌더가 되므로 재시뮬레이션도, 결과 파일 재파싱도 필요 없다.
-- manifest 는 `schema_version`(writer 는 `"0.4"` 를 쓴다. 버전별 추가 필드는 아래
+- manifest 는 `schema_version`(writer 는 `"0.5"` 를 쓴다. 버전별 추가 필드는 아래
   절 참조)과 필수 필드 `role` 을 선언한다. `role` 은
   검증 대상인 `"plant"` 또는 최적화·MPC 내부 예측 모델로 쓰인 `"predictor"` 다.
   `VDSimPlant` 은 그 자체가 플랜트이므로 `enable_trace` 의 기본값은 `plant` 이고,
@@ -472,6 +472,24 @@ plant.finalize_trace()
   물리를 담은 L4 trace 는 생길 수 없다. `VDSimPlant` 는 하드포인트 입력이 없어서
   같은 이유로 `level="L4"` 를 거부한다. `Experiment` 설정에서는
   `kinematics: {front: mp_front_sedan, rear: ta_rear_sedan}` 로 하드포인트를 지정한다.
+
+### trace 스키마 `0.5` — 모델이 실제로 계산한 채널
+
+`0.5` 는 모든 레벨에서 채널 `rp_rate`(rad/s, `[n,2]` = 롤율, 피치율)와
+`wheel_travel`(m, `[n,4]`)을 기록하고, manifest 필수 필드 `channel_validity` 1개를 더한다.
+채널별로 모델이 계산했는지를 적는다.
+
+- 값은 `modeled` 또는 `not_modeled@<level>` 이고, level 은 manifest 의 `model_level` 과 같아야 한다.
+- 출처는 core 의 순수 가상함수 `IVehicleDynamics::models_channel()` 이다. 각 동역학 모델이 선언하며
+  레벨 번호로 유도하지 않는다. L5 의 stroke 는 `l5_spatial_suspension` 이 켜졌을 때만 존재한다.
+- L1·L2(및 K/L0)는 두 채널 모두 모델링하지 않는다. 값은 정확히 `0.0` 으로 기록하고
+  `not_modeled@L1` / `not_modeled@L2` 로 표시한다. 여기의 `0.0` 은 "평탄 주행"이 아니라
+  "모델링 안 됨"이며, 리더와 렌더러는 "not modeled" 로 표기한다.
+- L3 이상은 적분된 롤·피치 상태(`state.angular_velocity`)에서 율을 읽는다. 수치 미분은 쓰지 않는다.
+- `channel_validity` 가 없는 `0.5` trace 는 에러이고, writer 는 `not_modeled` 채널에
+  0 이 아닌 데이터가 들어오면 거부한다.
+- `0.4` 이하 trace 는 validity 를 `unknown` 으로 읽고 경고 1회를 낸다. `modeled` 로 읽지
+  않는다. `0.1`–`0.4` fixture 는 그대로이고 `golden_v0_5.vdtrace` 가 `0.5` fixture 다.
 
 ## campaign — 선언 1개로 여러 run 돌리기
 

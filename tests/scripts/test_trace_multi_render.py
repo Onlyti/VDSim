@@ -67,6 +67,7 @@ def write_run(path, n, dt, y0=0.0, v=15.0, yaw0=0.0, yaw_rate=0.0,
                "seed": 1, "dt_s": dt, "run_id": run_id},
         producer={"name": "test_trace_multi_render", "version": "0"},
         role="plant", model_level="L2", contact_scope="C2", kinematics_attached=False,
+        channel_validity={},
         channels=list(vt.BASE_CHANNELS))
     x, y, yaw = 0.0, y0, yaw0
     for i in range(n):

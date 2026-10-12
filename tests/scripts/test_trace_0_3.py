@@ -58,6 +58,10 @@ def _writer(path, **kw):
         kinematics_attached=False,
     )
     args.update(kw)
+    if "channel_validity" not in args:
+        names = args.get("channels") or vt.channels_for_level(args["model_level"])
+        args["channel_validity"] = {n: "modeled" for n in vt.VALIDITY_CHANNELS
+                                    if n in names}
     return vt.TraceWriter(path=path, **args)
 
 
@@ -70,7 +74,7 @@ def _sample(i, names, dt=0.01):
         "pose_zrp": (0.55, 0.01, -0.002), "a_body": (0.5, 1.2, -0.03),
         "wheel_road_dz": [0.01, -0.01, 0.01, -0.01],
         "wheel_road_normal": [(0.0, -0.1, 0.995)] * 4,
-        "wheel_travel": [0.06] * 4,
+        "wheel_travel": [0.06] * 4, "rp_rate": (0.02, -0.01),
     }
     return {k: full[k] for k in names}
 
@@ -325,7 +329,8 @@ def test_0_4_requires_kinematics_attached():
                       tire={"friction_shape": "circle", "mu_aniso": [1.0, 1.0]},
                       repro={"vdsim_version": "t", "git_sha": "x", "param_hash": "sha256:x",
                              "seed": 1, "dt_s": 0.01, "run_id": "t"},
-                      role="plant", model_level="L3", contact_scope="C2")
+                      role="plant", model_level="L3", contact_scope="C2",
+                      channel_validity={})
             vt.TraceWriter(path=d / "x.vdtrace", **kw)
             check(False, "kinematics_attached is a required TraceWriter argument")
         except TypeError:
