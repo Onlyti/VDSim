@@ -1668,6 +1668,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#29-actuator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.9 Actuator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#210-road" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.10 Road
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2948,6 +2970,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#29-actuator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.9 Actuator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#210-road" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.10 Road
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3212,6 +3256,11 @@ Frame: ISO 8855 (x forward, y left, z up), angles in radians.</p>
 <td>rad, –, –</td>
 <td>commands after the actuator</td>
 </tr>
+<tr>
+<td><code>az</code></td>
+<td>m/s²</td>
+<td>body vertical acceleration, + = up, taken straight from the plant (<code>SimOutput.az</code>); gravity excluded (0 at rest), so not an accelerometer's specific force; always 0 on the planar levels K, L0, L1, L2 (<code>EnvConfig</code> warns once)</td>
+</tr>
 </tbody>
 </table>
 <h3 id="23-action">2.3 Action<a class="headerlink" href="#23-action" title="Permanent link">&para;</a></h3>
@@ -3281,6 +3330,21 @@ physics ticks (default 4 × 5 ms = 20 ms control interval).</p>
 </span></code></pre></div>
 <p>minus <code>crash_penalty</code> (default 10) on a terminating step. Pass
 <code>reward_fn(obs, col, action, prev_action, cfg) -&gt; (N,)</code> to replace it.</p>
+<p>Ride comfort example: put <code>az</code> in <code>obs_fields</code> on a level with a vertical ride
+(L3, L4; <code>configs/rl/ride_env.yaml</code>) and penalise it. <code>col</code> maps a column name
+to its index, the same in <code>VDSimVecEnv</code> (<code>obs</code> is <code>(N, n_obs)</code>) and <code>VDSimEnv</code>
+(one row):</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">vdsim_rl</span><span class="w"> </span><span class="kn">import</span> <span class="n">EnvConfig</span><span class="p">,</span> <span class="n">VDSimVecEnv</span><span class="p">,</span> <span class="n">default_reward</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">W_AZ</span> <span class="o">=</span> <span class="mf">0.05</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="k">def</span><span class="w"> </span><span class="nf">ride_reward</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">col</span><span class="p">,</span> <span class="n">action</span><span class="p">,</span> <span class="n">prev_action</span><span class="p">,</span> <span class="n">cfg</span><span class="p">):</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">az</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[:,</span> <span class="n">col</span><span class="p">[</span><span class="s2">"az"</span><span class="p">]]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="k">return</span> <span class="n">default_reward</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">col</span><span class="p">,</span> <span class="n">action</span><span class="p">,</span> <span class="n">prev_action</span><span class="p">,</span> <span class="n">cfg</span><span class="p">)</span> <span class="o">-</span> <span class="n">W_AZ</span> <span class="o">*</span> <span class="n">az</span> <span class="o">**</span> <span class="mi">2</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="n">env</span> <span class="o">=</span> <span class="n">VDSimVecEnv</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="n">EnvConfig</span><span class="o">.</span><span class="n">from_yaml</span><span class="p">(</span><span class="s2">"configs/rl/ride_env.yaml"</span><span class="p">),</span> <span class="n">reward_fn</span><span class="o">=</span><span class="n">ride_reward</span><span class="p">)</span>
+</span></code></pre></div>
 <h3 id="25-episode-end">2.5 Episode end<a class="headerlink" href="#25-episode-end" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -3340,53 +3404,108 @@ never 1.1 × the built-in default.</p>
 thread. <code>reset(seed=s)</code> gives env <em>i</em> its own Python stream (from
 <code>SeedSequence(s).spawn</code>) and core noise seed <code>s + i</code>, so a run is reproducible
 env by env.</p>
+<h3 id="29-actuator">2.9 Actuator<a class="headerlink" href="#29-actuator" title="Permanent link">&para;</a></h3>
+<p><code>actuator</code> puts the actuator model between the action and the plant, the same
+model <code>VDSimPlant</code> uses (<code>vdsim_plant.build_actuator_params</code>):</p>
+<ul>
+<li><code>null</code> (default) -- identity; the action reaches the plant on the same tick.</li>
+<li>a catalog id, e.g. <code>actuator: actuator.generic_sedan</code>.</li>
+<li>a mapping with any of <code>steer</code> / <code>throttle</code> / <code>brake</code> (<code>dead_time_s</code>, <code>tau_s</code>,
+  <code>rate_limit</code>, <code>dead_zone</code>, <code>backlash</code>, ...; steer also <code>friction</code> for the
+  LuGre stage); a <code>preset</code> key names a catalog id the other keys are laid over.</li>
+</ul>
+<p><code>steer_applied</code> / <code>throttle_applied</code> / <code>brake_applied</code> in the observation are
+the actuator outputs.  A steer <code>dead_time_s</code> of 0.02 s at <code>dt: 0.005</code> moves
+<code>steer_applied</code> exactly 4 ticks after the identity case.  <code>reset()</code> reports the
+preset id and a hash of the parameters the core received under <code>actuator</code>.</p>
+<h3 id="210-road">2.10 Road<a class="headerlink" href="#210-road" title="Permanent link">&para;</a></h3>
+<p>One road kind per env; two kinds at once raise <code>ValueError</code> (the core would
+keep only one).  Env <em>i</em> draws its road from <code>ground_seed + i</code>.</p>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>road</th>
+<th>levels</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>grade</code>, <code>bank</code> [rad]</td>
+<td>inclined plane: <code>grade &gt; 0</code> uphill toward +x, <code>bank &gt; 0</code> raises the +y (left) side</td>
+<td>L1-L4</td>
+</tr>
+<tr>
+<td><code>iso_class</code> 0 (A) .. 7 (H), -1 off</td>
+<td>ISO 8608 random profile, independent left/right tracks</td>
+<td>L3, L4</td>
+</tr>
+<tr>
+<td><code>rough_amp</code> [m], <code>rough_wavelength</code> [m]</td>
+<td>deterministic two-tone profile</td>
+<td>L3, L4</td>
+</tr>
+<tr>
+<td><code>road_psd</code></td>
+<td>general PSD: <code>{gd_n0, waviness, n_break, waviness_high, n_min, n_max}</code> or a measured table <code>{n, gd, n_min, n_max}</code> (same grounds as <code>make_sim_session_psd</code>)</td>
+<td>L3, L4</td>
+</tr>
+</tbody>
+</table>
+<p>The planar levels (K, L0, L1, L2) have no vertical ride: a rough, ISO 8608 or
+PSD road there raises <code>ValueError</code> instead of being silently flat.  K and L0
+read no road contact, so <code>grade</code> / <code>bank</code> are refused there too.</p>
+<p><code>roll</code> and <code>pitch</code> are the body attitude in the world frame, ISO 8855 signs:
+<code>pitch &gt; 0</code> nose down, <code>roll &gt; 0</code> left side up.  Standing on <code>grade: 0.05</code>
+gives <code>pitch</code> about -0.05 rad; on <code>bank: 0.05</code>, <code>roll</code> about +0.05 rad
+(tests/rl/test_rl_connection.py, R2-b).</p>
 <h2 id="3-quick-start">3. Quick start<a class="headerlink" href="#3-quick-start" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip<span class="w"> </span>install<span class="w"> </span>vdsim<span class="w"> </span>gymnasium<span class="w">        </span><span class="c1"># or a locally built wheel; add stable-baselines3 for 4.2</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pip<span class="w"> </span>install<span class="w"> </span>vdsim<span class="w"> </span>gymnasium<span class="w">        </span><span class="c1"># or a locally built wheel; add stable-baselines3 for 4.2</span>
 </span></code></pre></div>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">vdsim_rl</span><span class="w"> </span><span class="kn">import</span> <span class="n">EnvConfig</span><span class="p">,</span> <span class="n">VDSimEnv</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">env</span> <span class="o">=</span> <span class="n">VDSimEnv</span><span class="p">(</span><span class="n">EnvConfig</span><span class="p">(</span><span class="n">vehicle</span><span class="o">=</span><span class="s2">"generic_sedan"</span><span class="p">,</span> <span class="n">tire</span><span class="o">=</span><span class="s2">"generic_pacejka"</span><span class="p">),</span> <span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">obs</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">"vehicle"</span><span class="p">],</span> <span class="n">env</span><span class="o">.</span><span class="n">obs_columns</span><span class="p">)</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">200</span><span class="p">):</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="n">obs</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">terminated</span><span class="p">,</span> <span class="n">truncated</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">sample</span><span class="p">())</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="k">if</span> <span class="n">terminated</span> <span class="ow">or</span> <span class="n">truncated</span><span class="p">:</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">"ended:"</span><span class="p">,</span> <span class="n">info</span><span class="p">[</span><span class="s2">"termination_reason"</span><span class="p">])</span>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>        <span class="n">obs</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">vdsim_rl</span><span class="w"> </span><span class="kn">import</span> <span class="n">EnvConfig</span><span class="p">,</span> <span class="n">VDSimEnv</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">env</span> <span class="o">=</span> <span class="n">VDSimEnv</span><span class="p">(</span><span class="n">EnvConfig</span><span class="p">(</span><span class="n">vehicle</span><span class="o">=</span><span class="s2">"generic_sedan"</span><span class="p">,</span> <span class="n">tire</span><span class="o">=</span><span class="s2">"generic_pacejka"</span><span class="p">),</span> <span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">obs</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">"vehicle"</span><span class="p">],</span> <span class="n">env</span><span class="o">.</span><span class="n">obs_columns</span><span class="p">)</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">200</span><span class="p">):</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">obs</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">terminated</span><span class="p">,</span> <span class="n">truncated</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">sample</span><span class="p">())</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="k">if</span> <span class="n">terminated</span> <span class="ow">or</span> <span class="n">truncated</span><span class="p">:</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">"ended:"</span><span class="p">,</span> <span class="n">info</span><span class="p">[</span><span class="s2">"termination_reason"</span><span class="p">])</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>        <span class="n">obs</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
 </span></code></pre></div>
 <h2 id="4-examples">4. Examples<a class="headerlink" href="#4-examples" title="Permanent link">&para;</a></h2>
 <h3 id="41-random-policy-on-16-envs">4.1 Random policy on 16 envs<a class="headerlink" href="#41-random-policy-on-16-envs" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">vdsim_rl</span><span class="w"> </span><span class="kn">import</span> <span class="n">EnvConfig</span><span class="p">,</span> <span class="n">VDSimVecEnv</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">cfg</span> <span class="o">=</span> <span class="n">EnvConfig</span><span class="o">.</span><span class="n">from_yaml</span><span class="p">(</span><span class="s2">"configs/rl/default_env.yaml"</span><span class="p">)</span>    <span class="c1"># generic car, 1 ms</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">env</span> <span class="o">=</span> <span class="n">VDSimVecEnv</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">obs</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>                                <span class="c1"># obs: (16, obs_dim)</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">500</span><span class="p">):</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">obs</span><span class="p">,</span> <span class="n">rew</span><span class="p">,</span> <span class="n">term</span><span class="p">,</span> <span class="n">trunc</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">sample</span><span class="p">())</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="k">if</span> <span class="s2">"termination_reason"</span> <span class="ow">in</span> <span class="n">info</span><span class="p">:</span>                         <span class="c1"># auto-reset done</span>
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>        <span class="nb">print</span><span class="p">([</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">info</span><span class="p">[</span><span class="s2">"termination_reason"</span><span class="p">]</span> <span class="k">if</span> <span class="n">r</span><span class="p">])</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">vdsim_rl</span><span class="w"> </span><span class="kn">import</span> <span class="n">EnvConfig</span><span class="p">,</span> <span class="n">VDSimVecEnv</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">cfg</span> <span class="o">=</span> <span class="n">EnvConfig</span><span class="o">.</span><span class="n">from_yaml</span><span class="p">(</span><span class="s2">"configs/rl/default_env.yaml"</span><span class="p">)</span>    <span class="c1"># generic car, 1 ms</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">env</span> <span class="o">=</span> <span class="n">VDSimVecEnv</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">obs</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>                                <span class="c1"># obs: (16, obs_dim)</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">500</span><span class="p">):</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="n">obs</span><span class="p">,</span> <span class="n">rew</span><span class="p">,</span> <span class="n">term</span><span class="p">,</span> <span class="n">trunc</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">sample</span><span class="p">())</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="k">if</span> <span class="s2">"termination_reason"</span> <span class="ow">in</span> <span class="n">info</span><span class="p">:</span>                         <span class="c1"># auto-reset done</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>        <span class="nb">print</span><span class="p">([</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">info</span><span class="p">[</span><span class="s2">"termination_reason"</span><span class="p">]</span> <span class="k">if</span> <span class="n">r</span><span class="p">])</span>
 </span></code></pre></div>
 <h3 id="42-short-ppo-run-stable-baselines3-optional-dependency">4.2 Short PPO run (Stable-Baselines3, optional dependency)<a class="headerlink" href="#42-short-ppo-run-stable-baselines3-optional-dependency" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">stable_baselines3</span><span class="w"> </span><span class="kn">import</span> <span class="n">PPO</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">vdsim_rl</span><span class="w"> </span><span class="kn">import</span> <span class="n">EnvConfig</span><span class="p">,</span> <span class="n">make_sb3_vec_env</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">cfg</span> <span class="o">=</span> <span class="n">EnvConfig</span><span class="o">.</span><span class="n">from_yaml</span><span class="p">(</span><span class="s2">"configs/rl/fast_env.yaml"</span><span class="p">)</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">venv</span> <span class="o">=</span> <span class="n">make_sb3_vec_env</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="n">model</span> <span class="o">=</span> <span class="n">PPO</span><span class="p">(</span><span class="s2">"MlpPolicy"</span><span class="p">,</span> <span class="n">venv</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cpu"</span><span class="p">)</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="n">model</span><span class="o">.</span><span class="n">learn</span><span class="p">(</span><span class="n">total_timesteps</span><span class="o">=</span><span class="mi">100_000</span><span class="p">)</span>
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="n">model</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">"ppo_lanekeep"</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">stable_baselines3</span><span class="w"> </span><span class="kn">import</span> <span class="n">PPO</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">vdsim_rl</span><span class="w"> </span><span class="kn">import</span> <span class="n">EnvConfig</span><span class="p">,</span> <span class="n">make_sb3_vec_env</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">cfg</span> <span class="o">=</span> <span class="n">EnvConfig</span><span class="o">.</span><span class="n">from_yaml</span><span class="p">(</span><span class="s2">"configs/rl/fast_env.yaml"</span><span class="p">)</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="n">venv</span> <span class="o">=</span> <span class="n">make_sb3_vec_env</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="n">model</span> <span class="o">=</span> <span class="n">PPO</span><span class="p">(</span><span class="s2">"MlpPolicy"</span><span class="p">,</span> <span class="n">venv</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cpu"</span><span class="p">)</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="n">model</span><span class="o">.</span><span class="n">learn</span><span class="p">(</span><span class="n">total_timesteps</span><span class="o">=</span><span class="mi">100_000</span><span class="p">)</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="n">model</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">"ppo_lanekeep"</span><span class="p">)</span>
 </span></code></pre></div>
 <p><code>make_sb3_vec_env</code> implements SB3's own <code>VecEnv</code> protocol directly, so no
 <code>DummyVecEnv</code> wrapper (and no per-env Python object) is involved.</p>
 <h3 id="43-domain-randomization-road-friction-0610">4.3 Domain randomization: road friction 0.6–1.0<a class="headerlink" href="#43-domain-randomization-road-friction-0610" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">vdsim_rl</span><span class="w"> </span><span class="kn">import</span> <span class="n">EnvConfig</span><span class="p">,</span> <span class="n">VDSimVecEnv</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">cfg</span> <span class="o">=</span> <span class="n">EnvConfig</span><span class="o">.</span><span class="n">from_yaml</span><span class="p">(</span><span class="s2">"configs/rl/default_env.yaml"</span><span class="p">)</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">cfg</span><span class="o">.</span><span class="n">mu_scale_range</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.6</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="n">cfg</span><span class="o">.</span><span class="n">mass_scale_range</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.9</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">)</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="n">env</span> <span class="o">=</span> <span class="n">VDSimVecEnv</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="nb">print</span><span class="p">([</span><span class="nb">round</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">mu_scale</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">env</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">randomization</span><span class="p">[:</span><span class="mi">8</span><span class="p">]])</span>   <span class="c1"># this reset's draws</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">vdsim_rl</span><span class="w"> </span><span class="kn">import</span> <span class="n">EnvConfig</span><span class="p">,</span> <span class="n">VDSimVecEnv</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">cfg</span> <span class="o">=</span> <span class="n">EnvConfig</span><span class="o">.</span><span class="n">from_yaml</span><span class="p">(</span><span class="s2">"configs/rl/default_env.yaml"</span><span class="p">)</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">cfg</span><span class="o">.</span><span class="n">mu_scale_range</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.6</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="n">cfg</span><span class="o">.</span><span class="n">mass_scale_range</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.9</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">)</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="n">env</span> <span class="o">=</span> <span class="n">VDSimVecEnv</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="nb">print</span><span class="p">([</span><span class="nb">round</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">mu_scale</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">env</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">randomization</span><span class="p">[:</span><span class="mi">8</span><span class="p">]])</span>   <span class="c1"># this reset's draws</span>
 </span></code></pre></div>
 <p><code>configs/rl/fast_env.yaml</code> already turns on mass (0.85–1.15), friction
 (0.6–1.0) and tyre stiffness (0.85–1.15) randomization.</p>
@@ -3404,9 +3523,9 @@ PNG frames and print the encode command).</p>
 <p>What to look at: each tile keeps its own episode counter and return; when a car
 crosses the grey band's edge the tile flags <code>reset &lt;- off_track</code> and the car
 restarts from a new random speed, offset and heading.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>python<span class="w"> </span>examples/rl/record_vec_demo.py<span class="w"> </span>--config<span class="w"> </span>configs/rl/fast_env.yaml<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span>--num-envs<span class="w"> </span><span class="m">16</span><span class="w"> </span>--seconds<span class="w"> </span><span class="m">20</span><span class="w"> </span>--npz<span class="w"> </span>/tmp/rl_grid.npz
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>python<span class="w"> </span>examples/rl/render_vec_grid.py<span class="w"> </span>/tmp/rl_grid.npz<span class="w"> </span>--out<span class="w"> </span>docs/assets/rl/vec_grid.mp4
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>python<span class="w"> </span>examples/rl/record_vec_demo.py<span class="w"> </span>--config<span class="w"> </span>configs/rl/fast_env.yaml<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span>--num-envs<span class="w"> </span><span class="m">16</span><span class="w"> </span>--seconds<span class="w"> </span><span class="m">20</span><span class="w"> </span>--npz<span class="w"> </span>/tmp/rl_grid.npz
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>python<span class="w"> </span>examples/rl/render_vec_grid.py<span class="w"> </span>/tmp/rl_grid.npz<span class="w"> </span>--out<span class="w"> </span>docs/assets/rl/vec_grid.mp4
 </span></code></pre></div>
 <p><strong>B — one road, 64 cars</strong> (<a href="../assets/rl/vec_overlay.mp4"><code>assets/rl/vec_overlay.mp4</code></a>):
 the first episode of 64 envs overlaid, 15 s. Every env runs the same fixed
@@ -3421,11 +3540,11 @@ proportional lane-keeper (a scripted baseline, not a trained policy) plus its
 marker = episode ended) do so on both sides, and the rest settle at different
 distances because their inputs, initial speed and friction differ. For the
 spread from randomization alone, record with <code>--shared-actions</code>.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>python<span class="w"> </span>examples/rl/record_vec_demo.py<span class="w"> </span>--config<span class="w"> </span>configs/rl/fast_env.yaml<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span>--num-envs<span class="w"> </span><span class="m">64</span><span class="w"> </span>--seconds<span class="w"> </span><span class="m">15</span><span class="w"> </span>--seed<span class="w"> </span><span class="m">3</span><span class="w"> </span>--policy<span class="w"> </span>lanekeep<span class="w"> </span>--steer-scale<span class="w"> </span><span class="m">0</span>.3<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span>--hold<span class="w"> </span><span class="m">1</span>.0<span class="w"> </span>--npz<span class="w"> </span>/tmp/rl_overlay.npz
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>python<span class="w"> </span>examples/rl/render_vec_grid.py<span class="w"> </span>/tmp/rl_overlay.npz<span class="w"> </span>--overlay<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span>--out<span class="w"> </span>docs/assets/rl/vec_overlay.mp4
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>python<span class="w"> </span>examples/rl/record_vec_demo.py<span class="w"> </span>--config<span class="w"> </span>configs/rl/fast_env.yaml<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span>--num-envs<span class="w"> </span><span class="m">64</span><span class="w"> </span>--seconds<span class="w"> </span><span class="m">15</span><span class="w"> </span>--seed<span class="w"> </span><span class="m">3</span><span class="w"> </span>--policy<span class="w"> </span>lanekeep<span class="w"> </span>--steer-scale<span class="w"> </span><span class="m">0</span>.3<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span>--hold<span class="w"> </span><span class="m">1</span>.0<span class="w"> </span>--npz<span class="w"> </span>/tmp/rl_overlay.npz
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>python<span class="w"> </span>examples/rl/render_vec_grid.py<span class="w"> </span>/tmp/rl_overlay.npz<span class="w"> </span>--overlay<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span>--out<span class="w"> </span>docs/assets/rl/vec_overlay.mp4
 </span></code></pre></div>
 <p>Both videos ship as recorded by those two commands on the generic car of
 <code>fast_env.yaml</code>. The caption carries the commit of the tree they were recorded
@@ -3514,6 +3633,87 @@ a handful of runs, not for 64.</p>
   Pitch and roll are not in the criterion and are coarse at 2.5 ms (brake pitch
   30.6 %, step-steer roll 8.4 %); do not build a reward on them with
   <code>fast_env.yaml</code>.
+- <strong><code>ride_env.yaml</code> (L3, ride channels) uses a 1 ms substep, checked on a
+  criterion fixed before the measurement:</strong> the three channels above keep
+  their bounds, and az, pitch and roll are each ≤ 5 %, worst over three
+  manoeuvres — the step steer and the brake run above plus a 5 s straight run
+  at 20 m/s on the preset's ISO 8608 class B road (seed 1, throttle 0.1).
+  Same error definition: largest |error| over the run against a 1 µs
+  reference of the same plant, divided by the reference's peak |value|
+  (generic car, L3, 5 ms tick, 2026-10-13, <code>tests/rl/gate_g1_substep_accuracy.py
+  --level L3 --ride --road-class 1</code>). The state stayed finite in every run and
+  <code>solver_substep_clamp_count()</code> was 0.</p>
+<table>
+<thead>
+<tr>
+<th>substep</th>
+<th>ay</th>
+<th>yaw rate</th>
+<th>Fz_FL</th>
+<th>az</th>
+<th>pitch</th>
+<th>roll</th>
+<th>throughput flat / road (64 envs)</th>
+<th>verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.5 ms</td>
+<td>0.29 %</td>
+<td>0.10 %</td>
+<td>0.62 %</td>
+<td>1.41 %</td>
+<td>0.12 %</td>
+<td>0.17 %</td>
+<td>48 k / 49 k steps/s</td>
+<td>passes</td>
+</tr>
+<tr>
+<td>1.0 ms</td>
+<td>0.58 %</td>
+<td>0.20 %</td>
+<td>1.34 %</td>
+<td>2.87 %</td>
+<td>0.24 %</td>
+<td>0.33 %</td>
+<td>101 k / 84 k steps/s</td>
+<td>passes = <code>ride_env.yaml</code></td>
+</tr>
+<tr>
+<td>2.5 ms</td>
+<td>1.44 %</td>
+<td>0.39 %</td>
+<td>4.19 %</td>
+<td>7.49 %</td>
+<td>0.50 %</td>
+<td>0.69 %</td>
+<td>205 k / 207 k steps/s</td>
+<td>fails (az)</td>
+</tr>
+<tr>
+<td>5 ms</td>
+<td>6.83 %</td>
+<td>0.84 %</td>
+<td>6.81 %</td>
+<td>16.1 %</td>
+<td>0.98 %</td>
+<td>1.48 %</td>
+<td>333 k / 223 k steps/s</td>
+<td>fails (ay, Fz_FL, az)</td>
+</tr>
+</tbody>
+</table>
+<p>The worst az is always the road run; the error falls first-order with the
+  substep (observed order 1.01–1.10). On a class C road the 1 ms row reads the
+  same within 0.01 percentage points. Throughput was taken on a shared host
+  (load average about 4), so read it as a ratio between rows.
+- <strong>Rough roads under strong throttle.</strong> On L3 with the generic car the state
+  goes non-finite on ISO 8608 class C after 10–20 s of half or full throttle
+  (at about 40 m/s in the run whose speed was logged), and on class D and
+  rougher already under light throttle; the flat road and classes A and B
+  stayed finite at full throttle up to 69 m/s. <code>ride_env.yaml</code> therefore uses class B. Check a rougher class on
+  your own speed range before training on it.
 - <strong>A different car changes both accuracy and throughput, so the substep does
   not transfer.</strong> A preset that evaluates a measured <code>.tir</code> file through the
   MF2002 backend instead of the built-in MF96 has been measured ≈ 2.7× slower
@@ -3527,7 +3727,8 @@ a handful of runs, not for 64.</p>
   records only the stem, the parameter hash and <code>source: private</code> — never the
   path. Accuracy and throughput tables for those presets belong with them, not
   in this guide.
-- The road is straight and flat; there is no track or traffic yet.</p>
+- The road is straight (flat unless a road key from 2.10 is set); there is no
+  track or traffic yet.</p>
 
 
 
