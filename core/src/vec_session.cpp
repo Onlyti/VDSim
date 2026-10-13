@@ -16,7 +16,7 @@ enum : int {
     F_YAW_RATE, F_ROLL_RATE, F_PITCH_RATE,
     F_AX, F_AY, F_SIM_TIME,
     F_STEER_APPLIED, F_THROTTLE_APPLIED, F_BRAKE_APPLIED,
-    F_RACK_TRAVEL, F_RACK_VELOCITY,
+    F_RACK_TRAVEL, F_RACK_VELOCITY, F_AZ,
     F_WHEEL_SPIN = 100, F_SLIP_RATIO, F_SLIP_ANGLE, F_FZ,
     F_SUSP_COMP, F_SUSP_VEL, F_WHEEL_MU, F_TIRE_FX, F_TIRE_FY,
 };
@@ -30,6 +30,10 @@ const std::map<std::string, int>& field_table() {
         {"yaw_rate", F_YAW_RATE}, {"roll_rate", F_ROLL_RATE},
         {"pitch_rate", F_PITCH_RATE},
         {"ax", F_AX}, {"ay", F_AY}, {"sim_time", F_SIM_TIME},
+        // body vertical acceleration [m/s^2] = SimOutput.az: gravity
+        // excluded (0 at rest), not an accelerometer's specific force;
+        // 0 on the planar levels (K, L0, L1, L2)
+        {"az", F_AZ},
         {"steer_applied", F_STEER_APPLIED},
         {"throttle_applied", F_THROTTLE_APPLIED},
         {"brake_applied", F_BRAKE_APPLIED},
@@ -300,6 +304,7 @@ void VecSession::write_obs_row(const SimSession& s, float* row) const {
             case F_PITCH_RATE: v = st.pitch_rate(); break;
             case F_AX: v = o.ax; break;
             case F_AY: v = o.ay; break;
+            case F_AZ: v = o.az; break;
             case F_SIM_TIME: v = o.sim_time; break;
             case F_STEER_APPLIED:    v = o.steer_applied;    break;
             case F_THROTTLE_APPLIED: v = o.throttle_applied; break;

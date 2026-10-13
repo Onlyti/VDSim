@@ -49,10 +49,13 @@ def probe_root():
 def plant_weight_kg(cfg, n=2):
     """Total vertical tyre load / g of the plant the env actually built [kg].
 
-    Coasting straight at 10 m/s for 1 s; reads the per-wheel ``fz`` columns,
+    Coasting straight at 10 m/s for 1 s on a flat road (road keys cleared, the
+    L2 plant takes no vertical road); reads the per-wheel ``fz`` columns,
     so it measures the core's mass, not the Python-side params object.
     """
     c = EnvConfig(**{**cfg.__dict__, "level": "L2",
+                     "grade": 0.0, "bank": 0.0, "rough_amp": 0.0,
+                     "iso_class": -1, "road_psd": None,
                      "obs_fields": ["vx", "fz"], "speed_range": (10.0, 10.0),
                      "lateral_range": 0.0, "yaw_range": 0.0,
                      "time_limit_s": -1.0, "min_speed": -1.0})
@@ -80,9 +83,9 @@ print(f"Q23-1 probe plant weight {w.round(1)} kg vs YAML mass {PROBE['mass']}")
 assert np.all(np.abs(w / PROBE["mass"] - 1.0) < 0.01), w
 res["q23_probe_weight_kg"] = w.tolist()
 
-# ---- Q23-2 (Q23-f): both shipped RL declarations select the public generic
+# ---- Q23-2 (Q23-f): every shipped RL declaration selects the public generic
 #      car, name it, and do not warn (PO decision 78) ----
-for name in ("default_env.yaml", "fast_env.yaml"):
+for name in ("default_env.yaml", "fast_env.yaml", "ride_env.yaml"):
     c = EnvConfig.from_yaml(str(REPO / "configs/rl" / name))
     assert (c.vehicle, c.tire) == ("generic_sedan", "generic_pacejka"), \
         (name, c.vehicle, c.tire)

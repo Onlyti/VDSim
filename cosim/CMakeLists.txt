@@ -201,6 +201,15 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 300
         ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};VDSIM_BUILD_PY=${CMAKE_BINARY_DIR}/python;PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
+    # Work order 33: actuator and road declared in EnvConfig reach the
+    # VecSession (vdsim_rl._Core only -- no gymnasium needed).
+    add_test(NAME rl_connection
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/rl/test_rl_connection.py)
+    set_tests_properties(rl_connection PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 300
+        ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};VDSIM_BUILD_PY=${CMAKE_BINARY_DIR}/python;PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
     add_test(NAME control_ladder
         COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_SOURCE_DIR}/examples/control_ladder_demo.py)
