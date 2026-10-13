@@ -102,6 +102,47 @@ PREFERRED_SERIES = ("u_steer", "u_fx")
 #: Minimum and rounding step for the speedometer's static full-scale [km/h].
 SPEED_GAUGE_MIN_KMH = 40.0
 SPEED_GAUGE_STEP_KMH = 20.0
+#: Instrument strip geometry, in figure fractions. The two gauges sit side by
+#: side with only :data:`INSTRUMENT_GAP` between their drawn dials, centred
+#: under the drawn BEV map (the colorbar takes the right edge of the BEV axes).
+INSTRUMENT_BOTTOM = 0.020
+INSTRUMENT_HEIGHT = 0.140
+INSTRUMENT_GAP = 0.012
+INSTRUMENT_CENTRE_X = 0.320
+#: Data-limit aspect of one gauge axes (x span 2.30 / y span 2.40), so the
+#: axes rectangle is exactly the drawn dial and carries no empty margin.
+GAUGE_BOX_ASPECT = 2.30 / 2.40
+#: Figure width / height the layout assumes when the caller does not say.
+DEFAULT_FIGSIZE = (11.0, 5.6)
+#: g-g inset, left of the steering wheel; the gap leaves room for its tick labels.
+#: Its label sits inside the axes, not as a title, so the inset's top edge stays
+#: clear of the BEV x-label at the default 5.6 in figure height.
+GG_HEIGHT = 0.180
+GG_BOTTOM = 0.050
+GG_GAP = 0.030
+#: Above this many series panels the figure grows taller and panel labels wrap
+#: onto two lines, so neighbouring y-labels stop colliding.
+SERIES_COMPACT_MAX = 4
+SERIES_EXTRA_HEIGHT_IN = 0.6
+
+#: Motion-state layers (preset ``bev.accel_arrow`` / ``yaw_arcs`` /
+#: ``gg_diagram`` / ``kinematics_hud``).
+#: Window of the local-linear-fit derivative used for jerk and yaw acc. [s].
+KIN_DERIV_WINDOW_S = 0.20
+#: Standard gravity [m/s^2], for the g-g friction circle.
+GRAVITY = 9.81
+#: CG acceleration arrow length per (m/s^2), in wheelbases.
+ACCEL_ARROW_WB_PER_MPS2 = 0.40
+ACCEL_COLOR = "#c0399b"
+#: Yaw-rate arc sweep = yaw rate x this [s]: the heading change over 4 s.
+YAW_ARC_GAIN_S = 4.0
+#: Yaw-acceleration arc sweep = yaw acc. x this [s^2].
+YAW_ACC_ARC_GAIN_S2 = 0.8
+YAW_ARC_MAX_RAD = math.radians(300.0)
+YAW_RATE_COLOR = "#f08c00"
+YAW_ACC_COLOR = "#6f42c1"
+#: g-g trail length [s].
+GG_TAIL_S = 1.0
 
 UTIL_CMAP = LinearSegmentedColormap.from_list(
     "vdsim_util", ["#2c9c4c", "#9acd32", "#f5c542", "#e8752a", "#c02020"])
@@ -153,6 +194,76 @@ def load_sidecar(path, required: bool = False):
     return data
 
 
+def local_slope(values, dt: float, window_s: float = KIN_DERIV_WINDOW_S):
+    """Time derivative by a least-squares line over a sliding window.
+
+    Inside the record this is the Savitzky-Golay first derivative (poly
+    order 1 or 2 give the same centre slope); at the ends the window is cut to
+    the samples that exist instead of padding, so the first and last values
+    are one-sided fits rather than edge artefacts. A finite difference of an
+    acceleration would put the integrator's step noise straight into the jerk.
+
+    :param values: uniformly sampled series.
+    :param dt: sample period [s].
+    :param window_s: full window width [s]; at least 3 samples are used.
+    :returns: array of the same length, in ``unit(values) / s``.
+    """
+    x = np.asarray(values, dtype=float)
+    n = x.size
+    if n < 2 or not dt > 0:
+        return np.zeros(n)
+    half = max(1, int(round(0.5 * window_s / dt)))
+    k = np.arange(n, dtype=float)
+    # Prefix sums let every window's regression run in O(1).
+    def _cum(a):
+        return np.concatenate(([0.0], np.cumsum(a)))
+    s1, sk, sx = _cum(np.ones(n)), _cum(k), _cum(x)
+    skk, skx = _cum(k * k), _cum(k * x)
+    lo = np.clip(np.arange(n) - half, 0, n - 1)
+    hi = np.clip(np.arange(n) + half, 0, n - 1) + 1
+    m = s1[hi] - s1[lo]
+    mk, mx = sk[hi] - sk[lo], sx[hi] - sx[lo]
+    cov = (skx[hi] - skx[lo]) - mk * mx / m
+    var = (skk[hi] - skk[lo]) - mk * mk / m
+    return cov / np.maximum(var, 1e-12) / dt
+
+
+def kinematic_series(t, v_body, yaw_rate, a_body=None,
+                     window_s: float = KIN_DERIV_WINDOW_S) -> dict:
+    """Derived motion-state series for the ``kinematics`` panels and layers.
+
+    :param t: sample times [s].
+    :param v_body: ``[n,2]`` body-frame velocity [m/s] (ISO 8855, +y left).
+    :param yaw_rate: ``[n]`` yaw rate [rad/s].
+    :param a_body: ``[n,>=2]`` recorded body-frame CG acceleration [m/s^2], or
+        ``None`` to reconstruct it as ``dv/dt + r x v``.
+    :param window_s: derivative window, see :func:`local_slope`.
+    :returns: ``{name: (unit, array)}`` for ``speed``, ``a_long``, ``a_lat``,
+        ``jerk_long``, ``jerk_lat``, ``yaw_acc``, plus ``"_source"`` naming
+        where the acceleration came from.
+    """
+    t = np.asarray(t, dtype=float)
+    vb = np.asarray(v_body, dtype=float).reshape(len(t), -1)
+    r = np.asarray(yaw_rate, dtype=float)
+    dt = float(np.median(np.diff(t))) if t.size > 1 else 0.0
+    if a_body is not None:
+        ab = np.asarray(a_body, dtype=float).reshape(len(t), -1)
+        a_lon, a_lat, src = ab[:, 0], ab[:, 1], "a_body"
+    else:
+        a_lon = local_slope(vb[:, 0], dt, window_s) - r * vb[:, 1]
+        a_lat = local_slope(vb[:, 1], dt, window_s) + r * vb[:, 0]
+        src = "dv/dt + r x v"
+    return {
+        "speed": ("m/s", np.hypot(vb[:, 0], vb[:, 1])),
+        "a_long": ("m/s^2", a_lon),
+        "a_lat": ("m/s^2", a_lat),
+        "jerk_long": ("m/s^3", local_slope(a_lon, dt, window_s)),
+        "jerk_lat": ("m/s^3", local_slope(a_lat, dt, window_s)),
+        "yaw_acc": ("rad/s^2", local_slope(r, dt, window_s)),
+        "_source": src,
+    }
+
+
 def nearest_time_index(t_query, t_ref):
     """Index of the nearest ``t_ref`` sample for each ``t_query`` sample.
 
@@ -202,6 +313,16 @@ class LoadedTrace:
             self.util = (tr.utilization()
                          if tr.has("wheel_F") and tr.has("wheel_mu")
                          else np.zeros((len(self.t), 4)))
+            self.kin = kinematic_series(
+                self.t, self.v_body, self.yaw_rate,
+                a_body=np.asarray(tr.channel("a_body")) if tr.has("a_body") else None)
+            # g-g circle radius: the friction the run actually drove on.
+            self.gg_mu, self.gg_mu_assumed = 1.0, True
+            if tr.has("wheel_mu"):
+                mu = np.asarray(tr.channel("wheel_mu"), dtype=float).ravel()
+                mu = mu[np.isfinite(mu) & (mu > 0)]
+                if mu.size:
+                    self.gg_mu, self.gg_mu_assumed = float(np.median(mu)), False
             # Command panel series are chosen from the manifest, not hardcoded.
             names = [n for n in PREFERRED_SERIES if tr.has(n)]
             if not names:
@@ -240,6 +361,8 @@ class LoadedTrace:
         self.horizon_reach = self._horizon_reach()
         #: Window half-width actually used; ``render`` may override it.
         self.view_half_used = self.view_half
+        #: Append the motion-state HUD lines; set by ``render`` from the preset.
+        self.hud_kinematics = False
 
     def _resolve_panels(self, tr, panels):
         """Pick the panels a preset asks for from what this trace carries.
@@ -253,18 +376,17 @@ class LoadedTrace:
         :param panels: normalized preset panel list.
         :returns: ``(series, panels)`` for the panels that survived.
         """
-        speed = None
+        # Derived panels need a velocity; without ``v_body`` they are absent,
+        # not zeros, so a preset asking for them drops (or refuses) the panel.
+        derived = {}
         if tr.has("v_body"):
-            vb = np.asarray(tr.channel("v_body"), dtype=float)
-            speed = np.hypot(vb[:, 0], vb[:, 1])
+            derived = (self.kin if tr.has("yaw_rate")
+                       else {"speed": self.kin["speed"]})
         series, kept = [], []
         for spec in panels:
             name = spec["channel"]
-            if name == "speed":
-                if speed is None:
-                    arr, unit = None, ""
-                else:
-                    arr, unit = speed, "m/s"
+            if name in vdsim_preset.DERIVED_PANELS:
+                unit, arr = derived.get(name, ("", None))
             elif tr.has(name) and len(tr.channel_meta(name)["shape"]) == 1:
                 arr = np.asarray(tr.channel(name))
                 unit = tr.channel_meta(name).get("unit", "")
@@ -548,6 +670,16 @@ def frame_spec(tr: LoadedTrace, i: int) -> dict:
         # so would put a plant/predictor policy inside a drawing tool.
         "role = %s" % (tr.role,),
     ]
+    kin = {name: float(tr.kin[name][1][i])
+           for name in ("a_long", "a_lat", "jerk_long", "jerk_lat", "yaw_acc")}
+    kin["yaw_rate"] = float(tr.yaw_rate[i])
+    kin["yaw"] = yaw
+    if tr.hud_kinematics:
+        hud += [
+            "a = %+5.2f / %+5.2f m/s2 (lon/lat)" % (kin["a_long"], kin["a_lat"]),
+            "j = %+6.1f / %+6.1f m/s3" % (kin["jerk_long"], kin["jerk_lat"]),
+            "r' = %+6.1f deg/s2" % (math.degrees(kin["yaw_acc"]),),
+        ]
 
     # Horizons, when a sidecar was found. Without one the two artists are
     # never created and these stay None, which is what keeps old traces
@@ -585,7 +717,31 @@ def frame_spec(tr: LoadedTrace, i: int) -> dict:
         "hud": hud,
         "instruments": instrument_spec(delta, tr.steer_ratio, speed,
                                        tr.speed_gauge_max_kmh),
+        "kin": kin,
+        "accel_arrow": accel_arrow(tr.geometry, x, y, yaw,
+                                   kin["a_long"], kin["a_lat"]),
     }
+
+
+def accel_arrow(geometry: dict, x: float, y: float, yaw: float,
+                a_long: float, a_lat: float):
+    """CG acceleration arrow ``(x, y, dx, dy)`` [m] for a body-frame accel.
+
+    Length is proportional to the magnitude (not normalized like the velocity
+    arrow), so braking and cornering read at the same scale.
+    """
+    gain = ACCEL_ARROW_WB_PER_MPS2 * float(geometry["wheelbase_m"])
+    c, s = math.cos(yaw), math.sin(yaw)
+    return (x, y, gain * (c * a_long - s * a_lat), gain * (s * a_long + c * a_lat))
+
+
+def yaw_arc(x: float, y: float, radius: float, yaw: float, sweep: float,
+            n: int = 40):
+    """Arc ``(xs, ys)`` around the CG starting at the heading, ``sweep`` [rad]
+    (positive = counter-clockwise = +yaw), clipped to :data:`YAW_ARC_MAX_RAD`."""
+    sweep = max(-YAW_ARC_MAX_RAD, min(YAW_ARC_MAX_RAD, float(sweep)))
+    th = yaw + np.linspace(0.0, sweep, n)
+    return x + radius * np.cos(th), y + radius * np.sin(th)
 
 
 # --------------------------------------------------------------------------
@@ -611,17 +767,29 @@ def merge_spans(times, dt: float):
             for a, b in zip(starts, ends)]
 
 
-def single_layout_spec(n_series: int) -> dict:
+def single_layout_spec(n_series: int, fig_aspect: float = None,
+                       gg: bool = False) -> dict:
     """Return non-overlapping normalized figure rectangles for one run.
 
     The T6 instruments occupy a dedicated strip below the BEV instead of
     inset axes inside it.  Keeping this geometry in a pure function makes the
     fixed-screen contract testable without relying on artist draw order.
 
+    The two gauges are sized to their drawn dial (equal-aspect axes would
+    otherwise shrink inside a wider rectangle and leave the dials far apart)
+    and placed side by side, :data:`INSTRUMENT_GAP` apart, centred under the
+    BEV map.
+
     :param n_series: number of command/time-series panels on the right.
-    :returns: ``bev``, ``steering``, ``speed`` rectangles and a ``series``
-        tuple, each in Matplotlib ``[left, bottom, width, height]`` form.
+    :param fig_aspect: figure width / height; ``None`` assumes
+        :data:`DEFAULT_FIGSIZE`.
+    :param gg: also reserve the g-g inset, left of the steering wheel.
+    :returns: ``bev``, ``steering``, ``speed`` (and ``gg``) rectangles and a
+        ``series`` tuple, each in Matplotlib ``[left, bottom, width, height]``
+        form.
     """
+    if fig_aspect is None:
+        fig_aspect = DEFAULT_FIGSIZE[0] / DEFAULT_FIGSIZE[1]
     if n_series < 1:
         raise ValueError("single-run layout requires at least one series panel")
     series_bottom = 0.10
@@ -635,17 +803,33 @@ def single_layout_spec(n_series: int) -> dict:
          0.280, series_height)
         for k in range(n_series)
     )
-    return {
+    gauge_w = INSTRUMENT_HEIGHT * GAUGE_BOX_ASPECT / float(fig_aspect)
+    steer_left = INSTRUMENT_CENTRE_X - 0.5 * INSTRUMENT_GAP - gauge_w
+    out = {
         "bev": (0.07, 0.300, 0.525, 0.600),
-        "steering": (0.145, 0.020, 0.145, 0.140),
-        "speed": (0.365, 0.020, 0.145, 0.140),
+        "steering": (steer_left, INSTRUMENT_BOTTOM, gauge_w, INSTRUMENT_HEIGHT),
+        "speed": (INSTRUMENT_CENTRE_X + 0.5 * INSTRUMENT_GAP, INSTRUMENT_BOTTOM,
+                  gauge_w, INSTRUMENT_HEIGHT),
         "series": series,
     }
+    if gg:
+        gg_w = GG_HEIGHT / float(fig_aspect)
+        out["gg"] = (steer_left - GG_GAP - gg_w, GG_BOTTOM, gg_w, GG_HEIGHT)
+    return out
 
 
-def _setup_axes(tr: LoadedTrace, figsize, dpi):
+def auto_figsize(n_series: int):
+    """Figure size [in] for ``n_series`` panels: the default up to
+    :data:`SERIES_COMPACT_MAX`, then taller so each panel keeps its height."""
+    w, h = DEFAULT_FIGSIZE
+    extra = max(0, int(n_series) - SERIES_COMPACT_MAX)
+    return (w, h + SERIES_EXTRA_HEIGHT_IN * extra)
+
+
+def _setup_axes(tr: LoadedTrace, figsize, dpi, gg: bool = False):
     n_series = len(tr.series)
-    layout = single_layout_spec(max(n_series, 1))
+    layout = single_layout_spec(max(n_series, 1),
+                                fig_aspect=figsize[0] / figsize[1], gg=gg)
     fig = plt.figure(figsize=figsize, dpi=dpi)
     if n_series == 0:
         # Every optional panel was dropped for lack of a channel. That is an
@@ -663,6 +847,7 @@ def _setup_axes(tr: LoadedTrace, figsize, dpi):
         "speed": fig.add_axes(layout["speed"]),
     }
     fig._vdsim_instrument_axes = ax_instruments
+    fig._vdsim_gg_axes = fig.add_axes(layout["gg"]) if gg else None
     return fig, ax_bev, ax_series
 
 
@@ -751,6 +936,7 @@ def _draw_static(tr: LoadedTrace, ax_bev, ax_series, ax_instruments=None,
         arrowprops=dict(arrowstyle="-|>", color="#d62728", lw=1.8,
                         shrinkA=0, shrinkB=0))
     arrow.set_visible(bool(bev.get("velocity_arrow", True)))
+    kin_artists = _kinematic_artists(tr, ax_bev, bev)
     hud = ax_bev.text(
         0.015, 0.985, "", transform=ax_bev.transAxes, va="top", ha="left",
         fontsize=8, family="monospace", zorder=10,
@@ -799,10 +985,14 @@ def _draw_static(tr: LoadedTrace, ax_bev, ax_series, ax_instruments=None,
     fail_spans = merge_spans(fail_t, float(np.median(np.diff(tr.t)))
                              if len(tr.t) > 1 else 0.0)
     panel_specs = getattr(tr, "panels", [{}] * len(tr.series))
+    # Many short panels: put the unit on its own line so stacked y-labels fit
+    # the panel height instead of running into their neighbours.
+    label_fmt = ("%s [%s]" if len(tr.series) <= SERIES_COMPACT_MAX
+                 else "%s\n[%s]")
     for ax, (name, unit, arr), spec in zip(ax_series, tr.series, panel_specs):
         display_unit, display_arr = series_for_display(unit, arr)
         ax.plot(tr.t, display_arr, lw=1.1, color="#4c72b0")
-        ax.set_ylabel("%s [%s]" % (name, display_unit or "-"), fontsize=8)
+        ax.set_ylabel(label_fmt % (name, display_unit or "-"), fontsize=8)
         ax.tick_params(labelsize=7)
         ax.grid(True, alpha=0.25, lw=0.5)
         ax.set_xlim(float(tr.t[0]), float(tr.t[-1]))
@@ -824,12 +1014,63 @@ def _draw_static(tr: LoadedTrace, ax_bev, ax_series, ax_instruments=None,
     if ax_series:
         ax_series[-1].set_xlabel("time [s]", fontsize=8)
     instruments = _instrument_artists(ax_instruments, tr)
+    gg_ax = getattr(ax_bev.figure, "_vdsim_gg_axes", None)
+    if bev.get("gg_diagram", False) and gg_ax is not None:
+        kin_artists.update(_gg_artists(gg_ax, tr))
     return dict(trail=trail, body=body, wheels=wheels, arrow=arrow,
                 hud=hud, cursors=cursors, target=target,
                 prediction=prediction, qpfail=qpfail,
                 n_qp_fail=int(len(fail_t)),
                 util_color=bool(bev.get("utilization_color", True)),
-                **instruments)
+                **instruments, **kin_artists)
+
+
+def _kinematic_artists(tr: LoadedTrace, ax_bev, bev: dict) -> dict:
+    """BEV motion-state layers; only the ones the preset turns on exist."""
+    out = {}
+    if bev.get("accel_arrow", False):
+        out["accel_arrow"] = ax_bev.annotate(
+            "", xy=(0, 0), xytext=(0, 0), zorder=12,
+            arrowprops=dict(arrowstyle="-|>", color=ACCEL_COLOR, lw=2.2,
+                            shrinkA=0, shrinkB=0))
+        # Legend proxy: an annotation does not show up in the legend.
+        ax_bev.plot([], [], color=ACCEL_COLOR, lw=2.2,
+                    label="CG accel (%.1f m per m/s2)"
+                    % (ACCEL_ARROW_WB_PER_MPS2 * float(tr.geometry["wheelbase_m"]),))
+    if bev.get("yaw_arcs", False):
+        (out["yaw_rate_arc"],) = ax_bev.plot(
+            [], [], color=YAW_RATE_COLOR, lw=2.4, zorder=11,
+            label="yaw rate (arc = r x %g s)" % YAW_ARC_GAIN_S)
+        (out["yaw_rate_tip"],) = ax_bev.plot([], [], "o", color=YAW_RATE_COLOR,
+                                             ms=5, zorder=11)
+        (out["yaw_acc_arc"],) = ax_bev.plot(
+            [], [], color=YAW_ACC_COLOR, lw=1.6, ls="--", zorder=11,
+            label="yaw acc (arc = r' x %g s2)" % YAW_ACC_ARC_GAIN_S2)
+        out["yaw_arc_radius"] = 0.75 * tr.body_l
+    return out
+
+
+def _gg_artists(gg, tr: LoadedTrace) -> dict:
+    """g-g inset: whole-run path in grey, the last second and now in colour."""
+    lim = tr.gg_mu * GRAVITY
+    th = np.linspace(0.0, 2.0 * math.pi, 120)
+    gg.plot(lim * np.cos(th), lim * np.sin(th), ls="--", color="#999999", lw=1.0)
+    gg.plot(tr.kin["a_lat"][1], tr.kin["a_long"][1], color="#cccccc", lw=0.8)
+    (tail,) = gg.plot([], [], color=ACCEL_COLOR, lw=1.5)
+    (point,) = gg.plot([], [], "o", color=ACCEL_COLOR, ms=5)
+    gg.set_xlim(-1.1 * lim, 1.1 * lim)
+    gg.set_ylim(-1.1 * lim, 1.1 * lim)
+    gg.set_aspect("equal", adjustable="box")
+    gg.tick_params(labelsize=6, pad=1)
+    gg.set_xlabel("a_lat [m/s2]", fontsize=6, labelpad=1)
+    gg.set_ylabel("a_long [m/s2]", fontsize=6, labelpad=1)
+    gg.text(0.03, 0.97, "g-g\nmu=%.2f%s" % (tr.gg_mu, " (assumed)" if tr.gg_mu_assumed else ""),
+            transform=gg.transAxes, ha="left", va="top", fontsize=6)
+    dt = float(np.median(np.diff(tr.t))) if len(tr.t) > 1 else 1.0
+    return {"gg_tail": tail, "gg_point": point,
+            "gg_tail_n": max(1, int(round(GG_TAIL_S / max(dt, 1e-9)))),
+            "gg_series": (np.asarray(tr.kin["a_lat"][1]),
+                          np.asarray(tr.kin["a_long"][1]))}
 
 
 def draw_frame(artists, ax_bev, spec: dict):
@@ -849,9 +1090,39 @@ def draw_frame(artists, ax_bev, spec: dict):
     artists["arrow"].xy = (x + dx, y + dy)
     artists["hud"].set_text("\n".join(spec["hud"]))
     _draw_instruments(artists, spec["instruments"])
+    _draw_kinematics(artists, spec)
     _draw_horizons(artists, spec)
     for cur in artists["cursors"]:
         cur.set_xdata([spec["t"], spec["t"]])
+
+
+def _draw_kinematics(artists, spec: dict):
+    """Update the motion-state layers that exist; no-op for ``overview``."""
+    kin = spec.get("kin")
+    if kin is None:
+        return
+    x, y = spec["arrow"][0], spec["arrow"][1]
+    acc = artists.get("accel_arrow")
+    if acc is not None:
+        ax0, ay0, dx, dy = spec["accel_arrow"]
+        acc.set_position((ax0, ay0))
+        acc.xy = (ax0 + dx, ay0 + dy)
+    arc = artists.get("yaw_rate_arc")
+    if arc is not None:
+        rad = artists["yaw_arc_radius"]
+        xs, ys = yaw_arc(x, y, rad, kin["yaw"], YAW_ARC_GAIN_S * kin["yaw_rate"])
+        arc.set_data(xs, ys)
+        artists["yaw_rate_tip"].set_data([xs[-1]], [ys[-1]])
+        xs, ys = yaw_arc(x, y, 1.18 * rad, kin["yaw"],
+                         YAW_ACC_ARC_GAIN_S2 * kin["yaw_acc"])
+        artists["yaw_acc_arc"].set_data(xs, ys)
+    tail = artists.get("gg_tail")
+    if tail is not None:
+        i = int(spec["index"])
+        j0 = max(0, i - artists["gg_tail_n"])
+        a_lat, a_long = artists["gg_series"]
+        tail.set_data(a_lat[j0:i + 1], a_long[j0:i + 1])
+        artists["gg_point"].set_data([kin["a_lat"]], [kin["a_long"]])
 
 
 def _draw_instruments(artists, spec: dict):
@@ -1413,7 +1684,7 @@ def _default_multi_title(scene: MultiScene) -> str:
 # --------------------------------------------------------------------------
 
 def render(trace_path, out=None, png=None, fps: int = 20, stride: int = None,
-           dpi: int = 100, figsize=(11.0, 5.6), mp4: bool = False,
+           dpi: int = 100, figsize=None, mp4: bool = False,
            title: str = None, quiet: bool = False, sidecar=None,
            preview_frame: str = "util-peak", view_half: float = None,
            preset=None, panels=None) -> dict:
@@ -1426,7 +1697,8 @@ def render(trace_path, out=None, png=None, fps: int = 20, stride: int = None,
     :param stride: recorded samples per output frame. ``None`` derives it from
         the record rate so the animation plays at wall-clock speed.
     :param dpi: figure DPI.
-    :param figsize: figure size in inches.
+    :param figsize: figure size in inches; ``None`` is :func:`auto_figsize`
+        (11 x 5.6 up to four panels, taller beyond).
     :param mp4: also write an MP4; requires ``imageio-ffmpeg`` and is skipped
         with a warning when it is unavailable.
     :param title: figure suptitle.
@@ -1472,7 +1744,11 @@ def render(trace_path, out=None, png=None, fps: int = 20, stride: int = None,
         print("note: horizons reach %.0f m but the window is +-%.0f m; pass --view-half to widen"
               % (tr.horizon_reach, tr.view_half))
 
-    fig, ax_bev, ax_series = _setup_axes(tr, figsize, dpi)
+    tr.hud_kinematics = bool(resolved["bev"].get("kinematics_hud", False))
+    if figsize is None:
+        figsize = auto_figsize(len(tr.series))
+    fig, ax_bev, ax_series = _setup_axes(
+        tr, figsize, dpi, gg=bool(resolved["bev"].get("gg_diagram", False)))
     fig.suptitle(title or _default_title(tr), fontsize=9)
     artists = _draw_static(tr, ax_bev, ax_series, bev=resolved["bev"])
 

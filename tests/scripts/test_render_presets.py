@@ -78,9 +78,10 @@ def _write_trace(path, channels=None, n=40):
 
 
 def test_builtin_surface():
-    """Only ``overview`` ships; the other contracted names stay unoccupied."""
-    check(vp.builtin_names() == ("overview",),
-          "overview is the only built-in preset (%s)" % (vp.builtin_names(),))
+    """``overview`` is the only contracted preset that ships; the other
+    contracted names stay unoccupied. ``kinematics`` is the one extra."""
+    check(vp.builtin_names() == ("kinematics", "overview"),
+          "built-ins are kinematics + overview (%s)" % (vp.builtin_names(),))
     for name in ("control", "tire_limit", "road_contact"):
         check(name not in vp.BUILTIN_PRESETS,
               "%r is not implemented as a built-in" % name)
@@ -91,6 +92,15 @@ def test_builtin_surface():
     check(pre["bev"]["waypoint"] is True and pre["bev"]["view_half_m"] is None,
           "overview keeps the optional reference path and the geometry window")
     check(vp.load_preset() == pre, "no preset argument resolves to overview")
+    kin_keys = ("accel_arrow", "yaw_arcs", "gg_diagram", "kinematics_hud")
+    check(all(pre["bev"][k] is False for k in kin_keys),
+          "overview leaves every motion-state layer off (screen unchanged)")
+    kin = vp.load_preset("kinematics")
+    check(all(kin["bev"][k] is True for k in kin_keys),
+          "kinematics turns every motion-state layer on")
+    check([p["channel"] for p in kin["panels"]]
+          == ["speed", "a_long", "a_lat", "jerk_long", "jerk_lat", "yaw_rate", "yaw_acc"],
+          "kinematics declares speed/accel/jerk/yaw rate/yaw acc. panels")
 
 
 def test_unknown_and_reserved_names_are_refused():
@@ -190,6 +200,102 @@ def test_overview_renders_the_declared_screen():
         arr = np.asarray(Image.open(png).convert("L"), dtype=float)
         check(float(arr.std()) > 5.0,
               "preview is not a blank frame (std %.1f)" % float(arr.std()))
+
+
+def test_derivative_is_exact_on_polynomials():
+    """The jerk / yaw-acc derivative: exact on a line everywhere (ends
+    included) and on a parabola away from the cut ends."""
+    dt = 0.02
+    t = np.arange(200) * dt
+    d = vr.local_slope(3.0 - 1.5 * t, dt)
+    check(float(np.max(np.abs(d + 1.5))) < 1e-9,
+          "slope of a line is exact at every sample (max err %.1e)"
+          % float(np.max(np.abs(d + 1.5))))
+    d = vr.local_slope(0.7 * t * t, dt)
+    half = int(round(0.5 * vr.KIN_DERIV_WINDOW_S / dt))
+    err = np.abs(d - 1.4 * t)[half:-half]
+    check(float(err.max()) < 1e-9,
+          "slope of a parabola is exact inside the window (max err %.1e)"
+          % float(err.max()))
+
+
+def test_kinematics_derives_from_the_recorded_motion():
+    """Derived series follow the recorded channels, with and without a_body."""
+    with tempfile.TemporaryDirectory() as td:
+        p = _write_trace(Path(td) / "k.vdtrace")
+        tr = vr.LoadedTrace(p, panels=vp.load_preset("kinematics")["panels"])
+        names = [n for n, _u, _a in tr.series]
+        check(names == ["speed", "a long", "a lat", "jerk long", "jerk lat",
+                        "yaw rate", "yaw acc"],
+              "every kinematics panel resolves on a base-channel trace (%s)" % names)
+        check(tr.kin["_source"] == "dv/dt + r x v",
+              "without a_body the acceleration is reconstructed")
+        # Constant v_body (12, 0.4) and r 0.05: a_long = -r*vy, a_lat = r*vx.
+        check(np.allclose(tr.kin["a_long"][1], -0.05 * 0.4)
+              and np.allclose(tr.kin["a_lat"][1], 0.05 * 12.0),
+              "steady turn gives a_long = -r vy, a_lat = r vx")
+        check(np.allclose(tr.kin["jerk_lat"][1], 0.0)
+              and np.allclose(tr.kin["yaw_acc"][1], 0.0),
+              "steady turn has zero jerk and zero yaw acceleration")
+        check(abs(tr.gg_mu - 0.9) < 1e-12 and not tr.gg_mu_assumed,
+              "g-g circle uses the recorded wheel_mu")
+
+        ab = np.column_stack([np.linspace(0, 2, 40), np.full(40, -3.0), np.zeros(40)])
+        k = vr.kinematic_series(tr.t, tr.v_body, tr.yaw_rate, a_body=ab)
+        check(k["_source"] == "a_body" and np.allclose(k["a_lat"][1], -3.0),
+              "a recorded a_body wins over reconstruction")
+        slope = 2.0 / (39 * 0.05)
+        check(np.allclose(k["jerk_long"][1], slope),
+              "jerk is the time derivative of the acceleration (%.3f m/s3)" % slope)
+
+        thin = _write_trace(Path(td) / "thin.vdtrace", channels=["t", "pose", "u_steer"])
+        tr = vr.LoadedTrace(thin, panels=vp.load_preset("kinematics")["panels"])
+        check(tr.series == [] and tr.gg_mu_assumed,
+              "no v_body drops every derived panel; g-g mu falls back, labelled")
+
+
+def test_kinematics_renders_inside_the_frame():
+    """The kinematics screen: layers exist, they move, nothing leaves the frame."""
+    with tempfile.TemporaryDirectory() as td:
+        p = _write_trace(Path(td) / "k.vdtrace")
+        res = vr.render(p, out=Path(td) / "k.gif", fps=5, stride=10,
+                        quiet=True, preset="kinematics")
+        check(res["preset"] == "kinematics" and len(res["panels"]) == 7,
+              "kinematics renders seven panels (%s)" % (res["panels"],))
+        check(res["layout_violations"] == [],
+              "nothing left the frame: %s" % (res["layout_violations"],))
+
+        tr = vr.LoadedTrace(p, panels=vp.load_preset("kinematics")["panels"])
+        tr.hud_kinematics = True
+        size = vr.auto_figsize(len(tr.series))
+        check(size[1] > vr.DEFAULT_FIGSIZE[1],
+              "seven panels get a taller figure (%.1f in)" % size[1])
+        fig, ax_bev, axes = vr._setup_axes(tr, size, 100, gg=True)
+        artists = vr._draw_static(tr, ax_bev, axes,
+                                  bev=vp.load_preset("kinematics")["bev"])
+        spec = vr.frame_spec(tr, 20)
+        vr.draw_frame(artists, ax_bev, spec)
+        check(any(line.startswith("a = ") for line in spec["hud"])
+              and any(line.startswith("r' = ") for line in spec["hud"]),
+              "HUD carries acceleration and yaw-acc lines")
+        x, y, dx, dy = spec["accel_arrow"]
+        gain = vr.ACCEL_ARROW_WB_PER_MPS2 * 2.7
+        check(abs(math.hypot(dx, dy) - gain * math.hypot(spec["kin"]["a_long"],
+                                                         spec["kin"]["a_lat"])) < 1e-9,
+              "accel arrow length is proportional to |a|")
+        xs = artists["yaw_rate_arc"].get_xdata()
+        check(len(xs) > 2, "yaw-rate arc is drawn")
+        check(artists["gg_point"].get_xdata()[0] == spec["kin"]["a_lat"],
+              "g-g marker sits at the current (a_lat, a_long)")
+        fig.canvas.draw()
+        renderer = fig.canvas.get_renderer()
+        inv = fig.transFigure.inverted()
+        gg = fig._vdsim_gg_axes.get_tightbbox(renderer).transformed(inv)
+        others = [a for a in fig.axes if a is not fig._vdsim_gg_axes]
+        hits = [a for a in others
+                if a.get_tightbbox(renderer).transformed(inv).overlaps(gg)]
+        check(not hits, "g-g inset overlaps no other axes (%d hit)" % len(hits))
+        vr.plt.close(fig)
 
 
 def test_missing_optional_channel_drops_its_panel():
@@ -336,6 +442,9 @@ def main():
     test_user_preset_layers_over_the_builtin()
     test_cli_overrides_beat_the_preset()
     test_overview_renders_the_declared_screen()
+    test_derivative_is_exact_on_polynomials()
+    test_kinematics_derives_from_the_recorded_motion()
+    test_kinematics_renders_inside_the_frame()
     test_missing_optional_channel_drops_its_panel()
     test_required_channel_is_an_error()
     test_panel_geometry_is_fixed()
