@@ -22,6 +22,7 @@ struct SensorNoise {
     double noise_std {0.0};   // measurement white noise 1-sigma
     double bias      {0.0};   // constant offset
     double bias_rw   {0.0};   // random-walk std rate: bias += N(0,1)*bias_rw*sqrt(dt)
+    double lag_tau_s {0.0};   // first-order sensor lag [s] on the true signal, before bias/noise; 0 = none
 };
 
 struct SensorParams {
@@ -70,6 +71,10 @@ private:
     double b_ax_{0}, b_ay_{0}, b_az_{0}, b_wx_{0}, b_wy_{0}, b_wz_{0};
     std::array<double, NUM_WHEELS> b_w_{{0, 0, 0, 0}};
     double b_st_{0}, b_gx_{0}, b_gy_{0}, b_gvx_{0}, b_gvy_{0};
+    // first-order lag state per channel (ax ay az wx wy wz w0..w3 steer gx gy gvx gvy)
+    static constexpr int kLagCh = 15;
+    std::array<double, kLagCh> lag_{};
+    bool lag_primed_{false};
 };
 
 }  // namespace vdsim
