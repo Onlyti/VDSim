@@ -2,6 +2,7 @@
 #include "vdsim/sim_session.hpp"
 
 #include <cmath>
+#include <stdexcept>
 
 namespace vdsim {
 
@@ -10,6 +11,19 @@ namespace {
 void apply_vehicle_steer_deadtime(SimConfig& cfg, const VehicleParams& vp) {
     if (vp.steer_deadtime_s > 1e-9 && cfg.actuator.steer.ch.tau_s <= 1e-9)
         cfg.actuator.steer.ch.tau_s = vp.steer_deadtime_s;
+}
+
+// True when a throttle / brake channel does anything; otherwise the DirectControl
+// torque path is left untouched so the default stays bit-identical.
+bool channel_engaged(const ChannelActuator& c) {
+    return c.dead_time_s > 0.0 || c.tau_s > 0.0 || c.rate_limit > 0.0 ||
+           c.dead_zone > 0.0 || c.out_min > 0.0 || c.out_max < 1.0 ||
+           c.backlash > 0.0 || c.user != nullptr;
+}
+
+bool longitudinal_engaged(const ActuatorParams& p) {
+    return channel_engaged(p.throttle) || channel_engaged(p.brake.ch) ||
+           p.brake.thermal_enabled;
 }
 
 void snapshot_dynamics(IVehicleDynamics& dyn,
@@ -50,10 +64,19 @@ SimSession::SimSession(std::unique_ptr<IVehicleDynamics> dyn,
     network_ = make_default_veh_network(cfg.veh_network);
     SimConfig cfg_act = cfg;
     apply_vehicle_steer_deadtime(cfg_act, vp);
+    base_actuator_ = cfg_act.actuator;
     actuator_.initialize(cfg_act.actuator, cfg_act.nominal_dt);
     sensor_.initialize(cfg.sensor_delay_s, cfg.nominal_dt);
     sensors_.initialize(cfg.sensors);
     cascade_.initialize(vp);
+
+    drive_ref_ = (cfg.drive_torque_ref > 0.0) ? cfg.drive_torque_ref
+                                              : vp.max_motor_torque * vp.final_drive_ratio;
+    brake_ref_ = (cfg.brake_torque_ref > 0.0) ? cfg.brake_torque_ref
+                                              : vp.max_brake_torque;
+    const double sf = vp.drive_split_front;
+    w0_ = {{0.5 * sf, 0.5 * sf, 0.5 * (1.0 - sf), 0.5 * (1.0 - sf)}};
+    w_drive_ = w_brake_ = w0_;
 }
 
 
@@ -120,7 +143,9 @@ SessionSnapshot SimSession::snapshot() const {
     sensor_.save_aux(v);
     sensors_.save_aux(v, s.rng);
     dyn_->save_aux(v);
-    cascade_.save_state(v);
+    for (int i = 0; i < NUM_WHEELS; ++i) v.push_back(w_drive_[i]);
+    for (int i = 0; i < NUM_WHEELS; ++i) v.push_back(w_brake_[i]);
+    cascade_.save_state(v);   // keep last: tests/rl/test_rl_env.py addresses it as the tail
     return s;
 }
 
@@ -183,6 +208,8 @@ void SimSession::restore(const SessionSnapshot& s) {
     // transients, so the aux block is replayed after it, not before.
     dyn_->reset(true_state_);
     dyn_->restore_aux(v, p);
+    for (int i = 0; i < NUM_WHEELS; ++i) w_drive_[i] = snap::get(v, p);
+    for (int i = 0; i < NUM_WHEELS; ++i) w_brake_[i] = snap::get(v, p);
     cascade_.restore_state(v, p);
 }
 
@@ -216,6 +243,33 @@ DomainRandomization SimSession::randomization() const {
     return rand_;
 }
 
+void SimSession::set_actuator(const ActuatorParams& p) {
+    std::lock_guard<std::mutex> lk(mtx_);
+    actuator_.set_params(p);
+}
+
+ActuatorParams SimSession::actuator() const {
+    std::lock_guard<std::mutex> lk(mtx_);
+    return actuator_.params();
+}
+
+void SimSession::set_cascade_gains(const CascadeGains& g) {
+    const double v[] = {g.vx.kp, g.vx.ki, g.vx.i_max, g.vx.ax_clamp,
+                        g.ax.kp, g.ax.ki, g.ax.kd, g.ax.kff, g.ax.i_max,
+                        g.pp_lookahead_min, g.pp_lookahead_k, g.yaw_kp, g.yaw_ki};
+    for (double x : v)
+        if (!std::isfinite(x) || x < 0.0)
+            throw std::invalid_argument(
+                "SimSession.set_cascade_gains: every gain must be finite and >= 0");
+    std::lock_guard<std::mutex> lk(mtx_);
+    cascade_.set_gains(g);
+}
+
+CascadeGains SimSession::cascade_gains() const {
+    std::lock_guard<std::mutex> lk(mtx_);
+    return cascade_.gains();
+}
+
 // Rebuild the plant parameters from the as-built baseline and re-initialize in
 // place.  Called under mtx_ from reset().
 void SimSession::apply_randomization_locked() {
@@ -241,6 +295,20 @@ void SimSession::apply_randomization_locked() {
     const double delay = (rand_.sensor_delay_s >= 0.0) ? rand_.sensor_delay_s
                                                        : base_sensor_delay_s_;
     sensor_.initialize(delay, nominal_dt_);
+
+    // Actuator channels: rebuild from the as-built params so repeated resets do
+    // not compound the scales.  set_params() rather than initialize() -- the
+    // memory is cleared by actuator_.reset() in reset() right after this.
+    ActuatorParams ap = base_actuator_;
+    if (rand_.steer_delay_scale > 0.0) ap.steer.ch.dead_time_s *= rand_.steer_delay_scale;
+    if (rand_.steer_tau_scale   > 0.0) ap.steer.ch.tau_s       *= rand_.steer_tau_scale;
+    if (rand_.rate_limit_scale  > 0.0) {
+        ap.steer.ch.rate_limit *= rand_.rate_limit_scale;
+        ap.throttle.rate_limit *= rand_.rate_limit_scale;
+        ap.brake.ch.rate_limit *= rand_.rate_limit_scale;
+    }
+    ap.brake.ch.dead_zone += rand_.brake_deadzone_add;
+    actuator_.set_params(ap);
 }
 
 void SimSession::reset(const State& s0) {
@@ -260,6 +328,7 @@ void SimSession::reset(const State& s0) {
     sensor_.reset(s0);
     sensors_.reset();
     cascade_.reset();
+    w_drive_ = w_brake_ = w0_;
     true_state_ = s0;
     meas_state_ = s0;
     latched_    = ControlInput{CmdL4{}};
@@ -360,8 +429,42 @@ void SimSession::tick(double dt) {
         const double speed = s.speed_xy();
         CmdL4 steer_desired{};
         steer_desired.steer_angle_wheel = steer_from_input(cmd);
+
+        // Longitudinal channel: total drive / brake wheel torque -> normalised
+        // throttle / brake -> actuator -> redistributed with the commanded
+        // per-wheel shares.  Off (and bit-identical) unless a channel is set.
+        const CmdL1* l1 = std::get_if<CmdL1>(&cmd);
+        const bool long_on = l1 != nullptr && drive_ref_ > 0.0 && brake_ref_ > 0.0 &&
+                             longitudinal_engaged(actuator_.params());
+        if (long_on) {
+            double drive_sum = 0.0, brake_sum = 0.0;
+            for (int i = 0; i < NUM_WHEELS; ++i) {
+                drive_sum += std::max(l1->motor_torque[i], 0.0);
+                brake_sum += l1->brake_torque[i];
+            }
+            if (drive_sum > 1e-9)
+                for (int i = 0; i < NUM_WHEELS; ++i)
+                    w_drive_[i] = std::max(l1->motor_torque[i], 0.0) / drive_sum;
+            if (brake_sum > 1e-9)
+                for (int i = 0; i < NUM_WHEELS; ++i)
+                    w_brake_[i] = l1->brake_torque[i] / brake_sum;
+            steer_desired.throttle = drive_sum / drive_ref_;
+            steer_desired.brake    = brake_sum / brake_ref_;
+        }
+
         const CmdL4 steer_realized = actuator_.apply(steer_desired, speed, dt);
-        const ControlInput dyn_cmd = with_steer_angle(cmd, steer_realized.steer_angle_wheel);
+        ControlInput dyn_cmd = with_steer_angle(cmd, steer_realized.steer_angle_wheel);
+        if (long_on) {
+            CmdL1 c = *l1;
+            c.steer_angle_wheel = steer_realized.steer_angle_wheel;
+            for (int i = 0; i < NUM_WHEELS; ++i) {
+                // Negative motor torque (regen) is not a pedal: it passes through.
+                const double regen = std::min(l1->motor_torque[i], 0.0);
+                c.motor_torque[i] = regen + steer_realized.throttle * drive_ref_ * w_drive_[i];
+                c.brake_torque[i] = steer_realized.brake * brake_ref_ * w_brake_[i];
+            }
+            dyn_cmd = ControlInput{c};
+        }
 
         dyn_->step(dyn_cmd, contacts, dt);
         const State next = dyn_->state();
@@ -385,8 +488,8 @@ void SimSession::tick(double dt) {
             ax_ = ax; ay_ = ay; roll_ = roll; pitch_ = pitch; rack_ = rack;
             az_ = az; heave_z_ = heave; contacts_ = contacts;
             steer_applied_ = steer_realized.steer_angle_wheel;
-            throttle_applied_ = 0.0;
-            brake_applied_ = 0.0;
+            throttle_applied_ = long_on ? steer_realized.throttle : 0.0;
+            brake_applied_    = long_on ? steer_realized.brake : 0.0;
             Fz_ = Fz;
             snapshot_dynamics(*dyn_, tire_forces_, tire_forces_wheel_,
                               slip_ratio_, slip_angle_, wheel_mu_, wheel_mu_peak_,
@@ -507,6 +610,9 @@ std::unique_ptr<SimSession> make_direct_control_session(
     SimConfig cfg;
     cfg.session_kind = SessionKind::DirectControl;
     cfg.nominal_dt = opts.nominal_dt;
+    cfg.actuator = opts.actuator;
+    cfg.drive_torque_ref = opts.drive_torque_ref;
+    cfg.brake_torque_ref = opts.brake_torque_ref;
     apply_vehicle_steer_deadtime(cfg, vp);
     VehicleParams vp_dc = vp;
     vp_dc.plant_path = true;

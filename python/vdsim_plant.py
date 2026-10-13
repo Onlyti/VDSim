@@ -308,6 +308,124 @@ def _poly_patches_from_map_2d(friction_map_2d):
     return out
 
 
+_CHANNEL_KEYS = ("dead_time_s", "tau_s", "rate_limit", "dead_zone", "out_min", "out_max",
+                 "backlash")
+_STEER_EXTRA = ("friction", "inertia", "servo_kp", "servo_kd")
+_BRAKE_EXTRA = ("thermal",)
+_LUGRE_KEYS = ("sigma0", "sigma1", "sigma2", "Tc", "Ts", "ws")
+_THERMAL_KEYS = ("heat_coeff", "cool_coeff", "T_ambient", "mu_T_temp", "mu_T_scale")
+
+
+def _finite(v, where):
+    v = float(v)
+    if not math.isfinite(v):
+        raise ValueError(f"actuator[{where}] must be finite")
+    return v
+
+
+def _fill_channel(dst, spec, where, extra=()):
+    if not isinstance(spec, dict):
+        raise ValueError(f"actuator[{where}] must be a dict of {list(_CHANNEL_KEYS)}")
+    for k, v in spec.items():
+        if k == "user":
+            dst.user = v
+        elif k in _CHANNEL_KEYS:
+            setattr(dst, k, _finite(v, f"{where}][{k}"))
+        elif k not in extra:
+            raise ValueError(f"actuator[{where}]: unknown key {k!r}; "
+                             f"allowed {list(_CHANNEL_KEYS) + ['user'] + list(extra)}")
+
+
+def _conf_catalog_root():
+    pkg = Path(__file__).resolve().parent
+    if (pkg / "vdsim_configs" / "catalog" / "manifest.yaml").is_file():
+        return pkg
+    for c in (REPO, Path.cwd()):
+        if (c / "configs" / "catalog" / "manifest.yaml").is_file():
+            return c
+    return REPO
+
+
+def load_actuator_preset(preset_id: str) -> dict:
+    """Body of a catalog part ``type: actuator`` (schema ``actuator_v1``) as a spec dict."""
+    if str(pkg_dir := Path(__file__).resolve().parent) not in sys.path:
+        sys.path.insert(0, pkg_dir.as_posix())
+    from catalog import CatalogResolver
+    doc = CatalogResolver(_conf_catalog_root()).load_part(preset_id)
+    if doc["type"] != "actuator" or doc["schema"] != "actuator_v1":
+        raise ValueError(f"{preset_id!r} is a {doc['type']}/{doc['schema']} part, not actuator/actuator_v1")
+    return dict(doc["body"])
+
+
+def _merge_spec(base, over):
+    out = {k: (dict(v) if isinstance(v, dict) else v) for k, v in base.items()}
+    for ch, spec in over.items():
+        if isinstance(spec, dict) and isinstance(out.get(ch), dict):
+            out[ch].update(spec)
+        else:
+            out[ch] = spec
+    return out
+
+
+def build_actuator_params(spec):
+    """Turn ``spec`` into a ``vdsim.ActuatorParams``.
+
+    ``spec`` is one of
+      * ``None`` -- identity (no actuator effect);
+      * a ready ``vdsim.ActuatorParams``;
+      * a catalog id string, e.g. ``"actuator.passenger_ev_nominal"``;
+      * a dict with any of ``steer`` / ``throttle`` / ``brake`` (each a dict of
+        ``dead_time_s``, ``tau_s``, ``rate_limit``, ``dead_zone``, ``out_min``,
+        ``out_max``, ``backlash``, ``user``; steer also ``friction`` / ``inertia`` /
+        ``servo_kp`` / ``servo_kd``; brake also ``thermal``). A ``"preset"`` key
+        names a catalog id the other keys are laid over.
+    Unlisted fields keep the identity default.
+    """
+    if spec is None:
+        return vdsim.ActuatorParams()
+    if isinstance(spec, vdsim.ActuatorParams):
+        return spec
+    if isinstance(spec, str):
+        spec = {"preset": spec}
+    if not isinstance(spec, dict):
+        raise ValueError("actuator must be None, a preset id, vdsim.ActuatorParams or a dict")
+    spec = dict(spec)
+    if "preset" in spec:
+        spec = _merge_spec(load_actuator_preset(spec.pop("preset")), spec)
+    unknown = set(spec) - {"steer", "throttle", "brake"}
+    if unknown:
+        raise ValueError(f"actuator: unknown channel(s) {sorted(unknown)}; "
+                         "allowed ['steer', 'throttle', 'brake']")
+    ap = vdsim.ActuatorParams()
+    if "steer" in spec:
+        st = spec["steer"]
+        _fill_channel(ap.steer.ch, st, "steer", _STEER_EXTRA)
+        if isinstance(st.get("friction"), dict):
+            ap.steer.friction.enabled = True
+            for k, v in st["friction"].items():
+                if k not in _LUGRE_KEYS:
+                    raise ValueError(f"actuator[steer][friction]: unknown key {k!r}; allowed {list(_LUGRE_KEYS)}")
+                setattr(ap.steer.friction, k, _finite(v, f"steer][friction][{k}"))
+        for k in ("inertia", "servo_kp", "servo_kd"):
+            if k in st:
+                setattr(ap.steer, k, _finite(st[k], f"steer][{k}"))
+    if "throttle" in spec:
+        _fill_channel(ap.throttle, spec["throttle"], "throttle")
+    if "brake" in spec:
+        br = spec["brake"]
+        _fill_channel(ap.brake.ch, br, "brake", _BRAKE_EXTRA)
+        if isinstance(br.get("thermal"), dict):
+            ap.brake.thermal_enabled = True
+            for k, v in br["thermal"].items():
+                if k not in _THERMAL_KEYS:
+                    raise ValueError(f"actuator[brake][thermal]: unknown key {k!r}; allowed {list(_THERMAL_KEYS)}")
+                if k in ("mu_T_temp", "mu_T_scale"):
+                    setattr(ap.brake, k, [_finite(x, f"brake][thermal][{k}") for x in v])
+                else:
+                    setattr(ap.brake, k, _finite(v, f"brake][thermal][{k}"))
+    return ap
+
+
 def _validate_dt(control_dt: float, substep_dt: float):
     if not (control_dt > 0.0):
         raise ValueError("control_dt must be > 0")
@@ -509,6 +627,9 @@ class VDSimPlant:
       control_dt: float = 0.05,
       substep_dt: float = 5e-4,
       level: str = "L2",
+      actuator=None,
+      drive_torque_ref: float = 0.0,
+      brake_torque_ref: float = 0.0,
   ):
       if level not in PLANT_LEVELS:
           raise ValueError(
@@ -551,6 +672,10 @@ class VDSimPlant:
       opts.friction.polygons = poly_patches
       opts.friction.blend_distance = 1.0
       opts.level = level
+      if actuator is not None:
+          opts.actuator = build_actuator_params(actuator)
+      opts.drive_torque_ref = float(drive_torque_ref)
+      opts.brake_torque_ref = float(brake_torque_ref)
 
       self.level = level
       self.control_dt = float(control_dt)
@@ -594,6 +719,19 @@ class VDSimPlant:
               "tir": Path(self._ts.wheel[0].tir_path).name if self._ts.wheel[0].tir_path else "",
           },
       }
+
+  @property
+  def actuator(self):
+      """The ``vdsim.ActuatorParams`` currently in force (a copy)."""
+      return self._sess.actuator()
+
+  def set_actuator(self, actuator):
+      """Swap the actuator on a live plant, keeping its memory (delay line, lag).
+
+      Accepts what ``actuator=`` accepts. The next :meth:`reset` returns to the
+      as-built actuator.
+      """
+      self._sess.set_actuator(build_actuator_params(actuator))
 
   def reset(self, state0=None):
       """Seed pose [X, Y, psi, vx, vy, r]; wheel spin = vx/R (make_init_state)."""

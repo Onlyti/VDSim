@@ -136,6 +136,7 @@ nav:
       - "Catalog, scenes & physics": CATALOG_AND_PHYSICS.md
       - Running VDSim: RUNNING.md
       - "RL environment (vdsim_rl)": RL_GUIDE.md
+      - "Actuator model guide": ACTUATOR_GUIDE.md
       - "Closed-loop evaluation modes": guides/CLOSED_LOOP_EVAL.md
       - Validation: VALIDATION.md
       - "Assumptions & limitations": ASSUMPTIONS.md

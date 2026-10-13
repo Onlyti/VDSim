@@ -383,6 +383,31 @@ def test_lateral_error_and_tracking_stats():
           f"{st['e_y_rmse_m']:.4f} m over {st['e_y_n']} samples")
 
 
+ACTUATOR = {"steer": {"dead_time_s": 0.005, "tau_s": 0.02},
+            "throttle": {"dead_time_s": 0.01, "tau_s": 0.05}}
+
+
+def test_actuator_plant_sync_equals_async_zero():
+    """Work order 32: with actuator= on the plant, mode A and mode B with zero
+    latency stay bit-identical (skip and queue), and the chain acts on the run.
+    """
+    plant = dict(PLANT, actuator=ACTUATOR)
+    a = ClosedLoopEval(plant, controller, TC, mode="sync", duration=DURATION,
+                       state0=STATE0).run()
+    keys = TRACE_STATE_KEYS + ("u_steer", "u_fx")
+    for policy in ("skip", "queue"):
+        b = ClosedLoopEval(plant, controller, TC, mode="virtual_async",
+                           duration=DURATION, latency=LatencyModel.fixed(0.0),
+                           overrun=policy, state0=STATE0).run()
+        d = _max_abs_diff(a.trace, b.trace, keys)
+        assert d == 0.0, f"actuator plant, {policy}: fixed(0) differs from sync by {d}"
+    bare = _run("sync")
+    d_act = _max_abs_diff(bare.trace, a.trace)
+    assert d_act > 1e-6, f"the actuator chain had no effect (max|diff| = {d_act})"
+    print(f"actuator plant ok: sync == virtual_async fixed(0); chain moves the run "
+          f"by {d_act:.3e}")
+
+
 def main():
     test_s1_sync_matches_plant_loop()
     test_s2_async_zero_latency_matches_sync()
@@ -396,6 +421,7 @@ def main():
     test_trace_virtual_async_timing_channels()
     test_trace_timing_needs_eval_mode()
     test_lateral_error_and_tracking_stats()
+    test_actuator_plant_sync_equals_async_zero()
     print("test_closedloop_eval: all ok")
 
 

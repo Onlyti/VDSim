@@ -29,6 +29,16 @@ inline double first_order(double y, double u, double tau, double dt) {
     return a * y + (1.0 - a) * u;
 }
 
+// Play (backlash) operator: the output holds until the input has moved width/2
+// past it, then follows at that offset.  width <= 0 -> passthrough, state untouched.
+inline double play(double& y, double u, double width) {
+    if (width <= 0.0) return u;
+    const double h = 0.5 * width;
+    if (u - y > h)      y = u - h;
+    else if (y - u > h) y = u + h;
+    return y;
+}
+
 // Piecewise-linear lookup (ascending x). Empty table -> default.
 double lerp_table(const std::vector<double>& xs, const std::vector<double>& ys,
                   double x, double def) {
@@ -69,7 +79,46 @@ double ActuatorModel::push_delay(FracDelay& buf, double v,
 void ActuatorModel::initialize(const ActuatorParams& p, double nominal_dt) {
     p_ = p;
     nominal_dt_ = (nominal_dt > 1e-6) ? nominal_dt : 0.005;
+    sync_users();
     reset();                                   // sets brake_T_ = T_ambient
+    initialized_ = true;
+}
+
+void ActuatorModel::sync_user(UserSlot& s,
+                              const std::shared_ptr<const IChannelModel>& want) {
+    if (s.proto == want) return;
+    s.proto = want;
+    s.inst  = want ? want->clone() : nullptr;
+}
+
+void ActuatorModel::sync_users() {
+    sync_user(steer_user_,    p_.steer.ch.user);
+    sync_user(throttle_user_, p_.throttle.user);
+    sync_user(brake_user_,    p_.brake.ch.user);
+}
+
+void ActuatorModel::grow_ring(FracDelay& b, double L, double dt) {
+    if (L <= 0.0 || dt <= 1e-9) return;
+    const int need = static_cast<int>(std::floor(L / dt)) + 3;
+    const int sz   = static_cast<int>(b.buf.size());
+    if (sz >= need) return;
+    // FracDelay::resize() zero-fills, which would wipe the delay line at the
+    // exact moment the delay grows.  Re-lay the samples oldest-first instead.
+    std::vector<double> out(static_cast<std::size_t>(need), 0.0);
+    for (int i = 0; i < sz; ++i)
+        out[static_cast<std::size_t>(i)] = b.ago(sz - 1 - i);
+    b.buf.swap(out);
+    b.w = sz;                      // next write slot; sz < need by construction
+}
+
+void ActuatorModel::set_params(const ActuatorParams& p) {
+    p_ = p;
+    sync_users();
+    // Pre-grow here so push_delay()'s own resize() (which zero-fills) never
+    // fires as a side effect of a mid-rollout dead-time increase.
+    grow_ring(steer_buf_,    p_.steer.ch.dead_time_s, nominal_dt_);
+    grow_ring(throttle_buf_, p_.throttle.dead_time_s, nominal_dt_);
+    grow_ring(brake_buf_,    p_.brake.ch.dead_time_s, nominal_dt_);
     initialized_ = true;
 }
 
@@ -79,6 +128,9 @@ void ActuatorModel::reset() {
     steer_out_ = throttle_out_ = brake_out_ = 0.0;
     steer_pos_ = steer_vel_ = lugre_z_ = 0.0;
     brake_T_ = p_.brake.T_ambient;
+    steer_bl_ = throttle_bl_ = brake_bl_ = 0.0;
+    for (UserSlot* u : {&steer_user_, &throttle_user_, &brake_user_})
+        if (u->inst) u->inst->reset();
 }
 
 CmdL4 ActuatorModel::apply(const CmdL4& desired, double speed_mps, double dt) {
@@ -88,6 +140,7 @@ CmdL4 ActuatorModel::apply(const CmdL4& desired, double speed_mps, double dt) {
     // ---------------- Steering ----------------
     double s_cmd = push_delay(steer_buf_, desired.steer_angle_wheel,
                               p_.steer.ch.dead_time_s, dt);
+    s_cmd = play(steer_bl_, s_cmd, p_.steer.ch.backlash);
     if (p_.steer.friction.enabled) {
         // Torque-servo steering with LuGre friction (substepped).
         const auto& L = p_.steer.friction;
@@ -131,7 +184,8 @@ CmdL4 ActuatorModel::apply(const CmdL4& desired, double speed_mps, double dt) {
         steer_out_ = saturate(y, p_.steer.ch.out_min, p_.steer.ch.out_max);
         steer_pos_ = steer_out_;
     }
-    out.steer_angle_wheel = steer_out_;
+    out.steer_angle_wheel = steer_user_.inst ? steer_user_.inst->step(steer_out_, dt)
+                                             : steer_out_;
 
     // ---------------- Throttle ----------------
     {
@@ -143,13 +197,16 @@ CmdL4 ActuatorModel::apply(const CmdL4& desired, double speed_mps, double dt) {
         }
         double t_cmd = push_delay(throttle_buf_, t_in,
                                   p_.throttle.dead_time_s, dt);
+        t_cmd = play(throttle_bl_, t_cmd, p_.throttle.backlash);
         double y = first_order(throttle_lag_, t_cmd, p_.throttle.tau_s, dt);
         throttle_lag_ = y;
         y = rate_limit(throttle_out_, y, p_.throttle.rate_limit, dt);
         const double lo = std::max(0.0, p_.throttle.out_min);
         const double hi = std::min(1.0, p_.throttle.out_max);
         throttle_out_ = saturate(y, lo, hi);
-        out.throttle = throttle_out_;
+        out.throttle = throttle_user_.inst
+            ? saturate(throttle_user_.inst->step(throttle_out_, dt), 0.0, 1.0)
+            : throttle_out_;
     }
 
     // ---------------- Brake ----------------
@@ -161,6 +218,7 @@ CmdL4 ActuatorModel::apply(const CmdL4& desired, double speed_mps, double dt) {
             b_in = (b_in > dz) ? (b_in - dz) / std::max(1e-6, 1.0 - dz) : 0.0;
         }
         double b_cmd = push_delay(brake_buf_, b_in, p_.brake.ch.dead_time_s, dt);
+        b_cmd = play(brake_bl_, b_cmd, p_.brake.ch.backlash);
         double y = first_order(brake_lag_, b_cmd, p_.brake.ch.tau_s, dt);
         brake_lag_ = y;
         y = rate_limit(brake_out_, y, p_.brake.ch.rate_limit, dt);
@@ -177,6 +235,8 @@ CmdL4 ActuatorModel::apply(const CmdL4& desired, double speed_mps, double dt) {
         const double hi = std::min(1.0, p_.brake.ch.out_max);
         brake_out_ = saturate(y, lo, hi);
         out.brake = saturate(brake_out_ * mu_scale, 0.0, 1.0);
+        if (brake_user_.inst)
+            out.brake = saturate(brake_user_.inst->step(out.brake, dt), 0.0, 1.0);
     }
 
     return out;
@@ -226,6 +286,13 @@ void ActuatorModel::save_aux(std::vector<double>& v) const {
     v.push_back(steer_out_);   v.push_back(throttle_out_); v.push_back(brake_out_);
     v.push_back(steer_pos_);   v.push_back(steer_vel_);    v.push_back(lugre_z_);
     v.push_back(brake_T_);
+    v.push_back(steer_bl_); v.push_back(throttle_bl_); v.push_back(brake_bl_);
+    for (const UserSlot* u : {&steer_user_, &throttle_user_, &brake_user_}) {
+        const std::vector<double> st = u->inst ? u->inst->get_state()
+                                               : std::vector<double>{};
+        v.push_back(static_cast<double>(st.size()));
+        v.insert(v.end(), st.begin(), st.end());
+    }
 }
 
 void ActuatorModel::restore_aux(const std::vector<double>& v, std::size_t& p) {
@@ -242,6 +309,14 @@ void ActuatorModel::restore_aux(const std::vector<double>& v, std::size_t& p) {
     brake_out_ = snap::get(v, p);
     steer_pos_ = snap::get(v, p); steer_vel_ = snap::get(v, p);
     lugre_z_   = snap::get(v, p); brake_T_   = snap::get(v, p);
+    steer_bl_ = snap::get(v, p); throttle_bl_ = snap::get(v, p);
+    brake_bl_ = snap::get(v, p);
+    for (UserSlot* u : {&steer_user_, &throttle_user_, &brake_user_}) {
+        const std::size_t n = static_cast<std::size_t>(snap::get(v, p));
+        std::vector<double> st(n);
+        for (std::size_t i = 0; i < n; ++i) st[i] = snap::get(v, p);
+        if (u->inst) u->inst->set_state(st);
+    }
 }
 
 void SensorDelay::save_aux(std::vector<double>& v) const {

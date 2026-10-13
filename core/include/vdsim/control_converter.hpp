@@ -36,6 +36,9 @@ public:
 
     void initialize(const Gains& g) noexcept;
     void reset() noexcept;
+    // Swap the gains without touching the integrator (live retune).
+    void set_gains(const Gains& g) noexcept { g_ = g; }
+    const Gains& gains() const noexcept { return g_; }
 
     // Returns (throttle, brake), both in [0, 1].
     std::pair<double, double> update(double ax_target,
@@ -77,6 +80,9 @@ public:
 
     void initialize(const Gains& g) noexcept;
     void reset() noexcept;
+    // Swap the gains without touching the integrator (live retune).
+    void set_gains(const Gains& g) noexcept { g_ = g; }
+    const Gains& gains() const noexcept { return g_; }
     // Returns desired ax_target [m/s^2] given (v_target, v_meas, dt).
     double update(double v_target, double v_meas, double dt) noexcept;
 
@@ -181,10 +187,25 @@ private:
 // fed the measured state each tick. This is the "controller" entity in the
 // architecture: User Lc-command → CascadeController → CmdL4 → VehNetwork → actuator.
 // =============================================================================
+// Tunable gains of the CascadeController. Defaults are the values the cascade
+// used before they became settable, so an untouched session behaves as before.
+struct CascadeGains {
+    LongVxController::Gains vx {};            // L6 speed loop
+    LongAxController::Gains ax {};            // L5 accel loop (+ pedal feed-forward)
+    double pp_lookahead_min {1.5};            // [m]  pure-pursuit lookahead floor
+    double pp_lookahead_k   {0.40};           // [s]  Ld = max(min, k * vx)
+    double yaw_kp {0.15};                     // [rad steer / (rad/s)] yaw-rate PI
+    double yaw_ki {0.05};                     // [rad steer / rad]
+};
+
 class CascadeController {
 public:
     void initialize(const VehicleParams& vp);
     void reset() noexcept;
+
+    // Live retune: keeps every integrator and the pursuit progress.
+    void set_gains(const CascadeGains& g) noexcept;
+    const CascadeGains& gains() const noexcept { return gains_; }
 
     // Convert a ladder command to CmdL4 using current feedback.
     //   meas    : measured plant state (pose, vx for cascade)
@@ -212,6 +233,7 @@ private:
     // out.steer_mode/steer_actuator (L1-L3 sub-L4, for a Dynamic steering subsystem).
     void lat_to_cmd(const LcLatCmd& lat, const State& meas, double dt, CmdL4& out);
 
+    CascadeGains gains_ {};
     LongVxController vxc_;
     LongAxController axc_;
     PurePursuitController pp_;

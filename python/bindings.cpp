@@ -178,6 +178,62 @@ static std::unique_ptr<vdsim::SimSession> build_ground_session(
         std::move(dyn), std::move(ground), vp, tp, solver, cfg);
 }
 
+namespace {
+
+// Duck-typed Python object as a user channel stage: step(u, dt) -> float,
+// optional reset(), get_state() -> list[float], set_state(list).  The object
+// passed in is only a prototype; each ActuatorModel deep-copies its own.
+class PyChannelModel final : public vdsim::IChannelModel {
+public:
+    explicit PyChannelModel(py::object o) : obj_(std::move(o)) {}
+    ~PyChannelModel() override {
+        if (Py_IsInitialized()) {
+            py::gil_scoped_acquire g;
+            obj_ = py::object();
+        }
+    }
+    double step(double u, double dt) override {
+        py::gil_scoped_acquire g;
+        return obj_.attr("step")(u, dt).cast<double>();
+    }
+    void reset() override {
+        py::gil_scoped_acquire g;
+        if (py::hasattr(obj_, "reset")) obj_.attr("reset")();
+    }
+    std::unique_ptr<vdsim::IChannelModel> clone() const override {
+        py::gil_scoped_acquire g;
+        py::object c = py::module_::import("copy").attr("deepcopy")(obj_);
+        return std::make_unique<PyChannelModel>(std::move(c));
+    }
+    std::vector<double> get_state() const override {
+        py::gil_scoped_acquire g;
+        if (!py::hasattr(obj_, "get_state")) return {};
+        return obj_.attr("get_state")().cast<std::vector<double>>();
+    }
+    void set_state(const std::vector<double>& v) override {
+        py::gil_scoped_acquire g;
+        if (py::hasattr(obj_, "set_state")) obj_.attr("set_state")(v);
+    }
+    py::object object() const { return obj_; }
+
+private:
+    py::object obj_;
+};
+
+py::object channel_user_get(const vdsim::ChannelActuator& c) {
+    const auto* a = dynamic_cast<const PyChannelModel*>(c.user.get());
+    return a ? a->object() : py::none();
+}
+
+void channel_user_set(vdsim::ChannelActuator& c, py::object o) {
+    if (o.is_none()) { c.user.reset(); return; }
+    if (!py::hasattr(o, "step"))
+        throw py::type_error("user channel model needs a step(u, dt) -> float method");
+    c.user = std::make_shared<PyChannelModel>(std::move(o));
+}
+
+}  // namespace
+
 PYBIND11_MODULE(vdsim, m) {
     m.doc() = "VDSim core Python bindings";
 
@@ -944,7 +1000,10 @@ PYBIND11_MODULE(vdsim, m) {
     py::class_<vdsim::LongAxController::Gains>(m, "LongAxGains")
         .def(py::init<>())
         .def_readwrite("kp", &vdsim::LongAxController::Gains::kp)
-        .def_readwrite("ki", &vdsim::LongAxController::Gains::ki);
+        .def_readwrite("ki", &vdsim::LongAxController::Gains::ki)
+        .def_readwrite("kd", &vdsim::LongAxController::Gains::kd)
+        .def_readwrite("kff", &vdsim::LongAxController::Gains::kff)
+        .def_readwrite("i_max", &vdsim::LongAxController::Gains::i_max);
 
     py::class_<vdsim::LongAxController>(m, "LongAxController")
         .def(py::init<>())
@@ -955,7 +1014,21 @@ PYBIND11_MODULE(vdsim, m) {
     py::class_<vdsim::LongVxController::Gains>(m, "LongVxGains")
         .def(py::init<>())
         .def_readwrite("kp", &vdsim::LongVxController::Gains::kp)
-        .def_readwrite("ki", &vdsim::LongVxController::Gains::ki);
+        .def_readwrite("ki", &vdsim::LongVxController::Gains::ki)
+        .def_readwrite("i_max", &vdsim::LongVxController::Gains::i_max)
+        .def_readwrite("ax_clamp", &vdsim::LongVxController::Gains::ax_clamp);
+
+    py::class_<vdsim::CascadeGains>(m, "CascadeGains",
+        "Gains of the L5-L8 cascade: vx (LongVxGains), ax (LongAxGains), "
+        "pp_lookahead_min [m], pp_lookahead_k [s], yaw_kp, yaw_ki. Defaults "
+        "equal the previously hard-coded values.")
+        .def(py::init<>())
+        .def_readwrite("vx", &vdsim::CascadeGains::vx)
+        .def_readwrite("ax", &vdsim::CascadeGains::ax)
+        .def_readwrite("pp_lookahead_min", &vdsim::CascadeGains::pp_lookahead_min)
+        .def_readwrite("pp_lookahead_k",   &vdsim::CascadeGains::pp_lookahead_k)
+        .def_readwrite("yaw_kp", &vdsim::CascadeGains::yaw_kp)
+        .def_readwrite("yaw_ki", &vdsim::CascadeGains::yaw_ki);
 
     py::class_<vdsim::LongVxController>(m, "LongVxController")
         .def(py::init<>())
@@ -971,7 +1044,12 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("rate_limit",  &vdsim::ChannelActuator::rate_limit)
         .def_readwrite("dead_zone",   &vdsim::ChannelActuator::dead_zone)
         .def_readwrite("out_min",     &vdsim::ChannelActuator::out_min)
-        .def_readwrite("out_max",     &vdsim::ChannelActuator::out_max);
+        .def_readwrite("out_max",     &vdsim::ChannelActuator::out_max)
+        .def_readwrite("backlash",    &vdsim::ChannelActuator::backlash)
+        .def_property("user", &channel_user_get, &channel_user_set,
+             "Optional user stage: any object with step(u, dt) -> float (and "
+             "optionally reset(), get_state(), set_state()). Applied to the "
+             "output of the built-in chain; deep-copied per session.");
     py::class_<vdsim::LuGreParams>(m, "LuGreParams")
         .def(py::init<>())
         .def_readwrite("enabled", &vdsim::LuGreParams::enabled)
@@ -1008,7 +1086,8 @@ PYBIND11_MODULE(vdsim, m) {
         .def(py::init<>())
         .def_readwrite("noise_std", &vdsim::SensorNoise::noise_std)
         .def_readwrite("bias",      &vdsim::SensorNoise::bias)
-        .def_readwrite("bias_rw",   &vdsim::SensorNoise::bias_rw);
+        .def_readwrite("bias_rw",   &vdsim::SensorNoise::bias_rw)
+        .def_readwrite("lag_tau_s", &vdsim::SensorNoise::lag_tau_s);
     py::class_<vdsim::SensorParams>(m, "SensorParams")
         .def(py::init<>())
         .def_readwrite("enabled",     &vdsim::SensorParams::enabled)
@@ -1104,7 +1183,11 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("mu_scale",             &vdsim::DomainRandomization::mu_scale)
         .def_readwrite("tire_stiffness_scale", &vdsim::DomainRandomization::tire_stiffness_scale)
         .def_readwrite("tire_mu_scale",        &vdsim::DomainRandomization::tire_mu_scale)
-        .def_readwrite("sensor_delay_s",       &vdsim::DomainRandomization::sensor_delay_s);
+        .def_readwrite("sensor_delay_s",       &vdsim::DomainRandomization::sensor_delay_s)
+        .def_readwrite("steer_delay_scale",    &vdsim::DomainRandomization::steer_delay_scale)
+        .def_readwrite("steer_tau_scale",      &vdsim::DomainRandomization::steer_tau_scale)
+        .def_readwrite("rate_limit_scale",     &vdsim::DomainRandomization::rate_limit_scale)
+        .def_readwrite("brake_deadzone_add",   &vdsim::DomainRandomization::brake_deadzone_add);
 
     // -------- R8: session snapshot / restore --------
     py::class_<vdsim::SessionSnapshot>(m, "SessionSnapshot")
@@ -1157,6 +1240,18 @@ PYBIND11_MODULE(vdsim, m) {
              py::arg("spec"),
              "Latch a DomainRandomization; applied at the next reset().")
         .def("randomization",  &vdsim::SimSession::randomization)
+        .def("set_actuator", &vdsim::SimSession::set_actuator, py::arg("actuator"),
+             "Swap ActuatorParams on a live session, keeping actuator memory "
+             "(delay rings, lag, LuGre, brake temperature). Takes effect on the "
+             "next tick(); the next reset() returns to the as-built params.")
+        .def("actuator", &vdsim::SimSession::actuator,
+             "The ActuatorParams currently in force on this session.")
+        .def("set_cascade_gains", &vdsim::SimSession::set_cascade_gains, py::arg("gains"),
+             "Retune the L5-L8 cascade on a live session, keeping integrators. "
+             "Persists across reset(). ValueError on negative/non-finite gains. "
+             "No effect on a direct-control session (it never runs the cascade).")
+        .def("cascade_gains", &vdsim::SimSession::cascade_gains,
+             "The CascadeGains currently in force on this session.")
         .def("state",          &vdsim::SimSession::state)
         .def("measured_state", &vdsim::SimSession::measured_state)
         .def("output",         &vdsim::SimSession::output,
@@ -1290,6 +1385,16 @@ PYBIND11_MODULE(vdsim, m) {
         .def("set_randomizations", &vdsim::VecSession::set_randomizations,
              py::arg("specs"),
              "Per-env DomainRandomization (a list of length 1 broadcasts).")
+        .def("set_actuators", &vdsim::VecSession::set_actuators,
+             py::arg("actuators"),
+             "Per-env ActuatorParams swap, effective immediately and keeping "
+             "actuator memory (a list of length 1 broadcasts).")
+        .def("set_cascade_gains", &vdsim::VecSession::set_cascade_gains,
+             py::arg("gains"),
+             "Per-env CascadeGains swap, keeping controller memory (a list of "
+             "length 1 broadcasts).")
+        .def("actuators", &vdsim::VecSession::actuators,
+             "The ActuatorParams currently in force on each env.")
         .def("set_obs_fields", &vdsim::VecSession::set_obs_fields, py::arg("fields"),
              "Declare the flat observation layout; a bare per-wheel name "
              "expands to 4 columns (FL FR RL RR), 'slip_ratio.2' picks one.")
@@ -1462,7 +1567,10 @@ PYBIND11_MODULE(vdsim, m) {
         .def(py::init<>())
         .def_readwrite("friction", &vdsim::DirectControlSessionOptions::friction)
         .def_readwrite("nominal_dt", &vdsim::DirectControlSessionOptions::nominal_dt)
-        .def_readwrite("level", &vdsim::DirectControlSessionOptions::level);
+        .def_readwrite("level", &vdsim::DirectControlSessionOptions::level)
+        .def_readwrite("actuator", &vdsim::DirectControlSessionOptions::actuator)
+        .def_readwrite("drive_torque_ref", &vdsim::DirectControlSessionOptions::drive_torque_ref)
+        .def_readwrite("brake_torque_ref", &vdsim::DirectControlSessionOptions::brake_torque_ref);
 
     m.def("make_direct_control_session",
           [](const vdsim::VehicleParams& vp, const vdsim::TireSetup& ts,

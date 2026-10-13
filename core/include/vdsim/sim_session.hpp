@@ -46,6 +46,11 @@ struct SimConfig {
     double            sensor_delay_s {0.0}; // feedback transport delay (0 = none)
     double            nominal_dt    {0.005}; // for delay-buffer sizing
     SessionKind       session_kind  {SessionKind::Standard};
+    // DirectControl only: wheel-torque totals [Nm] that map to throttle = 1 /
+    // brake = 1 when the actuator filters the CmdL1 torque channels.  <= 0 =
+    // derive from VehicleParams (max_motor_torque*final_drive_ratio, max_brake_torque).
+    double            drive_torque_ref {0.0};
+    double            brake_torque_ref {0.0};
 };
 
 // Thread-safe snapshot of one tick's result (true + measured state plus the
@@ -85,6 +90,12 @@ struct DomainRandomization {
     double tire_stiffness_scale {1.0};   // B_long, B_lat, cornering_stiffness
     double tire_mu_scale        {1.0};   // TireParams::mu_nominal
     double sensor_delay_s       {-1.0};  // [s], <0 = keep the configured value
+    // Actuator channels.  Rebuilt at reset() from the as-built ActuatorParams,
+    // so the scales never compound across episodes.
+    double steer_delay_scale    {1.0};   // x steer ChannelActuator::dead_time_s
+    double steer_tau_scale      {1.0};   // x steer ChannelActuator::tau_s
+    double rate_limit_scale     {1.0};   // x rate_limit on all three channels
+    double brake_deadzone_add   {0.0};   // [-] added to brake dead_zone (pad wear)
 };
 
 class SimSession {
@@ -118,6 +129,22 @@ public:
     void set_randomization(const DomainRandomization& d);
     DomainRandomization randomization() const;
 
+    // Swap the actuator parameters on a live session.  Unlike construction this
+    // keeps every actuator memory, so dead time / lag / rate limit / dead-zone
+    // can change *during* an episode (degradation, fault injection).  The next
+    // reset() returns to the as-built parameters with DomainRandomization
+    // applied -- this setter is an in-episode override, not a new baseline.
+    void set_actuator(const ActuatorParams& p);
+    ActuatorParams actuator() const;
+
+    // Retune the L5-L8 cascade (speed/accel PI, pure-pursuit lookahead, yaw-rate
+    // PI) on a live session.  Integrators and pursuit progress are kept; a
+    // reset() keeps the new gains.  Throws std::invalid_argument on a negative
+    // or non-finite gain.  No effect on a DirectControl session, which latches
+    // CmdL1 and never runs the cascade.
+    void set_cascade_gains(const CascadeGains& g);
+    CascadeGains cascade_gains() const;
+
     // R6: this session's stochastic stream (sensor noise).  Re-armed at every
     // reset(), so episode k with the same seed is bitwise identical no matter
     // what ran before it.  Unset = the SensorParams seed from construction.
@@ -150,6 +177,7 @@ private:
     std::unique_ptr<IContactProvider> ground_;
     std::unique_ptr<IVehNetwork>      network_;   // ECU/CAN network (deadtime + drop)
     ActuatorModel     actuator_;
+    ActuatorParams    base_actuator_ {};  // as-built; randomization rebuilds from this
     SensorDelay       sensor_;
     SensorModel       sensors_;
     CascadeController cascade_;   // Lc5-L8 → CmdL4 (with measured-state feedback)
@@ -186,6 +214,12 @@ private:
     std::array<double, NUM_WHEELS> wheel_alpha_peak_ {{0,0,0,0}};
     std::array<double, NUM_WHEELS> wheel_kappa_peak_ {{0,0,0,0}};
     SensorMeas sensors_meas_ {};
+    // DirectControl longitudinal channel: torque normalisation and the last
+    // non-zero per-wheel share, so delayed / lagged torque keeps its distribution.
+    double drive_ref_ {0.0}, brake_ref_ {0.0};
+    std::array<double, NUM_WHEELS> w_drive_ {{0.25, 0.25, 0.25, 0.25}};
+    std::array<double, NUM_WHEELS> w_brake_ {{0.25, 0.25, 0.25, 0.25}};
+    std::array<double, NUM_WHEELS> w0_ {{0.25, 0.25, 0.25, 0.25}};
     double sim_time_ {0.0};
     SessionKind session_kind_ {SessionKind::Standard};
     std::chrono::steady_clock::time_point last_input_tp_ {std::chrono::steady_clock::now()};
@@ -209,6 +243,15 @@ struct DirectControlSessionOptions {
     // behaviour), "L3" 14-DOF ride, "L4" 14-DOF + KC tables.
     // The control contract does not change with the level.
     std::string level {"L2"};
+    // Actuator chain between the latched command and the plant.  Default =
+    // identity (bit-identical to a session without it).  Steering is filtered
+    // always; the CmdL1 torque channels are filtered as normalised throttle /
+    // brake once a throttle or brake channel is non-trivial.
+    ActuatorParams actuator {};
+    // Wheel-torque totals [Nm] equal to throttle = 1 / brake = 1; <= 0 = derive
+    // from the vehicle (max_motor_torque*final_drive_ratio, max_brake_torque).
+    double drive_torque_ref {0.0};
+    double brake_torque_ref {0.0};
 };
 
 std::unique_ptr<SimSession> make_direct_control_session(

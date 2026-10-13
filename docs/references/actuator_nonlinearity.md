@@ -2,7 +2,7 @@
 
 actuator/sensor 의 물리 비선형성·지연을 VDSim 에 반영하기 위한 조사 레퍼런스.
 모델 형태(식), typical parameter, 학술/산업 근거(DOI), 그리고 control 사다리
-Lc1-Lc8 별 적용 방식을 정리한다. 구현 전 spec 근거 문서이며, thesis 인용 시
+Lc1-Lc8 별 적용 방식을 정리한다. 구현 전 spec 근거 문서이며(사용법은 [Actuator Model Guide](../ACTUATOR_GUIDE.md)),, thesis 인용 시
 flag 표시된 항목은 publisher 페이지로 재확인할 것.
 
 신뢰도 표기: [S] 출처 확인 수치 · [E] engineering 추정 · [F] citation 미확정(재확인 필요).

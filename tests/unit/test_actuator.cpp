@@ -3,6 +3,8 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <memory>
+#include <vector>
 
 #include "vdsim/actuator.hpp"
 
@@ -137,4 +139,64 @@ TEST(Actuator, SensorDelayReturnsPast) {
         if (k == 20) seen_vx = out.vx();
     }
     EXPECT_NEAR(seen_vx, 10.0, 1.0 + 1e-9);  // ~10 steps behind k=20
+}
+
+// Backlash: play operator -- holds inside the band, follows at u -/+ w/2 on engage/reversal.
+TEST(Actuator, BacklashPlayOperator) {
+    ActuatorParams p;
+    p.steer.ch.backlash = 0.02;
+    ActuatorModel a; a.initialize(p, 0.005);
+    auto y = [&](double u) { return a.apply(cmd(0, 0, u), 0.0, 0.005).steer_angle_wheel; };
+    EXPECT_NEAR(y(0.10), 0.09, 1e-12);
+    EXPECT_NEAR(y(0.095), 0.09, 1e-12);
+    EXPECT_NEAR(y(0.07), 0.08, 1e-12);
+}
+
+// Backlash 0 leaves the chain bit-identical.
+TEST(Actuator, ZeroBacklashIsPassthrough) {
+    ActuatorModel a; a.initialize(ActuatorParams{}, 0.005);
+    EXPECT_DOUBLE_EQ(a.apply(cmd(0, 0, 0.123), 0.0, 0.005).steer_angle_wheel, 0.123);
+}
+
+namespace {
+struct Gain : IChannelModel {
+    double k; int n {0};
+    explicit Gain(double k_) : k(k_) {}
+    double step(double u, double) override { ++n; return k * u + 1e-3 * n; }
+    void reset() override { n = 0; }
+    std::unique_ptr<IChannelModel> clone() const override { return std::make_unique<Gain>(*this); }
+    std::vector<double> get_state() const override { return {static_cast<double>(n)}; }
+    void set_state(const std::vector<double>& v) override { n = static_cast<int>(v.at(0)); }
+};
+}  // namespace
+
+// User stage runs after the built-in chain; the prototype is never stepped and
+// two models built from the same prototype do not share state.
+TEST(Actuator, UserStageRunsAndIsNotShared) {
+    auto proto = std::make_shared<Gain>(0.5);
+    ActuatorParams p;
+    p.throttle.user = proto;
+    ActuatorModel a, b; a.initialize(p, 0.005); b.initialize(p, 0.005);
+    double ya = 0;
+    for (int k = 0; k < 3; ++k) ya = a.apply(cmd(0.4, 0, 0), 0.0, 0.005).throttle;
+    EXPECT_NEAR(ya, 0.5 * 0.4 + 3e-3, 1e-12);
+    EXPECT_NEAR(b.apply(cmd(0.4, 0, 0), 0.0, 0.005).throttle, 0.5 * 0.4 + 1e-3, 1e-12);
+    EXPECT_EQ(proto->n, 0);
+}
+
+// Backlash state and user-stage state round-trip through save_aux/restore_aux.
+TEST(Actuator, BacklashAndUserStateSnapshotRoundTrip) {
+    ActuatorParams p;
+    p.steer.ch.backlash = 0.02;
+    p.throttle.user = std::make_shared<Gain>(1.0);
+    ActuatorModel a; a.initialize(p, 0.005);
+    for (int k = 0; k < 7; ++k) a.apply(cmd(0.3, 0, 0.05 * k), 0.0, 0.005);
+    std::vector<double> snap; a.save_aux(snap);
+    CmdL4 r1 = a.apply(cmd(0.3, 0, 0.2), 0.0, 0.005);
+    for (int k = 0; k < 5; ++k) a.apply(cmd(0.9, 0, -0.3), 0.0, 0.005);
+    std::size_t pos = 0; a.restore_aux(snap, pos);
+    EXPECT_EQ(pos, snap.size());
+    CmdL4 r2 = a.apply(cmd(0.3, 0, 0.2), 0.0, 0.005);
+    EXPECT_DOUBLE_EQ(r1.throttle, r2.throttle);
+    EXPECT_DOUBLE_EQ(r1.steer_angle_wheel, r2.steer_angle_wheel);
 }

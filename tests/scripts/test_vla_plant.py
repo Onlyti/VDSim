@@ -226,7 +226,56 @@ def test_speed_budget():
         elapsed, BUDGET_S))
 
 
+def test_level_default_and_rejects():
+    """B2 (work order 32): the retired dynamics_level option is ``level`` here.
+
+    Ported from feat/direct-control-dynamics-level: an unknown level is refused
+    by name, and the default plant equals an explicit level='L2' bit for bit.
+    """
+    for bad in ("L5", "l3", "7dof", ""):
+        try:
+            VDSimPlant(level=bad)
+        except ValueError as e:
+            assert "level" in str(e), str(e)
+        else:
+            raise AssertionError(f"level={bad!r} should raise ValueError")
+    traj_u = [(0.03, 800.0)] * 20
+    runs = []
+    for kw in ({}, {"level": "L2"}):
+        plant = VDSimPlant(base_mu=0.9, control_dt=DT, substep_dt=SUB, **kw)
+        plant.reset([0.0, 0.0, 0.0, V0, 0.0, 0.0])
+        runs.append([tuple(plant.step(list(u))[k] for k in ("X", "Y", "psi", "vx", "vy", "r"))
+                     for u in traj_u])
+    assert runs[0] == runs[1], "default must equal explicit level='L2'"
+    print("level reject + default: ok")
+
+
+def test_level_l3_builds_fourteen_dof_and_steps():
+    """B2: level='L3' builds the 14-DOF model and keeps the L2 observation layout.
+
+    L4 is not here: VDSimPlant refuses a bare L4 (test_experiment_api,
+    test_plant_bare_l4_is_refused). The core factory's L4 is covered by
+    DirectControlSession.L3AndL4CreateAndTickFinite in test_sim_session.cpp.
+    """
+    expect = {"L2": vdsim.Level.L2_SevenDOF, "L3": vdsim.Level.L3_FourteenDOF}
+    ref_keys = None
+    for lvl, enum in expect.items():
+        plant = VDSimPlant(base_mu=0.9, control_dt=DT, substep_dt=SUB, level=lvl)
+        assert plant._dyn.level() == enum, f"{lvl}: wrong dynamics object {plant._dyn.level()}"
+        obs = plant.reset([0.0, 0.0, 0.0, V0, 0.0, 0.0])
+        for _ in range(40):
+            obs = plant.step([0.03, 500.0])
+        keys = (sorted(obs.keys()), sorted(obs["wheel"][0].keys()), len(obs["wheel"]))
+        ref_keys = ref_keys or keys
+        assert keys == ref_keys, f"{lvl}: obs layout differs from L2"
+        assert all(math.isfinite(v) for v in (obs["X"], obs["vx"], obs["r"])), lvl
+        assert obs["r"] > 0.01, f"{lvl}: expected positive yaw rate, r={obs['r']}"
+    print("level L3 builds 14-DOF + obs layout: ok")
+
+
 def main():
+    test_level_default_and_rejects()
+    test_level_l3_builds_fourteen_dof_and_steps()
     test_cmdl1_element_torque_assign()
     test_longitudinal_fx_accel()
     test_dry_qualitative_lane_change()

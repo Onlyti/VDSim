@@ -201,13 +201,24 @@ DriverModel::Output DriverModel::update(double x, double y, double psi, double v
 void CascadeController::initialize(const VehicleParams& vp) {
     wheelbase_ = vp.wheelbase > 1e-3 ? vp.wheelbase : 2.7;
     max_steer_ = vp.max_steer_angle_wheel > 1e-3 ? vp.max_steer_angle_wheel : 0.5;
-    vxc_.initialize({});
-    axc_.initialize({});
-    PurePursuitController::Gains pg;
-    pg.wheelbase = wheelbase_;
-    pg.max_steer = max_steer_;
-    pp_.initialize(pg);
+    vxc_.initialize(gains_.vx);
+    axc_.initialize(gains_.ax);
+    set_gains(gains_);
     reset();
+}
+
+void CascadeController::set_gains(const CascadeGains& g) noexcept {
+    gains_ = g;
+    vxc_.set_gains(g.vx);
+    axc_.set_gains(g.ax);
+    PurePursuitController::Gains pg;
+    pg.wheelbase     = wheelbase_;
+    pg.max_steer     = max_steer_;
+    pg.lookahead_min = g.pp_lookahead_min;
+    pg.lookahead_k   = g.pp_lookahead_k;
+    pp_.initialize(pg);
+    r_kp_ = g.yaw_kp;
+    r_ki_ = g.yaw_ki;
 }
 
 void CascadeController::reset() noexcept {
