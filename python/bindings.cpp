@@ -154,6 +154,12 @@ static std::unique_ptr<vdsim::SimSession> build_ground_session(
     double psd_waviness_high = 2.0, double psd_n_min = 0.011,
     double psd_n_max = 4.0, std::vector<double> psd_n = {},
     std::vector<double> psd_gd = {}) {
+    // A half-given or mismatched table would fall through to the next road
+    // kind below without a word; refuse it instead.
+    if (psd_n.size() != psd_gd.size())
+        throw std::invalid_argument(
+            "psd_n and psd_gd must have the same length (both empty = no table), got " +
+            std::to_string(psd_n.size()) + " and " + std::to_string(psd_gd.size()));
     std::unique_ptr<vdsim::IVehicleDynamics> dyn =
         (level == "K" || level == "L0") ? vdsim::create_kinematic()
         : (level == "L1") ? vdsim::create_bicycle()
@@ -1358,7 +1364,10 @@ PYBIND11_MODULE(vdsim, m) {
     m.attr("TERM_STALL")      = (int)vdsim::TERM_STALL;
 
     m.def("obs_field_names", &vdsim::obs_field_names,
-          "Observation field names accepted by VecSession.set_obs_fields().");
+          "Observation field names accepted by VecSession.set_obs_fields().\n"
+          "'az' is the body vertical acceleration [m/s^2] (SimOutput.az): gravity\n"
+          "excluded (0 at rest), not an accelerometer's specific force; 0 on the\n"
+          "planar levels K, L0, L1, L2.");
 
     // -------- VecSession: N independent sessions, one worker pool (RL) --------
     py::class_<vdsim::VecSession>(m, "VecSession")

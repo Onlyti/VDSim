@@ -1,0 +1,67 @@
+# vdsim_rl ride-comfort environment (EnvConfig.from_yaml), work order 33.
+# Same car and control interval as default_env.yaml, on the 14-DOF plant
+# (L3: roll, pitch, heave, suspension) over an ISO 8608 road, with the body
+# vertical acceleration az in the observation so a reward can penalise it.
+#
+# az is the body vertical acceleration [m/s^2] taken straight from the plant
+# (SimOutput.az, the integrated heave acceleration; no numerical difference):
+# gravity excluded, 0 at rest - not an accelerometer's specific force.
+#
+# Road: ISO 8608 class B (iso_class 1), env i uses ground_seed + i.
+# Class B is the roughest class whose state stayed finite in every run of a
+# sweep on this car that covers the whole pedal range a policy can command
+# (L3, 1 ms substep, 20 s straight, v0 8 / 15 / 25 m/s, pedal -1 .. +1);
+# class C passed the gentle runs but went non-finite under strong throttle
+# once the car got fast, class D and rougher already under light throttle.
+# docs/RL_GUIDE.md section 6 has the accuracy table for this file.
+level: L3
+vehicle: generic_sedan
+tire: generic_pacejka
+dt: 0.005
+action_repeat: 4          # control interval = 20 ms
+max_steer: 0.5            # [rad] at the wheel
+mu: 1.0
+
+iso_class: 1              # ISO 8608 class B
+ground_seed: 1
+
+obs_fields:
+  - vx                    # [m/s] body
+  - vy                    # [m/s] body
+  - yaw_rate              # [rad/s]
+  - beta                  # [rad] side-slip
+  - ay                    # [m/s^2] body
+  - y                     # [m] lateral position (odom)
+  - yaw                   # [rad]
+  - az                    # [m/s^2] body vertical, gravity excluded
+  - roll                  # [rad] ISO 8855, + = left side up
+  - pitch                 # [rad] ISO 8855, + = nose down
+  - roll_rate             # [rad/s]
+  - pitch_rate            # [rad/s]
+  - slip_ratio            # 4 wheels
+  - slip_angle            # 4 wheels [rad]
+  - steer_applied         # [rad] after actuator
+  - throttle_applied
+  - brake_applied
+
+# termination (<=0 disables the check)
+lane_y: 0.0
+max_lateral: 6.0          # [m]
+max_roll: 0.7             # [rad]
+max_beta: 0.7             # [rad]
+max_yaw_rate: 3.0         # [rad/s]
+time_limit_s: 20.0        # [s] -> truncation
+min_speed: 1.0            # [m/s]
+
+# reset randomization
+speed_range: [8.0, 25.0]  # [m/s]
+lateral_range: 1.0        # +-[m]
+yaw_range: 0.1            # +-[rad]
+
+# solver / pool
+max_substep_dt: 0.001
+max_substeps: 64
+threads: 0                # 0 = hardware_concurrency
+
+crash_penalty: 10.0
+speed_target: 15.0        # [m/s]

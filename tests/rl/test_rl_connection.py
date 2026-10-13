@@ -1,8 +1,9 @@
 # Work order 33: the RL connection layer -- actuator and road declared in
-# EnvConfig reach the VecSession (R1, R2).  Checks run on vdsim_rl._Core, so
-# this file needs neither gymnasium nor torch.
+# EnvConfig reach the VecSession (R1, R2), the "az" observation and the
+# reward hook (R3).  R1/R2 run on vdsim_rl._Core; R3-c drives VDSimVecEnv and
+# VDSimEnv, so it needs gymnasium (pinned in CI for ctest rl_env), not torch.
 # Paths are repo-relative; VDSIM_BUILD_PY overrides the built module dir.
-import json, os, sys, tempfile
+import json, os, sys, tempfile, warnings
 from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, os.environ.get("VDSIM_BUILD_PY", str(REPO / "build" / "python")))
@@ -220,6 +221,107 @@ for over in (dict(level="L2", grade=0.05), dict(level="L1", bank=0.05),
              dict(level="L4", iso_class=0)):
     EnvConfig(**over)
 print("R2-d planar level + vertical road -> ValueError")
+
+# ---- S1: the binding refuses a half-given or mismatched PSD table ----
+VP, TP, _prov = vdsim_rl.load_vehicle_preset("generic_sedan", "generic_pacejka")
+for kw in (dict(psd_n=[0.1, 1.0], psd_gd=[]), dict(psd_n=[], psd_gd=[1e-6]),
+           dict(psd_n=[0.1, 1.0], psd_gd=[1e-6])):
+    try:
+        vdsim_rl.vdsim.make_vec_session(1, VP, TP, level="L3", iso_class=2, **kw)
+    except ValueError as e:
+        print(f"S1 refused {kw}: {e}")
+    else:
+        raise AssertionError(f"make_vec_session accepted {kw}")
+
+# ---- R3: the "az" observation and the reward hook ----
+RIDE = ["az", "pitch", "roll"]
+assert "az" in vdsim_rl.vdsim.obs_field_names()
+
+# R3-a: obs az is SimOutput.az of the same tick -- 1-env VecSession against a
+# standalone SimSession on the same ISO 8608 ground (env 0 = ground_seed 1).
+core = make(level="L3", iso_class=2, obs_fields=RIDE)
+SP = vdsim_rl.vdsim.SolverParams()
+SP.max_substep_dt = core.cfg.max_substep_dt
+SP.max_substeps = core.cfg.max_substeps
+solo = vdsim_rl.vdsim.make_sim_session(VP, TP, level="L3", nominal_dt=DT,
+                                       solver=SP, iso_class=2)
+core.reset_all()
+solo.reset(vdsim_rl.vdsim.make_init_state(0.0, 0.0, 0.0, 15.0))
+cmd = vdsim_rl.vdsim.CmdL4()
+cmd.throttle = float(np.float32(0.1))   # the env's action is float32
+az_vec, az_solo, heave = [], [], []
+for k in range(800):
+    obs, *_ = core.step(np.array([[0.0, 0.1]], dtype=np.float32))
+    solo.set_input(cmd)
+    solo.tick(DT)
+    az_vec.append(obs[0, core.col["az"]])
+    az_solo.append(np.float32(solo.output().az))
+    heave.append(core.vs.outputs()[0].heave_z)
+az_vec, az_solo, heave = map(np.array, (az_vec, az_solo, heave))
+np.testing.assert_array_equal(az_vec, az_solo)
+assert np.isfinite(az_vec).all() and az_vec[200:].std() > 0.1, az_vec[200:].std()
+print(f"R3-a obs az == standalone SimSession az over 800 ticks "
+      f"(std {az_vec[200:].std():.3g} m/s^2 on ISO class C)")
+
+# R3-b: az agrees with the second central difference of the sprung-CG heave
+# SimOutput.heave_z (difference used here only, never on the observation
+# path).  The work order named vz, but State.velocity z stays 0 on L3 -- the
+# 14-DOF heave lives in its own state -- so vz cannot carry this check.
+ddz = (heave[2:] - 2.0 * heave[1:-1] + heave[:-2]) / DT ** 2
+rho = float(np.corrcoef(ddz[200:], az_vec[1:-1][200:])[0, 1])
+print(f"R3-b corr(second central diff of heave_z, az) = {rho:.4f} (need >= 0.95)")
+assert rho >= 0.95, rho
+
+# R3-c: a user reward_fn reading col["az"] is called by both gymnasium wrappers
+# and is what they return.
+W_AZ = 0.5
+calls = []
+
+
+def ride_reward(obs, col, action, prev_action, cfg):
+    """Ride comfort example: -w * az^2 per env."""
+    calls.append(obs.shape[0])
+    return (-W_AZ * obs[:, col["az"]].astype(np.float64) ** 2).astype(np.float32)
+
+
+ride_kw = dict(vehicle="generic_sedan", tire="generic_pacejka", level="L3",
+               iso_class=2, dt=DT, action_repeat=1, speed_range=(15.0, 15.0),
+               lateral_range=0.0, yaw_range=0.0, threads=1, time_limit_s=0.0,
+               min_speed=0.0, obs_fields=RIDE)
+venv = vdsim_rl.VDSimVecEnv(2, EnvConfig(**ride_kw), reward_fn=ride_reward, seed=0)
+venv.reset(seed=0)
+for _ in range(50):
+    obs, rew, term, trunc, info = venv.step(np.tile([0.0, 0.1], (2, 1)).astype(np.float32))
+expect = -W_AZ * obs[:, venv.obs_columns.index("az")].astype(np.float64) ** 2
+np.testing.assert_allclose(rew, expect, rtol=1e-6)
+assert (rew < 0).all() and len(calls) == 50 and set(calls) == {2}
+senv = vdsim_rl.VDSimEnv(EnvConfig(**ride_kw), reward_fn=ride_reward, seed=0)
+senv.reset(seed=0)
+for _ in range(50):
+    o1, r1, *_ = senv.step(np.array([0.0, 0.1], dtype=np.float32))
+assert r1 == float(np.float32(-W_AZ * float(o1[senv.obs_columns.index("az")]) ** 2))
+assert r1 < 0 and len(calls) == 100 and calls[-1] == 1
+print(f"R3-c ride reward via col['az']: VDSimVecEnv {rew}, VDSimEnv {r1:.4g}")
+
+# Planar level: az is 0 and EnvConfig warns once.
+with warnings.catch_warnings(record=True) as wl:
+    warnings.simplefilter("always")
+    pcfg = EnvConfig(level="L2", obs_fields=["vx", "az"])
+assert sum("obs field 'az'" in str(w.message) for w in wl) == 1, [str(w.message) for w in wl]
+pl = run(make(level="L2", obs_fields=["vx", "az"]), 50, steer=0.1, pedal=0.3)
+assert (pl[:, 0, 1] == 0.0).all()
+print("R3 planar L2: az column all 0, one UserWarning at EnvConfig")
+
+# R3-d: requesting az leaves every other column unchanged, bit for bit.
+base_f = ["steer_applied", "vx", "pitch", "roll", "pitch_rate", "roll_rate", "fz"]
+plain = run(make(n=2, level="L3", iso_class=2, obs_fields=base_f), 300,
+            steer=0.1, pedal=0.1, step_at=50)
+with_az = run(make(n=2, level="L3", iso_class=2, obs_fields=base_f[:3] + ["az"] + base_f[3:]),
+              300, steer=0.1, pedal=0.1, step_at=50)
+np.testing.assert_array_equal(plain, np.delete(with_az, 3, axis=2))
+print("R3-d obs columns without az identical with and without the az column")
+res["r3"] = dict(az_std=float(az_vec[200:].std()), corr_dvz_az=rho,
+                 vec_reward=rew.tolist(), single_reward=r1)
 
 json.dump(res, open(os.path.join(tempfile.gettempdir(), "rl_connection.json"), "w"),
           indent=1, default=str)

@@ -15,7 +15,9 @@ Action (per env, Box(-1, 1, shape=(2,))):
     a[1] = pedal, >0 -> throttle, <0 -> brake
 
 Observation: cfg.obs_fields, flattened left to right; a bare per-wheel name
-expands to four columns in FL, FR, RL, RR order.
+expands to four columns in FL, FR, RL, RR order.  ``az`` is the body vertical
+acceleration [m/s^2] straight from the plant (gravity excluded, 0 at rest; not
+an accelerometer's specific force), 0 on the planar levels.
 """
 from __future__ import annotations
 
@@ -437,6 +439,10 @@ class EnvConfig:
         if not self.max_accel > 0.0:
             raise ValueError(f"max_accel must be > 0 [m/s^2], got {self.max_accel}")
         _check_road(self)
+        if self.level not in VERTICAL_LEVELS and "az" in self.obs_fields:
+            warnings.warn(f"obs field 'az': level {self.level!r} has no heave, the "
+                          f"column is always 0; use one of {VERTICAL_LEVELS}",
+                          UserWarning, stacklevel=3)
 
     @classmethod
     def from_yaml(cls, path: str) -> "EnvConfig":

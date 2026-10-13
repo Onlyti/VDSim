@@ -86,6 +86,7 @@ Frame: ISO 8855 (x forward, y left, z up), angles in radians.
 | `wheel_mu` | – | per wheel, as reported in `SimOutput.wheel_mu` |
 | `tire_fx`, `tire_fy` | N | per-wheel tyre forces in the wheel frame |
 | `steer_applied`, `throttle_applied`, `brake_applied` | rad, –, – | commands after the actuator |
+| `az` | m/s² | body vertical acceleration, + = up, taken straight from the plant (`SimOutput.az`); gravity excluded (0 at rest), so not an accelerometer's specific force; always 0 on the planar levels K, L0, L1, L2 (`EnvConfig` warns once) |
 
 ### 2.3 Action
 
@@ -132,6 +133,24 @@ r = 1 - |y| / max_lateral - 0.05 |vx - speed_target| - 0.2 |beta| - 0.05 |Δstee
 
 minus `crash_penalty` (default 10) on a terminating step. Pass
 `reward_fn(obs, col, action, prev_action, cfg) -> (N,)` to replace it.
+
+Ride comfort example: put `az` in `obs_fields` on a level with a vertical ride
+(L3, L4; `configs/rl/ride_env.yaml`) and penalise it. `col` maps a column name
+to its index, the same in `VDSimVecEnv` (`obs` is `(N, n_obs)`) and `VDSimEnv`
+(one row):
+
+```python
+import numpy as np
+from vdsim_rl import EnvConfig, VDSimVecEnv, default_reward
+
+W_AZ = 0.05
+
+def ride_reward(obs, col, action, prev_action, cfg):
+    az = obs[:, col["az"]].astype(np.float64)
+    return default_reward(obs, col, action, prev_action, cfg) - W_AZ * az ** 2
+
+env = VDSimVecEnv(8, EnvConfig.from_yaml("configs/rl/ride_env.yaml"), reward_fn=ride_reward)
+```
 
 ### 2.5 Episode end
 
@@ -365,6 +384,34 @@ Throughput below is in **physics ticks per second summed over all envs**
   Pitch and roll are not in the criterion and are coarse at 2.5 ms (brake pitch
   30.6 %, step-steer roll 8.4 %); do not build a reward on them with
   `fast_env.yaml`.
+- **`ride_env.yaml` (L3, ride channels) uses a 1 ms substep, checked on a
+  criterion fixed before the measurement:** the three channels above keep
+  their bounds, and az, pitch and roll are each ≤ 5 %, worst over three
+  manoeuvres — the step steer and the brake run above plus a 5 s straight run
+  at 20 m/s on the preset's ISO 8608 class B road (seed 1, throttle 0.1).
+  Same error definition: largest |error| over the run against a 1 µs
+  reference of the same plant, divided by the reference's peak |value|
+  (generic car, L3, 5 ms tick, 2026-10-13, `tests/rl/gate_g1_substep_accuracy.py
+  --level L3 --ride --road-class 1`). The state stayed finite in every run and
+  `solver_substep_clamp_count()` was 0.
+
+  | substep | ay | yaw rate | Fz_FL | az | pitch | roll | throughput flat / road (64 envs) | verdict |
+  |---|---|---|---|---|---|---|---|---|
+  | 0.5 ms | 0.29 % | 0.10 % | 0.62 % | 1.41 % | 0.12 % | 0.17 % | 48 k / 49 k steps/s | passes |
+  | 1.0 ms | 0.58 % | 0.20 % | 1.34 % | 2.87 % | 0.24 % | 0.33 % | 101 k / 84 k steps/s | passes = `ride_env.yaml` |
+  | 2.5 ms | 1.44 % | 0.39 % | 4.19 % | 7.49 % | 0.50 % | 0.69 % | 205 k / 207 k steps/s | fails (az) |
+  | 5 ms | 6.83 % | 0.84 % | 6.81 % | 16.1 % | 0.98 % | 1.48 % | 333 k / 223 k steps/s | fails (ay, Fz_FL, az) |
+
+  The worst az is always the road run; the error falls first-order with the
+  substep (observed order 1.01–1.10). On a class C road the 1 ms row reads the
+  same within 0.01 percentage points. Throughput was taken on a shared host
+  (load average about 4), so read it as a ratio between rows.
+- **Rough roads under strong throttle.** On L3 with the generic car the state
+  goes non-finite on ISO 8608 class C after 10–20 s of half or full throttle
+  (at about 40 m/s in the run whose speed was logged), and on class D and
+  rougher already under light throttle; the flat road and classes A and B
+  stayed finite at full throttle up to 69 m/s. `ride_env.yaml` therefore uses class B. Check a rougher class on
+  your own speed range before training on it.
 - **A different car changes both accuracy and throughput, so the substep does
   not transfer.** A preset that evaluates a measured `.tir` file through the
   MF2002 backend instead of the built-in MF96 has been measured ≈ 2.7× slower
@@ -378,4 +425,5 @@ Throughput below is in **physics ticks per second summed over all envs**
   records only the stem, the parameter hash and `source: private` — never the
   path. Accuracy and throughput tables for those presets belong with them, not
   in this guide.
-- The road is straight and flat; there is no track or traffic yet.
+- The road is straight (flat unless a road key from 2.10 is set); there is no
+  track or traffic yet.
