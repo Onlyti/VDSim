@@ -13,9 +13,14 @@ Acceptance criteria of work order 31 (section 5):
   differs.
 * S5 -- with ``c_k = 1.5*Tc`` the skip and queue policies apply commands at
   the times of their expected tables.
+
+Also: the ``.vdtrace`` of each mode (sync identical to the plant's own trace,
+timing channels in virtual_async) and the lateral tracking error used by the
+S10 demo.
 """
 import math
 import sys
+import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -25,8 +30,10 @@ sys.path.insert(0, str(REPO / "build" / "python"))
 sys.path.insert(0, str(REPO / "python"))
 
 from vdsim_closedloop import (  # noqa: E402
-    ClosedLoopEval, LatencyModel, TRACE_STATE_KEYS, delay_substeps)
+    ClosedLoopEval, LatencyModel, TRACE_STATE_KEYS, delay_substeps,
+    lateral_error)
 from vdsim_plant import VDSimPlant  # noqa: E402
+import vdsim_trace as vt  # noqa: E402
 
 TC = 0.02            # control period [s]
 H = 5e-4             # substep [s]
@@ -269,6 +276,113 @@ def test_argument_checks():
     print("argument checks ok")
 
 
+def _lane_change_path():
+    """The y_ref lane change as a dense polyline [X, Y] (0.25 m spacing)."""
+    xs = np.arange(-10.0, 200.0, 0.25)
+    return np.stack([xs, [y_ref(x) for x in xs]], axis=1)
+
+
+def test_trace_sync_is_the_plant_trace():
+    with tempfile.TemporaryDirectory() as tmp:
+        ev = ClosedLoopEval(PLANT, controller, TC, mode="sync", duration=1.0,
+                            state0=STATE0, trace_path=Path(tmp) / "a.vdtrace")
+        res = ev.run()
+        # Reference: the documented plant loop with the plant's own trace.
+        plant = VDSimPlant(control_dt=TC, **PLANT)
+        obs = plant.reset(STATE0)
+        plant.enable_trace(Path(tmp) / "ref.vdtrace")
+        for k in range(int(round(1.0 / TC))):
+            obs = plant.step(list(controller(obs, k * TC)))
+        plant.finalize_trace()
+        with vt.TraceReader(res.meta["trace_path"]) as a, \
+                vt.TraceReader(Path(tmp) / "ref.vdtrace") as ref:
+            assert a.channel_names() == ref.channel_names(), a.channel_names()
+            assert not any(a.has(n) for n in vt.EVAL_CHANNELS)
+            for name in ref.channel_names():
+                assert np.array_equal(a.channel(name), ref.channel(name)), name
+            m = a.manifest
+            assert m["eval_mode"] == "sync" and m["control_period_s"] == TC
+            assert m["latency_model"] is None and m["overrun_policy"] is None
+            assert a.n_steps == int(round(1.0 / TC))
+    print("trace sync ok: channels bit-identical to VDSimPlant.enable_trace, "
+          "eval_mode recorded, no timing channels")
+
+
+def test_trace_virtual_async_timing_channels():
+    lat = LatencyModel.fixed(0.03)          # 1.5*Tc: overruns, skip policy
+    with tempfile.TemporaryDirectory() as tmp:
+        ev = ClosedLoopEval(PLANT, controller, TC, mode="virtual_async",
+                            duration=0.4, latency=lat, state0=STATE0,
+                            trace_path=Path(tmp) / "b.vdtrace")
+        res = ev.run()
+        smp = res.samples
+        with vt.TraceReader(res.meta["trace_path"]) as tr:
+            m = tr.manifest
+            assert m["eval_mode"] == "virtual_async"
+            assert m["latency_model"] == lat.describe()
+            assert m["overrun_policy"] == "skip"
+            n = tr.n_steps
+            assert n == int(round(0.4 / TC))
+            assert np.array_equal(tr.channel("u_steer"), res.trace["u_steer"][:n])
+            for k in range(n):
+                t_k = k * TC
+                # The sample whose command is in force at t_k.
+                ok = (smp["applied"] == 1) & (smp["t_apply"] <= t_k + 1e-12)
+                got = [tr.channel(c)[k] for c in vt.EVAL_CHANNELS]
+                if not ok.any():
+                    assert np.isnan(got[:3]).all() and got[3] == 0.0, (k, got)
+                    continue
+                i = int(np.flatnonzero(ok)[-1])
+                want = [smp["t_sample"][i], smp["t_apply"][i], smp["c_k"][i],
+                        float(smp["overrun"][i])]
+                assert got == want, (k, got, want)
+                assert tr.channel("u_steer")[k] == smp["u_steer"][i]
+            assert np.nansum(tr.channel("overrun")) > 0
+    print("trace virtual_async ok: t_sample/t_apply/c_k/overrun describe the "
+          "command in force on every row, NaN before the first one")
+
+
+def test_trace_timing_needs_eval_mode():
+    names = [{"name": n} for n in ("t",) + vt.EVAL_CHANNELS]
+
+    def rejected(manifest):
+        try:
+            vt._validate_eval_timing(manifest)
+        except vt.TraceSchemaError:
+            return True
+        return False
+
+    good = {"channels": names, "eval_mode": "virtual_async", "control_period_s": TC}
+    assert not rejected(good)
+    assert rejected(dict(good, eval_mode="sync"))
+    assert rejected({"channels": names, "control_period_s": TC})
+    assert rejected(dict(good, control_period_s=0.0))
+    assert rejected(dict(good, channels=names[:-1]))
+    assert not rejected({"channels": [{"name": "t"}]})
+    assert all(n not in vt.BASE_CHANNELS for n in vt.EVAL_CHANNELS)
+    assert all(n not in vt.channels_for_level("L5") for n in vt.EVAL_CHANNELS)
+    print("trace timing validation ok: needs all four channels, a delay mode "
+          "and a control period")
+
+
+def test_lateral_error_and_tracking_stats():
+    path = [[0.0, 0.0], [10.0, 0.0], [10.0, 10.0]]
+    e = lateral_error([2.0, 5.0, 11.0, 9.0, 12.0], [1.0, -0.5, 4.0, 4.0, 12.0], path)
+    # Left of +X is +Y; on the +Y leg left is -X; past the end the distance
+    # is to the end point (10, 10): sqrt(8), on the right side.
+    want = [1.0, -0.5, -1.0, 1.0, -math.sqrt(8.0)]
+    assert np.allclose(e, want, atol=1e-12), e
+    r = ClosedLoopEval(PLANT, controller, TC, mode="sync", duration=DURATION,
+                       state0=STATE0, reference_path=_lane_change_path()).run()
+    st = r.stats
+    assert st["e_y_n"] == int(round(DURATION / TC))
+    manual = lateral_error(r.trace["X"][:-1], r.trace["Y"][:-1], _lane_change_path())
+    assert st["e_y_rmse_m"] == float(np.sqrt(np.mean(manual ** 2)))
+    assert 0.0 < st["e_y_rmse_m"] < 1.0, st
+    print(f"lateral error ok: signed offsets exact, lane change RMSE = "
+          f"{st['e_y_rmse_m']:.4f} m over {st['e_y_n']} samples")
+
+
 def main():
     test_s1_sync_matches_plant_loop()
     test_s2_async_zero_latency_matches_sync()
@@ -278,6 +392,10 @@ def main():
     test_same_obs_keys_in_both_modes()
     test_measured_latency_runs()
     test_argument_checks()
+    test_trace_sync_is_the_plant_trace()
+    test_trace_virtual_async_timing_channels()
+    test_trace_timing_needs_eval_mode()
+    test_lateral_error_and_tracking_stats()
     print("test_closedloop_eval: all ok")
 
 

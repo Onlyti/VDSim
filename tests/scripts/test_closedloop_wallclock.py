@@ -320,6 +320,40 @@ def test_watchdog_failsafe_counts():
     assert st["failsafe_latches"] == 0, st
 
 
+def test_wallclock_trace_timing_channels():
+    """Mode C writes one trace row per control sample with its timing.
+
+    Each row holds the state at the sample and the command latched by the
+    previous sample, so its timing is that sample's; the first row is the
+    initial command (NaN timing).
+    """
+    import tempfile
+    import numpy as np
+    import vdsim_trace as vt
+    with tempfile.TemporaryDirectory() as tmp:
+        res = _eval(controller, 0.5,
+                    trace_path=Path(tmp) / "c.vdtrace").run()
+        smp = res.samples
+        with vt.TraceReader(res.meta["trace_path"]) as tr:
+            assert tr.manifest["eval_mode"] == "wallclock"
+            assert tr.manifest["overrun_policy"] == "skip"
+            n = tr.n_steps
+            assert n == smp["k"].size == res.trace["t"].size - 1, (n, smp["k"].size)
+            got = {c: np.asarray(tr.channel(c)) for c in vt.EVAL_CHANNELS}
+            assert np.isnan([got[c][0] for c in ("t_sample", "t_apply", "c_k")]).all()
+            assert got["overrun"][0] == 0.0
+            for c in ("t_sample", "t_apply", "c_k"):
+                assert np.array_equal(got[c][1:], smp[c][:-1]), c
+            assert np.array_equal(got["overrun"][1:], smp["overrun"][:-1].astype(float))
+            assert np.array_equal(tr.channel("t"), res.trace["t"][:-1])
+            assert np.array_equal(tr.channel("u_steer")[1:], smp["u_steer"][:-1])
+            # Rows are the snapshots the controller saw, not one aliased
+            # output object read after the run. (Not "X increases": under
+            # load two wakes can read the same sim tick.)
+            assert np.array_equal(tr.channel("pose")[:, 0], res.trace["X"][:-1])
+            assert np.array_equal(tr.channel("pose")[:, 1], res.trace["Y"][:-1])
+
+
 #: Wall-clock pass/fail lines (S6 RTF band, S7 tick floor). Registered as the
 #: ctest ``closedloop_wallclock_timing`` with label ``timing``, which the
 #: ``validation`` preset excludes; their evidence is the local low-load run.
@@ -335,6 +369,7 @@ CORE_TESTS = (
     test_s8_check_catches_a_leaked_thread,
     test_s8_fresh_interpreter_exits,
     test_watchdog_failsafe_counts,
+    test_wallclock_trace_timing_channels,
 )
 
 

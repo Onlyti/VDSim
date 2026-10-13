@@ -51,7 +51,8 @@ from dataclasses import dataclass, field
 import numpy as np
 
 import vdsim
-from vdsim_plant import VDSimPlant, _fx_to_cmdl1, _obs_from_output
+import vdsim_trace
+from vdsim_plant import VDSimPlant, _fx_to_cmdl1, _obs_from_output, trace_sample
 
 #: Mode strings accepted by :class:`ClosedLoopEval`.
 MODES = ("sync", "virtual_async", "wallclock")
@@ -232,11 +233,24 @@ class ClosedLoopEval:
         ``{"timeout_s": 0.1, "failsafe_u": (0.0, -2000.0)}`` latches
         ``failsafe_u`` whenever no command arrived for ``timeout_s`` of wall
         clock, counted in ``stats["failsafe_latches"]``.
+    :param trace_path: record the run to this ``.vdtrace`` (schema 0.5).
+        One row per control sample: the state at the sample and the command
+        in force at that instant. ``sync`` writes exactly what
+        :meth:`VDSimPlant.enable_trace` writes; ``virtual_async`` and
+        ``wallclock`` add the :data:`vdsim_trace.EVAL_CHANNELS` timing of
+        that command. Every mode records ``eval_mode``,
+        ``control_period_s``, ``latency_model`` and ``overrun_policy`` in the
+        manifest. A run that raises leaves no file.
+    :param reference_path: ``(M, 2)`` polyline ``[X, Y]`` [m] in the ground
+        frame. When given, ``stats`` carries the lateral tracking error of
+        :func:`lateral_error` over the control samples (``e_y_rmse_m``,
+        ``e_y_max_abs_m``, ``e_y_n``).
     """
 
     def __init__(self, plant_kwargs, controller, control_period, mode="sync",
                  duration=10.0, latency=None, overrun="skip", state0=None,
-                 u0=(0.0, 0.0), cpu_affinity=None, watchdog=None):
+                 u0=(0.0, 0.0), cpu_affinity=None, watchdog=None,
+                 trace_path=None, reference_path=None):
         if mode not in MODES:
             raise ValueError(f"mode={mode!r} is not one of {MODES}")
         plant_kwargs = dict(plant_kwargs or {})
@@ -266,6 +280,9 @@ class ClosedLoopEval:
             raise ValueError("cpu_affinity and watchdog apply to mode='wallclock' only")
         self.cpu_affinity = _check_affinity(cpu_affinity)
         self.watchdog = _check_watchdog(watchdog)
+        self.trace_path = None if trace_path is None else str(trace_path)
+        self.reference_path = (None if reference_path is None
+                               else _check_path(reference_path))
 
         self.plant_kwargs = plant_kwargs
         self.controller = controller
@@ -288,25 +305,61 @@ class ClosedLoopEval:
     def run(self) -> EvalResult:
         """Reset the plant and run ``duration`` seconds in the chosen mode."""
         obs = self.plant.reset(self.state0)
-        if self.mode == "sync":
-            res = self._run_sync(obs)
-        elif self.mode == "virtual_async":
-            res = self._run_virtual_async(obs)
-        else:
-            res = self._run_wallclock(obs)
-        res.meta = {
-            "eval_mode": self.mode,
-            "control_period_s": self.control_period,
-            "substep_dt_s": self.substep_dt,
-            "duration_s": self.n_steps * self.control_period,
-            "latency_model": None if self.latency is None else self.latency.describe(),
-            "overrun_policy": self.overrun,
-            "level": self.plant.level,
-        }
+        if self.trace_path is not None:
+            timing = () if self.mode == "sync" else vdsim_trace.EVAL_CHANNELS
+            self.plant.enable_trace(self.trace_path, extra_channels=timing,
+                                    manifest_extra=self._eval_manifest())
+        try:
+            if self.mode == "sync":
+                res = self._run_sync(obs)
+            elif self.mode == "virtual_async":
+                res = self._run_virtual_async(obs)
+            else:
+                res = self._run_wallclock(obs)
+        except BaseException:
+            self.plant._trace = None      # a failed run leaves no trace file
+            raise
+        res.meta = dict(self._eval_manifest(),
+                        substep_dt_s=self.substep_dt,
+                        duration_s=self.n_steps * self.control_period,
+                        level=self.plant.level)
         if self.mode == "wallclock":
             res.meta["cpu_affinity"] = self.cpu_affinity
             res.meta["watchdog"] = self.watchdog
+        if self.trace_path is not None:
+            res.meta["trace_path"] = str(self.plant.finalize_trace())
+        if self.reference_path is not None:
+            res.stats.update(_tracking_stats(res.trace, self.reference_path))
         return res
+
+    def _eval_manifest(self) -> dict:
+        """Evaluation settings recorded in the result and the trace manifest."""
+        return {
+            "eval_mode": self.mode,
+            "control_period_s": self.control_period,
+            "latency_model": None if self.latency is None else self.latency.describe(),
+            "overrun_policy": self.overrun,
+        }
+
+    def _trace_row(self, out, t, u, timing):
+        """Offer one control-sample row to the trace, if one is recorded.
+
+        :param out: ``vdsim.SimOutput`` at the sample.
+        :param t: sample time [s].
+        :param u: command ``(delta, Fx)`` in force at the sample.
+        :param timing: :data:`vdsim_trace.EVAL_CHANNELS` values of that
+            command (see :meth:`_SampleRecorder.timing`).
+        """
+        plant = self.plant
+        writer = plant._trace
+        if writer is None:
+            return
+        if not writer.due:
+            writer.skip()
+            return
+        sample = trace_sample(out, t, u[0], u[1], plant._channels, plant._validity)
+        sample.update(zip(vdsim_trace.EVAL_CHANNELS, timing))
+        writer.append(sample)
 
     def stop(self):
         """End a running ``wallclock`` run early.
@@ -368,6 +421,7 @@ class ClosedLoopEval:
         skipped = 0
         u_now = self.u0
         cmd_now = _fx_to_cmdl1(vp, *u_now)
+        in_force = None       # sample row of u_now; None while u0 holds
 
         def start(k, obs_k, t_k, begin):
             """Compute sample k on the worker starting at substep ``begin``."""
@@ -385,7 +439,8 @@ class ClosedLoopEval:
             on_grid = i % n_sub == 0
             if on_grid:
                 k = i // n_sub
-                obs = _obs_from_output(sess.output())
+                out = sess.output()
+                obs = _obs_from_output(out)
                 if i == total:
                     grid.put(k, k * Tc, obs, None)
                     break
@@ -408,8 +463,10 @@ class ClosedLoopEval:
                 _, row, u_now = pending.pop(0)
                 samples.mark_applied(row)
                 cmd_now = _fx_to_cmdl1(vp, *u_now)
+                in_force = row
             if on_grid:
                 grid.put(k, k * Tc, obs, u_now)
+                self._trace_row(out, k * Tc, u_now, samples.timing(in_force))
             sess.set_input(cmd_now)
             sess.tick(h)
 
@@ -441,6 +498,9 @@ class ClosedLoopEval:
         samples = _SampleRecorder()
         wall = {"slot": [], "sample": [], "apply": []}
         box = {"exc": None, "skipped": 0, "ctrl_affinity": False}
+        # Trace rows are kept raw and written after the run so building the
+        # trace sample never adds to the control thread's latency.
+        trace_rows = [] if self.plant._trace is not None else None
         self._stop.clear()
         stop = self._stop
         overrun_policy = self.overrun
@@ -455,6 +515,7 @@ class ClosedLoopEval:
                     box["ctrl_affinity"] = True
                 k = 0
                 u_now = self.u0
+                in_force = None
                 while not stop.is_set() and not runner.finished():
                     slot = w0 + k * Tc
                     wait = slot - clock()
@@ -472,8 +533,10 @@ class ClosedLoopEval:
                     t_a = float(sess.sim_time())
                     late = 1 if (w_apply - slot) > Tc else 0
                     rows.put(t_s, obs_k, u_now)
-                    samples.put(k, t_s, t_a, elapsed, late, u, applied=1,
-                                measured=elapsed)
+                    if trace_rows is not None:
+                        trace_rows.append((out, t_s, u_now, in_force))
+                    in_force = samples.put(k, t_s, t_a, elapsed, late, u,
+                                           applied=1, measured=elapsed)
                     wall["slot"].append(slot - w0)
                     wall["sample"].append(w_sample - w0)
                     wall["apply"].append(w_apply - w0)
@@ -513,6 +576,8 @@ class ClosedLoopEval:
         if rs.error:
             raise RuntimeError(f"sim thread failed: {rs.error}")
 
+        for out_k, t_k, u_k, row_k in trace_rows or ():
+            self._trace_row(out_k, t_k, u_k, samples.timing(row_k))
         out = sess.output()
         rows.put(float(out.sim_time), _obs_from_output(out), None)
         stats = samples.stats(Tc, skipped=box["skipped"], unapplied=0)
@@ -565,6 +630,62 @@ def _check_watchdog(spec):
     if len(fs) != 2 or not all(math.isfinite(v) for v in fs):
         raise ValueError("watchdog failsafe_u must be two finite numbers")
     return {"timeout_s": timeout, "failsafe_u": list(fs)}
+
+
+def _check_path(path):
+    """Validate a reference polyline; returns an ``(M, 2)`` float array."""
+    xy = np.asarray(path, dtype=np.float64)
+    if xy.ndim != 2 or xy.shape[1] != 2 or xy.shape[0] < 2:
+        raise ValueError("reference_path must be an (M >= 2, 2) array of [X, Y]")
+    if not np.all(np.isfinite(xy)):
+        raise ValueError("reference_path must be finite")
+    if np.any(np.hypot(*np.diff(xy, axis=0).T) <= 0.0):
+        raise ValueError("reference_path has repeated consecutive points")
+    return xy
+
+
+def lateral_error(x, y, path_xy):
+    """Signed lateral offset [m] of points from a polyline path.
+
+    For every point the closest point on the polyline (segments, not just
+    vertices) is found; the offset is the distance to it, positive when the
+    point lies to the left of the path direction. Points and path share the
+    ground frame of the trace.
+
+    :param x: point X [m], array-like of shape ``(N,)``.
+    :param y: point Y [m], same shape.
+    :param path_xy: ``(M, 2)`` polyline ``[X, Y]`` [m], ``M >= 2``.
+    :returns: ``(N,)`` array of ``e_y`` [m].
+    """
+    xy = _check_path(path_xy)
+    p = np.stack([np.asarray(x, dtype=np.float64),
+                  np.asarray(y, dtype=np.float64)], axis=-1)
+    a = xy[:-1]                                   # (M-1, 2) segment starts
+    d = np.diff(xy, axis=0)                       # (M-1, 2) segment vectors
+    rel = p[:, None, :] - a[None, :, :]           # (N, M-1, 2)
+    s = np.clip((rel * d).sum(-1) / (d * d).sum(-1), 0.0, 1.0)
+    gap = rel - s[..., None] * d[None, :, :]
+    dist2 = (gap * gap).sum(-1)
+    j = np.argmin(dist2, axis=1)
+    rows = np.arange(p.shape[0])
+    g = gap[rows, j]
+    side = np.sign(d[j, 0] * g[:, 1] - d[j, 1] * g[:, 0])
+    return side * np.sqrt(dist2[rows, j])
+
+
+def _tracking_stats(trace, path_xy) -> dict:
+    """Lateral tracking error over the control samples of a result trace.
+
+    The rows that carry a command are the control samples; the closing row
+    (state at ``duration``, no command) is left out.
+    """
+    sampled = ~np.isnan(np.asarray(trace["u_steer"]))
+    e = lateral_error(trace["X"][sampled], trace["Y"][sampled], path_xy)
+    return {
+        "e_y_rmse_m": float(np.sqrt(np.mean(e * e))) if e.size else float("nan"),
+        "e_y_max_abs_m": float(np.max(np.abs(e))) if e.size else float("nan"),
+        "e_y_n": int(e.size),
+    }
 
 
 def _pct(x, q):
@@ -661,6 +782,18 @@ class _SampleRecorder:
 
     def mark_applied(self, row: int):
         self._rows["applied"][row] = 1
+
+    def timing(self, row):
+        """Trace timing ``(t_sample, t_apply, c_k, overrun)`` of a sample row.
+
+        ``row=None`` is the initial command, which no sample produced: NaN
+        times and no overrun.
+        """
+        if row is None:
+            return (float("nan"), float("nan"), float("nan"), 0.0)
+        r = self._rows
+        return (float(r["t_sample"][row]), float(r["t_apply"][row]),
+                float(r["c_k"][row]), float(r["overrun"][row]))
 
     def arrays(self) -> dict:
         out = {}

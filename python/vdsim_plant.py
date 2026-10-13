@@ -633,7 +633,8 @@ class VDSimPlant:
 
   # ---- trace recording (opt-in) ---------------------------------------
   def enable_trace(self, path, decimation=None, seed=None, run_id=None,
-                   producer=None, tags=None, role="plant"):
+                   producer=None, tags=None, role="plant", extra_channels=(),
+                   manifest_extra=None):
       """Start recording this run to a ``.vdtrace``. Off unless called.
 
       One sample is offered per :meth:`step`, taken *before* the step is
@@ -653,6 +654,11 @@ class VDSimPlant:
           this class *is* the plant; pass ``"predictor"`` when the same object
           is driven as an optimiser's internal model rather than as the run
           under verification.
+      :param extra_channels: channels beyond the level's own set, for a
+          caller that drives the session itself and appends its samples to
+          ``_trace`` (``vdsim_closedloop`` timing channels). :meth:`step`
+          cannot fill them, so leave this empty when stepping the plant.
+      :param manifest_extra: manifest keys merged next to ``tags``.
       :returns: the resolved decimation.
       """
       import vdsim_trace
@@ -696,6 +702,8 @@ class VDSimPlant:
       self._channels = vdsim_trace.channels_for_level(self.level)
       self._validity = channel_validity_from_dynamics(
           self._dyn, self.level, self._channels)
+      extra = dict(manifest_extra or {})
+      extra["tags"] = dict(tags or {})
       self._trace = vdsim_trace.TraceWriter(
           path=path,
           geometry=geometry,
@@ -705,14 +713,14 @@ class VDSimPlant:
           # so no hardpoints are ever behind it; the manifest must say so.
           kinematics_attached=False,
           channel_validity=self._validity,
-          channels=self._channels,
+          channels=self._channels + tuple(extra_channels),
           tire={"friction_shape": shape, "mu_aniso": aniso,
                 "mu_aniso_source": "measured"},
           repro=repro,
           producer=producer or {"name": Path(sys.argv[0]).name or "python",
                                 "version": _vdsim_version()},
           decimation=decimation,
-          extra={"tags": dict(tags or {})},
+          extra=extra,
           role=role,
       )
       return decimation

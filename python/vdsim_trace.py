@@ -149,12 +149,30 @@ CHANNEL_SPECS = {
     # -- 0.5 extension. roll_rate, pitch_rate; zero and marked not_modeled
     # -- below the level whose state variables carry them.
     "rp_rate":           ("rad/s",     (2,)),
+    # -- Closed-loop evaluation timing (work order 31). Optional and additive
+    # -- like the 0.3 channels, so a 0.5 reader that predates them ignores
+    # -- them. Each row describes the command held in u_steer/u_fx of the
+    # -- same row; NaN while the initial command (no sample) is in force.
+    "t_sample":          ("s",         ()),
+    "t_apply":           ("s",         ()),
+    "c_k":               ("s",         ()),
+    "overrun":           ("-",         ()),
 }
+
+#: Timing channels of a closed-loop evaluation run. Recorded only by the
+#: modes that model controller delay, and then all four together; the
+#: manifest's ``eval_mode`` says which clock produced them.
+EVAL_CHANNELS = ("t_sample", "t_apply", "c_k", "overrun")
+
+#: ``eval_mode`` values whose traces carry :data:`EVAL_CHANNELS`. ``sync``
+#: applies every command at its sample time, so it has no timing to record.
+EVAL_TIMING_MODES = ("virtual_async", "wallclock")
 
 #: Channels of the 0.1/0.2 contract — the set a trace records when no explicit
 #: subset is requested at those versions.
 BASE_CHANNELS = tuple(n for n in CHANNEL_SPECS
-                      if n not in CHANNEL_MIN_LEVEL and n not in VALIDITY_CHANNELS)
+                      if n not in CHANNEL_MIN_LEVEL and n not in VALIDITY_CHANNELS
+                      and n not in EVAL_CHANNELS)
 
 
 def channels_for_level(model_level, base=None):
@@ -461,7 +479,7 @@ class TraceWriter:
         unknown = [n for n in names if n not in CHANNEL_SPECS]
         if unknown:
             raise TraceError("unknown channel(s): %s" % (", ".join(unknown),))
-        too_high = [n for n in names if n not in allowed]
+        too_high = [n for n in names if n not in allowed and n not in EVAL_CHANNELS]
         if too_high:
             raise TraceError(
                 "model_level %s does not produce %s — omit the channel instead of "
@@ -673,6 +691,36 @@ def _validate_manifest(manifest):
         _validate_manifest_0_4(manifest)
     if _at_least(version, "0.5"):
         _validate_manifest_0_5(manifest)
+    _validate_eval_timing(manifest)
+
+
+def _validate_eval_timing(manifest):
+    """Timing channels need the evaluation mode that gives them a clock.
+
+    ``t_sample``/``t_apply`` are virtual time in ``virtual_async`` and the
+    session's time as read by a wall-clock thread in ``wallclock``; without
+    ``eval_mode`` a consumer cannot tell which, and a partial set cannot be
+    matched to a command.
+    """
+    present = {c["name"] for c in manifest["channels"] if isinstance(c, dict)}
+    timing = [n for n in EVAL_CHANNELS if n in present]
+    if not timing:
+        return
+    if len(timing) != len(EVAL_CHANNELS):
+        raise TraceSchemaError(
+            "closed-loop timing channels are recorded together; this trace has "
+            "%s but not %s" % (", ".join(timing),
+                               ", ".join(n for n in EVAL_CHANNELS if n not in present)))
+    mode = manifest.get("eval_mode")
+    if mode not in EVAL_TIMING_MODES:
+        raise TraceSchemaError(
+            "closed-loop timing channels need manifest.eval_mode in %s, got %r"
+            % (list(EVAL_TIMING_MODES), mode))
+    period = manifest.get("control_period_s")
+    if isinstance(period, bool) or not isinstance(period, (int, float)) or not period > 0:
+        raise TraceSchemaError(
+            "closed-loop timing channels need a positive manifest.control_period_s, "
+            "got %r" % (period,))
 
 
 def _validate_manifest_0_4(manifest):
