@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://onlyti.github.io/VDSim/main/VALIDATION/">
       
       
-        <link rel="prev" href="../RL_GUIDE/">
+        <link rel="prev" href="../guides/CLOSED_LOOP_EVAL/">
       
       
         <link rel="next" href="../ASSUMPTIONS/">
@@ -1355,6 +1355,8 @@
       
         
       
+        
+      
     
     
     
@@ -1502,6 +1504,34 @@
     
   
     RL environment (vdsim_rl)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/CLOSED_LOOP_EVAL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Closed-loop evaluation modes
   
 
     
@@ -2947,14 +2977,15 @@ the CMake that performed the
 measurement -- a toolchain bump is a re-measurement trigger, so the new
 version and the new numbers have to land in the same commit.</p>
 <!-- VALIDATION-CURRENCY BEGIN -->
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>tests:    513/513
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>tests:    518/518
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>config:   cmake --preset validation &amp;&amp; cmake --build --preset validation &amp;&amp; ctest --preset validation
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>presets:  CMakePresets.json@53dec1158a6568e97fdf55c41e8ea0e14433a3cf
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>presets:  CMakePresets.json@c4d279dcd60c661b61f480db95f5fe86fa82a7b8
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>toolchain: cmake 3.31.10
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>commit:   0389a4e
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>commit:   e919fd3
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>date:     2026-10-13
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>excluded: closedloop_wallclock_timing (label timing, excluded by the validation test preset: wall-clock S6/S7 verdicts depend on host load -- local low-load evidence in the work order 31 PR description)
 </span></code></pre></div>
 <!-- VALIDATION-CURRENCY END -->
 
