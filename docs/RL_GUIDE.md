@@ -172,6 +172,43 @@ thread. `reset(seed=s)` gives env *i* its own Python stream (from
 `SeedSequence(s).spawn`) and core noise seed `s + i`, so a run is reproducible
 env by env.
 
+### 2.9 Actuator
+
+`actuator` puts the actuator model between the action and the plant, the same
+model `VDSimPlant` uses (`vdsim_plant.build_actuator_params`):
+
+- `null` (default) -- identity; the action reaches the plant on the same tick.
+- a catalog id, e.g. `actuator: actuator.generic_sedan`.
+- a mapping with any of `steer` / `throttle` / `brake` (`dead_time_s`, `tau_s`,
+  `rate_limit`, `dead_zone`, `backlash`, ...; steer also `friction` for the
+  LuGre stage); a `preset` key names a catalog id the other keys are laid over.
+
+`steer_applied` / `throttle_applied` / `brake_applied` in the observation are
+the actuator outputs.  A steer `dead_time_s` of 0.02 s at `dt: 0.005` moves
+`steer_applied` exactly 4 ticks after the identity case.  `reset()` reports the
+preset id and a hash of the parameters the core received under `actuator`.
+
+### 2.10 Road
+
+One road kind per env; two kinds at once raise `ValueError` (the core would
+keep only one).  Env *i* draws its road from `ground_seed + i`.
+
+| key | road | levels |
+|---|---|---|
+| `grade`, `bank` [rad] | inclined plane: `grade > 0` uphill toward +x, `bank > 0` raises the +y (left) side | L1-L4 |
+| `iso_class` 0 (A) .. 7 (H), -1 off | ISO 8608 random profile, independent left/right tracks | L3, L4 |
+| `rough_amp` [m], `rough_wavelength` [m] | deterministic two-tone profile | L3, L4 |
+| `road_psd` | general PSD: `{gd_n0, waviness, n_break, waviness_high, n_min, n_max}` or a measured table `{n, gd, n_min, n_max}` (same grounds as `make_sim_session_psd`) | L3, L4 |
+
+The planar levels (K, L0, L1, L2) have no vertical ride: a rough, ISO 8608 or
+PSD road there raises `ValueError` instead of being silently flat.  K and L0
+read no road contact, so `grade` / `bank` are refused there too.
+
+`roll` and `pitch` are the body attitude in the world frame, ISO 8855 signs:
+`pitch > 0` nose down, `roll > 0` left side up.  Standing on `grade: 0.05`
+gives `pitch` about -0.05 rad; on `bank: 0.05`, `roll` about +0.05 rad
+(tests/rl/test_rl_connection.py, R2-b).
+
 ## 3. Quick start
 
 ```bash

@@ -149,7 +149,11 @@ static std::unique_ptr<vdsim::SimSession> build_ground_session(
     const vdsim::SolverParams& solver, const vdsim::SensorParams& sensors,
     double mu_right, double mu_boundary_y, double grade, double bank,
     double rough_amp, double rough_wavelength, int iso_class,
-    unsigned ground_seed = 1u) {
+    unsigned ground_seed = 1u, double psd_gd_n0 = -1.0,
+    double psd_waviness = 2.0, double psd_n_break = 0.0,
+    double psd_waviness_high = 2.0, double psd_n_min = 0.011,
+    double psd_n_max = 4.0, std::vector<double> psd_n = {},
+    std::vector<double> psd_gd = {}) {
     std::unique_ptr<vdsim::IVehicleDynamics> dyn =
         (level == "K" || level == "L0") ? vdsim::create_kinematic()
         : (level == "L1") ? vdsim::create_bicycle()
@@ -161,10 +165,19 @@ static std::unique_ptr<vdsim::SimSession> build_ground_session(
     cfg.sensors        = sensors;
     cfg.sensor_delay_s = sensor_delay_s;
     cfg.nominal_dt     = nominal_dt;
-    // iso_class>=0 -> ISO 8608; rough_amp>0 -> two-tone rough;
-    // grade/bank -> inclined; mu_right>=0 -> split; else flat.
+    // psd_n/psd_gd table or psd_gd_n0>0 -> general PSD (same grounds as
+    // make_sim_session_psd); iso_class>=0 -> ISO 8608; rough_amp>0 -> two-tone
+    // rough; grade/bank -> inclined; mu_right>=0 -> split; else flat.
     std::unique_ptr<vdsim::IContactProvider> ground;
-    if (iso_class >= 0)
+    if (!psd_n.empty() && psd_n.size() == psd_gd.size())
+        ground = vdsim::create_psd_ground_table(0.0, mu, std::move(psd_n),
+                                                std::move(psd_gd), psd_n_min,
+                                                psd_n_max, ground_seed);
+    else if (psd_gd_n0 > 0.0)
+        ground = vdsim::create_psd_ground(0.0, mu, psd_gd_n0, psd_waviness,
+                                          psd_n_break, psd_waviness_high,
+                                          psd_n_min, psd_n_max, ground_seed);
+    else if (iso_class >= 0)
         ground = vdsim::create_iso8608_ground(0.0, mu, iso_class, ground_seed);
     else if (rough_amp > 0.0)
         ground = vdsim::create_rough_ground(0.0, mu, rough_amp, rough_wavelength);
@@ -1465,7 +1478,10 @@ PYBIND11_MODULE(vdsim, m) {
              const vdsim::SolverParams& solver, const vdsim::SensorParams& sensors,
              double mu_right, double mu_boundary_y, double grade, double bank,
              double rough_amp, double rough_wavelength, int iso_class,
-             int threads, unsigned ground_seed) {
+             int threads, unsigned ground_seed, double psd_gd_n0,
+             double psd_waviness, double psd_n_break, double psd_waviness_high,
+             double psd_n_min, double psd_n_max, const std::vector<double>& psd_n,
+             const std::vector<double>& psd_gd) {
               if (num_envs < 1)
                   throw std::invalid_argument("make_vec_session: num_envs must be >= 1");
               std::vector<std::unique_ptr<vdsim::SimSession>> v;
@@ -1475,7 +1491,9 @@ PYBIND11_MODULE(vdsim, m) {
                       vp, tp, level, sensor_delay_s, mu, nominal_dt, actuator,
                       solver, sensors, mu_right, mu_boundary_y, grade, bank,
                       rough_amp, rough_wavelength, iso_class,
-                      ground_seed + static_cast<unsigned>(i)));
+                      ground_seed + static_cast<unsigned>(i), psd_gd_n0,
+                      psd_waviness, psd_n_break, psd_waviness_high, psd_n_min,
+                      psd_n_max, psd_n, psd_gd));
               return std::make_unique<vdsim::VecSession>(std::move(v), threads);
           },
           py::arg("num_envs"), py::arg("vehicle"), py::arg("tire"),
@@ -1489,7 +1507,14 @@ PYBIND11_MODULE(vdsim, m) {
           py::arg("grade") = 0.0, py::arg("bank") = 0.0,
           py::arg("rough_amp") = 0.0, py::arg("rough_wavelength") = 4.0,
           py::arg("iso_class") = -1, py::arg("threads") = 0,
-          py::arg("ground_seed") = 1u);
+          py::arg("ground_seed") = 1u,
+          // General PSD road, env i seeded ground_seed + i: psd_n/psd_gd table
+          // (both non-empty) or analytic psd_gd_n0 > 0; see make_sim_session_psd.
+          py::arg("psd_gd_n0") = -1.0, py::arg("psd_waviness") = 2.0,
+          py::arg("psd_n_break") = 0.0, py::arg("psd_waviness_high") = 2.0,
+          py::arg("psd_n_min") = 0.011, py::arg("psd_n_max") = 4.0,
+          py::arg("psd_n") = std::vector<double>{},
+          py::arg("psd_gd") = std::vector<double>{});
 
     // Build a SimSession on a heightmap terrain (2D array h[ny][nx]). Per-wheel
     // bilinear height + gradient normal -> slope-gravity works on arbitrary

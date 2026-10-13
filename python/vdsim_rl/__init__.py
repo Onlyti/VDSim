@@ -25,7 +25,7 @@ import json
 import os
 import warnings
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -300,6 +300,65 @@ def load_vehicle_preset(vehicle: Optional[str], tire: Optional[str], *,
 
 ACTION_MODES = ("pedal", "accel")
 
+#: Levels whose dynamics carry a vertical ride (road_dz reaches the body).  The
+#: others are planar: a rough, ISO 8608 or PSD road only moves their contact
+#: heights, which they never read, so such a road is refused, not ignored.
+VERTICAL_LEVELS = ("L3", "L4")
+#: Levels that read no contact at all (kinematic model): grade/bank are refused.
+CONTACT_FREE_LEVELS = ("K", "L0")
+#: Keys of EnvConfig.road_psd -> make_vec_session keyword (psd_<key>).
+ROAD_PSD_KEYS = ("gd_n0", "waviness", "n_break", "waviness_high",
+                 "n_min", "n_max", "n", "gd")
+
+
+def _check_road(cfg: "EnvConfig") -> None:
+    """Refuse a road the core would drop without a word.
+
+    The core builds one ground per session and takes the first match of
+    PSD > ISO 8608 > rough > grade/bank (python/bindings.cpp
+    build_ground_session), so two kinds at once would silently lose one.
+    """
+    if not -1 <= cfg.iso_class <= 7:
+        raise ValueError(f"iso_class must be -1 (off) or 0 (A) .. 7 (H), got {cfg.iso_class}")
+    if cfg.rough_amp < 0.0:
+        raise ValueError(f"rough_amp must be >= 0 [m], got {cfg.rough_amp}")
+    if not cfg.rough_wavelength > 0.0:
+        raise ValueError(f"rough_wavelength must be > 0 [m], got {cfg.rough_wavelength}")
+    if cfg.road_psd is not None:
+        if not isinstance(cfg.road_psd, dict):
+            raise ValueError("road_psd must be a mapping")
+        unknown = sorted(set(cfg.road_psd) - set(ROAD_PSD_KEYS))
+        if unknown:
+            raise ValueError(f"road_psd: unknown keys {unknown}; allowed {list(ROAD_PSD_KEYS)}")
+        table = "n" in cfg.road_psd or "gd" in cfg.road_psd
+        if table == ("gd_n0" in cfg.road_psd):
+            raise ValueError("road_psd needs either gd_n0 (analytic) or n + gd (table), not both")
+        if table and len(cfg.road_psd.get("n", ())) != len(cfg.road_psd.get("gd", ())):
+            raise ValueError("road_psd: n and gd must have the same length")
+    vertical = [name for name, on in (("road_psd", cfg.road_psd is not None),
+                                      ("iso_class", cfg.iso_class >= 0),
+                                      ("rough_amp", cfg.rough_amp > 0.0)) if on]
+    kinds = vertical + (["grade/bank"] if (cfg.grade != 0.0 or cfg.bank != 0.0) else [])
+    if len(kinds) > 1:
+        raise ValueError(f"one road kind per env, got {kinds}")
+    if vertical and cfg.level not in VERTICAL_LEVELS:
+        raise ValueError(f"{vertical[0]} excites the vertical ride, which level "
+                         f"{cfg.level!r} does not model; use one of {VERTICAL_LEVELS}")
+    if kinds == ["grade/bank"] and cfg.level in CONTACT_FREE_LEVELS:
+        raise ValueError(f"grade/bank: level {cfg.level!r} reads no road contact")
+
+
+def _actuator_record(spec, ap) -> Optional[dict]:
+    """Provenance of the actuator: preset id and a hash of what the core gets."""
+    if spec is None:
+        return None
+    blob = json.dumps(_digest_value(ap), sort_keys=True, separators=(",", ":"),
+                      default=repr)
+    preset = spec if isinstance(spec, str) else (
+        spec.get("preset") if isinstance(spec, dict) else None)
+    return {"preset": preset,
+            "param_hash": hashlib.sha256(blob.encode()).hexdigest()}
+
 
 @dataclasses.dataclass
 class EnvConfig:
@@ -322,6 +381,20 @@ class EnvConfig:
     action_mode: str = "pedal"
     max_accel: float = 4.0            # action scale in accel mode [m/s^2]
     mu: float = 1.0
+    # actuator between the action and the plant: None = identity, a catalog id
+    # ("actuator.generic_sedan") or a spec dict (vdsim_plant.build_actuator_params)
+    actuator: Optional[Union[str, dict]] = None
+
+    # --- road (one kind per env; env i uses ground_seed + i) ---
+    grade: float = 0.0                # [rad] uphill toward +x
+    bank: float = 0.0                 # [rad] up toward +y
+    rough_amp: float = 0.0            # [m] two-tone profile, 0 = off (L3/L4)
+    rough_wavelength: float = 4.0     # [m]
+    iso_class: int = -1               # ISO 8608 class 0=A .. 7=H, -1 = off (L3/L4)
+    # general PSD road (L3/L4): {gd_n0, waviness, n_break, waviness_high,
+    # n_min, n_max} or a measured table {n, gd, n_min, n_max}; None = off
+    road_psd: Optional[dict] = None
+    ground_seed: int = 1
     obs_fields: List[str] = dataclasses.field(
         default_factory=lambda: list(DEFAULT_OBS_FIELDS))
 
@@ -356,12 +429,14 @@ class EnvConfig:
     speed_target: float = 15.0        # [m/s]
 
     def __post_init__(self):
-        """Reject an unknown action mode or a non-positive accel scale."""
+        """Reject an unknown action mode, a non-positive accel scale or a road
+        the chosen level would ignore."""
         if self.action_mode not in ACTION_MODES:
             raise ValueError(f"action_mode must be one of {ACTION_MODES}, "
                              f"got {self.action_mode!r}")
         if not self.max_accel > 0.0:
             raise ValueError(f"max_accel must be > 0 [m/s^2], got {self.max_accel}")
+        _check_road(self)
 
     @classmethod
     def from_yaml(cls, path: str) -> "EnvConfig":
@@ -413,10 +488,18 @@ class _Core:
         vp, tp, self.provenance = load_vehicle_preset(
             cfg.vehicle, cfg.tire,
             vehicle_file=cfg.vehicle_file, tire_file=cfg.tire_file)
+        from vdsim_plant import build_actuator_params
+        ap = build_actuator_params(cfg.actuator)
+        if cfg.actuator is not None:
+            self.provenance["actuator"] = _actuator_record(cfg.actuator, ap)
+        psd = {f"psd_{k}": v for k, v in (cfg.road_psd or {}).items()}
         self.vs = vdsim.make_vec_session(
             num_envs, vp, tp,
-            level=cfg.level, nominal_dt=cfg.dt, mu=cfg.mu,
-            solver=solver, threads=cfg.threads)
+            level=cfg.level, nominal_dt=cfg.dt, mu=cfg.mu, actuator=ap,
+            solver=solver, grade=cfg.grade, bank=cfg.bank,
+            rough_amp=cfg.rough_amp, rough_wavelength=cfg.rough_wavelength,
+            iso_class=cfg.iso_class, threads=cfg.threads,
+            ground_seed=cfg.ground_seed, **psd)
 
         self.columns = expand_obs_fields(cfg.obs_fields)
         self.vs.set_obs_fields(list(cfg.obs_fields))
