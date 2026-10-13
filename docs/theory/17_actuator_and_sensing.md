@@ -294,3 +294,7 @@ implicit 으로 풀면 무조건 안정.
 상세 bibliography 와 실측 ID 문헌은 `docs/references/actuator_nonlinearity.md`.
 핵심: LuGre(#2), steering friction physics(#1), steering/driveline backlash
 (#4·#15·#16), EMB/EHB clamp+dead-zone(#9·#11·#12), FOPDT for MPC(#19·#22).
+
+---
+
+사용법(기본 모델, 백래시, 프리셋, 사용자 정의 단계)은 [Actuator Model Guide](../ACTUATOR_GUIDE.md) 참고.

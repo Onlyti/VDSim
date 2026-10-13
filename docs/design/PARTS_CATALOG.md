@@ -92,7 +92,7 @@ Rules:
 | `brake` | `brake_subsystem_v1` | WS1 brake module config (v0.3 wires L3) |
 | `steering` | `steering_subsystem_v1` | ratio, deadtime |
 | `drivetrain` | `drivetrain_v1` | `engine_rotational_inertia`, diff, ratios (`V0.2_DRIVETRAIN.md`) |
-| `actuator` | `actuator_v1` | `ActuatorParams` |
+| `actuator` | `actuator_v1` | `ActuatorParams` (steer/throttle/brake channels incl. backlash; presets `actuator.ideal`, `actuator.generic_sedan`; see `ACTUATOR_GUIDE.md`) |
 | `sensor_suite` | `sensor_suite_v1` | `SensorParams` + mount list |
 
 New types add a row + resolver branch; they do not change the envelope.
