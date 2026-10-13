@@ -5,6 +5,7 @@
 #include <cmath>
 #include <memory>
 #include <thread>
+#include <variant>
 
 #include "vdsim/realtime_runner.hpp"
 #include "vdsim/sim_session.hpp"
@@ -128,4 +129,72 @@ TEST(SimSession, DynamicSteeringTorqueYaws) {
     // Steering lock: rack must not exceed max_steer · ratio.
     EXPECT_LE(std::abs(s->state().rack_travel),
               vp.max_steer_angle_wheel * vp.steering_ratio + 1e-6) << "rack clamps at lock";
+}
+
+// The fail-safe is a ControlInput now. Its default must still be the historical
+// L4 brake, and latching it through the variant overload must leave the session
+// bit-identical to the old CmdL4 overload the runner used to call.
+TEST(SimSession, RealTimeRunnerDefaultFailsafeIsBitIdenticalL4) {
+    const RealTimeRunner::Config cfg;
+    ASSERT_TRUE(std::holds_alternative<CmdL4>(cfg.failsafe));
+    const CmdL4 historical{0.0, 0.3, 0.0, 1, false};
+    const CmdL4& fs = std::get<CmdL4>(cfg.failsafe);
+    EXPECT_EQ(fs.throttle, historical.throttle);
+    EXPECT_EQ(fs.brake, historical.brake);
+    EXPECT_EQ(fs.steer_angle_wheel, historical.steer_angle_wheel);
+    EXPECT_EQ(fs.gear, historical.gear);
+    EXPECT_EQ(fs.handbrake, historical.handbrake);
+
+    auto s_old = make_session();
+    auto s_new = make_session();
+    s_old->set_input(historical);        // pre-change call: CmdL4 overload
+    s_new->set_input(cfg.failsafe);      // post-change call: ControlInput overload
+    for (int i = 0; i < 400; ++i) { s_old->tick(0.005); s_new->tick(0.005); }
+    const SessionSnapshot a = s_old->snapshot();
+    const SessionSnapshot b = s_new->snapshot();
+    ASSERT_EQ(a.d.size(), b.d.size());
+    for (std::size_t i = 0; i < a.d.size(); ++i) EXPECT_EQ(a.d[i], b.d[i]) << "slot " << i;
+    EXPECT_EQ(a.rng, b.rng);
+}
+
+// max_ticks: the loop stops by itself after exactly that many ticks, reports
+// finished(), and stop() still joins it.
+TEST(SimSession, RealTimeRunnerMaxTicksFinishesAndCounts) {
+    auto s = make_session();
+    RealTimeRunner::Config cfg;
+    cfg.dt = 0.001; cfg.cmd_timeout_s = 0.0; cfg.max_ticks = 50;
+    RealTimeRunner runner(*s, cfg);
+    const double t0 = s->sim_time();
+    runner.start();
+    for (int i = 0; i < 400 && !runner.finished(); ++i)
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    ASSERT_TRUE(runner.finished());
+    EXPECT_TRUE(runner.running());                 // still joinable until stop()
+    const auto st = runner.stats();
+    EXPECT_EQ(st.ticks, 50u);
+    EXPECT_NEAR(st.sim_elapsed_s, 50 * 0.001, 1e-12);
+    EXPECT_NEAR(s->sim_time() - t0, 50 * 0.001, 1e-12);
+    EXPECT_GT(st.wall_elapsed_s, 0.0);
+    EXPECT_TRUE(st.error.empty());
+    EXPECT_EQ(st.failsafe_latches, 0u);
+    runner.stop();
+    EXPECT_FALSE(runner.running());
+}
+
+// A non-L4 fail-safe (L1 per-wheel brake torque) is latched by the watchdog and
+// counted.
+TEST(SimSession, RealTimeRunnerL1FailsafeLatchesAndBrakes) {
+    auto s = make_session();
+    RealTimeRunner::Config cfg;
+    cfg.dt = 0.002; cfg.cmd_timeout_s = 0.005;
+    CmdL1 brake;
+    brake.brake_torque = {{1500.0, 1500.0, 1500.0, 1500.0}};
+    cfg.failsafe = brake;
+    RealTimeRunner runner(*s, cfg);
+    runner.start();
+    std::this_thread::sleep_for(std::chrono::milliseconds(120));
+    runner.stop();
+    EXPECT_GE(runner.stats().failsafe_latches, 1u);
+    EXPECT_TRUE(std::isfinite(s->state().vx()));
+    EXPECT_LT(s->state().vx(), 20.0);
 }

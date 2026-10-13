@@ -81,12 +81,14 @@ jobs:
       # optimisation, so they are given the budget that matches what they are,
       # not an exemption: the assert still runs and still fails on a real
       # regression.
+      # Label `timing` (wall-clock verdicts) is excluded here as in the
+      # validation preset: shared runners cannot hold a real-time band.
       - name: Test (Debug budget)
         if: matrix.build_type == 'Debug'
         working-directory: build
         env:
           VDSIM_PERF_BUDGET_S: '10.0'
-        run: ctest --output-on-failure
+        run: ctest --output-on-failure -LE timing
 
       # Release states no budget: it runs on the defaults compiled into the
       # tests, which are the Release contract. Injecting a value here would
@@ -94,7 +96,7 @@ jobs:
       - name: Test
         if: matrix.build_type != 'Debug'
         working-directory: build
-        run: ctest --output-on-failure
+        run: ctest --output-on-failure -LE timing
 
   # Canonical configuration (the `validation` CMake preset). This is the only
   # job whose ctest numbers docs/VALIDATION.md is allowed to record, and the
