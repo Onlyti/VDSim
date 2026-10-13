@@ -122,6 +122,18 @@ if(Python3_FOUND)
     set_tests_properties(vla_plant PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
+    add_test(NAME plant_actuator
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_plant_actuator.py)
+    set_tests_properties(plant_actuator PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
+    add_test(NAME cascade_sensor
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_cascade_sensor.py)
+    set_tests_properties(cascade_sensor PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
     # Closed-loop evaluation modes (work order 31): sync and virtual_async
     # bit-identity, seeded latency and overrun schedules.
     add_test(NAME closedloop_eval
