@@ -484,12 +484,14 @@ void pull_noise(const YAML::Node& root, const char* key, SensorNoise& n) {
     pull(g, "noise_std", n.noise_std);
     pull(g, "bias",      n.bias);
     pull(g, "bias_rw",   n.bias_rw);
+    pull(g, "lag_tau_s", n.lag_tau_s);
 }
 void emit_noise(YAML::Emitter& out, const char* key, const SensorNoise& n) {
     out << YAML::Key << key << YAML::Value << YAML::BeginMap
         << YAML::Key << "noise_std" << YAML::Value << n.noise_std
         << YAML::Key << "bias"      << YAML::Value << n.bias
         << YAML::Key << "bias_rw"   << YAML::Value << n.bias_rw
+        << YAML::Key << "lag_tau_s" << YAML::Value << n.lag_tau_s
         << YAML::EndMap;
 }
 }  // namespace

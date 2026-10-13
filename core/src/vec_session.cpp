@@ -245,6 +245,29 @@ void VecSession::set_seeds(const std::vector<unsigned>& seeds) {
         sessions_[i]->set_seed(bcast ? seeds[0] + static_cast<unsigned>(i) : seeds[i]);
 }
 
+void VecSession::set_actuators(const std::vector<ActuatorParams>& p) {
+    if (p.size() != sessions_.size() && p.size() != 1)
+        throw std::invalid_argument("VecSession.set_actuators: expected 1 or size() specs");
+    const bool bcast = (p.size() == 1);
+    for (std::size_t i = 0; i < sessions_.size(); ++i)
+        sessions_[i]->set_actuator(bcast ? p[0] : p[i]);
+}
+
+void VecSession::set_cascade_gains(const std::vector<CascadeGains>& g) {
+    if (g.size() != sessions_.size() && g.size() != 1)
+        throw std::invalid_argument("VecSession.set_cascade_gains: expected 1 or size() specs");
+    const bool bcast = (g.size() == 1);
+    for (std::size_t i = 0; i < sessions_.size(); ++i)
+        sessions_[i]->set_cascade_gains(bcast ? g[0] : g[i]);
+}
+
+std::vector<ActuatorParams> VecSession::actuators() const {
+    std::vector<ActuatorParams> out;
+    out.reserve(sessions_.size());
+    for (const auto& s : sessions_) out.push_back(s->actuator());
+    return out;
+}
+
 // ---------------- observation / termination ----------------
 
 void VecSession::set_obs_fields(const std::vector<std::string>& names) {

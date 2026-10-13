@@ -15,12 +15,29 @@
 #pragma once
 
 #include "vdsim/snapshot.hpp"
+#include <memory>
 #include <vector>
 
 #include "vdsim/control.hpp"
 #include "vdsim/state.hpp"
 
 namespace vdsim {
+
+// User-defined channel stage.  Runs after the built-in chain of its channel
+// (dead zone, dead time, backlash, lag, rate limit, saturation) on that chain's
+// output; leave the built-in fields at their defaults to replace the chain.
+// The prototype held in ChannelActuator is never stepped: every ActuatorModel
+// clone()s its own running instance, so per-env sessions never share state.
+class IChannelModel {
+public:
+    virtual ~IChannelModel() = default;
+    virtual double step(double u, double dt) = 0;
+    virtual void   reset() = 0;
+    virtual std::unique_ptr<IChannelModel> clone() const = 0;
+    // Snapshot support (optional): flat state vector, any length.
+    virtual std::vector<double> get_state() const { return {}; }
+    virtual void set_state(const std::vector<double>&) {}
+};
 
 // Per-channel first-order-plus-dead-time + rate limit + saturation.
 struct ChannelActuator {
@@ -32,6 +49,11 @@ struct ChannelActuator {
                                    // clearance). Applies to one-sided 0..1 channels.
     double out_min     {-1e12};    // saturation
     double out_max     { 1e12};
+    double backlash    {0.0};      // play / rate-independent hysteresis width [-]
+                                   // (full band: output follows the input only
+                                   // after it has moved width/2 past the output);
+                                   // sits between dead time and the lag. 0 = off.
+    std::shared_ptr<const IChannelModel> user;   // optional user stage (see above)
 };
 
 // LuGre dynamic friction (Stribeck + presliding hysteresis + stick-slip).
@@ -86,6 +108,15 @@ public:
     void save_aux(std::vector<double>& v) const;
     void restore_aux(const std::vector<double>& v, std::size_t& p);
 
+    // Swap parameters on a live model WITHOUT clearing its memory (transport
+    // rings, lag / rate state, servo + LuGre bristle, brake temperature).
+    // initialize() resets all of that, so it cannot express an actuator whose
+    // characteristics change *during* a rollout -- degradation, fault
+    // injection, a latency step.  Transport rings grow in place, history kept,
+    // when the dead time increases.
+    void set_params(const ActuatorParams& p);
+    const ActuatorParams& params() const { return p_; }
+
     double brake_temperature() const { return brake_T_; }
     double steer_angle()       const { return steer_pos_; }
 
@@ -109,6 +140,17 @@ private:
         }
     };
     FracDelay steer_buf_, throttle_buf_, brake_buf_;
+    // Backlash (play operator) state per channel.
+    double steer_bl_ {0.0}, throttle_bl_ {0.0}, brake_bl_ {0.0};
+    // Running instance of each channel's user stage (cloned from the prototype
+    // in ChannelActuator::user; rebuilt only when the prototype pointer changes).
+    struct UserSlot {
+        std::shared_ptr<const IChannelModel> proto;
+        std::unique_ptr<IChannelModel>       inst;
+    };
+    UserSlot steer_user_, throttle_user_, brake_user_;
+    static void sync_user(UserSlot& s, const std::shared_ptr<const IChannelModel>& want);
+    void sync_users();
     // First-order lag states.
     double steer_lag_ {0.0}, throttle_lag_ {0.0}, brake_lag_ {0.0};
     // Previous outputs (for rate limit) and steering servo states.
@@ -118,6 +160,8 @@ private:
     bool   initialized_ {false};
 
     double push_delay(FracDelay& buf, double v, double L, double dt) const;
+    // Grow a transport ring to hold delay L without discarding its history.
+    void   grow_ring(FracDelay& buf, double L, double dt);
 };
 
 // Feedback-path transport delay: returns the state as seen by the controller

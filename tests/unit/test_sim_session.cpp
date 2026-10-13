@@ -4,7 +4,9 @@
 #include <chrono>
 #include <cmath>
 #include <memory>
+#include <stdexcept>
 #include <thread>
+#include <utility>
 #include <variant>
 
 #include "vdsim/realtime_runner.hpp"
@@ -131,6 +133,91 @@ TEST(SimSession, DynamicSteeringTorqueYaws) {
               vp.max_steer_angle_wheel * vp.steering_ratio + 1e-6) << "rack clamps at lock";
 }
 
+// ---- Sensor lag (SensorNoise::lag_tau_s) -----------------------------------
+
+static SimConfig lag_cfg(double tau) {
+    SimConfig cfg;
+    cfg.sensors.enabled = true;           // all noise 0 -> measured == (lagged) truth
+    cfg.sensors.gnss_vel.lag_tau_s = tau;
+    return cfg;
+}
+
+// tau = 0 is a pure pass-through; tau > 0 starts primed on the truth (no
+// transient from zero) and then trails an accelerating signal.
+TEST(SimSession, SensorLagTrailsTruthAndStartsPrimed) {
+    auto plain = make_session(lag_cfg(0.0));
+    auto lag   = make_session(lag_cfg(0.5));
+    CmdL4 cmd; cmd.throttle = 1.0;
+    plain->set_input(cmd); lag->set_input(cmd);
+    plain->tick(0.005); lag->tick(0.005);
+    EXPECT_NEAR(plain->output().sensors.gnss_vx, plain->state().vx(), 1e-9);
+    EXPECT_NEAR(lag->output().sensors.gnss_vx, 20.0, 0.1) << "primed on the first sample";
+    for (int i = 0; i < 400; ++i) { plain->tick(0.005); lag->tick(0.005); }
+    EXPECT_NEAR(plain->output().sensors.gnss_vx, plain->state().vx(), 1e-9);
+    EXPECT_LT(lag->output().sensors.gnss_vx, lag->state().vx() - 0.2);
+}
+
+// The lag state is part of the sensor snapshot: restore replays bit-identically.
+TEST(SimSession, SensorLagSurvivesSnapshotRestore) {
+    auto s = make_session(lag_cfg(0.3));
+    CmdL4 cmd; cmd.throttle = 0.8;
+    s->set_input(cmd);
+    for (int i = 0; i < 100; ++i) s->tick(0.005);
+    const SessionSnapshot snap = s->snapshot();
+    for (int i = 0; i < 100; ++i) s->tick(0.005);
+    const double first = s->output().sensors.gnss_vx;
+    s->restore(snap);
+    for (int i = 0; i < 100; ++i) s->tick(0.005);
+    EXPECT_EQ(first, s->output().sensors.gnss_vx);
+}
+
+// ---- CascadeGains -----------------------------------------------------------
+
+static double l6_speed_after(SimSession& s, double v_target, double seconds) {
+    CmdL6 cmd; cmd.v_target = v_target;
+    for (int i = 0; i < int(seconds / 0.005); ++i) { s.set_input(ControlInput{cmd}); s.tick(0.005); }
+    return s.state().vx();
+}
+
+TEST(SimSession, CascadeGainsDefaultsAreBitIdentical) {
+    auto a = make_session();
+    auto b = make_session();
+    b->set_cascade_gains(CascadeGains{});
+    EXPECT_EQ(l6_speed_after(*a, 10.0, 6.0), l6_speed_after(*b, 10.0, 6.0));
+}
+
+TEST(SimSession, CascadeGainsRetuneChangesTracking) {
+    auto def = make_session();
+    auto off = make_session();
+    CascadeGains g; g.vx.kp = 0.0; g.vx.ki = 0.0;     // speed loop disabled
+    off->set_cascade_gains(g);
+    EXPECT_NEAR(l6_speed_after(*def, 10.0, 15.0), 10.0, 1.5);
+    EXPECT_GT(l6_speed_after(*off, 10.0, 15.0), 15.0) << "no speed loop -> no braking to target";
+}
+
+TEST(SimSession, CascadeGainsPersistAcrossResetAndRandomization) {
+    auto s = make_session();
+    CascadeGains g; g.vx.kp = 1.7; g.yaw_ki = 0.2; g.pp_lookahead_min = 3.0;
+    s->set_cascade_gains(g);
+    DomainRandomization d; d.mass_scale = 1.1;
+    s->set_randomization(d);
+    State s0; s0.velocity = {20.0, 0.0, 0.0};
+    s->reset(s0);
+    const CascadeGains r = s->cascade_gains();
+    EXPECT_EQ(r.vx.kp, 1.7);
+    EXPECT_EQ(r.yaw_ki, 0.2);
+    EXPECT_EQ(r.pp_lookahead_min, 3.0);
+}
+
+TEST(SimSession, CascadeGainsRejectBadValues) {
+    auto s = make_session();
+    CascadeGains neg; neg.ax.kp = -0.1;
+    EXPECT_THROW(s->set_cascade_gains(neg), std::invalid_argument);
+    CascadeGains nan_; nan_.yaw_kp = std::nan("");
+    EXPECT_THROW(s->set_cascade_gains(nan_), std::invalid_argument);
+    EXPECT_EQ(s->cascade_gains().ax.kp, CascadeGains{}.ax.kp) << "rejected set leaves gains unchanged";
+}
+
 // The fail-safe is a ControlInput now. Its default must still be the historical
 // L4 brake, and latching it through the variant overload must leave the session
 // bit-identical to the old CmdL4 overload the runner used to call.
@@ -197,4 +284,39 @@ TEST(SimSession, RealTimeRunnerL1FailsafeLatchesAndBrakes) {
     EXPECT_GE(runner.stats().failsafe_latches, 1u);
     EXPECT_TRUE(std::isfinite(s->state().vx()));
     EXPECT_LT(s->state().vx(), 20.0);
+}
+
+// ---- Direct-control level selection (work order 32, B2) --------------------
+// Ported from the retired feat/direct-control-dynamics-level branch: its
+// dynamics_level option is DirectControlSessionOptions::level here.
+static std::unique_ptr<SimSession> make_dc_level(const char* level) {
+    VehicleParams vp; TireParams tp; SolverParams sp;
+    DirectControlSessionOptions o;
+    o.level = level;
+    return make_direct_control_session(vp, TireSetup(tp), sp, o);
+}
+
+TEST(DirectControlSession, DefaultLevelIsSevenDof) {
+    EXPECT_EQ(DirectControlSessionOptions{}.level, "L2");
+    VehicleParams vp; TireParams tp; SolverParams sp;
+    auto s = make_direct_control_session(vp, TireSetup(tp), sp);
+    EXPECT_EQ(s->dynamics().level(), IVehicleDynamics::Level::L2_SevenDOF);
+}
+
+TEST(DirectControlSession, L3AndL4CreateAndTickFinite) {
+    const std::pair<const char*, IVehicleDynamics::Level> cases[] = {
+        {"L3", IVehicleDynamics::Level::L3_FourteenDOF},
+        {"L4", IVehicleDynamics::Level::L4_Kinematic}};
+    const double dt = DirectControlSessionOptions{}.nominal_dt;
+    for (const auto& [name, lvl] : cases) {
+        auto s = make_dc_level(name);
+        EXPECT_EQ(s->dynamics().level(), lvl) << name;
+        EXPECT_TRUE(s->vehicle_params().plant_path) << name;
+        State s0; s0.velocity = {20.0, 0.0, 0.0};
+        s->reset(s0);
+        CmdL1 cmd; cmd.steer_angle_wheel = 0.02;
+        for (int i = 0; i < 2000; ++i) { s->set_input(cmd); s->tick(dt); }
+        EXPECT_TRUE(std::isfinite(s->state().vx())) << name;
+        EXPECT_GT(s->state().yaw_rate(), 1e-4) << name;
+    }
 }
