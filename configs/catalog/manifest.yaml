@@ -1,6 +1,10 @@
 catalog_id: vdsim.builtin
 catalog_version: 1
 parts:
+- id: actuator.generic_sedan
+  path: parts/actuator/generic_sedan.yaml
+- id: actuator.ideal
+  path: parts/actuator/ideal.yaml
 - id: aero.fsk_formula
   path: parts/aero/fsk_formula.yaml
 - id: aero.race_car

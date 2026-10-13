@@ -1,0 +1,12 @@
+id: actuator.ideal
+type: actuator
+version: 1
+schema: actuator_v1
+label: ideal actuator (no delay, lag or play)
+tags:
+- actuator
+- reference
+body:
+  steer: {}
+  throttle: {}
+  brake: {}

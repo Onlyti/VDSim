@@ -1,0 +1,20 @@
+id: actuator.generic_sedan
+type: actuator
+version: 1
+schema: actuator_v1
+label: generic sedan actuator set (nominal placeholders, not measured)
+tags:
+- actuator
+- generic_sedan
+body:
+  steer:
+    dead_time_s: 0.05
+    tau_s: 0.08
+    backlash: 0.002
+  throttle:
+    dead_time_s: 0.10
+    tau_s: 0.25
+  brake:
+    dead_time_s: 0.08
+    tau_s: 0.15
+    dead_zone: 0.03
