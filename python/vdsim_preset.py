@@ -7,9 +7,13 @@ adding presets does not move ``schema_version``.
 
 Three presets are contracted — ``overview``, ``control``, ``tire_limit`` — and
 the implementation order is fixed in that order. This module ships
-``overview`` only; the other two names are deliberately absent rather than
-stubbed, so ``--preset control`` fails loudly instead of silently rendering
-something that is not the contracted screen.
+``overview`` of those three; the other two names are deliberately absent
+rather than stubbed, so ``--preset control`` fails loudly instead of silently
+rendering something that is not the contracted screen.
+
+``kinematics`` is an additional, non-contracted built-in: the ``overview``
+screen plus motion-state panels (acceleration, jerk, yaw acceleration) and the
+matching BEV layers. It occupies none of the reserved names.
 
 Resolution order, highest first (§6.3)::
 
@@ -41,8 +45,11 @@ RESERVED_PRESET_NAMES = ("road_contact", "control", "tire_limit")
 
 #: Panel channels the renderer derives rather than reads from the trace.
 #: ``speed`` is the magnitude of ``v_body``; it is not a recorded channel
-#: because it is a function of one.
-DERIVED_PANELS = ("speed",)
+#: because it is a function of one. ``a_long``/``a_lat`` are the body-frame
+#: CG acceleration (recorded ``a_body`` when present, else ``dv/dt + r x v``);
+#: ``jerk_*`` and ``yaw_acc`` are their time derivatives and that of
+#: ``yaw_rate`` — see :func:`vdsim_render.kinematic_series`.
+DERIVED_PANELS = ("speed", "a_long", "a_lat", "jerk_long", "jerk_lat", "yaw_acc")
 
 _BEV_DEFAULTS = {
     "show": True,              # the BEV axis itself
@@ -54,6 +61,11 @@ _BEV_DEFAULTS = {
     "colorbar": True,
     "legend": True,
     "view_half_m": None,       # None keeps the geometry-derived window
+    # Motion-state layers; off in ``overview`` so its screen is unchanged.
+    "accel_arrow": False,      # CG acceleration vector on the body
+    "yaw_arcs": False,         # yaw-rate / yaw-acceleration arcs around the CG
+    "gg_diagram": False,       # (a_lat, a_long) inset with the mu*g circle
+    "kinematics_hud": False,   # acceleration / jerk / yaw-acc HUD lines
 }
 
 _PANEL_DEFAULTS = {
@@ -76,6 +88,23 @@ BUILTIN_PRESETS = {
             {"channel": "speed", "label": "speed"},
             {"channel": "u_steer", "label": "steer cmd"},
             {"channel": "u_fx", "label": "long. cmd"},
+        ],
+    },
+    "kinematics": {
+        "name": "kinematics",
+        "description": "motion state — overview BEV plus acceleration arrow, "
+                       "yaw-rate/yaw-acc arcs, g-g diagram; speed, accel, "
+                       "jerk, yaw rate and yaw acc. panels",
+        "bev": dict(_BEV_DEFAULTS, accel_arrow=True, yaw_arcs=True,
+                    gg_diagram=True, kinematics_hud=True),
+        "panels": [
+            {"channel": "speed", "label": "speed"},
+            {"channel": "a_long", "label": "a long"},
+            {"channel": "a_lat", "label": "a lat"},
+            {"channel": "jerk_long", "label": "jerk long"},
+            {"channel": "jerk_lat", "label": "jerk lat"},
+            {"channel": "yaw_rate", "label": "yaw rate"},
+            {"channel": "yaw_acc", "label": "yaw acc"},
         ],
     },
 }

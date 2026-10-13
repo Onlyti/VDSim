@@ -265,7 +265,22 @@ def test_t6_layout_non_overlap():
     hud_bbox = artists["hud"].get_window_extent(renderer).transformed(to_figure).bounds
     check(all(not intersects(gauge, hud_bbox) for gauge in gauge_tight),
           "instrument decorations do not overlap HUD bbox")
+    # The dials sit next to each other: equal-aspect shrinking leaves no
+    # hidden margin, so the drawn gap is the layout gap.
+    steer_box = instrument_axes["steering"].get_position()
+    speed_box = instrument_axes["speed"].get_position()
+    gap = speed_box.x0 - steer_box.x1
+    check(0.0 < gap <= 2.0 * vr.INSTRUMENT_GAP,
+          "steering wheel and speedometer are adjacent (drawn gap %.3f)" % gap)
+    check(abs(steer_box.width - layout_w(fig, layout)) < 1e-3,
+          "gauge axes are not shrunk by equal aspect (no hidden margin)")
     vr.plt.close(fig)
+
+
+def layout_w(fig, layout):
+    """Gauge width the layout asks for at this figure's aspect."""
+    w, h = fig.get_size_inches()
+    return vr.single_layout_spec(len(layout["series"]), fig_aspect=w / h)["steering"][2]
 
 def test_render_from_fixture_only():
     """DoD 5 + 7: fixture in, GIF + PNG out, wall-clock measured."""
