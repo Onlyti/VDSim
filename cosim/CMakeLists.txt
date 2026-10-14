@@ -143,6 +143,15 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 300
         ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
+    # Closed-loop evaluation extensions (work order 34): early stop in the
+    # virtual-clock modes, realized steer observation and trace channel.
+    add_test(NAME closedloop_ext
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_closedloop_ext.py)
+    set_tests_properties(closedloop_ext PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 300
+        ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
     # Closed-loop mode C (wallclock): thread shutdown, argument checks and the
     # watchdog. Wall-clock pacing, so it never shares the host with other tests.
     add_test(NAME closedloop_wallclock

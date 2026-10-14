@@ -121,7 +121,7 @@ Options that exist only in this mode:
   `t_sample`, `t_apply`, `c_k`, `overrun`, `applied`, the command, and the
   measured compute time `t_compute_s`.
 - `res.meta`: `eval_mode`, `control_period_s`, `latency_model`,
-  `overrun_policy`, level and (C) affinity and watchdog.
+  `overrun_policy`, `delta_sw_ratio`, level and (C) affinity and watchdog.
 - `trace_path=` writes a `.vdtrace` (schema 0.5) with one row per control
   sample. A writes exactly what `VDSimPlant.enable_trace` writes. B and C add
   four channels that describe the command in force on that row:
@@ -138,6 +138,47 @@ Options that exist only in this mode:
   `latency_model` and `overrun_policy` in every mode. The four channels are
   optional and additive, so the schema stays 0.5 and an existing 0.5 reader
   ignores them.
+
+## Ending a run early
+
+`ev.stop()` ends a run in every mode. Call it from the controller or from any
+other thread; `run()` then returns what ran so far.
+
+| Mode | Where the run ends | The command of the stopping call |
+|---|---|---|
+| A `sync` | a `stop()` made while a controller call runs: at that sample's time `t_k`; a `stop()` made between calls: at the next grid time, before that sample is taken | not applied; the plant is not advanced |
+| B `virtual_async` | as in A, at the virtual time of the call. A `queue` sample computed late behind a busy worker is called at the substep the worker frees up, so the run ends there (the plant cannot go back to `t_k`) | not applied; every command still waiting for its `t_apply` is dropped too |
+| C `wallclock` | the control thread stops at its next slot and the sim thread is joined; the run ends wherever the session clock got to | unchanged from before |
+
+- `stats["stopped_early"]` (bool) and `stats["t_stop"]` (simulated end time
+  [s], `None` when the run went the full duration) are present in every mode.
+  `meta["duration_s"]` stays the nominal duration; the run's real length is
+  `t_stop`.
+- Dropped commands are counted in `stats["n_unapplied"]` with `applied = 0`
+  in `res.samples`; they never appear as a `t_apply` in the trace.
+- `res.trace` ends with a closing row at `t_stop` (no command), and the
+  tracking metrics of `reference_path` use only the samples that ran.
+- A recorded trace is finalized normally: its last row is `t_stop` (when that
+  row falls on the decimation grid; at `Tc >= 10 ms` it always does) and the
+  manifest carries `stopped_early` and `t_stop`. A run that is not stopped
+  records `stopped_early: false, t_stop: null`.
+- `stop()` before `run()` has no effect: every run starts cleared.
+
+## Realized steer
+
+The observation carries the steer the dynamics actually integrated, after the
+actuator chain (dead time, lag, rate limit) of `actuator=`:
+
+| Key | Unit | Meaning |
+|---|---|---|
+| `delta_rw` | rad | realized road-wheel steer over the last substep before the sample. With `actuator=None` it equals the command in force, bit for bit |
+| `delta_sw` | rad | `delta_rw x steering_ratio`, only when the vehicle file states `steering_ratio`; no default ratio stands in for it. The ratio used is `meta["delta_sw_ratio"]` (`None` = not observed) |
+
+`res.trace` has a `delta_rw` column. `trace_channels=("steer_applied",)` adds
+the same quantity to the `.vdtrace` as an optional channel (rad); it is off by
+default so the default trace is unchanged, and a 0.5 reader that predates it
+ignores it. Per-wheel steer angles are not observed: the direct-control
+plant applies one road-wheel angle.
 
 ## Example: delay budget of a lane-change controller
 

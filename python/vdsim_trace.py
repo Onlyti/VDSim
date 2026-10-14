@@ -157,6 +157,10 @@ CHANNEL_SPECS = {
     "t_apply":           ("s",         ()),
     "c_k":               ("s",         ()),
     "overrun":           ("-",         ()),
+    # -- Realized road-wheel steer after the actuator chain (work order 34).
+    # -- Optional and additive like the timing channels: recorded when the
+    # -- producer asks for it, ignored by a 0.5 reader that predates it.
+    "steer_applied":     ("rad",       ()),
 }
 
 #: Timing channels of a closed-loop evaluation run. Recorded only by the
@@ -168,11 +172,15 @@ EVAL_CHANNELS = ("t_sample", "t_apply", "c_k", "overrun")
 #: applies every command at its sample time, so it has no timing to record.
 EVAL_TIMING_MODES = ("virtual_async", "wallclock")
 
+#: Opt-in channels every level can produce: never part of the default set,
+#: recorded only when a producer lists them (``extra_channels``).
+OPTIONAL_CHANNELS = EVAL_CHANNELS + ("steer_applied",)
+
 #: Channels of the 0.1/0.2 contract — the set a trace records when no explicit
 #: subset is requested at those versions.
 BASE_CHANNELS = tuple(n for n in CHANNEL_SPECS
                       if n not in CHANNEL_MIN_LEVEL and n not in VALIDITY_CHANNELS
-                      and n not in EVAL_CHANNELS)
+                      and n not in OPTIONAL_CHANNELS)
 
 
 def channels_for_level(model_level, base=None):
@@ -479,7 +487,7 @@ class TraceWriter:
         unknown = [n for n in names if n not in CHANNEL_SPECS]
         if unknown:
             raise TraceError("unknown channel(s): %s" % (", ".join(unknown),))
-        too_high = [n for n in names if n not in allowed and n not in EVAL_CHANNELS]
+        too_high = [n for n in names if n not in allowed and n not in OPTIONAL_CHANNELS]
         if too_high:
             raise TraceError(
                 "model_level %s does not produce %s — omit the channel instead of "

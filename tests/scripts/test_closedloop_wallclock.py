@@ -172,6 +172,7 @@ def test_s8_threads_joined_on_every_exit():
     # Normal end.
     res = _eval(controller, 0.5).run()
     assert not res.stats["stopped_early"]
+    assert res.stats["t_stop"] is None           # work order 34: common key
     after, waits["normal"] = _settled_counts(base)
     assert after == base, ("normal", after, base)
 
@@ -202,6 +203,8 @@ def test_s8_threads_joined_on_every_exit():
     assert time.perf_counter() - t0 < 2.0
     assert res.stats["stopped_early"], res.stats
     assert res.stats["sim_ticks"] < res.stats["sim_ticks_planned"]
+    # t_stop is the session time the run ended at: the closing row's time.
+    assert res.stats["t_stop"] == res.trace["t"][-1] > 0.1, res.stats["t_stop"]
     after, waits["stop"] = _settled_counts(base)
     assert after == base, ("stop", after, base)
 

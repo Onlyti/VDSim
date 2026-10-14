@@ -10,6 +10,9 @@ Contract (stable):
       Fz [N], alpha [rad], kappa [-], mu [-] contact friction used this step
       mu_peak [-] realized load-dependent peak coefficient (force/Fz)
       alpha_peak [rad], kappa_peak [-] MF pure-slip peak slip at this Fz
+    delta_rw [rad] — realized road-wheel steer (after the actuator chain)
+    delta_sw [rad] — delta_rw × steering_ratio; only when the vehicle file
+      states steering_ratio (no default stands in for it)
 
 Built on vdsim_lab config resolution + SimSession (direct CmdL1 torque path).
 
@@ -95,6 +98,10 @@ def _load_tire_setup_for_vehicle(vp_path: Path) -> vdsim.TireSetup:
 #: Record rate the default `decimation` targets [Hz]. 100 Hz is >3x a 30 fps
 #: render and keeps 1 kHz control loops at a 10x storage saving.
 TRACE_TARGET_HZ = 100.0
+
+#: Opt-in trace channels :func:`trace_sample` fills from the session output
+#: (a subset of ``vdsim_trace.OPTIONAL_CHANNELS``).
+SAMPLED_OPTIONAL_CHANNELS = ("steer_applied",)
 
 #: Ladder levels this plant can be built at. The control contract
 #: ``u = [delta_rad, Fx_total_N]`` is the same at every one of them; only the
@@ -226,7 +233,14 @@ def _vdsim_version() -> str:
         return "source"
 
 
-def _obs_from_output(o: vdsim.SimOutput) -> dict:
+def _obs_from_output(o: vdsim.SimOutput, steer_ratio=None) -> dict:
+    """Observation dict of one session output (see the module contract).
+
+    :param o: ``vdsim.SimOutput``.
+    :param steer_ratio: steering ratio [-] read from the vehicle file, or
+        ``None`` when the file does not state one; ``delta_sw`` is present
+        only when it is given.
+    """
     st = o.state
     wheels = []
     for i in range(4):
@@ -242,7 +256,7 @@ def _obs_from_output(o: vdsim.SimOutput) -> dict:
             "alpha_peak": float(o.wheel_alpha_peak[i]),
             "kappa_peak": float(o.wheel_kappa_peak[i]),
         })
-    return {
+    obs = {
         "X": float(st.position[0]),
         "Y": float(st.position[1]),
         "psi": float(st.yaw()),
@@ -255,7 +269,13 @@ def _obs_from_output(o: vdsim.SimOutput) -> dict:
         "roll": float(o.roll),
         "pitch": float(o.pitch),
         "wheel": wheels,
+        # Road-wheel steer the dynamics integrated over the last substep, i.e.
+        # the command after the actuator chain (dead time, lag, rate limit).
+        "delta_rw": float(o.steer_applied),
     }
+    if steer_ratio is not None:
+        obs["delta_sw"] = obs["delta_rw"] * float(steer_ratio)
+    return obs
 
 
 def _validate_friction_map(friction_map):
@@ -493,6 +513,10 @@ def trace_sample(o, t, u_steer, u_fx, channels, validity):
   }
   if "u_fx" in channels:
       sample["u_fx"] = float(u_fx)
+  if "steer_applied" in channels:
+      # Opt-in channel (vdsim_trace.OPTIONAL_CHANNELS): the realized steer, not
+      # the command, so the actuator chain is visible next to u_steer.
+      sample["steer_applied"] = float(o.steer_applied)
   # 0.3 channels. `channels` already excludes anything this level does not
   # produce, so no branch here can write a zero standing in for a quantity the
   # model does not have (3.2.1).
@@ -689,6 +713,12 @@ class VDSimPlant:
       self._trace = None
       self._t = 0.0
       self._vp_path = vp_path
+      # delta_sw needs a ratio the vehicle file states; VehicleParams falls
+      # back to a default when the key is absent, and that default must not
+      # turn into an observation.
+      ratio = _load_yaml_sidecar(Path(vp_path), "steering_ratio")
+      self._delta_sw_ratio = (float(self._vp.steering_ratio)
+                              if ratio is not None else None)
       self._plant_params = {
           "config": Path(vp_path).name,
           "level": level,
@@ -746,7 +776,7 @@ class VDSimPlant:
           self._vp, self._ts.wheel[0], x=x, y=y, yaw=psi, vx=vx, vy=vy, r=r)
       self._sess.reset(s0)
       self._t = 0.0
-      return _obs_from_output(self._sess.output())
+      return self._obs()
 
   def step(self, u):
       """Advance one control period (ZOH); integrate internally at substep_dt."""
@@ -792,10 +822,12 @@ class VDSimPlant:
           this class *is* the plant; pass ``"predictor"`` when the same object
           is driven as an optimiser's internal model rather than as the run
           under verification.
-      :param extra_channels: channels beyond the level's own set, for a
+      :param extra_channels: channels beyond the level's own set. Names in
+          :data:`SAMPLED_OPTIONAL_CHANNELS` (``"steer_applied"``) are filled
+          by every sample, :meth:`step` included. Any other name is for a
           caller that drives the session itself and appends its samples to
-          ``_trace`` (``vdsim_closedloop`` timing channels). :meth:`step`
-          cannot fill them, so leave this empty when stepping the plant.
+          ``_trace`` (``vdsim_closedloop`` timing channels); :meth:`step`
+          cannot fill those, so leave them out when stepping the plant.
       :param manifest_extra: manifest keys merged next to ``tags``.
       :returns: the resolved decimation.
       """
@@ -837,7 +869,11 @@ class VDSimPlant:
           "substep_dt_s": float(self.substep_dt),
           "decimation": decimation,
       }
-      self._channels = vdsim_trace.channels_for_level(self.level)
+      # Opt-in channels trace_sample() can fill itself join the per-step set,
+      # so step() records them too; the rest stay with the caller.
+      own = tuple(n for n in extra_channels if n in SAMPLED_OPTIONAL_CHANNELS)
+      extra_channels = tuple(n for n in extra_channels if n not in own)
+      self._channels = vdsim_trace.channels_for_level(self.level) + own
       self._validity = channel_validity_from_dynamics(
           self._dyn, self.level, self._channels)
       extra = dict(manifest_extra or {})
@@ -891,5 +927,15 @@ class VDSimPlant:
   def tire_model(self):
       return self._dyn.tire(0)
 
+  @property
+  def delta_sw_ratio(self):
+      """Steering ratio [-] behind ``obs["delta_sw"]``, or ``None`` when the
+      vehicle file states none and ``delta_sw`` is therefore not observed."""
+      return self._delta_sw_ratio
+
+  def _obs_from(self, out) -> dict:
+      """Observation dict of a ``vdsim.SimOutput`` of this plant's session."""
+      return _obs_from_output(out, self._delta_sw_ratio)
+
   def _obs(self) -> dict:
-      return _obs_from_output(self._sess.output())
+      return self._obs_from(self._sess.output())
