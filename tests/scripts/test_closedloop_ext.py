@@ -28,6 +28,7 @@ Part 2: E3-E5.
   and actuator; E5-a the SHA is the source HEAD, E5-b the built module keeps
   it when imported from outside the repository.
 """
+import importlib.util
 import math
 import os
 import shutil
@@ -424,6 +425,76 @@ def test_e4_accel_same_in_every_mode():
         raise AssertionError(f"{bad} accepted")
     print("E4: accel commands give the same run in sync and virtual_async(0); "
           "conversion recorded in meta and manifest; L1 and unknown modes refused")
+
+
+#: main before work order 34; its 0.5 reader must open an accel trace.
+MAIN_READER_SHA = "35f19bc"
+
+
+def _main_reader(tmp):
+    """``vdsim_trace`` as of :data:`MAIN_READER_SHA`, or ``None`` when that
+    commit is not in the checkout (shallow clone)."""
+    root = Path(__file__).resolve().parents[2]
+    try:
+        src = subprocess.run(
+            ["git", "-C", str(root), "show",
+             f"{MAIN_READER_SHA}:python/vdsim_trace.py"],
+            capture_output=True, check=True).stdout
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    path = Path(tmp) / "vdsim_trace_main.py"
+    path.write_bytes(src)
+    spec = importlib.util.spec_from_file_location("vdsim_trace_main", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_e4_accel_command_is_u_ax():
+    """An acceleration target is recorded as u_ax [m/s^2], never as u_fx [N]."""
+    def ctrl(obs, t):
+        return 0.0, 1.0 if t < 1.0 else -1.5
+    with tempfile.TemporaryDirectory() as tmp:
+        acc = ClosedLoopEval(dict(PLANT, longitudinal="accel"), ctrl, TC,
+                             mode="virtual_async", latency=LatencyModel.fixed(0.01),
+                             duration=2.0, state0=STATE0,
+                             trace_path=Path(tmp) / "accel.vdtrace").run()
+        frc = ClosedLoopEval(PLANT, controller, TC, mode="sync", duration=0.4,
+                             state0=STATE0, trace_path=Path(tmp) / "force.vdtrace").run()
+        assert "u_ax" in acc.trace and "u_fx" not in acc.trace, list(acc.trace)
+        assert "u_ax" in acc.samples and "u_fx" not in acc.samples, list(acc.samples)
+        assert set(acc.samples["u_ax"].tolist()) == {1.0, -1.5}
+        assert "u_fx" in frc.trace and "u_ax" not in frc.trace
+        assert "u_fx" in frc.samples and "u_ax" not in frc.samples
+        with vt.TraceReader(acc.meta["trace_path"]) as tr:
+            assert tr.has("u_ax") and not tr.has("u_fx"), tr.channel_names()
+            assert tr.channel_meta("u_ax")["unit"] == "m/s^2"
+            assert np.array_equal(tr.channel("u_ax"), acc.trace["u_ax"][:tr.n_steps],
+                                  equal_nan=True)
+        with vt.TraceReader(frc.meta["trace_path"]) as tr:
+            assert tr.has("u_fx") and not tr.has("u_ax")
+        main = _main_reader(tmp)
+        if main is None:
+            print(f"E4: {MAIN_READER_SHA} not in this checkout; main-reader check "
+                  "not run here")
+        else:
+            with main.TraceReader(acc.meta["trace_path"]) as tr:
+                assert tr.manifest["schema_version"] == "0.5"
+                assert not tr.has("u_fx")
+                assert tr.channel("u_steer").shape == (tr.n_steps,)
+            print(f"E4: the {MAIN_READER_SHA} reader opens the accel trace "
+                  "(no u_fx)")
+    plant = VDSimPlant(control_dt=TC, **PLANT)
+    plant.reset(STATE0)
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            plant.enable_trace(Path(tmp) / "x.vdtrace", extra_channels=("u_ax",))
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("u_ax accepted as an extra channel")
+    print("E4: accel runs record u_ax and no u_fx in result, samples and trace; "
+          "force runs unchanged")
 
 
 def _git_head():

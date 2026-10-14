@@ -361,9 +361,9 @@ def test_e6a_quality_keys_and_rules():
     """Work order 34 E6-a: load1_start, rtf_windows and quality are reported.
 
     The verdict of a real run depends on the host, so it is only checked for
-    consistency; each fixed rule is exercised on synthetic stats instead.
+    consistency; the fixed rules are exercised on synthetic stats in E6-b1.
     """
-    from vdsim_closedloop import RTF_BAND, _rtf_windows, _wall_quality
+    from vdsim_closedloop import _rtf_windows
     st = _eval(controller, 3.5).run().stats
     if sys.platform.startswith("linux"):
         assert isinstance(st["load1_start"], float), st["load1_start"]
@@ -374,26 +374,82 @@ def test_e6a_quality_keys_and_rules():
     q = st["quality"]
     assert q["ok"] == (not q["reasons"]), q
     assert set(q["reasons"]) <= {"rtf_band", "sim_max_lag", "sim_ticks_short"}, q
+    assert q["warnings"] == (["control_overrun"] if st["n_overrun"] else []), q
     print(f"E6-a: load1_start {st['load1_start']}, rtf_windows {win}, quality {q}")
 
+    half = _rtf_windows([0.0, 1.0, 2.0, 3.0], [0.0, 0.5, 1.0, 1.5])
+    assert half["p50"] == 0.5 and half["n"] == 3, half
+    assert _rtf_windows([0.0, 0.5, 1.5], [0.0, 0.5, 1.5]) is None
+
+
+def test_e6b1_quality_rules_on_synthetic_stats():
+    """Work order 34 E6-b1: each fixed rule alone, all three, the boundaries,
+    and control_overrun as a warning that never touches ``ok``.
+
+    ``|rtf - 1| = RTF_BAND`` cannot be hit exactly in floating point for 0.02
+    (no double near 1 differs from 1 by the double 0.02), so the inclusive
+    edge is checked twice: at the largest in-band double for the real band,
+    and at exact equality under a temporarily widened, exactly representable
+    band.
+    """
+    import numpy as np
+    import vdsim_closedloop as vcl
+    q = vcl._wall_quality
     good = {"rtf": 1.0, "sim_max_lag_s": 0.0, "stopped_early": False,
-            "sim_ticks": 10, "sim_ticks_planned": 10}
-    assert _wall_quality(good, TC) == {"ok": True, "reasons": []}
+            "sim_ticks": 10, "sim_ticks_planned": 10, "n_overrun": 0}
+    assert q(good, TC) == {"ok": True, "reasons": [], "warnings": []}
     cases = (
-        ({"rtf": 1.0 + 1.5 * RTF_BAND}, ["rtf_band"]),
+        ({"rtf": 1.0 + 1.5 * vcl.RTF_BAND}, ["rtf_band"]),
+        ({"rtf": 1.0 - 1.5 * vcl.RTF_BAND}, ["rtf_band"]),
         ({"rtf": float("nan")}, ["rtf_band"]),
         ({"sim_max_lag_s": 1.5 * TC}, ["sim_max_lag"]),
         ({"sim_ticks": 9}, ["sim_ticks_short"]),
         ({"sim_ticks": 9, "stopped_early": True}, []),
         ({"rtf": 0.5, "sim_max_lag_s": 1.0, "sim_ticks": 3},
          ["rtf_band", "sim_max_lag", "sim_ticks_short"]),
+        # Boundaries are inside: lag equal to Tc, ticks equal to the plan.
+        ({"sim_max_lag_s": TC}, []),
+        ({"sim_ticks": 10, "sim_ticks_planned": 10}, []),
     )
     for change, reasons in cases:
-        assert _wall_quality(dict(good, **change), TC)["reasons"] == reasons, change
-    half = _rtf_windows([0.0, 1.0, 2.0, 3.0], [0.0, 0.5, 1.0, 1.5])
-    assert half["p50"] == 0.5 and half["n"] == 3, half
-    assert _rtf_windows([0.0, 0.5, 1.5], [0.0, 0.5, 1.5]) is None
-    print("E6-a: each quality rule raises its own reason on synthetic stats")
+        got = q(dict(good, **change), TC)
+        assert got["reasons"] == reasons and got["ok"] == (not reasons), (change, got)
+        assert got["warnings"] == [], (change, got)
+    for rtf in (1.0 + vcl.RTF_BAND, 1.0 - vcl.RTF_BAND):
+        edge = float(np.nextafter(rtf, 1.0))          # largest in-band double
+        assert abs(edge - 1.0) <= vcl.RTF_BAND
+        assert q(dict(good, rtf=edge), TC)["ok"], edge
+    band = vcl.RTF_BAND
+    try:
+        vcl.RTF_BAND = 0.25                           # 1 +/- 0.25 is exact
+        for rtf in (1.25, 0.75):
+            assert q(dict(good, rtf=rtf), TC)["ok"], rtf
+    finally:
+        vcl.RTF_BAND = band
+    # A slow controller warns and leaves the environment verdict alone.
+    for change in ({}, {"rtf": 0.5}):
+        got = q(dict(good, n_overrun=3, **change), TC)
+        assert got["warnings"] == ["control_overrun"], got
+        assert got["reasons"] == ([] if not change else ["rtf_band"]), got
+        assert got["ok"] == (not change), got
+    print("E6-b1: each rule alone, all three, inclusive boundaries; "
+          "control_overrun only in warnings, ok unchanged")
+
+
+def test_e6b2_blocked_controller_warns():
+    """Work order 34 E6-b2: a controller blocked for 3*Tc (the S7 run) leaves
+    ``control_overrun`` in ``quality["warnings"]`` with ``n_overrun >= 1``.
+
+    ``ok`` is not asserted: under load the sim-side rules may fail too. The
+    3*Tc sleep makes the measured compute time exceed Tc by construction, so
+    the overrun does not depend on host load and the check is not ``timing``.
+    """
+    ev, log = [None], []
+    ev[0] = _eval(_blocking_controller(ev, time.sleep, log), 1.0)
+    st = ev[0].run().stats
+    assert st["n_overrun"] >= 1, st
+    assert "control_overrun" in st["quality"]["warnings"], st["quality"]
+    print(f"E6-b2: n_overrun = {st['n_overrun']}, quality = {st['quality']}")
 
 
 #: Wall-clock pass/fail lines (S6 RTF band, S7 tick floor). Registered as the
@@ -413,6 +469,8 @@ CORE_TESTS = (
     test_watchdog_failsafe_counts,
     test_wallclock_trace_timing_channels,
     test_e6a_quality_keys_and_rules,
+    test_e6b1_quality_rules_on_synthetic_stats,
+    test_e6b2_blocked_controller_warns,
 )
 
 

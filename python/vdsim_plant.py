@@ -563,8 +563,10 @@ def trace_sample(o, t, u_steer, u_fx, channels, validity):
   :param o: ``vdsim.SimOutput`` at time ``t``.
   :param t: sample time [s].
   :param u_steer: commanded road-wheel steer [rad].
-  :param u_fx: commanded total longitudinal force [N]; ignored when ``u_fx``
-      is not in ``channels`` (pedal-commanded producers have no such value).
+  :param u_fx: longitudinal command -- total force [N], written to ``u_fx``;
+      or, when ``channels`` holds ``u_ax`` instead, the acceleration target
+      [m/s^2] of a ``longitudinal="accel"`` run. Ignored when neither is in
+      ``channels`` (pedal-commanded producers have no such value).
   :param channels: channel names this run records.
   :param validity: ``channel_validity`` of the run (see
       :func:`channel_validity_from_dynamics`); a not-modeled channel is written
@@ -587,6 +589,9 @@ def trace_sample(o, t, u_steer, u_fx, channels, validity):
   }
   if "u_fx" in channels:
       sample["u_fx"] = float(u_fx)
+  elif "u_ax" in channels:
+      # An acceleration target has its own channel; u_fx stays a force.
+      sample["u_ax"] = float(u_fx)
   if "steer_applied" in channels:
       # Opt-in channel (vdsim_trace.OPTIONAL_CHANNELS): the realized steer, not
       # the command, so the actuator chain is visible next to u_steer.
@@ -1066,9 +1071,19 @@ class VDSimPlant:
       }
       # Opt-in channels trace_sample() can fill itself join the per-step set,
       # so step() records them too; the rest stay with the caller.
+      if "u_ax" in extra_channels:
+          raise ValueError("u_ax is recorded by longitudinal='accel' plants "
+                           "only; do not list it in extra_channels")
       own = tuple(n for n in extra_channels if n in SAMPLED_OPTIONAL_CHANNELS)
       extra_channels = tuple(n for n in extra_channels if n not in own)
-      self._channels = vdsim_trace.channels_for_level(self.level) + own
+      if self.longitudinal == "accel":
+          # The command is an acceleration target [m/s^2]: it goes to u_ax and
+          # u_fx, a force [N] to every reader, is left out, not mislabelled.
+          base = tuple(n for n in vdsim_trace.BASE_CHANNELS if n != "u_fx")
+          self._channels = (vdsim_trace.channels_for_level(self.level, base=base)
+                            + ("u_ax",) + own)
+      else:
+          self._channels = vdsim_trace.channels_for_level(self.level) + own
       self._validity = channel_validity_from_dynamics(
           self._dyn, self.level, self._channels)
       extra = dict(manifest_extra or {})

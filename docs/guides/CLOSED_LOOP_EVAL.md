@@ -114,7 +114,8 @@ Options that exist only in this mode:
 ## Results and trace
 
 - `res.trace`: arrays per control sample (`t`, pose and velocities,
-  `u_steer`/`u_fx` = command in force at that instant). A and B are on the
+  `u_steer`/`u_fx` = command in force at that instant; `u_ax` in place of
+  `u_fx` with `longitudinal="accel"`). A and B are on the
   grid `t_k = k*Tc` plus a closing row at `duration` without a command; C has
   one row per wall-clock sample (irregular `t`).
 - `res.samples`: one row per controller sample actually taken: `k`,
@@ -234,8 +235,12 @@ ev = ClosedLoopEval(dict(config="generic_sedan.yaml", longitudinal="accel"),
   references above.
 - `meta["accel_conversion"]` (and the trace manifest) records the converter,
   its gains, both references and these choices. In `force` mode it is `None`
-  and the manifest has neither key. `u_fx` in the result and trace holds
-  the acceleration target in `accel` mode.
+  and the manifest has neither key.
+- The target is recorded as `u_ax` [m/s^2] in `res.trace`, `res.samples` and
+  the trace file; `u_fx` is absent from all three in `accel` mode, so a
+  reader that takes `u_fx` as a force [N] never sees an acceleration. A
+  schema 0.5 reader that predates `u_ax` opens such a trace and ignores the
+  channel.
 - L1 is refused: the bicycle model reports `ax = 0`, so the feedback has
   nothing to track.
 
@@ -348,15 +353,20 @@ Each `wallclock` result carries flags to filter on:
   `None` elsewhere).
 - `stats["rtf_windows"]`: RTF per 1 s of wall clock, `p01` / `p50` / `p99` /
   `min` and the window count `n` (`None` under two windows).
-- `stats["quality"] = {"ok": bool, "reasons": [...]}` with fixed rules:
-  `"rtf_band"` when `|rtf - 1| > 0.02`, `"sim_max_lag"` when
-  `sim_max_lag_s > Tc`, `"sim_ticks_short"` when a run that was not stopped
-  took fewer substeps than planned. These rules watch the sim thread only; a
-  late controller shows in `n_overrun` and the delay statistics.
+- `stats["quality"] = {"ok": bool, "reasons": [...], "warnings": [...]}`
+  with fixed rules: `"rtf_band"` when `|rtf - 1| > 0.02`, `"sim_max_lag"`
+  when `sim_max_lag_s > Tc`, `"sim_ticks_short"` when a run that was not
+  stopped took fewer substeps than planned.
+- `ok` answers "can the measuring environment (the sim thread) be trusted";
+  `warnings` answers "did the controller miss its period". The only warning
+  is `"control_overrun"` (`n_overrun > 0`); it never changes `ok`, because a
+  slow controller is the result being measured, not a broken environment.
 
 ```python
 runs = [ev.run() for _ in range(5)]
-kept = [r for r in runs if r.stats["quality"]["ok"]]
+kept = [r for r in runs if r.stats["quality"]["ok"]]          # trusted runs
+on_time = [r for r in kept
+           if "control_overrun" not in r.stats["quality"]["warnings"]]
 ```
 
 Contention on the controller side adds delay too: an inference library

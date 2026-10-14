@@ -161,6 +161,10 @@ CHANNEL_SPECS = {
     # -- Optional and additive like the timing channels: recorded when the
     # -- producer asks for it, ignored by a 0.5 reader that predates it.
     "steer_applied":     ("rad",       ()),
+    # -- Acceleration-target command (work order 34). A longitudinal="accel"
+    # -- producer records its command here and leaves u_fx out, so u_fx is a
+    # -- force [N] to every reader. Optional and additive like the above.
+    "u_ax":              ("m/s^2",     ()),
 }
 
 #: Timing channels of a closed-loop evaluation run. Recorded only by the
@@ -172,9 +176,10 @@ EVAL_CHANNELS = ("t_sample", "t_apply", "c_k", "overrun")
 #: applies every command at its sample time, so it has no timing to record.
 EVAL_TIMING_MODES = ("virtual_async", "wallclock")
 
-#: Opt-in channels every level can produce: never part of the default set,
-#: recorded only when a producer lists them (``extra_channels``).
-OPTIONAL_CHANNELS = EVAL_CHANNELS + ("steer_applied",)
+#: Opt-in channels: never part of the default set, recorded only when a
+#: producer lists them (``extra_channels``) or, for ``u_ax``, when the
+#: producer's command is an acceleration target.
+OPTIONAL_CHANNELS = EVAL_CHANNELS + ("steer_applied", "u_ax")
 
 #: Channels of the 0.1/0.2 contract — the set a trace records when no explicit
 #: subset is requested at those versions.

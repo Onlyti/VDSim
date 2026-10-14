@@ -215,12 +215,14 @@ class EvalResult:
 
     :ivar trace: arrays on the control grid ``t = k*Tc``, ``k = 0..N`` --
         ``t`` and the :data:`TRACE_STATE_KEYS` state, plus ``u_steer`` /
-        ``u_fx``, the command *in force* over ``[t_k, t_k + substep_dt)``.
+        ``u_fx``, the command *in force* over ``[t_k, t_k + substep_dt)``
+        (``u_ax`` [m/s^2] in place of ``u_fx`` with ``longitudinal="accel"``).
         The last row is the state at ``duration`` (``t_stop`` after an early
         end) and carries no command.
     :ivar samples: one entry per controller sample actually taken --
         ``k`` (grid index), ``t_sample``, ``t_apply``, ``c_k`` [s],
-        ``overrun`` (0/1), ``u_steer``, ``u_fx`` (the command computed).
+        ``overrun`` (0/1), ``u_steer``, ``u_fx`` or ``u_ax`` (the command
+        computed).
         Samples whose ``t_apply`` falls after ``duration`` keep their row with
         ``applied`` = 0.
     :ivar stats: counts and latency summary.
@@ -242,8 +244,8 @@ class ClosedLoopEval:
     :param controller: ``controller(obs, t) -> (delta_rad, Fx_total_N)``;
         ``obs`` is the observation dict of :class:`VDSimPlant` sampled at
         ``t``. With ``plant_kwargs["longitudinal"] = "accel"`` the second
-        element is an acceleration target [m/s^2] instead, and ``u_fx`` in
-        the result and trace holds that target.
+        element is an acceleration target [m/s^2] instead, recorded as
+        ``u_ax`` in the result and trace; ``u_fx`` is then absent.
     :param control_period: ``Tc`` [s]; must be a whole multiple of
         ``substep_dt``.
     :param mode: one of :data:`MODES`.
@@ -339,6 +341,9 @@ class ClosedLoopEval:
         self.plant = VDSimPlant(control_dt=self.control_period, **plant_kwargs)
         self.substep_dt = self.plant.substep_dt
         self.n_sub = self.plant._n_sub
+        # Result key of the longitudinal command: a force [N] is u_fx, an
+        # acceleration target [m/s^2] is u_ax (the trace channels match).
+        self._lon = "u_ax" if self.plant.longitudinal == "accel" else "u_fx"
         self.n_steps = max(1, int(round(duration / self.control_period)))
         self._stop = threading.Event()
         self._runner = None
@@ -449,8 +454,8 @@ class ClosedLoopEval:
     def _run_sync(self, obs) -> EvalResult:
         """Mode A: exactly :meth:`VDSimPlant.step` per period."""
         Tc = self.control_period
-        grid = _GridRecorder(self.n_steps)
-        samples = _SampleRecorder()
+        grid = _GridRecorder(self.n_steps, self._lon)
+        samples = _SampleRecorder(self._lon)
         stop = self._stop
         u_prev = self.u0        # in force for a closing row; nothing applied yet
         for k in range(self.n_steps):
@@ -486,8 +491,8 @@ class ClosedLoopEval:
         draw = self.latency.sampler()
         total = self.n_steps * n_sub
 
-        grid = _GridRecorder(self.n_steps)
-        samples = _SampleRecorder()
+        grid = _GridRecorder(self.n_steps, self._lon)
+        samples = _SampleRecorder(self._lon)
         pending = []          # [(apply_index, sample_row, cmd)] in apply order
         backlog = []          # queue mode: (k, obs, t) waiting for the worker
         worker_free = 0       # substep index at which the worker is idle again
@@ -601,8 +606,8 @@ class ClosedLoopEval:
         load1_start = (float(os.getloadavg()[0])
                        if sys.platform.startswith("linux") else None)
 
-        rows = _RowRecorder()
-        samples = _SampleRecorder()
+        rows = _RowRecorder(self._lon)
+        samples = _SampleRecorder(self._lon)
         wall = {"slot": [], "sample": [], "apply": []}
         box = {"exc": None, "skipped": 0, "ctrl_affinity": False,
                "last": (self.u0, None)}   # command in force, its sample row
@@ -871,8 +876,15 @@ def _wall_quality(stats: dict, Tc: float) -> dict:
     * ``"sim_ticks_short"`` -- not stopped early and
       ``sim_ticks != sim_ticks_planned``.
 
-    :returns: ``{"ok": bool, "reasons": [str]}``.
+    ``ok`` says whether the measuring environment (the sim thread) can be
+    trusted, and nothing else. A slow controller is what the run measures, not
+    a broken environment, so it only adds a warning that leaves ``ok`` alone:
+
+    * ``"control_overrun"`` -- ``n_overrun > 0``.
+
+    :returns: ``{"ok": bool, "reasons": [str], "warnings": [str]}``.
     """
+    warn = ["control_overrun"] if stats["n_overrun"] > 0 else []
     reasons = []
     if not abs(stats["rtf"] - 1.0) <= RTF_BAND:
         reasons.append("rtf_band")
@@ -880,14 +892,15 @@ def _wall_quality(stats: dict, Tc: float) -> dict:
         reasons.append("sim_max_lag")
     if not stats["stopped_early"] and stats["sim_ticks"] != stats["sim_ticks_planned"]:
         reasons.append("sim_ticks_short")
-    return {"ok": not reasons, "reasons": reasons}
+    return {"ok": not reasons, "reasons": reasons, "warnings": warn}
 
 
 class _RowRecorder:
     """State and in-force command at each wall-clock sample (variable length)."""
 
-    def __init__(self):
-        self._rows = {"t": [], "u_steer": [], "u_fx": []}
+    def __init__(self, lon="u_fx"):
+        self._lon = lon
+        self._rows = {"t": [], "u_steer": [], lon: []}
         for key in TRACE_STATE_KEYS:
             self._rows[key] = []
 
@@ -898,7 +911,7 @@ class _RowRecorder:
         for key in TRACE_STATE_KEYS:
             r[key].append(obs[key])
         r["u_steer"].append(float("nan") if u is None else u[0])
-        r["u_fx"].append(float("nan") if u is None else u[1])
+        r[self._lon].append(float("nan") if u is None else u[1])
 
     def arrays(self) -> dict:
         return {key: np.asarray(v, dtype=np.float64) for key, v in self._rows.items()}
@@ -907,13 +920,14 @@ class _RowRecorder:
 class _GridRecorder:
     """State and in-force command on the control grid ``t_k = k*Tc``."""
 
-    def __init__(self, n_steps: int):
+    def __init__(self, n_steps: int, lon="u_fx"):
         n = n_steps + 1
+        self._lon = lon
         self._a = {"t": np.zeros(n)}
         for key in TRACE_STATE_KEYS:
             self._a[key] = np.zeros(n)
         self._a["u_steer"] = np.full(n, np.nan)
-        self._a["u_fx"] = np.full(n, np.nan)
+        self._a[lon] = np.full(n, np.nan)
 
     def put(self, k, t, obs, u):
         """Record grid row ``k``; ``u=None`` leaves the command NaN."""
@@ -921,7 +935,7 @@ class _GridRecorder:
         for key in TRACE_STATE_KEYS:
             self._a[key][k] = obs[key]
         if u is not None:
-            self._a["u_steer"][k], self._a["u_fx"][k] = u
+            self._a["u_steer"][k], self._a[self._lon][k] = u
 
     def arrays(self, n_rows=None) -> dict:
         """The grid arrays, cut to the first ``n_rows`` rows when given."""
@@ -933,11 +947,11 @@ class _GridRecorder:
 class _SampleRecorder:
     """One row per controller sample: timing, overrun flag and command."""
 
-    _KEYS = ("k", "t_sample", "t_apply", "c_k", "overrun", "u_steer", "u_fx",
-             "applied", "t_compute_s")
-
-    def __init__(self):
-        self._rows = {key: [] for key in self._KEYS}
+    def __init__(self, lon="u_fx"):
+        self._lon = lon
+        keys = ("k", "t_sample", "t_apply", "c_k", "overrun", "u_steer", lon,
+                "applied", "t_compute_s")
+        self._rows = {key: [] for key in keys}
 
     def put(self, k, t_sample, t_apply, c, overrun, u, applied, measured) -> int:
         """Append a sample row and return its index."""
@@ -948,7 +962,7 @@ class _SampleRecorder:
         r["c_k"].append(c)
         r["overrun"].append(overrun)
         r["u_steer"].append(u[0])
-        r["u_fx"].append(u[1])
+        r[self._lon].append(u[1])
         r["applied"].append(applied)
         r["t_compute_s"].append(measured)
         return len(r["k"]) - 1
