@@ -114,14 +114,18 @@ Options that exist only in this mode:
 ## Results and trace
 
 - `res.trace`: arrays per control sample (`t`, pose and velocities,
-  `u_steer`/`u_fx` = command in force at that instant). A and B are on the
+  `u_steer`/`u_fx` = command in force at that instant; `u_ax` in place of
+  `u_fx` with `longitudinal="accel"`). A and B are on the
   grid `t_k = k*Tc` plus a closing row at `duration` without a command; C has
   one row per wall-clock sample (irregular `t`).
 - `res.samples`: one row per controller sample actually taken: `k`,
   `t_sample`, `t_apply`, `c_k`, `overrun`, `applied`, the command, and the
   measured compute time `t_compute_s`.
 - `res.meta`: `eval_mode`, `control_period_s`, `latency_model`,
-  `overrun_policy`, level and (C) affinity and watchdog.
+  `overrun_policy`, `delta_sw_ratio`, level and (C) affinity and watchdog;
+  the provenance of [Using VDSim from another repository](#using-vdsim-from-another-repository);
+  `longitudinal` / `accel_conversion` ([Acceleration command](#acceleration-command));
+  `ref_point` and `tracking_point` ([Reference point](#reference-point)).
 - `trace_path=` writes a `.vdtrace` (schema 0.5) with one row per control
   sample. A writes exactly what `VDSimPlant.enable_trace` writes. B and C add
   four channels that describe the command in force on that row:
@@ -138,6 +142,134 @@ Options that exist only in this mode:
   `latency_model` and `overrun_policy` in every mode. The four channels are
   optional and additive, so the schema stays 0.5 and an existing 0.5 reader
   ignores them.
+
+## Ending a run early
+
+`ev.stop()` ends a run in every mode. Call it from the controller or from any
+other thread; `run()` then returns what ran so far.
+
+| Mode | Where the run ends | The command of the stopping call |
+|---|---|---|
+| A `sync` | a `stop()` made while a controller call runs: at that sample's time `t_k`; a `stop()` made between calls: at the next grid time, before that sample is taken | not applied; the plant is not advanced |
+| B `virtual_async` | as in A, at the virtual time of the call. A `queue` sample computed late behind a busy worker is called at the substep the worker frees up, so the run ends there (the plant cannot go back to `t_k`) | not applied; every command still waiting for its `t_apply` is dropped too |
+| C `wallclock` | the control thread stops at its next slot and the sim thread is joined; the run ends wherever the session clock got to | unchanged from before |
+
+- `stats["stopped_early"]` (bool) and `stats["t_stop"]` (simulated end time
+  [s], `None` when the run went the full duration) are present in every mode.
+  `meta["duration_s"]` stays the nominal duration; the run's real length is
+  `t_stop`.
+- Dropped commands are counted in `stats["n_unapplied"]` with `applied = 0`
+  in `res.samples`; they never appear as a `t_apply` in the trace.
+- `res.trace` ends with a closing row at `t_stop` (no command), and the
+  tracking metrics of `reference_path` use only the samples that ran.
+- A recorded trace is finalized normally: its last row is `t_stop` (when that
+  row falls on the decimation grid; at `Tc >= 10 ms` it always does) and the
+  manifest carries `stopped_early` and `t_stop`. A run that is not stopped
+  records `stopped_early: false, t_stop: null`.
+- `stop()` before `run()` has no effect: every run starts cleared.
+
+## Realized steer
+
+The observation carries the steer the dynamics actually integrated, after the
+actuator chain (dead time, lag, rate limit) of `actuator=`:
+
+| Key | Unit | Meaning |
+|---|---|---|
+| `delta_rw` | rad | realized road-wheel steer over the last substep before the sample. With `actuator=None` it equals the command in force, bit for bit |
+| `delta_sw` | rad | `delta_rw x steering_ratio`, only when the vehicle file states `steering_ratio`; no default ratio stands in for it. The ratio used is `meta["delta_sw_ratio"]` (`None` = not observed) |
+
+`res.trace` has a `delta_rw` column. `trace_channels=("steer_applied",)` adds
+the same quantity to the `.vdtrace` as an optional channel (rad); it is off by
+default so the default trace is unchanged, and a 0.5 reader that predates it
+ignores it. Per-wheel steer angles are not observed: the direct-control
+plant applies one road-wheel angle.
+
+Yaw acceleration `r_dot` is not provided: the dynamics' derivative cannot be
+read out without a core interface change, and a finite difference of `r` is
+not offered in its place.
+
+## Reference point
+
+`ref_point=` (a `VDSimPlant` argument, so it also goes in `plant_kwargs`) adds
+the motion of one body point to every observation. `X`, `Y` stay at the CG.
+
+| Value | Point (body frame, ISO 8855: x forward, y left) |
+|---|---|
+| `None` (default) | nothing added |
+| `"cg"` | `[0, 0]` |
+| `"rear_axle"` | `[-cg_to_rear, 0]` |
+| `"front_axle"` | `[cg_to_front, 0]` |
+| `[x_fwd, y_left]` | that offset [m] |
+
+| Key | Unit | Meaning |
+|---|---|---|
+| `X_ref`, `Y_ref` | m | ground position of the point |
+| `vx_ref`, `vy_ref` | m/s | its velocity in the body frame, `v_P = v_CG + r x p`: `vx - r*y_left`, `vy + r*x_fwd` |
+
+`meta["ref_point"]` and the trace manifest record the setting, the offset
+used and `cg_to_front_m` / `cg_to_rear_m`. The tracking error of
+`reference_path` is still measured at the CG (`meta["tracking_point"] = "cg"`).
+
+## Acceleration command
+
+With `longitudinal="accel"` the second command element is a longitudinal
+acceleration target [m/s^2] instead of a force [N]:
+
+```python
+ev = ClosedLoopEval(dict(config="generic_sedan.yaml", longitudinal="accel"),
+                    controller,           # returns (delta_rad, ax_mps2)
+                    control_period=0.02)
+```
+
+- One converter: the session's L5 cascade, `LongAxController` (PI plus
+  feed-forward on the measured `ax`), the class and gains the RL `accel`
+  action uses. Its pedal output becomes wheel torque linearly:
+  `throttle x drive_torque_ref` and `brake x brake_torque_ref`, split with the
+  vehicle's front share. Non-positive references fall back to
+  `max_motor_torque x final_drive_ratio` and `max_brake_torque`.
+- No resistance or mass feed-forward is added; the integrator absorbs the
+  steady drag and rolling resistance. The target is not clamped; full pedal
+  is the ceiling.
+- Not the RL `accel` response: the RL environment's pedals drive the
+  vehicle's powertrain map, while here they scale the linear torque
+  references above.
+- `meta["accel_conversion"]` (and the trace manifest) records the converter,
+  its gains, both references and these choices. In `force` mode it is `None`
+  and the manifest has neither key.
+- The target is recorded as `u_ax` [m/s^2] in `res.trace`, `res.samples` and
+  the trace file; `u_fx` is absent from all three in `accel` mode, so a
+  reader that takes `u_fx` as a force [N] never sees an acceleration. A
+  schema 0.5 reader that predates `u_ax` opens such a trace and ignores the
+  channel.
+- L1 is refused: the bicycle model reports `ax = 0`, so the feedback has
+  nothing to track.
+
+## Using VDSim from another repository
+
+Pin a commit, build the bindings and install the Python layer in editable
+mode:
+
+```bash
+git clone https://github.com/Onlyti/VDSim.git && cd VDSim
+git checkout <sha>
+pip install -e .            # builds the bindings (scikit-build-core)
+python -c "import vdsim; print(vdsim.__version__, vdsim.__git_sha__, vdsim.__git_dirty__)"
+```
+
+The build bakes the source HEAD into the module: `vdsim.__git_sha__` (40 hex
+digits, `"unknown"` without git at build time) and `vdsim.__git_dirty__`
+(`True` when tracked files differed from HEAD, `None` when unknown). Every
+result carries it, so a stored result says what it ran on:
+
+```python
+res = ev.run()
+assert res.meta["vdsim_git_sha"] == "<sha>"
+res.meta["vdsim_version"], res.meta["param_hash"], res.meta["vehicle_config"]
+res.meta["level"], res.meta["actuator"]   # None, {"preset": id} or {"param_hash": ...}
+```
+
+The same functions fill the trace `repro` block. Tagged releases and PyPI
+packages are not published for this yet; pin by SHA.
 
 ## Example: delay budget of a lane-change controller
 
@@ -214,3 +346,28 @@ while the controller blocks for `3*Tc`. Observed failure rates:
 
 On a heavily loaded host expect occasional misses of the tick floor; measure
 mode C on a quiet machine or treat its numbers as host-specific.
+
+Each `wallclock` result carries flags to filter on:
+
+- `stats["load1_start"]`: 1-minute load average just before the run (Linux;
+  `None` elsewhere).
+- `stats["rtf_windows"]`: RTF per 1 s of wall clock, `p01` / `p50` / `p99` /
+  `min` and the window count `n` (`None` under two windows).
+- `stats["quality"] = {"ok": bool, "reasons": [...], "warnings": [...]}`
+  with fixed rules: `"rtf_band"` when `|rtf - 1| > 0.02`, `"sim_max_lag"`
+  when `sim_max_lag_s > Tc`, `"sim_ticks_short"` when a run that was not
+  stopped took fewer substeps than planned.
+- `ok` answers "can the measuring environment (the sim thread) be trusted";
+  `warnings` answers "did the controller miss its period". The only warning
+  is `"control_overrun"` (`n_overrun > 0`); it never changes `ok`, because a
+  slow controller is the result being measured, not a broken environment.
+
+```python
+runs = [ev.run() for _ in range(5)]
+kept = [r for r in runs if r.stats["quality"]["ok"]]          # trusted runs
+on_time = [r for r in kept
+           if "control_overrun" not in r.stats["quality"]["warnings"]]
+```
+
+Contention on the controller side adds delay too: an inference library
+whose thread count is not fixed can compete with the sim thread for cores.

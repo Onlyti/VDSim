@@ -157,6 +157,14 @@ CHANNEL_SPECS = {
     "t_apply":           ("s",         ()),
     "c_k":               ("s",         ()),
     "overrun":           ("-",         ()),
+    # -- Realized road-wheel steer after the actuator chain (work order 34).
+    # -- Optional and additive like the timing channels: recorded when the
+    # -- producer asks for it, ignored by a 0.5 reader that predates it.
+    "steer_applied":     ("rad",       ()),
+    # -- Acceleration-target command (work order 34). A longitudinal="accel"
+    # -- producer records its command here and leaves u_fx out, so u_fx is a
+    # -- force [N] to every reader. Optional and additive like the above.
+    "u_ax":              ("m/s^2",     ()),
 }
 
 #: Timing channels of a closed-loop evaluation run. Recorded only by the
@@ -168,11 +176,16 @@ EVAL_CHANNELS = ("t_sample", "t_apply", "c_k", "overrun")
 #: applies every command at its sample time, so it has no timing to record.
 EVAL_TIMING_MODES = ("virtual_async", "wallclock")
 
+#: Opt-in channels: never part of the default set, recorded only when a
+#: producer lists them (``extra_channels``) or, for ``u_ax``, when the
+#: producer's command is an acceleration target.
+OPTIONAL_CHANNELS = EVAL_CHANNELS + ("steer_applied", "u_ax")
+
 #: Channels of the 0.1/0.2 contract — the set a trace records when no explicit
 #: subset is requested at those versions.
 BASE_CHANNELS = tuple(n for n in CHANNEL_SPECS
                       if n not in CHANNEL_MIN_LEVEL and n not in VALIDITY_CHANNELS
-                      and n not in EVAL_CHANNELS)
+                      and n not in OPTIONAL_CHANNELS)
 
 
 def channels_for_level(model_level, base=None):
@@ -479,7 +492,7 @@ class TraceWriter:
         unknown = [n for n in names if n not in CHANNEL_SPECS]
         if unknown:
             raise TraceError("unknown channel(s): %s" % (", ".join(unknown),))
-        too_high = [n for n in names if n not in allowed and n not in EVAL_CHANNELS]
+        too_high = [n for n in names if n not in allowed and n not in OPTIONAL_CHANNELS]
         if too_high:
             raise TraceError(
                 "model_level %s does not produce %s — omit the channel instead of "

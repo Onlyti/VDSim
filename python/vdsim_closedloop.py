@@ -39,11 +39,33 @@ In C the same two policies act on wall-clock slots ``w_k = w_0 + k*Tc``.
 computation; ``queue`` takes every slot in order, back to back while behind.
 A real-time loop cannot read the past, so a queued sample is the state at the
 moment the controller thread gets to it, not the state at its slot.
+
+Early end (:meth:`ClosedLoopEval.stop`, every mode, from the controller or
+any other thread):
+
+* ``sync`` / ``virtual_async`` -- a ``stop()`` made while a controller call
+  runs (from the controller itself or from another thread) ends the run at
+  the virtual time of that call: the command it returned is
+  not applied and the plant is not advanced. That time is the sample time
+  ``t_k``, except for a ``queue`` sample computed late behind a busy worker,
+  whose call happens at the substep the worker frees up (the plant cannot go
+  back to ``t_k``). A ``stop()`` made between calls ends the run at the next
+  control-grid boundary, before that sample is taken. Commands still waiting
+  for their ``t_apply`` are dropped and counted in ``n_unapplied``.
+* ``wallclock`` -- the control thread stops at its next slot and the sim
+  thread is joined; the run ends wherever the session clock got to.
+
+Either way ``stats["stopped_early"]`` is ``True`` and ``stats["t_stop"]`` is the
+simulated end time [s] (``None`` when the run went the full duration), the
+result arrays hold only what ran, and a recorded trace is finalized with a
+last row at ``t_stop`` (when that row falls on the decimation grid) and
+``stopped_early`` / ``t_stop`` in its manifest.
 """
 from __future__ import annotations
 
 import math
 import os
+import sys
 import threading
 import time
 from dataclasses import dataclass, field
@@ -52,7 +74,7 @@ import numpy as np
 
 import vdsim
 import vdsim_trace
-from vdsim_plant import VDSimPlant, _fx_to_cmdl1, _obs_from_output, trace_sample
+from vdsim_plant import SAMPLED_OPTIONAL_CHANNELS, VDSimPlant, trace_sample
 
 #: Mode strings accepted by :class:`ClosedLoopEval`.
 MODES = ("sync", "virtual_async", "wallclock")
@@ -73,7 +95,10 @@ GRID_EPS = 1e-9
 
 #: Scalar observation keys copied into the per-grid trace.
 TRACE_STATE_KEYS = ("X", "Y", "psi", "vx", "vy", "r", "ax", "ay", "beta",
-                    "roll", "pitch")
+                    "roll", "pitch", "delta_rw")
+
+#: Timing row of a trace row whose command no sample produced.
+_NO_TIMING = (float("nan"), float("nan"), float("nan"), 0.0)
 
 
 class LatencyModel:
@@ -190,11 +215,14 @@ class EvalResult:
 
     :ivar trace: arrays on the control grid ``t = k*Tc``, ``k = 0..N`` --
         ``t`` and the :data:`TRACE_STATE_KEYS` state, plus ``u_steer`` /
-        ``u_fx``, the command *in force* over ``[t_k, t_k + substep_dt)``.
-        The last row is the state at ``duration`` and carries no command.
+        ``u_fx``, the command *in force* over ``[t_k, t_k + substep_dt)``
+        (``u_ax`` [m/s^2] in place of ``u_fx`` with ``longitudinal="accel"``).
+        The last row is the state at ``duration`` (``t_stop`` after an early
+        end) and carries no command.
     :ivar samples: one entry per controller sample actually taken --
         ``k`` (grid index), ``t_sample``, ``t_apply``, ``c_k`` [s],
-        ``overrun`` (0/1), ``u_steer``, ``u_fx`` (the command computed).
+        ``overrun`` (0/1), ``u_steer``, ``u_fx`` or ``u_ax`` (the command
+        computed).
         Samples whose ``t_apply`` falls after ``duration`` keep their row with
         ``applied`` = 0.
     :ivar stats: counts and latency summary.
@@ -215,7 +243,9 @@ class ClosedLoopEval:
         ``control_period`` and must not be given here.
     :param controller: ``controller(obs, t) -> (delta_rad, Fx_total_N)``;
         ``obs`` is the observation dict of :class:`VDSimPlant` sampled at
-        ``t``.
+        ``t``. With ``plant_kwargs["longitudinal"] = "accel"`` the second
+        element is an acceleration target [m/s^2] instead, recorded as
+        ``u_ax`` in the result and trace; ``u_fx`` is then absent.
     :param control_period: ``Tc`` [s]; must be a whole multiple of
         ``substep_dt``.
     :param mode: one of :data:`MODES`.
@@ -241,16 +271,26 @@ class ClosedLoopEval:
         that command. Every mode records ``eval_mode``,
         ``control_period_s``, ``latency_model`` and ``overrun_policy`` in the
         manifest. A run that raises leaves no file.
+    :param trace_channels: opt-in channels added to that trace, from
+        :data:`vdsim_plant.SAMPLED_OPTIONAL_CHANNELS` (``"steer_applied"``,
+        the realized road-wheel steer [rad]). Default: none.
     :param reference_path: ``(M, 2)`` polyline ``[X, Y]`` [m] in the ground
         frame. When given, ``stats`` carries the lateral tracking error of
         :func:`lateral_error` over the control samples (``e_y_rmse_m``,
-        ``e_y_max_abs_m``, ``e_y_n``).
+        ``e_y_max_abs_m``, ``e_y_n``), measured at the CG
+        (``meta["tracking_point"]``).
+
+    ``meta`` of every result also carries :meth:`VDSimPlant.provenance`
+    (version, git SHA, vehicle file, ``param_hash``, level, actuator),
+    :meth:`VDSimPlant.conversion` (``longitudinal``, ``accel_conversion``)
+    and ``ref_point``. A ``wallclock`` result adds ``load1_start``,
+    ``rtf_windows`` and ``quality`` to ``stats`` (see :func:`_wall_quality`).
     """
 
     def __init__(self, plant_kwargs, controller, control_period, mode="sync",
                  duration=10.0, latency=None, overrun="skip", state0=None,
                  u0=(0.0, 0.0), cpu_affinity=None, watchdog=None,
-                 trace_path=None, reference_path=None):
+                 trace_path=None, reference_path=None, trace_channels=()):
         if mode not in MODES:
             raise ValueError(f"mode={mode!r} is not one of {MODES}")
         plant_kwargs = dict(plant_kwargs or {})
@@ -281,6 +321,10 @@ class ClosedLoopEval:
         self.cpu_affinity = _check_affinity(cpu_affinity)
         self.watchdog = _check_watchdog(watchdog)
         self.trace_path = None if trace_path is None else str(trace_path)
+        self.trace_channels = tuple(trace_channels)
+        bad = [n for n in self.trace_channels if n not in SAMPLED_OPTIONAL_CHANNELS]
+        if bad:
+            raise ValueError(f"trace_channels {bad} not in {SAMPLED_OPTIONAL_CHANNELS}")
         self.reference_path = (None if reference_path is None
                                else _check_path(reference_path))
 
@@ -297,6 +341,9 @@ class ClosedLoopEval:
         self.plant = VDSimPlant(control_dt=self.control_period, **plant_kwargs)
         self.substep_dt = self.plant.substep_dt
         self.n_sub = self.plant._n_sub
+        # Result key of the longitudinal command: a force [N] is u_fx, an
+        # acceleration target [m/s^2] is u_ax (the trace channels match).
+        self._lon = "u_ax" if self.plant.longitudinal == "accel" else "u_fx"
         self.n_steps = max(1, int(round(duration / self.control_period)))
         self._stop = threading.Event()
         self._runner = None
@@ -304,10 +351,12 @@ class ClosedLoopEval:
     # ------------------------------------------------------------------ run
     def run(self) -> EvalResult:
         """Reset the plant and run ``duration`` seconds in the chosen mode."""
+        self._stop.clear()
         obs = self.plant.reset(self.state0)
         if self.trace_path is not None:
             timing = () if self.mode == "sync" else vdsim_trace.EVAL_CHANNELS
-            self.plant.enable_trace(self.trace_path, extra_channels=timing,
+            self.plant.enable_trace(self.trace_path,
+                                    extra_channels=self.trace_channels + timing,
                                     manifest_extra=self._eval_manifest())
         try:
             if self.mode == "sync":
@@ -323,10 +372,17 @@ class ClosedLoopEval:
                         substep_dt_s=self.substep_dt,
                         duration_s=self.n_steps * self.control_period,
                         level=self.plant.level)
+        res.meta.update(self.plant.provenance())
+        res.meta.update(self.plant.conversion())
+        res.meta["ref_point"] = self.plant.ref_point_record()
+        # e_y_* of reference_path is computed at the CG (obs X, Y).
+        res.meta["tracking_point"] = "cg"
         if self.mode == "wallclock":
             res.meta["cpu_affinity"] = self.cpu_affinity
             res.meta["watchdog"] = self.watchdog
         if self.trace_path is not None:
+            self.plant._trace.extra.update(
+                stopped_early=res.stats["stopped_early"], t_stop=res.stats["t_stop"])
             res.meta["trace_path"] = str(self.plant.finalize_trace())
         if self.reference_path is not None:
             res.stats.update(_tracking_stats(res.trace, self.reference_path))
@@ -339,6 +395,9 @@ class ClosedLoopEval:
             "control_period_s": self.control_period,
             "latency_model": None if self.latency is None else self.latency.describe(),
             "overrun_policy": self.overrun,
+            # Ratio behind obs["delta_sw"]; None = the vehicle file states
+            # none and delta_sw is not observed.
+            "delta_sw_ratio": self.plant.delta_sw_ratio,
         }
 
     def _trace_row(self, out, t, u, timing):
@@ -362,10 +421,12 @@ class ClosedLoopEval:
         writer.append(sample)
 
     def stop(self):
-        """End a running ``wallclock`` run early.
+        """End the running run early, in any mode.
 
         Callable from any thread, the controller included; :meth:`run`
-        returns the partial result with ``stats["stopped_early"] = True``.
+        returns the partial result with ``stats["stopped_early"] = True`` and
+        ``stats["t_stop"]`` (see the module notes for where each mode ends).
+        A call before :meth:`run` has no effect: every run starts cleared.
         """
         self._stop.set()
 
@@ -384,7 +445,7 @@ class ClosedLoopEval:
         u = self.controller(obs, t)
         elapsed = time.perf_counter() - t0
         if len(u) != 2:
-            raise ValueError("controller must return (delta_rad, Fx_total_N)")
+            raise ValueError("controller must return (delta_rad, Fx_total_N or ax_mps2)")
         delta, fx = float(u[0]), float(u[1])
         if not (math.isfinite(delta) and math.isfinite(fx)):
             raise ValueError(f"controller returned a non-finite command at t={t}")
@@ -393,38 +454,63 @@ class ClosedLoopEval:
     def _run_sync(self, obs) -> EvalResult:
         """Mode A: exactly :meth:`VDSimPlant.step` per period."""
         Tc = self.control_period
-        grid = _GridRecorder(self.n_steps)
-        samples = _SampleRecorder()
+        grid = _GridRecorder(self.n_steps, self._lon)
+        samples = _SampleRecorder(self._lon)
+        stop = self._stop
+        u_prev = self.u0        # in force for a closing row; nothing applied yet
         for k in range(self.n_steps):
             t = k * Tc
+            if stop.is_set():                    # stop() from another thread
+                return self._sync_stopped(grid, samples, k, t, obs, u_prev, 0)
             u, elapsed = self._call(obs, t)
+            if stop.is_set():                    # stop() during this call
+                samples.put(k, t, t, 0.0, 0, u, applied=0, measured=elapsed)
+                return self._sync_stopped(grid, samples, k, t, obs, u_prev, 1)
             grid.put(k, t, obs, u)
             samples.put(k, t, t, 0.0, 0, u, applied=1, measured=elapsed)
             obs = self.plant.step(list(u))
+            u_prev = u
         grid.put(self.n_steps, self.n_steps * Tc, obs, None)
-        return EvalResult(trace=grid.arrays(), samples=samples.arrays(),
-                          stats=samples.stats(Tc, skipped=0, unapplied=0))
+        stats = samples.stats(Tc, skipped=0, unapplied=0)
+        stats.update(stopped_early=False, t_stop=None)
+        return EvalResult(trace=grid.arrays(), samples=samples.arrays(), stats=stats)
+
+    def _sync_stopped(self, grid, samples, k, t, obs, u_prev, unapplied):
+        """Close a ``sync`` run that stopped at grid sample ``k`` (time ``t``)."""
+        grid.put(k, t, obs, None)
+        self._trace_row(self.plant._sess.output(), t, u_prev, _NO_TIMING)
+        stats = samples.stats(self.control_period, skipped=0, unapplied=unapplied)
+        stats.update(stopped_early=True, t_stop=float(t))
+        return EvalResult(trace=grid.arrays(k + 1), samples=samples.arrays(),
+                          stats=stats)
 
     def _run_virtual_async(self, obs) -> EvalResult:
         """Mode B: substep loop with commands applied at their ``t_apply``."""
         Tc, h, n_sub = self.control_period, self.substep_dt, self.n_sub
-        sess, vp = self.plant._sess, self.plant._vp
+        sess, to_cmd = self.plant._sess, self.plant._command
         draw = self.latency.sampler()
         total = self.n_steps * n_sub
 
-        grid = _GridRecorder(self.n_steps)
-        samples = _SampleRecorder()
+        grid = _GridRecorder(self.n_steps, self._lon)
+        samples = _SampleRecorder(self._lon)
         pending = []          # [(apply_index, sample_row, cmd)] in apply order
         backlog = []          # queue mode: (k, obs, t) waiting for the worker
         worker_free = 0       # substep index at which the worker is idle again
         next_sample = 0       # skip mode: earliest substep a sample may be taken
         skipped = 0
         u_now = self.u0
-        cmd_now = _fx_to_cmdl1(vp, *u_now)
+        cmd_now = to_cmd(*u_now)
         in_force = None       # sample row of u_now; None while u0 holds
+        stop = self._stop
+        stop_at = None        # substep the run ended at after a stop()
+        rows = 0              # grid rows recorded so far
 
         def start(k, obs_k, t_k, begin):
-            """Compute sample k on the worker starting at substep ``begin``."""
+            """Compute sample k on the worker starting at substep ``begin``.
+
+            :returns: ``True`` when ``stop()`` was called meanwhile; the
+                sample keeps its row and stays unapplied.
+            """
             nonlocal worker_free
             u, elapsed = self._call(obs_k, t_k)
             c = float(draw(elapsed))
@@ -434,20 +520,27 @@ class ClosedLoopEval:
             row = samples.put(k, t_k, finish * h, c, late, u, applied=0,
                               measured=elapsed)
             pending.append((finish, row, u))
+            return stop.is_set()
 
         for i in range(total + 1):
             on_grid = i % n_sub == 0
             if on_grid:
                 k = i // n_sub
                 out = sess.output()
-                obs = _obs_from_output(out)
+                obs = self.plant._obs_from(out)
                 if i == total:
                     grid.put(k, k * Tc, obs, None)
+                    rows += 1
+                    break
+                if stop.is_set():        # stop() from another thread
+                    stop_at = i
                     break
                 if self.overrun == "queue":
                     backlog.append((k, obs, k * Tc))
                 elif i >= next_sample:
-                    start(k, obs, k * Tc, i)
+                    if start(k, obs, k * Tc, i):
+                        stop_at = i
+                        break
                     next_sample = worker_free
                 else:
                     skipped += 1
@@ -457,29 +550,46 @@ class ClosedLoopEval:
                 # zero-delay computation frees it again in the same substep.
                 while backlog and worker_free <= i:
                     k_q, obs_q, t_q = backlog.pop(0)
-                    start(k_q, obs_q, t_q, i)
+                    if start(k_q, obs_q, t_q, i):
+                        stop_at = i
+                        break
+                if stop_at is not None:
+                    break
             # Apply everything that finished by this substep, oldest first.
             while pending and pending[0][0] <= i:
                 _, row, u_now = pending.pop(0)
                 samples.mark_applied(row)
-                cmd_now = _fx_to_cmdl1(vp, *u_now)
+                cmd_now = to_cmd(*u_now)
                 in_force = row
             if on_grid:
                 grid.put(k, k * Tc, obs, u_now)
+                rows += 1
                 self._trace_row(out, k * Tc, u_now, samples.timing(in_force))
             sess.set_input(cmd_now)
             sess.tick(h)
 
+        # Commands still waiting for their t_apply are dropped at a stop.
         unapplied = len(pending) + len(backlog)
-        return EvalResult(trace=grid.arrays(), samples=samples.arrays(),
-                          stats=samples.stats(Tc, skipped=skipped,
-                                              unapplied=unapplied))
+        stats = samples.stats(Tc, skipped=skipped, unapplied=unapplied)
+        if stop_at is None:
+            stats.update(stopped_early=False, t_stop=None)
+            return EvalResult(trace=grid.arrays(), samples=samples.arrays(),
+                              stats=stats)
+        # The plant has not been ticked at stop_at: the closing row is the
+        # state there, with the command that was in force on arrival.
+        t_stop = (stop_at // n_sub) * Tc if stop_at % n_sub == 0 else stop_at * h
+        out = sess.output()
+        grid.put(rows, t_stop, self.plant._obs_from(out), None)
+        self._trace_row(out, t_stop, u_now, samples.timing(in_force))
+        stats.update(stopped_early=True, t_stop=float(t_stop))
+        return EvalResult(trace=grid.arrays(rows + 1), samples=samples.arrays(),
+                          stats=stats)
 
 
     def _run_wallclock(self, obs) -> EvalResult:
         """Mode C: C++ sim thread paced to the wall clock + Python control thread."""
         Tc, h, n_sub = self.control_period, self.substep_dt, self.n_sub
-        sess, vp = self.plant._sess, self.plant._vp
+        sess, to_cmd = self.plant._sess, self.plant._command
         total = self.n_steps * n_sub
 
         cfg = vdsim.RealTimeRunnerConfig()
@@ -490,18 +600,20 @@ class ClosedLoopEval:
             cfg.cmd_timeout_s = 0.0
         else:
             cfg.cmd_timeout_s = self.watchdog["timeout_s"]
-            cfg.failsafe = _fx_to_cmdl1(vp, *self.watchdog["failsafe_u"])
-        sess.set_input(_fx_to_cmdl1(vp, *self.u0))
+            cfg.failsafe = to_cmd(*self.watchdog["failsafe_u"])
+        sess.set_input(to_cmd(*self.u0))
         runner = vdsim.RealTimeRunner(sess, cfg)
+        load1_start = (float(os.getloadavg()[0])
+                       if sys.platform.startswith("linux") else None)
 
-        rows = _RowRecorder()
-        samples = _SampleRecorder()
+        rows = _RowRecorder(self._lon)
+        samples = _SampleRecorder(self._lon)
         wall = {"slot": [], "sample": [], "apply": []}
-        box = {"exc": None, "skipped": 0, "ctrl_affinity": False}
+        box = {"exc": None, "skipped": 0, "ctrl_affinity": False,
+               "last": (self.u0, None)}   # command in force, its sample row
         # Trace rows are kept raw and written after the run so building the
         # trace sample never adds to the control thread's latency.
         trace_rows = [] if self.plant._trace is not None else None
-        self._stop.clear()
         stop = self._stop
         overrun_policy = self.overrun
         ctrl_cpus = None if self.cpu_affinity is None else self.cpu_affinity["ctrl"]
@@ -525,10 +637,10 @@ class ClosedLoopEval:
                         break
                     w_sample = clock()
                     out = sess.output()
-                    obs_k = _obs_from_output(out)
+                    obs_k = self.plant._obs_from(out)
                     t_s = float(out.sim_time)
                     u, elapsed = self._call(obs_k, t_s)
-                    sess.set_input(_fx_to_cmdl1(vp, *u))
+                    sess.set_input(to_cmd(*u))
                     w_apply = clock()
                     t_a = float(sess.sim_time())
                     late = 1 if (w_apply - slot) > Tc else 0
@@ -541,6 +653,7 @@ class ClosedLoopEval:
                     wall["sample"].append(w_sample - w0)
                     wall["apply"].append(w_apply - w0)
                     u_now = u
+                    box["last"] = (u_now, in_force)
                     nxt = k + 1
                     if overrun_policy == "skip":
                         first_free = int(math.ceil((clock() - w0) / Tc - GRID_EPS))
@@ -579,7 +692,12 @@ class ClosedLoopEval:
         for out_k, t_k, u_k, row_k in trace_rows or ():
             self._trace_row(out_k, t_k, u_k, samples.timing(row_k))
         out = sess.output()
-        rows.put(float(out.sim_time), _obs_from_output(out), None)
+        t_end = float(out.sim_time)
+        rows.put(t_end, self.plant._obs_from(out), None)
+        stopped = bool(rs.ticks < total)
+        if stopped:
+            u_last, row_last = box["last"]
+            self._trace_row(out, t_end, u_last, samples.timing(row_last))
         stats = samples.stats(Tc, skipped=box["skipped"], unapplied=0)
         stats.update(_wall_stats(wall))
         stats.update({
@@ -594,9 +712,13 @@ class ClosedLoopEval:
             "failsafe_latches": int(rs.failsafe_latches),
             "sim_affinity_applied": bool(rs.affinity_applied),
             "ctrl_affinity_applied": bool(box["ctrl_affinity"]),
-            "stopped_early": bool(rs.ticks < total),
+            "stopped_early": stopped,
+            "t_stop": t_end if stopped else None,
+            "load1_start": load1_start,
         })
         smp = samples.arrays()
+        stats["rtf_windows"] = _rtf_windows(wall["sample"], smp["t_sample"])
+        stats["quality"] = _wall_quality(stats, Tc)
         for key, vals in wall.items():
             smp[f"wall_{key}"] = np.asarray(vals, dtype=np.float64)
         return EvalResult(trace=rows.arrays(), samples=smp, stats=stats)
@@ -713,11 +835,72 @@ def _wall_stats(wall: dict) -> dict:
     }
 
 
+#: Width [s] of the wall-clock windows behind ``stats["rtf_windows"]``.
+RTF_WINDOW_S = 1.0
+
+#: ``|rtf - 1|`` above which a ``wallclock`` run is flagged (31번 S6 band).
+RTF_BAND = 0.02
+
+
+def _rtf_windows(wall_sample, t_sample):
+    """Real-time factor per :data:`RTF_WINDOW_S` of wall clock.
+
+    The simulated time at every whole window boundary is interpolated from
+    the control samples' ``(wall time, sim time)`` pairs; each window's RTF is
+    its simulated span over its wall span.
+
+    :param wall_sample: wall time [s] of each control sample from the start.
+    :param t_sample: simulated time [s] read at that sample.
+    :returns: ``{"p01", "p50", "p99", "min", "n"}`` or ``None`` with fewer
+        than two whole windows.
+    """
+    w = np.asarray(wall_sample, dtype=np.float64)
+    t = np.asarray(t_sample, dtype=np.float64)
+    if w.size < 2:
+        return None
+    edges = np.arange(w[0], w[-1] + 1e-12, RTF_WINDOW_S)
+    if edges.size < 3:
+        return None
+    rtf = np.diff(np.interp(edges, w, t)) / RTF_WINDOW_S
+    return {"p01": _pct(rtf, 1), "p50": _pct(rtf, 50), "p99": _pct(rtf, 99),
+            "min": float(rtf.min()), "n": int(rtf.size)}
+
+
+def _wall_quality(stats: dict, Tc: float) -> dict:
+    """Mechanical pass/fail of a ``wallclock`` run (work order 34, fixed rules).
+
+    Reasons, each added when its rule fails:
+
+    * ``"rtf_band"`` -- ``|rtf - 1| > RTF_BAND`` (or ``rtf`` not finite);
+    * ``"sim_max_lag"`` -- ``sim_max_lag_s > Tc``;
+    * ``"sim_ticks_short"`` -- not stopped early and
+      ``sim_ticks != sim_ticks_planned``.
+
+    ``ok`` says whether the measuring environment (the sim thread) can be
+    trusted, and nothing else. A slow controller is what the run measures, not
+    a broken environment, so it only adds a warning that leaves ``ok`` alone:
+
+    * ``"control_overrun"`` -- ``n_overrun > 0``.
+
+    :returns: ``{"ok": bool, "reasons": [str], "warnings": [str]}``.
+    """
+    warn = ["control_overrun"] if stats["n_overrun"] > 0 else []
+    reasons = []
+    if not abs(stats["rtf"] - 1.0) <= RTF_BAND:
+        reasons.append("rtf_band")
+    if not stats["sim_max_lag_s"] <= Tc:
+        reasons.append("sim_max_lag")
+    if not stats["stopped_early"] and stats["sim_ticks"] != stats["sim_ticks_planned"]:
+        reasons.append("sim_ticks_short")
+    return {"ok": not reasons, "reasons": reasons, "warnings": warn}
+
+
 class _RowRecorder:
     """State and in-force command at each wall-clock sample (variable length)."""
 
-    def __init__(self):
-        self._rows = {"t": [], "u_steer": [], "u_fx": []}
+    def __init__(self, lon="u_fx"):
+        self._lon = lon
+        self._rows = {"t": [], "u_steer": [], lon: []}
         for key in TRACE_STATE_KEYS:
             self._rows[key] = []
 
@@ -728,7 +911,7 @@ class _RowRecorder:
         for key in TRACE_STATE_KEYS:
             r[key].append(obs[key])
         r["u_steer"].append(float("nan") if u is None else u[0])
-        r["u_fx"].append(float("nan") if u is None else u[1])
+        r[self._lon].append(float("nan") if u is None else u[1])
 
     def arrays(self) -> dict:
         return {key: np.asarray(v, dtype=np.float64) for key, v in self._rows.items()}
@@ -737,13 +920,14 @@ class _RowRecorder:
 class _GridRecorder:
     """State and in-force command on the control grid ``t_k = k*Tc``."""
 
-    def __init__(self, n_steps: int):
+    def __init__(self, n_steps: int, lon="u_fx"):
         n = n_steps + 1
+        self._lon = lon
         self._a = {"t": np.zeros(n)}
         for key in TRACE_STATE_KEYS:
             self._a[key] = np.zeros(n)
         self._a["u_steer"] = np.full(n, np.nan)
-        self._a["u_fx"] = np.full(n, np.nan)
+        self._a[lon] = np.full(n, np.nan)
 
     def put(self, k, t, obs, u):
         """Record grid row ``k``; ``u=None`` leaves the command NaN."""
@@ -751,20 +935,23 @@ class _GridRecorder:
         for key in TRACE_STATE_KEYS:
             self._a[key][k] = obs[key]
         if u is not None:
-            self._a["u_steer"][k], self._a["u_fx"][k] = u
+            self._a["u_steer"][k], self._a[self._lon][k] = u
 
-    def arrays(self) -> dict:
-        return self._a
+    def arrays(self, n_rows=None) -> dict:
+        """The grid arrays, cut to the first ``n_rows`` rows when given."""
+        if n_rows is None:
+            return self._a
+        return {key: v[:n_rows] for key, v in self._a.items()}
 
 
 class _SampleRecorder:
     """One row per controller sample: timing, overrun flag and command."""
 
-    _KEYS = ("k", "t_sample", "t_apply", "c_k", "overrun", "u_steer", "u_fx",
-             "applied", "t_compute_s")
-
-    def __init__(self):
-        self._rows = {key: [] for key in self._KEYS}
+    def __init__(self, lon="u_fx"):
+        self._lon = lon
+        keys = ("k", "t_sample", "t_apply", "c_k", "overrun", "u_steer", lon,
+                "applied", "t_compute_s")
+        self._rows = {key: [] for key in keys}
 
     def put(self, k, t_sample, t_apply, c, overrun, u, applied, measured) -> int:
         """Append a sample row and return its index."""
@@ -775,7 +962,7 @@ class _SampleRecorder:
         r["c_k"].append(c)
         r["overrun"].append(overrun)
         r["u_steer"].append(u[0])
-        r["u_fx"].append(u[1])
+        r[self._lon].append(u[1])
         r["applied"].append(applied)
         r["t_compute_s"].append(measured)
         return len(r["k"]) - 1

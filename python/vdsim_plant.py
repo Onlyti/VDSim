@@ -10,6 +10,9 @@ Contract (stable):
       Fz [N], alpha [rad], kappa [-], mu [-] contact friction used this step
       mu_peak [-] realized load-dependent peak coefficient (force/Fz)
       alpha_peak [rad], kappa_peak [-] MF pure-slip peak slip at this Fz
+    delta_rw [rad] — realized road-wheel steer (after the actuator chain)
+    delta_sw [rad] — delta_rw × steering_ratio; only when the vehicle file
+      states steering_ratio (no default stands in for it)
 
 Built on vdsim_lab config resolution + SimSession (direct CmdL1 torque path).
 
@@ -95,6 +98,10 @@ def _load_tire_setup_for_vehicle(vp_path: Path) -> vdsim.TireSetup:
 #: Record rate the default `decimation` targets [Hz]. 100 Hz is >3x a 30 fps
 #: render and keeps 1 kHz control loops at a 10x storage saving.
 TRACE_TARGET_HZ = 100.0
+
+#: Opt-in trace channels :func:`trace_sample` fills from the session output
+#: (a subset of ``vdsim_trace.OPTIONAL_CHANNELS``).
+SAMPLED_OPTIONAL_CHANNELS = ("steer_applied",)
 
 #: Ladder levels this plant can be built at. The control contract
 #: ``u = [delta_rad, Fx_total_N]`` is the same at every one of them; only the
@@ -205,7 +212,15 @@ def measure_mu_aniso(tp: vdsim.TireParams, Fz: float = None, n: int = 601):
 
 
 def _git_sha(repo: Path = REPO) -> str:
-    """Short git SHA of the working tree, or ``"unknown"`` outside a checkout."""
+    """Git SHA the bindings were built from, or ``"unknown"``.
+
+    The build bakes the source HEAD into ``vdsim.__git_sha__``; a run-time
+    ``git rev-parse`` of ``repo`` is the fallback for a module built without
+    it (no git at build time).
+    """
+    baked = getattr(vdsim, "__git_sha__", "unknown")
+    if baked != "unknown":
+        return baked
     try:
         out = subprocess.run(
             ["git", "-C", str(repo), "rev-parse", "HEAD"],
@@ -218,7 +233,16 @@ def _git_sha(repo: Path = REPO) -> str:
 
 
 def _vdsim_version() -> str:
-    """Installed distribution version, or ``"source"`` for an in-tree build."""
+    """Package version of the loaded module, or ``"source"`` for an in-tree build.
+
+    The build bakes it into ``vdsim.__version__``, so an in-tree module is not
+    labelled with the version of some other installed ``vdsim``. A module
+    built before that attribute existed falls back to the installed
+    distribution metadata.
+    """
+    baked = getattr(vdsim, "__version__", None)
+    if baked is not None:
+        return baked
     try:
         from importlib.metadata import version  # py3.8+
         return version("vdsim")
@@ -226,7 +250,18 @@ def _vdsim_version() -> str:
         return "source"
 
 
-def _obs_from_output(o: vdsim.SimOutput) -> dict:
+def _obs_from_output(o: vdsim.SimOutput, steer_ratio=None, ref_offset=None) -> dict:
+    """Observation dict of one session output (see the module contract).
+
+    :param o: ``vdsim.SimOutput``.
+    :param steer_ratio: steering ratio [-] read from the vehicle file, or
+        ``None`` when the file does not state one; ``delta_sw`` is present
+        only when it is given.
+    :param ref_offset: ``(x_fwd, y_left)`` [m] of a body point from the CG
+        (ISO 8855), or ``None``. When given, ``X_ref`` / ``Y_ref`` (ground
+        position [m]) and ``vx_ref`` / ``vy_ref`` (body-frame velocity [m/s],
+        rigid body ``v_P = v_CG + r x p``) of that point are added.
+    """
     st = o.state
     wheels = []
     for i in range(4):
@@ -242,7 +277,7 @@ def _obs_from_output(o: vdsim.SimOutput) -> dict:
             "alpha_peak": float(o.wheel_alpha_peak[i]),
             "kappa_peak": float(o.wheel_kappa_peak[i]),
         })
-    return {
+    obs = {
         "X": float(st.position[0]),
         "Y": float(st.position[1]),
         "psi": float(st.yaw()),
@@ -255,7 +290,20 @@ def _obs_from_output(o: vdsim.SimOutput) -> dict:
         "roll": float(o.roll),
         "pitch": float(o.pitch),
         "wheel": wheels,
+        # Road-wheel steer the dynamics integrated over the last substep, i.e.
+        # the command after the actuator chain (dead time, lag, rate limit).
+        "delta_rw": float(o.steer_applied),
     }
+    if steer_ratio is not None:
+        obs["delta_sw"] = obs["delta_rw"] * float(steer_ratio)
+    if ref_offset is not None:
+        px, py = ref_offset
+        c, s = math.cos(obs["psi"]), math.sin(obs["psi"])
+        obs["X_ref"] = obs["X"] + c * px - s * py
+        obs["Y_ref"] = obs["Y"] + s * px + c * py
+        obs["vx_ref"] = obs["vx"] - obs["r"] * py
+        obs["vy_ref"] = obs["vy"] + obs["r"] * px
+    return obs
 
 
 def _validate_friction_map(friction_map):
@@ -458,6 +506,52 @@ def _fx_to_cmdl1(vp: vdsim.VehicleParams, delta: float, fx: float) -> vdsim.CmdL
     return cmd
 
 
+#: Meanings of the second command element ``u[1]`` accepted by
+#: :class:`VDSimPlant` (``longitudinal=``): total longitudinal force [N] or
+#: longitudinal acceleration target [m/s^2].
+LONGITUDINAL_MODES = ("force", "accel")
+
+#: Named observation reference points (``ref_point=``).
+REF_POINTS = ("cg", "rear_axle", "front_axle")
+
+
+def _ref_offset(spec, vp: vdsim.VehicleParams):
+    """Body-frame offset ``(x_fwd, y_left)`` [m] from the CG of ``ref_point``.
+
+    :param spec: one of :data:`REF_POINTS` or ``[x_fwd, y_left]`` [m] (ISO 8855).
+    :param vp: vehicle whose ``cg_to_front`` / ``cg_to_rear`` place the axles.
+    :returns: tuple of two floats.
+    """
+    if isinstance(spec, str):
+        if spec not in REF_POINTS:
+            raise ValueError(f"ref_point={spec!r} is not one of {REF_POINTS} "
+                             "or [x_fwd, y_left]")
+        return {"cg": (0.0, 0.0),
+                "rear_axle": (-float(vp.cg_to_rear), 0.0),
+                "front_axle": (float(vp.cg_to_front), 0.0)}[spec]
+    try:
+        px, py = (float(v) for v in spec)
+    except (TypeError, ValueError):
+        raise ValueError("ref_point must be a name or [x_fwd, y_left] in metres")
+    if not (math.isfinite(px) and math.isfinite(py)):
+        raise ValueError("ref_point offsets must be finite")
+    return (px, py)
+
+
+def _drive_brake_refs(vp: vdsim.VehicleParams, drive_torque_ref, brake_torque_ref):
+    """Full-pedal total wheel torques [Nm] a direct-control session uses.
+
+    Mirrors the fallback in ``SimSession``'s constructor (``sim_session.cpp``):
+    a non-positive reference means ``max_motor_torque * final_drive_ratio``
+    for drive and ``max_brake_torque`` for brake. Used for the record only.
+    """
+    drive = (float(drive_torque_ref) if drive_torque_ref > 0.0
+             else float(vp.max_motor_torque * vp.final_drive_ratio))
+    brake = (float(brake_torque_ref) if brake_torque_ref > 0.0
+             else float(vp.max_brake_torque))
+    return drive, brake
+
+
 def trace_sample(o, t, u_steer, u_fx, channels, validity):
   """Map one session output onto a trace sample (3.2 / 3.2.1).
 
@@ -469,8 +563,10 @@ def trace_sample(o, t, u_steer, u_fx, channels, validity):
   :param o: ``vdsim.SimOutput`` at time ``t``.
   :param t: sample time [s].
   :param u_steer: commanded road-wheel steer [rad].
-  :param u_fx: commanded total longitudinal force [N]; ignored when ``u_fx``
-      is not in ``channels`` (pedal-commanded producers have no such value).
+  :param u_fx: longitudinal command -- total force [N], written to ``u_fx``;
+      or, when ``channels`` holds ``u_ax`` instead, the acceleration target
+      [m/s^2] of a ``longitudinal="accel"`` run. Ignored when neither is in
+      ``channels`` (pedal-commanded producers have no such value).
   :param channels: channel names this run records.
   :param validity: ``channel_validity`` of the run (see
       :func:`channel_validity_from_dynamics`); a not-modeled channel is written
@@ -493,6 +589,13 @@ def trace_sample(o, t, u_steer, u_fx, channels, validity):
   }
   if "u_fx" in channels:
       sample["u_fx"] = float(u_fx)
+  elif "u_ax" in channels:
+      # An acceleration target has its own channel; u_fx stays a force.
+      sample["u_ax"] = float(u_fx)
+  if "steer_applied" in channels:
+      # Opt-in channel (vdsim_trace.OPTIONAL_CHANNELS): the realized steer, not
+      # the command, so the actuator chain is visible next to u_steer.
+      sample["steer_applied"] = float(o.steer_applied)
   # 0.3 channels. `channels` already excludes anything this level does not
   # produce, so no branch here can write a zero standing in for a quantity the
   # model does not have (3.2.1).
@@ -616,6 +719,16 @@ class VDSimPlant:
   suspension hardpoints, and without them L4 is L3 under another label. The control contract ``u = [delta_rad, Fx_total_N]`` does not
   change with the level; what changes is which quantities exist, and therefore
   which trace channels a run at that level is allowed to record.
+
+  ``longitudinal="accel"`` turns ``u[1]`` into a longitudinal acceleration
+  target [m/s^2]: the session's L5 cascade (``LongAxController``, the same
+  class and gains as the RL ``accel`` action) maps it to pedals, and the
+  pedals to wheel torque on the linear references ``drive_torque_ref`` /
+  ``brake_torque_ref``. :meth:`conversion` describes the setting in force.
+
+  ``ref_point`` adds the position and velocity of one body point to every
+  observation (``X_ref``, ``Y_ref``, ``vx_ref``, ``vy_ref``); ``X`` / ``Y``
+  stay at the CG.
   """
 
   def __init__(
@@ -630,10 +743,22 @@ class VDSimPlant:
       actuator=None,
       drive_torque_ref: float = 0.0,
       brake_torque_ref: float = 0.0,
+      ref_point=None,
+      longitudinal: str = "force",
   ):
+      if longitudinal not in LONGITUDINAL_MODES:
+          raise ValueError(
+              f"longitudinal={longitudinal!r} is not one of {list(LONGITUDINAL_MODES)}")
       if level not in PLANT_LEVELS:
           raise ValueError(
               f"level={level!r} is not one of {list(PLANT_LEVELS)}")
+      # The accel converter feeds back the measured ax, which the L1 bicycle
+      # does not compute (ax_body_est stays 0): its integrator would wind up on
+      # a constant error instead of tracking the target.
+      if longitudinal == "accel" and level == "L1":
+          raise ValueError(
+              "longitudinal='accel' needs a level that reports ax; the L1 "
+              "bicycle reports ax = 0, so the ax feedback cannot track -- use L2 or L3")
       # This plant has no hardpoint input, so an L4 plant would be L3 physics
       # recorded as model_level L4. Same refusal as vdsim_lab._build_session;
       # the leading sentence is shared on purpose and a test compares the two.
@@ -678,6 +803,11 @@ class VDSimPlant:
       opts.brake_torque_ref = float(brake_torque_ref)
 
       self.level = level
+      self.longitudinal = longitudinal
+      self._ref_point = ref_point
+      self._ref_offset = None if ref_point is None else _ref_offset(ref_point, self._vp)
+      self._actuator_built = self._actuator_spec = actuator
+      self._torque_refs = _drive_brake_refs(self._vp, drive_torque_ref, brake_torque_ref)
       self.control_dt = float(control_dt)
       self.substep_dt = float(substep_dt)
       self._n_sub = int(round(control_dt / substep_dt))
@@ -689,6 +819,12 @@ class VDSimPlant:
       self._trace = None
       self._t = 0.0
       self._vp_path = vp_path
+      # delta_sw needs a ratio the vehicle file states; VehicleParams falls
+      # back to a default when the key is absent, and that default must not
+      # turn into an observation.
+      ratio = _load_yaml_sidecar(Path(vp_path), "steering_ratio")
+      self._delta_sw_ratio = (float(self._vp.steering_ratio)
+                              if ratio is not None else None)
       self._plant_params = {
           "config": Path(vp_path).name,
           "level": level,
@@ -732,6 +868,7 @@ class VDSimPlant:
       as-built actuator.
       """
       self._sess.set_actuator(build_actuator_params(actuator))
+      self._actuator_spec = actuator
 
   def reset(self, state0=None):
       """Seed pose [X, Y, psi, vx, vy, r]; wheel spin = vx/R (make_init_state)."""
@@ -745,16 +882,22 @@ class VDSimPlant:
       s0 = vdsim.make_init_state_6dof(
           self._vp, self._ts.wheel[0], x=x, y=y, yaw=psi, vx=vx, vy=vy, r=r)
       self._sess.reset(s0)
+      self._actuator_spec = self._actuator_built   # reset restores the as-built actuator
       self._t = 0.0
-      return _obs_from_output(self._sess.output())
+      return self._obs()
 
   def step(self, u):
-      """Advance one control period (ZOH); integrate internally at substep_dt."""
+      """Advance one control period (ZOH); integrate internally at substep_dt.
+
+      :param u: ``[delta_rad, Fx_total_N]``, or ``[delta_rad, ax_mps2]`` when
+          the plant was built with ``longitudinal="accel"``.
+      """
       if not isinstance(u, (list, tuple)) or len(u) != 2:
-          raise ValueError("step(u): u must be [delta_rad, Fx_total_N]")
+          raise ValueError("step(u): u must be [delta_rad, Fx_total_N] "
+                           "([delta_rad, ax_mps2] with longitudinal='accel')")
       delta, fx = float(u[0]), float(u[1])
       if not math.isfinite(delta) or not math.isfinite(fx):
-          raise ValueError("delta and Fx_total must be finite")
+          raise ValueError("delta and the longitudinal command must be finite")
       if self._trace is not None:
           # Ask before building the sample: on a decimated step the dict
           # construction is the whole cost, so skipping it is the saving.
@@ -762,12 +905,99 @@ class VDSimPlant:
               self._record(delta, fx)
           else:
               self._trace.skip()
-      cmd = _fx_to_cmdl1(self._vp, delta, fx)
+      cmd = self._command(delta, fx)
       for _ in range(self._n_sub):
           self._sess.set_input(cmd)
           self._sess.tick(self.substep_dt)
       self._t += self.control_dt
       return self._obs()
+
+  def _command(self, delta: float, lon: float):
+      """Session command of one ``(delta, u[1])`` pair, per ``longitudinal``.
+
+      :param delta: road-wheel steer [rad].
+      :param lon: total longitudinal force [N] (``"force"``) or acceleration
+          target [m/s^2] (``"accel"``).
+      :returns: ``vdsim.CmdL1`` or ``vdsim.CmdL5``.
+      """
+      if self.longitudinal == "force":
+          return _fx_to_cmdl1(self._vp, delta, lon)
+      cmd = vdsim.CmdL5()
+      cmd.ax_target = lon
+      cmd.steer_angle_wheel = delta
+      return cmd
+
+  def conversion(self) -> dict:
+      """How ``u[1]`` becomes wheel torque, for the result and trace record.
+
+      ``longitudinal`` is ``"force"`` or ``"accel"``; ``accel_conversion`` is
+      ``None`` for force and otherwise names the converter, its gains (read
+      from the session), the pedal-to-torque references and what it does not
+      do (no resistance feed-forward, no ``ax`` clamp).
+      """
+      if self.longitudinal == "force":
+          return {"longitudinal": "force", "accel_conversion": None}
+      g = self._sess.cascade_gains().ax
+      drive, brake = self._torque_refs
+      return {
+          "longitudinal": "accel",
+          "accel_conversion": {
+              "kind": "cmdl5_feedback",
+              "controller": "LongAxController",
+              "law": "PI + feed-forward on measured ax "
+                     "(u = kp*e + ki*int(e) + kd*de/dt + kff*ax_target)",
+              "gains": {"kp": float(g.kp), "ki": float(g.ki), "kd": float(g.kd),
+                        "kff": float(g.kff), "i_max": float(g.i_max)},
+              "pedal_to_torque": "linear",
+              "drive_torque_ref_Nm": drive,
+              "brake_torque_ref_Nm": brake,
+              "drive_split_front": float(self._vp.drive_split_front),
+              "resistance_compensation": False,
+              "ax_limit_mps2": None,
+          },
+      }
+
+  def ref_point_record(self):
+      """``ref_point`` setting for the record, or ``None`` when not set."""
+      if self._ref_offset is None:
+          return None
+      return {"spec": (self._ref_point if isinstance(self._ref_point, str)
+                       else list(self._ref_offset)),
+              "offset_m": list(self._ref_offset),
+              "cg_to_front_m": float(self._vp.cg_to_front),
+              "cg_to_rear_m": float(self._vp.cg_to_rear)}
+
+  def provenance(self) -> dict:
+      """Version and input identity of this plant, from the functions that
+      fill the trace ``repro`` block.
+
+      ``actuator`` is ``None`` (built-in), ``{"preset": id}`` or
+      ``{"param_hash": ...}`` of a dict spec, for the actuator in force
+      (:meth:`set_actuator` included).
+      """
+      import vdsim_trace
+
+      act = self._actuator_spec
+      if act is None:
+          act_rec = None
+      elif isinstance(act, str):
+          act_rec = {"preset": act}
+      else:
+          # A dict spec is hashed; a ready ActuatorParams or a dict holding a
+          # callable has no JSON form, so its hash is recorded as None.
+          try:
+              act_rec = {"param_hash": vdsim_trace.param_hash(act)}
+          except (TypeError, ValueError):
+              act_rec = {"param_hash": None}
+      return {
+          "vdsim_version": _vdsim_version(),
+          "vdsim_git_sha": _git_sha(),
+          "vdsim_git_dirty": getattr(vdsim, "__git_dirty__", None),
+          "vehicle_config": str(self._vp_path),
+          "param_hash": vdsim_trace.param_hash(self._plant_params),
+          "level": self.level,
+          "actuator": act_rec,
+      }
 
   # ---- trace recording (opt-in) ---------------------------------------
   def enable_trace(self, path, decimation=None, seed=None, run_id=None,
@@ -792,10 +1022,12 @@ class VDSimPlant:
           this class *is* the plant; pass ``"predictor"`` when the same object
           is driven as an optimiser's internal model rather than as the run
           under verification.
-      :param extra_channels: channels beyond the level's own set, for a
+      :param extra_channels: channels beyond the level's own set. Names in
+          :data:`SAMPLED_OPTIONAL_CHANNELS` (``"steer_applied"``) are filled
+          by every sample, :meth:`step` included. Any other name is for a
           caller that drives the session itself and appends its samples to
-          ``_trace`` (``vdsim_closedloop`` timing channels). :meth:`step`
-          cannot fill them, so leave this empty when stepping the plant.
+          ``_trace`` (``vdsim_closedloop`` timing channels); :meth:`step`
+          cannot fill those, so leave them out when stepping the plant.
       :param manifest_extra: manifest keys merged next to ``tags``.
       :returns: the resolved decimation.
       """
@@ -837,11 +1069,31 @@ class VDSimPlant:
           "substep_dt_s": float(self.substep_dt),
           "decimation": decimation,
       }
-      self._channels = vdsim_trace.channels_for_level(self.level)
+      # Opt-in channels trace_sample() can fill itself join the per-step set,
+      # so step() records them too; the rest stay with the caller.
+      if "u_ax" in extra_channels:
+          raise ValueError("u_ax is recorded by longitudinal='accel' plants "
+                           "only; do not list it in extra_channels")
+      own = tuple(n for n in extra_channels if n in SAMPLED_OPTIONAL_CHANNELS)
+      extra_channels = tuple(n for n in extra_channels if n not in own)
+      if self.longitudinal == "accel":
+          # The command is an acceleration target [m/s^2]: it goes to u_ax and
+          # u_fx, a force [N] to every reader, is left out, not mislabelled.
+          base = tuple(n for n in vdsim_trace.BASE_CHANNELS if n != "u_fx")
+          self._channels = (vdsim_trace.channels_for_level(self.level, base=base)
+                            + ("u_ax",) + own)
+      else:
+          self._channels = vdsim_trace.channels_for_level(self.level) + own
       self._validity = channel_validity_from_dynamics(
           self._dyn, self.level, self._channels)
       extra = dict(manifest_extra or {})
       extra["tags"] = dict(tags or {})
+      # Settings that change what u_fx and the observation mean; a default
+      # plant (force command, no reference point) writes neither key.
+      if self.longitudinal != "force":
+          extra.update(self.conversion())
+      if self._ref_offset is not None:
+          extra["ref_point"] = self.ref_point_record()
       self._trace = vdsim_trace.TraceWriter(
           path=path,
           geometry=geometry,
@@ -891,5 +1143,15 @@ class VDSimPlant:
   def tire_model(self):
       return self._dyn.tire(0)
 
+  @property
+  def delta_sw_ratio(self):
+      """Steering ratio [-] behind ``obs["delta_sw"]``, or ``None`` when the
+      vehicle file states none and ``delta_sw`` is therefore not observed."""
+      return self._delta_sw_ratio
+
+  def _obs_from(self, out) -> dict:
+      """Observation dict of a ``vdsim.SimOutput`` of this plant's session."""
+      return _obs_from_output(out, self._delta_sw_ratio, self._ref_offset)
+
   def _obs(self) -> dict:
-      return _obs_from_output(self._sess.output())
+      return self._obs_from(self._sess.output())
