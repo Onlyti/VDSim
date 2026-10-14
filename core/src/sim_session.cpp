@@ -427,6 +427,20 @@ void SimSession::tick(double dt) {
 
     if (session_kind_ == SessionKind::DirectControl) {
         const double speed = s.speed_xy();
+        // Acceleration command: the cascade the RL accel action goes through
+        // (LongAxController, this session's gains) turns ax_target into
+        // pedals; the pedals become wheel torque on the linear references and
+        // the default shares, then follow the CmdL1 path below.
+        if (const CmdL5* l5 = std::get_if<CmdL5>(&cmd)) {
+            const CmdL4 pedal = cascade_.to_l4(cmd, meas_state_, dyn_->ax_body_est(), dt);
+            CmdL1 c;
+            c.steer_angle_wheel = l5->steer_angle_wheel;
+            for (int i = 0; i < NUM_WHEELS; ++i) {
+                c.motor_torque[i] = pedal.throttle * drive_ref_ * w0_[i];
+                c.brake_torque[i] = pedal.brake * brake_ref_ * w0_[i];
+            }
+            cmd = ControlInput{c};
+        }
         CmdL4 steer_desired{};
         steer_desired.steer_angle_wheel = steer_from_input(cmd);
 

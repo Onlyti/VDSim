@@ -20,6 +20,7 @@
 #include "vdsim/state.hpp"
 #include "vdsim/multibody.hpp"
 #include "vdsim/suspension.hpp"
+#include "vdsim_git_info.h"
 
 namespace py = pybind11;
 
@@ -255,6 +256,14 @@ void channel_user_set(vdsim::ChannelActuator& c, py::object o) {
 
 PYBIND11_MODULE(vdsim, m) {
     m.doc() = "VDSim core Python bindings";
+
+    // Provenance baked at build time (cmake/vdsim_git_info.cmake): the git
+    // HEAD of the source tree, whether tracked files differed from it, and
+    // the package version of a wheel build ("source" for an in-tree build).
+    m.attr("__git_sha__")   = VDSIM_GIT_SHA;
+    m.attr("__git_dirty__") = (VDSIM_GIT_DIRTY < 0) ? py::object(py::none())
+                                                    : py::object(py::bool_(VDSIM_GIT_DIRTY == 1));
+    m.attr("__version__")   = VDSIM_PY_VERSION;
 
     bind_wheel_array_type(m);
 

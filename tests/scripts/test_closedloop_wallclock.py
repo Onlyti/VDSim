@@ -357,6 +357,45 @@ def test_wallclock_trace_timing_channels():
             assert np.array_equal(tr.channel("pose")[:, 1], res.trace["Y"][:-1])
 
 
+def test_e6a_quality_keys_and_rules():
+    """Work order 34 E6-a: load1_start, rtf_windows and quality are reported.
+
+    The verdict of a real run depends on the host, so it is only checked for
+    consistency; each fixed rule is exercised on synthetic stats instead.
+    """
+    from vdsim_closedloop import RTF_BAND, _rtf_windows, _wall_quality
+    st = _eval(controller, 3.5).run().stats
+    if sys.platform.startswith("linux"):
+        assert isinstance(st["load1_start"], float), st["load1_start"]
+    else:
+        assert st["load1_start"] is None
+    win = st["rtf_windows"]
+    assert set(win) == {"p01", "p50", "p99", "min", "n"} and win["n"] >= 2, win
+    q = st["quality"]
+    assert q["ok"] == (not q["reasons"]), q
+    assert set(q["reasons"]) <= {"rtf_band", "sim_max_lag", "sim_ticks_short"}, q
+    print(f"E6-a: load1_start {st['load1_start']}, rtf_windows {win}, quality {q}")
+
+    good = {"rtf": 1.0, "sim_max_lag_s": 0.0, "stopped_early": False,
+            "sim_ticks": 10, "sim_ticks_planned": 10}
+    assert _wall_quality(good, TC) == {"ok": True, "reasons": []}
+    cases = (
+        ({"rtf": 1.0 + 1.5 * RTF_BAND}, ["rtf_band"]),
+        ({"rtf": float("nan")}, ["rtf_band"]),
+        ({"sim_max_lag_s": 1.5 * TC}, ["sim_max_lag"]),
+        ({"sim_ticks": 9}, ["sim_ticks_short"]),
+        ({"sim_ticks": 9, "stopped_early": True}, []),
+        ({"rtf": 0.5, "sim_max_lag_s": 1.0, "sim_ticks": 3},
+         ["rtf_band", "sim_max_lag", "sim_ticks_short"]),
+    )
+    for change, reasons in cases:
+        assert _wall_quality(dict(good, **change), TC)["reasons"] == reasons, change
+    half = _rtf_windows([0.0, 1.0, 2.0, 3.0], [0.0, 0.5, 1.0, 1.5])
+    assert half["p50"] == 0.5 and half["n"] == 3, half
+    assert _rtf_windows([0.0, 0.5, 1.5], [0.0, 0.5, 1.5]) is None
+    print("E6-a: each quality rule raises its own reason on synthetic stats")
+
+
 #: Wall-clock pass/fail lines (S6 RTF band, S7 tick floor). Registered as the
 #: ctest ``closedloop_wallclock_timing`` with label ``timing``, which the
 #: ``validation`` preset excludes; their evidence is the local low-load run.
@@ -373,6 +412,7 @@ CORE_TESTS = (
     test_s8_fresh_interpreter_exits,
     test_watchdog_failsafe_counts,
     test_wallclock_trace_timing_channels,
+    test_e6a_quality_keys_and_rules,
 )
 
 

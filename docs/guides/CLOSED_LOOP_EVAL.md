@@ -121,7 +121,10 @@ Options that exist only in this mode:
   `t_sample`, `t_apply`, `c_k`, `overrun`, `applied`, the command, and the
   measured compute time `t_compute_s`.
 - `res.meta`: `eval_mode`, `control_period_s`, `latency_model`,
-  `overrun_policy`, `delta_sw_ratio`, level and (C) affinity and watchdog.
+  `overrun_policy`, `delta_sw_ratio`, level and (C) affinity and watchdog;
+  the provenance of [Using VDSim from another repository](#using-vdsim-from-another-repository);
+  `longitudinal` / `accel_conversion` ([Acceleration command](#acceleration-command));
+  `ref_point` and `tracking_point` ([Reference point](#reference-point)).
 - `trace_path=` writes a `.vdtrace` (schema 0.5) with one row per control
   sample. A writes exactly what `VDSimPlant.enable_trace` writes. B and C add
   four channels that describe the command in force on that row:
@@ -179,6 +182,89 @@ the same quantity to the `.vdtrace` as an optional channel (rad); it is off by
 default so the default trace is unchanged, and a 0.5 reader that predates it
 ignores it. Per-wheel steer angles are not observed: the direct-control
 plant applies one road-wheel angle.
+
+Yaw acceleration `r_dot` is not provided: the dynamics' derivative cannot be
+read out without a core interface change, and a finite difference of `r` is
+not offered in its place.
+
+## Reference point
+
+`ref_point=` (a `VDSimPlant` argument, so it also goes in `plant_kwargs`) adds
+the motion of one body point to every observation. `X`, `Y` stay at the CG.
+
+| Value | Point (body frame, ISO 8855: x forward, y left) |
+|---|---|
+| `None` (default) | nothing added |
+| `"cg"` | `[0, 0]` |
+| `"rear_axle"` | `[-cg_to_rear, 0]` |
+| `"front_axle"` | `[cg_to_front, 0]` |
+| `[x_fwd, y_left]` | that offset [m] |
+
+| Key | Unit | Meaning |
+|---|---|---|
+| `X_ref`, `Y_ref` | m | ground position of the point |
+| `vx_ref`, `vy_ref` | m/s | its velocity in the body frame, `v_P = v_CG + r x p`: `vx - r*y_left`, `vy + r*x_fwd` |
+
+`meta["ref_point"]` and the trace manifest record the setting, the offset
+used and `cg_to_front_m` / `cg_to_rear_m`. The tracking error of
+`reference_path` is still measured at the CG (`meta["tracking_point"] = "cg"`).
+
+## Acceleration command
+
+With `longitudinal="accel"` the second command element is a longitudinal
+acceleration target [m/s^2] instead of a force [N]:
+
+```python
+ev = ClosedLoopEval(dict(config="generic_sedan.yaml", longitudinal="accel"),
+                    controller,           # returns (delta_rad, ax_mps2)
+                    control_period=0.02)
+```
+
+- One converter: the session's L5 cascade, `LongAxController` (PI plus
+  feed-forward on the measured `ax`), the class and gains the RL `accel`
+  action uses. Its pedal output becomes wheel torque linearly:
+  `throttle x drive_torque_ref` and `brake x brake_torque_ref`, split with the
+  vehicle's front share. Non-positive references fall back to
+  `max_motor_torque x final_drive_ratio` and `max_brake_torque`.
+- No resistance or mass feed-forward is added; the integrator absorbs the
+  steady drag and rolling resistance. The target is not clamped; full pedal
+  is the ceiling.
+- Not the RL `accel` response: the RL environment's pedals drive the
+  vehicle's powertrain map, while here they scale the linear torque
+  references above.
+- `meta["accel_conversion"]` (and the trace manifest) records the converter,
+  its gains, both references and these choices. In `force` mode it is `None`
+  and the manifest has neither key. `u_fx` in the result and trace holds
+  the acceleration target in `accel` mode.
+- L1 is refused: the bicycle model reports `ax = 0`, so the feedback has
+  nothing to track.
+
+## Using VDSim from another repository
+
+Pin a commit, build the bindings and install the Python layer in editable
+mode:
+
+```bash
+git clone https://github.com/Onlyti/VDSim.git && cd VDSim
+git checkout <sha>
+pip install -e .            # builds the bindings (scikit-build-core)
+python -c "import vdsim; print(vdsim.__version__, vdsim.__git_sha__, vdsim.__git_dirty__)"
+```
+
+The build bakes the source HEAD into the module: `vdsim.__git_sha__` (40 hex
+digits, `"unknown"` without git at build time) and `vdsim.__git_dirty__`
+(`True` when tracked files differed from HEAD, `None` when unknown). Every
+result carries it, so a stored result says what it ran on:
+
+```python
+res = ev.run()
+assert res.meta["vdsim_git_sha"] == "<sha>"
+res.meta["vdsim_version"], res.meta["param_hash"], res.meta["vehicle_config"]
+res.meta["level"], res.meta["actuator"]   # None, {"preset": id} or {"param_hash": ...}
+```
+
+The same functions fill the trace `repro` block. Tagged releases and PyPI
+packages are not published for this yet; pin by SHA.
 
 ## Example: delay budget of a lane-change controller
 
@@ -255,3 +341,23 @@ while the controller blocks for `3*Tc`. Observed failure rates:
 
 On a heavily loaded host expect occasional misses of the tick floor; measure
 mode C on a quiet machine or treat its numbers as host-specific.
+
+Each `wallclock` result carries flags to filter on:
+
+- `stats["load1_start"]`: 1-minute load average just before the run (Linux;
+  `None` elsewhere).
+- `stats["rtf_windows"]`: RTF per 1 s of wall clock, `p01` / `p50` / `p99` /
+  `min` and the window count `n` (`None` under two windows).
+- `stats["quality"] = {"ok": bool, "reasons": [...]}` with fixed rules:
+  `"rtf_band"` when `|rtf - 1| > 0.02`, `"sim_max_lag"` when
+  `sim_max_lag_s > Tc`, `"sim_ticks_short"` when a run that was not stopped
+  took fewer substeps than planned. These rules watch the sim thread only; a
+  late controller shows in `n_overrun` and the delay statistics.
+
+```python
+runs = [ev.run() for _ in range(5)]
+kept = [r for r in runs if r.stats["quality"]["ok"]]
+```
+
+Contention on the controller side adds delay too: an inference library
+whose thread count is not fixed can compete with the sim thread for cores.

@@ -14,6 +14,23 @@ if(pybind11_FOUND)
     set_target_properties(vdsim_py PROPERTIES
         OUTPUT_NAME vdsim
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/python)
+    # vdsim.__git_sha__ / __git_dirty__: refreshed on every build, so the
+    # module carries the HEAD it was compiled from; vdsim.__version__ is the
+    # wheel version under scikit-build and "source" otherwise.
+    set(VDSIM_GIT_INFO_H ${CMAKE_CURRENT_BINARY_DIR}/generated/vdsim_git_info.h)
+    add_custom_target(vdsim_git_info
+        COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -DOUT=${VDSIM_GIT_INFO_H}
+                -P ${CMAKE_SOURCE_DIR}/cmake/vdsim_git_info.cmake
+        BYPRODUCTS ${VDSIM_GIT_INFO_H}
+        VERBATIM)
+    add_dependencies(vdsim_py vdsim_git_info)
+    target_include_directories(vdsim_py PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
+    if(DEFINED SKBUILD_PROJECT_VERSION)
+        set(VDSIM_PY_VERSION "${SKBUILD_PROJECT_VERSION}")
+    else()
+        set(VDSIM_PY_VERSION "source")
+    endif()
+    target_compile_definitions(vdsim_py PRIVATE VDSIM_PY_VERSION="${VDSIM_PY_VERSION}")
     # Wheel build (scikit-build-core): install the compiled module + the pure-
     # Python experiment layer (vdsim_lab + the comms protocol + map parsers) as
     # top-level modules, plus the preset configs as bundled data, so `pip
@@ -24,6 +41,7 @@ if(pybind11_FOUND)
             ${CMAKE_SOURCE_DIR}/python/vdsim_guard.py
             ${CMAKE_SOURCE_DIR}/python/vdsim_lab.py
             ${CMAKE_SOURCE_DIR}/python/vdsim_plant.py
+            ${CMAKE_SOURCE_DIR}/python/vdsim_closedloop.py
             ${CMAKE_SOURCE_DIR}/python/vdsim_trace.py
             ${CMAKE_SOURCE_DIR}/python/vdsim_render.py
             ${CMAKE_SOURCE_DIR}/python/vdsim_render3d.py

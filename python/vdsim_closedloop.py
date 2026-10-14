@@ -65,6 +65,7 @@ from __future__ import annotations
 
 import math
 import os
+import sys
 import threading
 import time
 from dataclasses import dataclass, field
@@ -73,8 +74,7 @@ import numpy as np
 
 import vdsim
 import vdsim_trace
-from vdsim_plant import (SAMPLED_OPTIONAL_CHANNELS, VDSimPlant, _fx_to_cmdl1,
-                         trace_sample)
+from vdsim_plant import SAMPLED_OPTIONAL_CHANNELS, VDSimPlant, trace_sample
 
 #: Mode strings accepted by :class:`ClosedLoopEval`.
 MODES = ("sync", "virtual_async", "wallclock")
@@ -241,7 +241,9 @@ class ClosedLoopEval:
         ``control_period`` and must not be given here.
     :param controller: ``controller(obs, t) -> (delta_rad, Fx_total_N)``;
         ``obs`` is the observation dict of :class:`VDSimPlant` sampled at
-        ``t``.
+        ``t``. With ``plant_kwargs["longitudinal"] = "accel"`` the second
+        element is an acceleration target [m/s^2] instead, and ``u_fx`` in
+        the result and trace holds that target.
     :param control_period: ``Tc`` [s]; must be a whole multiple of
         ``substep_dt``.
     :param mode: one of :data:`MODES`.
@@ -273,7 +275,14 @@ class ClosedLoopEval:
     :param reference_path: ``(M, 2)`` polyline ``[X, Y]`` [m] in the ground
         frame. When given, ``stats`` carries the lateral tracking error of
         :func:`lateral_error` over the control samples (``e_y_rmse_m``,
-        ``e_y_max_abs_m``, ``e_y_n``).
+        ``e_y_max_abs_m``, ``e_y_n``), measured at the CG
+        (``meta["tracking_point"]``).
+
+    ``meta`` of every result also carries :meth:`VDSimPlant.provenance`
+    (version, git SHA, vehicle file, ``param_hash``, level, actuator),
+    :meth:`VDSimPlant.conversion` (``longitudinal``, ``accel_conversion``)
+    and ``ref_point``. A ``wallclock`` result adds ``load1_start``,
+    ``rtf_windows`` and ``quality`` to ``stats`` (see :func:`_wall_quality`).
     """
 
     def __init__(self, plant_kwargs, controller, control_period, mode="sync",
@@ -358,6 +367,11 @@ class ClosedLoopEval:
                         substep_dt_s=self.substep_dt,
                         duration_s=self.n_steps * self.control_period,
                         level=self.plant.level)
+        res.meta.update(self.plant.provenance())
+        res.meta.update(self.plant.conversion())
+        res.meta["ref_point"] = self.plant.ref_point_record()
+        # e_y_* of reference_path is computed at the CG (obs X, Y).
+        res.meta["tracking_point"] = "cg"
         if self.mode == "wallclock":
             res.meta["cpu_affinity"] = self.cpu_affinity
             res.meta["watchdog"] = self.watchdog
@@ -426,7 +440,7 @@ class ClosedLoopEval:
         u = self.controller(obs, t)
         elapsed = time.perf_counter() - t0
         if len(u) != 2:
-            raise ValueError("controller must return (delta_rad, Fx_total_N)")
+            raise ValueError("controller must return (delta_rad, Fx_total_N or ax_mps2)")
         delta, fx = float(u[0]), float(u[1])
         if not (math.isfinite(delta) and math.isfinite(fx)):
             raise ValueError(f"controller returned a non-finite command at t={t}")
@@ -468,7 +482,7 @@ class ClosedLoopEval:
     def _run_virtual_async(self, obs) -> EvalResult:
         """Mode B: substep loop with commands applied at their ``t_apply``."""
         Tc, h, n_sub = self.control_period, self.substep_dt, self.n_sub
-        sess, vp = self.plant._sess, self.plant._vp
+        sess, to_cmd = self.plant._sess, self.plant._command
         draw = self.latency.sampler()
         total = self.n_steps * n_sub
 
@@ -480,7 +494,7 @@ class ClosedLoopEval:
         next_sample = 0       # skip mode: earliest substep a sample may be taken
         skipped = 0
         u_now = self.u0
-        cmd_now = _fx_to_cmdl1(vp, *u_now)
+        cmd_now = to_cmd(*u_now)
         in_force = None       # sample row of u_now; None while u0 holds
         stop = self._stop
         stop_at = None        # substep the run ended at after a stop()
@@ -540,7 +554,7 @@ class ClosedLoopEval:
             while pending and pending[0][0] <= i:
                 _, row, u_now = pending.pop(0)
                 samples.mark_applied(row)
-                cmd_now = _fx_to_cmdl1(vp, *u_now)
+                cmd_now = to_cmd(*u_now)
                 in_force = row
             if on_grid:
                 grid.put(k, k * Tc, obs, u_now)
@@ -570,7 +584,7 @@ class ClosedLoopEval:
     def _run_wallclock(self, obs) -> EvalResult:
         """Mode C: C++ sim thread paced to the wall clock + Python control thread."""
         Tc, h, n_sub = self.control_period, self.substep_dt, self.n_sub
-        sess, vp = self.plant._sess, self.plant._vp
+        sess, to_cmd = self.plant._sess, self.plant._command
         total = self.n_steps * n_sub
 
         cfg = vdsim.RealTimeRunnerConfig()
@@ -581,9 +595,11 @@ class ClosedLoopEval:
             cfg.cmd_timeout_s = 0.0
         else:
             cfg.cmd_timeout_s = self.watchdog["timeout_s"]
-            cfg.failsafe = _fx_to_cmdl1(vp, *self.watchdog["failsafe_u"])
-        sess.set_input(_fx_to_cmdl1(vp, *self.u0))
+            cfg.failsafe = to_cmd(*self.watchdog["failsafe_u"])
+        sess.set_input(to_cmd(*self.u0))
         runner = vdsim.RealTimeRunner(sess, cfg)
+        load1_start = (float(os.getloadavg()[0])
+                       if sys.platform.startswith("linux") else None)
 
         rows = _RowRecorder()
         samples = _SampleRecorder()
@@ -619,7 +635,7 @@ class ClosedLoopEval:
                     obs_k = self.plant._obs_from(out)
                     t_s = float(out.sim_time)
                     u, elapsed = self._call(obs_k, t_s)
-                    sess.set_input(_fx_to_cmdl1(vp, *u))
+                    sess.set_input(to_cmd(*u))
                     w_apply = clock()
                     t_a = float(sess.sim_time())
                     late = 1 if (w_apply - slot) > Tc else 0
@@ -693,8 +709,11 @@ class ClosedLoopEval:
             "ctrl_affinity_applied": bool(box["ctrl_affinity"]),
             "stopped_early": stopped,
             "t_stop": t_end if stopped else None,
+            "load1_start": load1_start,
         })
         smp = samples.arrays()
+        stats["rtf_windows"] = _rtf_windows(wall["sample"], smp["t_sample"])
+        stats["quality"] = _wall_quality(stats, Tc)
         for key, vals in wall.items():
             smp[f"wall_{key}"] = np.asarray(vals, dtype=np.float64)
         return EvalResult(trace=rows.arrays(), samples=smp, stats=stats)
@@ -809,6 +828,59 @@ def _wall_stats(wall: dict) -> dict:
         "wake_jitter_p99_s": _pct(jitter, 99),
         "wake_jitter_max_s": float(jitter.max()) if jitter.size else float("nan"),
     }
+
+
+#: Width [s] of the wall-clock windows behind ``stats["rtf_windows"]``.
+RTF_WINDOW_S = 1.0
+
+#: ``|rtf - 1|`` above which a ``wallclock`` run is flagged (31번 S6 band).
+RTF_BAND = 0.02
+
+
+def _rtf_windows(wall_sample, t_sample):
+    """Real-time factor per :data:`RTF_WINDOW_S` of wall clock.
+
+    The simulated time at every whole window boundary is interpolated from
+    the control samples' ``(wall time, sim time)`` pairs; each window's RTF is
+    its simulated span over its wall span.
+
+    :param wall_sample: wall time [s] of each control sample from the start.
+    :param t_sample: simulated time [s] read at that sample.
+    :returns: ``{"p01", "p50", "p99", "min", "n"}`` or ``None`` with fewer
+        than two whole windows.
+    """
+    w = np.asarray(wall_sample, dtype=np.float64)
+    t = np.asarray(t_sample, dtype=np.float64)
+    if w.size < 2:
+        return None
+    edges = np.arange(w[0], w[-1] + 1e-12, RTF_WINDOW_S)
+    if edges.size < 3:
+        return None
+    rtf = np.diff(np.interp(edges, w, t)) / RTF_WINDOW_S
+    return {"p01": _pct(rtf, 1), "p50": _pct(rtf, 50), "p99": _pct(rtf, 99),
+            "min": float(rtf.min()), "n": int(rtf.size)}
+
+
+def _wall_quality(stats: dict, Tc: float) -> dict:
+    """Mechanical pass/fail of a ``wallclock`` run (work order 34, fixed rules).
+
+    Reasons, each added when its rule fails:
+
+    * ``"rtf_band"`` -- ``|rtf - 1| > RTF_BAND`` (or ``rtf`` not finite);
+    * ``"sim_max_lag"`` -- ``sim_max_lag_s > Tc``;
+    * ``"sim_ticks_short"`` -- not stopped early and
+      ``sim_ticks != sim_ticks_planned``.
+
+    :returns: ``{"ok": bool, "reasons": [str]}``.
+    """
+    reasons = []
+    if not abs(stats["rtf"] - 1.0) <= RTF_BAND:
+        reasons.append("rtf_band")
+    if not stats["sim_max_lag_s"] <= Tc:
+        reasons.append("sim_max_lag")
+    if not stats["stopped_early"] and stats["sim_ticks"] != stats["sim_ticks_planned"]:
+        reasons.append("sim_ticks_short")
+    return {"ok": not reasons, "reasons": reasons}
 
 
 class _RowRecorder:
