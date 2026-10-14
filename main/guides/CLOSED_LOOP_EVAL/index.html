@@ -1686,6 +1686,61 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#ending-a-run-early" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ending a run early
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#realized-steer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Realized steer
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reference-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reference point
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#acceleration-command" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Acceleration command
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-vdsim-from-another-repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using VDSim from another repository
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#example-delay-budget-of-a-lane-change-controller" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2816,6 +2871,61 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#ending-a-run-early" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ending a run early
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#realized-steer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Realized steer
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reference-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reference point
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#acceleration-command" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Acceleration command
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-vdsim-from-another-repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using VDSim from another repository
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#example-delay-budget-of-a-lane-change-controller" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3018,14 +3128,18 @@ before <code>run()</code> returns.</p>
 <h2 id="results-and-trace">Results and trace<a class="headerlink" href="#results-and-trace" title="Permanent link">&para;</a></h2>
 <ul>
 <li><code>res.trace</code>: arrays per control sample (<code>t</code>, pose and velocities,
-  <code>u_steer</code>/<code>u_fx</code> = command in force at that instant). A and B are on the
+  <code>u_steer</code>/<code>u_fx</code> = command in force at that instant; <code>u_ax</code> in place of
+  <code>u_fx</code> with <code>longitudinal="accel"</code>). A and B are on the
   grid <code>t_k = k*Tc</code> plus a closing row at <code>duration</code> without a command; C has
   one row per wall-clock sample (irregular <code>t</code>).</li>
 <li><code>res.samples</code>: one row per controller sample actually taken: <code>k</code>,
   <code>t_sample</code>, <code>t_apply</code>, <code>c_k</code>, <code>overrun</code>, <code>applied</code>, the command, and the
   measured compute time <code>t_compute_s</code>.</li>
 <li><code>res.meta</code>: <code>eval_mode</code>, <code>control_period_s</code>, <code>latency_model</code>,
-  <code>overrun_policy</code>, level and (C) affinity and watchdog.</li>
+  <code>overrun_policy</code>, <code>delta_sw_ratio</code>, level and (C) affinity and watchdog;
+  the provenance of <a href="#using-vdsim-from-another-repository">Using VDSim from another repository</a>;
+  <code>longitudinal</code> / <code>accel_conversion</code> (<a href="#acceleration-command">Acceleration command</a>);
+  <code>ref_point</code> and <code>tracking_point</code> (<a href="#reference-point">Reference point</a>).</li>
 <li><code>trace_path=</code> writes a <code>.vdtrace</code> (schema 0.5) with one row per control
   sample. A writes exactly what <code>VDSimPlant.enable_trace</code> writes. B and C add
   four channels that describe the command in force on that row:</li>
@@ -3066,6 +3180,189 @@ before <code>run()</code> returns.</p>
   <code>latency_model</code> and <code>overrun_policy</code> in every mode. The four channels are
   optional and additive, so the schema stays 0.5 and an existing 0.5 reader
   ignores them.</p>
+<h2 id="ending-a-run-early">Ending a run early<a class="headerlink" href="#ending-a-run-early" title="Permanent link">&para;</a></h2>
+<p><code>ev.stop()</code> ends a run in every mode. Call it from the controller or from any
+other thread; <code>run()</code> then returns what ran so far.</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Where the run ends</th>
+<th>The command of the stopping call</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A <code>sync</code></td>
+<td>a <code>stop()</code> made while a controller call runs: at that sample's time <code>t_k</code>; a <code>stop()</code> made between calls: at the next grid time, before that sample is taken</td>
+<td>not applied; the plant is not advanced</td>
+</tr>
+<tr>
+<td>B <code>virtual_async</code></td>
+<td>as in A, at the virtual time of the call. A <code>queue</code> sample computed late behind a busy worker is called at the substep the worker frees up, so the run ends there (the plant cannot go back to <code>t_k</code>)</td>
+<td>not applied; every command still waiting for its <code>t_apply</code> is dropped too</td>
+</tr>
+<tr>
+<td>C <code>wallclock</code></td>
+<td>the control thread stops at its next slot and the sim thread is joined; the run ends wherever the session clock got to</td>
+<td>unchanged from before</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><code>stats["stopped_early"]</code> (bool) and <code>stats["t_stop"]</code> (simulated end time
+  [s], <code>None</code> when the run went the full duration) are present in every mode.
+  <code>meta["duration_s"]</code> stays the nominal duration; the run's real length is
+  <code>t_stop</code>.</li>
+<li>Dropped commands are counted in <code>stats["n_unapplied"]</code> with <code>applied = 0</code>
+  in <code>res.samples</code>; they never appear as a <code>t_apply</code> in the trace.</li>
+<li><code>res.trace</code> ends with a closing row at <code>t_stop</code> (no command), and the
+  tracking metrics of <code>reference_path</code> use only the samples that ran.</li>
+<li>A recorded trace is finalized normally: its last row is <code>t_stop</code> (when that
+  row falls on the decimation grid; at <code>Tc &gt;= 10 ms</code> it always does) and the
+  manifest carries <code>stopped_early</code> and <code>t_stop</code>. A run that is not stopped
+  records <code>stopped_early: false, t_stop: null</code>.</li>
+<li><code>stop()</code> before <code>run()</code> has no effect: every run starts cleared.</li>
+</ul>
+<h2 id="realized-steer">Realized steer<a class="headerlink" href="#realized-steer" title="Permanent link">&para;</a></h2>
+<p>The observation carries the steer the dynamics actually integrated, after the
+actuator chain (dead time, lag, rate limit) of <code>actuator=</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Unit</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>delta_rw</code></td>
+<td>rad</td>
+<td>realized road-wheel steer over the last substep before the sample. With <code>actuator=None</code> it equals the command in force, bit for bit</td>
+</tr>
+<tr>
+<td><code>delta_sw</code></td>
+<td>rad</td>
+<td><code>delta_rw x steering_ratio</code>, only when the vehicle file states <code>steering_ratio</code>; no default ratio stands in for it. The ratio used is <code>meta["delta_sw_ratio"]</code> (<code>None</code> = not observed)</td>
+</tr>
+</tbody>
+</table>
+<p><code>res.trace</code> has a <code>delta_rw</code> column. <code>trace_channels=("steer_applied",)</code> adds
+the same quantity to the <code>.vdtrace</code> as an optional channel (rad); it is off by
+default so the default trace is unchanged, and a 0.5 reader that predates it
+ignores it. Per-wheel steer angles are not observed: the direct-control
+plant applies one road-wheel angle.</p>
+<p>Yaw acceleration <code>r_dot</code> is not provided: the dynamics' derivative cannot be
+read out without a core interface change, and a finite difference of <code>r</code> is
+not offered in its place.</p>
+<h2 id="reference-point">Reference point<a class="headerlink" href="#reference-point" title="Permanent link">&para;</a></h2>
+<p><code>ref_point=</code> (a <code>VDSimPlant</code> argument, so it also goes in <code>plant_kwargs</code>) adds
+the motion of one body point to every observation. <code>X</code>, <code>Y</code> stay at the CG.</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Point (body frame, ISO 8855: x forward, y left)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>None</code> (default)</td>
+<td>nothing added</td>
+</tr>
+<tr>
+<td><code>"cg"</code></td>
+<td><code>[0, 0]</code></td>
+</tr>
+<tr>
+<td><code>"rear_axle"</code></td>
+<td><code>[-cg_to_rear, 0]</code></td>
+</tr>
+<tr>
+<td><code>"front_axle"</code></td>
+<td><code>[cg_to_front, 0]</code></td>
+</tr>
+<tr>
+<td><code>[x_fwd, y_left]</code></td>
+<td>that offset [m]</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Unit</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>X_ref</code>, <code>Y_ref</code></td>
+<td>m</td>
+<td>ground position of the point</td>
+</tr>
+<tr>
+<td><code>vx_ref</code>, <code>vy_ref</code></td>
+<td>m/s</td>
+<td>its velocity in the body frame, <code>v_P = v_CG + r x p</code>: <code>vx - r*y_left</code>, <code>vy + r*x_fwd</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>meta["ref_point"]</code> and the trace manifest record the setting, the offset
+used and <code>cg_to_front_m</code> / <code>cg_to_rear_m</code>. The tracking error of
+<code>reference_path</code> is still measured at the CG (<code>meta["tracking_point"] = "cg"</code>).</p>
+<h2 id="acceleration-command">Acceleration command<a class="headerlink" href="#acceleration-command" title="Permanent link">&para;</a></h2>
+<p>With <code>longitudinal="accel"</code> the second command element is a longitudinal
+acceleration target [m/s^2] instead of a force [N]:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">ev</span> <span class="o">=</span> <span class="n">ClosedLoopEval</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="s2">"generic_sedan.yaml"</span><span class="p">,</span> <span class="n">longitudinal</span><span class="o">=</span><span class="s2">"accel"</span><span class="p">),</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>                    <span class="n">controller</span><span class="p">,</span>           <span class="c1"># returns (delta_rad, ax_mps2)</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>                    <span class="n">control_period</span><span class="o">=</span><span class="mf">0.02</span><span class="p">)</span>
+</span></code></pre></div>
+<ul>
+<li>One converter: the session's L5 cascade, <code>LongAxController</code> (PI plus
+  feed-forward on the measured <code>ax</code>), the class and gains the RL <code>accel</code>
+  action uses. Its pedal output becomes wheel torque linearly:
+  <code>throttle x drive_torque_ref</code> and <code>brake x brake_torque_ref</code>, split with the
+  vehicle's front share. Non-positive references fall back to
+  <code>max_motor_torque x final_drive_ratio</code> and <code>max_brake_torque</code>.</li>
+<li>No resistance or mass feed-forward is added; the integrator absorbs the
+  steady drag and rolling resistance. The target is not clamped; full pedal
+  is the ceiling.</li>
+<li>Not the RL <code>accel</code> response: the RL environment's pedals drive the
+  vehicle's powertrain map, while here they scale the linear torque
+  references above.</li>
+<li><code>meta["accel_conversion"]</code> (and the trace manifest) records the converter,
+  its gains, both references and these choices. In <code>force</code> mode it is <code>None</code>
+  and the manifest has neither key.</li>
+<li>The target is recorded as <code>u_ax</code> [m/s^2] in <code>res.trace</code>, <code>res.samples</code> and
+  the trace file; <code>u_fx</code> is absent from all three in <code>accel</code> mode, so a
+  reader that takes <code>u_fx</code> as a force [N] never sees an acceleration. A
+  schema 0.5 reader that predates <code>u_ax</code> opens such a trace and ignores the
+  channel.</li>
+<li>L1 is refused: the bicycle model reports <code>ax = 0</code>, so the feedback has
+  nothing to track.</li>
+</ul>
+<h2 id="using-vdsim-from-another-repository">Using VDSim from another repository<a class="headerlink" href="#using-vdsim-from-another-repository" title="Permanent link">&para;</a></h2>
+<p>Pin a commit, build the bindings and install the Python layer in editable
+mode:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Onlyti/VDSim.git<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>VDSim
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>git<span class="w"> </span>checkout<span class="w"> </span>&lt;sha&gt;
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.<span class="w">            </span><span class="c1"># builds the bindings (scikit-build-core)</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import vdsim; print(vdsim.__version__, vdsim.__git_sha__, vdsim.__git_dirty__)"</span>
+</span></code></pre></div>
+<p>The build bakes the source HEAD into the module: <code>vdsim.__git_sha__</code> (40 hex
+digits, <code>"unknown"</code> without git at build time) and <code>vdsim.__git_dirty__</code>
+(<code>True</code> when tracked files differed from HEAD, <code>None</code> when unknown). Every
+result carries it, so a stored result says what it ran on:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">res</span> <span class="o">=</span> <span class="n">ev</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="k">assert</span> <span class="n">res</span><span class="o">.</span><span class="n">meta</span><span class="p">[</span><span class="s2">"vdsim_git_sha"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"&lt;sha&gt;"</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">res</span><span class="o">.</span><span class="n">meta</span><span class="p">[</span><span class="s2">"vdsim_version"</span><span class="p">],</span> <span class="n">res</span><span class="o">.</span><span class="n">meta</span><span class="p">[</span><span class="s2">"param_hash"</span><span class="p">],</span> <span class="n">res</span><span class="o">.</span><span class="n">meta</span><span class="p">[</span><span class="s2">"vehicle_config"</span><span class="p">]</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">res</span><span class="o">.</span><span class="n">meta</span><span class="p">[</span><span class="s2">"level"</span><span class="p">],</span> <span class="n">res</span><span class="o">.</span><span class="n">meta</span><span class="p">[</span><span class="s2">"actuator"</span><span class="p">]</span>   <span class="c1"># None, {"preset": id} or {"param_hash": ...}</span>
+</span></code></pre></div>
+<p>The same functions fill the trace <code>repro</code> block. Tagged releases and PyPI
+packages are not published for this yet; pin by SHA.</p>
 <h2 id="example-delay-budget-of-a-lane-change-controller">Example: delay budget of a lane-change controller<a class="headerlink" href="#example-delay-budget-of-a-lane-change-controller" title="Permanent link">&para;</a></h2>
 <p><code>examples/closed_loop_eval_demo.py</code> runs a Stanley-type lateral controller
 with a speed loop on a double lane change (3.5 m over 30 m, 20 m/s, L2,
@@ -3075,7 +3372,7 @@ with a speed loop on a double lane change (3.5 m over 30 m, 20 m/s, L2,
 reference polyline, along its normal, ground frame
 (<code>vdsim_closedloop.lateral_error</code>); RMSE over every control sample (lower is
 better). C is the mean ± standard deviation of five runs.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>taskset<span class="w"> </span>-c<span class="w"> </span><span class="m">0</span>-9,12-23<span class="w"> </span>python3<span class="w"> </span>examples/closed_loop_eval_demo.py<span class="w"> </span>--out<span class="w"> </span>demo_out
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>taskset<span class="w"> </span>-c<span class="w"> </span><span class="m">0</span>-9,12-23<span class="w"> </span>python3<span class="w"> </span>examples/closed_loop_eval_demo.py<span class="w"> </span>--out<span class="w"> </span>demo_out
 </span></code></pre></div>
 <p><img alt="Lateral error and RMSE by mode" src="../closed_loop_eval_demo.png" /></p>
 <table>
@@ -3260,6 +3557,28 @@ while the controller blocks for <code>3*Tc</code>. Observed failure rates:</p>
 </table>
 <p>On a heavily loaded host expect occasional misses of the tick floor; measure
 mode C on a quiet machine or treat its numbers as host-specific.</p>
+<p>Each <code>wallclock</code> result carries flags to filter on:</p>
+<ul>
+<li><code>stats["load1_start"]</code>: 1-minute load average just before the run (Linux;
+  <code>None</code> elsewhere).</li>
+<li><code>stats["rtf_windows"]</code>: RTF per 1 s of wall clock, <code>p01</code> / <code>p50</code> / <code>p99</code> /
+  <code>min</code> and the window count <code>n</code> (<code>None</code> under two windows).</li>
+<li><code>stats["quality"] = {"ok": bool, "reasons": [...], "warnings": [...]}</code>
+  with fixed rules: <code>"rtf_band"</code> when <code>|rtf - 1| &gt; 0.02</code>, <code>"sim_max_lag"</code>
+  when <code>sim_max_lag_s &gt; Tc</code>, <code>"sim_ticks_short"</code> when a run that was not
+  stopped took fewer substeps than planned.</li>
+<li><code>ok</code> answers "can the measuring environment (the sim thread) be trusted";
+  <code>warnings</code> answers "did the controller miss its period". The only warning
+  is <code>"control_overrun"</code> (<code>n_overrun &gt; 0</code>); it never changes <code>ok</code>, because a
+  slow controller is the result being measured, not a broken environment.</li>
+</ul>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">runs</span> <span class="o">=</span> <span class="p">[</span><span class="n">ev</span><span class="o">.</span><span class="n">run</span><span class="p">()</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">)]</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">kept</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">runs</span> <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">stats</span><span class="p">[</span><span class="s2">"quality"</span><span class="p">][</span><span class="s2">"ok"</span><span class="p">]]</span>          <span class="c1"># trusted runs</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">on_time</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">kept</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>           <span class="k">if</span> <span class="s2">"control_overrun"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">r</span><span class="o">.</span><span class="n">stats</span><span class="p">[</span><span class="s2">"quality"</span><span class="p">][</span><span class="s2">"warnings"</span><span class="p">]]</span>
+</span></code></pre></div>
+<p>Contention on the controller side adds delay too: an inference library
+whose thread count is not fixed can compete with the sim thread for cores.</p>
 
 
 
