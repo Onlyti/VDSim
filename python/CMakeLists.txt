@@ -61,7 +61,7 @@ if(pybind11_FOUND)
         # Live monitor page + the vendored three.js it imports (no CDN).
         install(DIRECTORY ${CMAKE_SOURCE_DIR}/python/vdsim_livemonitor_web
             DESTINATION "."
-            FILES_MATCHING PATTERN "*.html" PATTERN "*.js")
+            FILES_MATCHING PATTERN "*.py" PATTERN "*.html" PATTERN "*.js")
         install(FILES ${CMAKE_SOURCE_DIR}/gui/vendor/three/three.module.js
             DESTINATION "vdsim_livemonitor_web/three")
         install(FILES ${CMAKE_SOURCE_DIR}/gui/vendor/three/addons/controls/OrbitControls.js
