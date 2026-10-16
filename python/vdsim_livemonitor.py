@@ -739,10 +739,11 @@ class LiveMonitor:
         """
         if self._sock is None:
             raise RuntimeError("LiveMonitor.push() before start()")
+        compact = _compact_state(state)
         now = time.monotonic()
         if now - self._last_push < 1.0 / self.rate_hz:
             return False
-        msg = {"state": _compact_state(state)}
+        msg = {"state": compact}
         if now - self._last_scene >= SCENE_RESEND_S:
             msg["scene"] = self.scene
             self._last_scene = now
