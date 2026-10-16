@@ -83,14 +83,12 @@ version and the new numbers have to land in the same commit.
 
 <!-- VALIDATION-CURRENCY BEGIN -->
 ```text
-tests:    PENDING
+tests:    535/535
 config:   cmake --preset validation && cmake --build --preset validation && ctest --preset validation
 presets:  CMakePresets.json@c4d279dcd60c661b61f480db95f5fe86fa82a7b8
 toolchain: cmake 3.31.10
-commit:   PENDING
-pending:  registration surface changed (live 3D monitor test added on top of main);
-          this tree has no canonical 3-run measurement yet
-date:     2026-10-16
+commit:   4caa9c2
+date:     2026-10-17
 excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: closedloop_wallclock_timing (label timing, excluded by the validation test preset: wall-clock S6/S7 verdicts depend on host load -- local low-load evidence in the work order 31 PR description)
