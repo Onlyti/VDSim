@@ -47,6 +47,7 @@ if(pybind11_FOUND)
             ${CMAKE_SOURCE_DIR}/python/vdsim_render3d.py
             ${CMAKE_SOURCE_DIR}/python/vdsim_preset.py
             ${CMAKE_SOURCE_DIR}/python/vdsim_campaign.py
+            ${CMAKE_SOURCE_DIR}/python/vdsim_livemonitor.py
             ${CMAKE_SOURCE_DIR}/cosim/protocol.py
             ${CMAKE_SOURCE_DIR}/examples/opendrive.py
             ${CMAKE_SOURCE_DIR}/examples/rd5_route.py
@@ -57,6 +58,14 @@ if(pybind11_FOUND)
             ${CMAKE_SOURCE_DIR}/python/vdsim_rl
             DESTINATION "."
             FILES_MATCHING PATTERN "*.py")
+        # Live monitor page + the vendored three.js it imports (no CDN).
+        install(DIRECTORY ${CMAKE_SOURCE_DIR}/python/vdsim_livemonitor_web
+            DESTINATION "."
+            FILES_MATCHING PATTERN "*.py" PATTERN "*.html" PATTERN "*.js")
+        install(FILES ${CMAKE_SOURCE_DIR}/gui/vendor/three/three.module.js
+            DESTINATION "vdsim_livemonitor_web/three")
+        install(FILES ${CMAKE_SOURCE_DIR}/gui/vendor/three/addons/controls/OrbitControls.js
+            DESTINATION "vdsim_livemonitor_web/three/addons/controls")
         install(DIRECTORY
             ${CMAKE_SOURCE_DIR}/configs/parts
             ${CMAKE_SOURCE_DIR}/configs/blueprints

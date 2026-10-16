@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>VDSim live monitor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #87ceeb;
+               font: 15px/1.3 system-ui, sans-serif; }
+  #view { position: absolute; inset: 0; }
+  #hud { position: absolute; left: 12px; top: 10px; padding: 6px 10px;
+         background: rgba(20, 30, 40, 0.72); color: #fff; border-radius: 6px;
+         font-variant-numeric: tabular-nums; white-space: pre; }
+  #status { position: absolute; right: 12px; top: 10px; padding: 6px 10px;
+            border-radius: 6px; color: #fff; background: #8a6d00; }
+  #status.live { background: #1f7a3a; }
+  #status.down { background: #9b2d2d; }
+  #wait { position: absolute; inset: 0; display: flex; align-items: center;
+          justify-content: center; pointer-events: none; }
+  #wait div { padding: 14px 22px; border-radius: 8px; font-size: 20px;
+              background: rgba(20, 30, 40, 0.72); color: #fff; }
+  #wait.hidden { display: none; }
+  #follow { position: absolute; right: 12px; bottom: 12px; padding: 6px 10px;
+            border: 0; border-radius: 6px; background: rgba(20, 30, 40, 0.72);
+            color: #fff; font: inherit; cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="view"></div>
+<div id="hud">t -- s | v -- m/s | steer -- deg</div>
+<div id="status">connecting</div>
+<div id="wait"><div id="waitmsg">waiting for simulator</div></div>
+<button id="follow" title="camera behind the vehicle (key F)">chase view</button>
+<script type="importmap">
+{ "imports": { "three": "./three/three.module.js",
+               "three/addons/": "./three/addons/" } }
+</script>
+<script type="module" src="./monitor.js"></script>
+</body>
+</html>

@@ -152,6 +152,15 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 300
         ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
+    # Live 3D monitor (work order 35): OSM placement, HTTP/WebSocket page
+    # server, publisher attach/embed and the Windows shortcut. Own free ports.
+    add_test(NAME livemonitor
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_livemonitor.py)
+    set_tests_properties(livemonitor PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 120
+        ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
     # Closed-loop mode C (wallclock): thread shutdown, argument checks and the
     # watchdog. Wall-clock pacing, so it never shares the host with other tests.
     add_test(NAME closedloop_wallclock

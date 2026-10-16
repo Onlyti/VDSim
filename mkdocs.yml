@@ -138,6 +138,7 @@ nav:
       - "RL environment (vdsim_rl)": RL_GUIDE.md
       - "Actuator model guide": ACTUATOR_GUIDE.md
       - "Closed-loop evaluation modes": guides/CLOSED_LOOP_EVAL.md
+      - "Live 3D monitor": guides/LIVE_MONITOR.md
       - Validation: VALIDATION.md
       - "Assumptions & limitations": ASSUMPTIONS.md
       - Positioning: POSITIONING.md
