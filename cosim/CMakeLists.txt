@@ -24,6 +24,14 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 30
         ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_SOURCE_DIR}/python")
+    # Work order 36: --monitor starts the browser monitor's page server with the
+    # simulator and takes it down on every exit path (end, SIGINT, SIGTERM, kill).
+    add_test(NAME realtime_monitor
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_realtime_monitor.py)
+    set_tests_properties(realtime_monitor PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 180
+        ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_SOURCE_DIR}/python")
     add_test(NAME l3_scenario_susp_paths
         COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_SOURCE_DIR}/tests/scripts/test_l3_scenario_paths.py)

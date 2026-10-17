@@ -23,6 +23,7 @@ add_executable(vdsim_unit_tests
     test_comms_templates.cpp
     test_comms_parsers.cpp
     test_warn_throttle.cpp
+    test_live_monitor_link.cpp
     test_contact_frame.cpp
     test_solver_substeps.cpp
 )

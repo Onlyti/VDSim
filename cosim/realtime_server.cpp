@@ -3,6 +3,7 @@
 //   vdsim_realtime --scene=<scene.yaml|world.yaml> [options]
 #include "comms_templates.hpp"
 #include "cosim_protocol.hpp"
+#include "live_monitor_link.hpp"
 #include "warn_throttle.hpp"
 #include "scene_loader.hpp"
 
@@ -47,6 +48,12 @@
 #include <thread>
 #include <unordered_map>
 #include <vector>
+
+#ifdef VDSIM_PYTHON
+  #define VDSIM_MONITOR_PYTHON VDSIM_PYTHON
+#else
+  #define VDSIM_MONITOR_PYTHON "python3"
+#endif
 
 namespace {
 std::atomic<bool> g_run {true};
@@ -506,6 +513,32 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
         by_id[wv.id] = &wv;
 
     std::signal(SIGINT, on_sigint);
+    // Browser 3D monitor (work order 36): off unless --monitor[=PORT] is given.
+    // The page server lives exactly as long as this process; any monitor
+    // trouble is one warning line and the simulation goes on without it.
+    vdsim::cosim::MonitorLink monitor;
+    const int mon_port = vdsim::cosim::monitor_port_from_args(argc, argv);
+    if (mon_port < 0) {
+        std::fprintf(stderr, "[vdsim_realtime] monitor: --monitor port must be 1..65535,"
+            " continuing without monitor\n");
+    } else if (mon_port > 0 && !fleet.empty()) {
+        vdsim::cosim::MonitorOptions mo;
+        mo.port = mon_port;
+        mo.python = opts(argc, argv, "--monitor-python=", VDSIM_MONITOR_PYTHON);
+        mo.module_dir = std::string(VDSIM_SOURCE_DIR) + "/python";
+        std::string why;
+        if (monitor.start(mo, fleet.front().vp, &why)) {
+#ifndef _WIN32
+            std::signal(SIGTERM, on_sigint);   // `kill` must also reach monitor.stop()
+#endif
+            std::fprintf(stderr, "[vdsim_realtime] monitor: page http://<this host>:%d/"
+                " (vehicle %u, page server pid %ld)\n",
+                mon_port, fleet.front().id, monitor.pid());
+        } else {
+            std::fprintf(stderr, "[vdsim_realtime] monitor: %s, continuing without monitor\n",
+                         why.c_str());
+        }
+    }
     const vdsim::CmdL4 failsafe{0.0, 0.3, 0.0, 1, false};
     std::atomic<uint64_t> cmd_count {0};
 
@@ -735,6 +768,12 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
                 broadcast_state(sock, subscribers, out, len);
             }
         }
+        if (monitor.active()) {
+            std::string why;
+            if (!monitor.push(fleet.front().sim->output(), t, &why) && g_run.load())
+                std::fprintf(stderr, "[vdsim_realtime] monitor: %s, continuing without monitor\n",
+                             why.c_str());
+        }
         next += period;
         std::this_thread::sleep_until(next);
     }
@@ -744,6 +783,12 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
     if (sock != INVALID_SOCKET) close_socket(sock);
     for (socket_t s : rx_socks) close_socket(s);
     if (tx_sock != INVALID_SOCKET) close_socket(tx_sock);
+    if (monitor.active()) {   // a page server that died already had its warning
+        const unsigned long long sent = monitor.n_sent();
+        monitor.stop();
+        std::fprintf(stderr, "[vdsim_realtime] monitor: page server stopped (%llu states sent)\n",
+                     sent);
+    }
     std::fprintf(stderr, "[vdsim_realtime] stopped. cmds=%llu\n",
                  static_cast<unsigned long long>(cmd_count.load()));
     return 0;
@@ -770,7 +815,8 @@ int main(int argc, char** argv) {
             "  (--scenario= accepted as deprecated alias)\n"
             "  [--cmd-port=7001] [--state-ip=127.0.0.1] [--state-port=7002]\n"
             "  [--rate=200] [--time-scale=1] [--cmd-timeout=0.1]\n"
-            "  [--lugre] [--no-lugre]  (override tire YAML lugre.enabled)\n",
+            "  [--lugre] [--no-lugre]  (override tire YAML lugre.enabled)\n"
+            "  [--monitor[=8790]] [--monitor-python=<python>]  (browser 3D monitor, POSIX)\n",
             argv[0]);
         rc = 2;
     }
