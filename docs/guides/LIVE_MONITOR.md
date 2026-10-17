@@ -36,8 +36,12 @@ service: there is no monitor while no simulation runs.
 
 | way of running VDSim | monitor turns on | monitor turns off |
 |---|---|---|
-| from your code (`VDSimPlant`, `ClosedLoopEval`, RL envs) | when your code calls `LiveMonitor.start()` (or enters `with LiveMonitor(...)`); the library never starts one by itself | at `LiveMonitor.stop()` / leaving the `with` block / process exit |
+| from your code with the `monitor=` option (`VDSimPlant`, `VDSimEnv`, `VDSimVecEnv`) | when the object is built with `monitor=` set; off by default (see "Turning the monitor on from code") | at `close()` of that object / process exit |
+| from your code with your own `LiveMonitor` (any loop, e.g. a `ClosedLoopEval` callback) | when your code calls `LiveMonitor.start()` (or enters `with LiveMonitor(...)`) | at `LiveMonitor.stop()` / leaving the `with` block / process exit |
 | as a separate program: `vdsim_realtime --monitor[=PORT]` | when the program starts (`--monitor` absent = off) | when the program ends: end of the scene, Ctrl-C (SIGINT), `kill` (SIGTERM); also when it is killed outright (Linux) |
+
+Without `monitor=` and without a `LiveMonitor` the library starts no page
+server, no thread and no socket.
 
 ### From your code
 
@@ -87,6 +91,68 @@ hand, e.g. to watch several short runs in a row from one tab.
 Publishers must run on the same host as the page server: the UDP ingest port
 is bound to the loopback interface. The page itself is served on every
 interface (`--host` to restrict a hand-started `serve`).
+
+## Turning the monitor on from code
+
+A code run can bring up the page by itself: the world (ground, roads) is on
+the page as soon as the object is built, a vehicle appears with its first
+state and the page keeps the last frame under "simulation finished" after
+`close()`.
+
+### One vehicle
+
+```python
+from vdsim_plant import VDSimPlant
+
+plant = VDSimPlant(control_dt=0.01, monitor=True)     # page: http://<host>:8790/
+plant.reset([0.0, 0.0, 0.0, 10.0, 0.0, 0.0])
+for k in range(500):
+    plant.step([0.0, 900.0])
+plant.close()
+```
+
+### Many envs (RL)
+
+```python
+from vdsim_rl import VDSimVecEnv
+
+env = VDSimVecEnv(64, monitor=True, monitor_max_vehicles=16, monitor_layout="grid")
+obs, _ = env.reset(seed=0)
+for _ in range(1000):
+    obs, rew, term, trunc, info = env.step(policy(obs))
+env.close()
+```
+
+`examples/rl_live_monitor_demo.py` runs a short search over a lane-keeping
+policy on 16 envs with the monitor on.
+
+| option | meaning |
+|---|---|
+| `monitor` | `None` / `False` = off (default); `True` = port 8790; an `int` = that port; a `LiveMonitor` = publish through it (not stopped by `close()`) |
+| `monitor_max_vehicles` (`VDSimVecEnv`, default 16) | the first K envs are drawn, each in its own colour; the HUD shows "K / N shown" |
+| `monitor_layout` (`VDSimVecEnv`) | `"overlay"` (default): all envs in the same world; `"grid"`: env i shifted by `i * monitor_grid_spacing` [m] (default 8) to the left, display only |
+| `monitor_pace` | `None` (default): run as fast as the simulation steps; a number, e.g. `1.0`, sleeps inside `step()` to hold that sim/wall ratio |
+| `monitor_wait_s` | wait up to this long [s] for a page before returning from the constructor, so a short run is not over before the tab opens; on time-out one warning line, then the run goes on (default 0 = do not wait) |
+
+`VDSimEnv` takes `monitor`, `monitor_pace` and `monitor_wait_s`.
+
+What the page shows:
+
+* Each env is one vehicle with a trail. An env that ends its episode and
+  restarts (auto-reset in `step()`) has only its own trail cleared.
+* The HUD's second line: simulated time, wall time since the first step, the
+  sim/wall rate over the last second (`x N`), vehicles shown and the run kind
+  (`code` for a plant, `rl` for an env).
+* A run faster than real time is shown fast; that is the intended view of an
+  unpaced run. Poses are read from the env pool only when a send is due (at
+  most 30 per wall second, newest state only); the frames in between are not
+  sent. In the work order 37 check (64 envs, 16 drawn, one page connected,
+  same seed and 1000 steps, median of 5 runs) the monitor cost about 2 % of
+  the steps per second.
+
+Monitor trouble never stops a code run: a port held by something else,
+missing page assets or a failing send is one `warning:` line on stderr and
+the run goes on without the monitor.
 
 ## One-click shortcut (Windows)
 

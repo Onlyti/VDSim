@@ -729,6 +729,16 @@ class VDSimPlant:
   ``ref_point`` adds the position and velocity of one body point to every
   observation (``X_ref``, ``Y_ref``, ``vx_ref``, ``vy_ref``); ``X`` / ``Y``
   stay at the CG.
+
+  ``monitor`` (off by default) shows the run in the browser live monitor:
+  ``True`` = port 8790, an ``int`` = that port, or a
+  ``vdsim_livemonitor.LiveMonitor``. The world is declared here, the vehicle
+  appears with the first :meth:`reset` / :meth:`step` and :meth:`close` marks
+  the run finished. States go out at most 30 times per wall second, so a run
+  faster than real time is shown fast. ``monitor_pace`` (e.g. 1.0) sleeps in
+  :meth:`step` to hold that sim/wall ratio; ``monitor_wait_s`` waits up to that
+  long for a page before returning. Both apply only with the monitor on. A
+  monitor that cannot start prints one warning and the plant runs without it.
   """
 
   def __init__(
@@ -745,6 +755,9 @@ class VDSimPlant:
       brake_torque_ref: float = 0.0,
       ref_point=None,
       longitudinal: str = "force",
+      monitor=None,
+      monitor_pace=None,
+      monitor_wait_s: float = 0.0,
   ):
       if longitudinal not in LONGITUDINAL_MODES:
           raise ValueError(
@@ -856,6 +869,17 @@ class VDSimPlant:
           },
       }
 
+      # Live monitor is opt-in; `_mon is None` is the OFF path (nothing
+      # imported, no socket, no thread).
+      self._mon = None
+      self._mon_t = 0.0       # simulated time since construction, not reset
+      if monitor is not None and monitor is not False:
+          import vdsim_livemonitor
+          self._mon = vdsim_livemonitor.open_monitor(
+              monitor, mode="code", n_vehicles=1, ids=[vdsim_livemonitor.LEGACY_ID],
+              vehicle=vdsim_livemonitor.vehicle_geometry(self._vp),
+              pace=monitor_pace, wait_s=monitor_wait_s)
+
   @property
   def actuator(self):
       """The ``vdsim.ActuatorParams`` currently in force (a copy)."""
@@ -884,7 +908,11 @@ class VDSimPlant:
       self._sess.reset(s0)
       self._actuator_spec = self._actuator_built   # reset restores the as-built actuator
       self._t = 0.0
-      return self._obs()
+      obs = self._obs()
+      if self._mon is not None:
+          self._mon.reset([0])
+          self._mon.publish([{**obs, "t": self._t}], self._mon_t)
+      return obs
 
   def step(self, u):
       """Advance one control period (ZOH); integrate internally at substep_dt.
@@ -910,7 +938,26 @@ class VDSimPlant:
           self._sess.set_input(cmd)
           self._sess.tick(self.substep_dt)
       self._t += self.control_dt
-      return self._obs()
+      obs = self._obs()
+      if self._mon is not None:
+          self._mon_t += self.control_dt
+          if self._mon.due():
+              self._mon.publish([{**obs, "t": self._t}], self._mon_t)
+          self._mon.hold_pace(self._mon_t)
+      return obs
+
+  @property
+  def monitor(self):
+      """The ``vdsim_livemonitor.MonitorAttachment`` of this plant, or None."""
+      return self._mon
+
+  def close(self):
+      """Mark a monitored run finished and release its monitor (the page
+      keeps the last frame). Without a monitor this does nothing; the plant
+      stays usable either way."""
+      if self._mon is not None:
+          self._mon.close()
+          self._mon = None
 
   def _command(self, delta: float, lon: float):
       """Session command of one ``(delta, u[1])`` pair, per ``longitudinal``.

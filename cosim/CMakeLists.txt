@@ -169,6 +169,16 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 120
         ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
+    # Live monitor in code runs (work order 37): monitor= off adds nothing,
+    # world / fleet protocol, VDSimPlant and VDSimVecEnv attach, failures that
+    # must not stop the run. Own free ports.
+    add_test(NAME livemonitor_world
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_livemonitor_world.py)
+    set_tests_properties(livemonitor_world PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 180
+        ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
     # Closed-loop mode C (wallclock): thread shutdown, argument checks and the
     # watchdog. Wall-clock pacing, so it never shares the host with other tests.
     add_test(NAME closedloop_wallclock
