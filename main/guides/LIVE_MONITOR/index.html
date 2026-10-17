@@ -1705,6 +1705,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#turning-the-monitor-on-from-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Turning the monitor on from code
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Turning the monitor on from code">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#one-vehicle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One vehicle
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#many-envs-rl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Many envs (RL)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#one-click-shortcut-windows" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2824,6 +2863,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#turning-the-monitor-on-from-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Turning the monitor on from code
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Turning the monitor on from code">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#one-vehicle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One vehicle
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#many-envs-rl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Many envs (RL)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#one-click-shortcut-windows" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2912,8 +2990,13 @@ service: there is no monitor while no simulation runs.</p>
 </thead>
 <tbody>
 <tr>
-<td>from your code (<code>VDSimPlant</code>, <code>ClosedLoopEval</code>, RL envs)</td>
-<td>when your code calls <code>LiveMonitor.start()</code> (or enters <code>with LiveMonitor(...)</code>); the library never starts one by itself</td>
+<td>from your code with the <code>monitor=</code> option (<code>VDSimPlant</code>, <code>VDSimEnv</code>, <code>VDSimVecEnv</code>)</td>
+<td>when the object is built with <code>monitor=</code> set; off by default (see "Turning the monitor on from code")</td>
+<td>at <code>close()</code> of that object / process exit</td>
+</tr>
+<tr>
+<td>from your code with your own <code>LiveMonitor</code> (any loop, e.g. a <code>ClosedLoopEval</code> callback)</td>
+<td>when your code calls <code>LiveMonitor.start()</code> (or enters <code>with LiveMonitor(...)</code>)</td>
 <td>at <code>LiveMonitor.stop()</code> / leaving the <code>with</code> block / process exit</td>
 </tr>
 <tr>
@@ -2923,6 +3006,8 @@ service: there is no monitor while no simulation runs.</p>
 </tr>
 </tbody>
 </table>
+<p>Without <code>monitor=</code> and without a <code>LiveMonitor</code> the library starts no page
+server, no thread and no socket.</p>
 <h3 id="from-your-code">From your code<a class="headerlink" href="#from-your-code" title="Permanent link">&para;</a></h3>
 <p><code>LiveMonitor.start()</code> asks <code>http://127.0.0.1:&lt;port&gt;/health</code> first. When a
 monitor server already answers on the port it publishes there; otherwise it
@@ -2965,8 +3050,81 @@ hand, e.g. to watch several short runs in a row from one tab.</p>
 <p>Publishers must run on the same host as the page server: the UDP ingest port
 is bound to the loopback interface. The page itself is served on every
 interface (<code>--host</code> to restrict a hand-started <code>serve</code>).</p>
+<h2 id="turning-the-monitor-on-from-code">Turning the monitor on from code<a class="headerlink" href="#turning-the-monitor-on-from-code" title="Permanent link">&para;</a></h2>
+<p>A code run can bring up the page by itself: the world (ground, roads) is on
+the page as soon as the object is built, a vehicle appears with its first
+state and the page keeps the last frame under "simulation finished" after
+<code>close()</code>.</p>
+<h3 id="one-vehicle">One vehicle<a class="headerlink" href="#one-vehicle" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">vdsim_plant</span><span class="w"> </span><span class="kn">import</span> <span class="n">VDSimPlant</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">plant</span> <span class="o">=</span> <span class="n">VDSimPlant</span><span class="p">(</span><span class="n">control_dt</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">monitor</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>     <span class="c1"># page: http://&lt;host&gt;:8790/</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">plant</span><span class="o">.</span><span class="n">reset</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">])</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">500</span><span class="p">):</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">plant</span><span class="o">.</span><span class="n">step</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">900.0</span><span class="p">])</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">plant</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</span></code></pre></div>
+<h3 id="many-envs-rl">Many envs (RL)<a class="headerlink" href="#many-envs-rl" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">vdsim_rl</span><span class="w"> </span><span class="kn">import</span> <span class="n">VDSimVecEnv</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">env</span> <span class="o">=</span> <span class="n">VDSimVecEnv</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="n">monitor</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">monitor_max_vehicles</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span> <span class="n">monitor_layout</span><span class="o">=</span><span class="s2">"grid"</span><span class="p">)</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">obs</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1000</span><span class="p">):</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">obs</span><span class="p">,</span> <span class="n">rew</span><span class="p">,</span> <span class="n">term</span><span class="p">,</span> <span class="n">trunc</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">policy</span><span class="p">(</span><span class="n">obs</span><span class="p">))</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">env</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</span></code></pre></div>
+<p><code>examples/rl_live_monitor_demo.py</code> runs a short search over a lane-keeping
+policy on 16 envs with the monitor on.</p>
+<table>
+<thead>
+<tr>
+<th>option</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>monitor</code></td>
+<td><code>None</code> / <code>False</code> = off (default); <code>True</code> = port 8790; an <code>int</code> = that port; a <code>LiveMonitor</code> = publish through it (not stopped by <code>close()</code>)</td>
+</tr>
+<tr>
+<td><code>monitor_max_vehicles</code> (<code>VDSimVecEnv</code>, default 16)</td>
+<td>the first K envs are drawn, each in its own colour; the HUD shows "K / N shown"</td>
+</tr>
+<tr>
+<td><code>monitor_layout</code> (<code>VDSimVecEnv</code>)</td>
+<td><code>"overlay"</code> (default): all envs in the same world; <code>"grid"</code>: env i shifted by <code>i * monitor_grid_spacing</code> [m] (default 8) to the left, display only</td>
+</tr>
+<tr>
+<td><code>monitor_pace</code></td>
+<td><code>None</code> (default): run as fast as the simulation steps; a number, e.g. <code>1.0</code>, sleeps inside <code>step()</code> to hold that sim/wall ratio</td>
+</tr>
+<tr>
+<td><code>monitor_wait_s</code></td>
+<td>wait up to this long [s] for a page before returning from the constructor, so a short run is not over before the tab opens; on time-out one warning line, then the run goes on (default 0 = do not wait)</td>
+</tr>
+</tbody>
+</table>
+<p><code>VDSimEnv</code> takes <code>monitor</code>, <code>monitor_pace</code> and <code>monitor_wait_s</code>.</p>
+<p>What the page shows:</p>
+<ul>
+<li>Each env is one vehicle with a trail. An env that ends its episode and
+  restarts (auto-reset in <code>step()</code>) has only its own trail cleared.</li>
+<li>The HUD's second line: simulated time, wall time since the first step, the
+  sim/wall rate over the last second (<code>x N</code>), vehicles shown and the run kind
+  (<code>code</code> for a plant, <code>rl</code> for an env).</li>
+<li>A run faster than real time is shown fast; that is the intended view of an
+  unpaced run. Poses are read from the env pool only when a send is due (at
+  most 30 per wall second, newest state only); the frames in between are not
+  sent. In the work order 37 check (64 envs, 16 drawn, one page connected,
+  same seed and 1000 steps, median of 5 runs) the monitor cost about 2 % of
+  the steps per second.</li>
+</ul>
+<p>Monitor trouble never stops a code run: a port held by something else,
+missing page assets or a failing send is one <code>warning:</code> line on stderr and
+the run goes on without the monitor.</p>
 <h2 id="one-click-shortcut-windows">One-click shortcut (Windows)<a class="headerlink" href="#one-click-shortcut-windows" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python -m vdsim_livemonitor shortcut --url http://&lt;sim-host&gt;:8790/ --out "VDSim monitor.url"
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python -m vdsim_livemonitor shortcut --url http://&lt;sim-host&gt;:8790/ --out "VDSim monitor.url"
 </span></code></pre></div>
 <p>writes an Internet Shortcut. Double-clicking it on any PC that can reach the
 simulation host opens the page in the default browser while a simulation with
@@ -2974,7 +3132,7 @@ the monitor on is running (see "Opening the page" above).</p>
 <p><code>LiveMonitor(open_browser=True)</code> / <code>serve --open</code> open the page on the
 simulation host itself when it has a display.</p>
 <h2 id="osm-layer">OSM layer<a class="headerlink" href="#osm-layer" title="Permanent link">&para;</a></h2>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">LiveMonitor</span><span class="p">(</span><span class="n">osm</span><span class="o">=</span><span class="s2">"map.osm"</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="p">(</span><span class="n">lat0</span><span class="p">,</span> <span class="n">lon0</span><span class="p">))</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">LiveMonitor</span><span class="p">(</span><span class="n">osm</span><span class="o">=</span><span class="s2">"map.osm"</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="p">(</span><span class="n">lat0</span><span class="p">,</span> <span class="n">lon0</span><span class="p">))</span>
 </span></code></pre></div>
 <ul>
 <li><code>origin</code> is the geodetic position of the simulation frame origin (x east,
