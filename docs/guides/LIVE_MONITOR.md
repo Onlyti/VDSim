@@ -29,36 +29,64 @@ safe inside a 100 Hz controller or a `ClosedLoopEval` callback.
 `examples/live_monitor_demo.py` drives a plant in real time along a weaving
 lane and publishes every control period.
 
-## Embedded or standing server
+## When the monitor is on
 
-| | embedded | standing |
+The page server lives with the simulator. Nothing is installed as a
+service: there is no monitor while no simulation runs.
+
+| way of running VDSim | monitor turns on | monitor turns off |
 |---|---|---|
-| started by | `LiveMonitor.start()` when nothing listens on the port | `python -m vdsim_livemonitor serve --port 8790` |
-| page reachable | only while the simulation process runs | always |
-| with no simulator | — | page shows "waiting for simulator" |
-| simulator restarts | page reconnects once the port is back | state appears within one push |
+| from your code (`VDSimPlant`, `ClosedLoopEval`, RL envs) | when your code calls `LiveMonitor.start()` (or enters `with LiveMonitor(...)`); the library never starts one by itself | at `LiveMonitor.stop()` / leaving the `with` block / process exit |
+| as a separate program: `vdsim_realtime --monitor[=PORT]` | when the program starts (`--monitor` absent = off) | when the program ends: end of the scene, Ctrl-C (SIGINT), `kill` (SIGTERM); also when it is killed outright (Linux) |
 
-`LiveMonitor` asks `http://127.0.0.1:<port>/health` first. When a standing
-server answers it publishes there; otherwise it binds the port itself
-(`embed=False` turns that off). A port held by anything else is an error.
+### From your code
 
-The page reconnects by itself: a lost WebSocket is retried every second, and a
-connection that has been silent for 3 s is dropped and retried. Keep a
-standing server running on the simulation host so that the page opens before
-any simulator does, e.g. as a user service:
+`LiveMonitor.start()` asks `http://127.0.0.1:<port>/health` first. When a
+monitor server already answers on the port it publishes there; otherwise it
+binds the port itself (`embed=False` turns that off). A port held by anything
+else is an error.
 
-```ini
-# ~/.config/systemd/user/vdsim-livemonitor.service
-[Service]
-ExecStart=/usr/bin/python3 -m vdsim_livemonitor serve --port 8790
-Restart=on-failure
-[Install]
-WantedBy=default.target
+### As a separate program
+
+```
+vdsim_realtime --scene=configs/scenes/two_vehicle_race.yaml --monitor
 ```
 
-Publishers must run on the same host as the server: the UDP ingest port is
-bound to the loopback interface. The page itself is served on every interface
-(`--host` to restrict it).
+starts `python -m vdsim_livemonitor serve --port 8790` as a child process and
+sends the first vehicle of the scene to it at up to 30 Hz over loopback UDP
+(the same datagram `LiveMonitor.push()` sends). The page is
+`http://<sim-host>:8790/`.
+
+* `--monitor=PORT` picks another port. `--monitor-python=<python>` picks the
+  interpreter; the default is the one the build was configured with, and the
+  source tree's `python/` directory is put on its `PYTHONPATH`.
+* Monitor trouble never stops the simulation: no interpreter, no
+  `vdsim_livemonitor`, a port already in use or a page server that exits is
+  one `[vdsim_realtime] monitor: ... continuing without monitor` line and the
+  scene runs on.
+* On exit the child gets SIGTERM, then SIGKILL after 3 s; the port is free
+  again when `vdsim_realtime` returns. On Linux the child also receives
+  SIGTERM if `vdsim_realtime` itself is killed with SIGKILL.
+* POSIX only. On Windows `--monitor` prints the one warning line and the
+  simulation runs without the monitor.
+
+`python -m vdsim_livemonitor serve --port 8790` still runs a page server by
+hand, e.g. to watch several short runs in a row from one tab.
+
+### Opening the page
+
+* A tab opened while no simulation runs gets the browser's own "connection
+  refused" page. That is expected: start the simulation and reload.
+* A tab left open from an earlier run keeps retrying (a lost WebSocket is
+  retried every second, a connection silent for 3 s is dropped and retried)
+  and shows "monitor server unreachable, retrying" meanwhile. It picks the
+  next run up by itself: in the work order 36 check (simulation host and
+  browser on the lab network) the state appeared 1.5 s after the simulator
+  was launched, the same as on a freshly opened tab.
+
+Publishers must run on the same host as the page server: the UDP ingest port
+is bound to the loopback interface. The page itself is served on every
+interface (`--host` to restrict a hand-started `serve`).
 
 ## One-click shortcut (Windows)
 
@@ -67,8 +95,8 @@ python -m vdsim_livemonitor shortcut --url http://<sim-host>:8790/ --out "VDSim 
 ```
 
 writes an Internet Shortcut. Double-clicking it on any PC that can reach the
-simulation host opens the page in the default browser. With a standing server
-it shows "waiting for simulator" until a simulation starts publishing.
+simulation host opens the page in the default browser while a simulation with
+the monitor on is running (see "Opening the page" above).
 
 `LiveMonitor(open_browser=True)` / `serve --open` open the page on the
 simulation host itself when it has a display.
@@ -89,8 +117,8 @@ LiveMonitor(osm="map.osm", origin=(lat0, lon0))
 * Nodes are mapped with the exact WGS84 local tangent plane at the origin
   (geodetic → ECEF → ENU), the transform a GeographicLib `LocalCartesian`
   uses.
-* An OSM error on a standing server does not stop it; the reason is shown on
-  the HUD.
+* An OSM error does not stop the page server; the reason is shown on the
+  HUD.
 
 ## What the monitor does not promise
 
