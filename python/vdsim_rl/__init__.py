@@ -478,7 +478,8 @@ class _Core:
     """VecSession + buffers + episode bookkeeping, shared by both front ends."""
 
     def __init__(self, num_envs: int, cfg: EnvConfig,
-                 reward_fn: Optional[Callable] = None, seed: Optional[int] = None):
+                 reward_fn: Optional[Callable] = None, seed: Optional[int] = None,
+                 monitor=None, monitor_opts: Optional[dict] = None):
         if num_envs < 1:
             raise ValueError("num_envs must be >= 1")
         self.cfg = cfg
@@ -543,6 +544,28 @@ class _Core:
         self._cmds = [cmd_type() for _ in range(num_envs)]
         self.seed(seed)
 
+        # Live monitor is opt-in; `monitor is None` is the OFF path (nothing
+        # imported, no socket, no thread, no extra read of the pool).
+        self.monitor = None
+        self._mon_t = 0.0       # simulated time per env since construction [s]
+        if monitor is not None and monitor is not False:
+            import vdsim_livemonitor
+            self.monitor = vdsim_livemonitor.open_monitor(
+                monitor, mode="rl", n_vehicles=num_envs,
+                vehicle=vdsim_livemonitor.vehicle_geometry(vp),
+                **(monitor_opts or {}))
+
+    def _monitor_publish(self) -> None:
+        """Send the drawn envs' poses; the pool is read only when a send is
+        due (at most the monitor rate per wall second)."""
+        att = self.monitor
+        if att.due():
+            from vdsim_livemonitor import state_from_output
+            outs = self.vs.outputs()
+            dt = self.cfg.dt * self.cfg.action_repeat
+            att.publish([state_from_output(outs[i], float(self.ep_len[i]) * dt)
+                         for i in range(att.n_shown)], self._mon_t)
+
     # --- R6: one independent stream per env, python side and core side ---
     def seed(self, seed: Optional[int]) -> None:
         base = 0 if seed is None else int(seed)
@@ -587,6 +610,9 @@ class _Core:
         self.ep_len[:] = 0
         self.ep_ret[:] = 0.0
         self.term[:] = 0
+        if self.monitor is not None:
+            self.monitor.reset(range(self.num_envs))
+            self._monitor_publish()
         return self.obs
 
     def _apply(self, actions: np.ndarray) -> None:
@@ -623,6 +649,10 @@ class _Core:
         self.prev_action[:] = a
         self.ep_len += 1
         self.ep_ret += reward
+        if self.monitor is not None:
+            self._mon_t += self.cfg.dt * self.cfg.action_repeat
+            self._monitor_publish()
+            self.monitor.hold_pace(self._mon_t)
         return self.obs, reward, terminated, truncated, codes
 
     def reset_done(self, done: np.ndarray) -> None:
@@ -636,8 +666,13 @@ class _Core:
         self.prev_action[idx] = 0.0
         self.ep_len[idx] = 0
         self.ep_ret[idx] = 0.0
+        if self.monitor is not None:
+            self.monitor.reset(idx)
 
     def close(self) -> None:
+        if self.monitor is not None:
+            self.monitor.close()
+            self.monitor = None
         self.vs = None
 
 
@@ -650,14 +685,33 @@ def _spaces(obs_dim: int):
 
 
 class VDSimVecEnv:
-    """gymnasium VectorEnv over one VecSession (auto-resets on done)."""
+    """gymnasium VectorEnv over one VecSession (auto-resets on done).
+
+    ``monitor`` (off by default) draws the envs in the browser live monitor:
+    ``True`` = port 8790, an ``int`` = that port, or a
+    ``vdsim_livemonitor.LiveMonitor``. The first ``monitor_max_vehicles`` envs
+    are drawn, each in its own colour; an env that resets has its trail
+    cleared. ``monitor_layout="grid"`` shifts env i by
+    ``i * monitor_grid_spacing`` [m] to the left on the page (display only).
+    Poses are read from the pool only when a send is due (at most 30 per wall
+    second). ``monitor_pace`` / ``monitor_wait_s`` as for
+    ``vdsim_plant.VDSimPlant``; ``close()`` marks the run finished.
+    """
 
     metadata = {"render_modes": []}
 
     def __init__(self, num_envs: int, cfg: Optional[EnvConfig] = None,
-                 reward_fn: Optional[Callable] = None, seed: Optional[int] = None):
+                 reward_fn: Optional[Callable] = None, seed: Optional[int] = None,
+                 monitor=None, monitor_max_vehicles: int = 16,
+                 monitor_layout: str = "overlay", monitor_grid_spacing: float = 8.0,
+                 monitor_pace: Optional[float] = None, monitor_wait_s: float = 0.0):
         import gymnasium as gym
-        self.core = _Core(num_envs, cfg or EnvConfig(), reward_fn, seed)
+        self.core = _Core(num_envs, cfg or EnvConfig(), reward_fn, seed,
+                          monitor=monitor,
+                          monitor_opts={"max_vehicles": monitor_max_vehicles,
+                                        "layout": monitor_layout,
+                                        "spacing": monitor_grid_spacing,
+                                        "pace": monitor_pace, "wait_s": monitor_wait_s})
         self.num_envs = num_envs
         self.single_observation_space, self.single_action_space = _spaces(
             self.core.vs.obs_dim)
@@ -696,6 +750,11 @@ class VDSimVecEnv:
             self.core.reset_done(done)
         return obs.copy(), rew.copy(), terminated.copy(), truncated.copy(), info
 
+    @property
+    def monitor(self):
+        """The ``vdsim_livemonitor.MonitorAttachment``, or None."""
+        return self.core.monitor
+
     def close(self):
         if not self.closed:
             self.core.close()
@@ -706,13 +765,19 @@ class VDSimVecEnv:
 
 
 class VDSimEnv:
-    """Single-env gymnasium API (one VecSession of size 1)."""
+    """Single-env gymnasium API (one VecSession of size 1).
+
+    ``monitor``, ``monitor_pace``, ``monitor_wait_s``: see :class:`VDSimVecEnv`.
+    """
 
     metadata = {"render_modes": []}
 
     def __init__(self, cfg: Optional[EnvConfig] = None,
-                 reward_fn: Optional[Callable] = None, seed: Optional[int] = None):
-        self.core = _Core(1, cfg or EnvConfig(), reward_fn, seed)
+                 reward_fn: Optional[Callable] = None, seed: Optional[int] = None,
+                 monitor=None, monitor_pace: Optional[float] = None,
+                 monitor_wait_s: float = 0.0):
+        self.core = _Core(1, cfg or EnvConfig(), reward_fn, seed, monitor=monitor,
+                          monitor_opts={"pace": monitor_pace, "wait_s": monitor_wait_s})
         self.observation_space, self.action_space = _spaces(self.core.vs.obs_dim)
         self.metadata = {**type(self).metadata, "vdsim": dict(self.core.provenance)}
 
@@ -731,6 +796,11 @@ class VDSimEnv:
         info = {"termination_reason": TERM_NAMES.get(int(codes[0]), "unknown")}
         return (obs[0].copy(), float(rew[0]), bool(terminated[0]),
                 bool(truncated[0]), info)
+
+    @property
+    def monitor(self):
+        """The ``vdsim_livemonitor.MonitorAttachment``, or None."""
+        return self.core.monitor
 
     def close(self):
         self.core.close()
