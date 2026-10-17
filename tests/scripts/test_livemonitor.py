@@ -10,8 +10,9 @@
   ``/health`` answer; a WebSocket client gets ``hello`` with ``live`` False
   while no simulator publishes ("waiting").
 * L4 a ``LiveMonitor`` attaches to the standing server, its states reach the
-  page client (non-finite numbers as ``null``) and ``live`` turns True;
-  ``push`` is limited to ``rate_hz``.
+  page client (non-finite numbers as ``null``) and ``live`` turns True, also
+  for a single push sent right after a status line; ``push`` is limited to
+  ``rate_hz``.
 * L5 after a server restart on the same port a new page connection gets the
   stream again (what the page's reconnect loop relies on).
 * L6 no server -> ``LiveMonitor`` embeds one and frees the port on stop; a
@@ -209,6 +210,10 @@ def l3_l4_l5_server():
 
         mon = lm.LiveMonitor(port=port, rate_hz=50.0).start()
         check("L4 attaches to standing server", mon.mode == "standing" and mon.server is None)
+        # push right after a periodic status line: the next periodic line is
+        # about a second later, so only the waiting -> live edge line can
+        # report live for this single push
+        ws.wait_for(lambda m: m["type"] == "status", 1.5)
         sent = mon.push({"t": 1.0, "X": 3.0, "Y": -2.0, "psi": 0.25, "vx": 12.0,
                          "delta_rw": float("nan"), "roll": 0.01})
         again = mon.push({"X": 4.0, "Y": -2.0, "psi": 0.25})

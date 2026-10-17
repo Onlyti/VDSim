@@ -450,6 +450,7 @@ class MonitorServer:
         self._clock = None
         self._states_seq = 0
         self._states_wall = 0.0
+        self._live_edge = False
         self._scene_spec = None
         self._scene = {"version": 0, "vehicle": dict(DEFAULT_VEHICLE),
                        "roads": [], "origin": None, "osm": None, "osm_error": None}
@@ -547,11 +548,26 @@ class MonitorServer:
         with self._lock:
             return self._status_locked()
 
-    def _status_locked(self) -> dict:
-        """:meth:`status` for callers already holding the lock."""
+    def _age_locked(self) -> float | None:
+        """Seconds since the newest state of either kind (``None`` = none
+        yet); caller holds the lock."""
         last = max(self._state_wall if self._state is not None else -math.inf,
                    self._states_wall if self._states else -math.inf)
-        age = time.monotonic() - last if math.isfinite(last) else None
+        return time.monotonic() - last if math.isfinite(last) else None
+
+    def _note_state_locked(self) -> None:
+        """Called before a state's arrival time is stamped: a state that ends
+        a waiting period flags the waiting -> live edge, so the next broadcast
+        tick sends a status line at once. Without it the page could hear only
+        the next periodic line, which may already be past ``LIVE_TIMEOUT_S``
+        after a single push. Caller holds the lock."""
+        age = self._age_locked()
+        if age is None or age > LIVE_TIMEOUT_S:
+            self._live_edge = True
+
+    def _status_locked(self) -> dict:
+        """:meth:`status` for callers already holding the lock."""
+        age = self._age_locked()
         w = self._world
         return {"service": SERVICE_ID, "v": PROTOCOL_VERSION,
                 "live": age is not None and age <= LIVE_TIMEOUT_S,
@@ -612,6 +628,7 @@ class MonitorServer:
             self._apply_scene(msg["scene"])
         if isinstance(msg.get("state"), dict):
             with self._lock:
+                self._note_state_locked()
                 self._state = msg["state"]
                 self._state_seq += 1
                 self._state_wall = time.monotonic()
@@ -627,6 +644,7 @@ class MonitorServer:
                         self._states[s["id"]] = s
                 if isinstance(msg.get("clock"), dict):
                     self._clock = msg["clock"]
+                self._note_state_locked()
                 self._states_seq += 1
                 self._states_wall = time.monotonic()
 
@@ -649,8 +667,9 @@ class MonitorServer:
 
     def _broadcast_loop(self):
         """Send the newest world / states at ``rate_hz`` and a status line
-        every second. The world goes first so a page spawns (or clears the
-        trail of) a vehicle before its state in the same tick."""
+        every second, plus one extra status line on the tick after a
+        waiting -> live edge. The world goes first so a page spawns (or clears
+        the trail of) a vehicle before its state in the same tick."""
         period = 1.0 / self.rate_hz
         sent_seq, sent_world, sent_states, last_status = 0, 0, 0, 0.0
         while not self._stop.wait(period):
@@ -667,9 +686,12 @@ class MonitorServer:
                     msgs.append(json.dumps({"type": "states", "clock": self._clock,
                                             "states": list(self._states.values())}))
                     sent_states = self._states_seq
+                live_edge, self._live_edge = self._live_edge, False
             if now - last_status >= 1.0:
                 msgs.append(json.dumps({"type": "status", **self.status()}))
                 last_status = now
+            elif live_edge:
+                msgs.append(json.dumps({"type": "status", **self.status()}))
             if msgs:
                 self._send_all(msgs)
 
