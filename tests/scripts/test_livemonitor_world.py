@@ -344,6 +344,17 @@ def w5_vec_env():
     pool = _CountingPool(env.core.vs)
     env.core.vs = pool
     a = np.zeros((20, 2), dtype=np.float32)
+    # The rate gate is driven directly so the check does not depend on how
+    # fast a step runs (a Debug build steps slower than the monitor rate).
+    due_steps = {0, 3, 7}
+    for k in range(12):
+        att.mon._last_push = -float("inf") if k in due_steps \
+            else time.monotonic() + 3600.0
+        env.step(a)
+    check("W5 pool read only when due", pool.reads == len(due_steps),
+          f"{pool.reads} reads / 12 steps, {len(due_steps)} due")
+    att.mon._last_push = -float("inf")
+    pool.reads = 0
     t0 = time.monotonic()
     n = 0
     while time.monotonic() - t0 < 1.0:
@@ -351,7 +362,8 @@ def w5_vec_env():
         n += 1
     el = time.monotonic() - t0
     bound = att.mon.rate_hz * el + 2
-    check("W5 pool read only when due", n > pool.reads and pool.reads <= bound,
+    check("W5 pool reads within the monitor rate",
+          pool.reads <= min(n, bound),
           f"{pool.reads} reads / {n} steps in {el:.2f} s")
     env.core.vs = pool._vs
     env.close()
