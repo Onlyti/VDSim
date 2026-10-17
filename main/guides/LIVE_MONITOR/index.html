@@ -1655,13 +1655,52 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#embedded-or-standing-server" class="md-nav__link">
+  <a href="#when-the-monitor-is-on" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Embedded or standing server
+        When the monitor is on
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="When the monitor is on">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#from-your-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From your code
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#as-a-separate-program" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        As a separate program
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#opening-the-page" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Opening the page
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2735,13 +2774,52 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#embedded-or-standing-server" class="md-nav__link">
+  <a href="#when-the-monitor-is-on" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Embedded or standing server
+        When the monitor is on
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="When the monitor is on">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#from-your-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From your code
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#as-a-separate-program" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        As a separate program
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#opening-the-page" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Opening the page
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2821,61 +2899,78 @@ faster than <code>rate_hz</code> (default 30) are dropped and return <code>False
 safe inside a 100 Hz controller or a <code>ClosedLoopEval</code> callback.</p>
 <p><code>examples/live_monitor_demo.py</code> drives a plant in real time along a weaving
 lane and publishes every control period.</p>
-<h2 id="embedded-or-standing-server">Embedded or standing server<a class="headerlink" href="#embedded-or-standing-server" title="Permanent link">&para;</a></h2>
+<h2 id="when-the-monitor-is-on">When the monitor is on<a class="headerlink" href="#when-the-monitor-is-on" title="Permanent link">&para;</a></h2>
+<p>The page server lives with the simulator. Nothing is installed as a
+service: there is no monitor while no simulation runs.</p>
 <table>
 <thead>
 <tr>
-<th></th>
-<th>embedded</th>
-<th>standing</th>
+<th>way of running VDSim</th>
+<th>monitor turns on</th>
+<th>monitor turns off</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>started by</td>
-<td><code>LiveMonitor.start()</code> when nothing listens on the port</td>
-<td><code>python -m vdsim_livemonitor serve --port 8790</code></td>
+<td>from your code (<code>VDSimPlant</code>, <code>ClosedLoopEval</code>, RL envs)</td>
+<td>when your code calls <code>LiveMonitor.start()</code> (or enters <code>with LiveMonitor(...)</code>); the library never starts one by itself</td>
+<td>at <code>LiveMonitor.stop()</code> / leaving the <code>with</code> block / process exit</td>
 </tr>
 <tr>
-<td>page reachable</td>
-<td>only while the simulation process runs</td>
-<td>always</td>
-</tr>
-<tr>
-<td>with no simulator</td>
-<td>—</td>
-<td>page shows "waiting for simulator"</td>
-</tr>
-<tr>
-<td>simulator restarts</td>
-<td>page reconnects once the port is back</td>
-<td>state appears within one push</td>
+<td>as a separate program: <code>vdsim_realtime --monitor[=PORT]</code></td>
+<td>when the program starts (<code>--monitor</code> absent = off)</td>
+<td>when the program ends: end of the scene, Ctrl-C (SIGINT), <code>kill</code> (SIGTERM); also when it is killed outright (Linux)</td>
 </tr>
 </tbody>
 </table>
-<p><code>LiveMonitor</code> asks <code>http://127.0.0.1:&lt;port&gt;/health</code> first. When a standing
-server answers it publishes there; otherwise it binds the port itself
-(<code>embed=False</code> turns that off). A port held by anything else is an error.</p>
-<p>The page reconnects by itself: a lost WebSocket is retried every second, and a
-connection that has been silent for 3 s is dropped and retried. Keep a
-standing server running on the simulation host so that the page opens before
-any simulator does, e.g. as a user service:</p>
-<div class="language-ini highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># ~/.config/systemd/user/vdsim-livemonitor.service</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">[Service]</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="na">ExecStart</span><span class="o">=</span><span class="s">/usr/bin/python3 -m vdsim_livemonitor serve --port 8790</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="na">Restart</span><span class="o">=</span><span class="s">on-failure</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="k">[Install]</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="na">WantedBy</span><span class="o">=</span><span class="s">default.target</span>
+<h3 id="from-your-code">From your code<a class="headerlink" href="#from-your-code" title="Permanent link">&para;</a></h3>
+<p><code>LiveMonitor.start()</code> asks <code>http://127.0.0.1:&lt;port&gt;/health</code> first. When a
+monitor server already answers on the port it publishes there; otherwise it
+binds the port itself (<code>embed=False</code> turns that off). A port held by anything
+else is an error.</p>
+<h3 id="as-a-separate-program">As a separate program<a class="headerlink" href="#as-a-separate-program" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>vdsim_realtime --scene=configs/scenes/two_vehicle_race.yaml --monitor
 </span></code></pre></div>
-<p>Publishers must run on the same host as the server: the UDP ingest port is
-bound to the loopback interface. The page itself is served on every interface
-(<code>--host</code> to restrict it).</p>
+<p>starts <code>python -m vdsim_livemonitor serve --port 8790</code> as a child process and
+sends the first vehicle of the scene to it at up to 30 Hz over loopback UDP
+(the same datagram <code>LiveMonitor.push()</code> sends). The page is
+<code>http://&lt;sim-host&gt;:8790/</code>.</p>
+<ul>
+<li><code>--monitor=PORT</code> picks another port. <code>--monitor-python=&lt;python&gt;</code> picks the
+  interpreter; the default is the one the build was configured with, and the
+  source tree's <code>python/</code> directory is put on its <code>PYTHONPATH</code>.</li>
+<li>Monitor trouble never stops the simulation: no interpreter, no
+  <code>vdsim_livemonitor</code>, a port already in use or a page server that exits is
+  one <code>[vdsim_realtime] monitor: ... continuing without monitor</code> line and the
+  scene runs on.</li>
+<li>On exit the child gets SIGTERM, then SIGKILL after 3 s; the port is free
+  again when <code>vdsim_realtime</code> returns. On Linux the child also receives
+  SIGTERM if <code>vdsim_realtime</code> itself is killed with SIGKILL.</li>
+<li>POSIX only. On Windows <code>--monitor</code> prints the one warning line and the
+  simulation runs without the monitor.</li>
+</ul>
+<p><code>python -m vdsim_livemonitor serve --port 8790</code> still runs a page server by
+hand, e.g. to watch several short runs in a row from one tab.</p>
+<h3 id="opening-the-page">Opening the page<a class="headerlink" href="#opening-the-page" title="Permanent link">&para;</a></h3>
+<ul>
+<li>A tab opened while no simulation runs gets the browser's own "connection
+  refused" page. That is expected: start the simulation and reload.</li>
+<li>A tab left open from an earlier run keeps retrying (a lost WebSocket is
+  retried every second, a connection silent for 3 s is dropped and retried)
+  and shows "monitor server unreachable, retrying" meanwhile. It picks the
+  next run up by itself: in the work order 36 check (simulation host and
+  browser on the lab network) the state appeared 1.5 s after the simulator
+  was launched, the same as on a freshly opened tab.</li>
+</ul>
+<p>Publishers must run on the same host as the page server: the UDP ingest port
+is bound to the loopback interface. The page itself is served on every
+interface (<code>--host</code> to restrict a hand-started <code>serve</code>).</p>
 <h2 id="one-click-shortcut-windows">One-click shortcut (Windows)<a class="headerlink" href="#one-click-shortcut-windows" title="Permanent link">&para;</a></h2>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python -m vdsim_livemonitor shortcut --url http://&lt;sim-host&gt;:8790/ --out "VDSim monitor.url"
 </span></code></pre></div>
 <p>writes an Internet Shortcut. Double-clicking it on any PC that can reach the
-simulation host opens the page in the default browser. With a standing server
-it shows "waiting for simulator" until a simulation starts publishing.</p>
+simulation host opens the page in the default browser while a simulation with
+the monitor on is running (see "Opening the page" above).</p>
 <p><code>LiveMonitor(open_browser=True)</code> / <code>serve --open</code> open the page on the
 simulation host itself when it has a display.</p>
 <h2 id="osm-layer">OSM layer<a class="headerlink" href="#osm-layer" title="Permanent link">&para;</a></h2>
@@ -2892,8 +2987,8 @@ simulation host itself when it has a display.</p>
 <li>Nodes are mapped with the exact WGS84 local tangent plane at the origin
   (geodetic → ECEF → ENU), the transform a GeographicLib <code>LocalCartesian</code>
   uses.</li>
-<li>An OSM error on a standing server does not stop it; the reason is shown on
-  the HUD.</li>
+<li>An OSM error does not stop the page server; the reason is shown on the
+  HUD.</li>
 </ul>
 <h2 id="what-the-monitor-does-not-promise">What the monitor does not promise<a class="headerlink" href="#what-the-monitor-does-not-promise" title="Permanent link">&para;</a></h2>
 <ul>
