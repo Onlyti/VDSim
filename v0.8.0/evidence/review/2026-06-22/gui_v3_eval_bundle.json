@@ -1,0 +1,62 @@
+{
+  "date": "2026-06-22",
+  "steps": [
+    {
+      "cmd": "npm run check",
+      "exit_code": 0,
+      "stdout_tail": "\n/home/ailab-12/git/VDSim/gui/v3/tsconfig.app.json:18:5\nWarn: Option 'baseUrl' is deprecated and will stop functioning in TypeScript 7.0. Specify compilerOption '\"ignoreDeprecations\": \"6.0\"' to silence this error.\n  Visit https://aka.ms/ts6 for migration information. \n\n\n====================================\nsvelte-check found 0 errors and 2 warnings in 2 files",
+      "stderr_tail": "",
+      "step": "npm_check"
+    },
+    {
+      "cmd": "npm run build",
+      "exit_code": 0,
+      "stdout_tail": "transforming...\u2713 148 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                   0.46 kB \u2502 gzip:   0.30 kB\ndist/assets/index-C5rlO4KD.css   21.98 kB \u2502 gzip:   3.98 kB\ndist/assets/index-DZFB-5Nr.js   600.49 kB \u2502 gzip: 162.53 kB\n\n\u2713 built in 1.18s",
+      "stderr_tail": "                       ^\n281:                   cx={vpX(vp, p[1])}\n282:                   cy={vpY(vp, p[2])}\n[plugin builtin:vite-reporter] \n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.",
+      "step": "npm_build"
+    },
+    {
+      "cmd": "/usr/bin/python3 tests/scripts/test_gui_v3_api_smoke.py",
+      "exit_code": 0,
+      "stdout_tail": "ok gui_v3_api_smoke",
+      "stderr_tail": "",
+      "step": "gui_v3_api_smoke"
+    },
+    {
+      "cmd": "/usr/bin/python3 tests/scripts/test_gui_v3_e2e.py",
+      "exit_code": 0,
+      "stdout_tail": "\n  \u2713  1 e2e/smoke.spec.ts:17:3 \u203a GUI v3 smoke \u203a scenario map and fleet (166ms)\n  \u2713  2 e2e/smoke.spec.ts:23:3 \u203a GUI v3 smoke \u203a build assembly (954ms)\n  \u2713  3 e2e/smoke.spec.ts:30:3 \u203a GUI v3 smoke \u203a analyze compare panel (118ms)\n  \u2713  4 e2e/smoke.spec.ts:36:3 \u203a GUI v3 smoke \u203a run viewport shell (269ms)\n\n  4 passed (1.9s)\nok gui_v3_e2e",
+      "stderr_tail": "(node:1471308) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)",
+      "step": "gui_v3_e2e"
+    },
+    {
+      "cmd": "/usr/bin/python3 tools/gui_v3_parity_audit.py --out-dir /home/ailab-12/git/VDSim/docs/evidence/review/2026-06-22",
+      "exit_code": 1,
+      "stdout_tail": "/home/ailab-12/git/VDSim/docs/evidence/review/2026-06-22/GUI_V3_PARITY_AUDIT.md\nP0 gaps: 3  PASS/PARTIAL/GAP = 38/2/8",
+      "stderr_tail": "",
+      "step": "parity_audit"
+    },
+    {
+      "cmd": "ctest -R assembly --output-on-failure",
+      "exit_code": 0,
+      "stdout_tail": "Test project /home/ailab-12/git/VDSim/build\n    Start 395: assembly_api\n1/1 Test #395: assembly_api .....................   Passed    1.23 sec\n\n100% tests passed, 0 tests failed out of 1\n\nTotal Test time (real) =   1.24 sec",
+      "stderr_tail": "",
+      "step": "ctest_assembly"
+    },
+    {
+      "cmd": "ctest -R catalog --output-on-failure",
+      "exit_code": 0,
+      "stdout_tail": "    Start 389: catalog_resolver\n1/2 Test #389: catalog_resolver .................   Passed    0.19 sec\n    Start 391: catalog_api\n2/2 Test #391: catalog_api ......................   Passed    0.31 sec\n\n100% tests passed, 0 tests failed out of 2\n\nTotal Test time (real) =   0.50 sec",
+      "stderr_tail": "",
+      "step": "ctest_catalog"
+    },
+    {
+      "cmd": "ctest -R multi_vehicle_compare --output-on-failure",
+      "exit_code": 0,
+      "stdout_tail": "Test project /home/ailab-12/git/VDSim/build\n    Start 398: multi_vehicle_compare\n1/1 Test #398: multi_vehicle_compare ............   Passed    0.96 sec\n\n100% tests passed, 0 tests failed out of 1\n\nTotal Test time (real) =   0.97 sec",
+      "stderr_tail": "",
+      "step": "ctest_compare"
+    }
+  ],
+  "p0_gaps_blocking": true
+}

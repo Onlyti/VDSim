@@ -1,0 +1,13 @@
+# Default tire (Pacejka MF96 simple form).
+B_long: 10
+C_long: 1.65
+D_long: 1
+E_long: 0.97
+B_lat:  8
+C_lat:  1.3
+D_lat:  1
+E_lat:  -1
+mu_nominal: 1
+Fz_nominal: 4000
+cornering_stiffness: 80000
+rolling_resistance: 0.015
