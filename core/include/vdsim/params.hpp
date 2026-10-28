@@ -2,12 +2,30 @@
 
 #include <array>
 #include <cmath>
+#include <optional>
 #include <string>
+#include <vector>
 
 #include "vdsim/powertrain.hpp"
 #include "vdsim/types.hpp"
 
 namespace vdsim {
+
+/**
+ * @brief One aerodynamic element (wing, undertray, body) of a vehicle.
+ *
+ * Coordinates are ISO 8855 body axes with the origin on the ground below the
+ * front axle: x forward (rear elements negative), y left, z up [m]. ClA > 0
+ * is downforce. The element force acts at (x, y, z) in the static design pose.
+ */
+struct AeroElement {
+    std::string name;     ///< [a-z0-9_]+, unique within a vehicle
+    double ClA {0.0};     ///< lift coefficient x area [m^2], + = downforce
+    double CdA {0.0};     ///< drag coefficient x area [m^2], >= 0
+    double x   {0.0};     ///< centre of pressure, from the front axle, + forward [m]
+    double y   {0.0};     ///< lateral offset, + left [m] (roll moment on L3-L5 only)
+    double z   {0.0};     ///< height above ground [m], >= 0
+};
 
 struct VehicleParams {
     // ---- Mass ----
@@ -95,6 +113,14 @@ struct VehicleParams {
     double frontal_area          {2.2};                                // [m^2]
     double aero_lift_front       {0.0};                                // Cl_front (positive = downforce)
     double aero_lift_rear        {0.0};                                // Cl_rear  (positive = downforce)
+    double air_density           {1.225};                              // rho [kg/m^3], all aero paths
+    // Drag point of application above ground [m] for the four-key path.
+    // Unset = legacy per level (L1-L4: ground, L5: CG). 0.0 is "at the ground",
+    // which differs from unset on L5; the distinction survives YAML/Python.
+    std::optional<double> aero_drag_height;
+    // Per-element aero (front wing, rear wing, ...). Non-empty replaces the
+    // four-key path (aero_drag_coeff/frontal_area/aero_lift_*). See aero.hpp.
+    std::vector<AeroElement> aero_elements;
 
     static VehicleParams from_yaml(const std::string& path);
     void to_yaml(const std::string& path) const;

@@ -37,6 +37,7 @@
 // matches the Task 22 quasi-static formulas.  Damper gives transient ringing.
 
 #include "vdsim/snapshot.hpp"
+#include "vdsim/aero.hpp"
 #include "vdsim/control.hpp"
 #include "vdsim/coordinate.hpp"
 #include "vdsim/default_subsystems.hpp"
@@ -219,13 +220,17 @@ public:
         inner_->set_toe_per_wheel(toe);
 
         {
-            constexpr double kAirDensity = 1.225;
             const double k_tire = std::max(1.0, ts_.for_wheel(WHEEL_FL).tire_vertical_stiffness);
             const double Lwb  = vp_.wheelbase;
             const double vx   = state_.velocity.x();
             const double yaw  = yaw_from_quat(state_.orientation);
             const double yaw_rate = state_.angular_velocity.z();
-            const double q_aero = 0.5 * kAirDensity * vp_.frontal_area * vx * std::abs(vx);
+            // Four-key path keeps its original arithmetic; elements / drag
+            // height use compute_aero_loads with the per-axle-track roll split.
+            // Aero only adds to the tire loads (no sprung-body heave/pitch).
+            const bool aero_el = aero_uses_element_path(vp_);
+            const AeroLoads aero = aero_el ? compute_aero_loads(vp_, AeroState{vx}) : AeroLoads{};
+            const double q_aero = 0.5 * vp_.air_density * vp_.frontal_area * vx * std::abs(vx);
             const double aero_f = 0.5 * vp_.aero_lift_front * q_aero;
             const double aero_r = 0.5 * vp_.aero_lift_rear  * q_aero;
             const double st_f = vp_.mass * kGravity * vp_.cg_to_rear  / (2.0 * Lwb);
@@ -254,7 +259,8 @@ public:
                              + vx * yaw_rate * normal_y_body);
                 const double st = ((i < 2) ? st_f : st_r)
                                 * (normal_accel / kGravity)
-                                + ((i < 2) ? aero_f : aero_r);
+                                + (aero_el ? aero.fz_wheel_roll[i]
+                                           : ((i < 2) ? aero_f : aero_r));
                 fz_dyn[i] = std::max(0.0, st + k_tire * (contacts[i].road_dz - z_u_[i]));
             }
             inner_->set_external_fz(fz_dyn);

@@ -608,6 +608,13 @@ Runs are **scenes** (`configs/scenes/*.yaml`) with a `fleet[]` of blueprint + pa
 overrides. See [CATALOG_AND_PHYSICS](docs/CATALOG_AND_PHYSICS.md) for layout,
 GUI API, drivetrain inertia, and opt-in LuGre tire.
 
+**Aerodynamics (0.8.0).** A vehicle file can list named aero elements
+(`aero.elements`: `ClA`, `CdA`, `x`, `z`, optional `y`), set `air_density`, or
+keep the four legacy keys with an optional `aero_drag_height`. What each level
+applies, the axle split and the known L5 limit are in
+[Ch.26 — Aero elements](docs/theory/26_aero_elements.md); check aero balance
+numbers on L1–L3.
+
 ## Control — real-time UDP runtime
 
 `vdsim_realtime` is VDSim's real-time application: it runs the same core against

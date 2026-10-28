@@ -35,6 +35,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import warnings
 import zipfile
 from pathlib import Path
@@ -180,6 +181,53 @@ EVAL_TIMING_MODES = ("virtual_async", "wallclock")
 #: producer lists them (``extra_channels``) or, for ``u_ax``, when the
 #: producer's command is an acceleration target.
 OPTIONAL_CHANNELS = EVAL_CHANNELS + ("steer_applied", "u_ax")
+
+#: Aero channels (work order 42). Opt-in and additive like the channels
+#: above. The totals have fixed names; each element of ``aero.elements`` adds
+#: ``aero_<name>_fz`` (downforce) and ``aero_<name>_fx`` (drag), so their
+#: names come from the vehicle file and match :data:`_AERO_ELEMENT_RE`.
+AERO_TOTAL_SPECS = {
+    "aero_fz_total":      ("N", ()),   # total downforce
+    "aero_balance_front": ("-", ()),   # front-axle share incl. drag moment, 0..1
+    "aero_ld":            ("-", ()),   # sum fz / sum fx, NaN at zero speed
+}
+_AERO_ELEMENT_RE = re.compile(r"^aero_[a-z0-9_]+_f[zx]$")
+
+
+def channel_spec(name):
+    """``(unit, trailing shape)`` of a channel, or ``None`` if unknown.
+
+    The fixed table :data:`CHANNEL_SPECS` plus the aero channels, whose
+    per-element names are generated from the vehicle's element names.
+    """
+    spec = CHANNEL_SPECS.get(name)
+    if spec is not None:
+        return spec
+    spec = AERO_TOTAL_SPECS.get(name)
+    if spec is not None:
+        return spec
+    if _AERO_ELEMENT_RE.match(name):
+        return ("N", ())
+    return None
+
+
+def is_optional_channel(name):
+    """True for opt-in channels (never in a level's default set)."""
+    return name in OPTIONAL_CHANNELS or (
+        name.startswith("aero_") and channel_spec(name) is not None)
+
+
+def aero_channel_names(element_names=()):
+    """Aero channel names of a vehicle: per element ``fz``/``fx`` then totals.
+
+    :param element_names: names of ``VehicleParams.aero_elements`` (empty for
+        the four-key path, which records the totals only).
+    :returns: tuple of channel names.
+    """
+    out = []
+    for n in element_names:
+        out += ["aero_%s_fz" % n, "aero_%s_fx" % n]
+    return tuple(out) + tuple(AERO_TOTAL_SPECS)
 
 #: Channels of the 0.1/0.2 contract — the set a trace records when no explicit
 #: subset is requested at those versions.
@@ -489,10 +537,10 @@ class TraceWriter:
                 % (list(CONTACT_SCOPES), contact_scope))
         allowed = channels_for_level(model_level)
         names = tuple(channels) if channels is not None else allowed
-        unknown = [n for n in names if n not in CHANNEL_SPECS]
+        unknown = [n for n in names if channel_spec(n) is None]
         if unknown:
             raise TraceError("unknown channel(s): %s" % (", ".join(unknown),))
-        too_high = [n for n in names if n not in allowed and n not in OPTIONAL_CHANNELS]
+        too_high = [n for n in names if n not in allowed and not is_optional_channel(n)]
         if too_high:
             raise TraceError(
                 "model_level %s does not produce %s — omit the channel instead of "
@@ -582,7 +630,7 @@ class TraceWriter:
         arrays = {}
         chan_meta = []
         for name in self._names:
-            unit, trailing = CHANNEL_SPECS[name]
+            unit, trailing = channel_spec(name)
             arr = np.asarray(self._buf[name], dtype=_DTYPE).reshape((n,) + trailing)
             if self.channel_validity.get(name, VALIDITY_MODELED) != VALIDITY_MODELED \
                     and bool(np.any(arr != 0.0)):

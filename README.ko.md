@@ -560,6 +560,12 @@ for row in vc.read_index("campaigns/mu_sweep"):
 (`configs/scenes/`). 레이아웃·GUI API·drivetrain 관성·LuGre 타이어(opt-in)는
 [CATALOG_AND_PHYSICS](docs/CATALOG_AND_PHYSICS.md) 참고.
 
+**공력 (0.8.0).** 차량 파일에 이름 붙은 공력 요소(`aero.elements`: `ClA`, `CdA`,
+`x`, `z`, 선택 `y`)를 나열하거나 `air_density`를 지정할 수 있고, 기존 4개 키는
+선택 키 `aero_drag_height`와 함께 그대로 쓸 수 있음. 레벨별 반영 방식·축 분배·L5
+알려진 한계는 [Ch.26 — Aero elements](docs/theory/26_aero_elements.md) 참고.
+공력 밸런스 수치 확인은 L1~L3 권장.
+
 ## 제어 — real-time UDP runtime
 
 `vdsim_realtime` 가 VDSim 의 real-time application 입니다: 같은 core 를 wall clock

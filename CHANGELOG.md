@@ -6,6 +6,49 @@ All notable changes to VDSim are documented here. Format follows
 
 ## [Unreleased]
 
+Planned as 0.8.0 (work order 42, per-element aero). Not released yet.
+
+### Changed — BREAKING: the four lift keys now act on L5
+- `aero_lift_front` / `aero_lift_rear` were ignored by the L5 (free 3D) model.
+  They now press the body down at the front axle (x = 0) and the rear axle
+  (x = -wheelbase) at ground height; drag stays at the CG unless
+  `aero_drag_height` is set. Only L5 results change, and only for cars whose
+  lift keys are non-zero: the catalog aero parts `aero.sedan`, `aero.sports`,
+  `aero.fsk_formula` and `aero.race_car` (and the blueprints that use them).
+
+### Added
+- `aero.elements` in a vehicle file: named elements with `ClA`, `CdA`, `x`,
+  `z` (and optional `y`), ISO 8855 axes, origin on the ground below the front
+  axle. Each element acts at its own point: L1-L4 split it to the axles with
+  the drag pitch moment, L3/L4 also split `y` by the track of each axle, L5
+  applies it as a body wrench. Downforce scales with vx^2, drag with
+  sign(vx) vx^2. `aero.elements` together with any of the four aero keys or
+  `aero_drag_height` is a `ValueError`.
+- `air_density` [kg/m^3] (default 1.225) for every aero path, and
+  `aero_drag_height` [m] for the four-key path (unset = previous behaviour).
+- `vdsim.compute_aero_loads(vp, vdsim.AeroState(vx))`, `vdsim.AeroElement`.
+- Opt-in trace channels `aero_<name>_fz`, `aero_<name>_fx`, `aero_fz_total`,
+  `aero_balance_front`, `aero_ld` (`enable_trace(extra_channels=("aero",))`);
+  schema stays 0.5.
+- `configs/vehicles/fs_aero_example.yaml` (illustrative, not a real car).
+- Theory chapter `docs/theory/26_aero_elements.md`: inputs, axle split, what each
+  level applies, limits.
+
+### Compatibility
+- Without `aero.elements`, `aero_drag_height` and `air_density`, L1-L4 results
+  are bit-identical to 0.7.0 for every car, and L5 results are bit-identical
+  for cars whose lift keys are 0; the RL observation/reward digests and the
+  closed-loop evaluation dumps are unchanged.
+
+### Known limitations
+- L5 applies tyre longitudinal forces at the wheel centre and does not return drive/brake torque reactions to the body, so longitudinal load transfer uses (h_cg − R) instead of h_cg; with aero drag the front axle share is biased by ΣF_d·R/L. Check aero balance numbers on L1-L3 (see docs/theory/26_aero_elements.md).
+  The original A3 L5 gate is kept as the ctest `AeroElements.A3_SteadyAxleLoadL5` with label `known_failure`; reproduce it with `ctest -L known_failure` (the validation preset and CI exclude this label).
+  When the L5 core is fixed, the label is dropped and the test joins the canonical suite.
+- The L3 output `Fz` is the internal quasi-static 7-DOF wheel load.
+- L3/L4 downforce is added to the tyre loads only; it does not press the
+  suspension (no body heave or pitch from aero).
+- On L1/L2 an element `y` is ignored (one warning per process).
+
 ## [0.7.0] - 2026-10-28
 
 First release published to PyPI (`pip install vdsim`).

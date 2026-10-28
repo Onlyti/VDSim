@@ -83,15 +83,16 @@ version and the new numbers have to land in the same commit.
 
 <!-- VALIDATION-CURRENCY BEGIN -->
 ```text
-tests:    543/543
+tests:    563/563
 config:   cmake --preset validation && cmake --build --preset validation && ctest --preset validation
-presets:  CMakePresets.json@c4d279dcd60c661b61f480db95f5fe86fa82a7b8
+presets:  CMakePresets.json@c98fe5e64c842faaeb06598af46476f3507c18a6
 toolchain: cmake 3.31.10
-commit:   8fd2589
-date:     2026-10-28
+commit:   c69bcc57a6a176819b86d2c36fd9c0a869ca9570
+date:     2026-10-29
 excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: closedloop_wallclock_timing (label timing, excluded by the validation test preset: wall-clock S6/S7 verdicts depend on host load -- local low-load evidence in the work order 31 PR description)
+excluded: AeroElements.A3_SteadyAxleLoadL5 (known_failure -- L5 core force application point, PR #30, PROP-1848)
 ```
 <!-- VALIDATION-CURRENCY END -->
 

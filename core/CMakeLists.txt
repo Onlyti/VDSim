@@ -12,6 +12,7 @@ add_library(vdsim_core
     src/free_3d_dynamics.cpp
     src/contact_providers.cpp
     src/params.cpp
+    src/aero.cpp
     src/scenario.cpp
     src/control_converter.cpp
     src/actuator_model.cpp

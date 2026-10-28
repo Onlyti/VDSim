@@ -66,6 +66,8 @@ EDITOR_SCHEMAS: Dict[str, Dict[str, Any]] = {
             ("frontal_area", "Frontal area [m²]", "num"),
             ("aero_lift_front", "Lift front", "num"),
             ("aero_lift_rear", "Lift rear", "num"),
+            ("air_density", "Air density [kg/m³]", "num"),
+            ("aero_drag_height", "Drag height [m]", "num"),
         ],
     },
     "ride": {

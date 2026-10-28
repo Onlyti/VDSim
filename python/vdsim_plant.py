@@ -602,7 +602,7 @@ def _drive_brake_refs(vp: vdsim.VehicleParams, drive_torque_ref, brake_torque_re
     return drive, brake
 
 
-def trace_sample(o, t, u_steer, u_fx, channels, validity):
+def trace_sample(o, t, u_steer, u_fx, channels, validity, vp=None):
   """Map one session output onto a trace sample (3.2 / 3.2.1).
 
   Shared by the plant path (:class:`VDSimPlant`) and the scenario path
@@ -618,6 +618,9 @@ def trace_sample(o, t, u_steer, u_fx, channels, validity):
       [m/s^2] of a ``longitudinal="accel"`` run. Ignored when neither is in
       ``channels`` (pedal-commanded producers have no such value).
   :param channels: channel names this run records.
+  :param vp: ``vdsim.VehicleParams`` of the run; needed only for the opt-in
+      aero channels (``vdsim_trace.aero_channel_names``), which are evaluated
+      with ``vdsim.compute_aero_loads`` at the sample's body-x speed.
   :param validity: ``channel_validity`` of the run (see
       :func:`channel_validity_from_dynamics`); a not-modeled channel is written
       as exactly ``0.0``.
@@ -681,7 +684,31 @@ def trace_sample(o, t, u_steer, u_fx, channels, validity):
                                float(st.angular_velocity[1]))
       else:
           sample["rp_rate"] = (0.0, 0.0)
+  aero_names = [n for n in channels if n.startswith("aero_")]
+  if aero_names:
+      sample.update(_aero_sample(vp, float(st.vx()), aero_names))
   return sample
+
+
+def _aero_sample(vp, vx, names):
+  """Aero channel values at body-x speed ``vx`` -- the same core function the
+  dynamics use, so the trace is the applied load, never a re-derivation.
+
+  :param vp: ``vdsim.VehicleParams`` of the run.
+  :param vx: body-x speed [m/s].
+  :param names: aero channel names to fill.
+  :returns: ``{name: value}``.
+  """
+  if vp is None:
+      raise ValueError("aero trace channels need the run's VehicleParams (vp=)")
+  loads = vdsim.compute_aero_loads(vp, vdsim.AeroState(vx))
+  vals = {"aero_fz_total": float(loads.fz_total),
+          "aero_balance_front": float(loads.balance_front),
+          "aero_ld": float(loads.ld)}
+  for e, el in zip(vp.aero_elements, loads.elements):
+      vals["aero_%s_fz" % e.name] = float(el.fz)
+      vals["aero_%s_fx" % e.name] = float(el.fx)
+  return {n: vals[n] for n in names}
 
 
 _VALIDITY_CHANNEL_ENUM = {"rp_rate": "RollPitchRate", "wheel_travel": "WheelTravel"}
@@ -1121,7 +1148,8 @@ class VDSimPlant:
           under verification.
       :param extra_channels: channels beyond the level's own set. Names in
           :data:`SAMPLED_OPTIONAL_CHANNELS` (``"steer_applied"``) are filled
-          by every sample, :meth:`step` included. Any other name is for a
+          by every sample, :meth:`step` included. ``"aero"`` adds the aero
+          channels of :func:`vdsim_trace.aero_channel_names` the same way. Any other name is for a
           caller that drives the session itself and appends its samples to
           ``_trace`` (``vdsim_closedloop`` timing channels); :meth:`step`
           cannot fill those, so leave them out when stepping the plant.
@@ -1172,7 +1200,13 @@ class VDSimPlant:
           raise ValueError("u_ax is recorded by longitudinal='accel' plants "
                            "only; do not list it in extra_channels")
       own = tuple(n for n in extra_channels if n in SAMPLED_OPTIONAL_CHANNELS)
-      extra_channels = tuple(n for n in extra_channels if n not in own)
+      if "aero" in extra_channels:
+          # One switch for the aero channels: per element fz/fx (names from
+          # the vehicle file) plus the totals; the four-key path has totals only.
+          own += vdsim_trace.aero_channel_names(
+              [e.name for e in self._vp.aero_elements])
+      extra_channels = tuple(n for n in extra_channels
+                             if n not in own and n != "aero")
       if self.longitudinal == "accel":
           # The command is an acceleration target [m/s^2]: it goes to u_ax and
           # u_fx, a force [N] to every reader, is left out, not mislabelled.
@@ -1230,7 +1264,7 @@ class VDSimPlant:
   def _record(self, delta: float, fx: float):
       """Offer one sample of the current state to the writer."""
       self._trace.append(trace_sample(self._sess.output(), self._t, delta, fx,
-                                      self._channels, self._validity))
+                                      self._channels, self._validity, self._vp))
 
   @property
   def vehicle(self):

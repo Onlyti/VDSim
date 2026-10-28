@@ -5,6 +5,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/functional.h>
 
+#include "vdsim/aero.hpp"
 #include "vdsim/contact.hpp"
 #include "vdsim/control.hpp"
 #include "vdsim/control_converter.hpp"
@@ -293,6 +294,59 @@ PYBIND11_MODULE(vdsim, m) {
         .value("RollPitchRate", vdsim::IVehicleDynamics::ModeledChannel::RollPitchRate)
         .value("WheelTravel",   vdsim::IVehicleDynamics::ModeledChannel::WheelTravel);
 
+    // -------- Aero --------
+    py::class_<vdsim::AeroElement>(m, "AeroElement",
+        "One aero element. ISO 8855 body axes, origin on the ground below the "
+        "front axle [m]; ClA > 0 is downforce [m^2], CdA >= 0 [m^2].")
+        .def(py::init<>())
+        .def(py::init([](std::string name, double ClA, double CdA,
+                         double x, double z, double y) {
+                 vdsim::AeroElement e;
+                 e.name = std::move(name); e.ClA = ClA; e.CdA = CdA;
+                 e.x = x; e.y = y; e.z = z;
+                 return e;
+             }),
+             py::arg("name"), py::arg("ClA"), py::arg("CdA"),
+             py::arg("x"), py::arg("z"), py::arg("y") = 0.0)
+        .def_readwrite("name", &vdsim::AeroElement::name)
+        .def_readwrite("ClA",  &vdsim::AeroElement::ClA)
+        .def_readwrite("CdA",  &vdsim::AeroElement::CdA)
+        .def_readwrite("x",    &vdsim::AeroElement::x)
+        .def_readwrite("y",    &vdsim::AeroElement::y)
+        .def_readwrite("z",    &vdsim::AeroElement::z)
+        .def("__repr__", [](const vdsim::AeroElement& e) {
+            return "AeroElement(name='" + e.name + "', ClA=" + std::to_string(e.ClA) +
+                   ", CdA=" + std::to_string(e.CdA) + ", x=" + std::to_string(e.x) +
+                   ", y=" + std::to_string(e.y) + ", z=" + std::to_string(e.z) + ")";
+        });
+    py::class_<vdsim::AeroState>(m, "AeroState")
+        .def(py::init<>())
+        .def(py::init([](double vx) { vdsim::AeroState s; s.vx = vx; return s; }),
+             py::arg("vx"))
+        .def_readwrite("vx", &vdsim::AeroState::vx);
+    py::class_<vdsim::AeroElementLoad>(m, "AeroElementLoad")
+        .def_readonly("fz", &vdsim::AeroElementLoad::fz)
+        .def_readonly("fx", &vdsim::AeroElementLoad::fx);
+    py::class_<vdsim::AeroLoads>(m, "AeroLoads")
+        .def_readonly("elements",          &vdsim::AeroLoads::elements)
+        .def_readonly("fz_total",          &vdsim::AeroLoads::fz_total)
+        .def_readonly("fx_total",          &vdsim::AeroLoads::fx_total)
+        .def_readonly("drag_pitch_moment", &vdsim::AeroLoads::drag_pitch_moment)
+        .def_readonly("fz_front",          &vdsim::AeroLoads::fz_front)
+        .def_readonly("fz_rear",           &vdsim::AeroLoads::fz_rear)
+        .def_readonly("fz_wheel_split",    &vdsim::AeroLoads::fz_wheel_split)
+        .def_readonly("fz_wheel_roll",     &vdsim::AeroLoads::fz_wheel_roll)
+        .def_readonly("force_body",        &vdsim::AeroLoads::force_body)
+        .def_readonly("torque_body",       &vdsim::AeroLoads::torque_body)
+        .def_readonly("balance_front",     &vdsim::AeroLoads::balance_front)
+        .def_readonly("ld",                &vdsim::AeroLoads::ld);
+    m.def("compute_aero_loads", &vdsim::compute_aero_loads,
+          py::arg("vp"), py::arg("state"),
+          "Aero loads of `vp` at `state` (AeroState). Downforce ~ vx^2, drag ~ sign(vx) vx^2.");
+    m.def("validate_aero_params", &vdsim::validate_aero_params, py::arg("vp"),
+          "Raise ValueError if the aero inputs of `vp` are inconsistent.");
+    m.def("aero_uses_element_path", &vdsim::aero_uses_element_path, py::arg("vp"));
+
     // -------- VehicleParams --------
     py::class_<vdsim::VehicleParams>(m, "VehicleParams")
         .def(py::init<>())
@@ -352,6 +406,12 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("frontal_area",         &vdsim::VehicleParams::frontal_area)
         .def_readwrite("aero_lift_front",      &vdsim::VehicleParams::aero_lift_front)
         .def_readwrite("aero_lift_rear",       &vdsim::VehicleParams::aero_lift_rear)
+        .def_readwrite("air_density",          &vdsim::VehicleParams::air_density)
+        .def_readwrite("aero_drag_height",     &vdsim::VehicleParams::aero_drag_height,
+                       "Drag height [m] for the four-key path; None = legacy per level")
+        .def_readwrite("aero_elements",        &vdsim::VehicleParams::aero_elements,
+                       "List[AeroElement]; assign a whole list (element edits on the "
+                       "returned copy do not write back)")
         .def_readwrite("anti_dive_front",      &vdsim::VehicleParams::anti_dive_front)
         .def_readwrite("anti_squat_rear",      &vdsim::VehicleParams::anti_squat_rear)
         .def_static("from_yaml", &vdsim::VehicleParams::from_yaml)

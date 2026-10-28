@@ -416,7 +416,8 @@ class ClosedLoopEval:
         if not writer.due:
             writer.skip()
             return
-        sample = trace_sample(out, t, u[0], u[1], plant._channels, plant._validity)
+        sample = trace_sample(out, t, u[0], u[1], plant._channels, plant._validity,
+                              plant._vp)
         sample.update(zip(vdsim_trace.EVAL_CHANNELS, timing))
         writer.append(sample)
 
