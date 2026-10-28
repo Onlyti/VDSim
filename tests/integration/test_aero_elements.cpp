@@ -121,9 +121,14 @@ TEST(AeroElements, A3_SteadyAxleLoadL3) { check_a3("L3"); }
 // centre without the drive/brake torque reaction on the body, so the drive
 // force that balances the drag adds a load transfer of F_d * R / L that the
 // no-aero reference does not have. The cause is the L5 core, not the aero
-// wrench; A3-L5a and A3-L5b below replace it (gate unchanged). Kept runnable
-// with --gtest_also_run_disabled_tests to reproduce the recorded failure.
-TEST(AeroElements, DISABLED_A3_SteadyAxleLoadL5) { check_a3("L5"); }
+// wrench; A3-L5a and A3-L5b below replace it (gate unchanged). It is built
+// only into vdsim_known_failure_tests and registered as one ctest with label
+// known_failure (`ctest -L known_failure`), which the validation preset
+// excludes. It runs and fails until the L5 core is fixed; then the label is
+// dropped and the test joins the canonical suite.
+#ifdef VDSIM_KNOWN_FAILURE_TESTS
+TEST(AeroElements, A3_SteadyAxleLoadL5) { check_a3("L5"); }
+#endif
 
 /// A3 L4: same loads as L3 (no hardpoints attached -> the L3 equations).
 TEST(AeroElements, A3_L4MatchesL3) {

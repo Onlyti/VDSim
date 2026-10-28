@@ -42,6 +42,8 @@ Planned as 0.8.0 (work order 42, per-element aero). Not released yet.
 
 ### Known limitations
 - L5 applies tyre longitudinal forces at the wheel centre and does not return drive/brake torque reactions to the body, so longitudinal load transfer uses (h_cg − R) instead of h_cg; with aero drag the front axle share is biased by ΣF_d·R/L. Check aero balance numbers on L1-L3 (see docs/theory/26_aero_elements.md).
+  The original A3 L5 gate is kept as the ctest `AeroElements.A3_SteadyAxleLoadL5` with label `known_failure`; reproduce it with `ctest -L known_failure` (the validation preset and CI exclude this label).
+  When the L5 core is fixed, the label is dropped and the test joins the canonical suite.
 - The L3 output `Fz` is the internal quasi-static 7-DOF wheel load.
 - L3/L4 downforce is added to the tyre loads only; it does not press the
   suspension (no body heave or pitch from aero).

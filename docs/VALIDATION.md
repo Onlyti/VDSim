@@ -85,15 +85,16 @@ version and the new numbers have to land in the same commit.
 ```text
 tests:    PENDING
 config:   cmake --preset validation && cmake --build --preset validation && ctest --preset validation
-presets:  CMakePresets.json@c4d279dcd60c661b61f480db95f5fe86fa82a7b8
+presets:  CMakePresets.json@c98fe5e64c842faaeb06598af46476f3507c18a6
 toolchain: cmake 3.31.10
 commit:   PENDING
-pending:  registration surface changed (new aero unit and integration tests); this
+pending:  registration surface changed (new aero unit and integration tests, known_failure label); this
           tree has no canonical 3-run measurement yet
 date:     2026-10-28
 excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: closedloop_wallclock_timing (label timing, excluded by the validation test preset: wall-clock S6/S7 verdicts depend on host load -- local low-load evidence in the work order 31 PR description)
+excluded: AeroElements.A3_SteadyAxleLoadL5 (known_failure -- L5 core force application point, PR #30, PROP-1848)
 ```
 <!-- VALIDATION-CURRENCY END -->
 
