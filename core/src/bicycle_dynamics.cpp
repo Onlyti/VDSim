@@ -16,6 +16,7 @@
 // SAE Y-right convention.
 
 #include "vdsim/snapshot.hpp"
+#include "vdsim/aero.hpp"
 #include "vdsim/coordinate.hpp"
 #include "vdsim/drivetrain_inertia.hpp"
 #include "vdsim/interfaces.hpp"
@@ -66,7 +67,6 @@ inline CmdL4 lower_to_l4(const ControlInput& u) {
     }, u);
 }
 
-constexpr double kAirDensity   = 1.225;   // [kg/m^3]
 constexpr double kGravity      = 9.80665; // [m/s^2]
 constexpr double kBrakeWidth   = 1.0;     // [rad/s] tanh transition width
 // kStickBlend / kStickC / kKinTau: shared low-speed constants in vdsim/low_speed.hpp
@@ -258,10 +258,14 @@ private:
         const double gx_b =  std::cos(yaw) * gtx + std::sin(yaw) * gty;
         const double gy_b = -std::sin(yaw) * gtx + std::cos(yaw) * gty;
 
-        // Aerodynamic downforce per axle (positive Cl -> Fz increase).
-        const double q_aero = 0.5 * kAirDensity * vp_.frontal_area * vx * std::abs(vx);
-        const double Fz_aero_f = vp_.aero_lift_front * q_aero;
-        const double Fz_aero_r = vp_.aero_lift_rear  * q_aero;
+        // Aerodynamic downforce per axle (positive Cl -> Fz increase).  The
+        // four-key path keeps its original arithmetic; elements / drag height
+        // go through compute_aero_loads (axle reactions incl. drag moment).
+        const bool aero_el = aero_uses_element_path(vp_);
+        const AeroLoads aero = aero_el ? compute_aero_loads(vp_, AeroState{vx}) : AeroLoads{};
+        const double q_aero = 0.5 * vp_.air_density * vp_.frontal_area * vx * std::abs(vx);
+        const double Fz_aero_f = aero_el ? aero.fz_front : vp_.aero_lift_front * q_aero;
+        const double Fz_aero_r = aero_el ? aero.fz_rear  : vp_.aero_lift_rear  * q_aero;
 
         // Quasi-static longitudinal weight transfer (1-step lag on ax to
         // avoid self-reference).  ax > 0 (accel) -> rear loaded.
@@ -387,7 +391,8 @@ private:
         const double Fy_body_r = Fy_r_axle;
 
         // Aero drag (opposes body-X velocity).
-        const double F_aero = 0.5 * kAirDensity * vp_.aero_drag_coeff *
+        const double F_aero = aero_el ? aero.fx_total
+                            : 0.5 * vp_.air_density * vp_.aero_drag_coeff *
                               vp_.frontal_area * vx * std::abs(vx);
         // Rolling resistance: f_rr * (Fz_f + Fz_r) * tanh(vx / 0.5)
         double F_rr = 0.0;

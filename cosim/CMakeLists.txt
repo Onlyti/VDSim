@@ -151,6 +151,15 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 300
         ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
+    # Per-element aero, Python side (work order 42): binding, refusals,
+    # drag-height None/0.0, opt-in trace channels.
+    add_test(NAME aero_elements
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_aero_elements.py)
+    set_tests_properties(aero_elements PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 300
+        ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
     # Closed-loop evaluation extensions (work order 34): early stop in the
     # virtual-clock modes, realized steer observation and trace channel.
     add_test(NAME closedloop_ext

@@ -7,6 +7,7 @@ add_executable(vdsim_unit_tests
     test_belt_tire.cpp
     test_powertrain.cpp
     test_params_yaml.cpp
+    test_aero.cpp
     test_scenario_yaml.cpp
     test_control_converter.cpp
     test_control_l6_l7.cpp

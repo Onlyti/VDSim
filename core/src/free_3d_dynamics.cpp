@@ -1,4 +1,5 @@
 #include "vdsim/snapshot.hpp"
+#include "vdsim/aero.hpp"
 #include "vdsim/coordinate.hpp"
 #include "vdsim/default_subsystems.hpp"
 #include "vdsim/drivetrain_inertia.hpp"
@@ -49,7 +50,6 @@ inline CmdL4 lower_to_l4(const ControlInput& u) {
     }, u);
 }
 
-constexpr double kAirDensity = 1.225;
 constexpr double kGravity    = 9.80665;
 constexpr double kStickBlend   = 3.0;
 constexpr double kStickC       = 6.0e4;
@@ -684,9 +684,25 @@ private:
         }
 
         const double vx_fwd = v_body.x();
-        const double F_aero = 0.5 * kAirDensity * vp_.aero_drag_coeff *
-                              vp_.frontal_area * vx_fwd * std::abs(vx_fwd);
-        F_total_world -= R * Vec3(F_aero, 0.0, 0.0);
+        if (!aero_uses_element_path(vp_)) {
+            // Four-key path: drag at the CG exactly as before; the lift keys now
+            // also act on L5 (front axle x=0 / rear axle x=-L at the ground).
+            const double F_aero = 0.5 * vp_.air_density * vp_.aero_drag_coeff *
+                                  vp_.frontal_area * vx_fwd * std::abs(vx_fwd);
+            F_total_world -= R * Vec3(F_aero, 0.0, 0.0);
+            if (vp_.aero_lift_front != 0.0 || vp_.aero_lift_rear != 0.0) {
+                // The drag piece sits at the CG (zero arm), so torque_body is
+                // the lift moment alone; take only the vertical force here.
+                const AeroLoads al = compute_aero_loads(vp_, AeroState{vx_fwd});
+                F_total_world += R * Vec3(0.0, 0.0, al.force_body.z());
+                tau_body += al.torque_body;
+            }
+        } else {
+            // Elements / drag height: each force at its own point (wrench about the CG).
+            const AeroLoads al = compute_aero_loads(vp_, AeroState{vx_fwd});
+            F_total_world += R * al.force_body;
+            tau_body += al.torque_body;
+        }
 
         double F_rr = 0.0;
         for (int wi = 0; wi < NUM_WHEELS; ++wi)

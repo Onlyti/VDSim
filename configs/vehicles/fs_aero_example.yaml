@@ -1,0 +1,69 @@
+# Formula Student style car with per-element aero (work order 42 example).
+#
+# NOT a real car. Mass and wheelbase are the team wiki's aero check vector
+# (280 kg, 1.55 m); the four aero elements below are that vector's values.
+# Every other number started from configs/vehicles/generic_sedan.yaml and was
+# scaled to a small open-wheel car by hand -- illustrative only, no source, do
+# not cite any of it as a specification.
+#
+# Aero coordinates: ISO 8855 body axes, origin on the ground below the front
+# axle, x forward (rear elements negative), y left, z up [m]. ClA > 0 is
+# downforce [m^2]; CdA [m^2]. With aero.elements present the four-key aero
+# (aero_drag_coeff, frontal_area, aero_lift_front/rear) must not be given.
+mass: 280.0
+mass_sprung: 240.0
+inertia_diag: [60.0, 140.0, 160.0]
+wheelbase: 1.55
+cg_to_front: 0.82
+cg_to_rear: 0.73
+track_front: 1.22
+track_rear: 1.18
+cg_height: 0.28
+wheel_radius_nominal: 0.23
+
+spring_stiffness: [35000.0, 35000.0, 35000.0, 35000.0]
+damper_coefficient: [1500.0, 1500.0, 1500.0, 1500.0]
+unsprung_mass: [10.0, 10.0, 10.0, 10.0]
+wheel_inertia: [0.0, 0.0, 0.0, 0.0]   # 0 = core derives a disc from radius/mass
+arb_stiffness_front: 0.0
+arb_stiffness_rear: 0.0
+roll_center_height_front: 0.0
+roll_center_height_rear: 0.0
+anti_dive_front: 0.0
+anti_squat_rear: 0.0
+camber_per_roll: 0.0
+
+drive_type: RWD
+drive_split_front: 0.5
+differential: Open
+lsd_preload: 0.1
+lsd_ramp: 0.2
+plant_path: false
+
+max_motor_torque: 120.0
+final_drive_ratio: 4.0
+engine_rotational_inertia: 0.05
+max_brake_torque: 800.0
+brake_bias_front: 0.6
+brake_ebd_enabled: false
+brake_deadtime_s: 0.0
+drive_deadtime_s: 0.0
+steer_deadtime_s: 0.0
+
+steering_ratio: 5.0
+max_steer_angle_wheel: 0.4
+ackerman_percent: 0.0
+
+air_density: 1.165          # [kg/m^3]
+aero:
+  elements:
+    - {name: front_wing, ClA: 0.70, CdA: 0.12, x:  0.550, z: 0.100}
+    - {name: rear_wing,  ClA: 1.50, CdA: 0.55, x: -1.520, z: 1.000}
+    - {name: undertray,  ClA: 0.80, CdA: 0.05, x: -0.750, z: 0.060}
+    - {name: body,       ClA: 0.00, CdA: 0.75, x: -0.775, z: 0.300}   # x: mid wheelbase
+
+tire_yaml: parts/tire/generic_pacejka.yaml
+
+# Drawn-primitive sizes for the 3D replay renderer; placeholder, no source.
+body_lwh_m: [2.9, 1.4, 1.2]
+wheel_width_m: 0.2

@@ -1,6 +1,12 @@
 // SimSession implementation. See sim_session.hpp.
 #include "vdsim/sim_session.hpp"
 
+#include "vdsim/aero.hpp"
+
+#include <spdlog/spdlog.h>
+
+#include <atomic>
+
 #include <cmath>
 #include <stdexcept>
 
@@ -59,7 +65,23 @@ SimSession::SimSession(std::unique_ptr<IVehicleDynamics> dyn,
     base_sensor_delay_s_ = cfg.sensor_delay_s;
     base_sensors_ = cfg.sensors;
     nominal_dt_ = cfg.nominal_dt;
+    validate_aero_params(vp);
     dyn_->initialize(vp, ts, sp);
+    {
+        // L1/L2 have no roll split for aero: an element y offset is ignored.
+        const auto lvl = dyn_->level();
+        if (lvl == IVehicleDynamics::Level::L1_Bicycle ||
+            lvl == IVehicleDynamics::Level::L2_SevenDOF) {
+            static std::atomic<bool> warned{false};   // once per process
+            for (const auto& e : vp.aero_elements) {
+                if (e.y != 0.0 && !warned.exchange(true)) {
+                    spdlog::warn("[vdsim aero] element '{}' y={} is ignored on L1/L2 "
+                                 "(lateral offset is modelled on L3-L5 only)", e.name, e.y);
+                    break;
+                }
+            }
+        }
+    }
     free_3d_attach_contact_provider(*dyn_, ground_.get());
     network_ = make_default_veh_network(cfg.veh_network);
     SimConfig cfg_act = cfg;

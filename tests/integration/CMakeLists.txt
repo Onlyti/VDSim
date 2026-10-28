@@ -1,5 +1,6 @@
 add_executable(vdsim_integration_tests
     test_bicycle_steady_state.cpp
+    test_aero_elements.cpp
     test_step_steer_sweep.cpp
     test_accel_brake.cpp
     test_weight_transfer.cpp

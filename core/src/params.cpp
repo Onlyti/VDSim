@@ -7,6 +7,7 @@
 //   - Unknown extra keys are silently ignored.
 
 #include "vdsim/params.hpp"
+#include "vdsim/aero.hpp"
 #include "vdsim/sensors.hpp"
 
 #include <yaml-cpp/yaml.h>
@@ -155,6 +156,50 @@ void parse_powertrain(const YAML::Node& root, PowertrainParams& pt) {
     }
 }
 
+/**
+ * @brief Parse `aero: {elements: [...]}` into vp.aero_elements.
+ *
+ * Each element needs name, ClA, CdA, x, z (y optional, default 0). With
+ * elements present the four legacy keys and aero_drag_height must be absent
+ * from the same file; a silent override is never allowed.
+ * @throws std::invalid_argument on a malformed list or a double specification
+ */
+void parse_aero_elements(const YAML::Node& root, VehicleParams& p) {
+    const auto aero = root["aero"];
+    if (!aero || aero.IsNull()) return;
+    if (!aero.IsMap())
+        throw std::invalid_argument("YAML field 'aero' must be a map with 'elements'");
+    const auto els = aero["elements"];
+    if (!els || els.IsNull()) return;
+    if (!els.IsSequence())
+        throw std::invalid_argument("YAML field 'aero.elements' must be a sequence");
+    for (std::size_t k = 0; k < els.size(); ++k) {
+        const auto e = els[k];
+        if (!e.IsMap())
+            throw std::invalid_argument("aero.elements[" + std::to_string(k) + "] must be a map");
+        AeroElement el;
+        for (const char* key : {"name", "ClA", "CdA", "x", "z"}) {
+            if (!e[key] || e[key].IsNull())
+                throw std::invalid_argument("aero.elements[" + std::to_string(k) +
+                                            "] is missing '" + key + "'");
+        }
+        el.name = e["name"].as<std::string>();
+        el.ClA  = e["ClA"].as<double>();
+        el.CdA  = e["CdA"].as<double>();
+        el.x    = e["x"].as<double>();
+        el.z    = e["z"].as<double>();
+        if (e["y"] && !e["y"].IsNull()) el.y = e["y"].as<double>();
+        p.aero_elements.push_back(std::move(el));
+    }
+    if (p.aero_elements.empty()) return;
+    for (const char* key : {"aero_lift_front", "aero_lift_rear", "aero_drag_coeff",
+                            "frontal_area", "aero_drag_height"}) {
+        if (root[key] && !root[key].IsNull())
+            throw std::invalid_argument(std::string("aero.elements cannot be combined with '") +
+                                        key + "' in the same vehicle file");
+    }
+}
+
 }  // namespace
 
 // =============================================================================
@@ -221,6 +266,11 @@ VehicleParams VehicleParams::from_yaml(const std::string& path) {
     pull(root, "frontal_area",    p.frontal_area);
     pull(root, "aero_lift_front", p.aero_lift_front);
     pull(root, "aero_lift_rear",  p.aero_lift_rear);
+    pull(root, "air_density",     p.air_density);
+    if (const auto n = root["aero_drag_height"]; n && !n.IsNull())
+        p.aero_drag_height = n.as<double>();
+    parse_aero_elements(root, p);
+    validate_aero_params(p);
 
     // Self-consistency: cg_to_front + cg_to_rear should equal wheelbase.
     const double sum = p.cg_to_front + p.cg_to_rear;
@@ -286,10 +336,30 @@ void VehicleParams::to_yaml(const std::string& path) const {
     out << YAML::Key << "max_steer_angle_wheel" << YAML::Value << max_steer_angle_wheel;
     out << YAML::Key << "ackerman_percent"      << YAML::Value << ackerman_percent;
 
-    out << YAML::Key << "aero_drag_coeff" << YAML::Value << aero_drag_coeff;
-    out << YAML::Key << "frontal_area"    << YAML::Value << frontal_area;
-    out << YAML::Key << "aero_lift_front" << YAML::Value << aero_lift_front;
-    out << YAML::Key << "aero_lift_rear"  << YAML::Value << aero_lift_rear;
+    if (aero_elements.empty()) {
+        out << YAML::Key << "aero_drag_coeff" << YAML::Value << aero_drag_coeff;
+        out << YAML::Key << "frontal_area"    << YAML::Value << frontal_area;
+        out << YAML::Key << "aero_lift_front" << YAML::Value << aero_lift_front;
+        out << YAML::Key << "aero_lift_rear"  << YAML::Value << aero_lift_rear;
+        if (aero_drag_height)
+            out << YAML::Key << "aero_drag_height" << YAML::Value << *aero_drag_height;
+    } else {
+        out << YAML::Key << "aero" << YAML::Value << YAML::BeginMap;
+        out << YAML::Key << "elements" << YAML::Value << YAML::BeginSeq;
+        for (const auto& e : aero_elements) {
+            out << YAML::BeginMap;
+            out << YAML::Key << "name" << YAML::Value << e.name;
+            out << YAML::Key << "ClA"  << YAML::Value << e.ClA;
+            out << YAML::Key << "CdA"  << YAML::Value << e.CdA;
+            out << YAML::Key << "x"    << YAML::Value << e.x;
+            out << YAML::Key << "y"    << YAML::Value << e.y;
+            out << YAML::Key << "z"    << YAML::Value << e.z;
+            out << YAML::EndMap;
+        }
+        out << YAML::EndSeq;
+        out << YAML::EndMap;
+    }
+    out << YAML::Key << "air_density" << YAML::Value << air_density;
 
     out << YAML::EndMap;
 
