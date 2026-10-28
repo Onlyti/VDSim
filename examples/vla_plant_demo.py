@@ -23,7 +23,7 @@ KP_V = 800.0
 
 def main():
     plant = VDSimPlant(
-        config="ioniq5_awd.yaml",
+        config="generic_sedan.yaml",
         friction_map=[(120.0, 200.0, 0.5)],
         base_mu=0.9,
         control_dt=DT,

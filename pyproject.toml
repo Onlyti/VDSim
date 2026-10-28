@@ -41,6 +41,16 @@ cmake.args = [
     "-DVDSIM_BUILD_COSIM=OFF",
 ]
 wheel.install-dir = "."
+# The sdist is the source tree minus run outputs and the folder kept for
+# withheld validation data; tools/verify_wheel_packaging.py checks the result.
+sdist.exclude = [
+    "**/results/",
+    "**/runs/",
+    "**/logs/",
+    "build/",
+    "dist/",
+    "tests/validation/carmaker/",
+]
 
 [tool.scikit-build.metadata.version]
 provider = "scikit_build_core.metadata.setuptools_scm"

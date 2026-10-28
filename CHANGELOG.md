@@ -6,6 +6,32 @@ All notable changes to VDSim are documented here. Format follows
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-28
+
+First release published to PyPI (`pip install vdsim`).
+
+### Changed — BREAKING: generic default vehicle, vehicle-specific presets removed
+- **`VDSimPlant()` and `vdsim_plant.resolve_vehicle_config()` default to
+  `generic_sedan`** (with `generic_pacejka`, the solver-default MF96 tyre). The
+  previous default vehicle preset, its MF2002 tyre YAML + `.tir` and its MF96 tyre
+  YAML are removed from the repository, the wheel and the sdist. Code that relied
+  on the old default or named that preset must name a vehicle explicitly; a car
+  whose parameters are not public is injected as below.
+- A vehicle YAML without `tire_yaml` now gets `parts/tire/generic_pacejka.yaml`.
+- No `.tir` ships in the wheel. MF2002 (`backend: mf2002`) needs the user's own
+  `.tir`; the MF2002 tests run on the public synthetic
+  `external/chrono_parity/sample_pac02.tir`.
+
+### Added
+- **`$VDSIM_PRIVATE_CONFIGS` for the plant**: `VDSimPlant(config=...)` searches
+  `<root>/vehicles/` before the bundled presets, and a vehicle's `tire_yaml` is
+  resolved in the vehicle's own root first — the rule `vdsim_rl` already used, now
+  one function (`vdsim_plant.find_preset` / `preset_roots`) for both.
+- Wheels for CPython 3.8 and 3.9 (3.8–3.12, Linux x86_64 and Windows AMD64).
+- `tools/verify_wheel_packaging.py` checks wheels and sdists: it fails on a member
+  naming a withheld source, on any `.tir`, on run-output directories, and on a wheel
+  without the generic presets. The sdist excludes run-output folders.
+
 ### Added — `.vdtrace` run container + headless trace renderer
 - **`.vdtrace` container** (`python/vdsim_trace.py`): one zip per simulation run —
   `manifest.json` + `channels/<name>.f64` (C-order little-endian float64, stored

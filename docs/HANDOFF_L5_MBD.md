@@ -41,7 +41,7 @@ green**. main HEAD = `7d77754`. 태그 `v0.6.0` 푸시됨. **미push = `7d77754`
    real-κ grip-loss)가 진짜 통과인지 직접 확인. (Cursor가 막히면 #0 torque 경로는 Claude 직접.)
    Ld2 7DOF를 thesis closed-loop plant로 swap. **6개**: (#0) Ld2 **direct-Fx force/torque 경로**
    (현 CmdL3은 Fx_total을 throttle로 매핑함 = thesis 금지 → 우회 필수, acceptance #2 crux) ·
-   x-구간 friction-patch provider(per-wheel μ) · `wheel_mu()` getter · `ioniq5_awd.yaml`(Caf/Car는
+   x-구간 friction-patch provider(per-wheel μ) · `wheel_mu()` getter · 차량 프리셋 yaml(Caf/Car는
    AXLE값→per-wheel B=Ca/2 주의) · `VDSimPlant` 래퍼(vdsim_lab 위) · smoke 3종(#2=patch
    brake+turn combined grip-loss). 이미 있음: SimSession lockstep · MF96 combined ·
    `tire_forces_wheel()`(마찰원용 contact-frame) · per-wheel GT. 함정: wheel_spin=vx/R seed,

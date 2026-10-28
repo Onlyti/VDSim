@@ -273,7 +273,68 @@ def test_level_l3_builds_fourteen_dof_and_steps():
     print("level L3 builds 14-DOF + obs layout: ok")
 
 
+def test_private_preset_root():
+    """R2 (work order 40): ``$VDSIM_PRIVATE_CONFIGS`` is searched before ``configs/``.
+
+    A probe root carries a vehicle that names its own tyre, plus a
+    ``generic_sedan`` copy that must shadow the public one.  The default
+    plant (no ``config``) loads the public generic car.
+    """
+    import shutil
+    import tempfile
+    import vdsim_plant as vp_mod
+
+    assert vp_mod.resolve_vehicle_config().name == "generic_sedan.yaml"
+    assert VDSimPlant()._vp.mass == vdsim.VehicleParams.from_yaml(
+        str(REPO / "configs/vehicles/generic_sedan.yaml")).mass
+    pub = REPO / "configs"
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "vehicles").mkdir()
+        (root / "parts/tire").mkdir(parents=True)
+        shutil.copy(pub / "parts/tire/generic_pacejka.yaml",
+                    root / "parts/tire/probe_tire.yaml")
+        car = (pub / "vehicles/generic_sedan.yaml").read_text()
+        car = car.replace("tire_yaml: parts/tire/generic_pacejka.yaml",
+                          "tire_yaml: parts/tire/probe_tire.yaml")
+        assert "probe_tire" in car
+        (root / "vehicles/probe_car.yaml").write_text(car)
+        (root / "vehicles/generic_sedan.yaml").write_text(
+            car.replace("mass: 1500.0", "mass: 1777.0"))
+        old = os.environ.get(vp_mod.PRIVATE_ROOT_ENV)
+        os.environ[vp_mod.PRIVATE_ROOT_ENV] = str(root)
+        try:
+            p = vp_mod.resolve_vehicle_config("probe_car.yaml")
+            assert p == root / "vehicles/probe_car.yaml", p
+            plant = VDSimPlant(config="probe_car.yaml", base_mu=0.9,
+                               control_dt=DT, substep_dt=SUB)
+            plant.reset([0.0, 0.0, 0.0, V0, 0.0, 0.0])
+            obs = plant.step([0.0, 0.0])
+            assert math.isfinite(obs["vx"])
+            tp = vp_mod._load_tire_setup_for_vehicle(p)
+            assert tp is not None
+            assert vp_mod.find_preset("parts/tire/probe_tire.yaml") ==                 root / "parts/tire/probe_tire.yaml"
+            shadow = vp_mod.resolve_vehicle_config("generic_sedan")
+            assert shadow == root / "vehicles/generic_sedan.yaml", shadow
+            assert VDSimPlant()._vp.mass == 1777.0, "private root must win"
+            os.environ[vp_mod.PRIVATE_ROOT_ENV] = str(root / "missing")
+            try:
+                vp_mod.resolve_vehicle_config()
+            except FileNotFoundError as e:
+                assert vp_mod.PRIVATE_ROOT_ENV in str(e), str(e)
+            else:
+                raise AssertionError("a missing private root must raise")
+        finally:
+            if old is None:
+                os.environ.pop(vp_mod.PRIVATE_ROOT_ENV, None)
+            else:
+                os.environ[vp_mod.PRIVATE_ROOT_ENV] = old
+    assert vp_mod.resolve_vehicle_config().parent == pub / "vehicles"
+    print("private preset root: ok")
+
+
 def main():
+    test_private_preset_root()
     test_level_default_and_rejects()
     test_level_l3_builds_fourteen_dof_and_steps()
     test_cmdl1_element_torque_assign()

@@ -52,7 +52,7 @@ def _load_baseline(rev: str, workdir: Path):
 
 
 def _run(plant_cls, steps, control_dt, trace_path=None, decimation=None):
-    plant = plant_cls(config="ioniq5_awd.yaml", base_mu=0.9,
+    plant = plant_cls(config="generic_sedan.yaml", base_mu=0.9,
                       control_dt=control_dt, substep_dt=5e-4)
     plant.reset([0.0, 0.0, 0.0, 16.7, 0.0, 0.0])
     if trace_path is not None:

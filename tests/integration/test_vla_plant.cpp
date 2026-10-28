@@ -18,12 +18,14 @@
 namespace {
 
 const std::string kRepo = VDSIM_SOURCE_DIR;
-const std::string kIoniq5TirYaml = kRepo + "/configs/parts/tire/ioniq5_pac2002.yaml";
-const std::string kIoniq5Tir     = kRepo + "/configs/parts/tire/ioniq5_pac2002.tir";
-const std::string kIoniq5VpYaml  = kRepo + "/configs/vehicles/ioniq5_awd.yaml";
+// Public synthetic MF2002 coefficients (hand-authored, not measured; also the
+// Chrono Pac02 parity input) and the public generic car.
+const std::string kMfTir     = kRepo + "/external/chrono_parity/sample_pac02.tir";
+const double      kMfFnomin  = 4000.0;   // FNOMIN of kMfTir [N]
+const std::string kVpYaml    = kRepo + "/configs/vehicles/generic_sedan.yaml";
 
-vdsim::VehicleParams ioniq5_vp() {
-    return vdsim::VehicleParams::from_yaml(kIoniq5VpYaml);
+vdsim::VehicleParams generic_vp() {
+    return vdsim::VehicleParams::from_yaml(kVpYaml);
 }
 
 vdsim::TireParams plant_tp(double mu) {
@@ -34,10 +36,11 @@ vdsim::TireParams plant_tp(double mu) {
     return tp;
 }
 
-vdsim::TireParams ioniq5_plant_tp() {
-    vdsim::TireParams tp = vdsim::TireParams::from_yaml(kIoniq5TirYaml);
-    tp.tir_path = kIoniq5Tir;
-    tp.lugre.enabled = false;
+vdsim::TireParams mf2002_plant_tp() {
+    vdsim::TireParams tp = plant_tp(0.9);
+    tp.backend = "mf2002";
+    tp.tir_path = kMfTir;
+    tp.Fz_nominal = kMfFnomin;
     return tp;
 }
 
@@ -84,7 +87,7 @@ double wheel_torque(double Fx_total, double R) { return 0.25 * Fx_total * R; }
 // Throttle BYPASS: a CmdL1 drive torque must accelerate the car directly (wheel-spin ODE),
 // whereas CmdL4 throttle=0 does not. Proves Fx is NOT routed through the throttle map.
 TEST(VlaPlant, CmdL1DirectTorqueNotThrottleMapped) {
-    auto vp = ioniq5_vp();
+    auto vp = generic_vp();
     auto tp = plant_tp(0.9);
     vdsim::SolverParams sp;
     const double R = vp.wheel_radius_nominal;
@@ -122,7 +125,7 @@ TEST(VlaPlant, CmdL1DirectTorqueNotThrottleMapped) {
 // on the loaded wheels, (c) develop real slip (kappa), and (d) lose grip at the vehicle level
 // (realised |sum Fx| < commanded). Not a clamp — the saturation comes from wheel lock/spin.
 TEST(VlaPlant, CombinedBrakeTurnGripLossOnPatch) {
-    auto vp = ioniq5_vp();
+    auto vp = generic_vp();
     auto tp = plant_tp(0.5);
     vdsim::SolverParams sp;
     const double R = vp.wheel_radius_nominal;
@@ -177,7 +180,7 @@ TEST(VlaPlant, CombinedBrakeTurnGripLossOnPatch) {
 // GT consistency (acceptance #3): lateral force balance sum Fy_body ~ m*ay, and every wheel
 // stays inside the friction circle, on a moderate dry turn.
 TEST(VlaPlant, GroundTruthConsistency) {
-    auto vp = ioniq5_vp();
+    auto vp = generic_vp();
     auto tp = plant_tp(0.9);
     vdsim::SolverParams sp;
     const double R = vp.wheel_radius_nominal;
@@ -211,7 +214,7 @@ TEST(VlaPlant, GroundTruthConsistency) {
 // stiffness — confirms the plant reproduces the controller's bicycle handling AND that the
 // MF96 B=Ca/(C*D) calibration recovered the intended Caf/Car (per-wheel B=Ca/2).
 TEST(VlaPlant, DryHandlingMatchesLinearBicycle) {
-    auto vp = ioniq5_vp();
+    auto vp = generic_vp();
     auto tp = plant_tp(0.9);
     vdsim::SolverParams sp;
     const double R = vp.wheel_radius_nominal;
@@ -238,15 +241,21 @@ TEST(VlaPlant, DryHandlingMatchesLinearBicycle) {
 }
 
 // Same acceptance as DryHandlingMatchesLinearBicycle but through the REAL plant tyre
-// (ioniq5 yaml -> MF2002 .tir). Self-correcting gate for PKY1/PKY2 calibration.
+// (MF2002 .tir). The bicycle reference takes its axle cornering stiffness from the
+// same .tir at the static wheel loads, so the gate checks the plant, not a tuned number.
 TEST(VlaPlant, DryHandlingMatchesLinearBicycleRealMf2002Tire) {
-    auto vp = ioniq5_vp();
+    auto vp = generic_vp();
     vp.plant_path = true;
-    auto tp = ioniq5_plant_tp();
+    auto tp = mf2002_plant_tp();
     vdsim::SolverParams sp;
     const double R = vp.wheel_radius_nominal;
     const double m = vp.mass, lf = vp.cg_to_front, lr = vp.cg_to_rear, L = lf + lr;
-    const double Caf = 2.2e5, Car = 1.6e5, V = 16.7, delta = 0.04;
+    const auto tire = vdsim::create_magic_formula_tire_from_tir(kMfTir);
+    ASSERT_NE(tire, nullptr);
+    const double g = 9.81;
+    const double Caf = 2.0 * std::abs(finite_diff_kya(*tire, 0.5 * m * g * lr / L));
+    const double Car = 2.0 * std::abs(finite_diff_kya(*tire, 0.5 * m * g * lf / L));
+    const double V = 16.7, delta = 0.04;
     const double K_us = m * (lr * Car - lf * Caf) / (L * Caf * Car);
     const double r_bicycle = delta * V / (L + K_us * V * V);
 
@@ -268,9 +277,9 @@ TEST(VlaPlant, DryHandlingMatchesLinearBicycleRealMf2002Tire) {
 
 // Load-sensitivity gate: concave cornering stiffness + peak mu_y falls with Fz (PDY2<0).
 TEST(VlaPlant, Mf2002LoadSensitivityConcaveStiffnessAndMu) {
-    auto tire = vdsim::create_magic_formula_tire_from_tir(kIoniq5Tir);
+    auto tire = vdsim::create_magic_formula_tire_from_tir(kMfTir);
     ASSERT_NE(tire, nullptr);
-    const double Fz0 = 5764.0;
+    const double Fz0 = kMfFnomin;
     const double K0 = finite_diff_kya(*tire, Fz0);
     const double K2 = finite_diff_kya(*tire, 2.0 * Fz0);
     EXPECT_LT(std::abs(K2), 2.0 * std::abs(K0))
@@ -283,9 +292,9 @@ TEST(VlaPlant, Mf2002LoadSensitivityConcaveStiffnessAndMu) {
 
 // MF2002 honours contact mu_lat (Lmuy scaling) — low-mu patch halves peak grip.
 TEST(VlaPlant, Mf2002FrictionPatchHalvesPeakGrip) {
-    auto tire = vdsim::create_magic_formula_tire_from_tir(kIoniq5Tir);
+    auto tire = vdsim::create_magic_formula_tire_from_tir(kMfTir);
     ASSERT_NE(tire, nullptr);
-    const double Fz = 5764.0;
+    const double Fz = kMfFnomin;
     const double peak_dry = scan_peak_mu_lat(*tire, Fz, 0.9);
     const double peak_patch = scan_peak_mu_lat(*tire, Fz, 0.5);
     EXPECT_GT(peak_dry, peak_patch);
@@ -294,9 +303,9 @@ TEST(VlaPlant, Mf2002FrictionPatchHalvesPeakGrip) {
 
 // HEADLINE grip-loss with the REAL MF2002 plant tyre on the low-mu patch.
 TEST(VlaPlant, CombinedBrakeTurnGripLossOnPatchMf2002) {
-    auto vp = ioniq5_vp();
+    auto vp = generic_vp();
     vp.plant_path = true;
-    auto tp = ioniq5_plant_tp();
+    auto tp = mf2002_plant_tp();
     vdsim::SolverParams sp;
     const double R = vp.wheel_radius_nominal;
     auto dyn = vdsim::create_seven_dof();
@@ -344,9 +353,9 @@ TEST(VlaPlant, CombinedBrakeTurnGripLossOnPatchMf2002) {
 // Realized peak mu (useGT>1 fix): ||[Fx,Fy]||/(mu_peak*Fz) <= 1 with load-dependent MF peak.
 // Documents that mu_peak can exceed contact mu on unloaded/low-load wheels (PDY2<0).
 TEST(VlaPlant, RealizedPeakMuBoundsFrictionCircle) {
-    auto vp = ioniq5_vp();
+    auto vp = generic_vp();
     vp.plant_path = true;
-    auto tp = ioniq5_plant_tp();
+    auto tp = mf2002_plant_tp();
     vdsim::SolverParams sp;
     const double R = vp.wheel_radius_nominal;
     auto dyn = vdsim::create_seven_dof();
@@ -383,7 +392,7 @@ TEST(VlaPlant, RealizedPeakMuBoundsFrictionCircle) {
     if (!old_metric_exceeds_contact) {
         // Locked-wheel braking sits on the MF sliding tail (below peak); document the
         // old-metric violation on a lightly loaded combined-slip tyre point instead.
-        auto tire = vdsim::create_magic_formula_tire_from_tir(kIoniq5Tir);
+        auto tire = vdsim::create_magic_formula_tire_from_tir(kMfTir);
         const auto o = tire->compute(slip_input(-0.18, 0.04, 300.0, 0.5, 0.5));
         const double fxy = std::hypot(o.Fx, o.Fy);
         EXPECT_GT(o.mu_peak, 0.5);
@@ -397,8 +406,8 @@ TEST(VlaPlant, RealizedPeakMuBoundsFrictionCircle) {
 }
 
 TEST(VlaPlant, PeakSlipMatchesNumericalArgmax) {
-    auto tire = vdsim::create_magic_formula_tire_from_tir(kIoniq5Tir);
-    const double fz_vals[] = {3000.0, 5764.0, 9000.0};
+    auto tire = vdsim::create_magic_formula_tire_from_tir(kMfTir);
+    const double fz_vals[] = {3000.0, kMfFnomin, 9000.0};
     for (double Fz : fz_vals) {
         double alpha_argmax = 0.0;
         double peak_fy = 0.0;
@@ -435,7 +444,7 @@ TEST(VlaPlant, PeakSlipMatchesNumericalArgmax) {
 // Speed (acceptance #5): a ~5 s trajectory at the fine plant substep must run far under
 // real time so velocity / patch sweeps are cheap. Generous bound (measured ~25 ms here).
 TEST(VlaPlant, FasterThanRealtime) {
-    auto vp = ioniq5_vp();
+    auto vp = generic_vp();
     auto tp = plant_tp(0.9);
     vdsim::SolverParams sp;
     sp.max_substep_dt = 5e-4;
@@ -464,7 +473,7 @@ TEST(VlaPlant, FasterThanRealtime) {
 }
 
 TEST(VlaPlant, FrictionPatchPerWheelMu) {
-    auto vp = ioniq5_vp();
+    auto vp = generic_vp();
     auto ground = vdsim::create_friction_patch_ground(0.0, 0.9, {{10.0, 30.0, 0.5}});
     vdsim::State s;
     s.position.x() = 20.0;
@@ -476,7 +485,7 @@ TEST(VlaPlant, FrictionPatchPerWheelMu) {
 }
 
 TEST(VlaPlant, FrictionPatchSmoothTransition) {
-    auto vp = ioniq5_vp();
+    auto vp = generic_vp();
     auto ground = vdsim::create_friction_patch_ground(0.0, 0.9, {{10.0, 30.0, 0.5}});
     vdsim::State s;
     s.position.y() = 0.0;
@@ -497,7 +506,7 @@ TEST(VlaPlant, FrictionPatchSmoothTransition) {
 }
 
 TEST(VlaPlant, PolygonFrictionInsideAndOutside) {
-    auto vp = ioniq5_vp();
+    auto vp = generic_vp();
     vdsim::PolygonMuPatch patch;
     patch.polygon = {{10.0, -2.0}, {30.0, -2.0}, {30.0, 2.0}, {10.0, 2.0}};
     patch.mu = 0.5;
@@ -516,7 +525,7 @@ TEST(VlaPlant, PolygonFrictionInsideAndOutside) {
 }
 
 TEST(VlaPlant, PolygonFrictionBlendZone) {
-    auto vp = ioniq5_vp();
+    auto vp = generic_vp();
     vdsim::PolygonMuPatch patch;
     patch.polygon = {{0.0, -5.0}, {20.0, -5.0}, {20.0, 5.0}, {0.0, 5.0}};
     patch.mu = 0.5;

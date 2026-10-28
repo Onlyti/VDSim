@@ -64,7 +64,7 @@ from vdsim_plant import VDSimPlant
 
 ```python
 plant = VDSimPlant(
-    config="ioniq5_awd",                 # configs/vehicles/ioniq5_awd.yaml
+    config="generic_sedan",              # configs/vehicles/generic_sedan.yaml
     base_mu=0.9,
     friction_map=[(40.0, 60.0, 0.5)],    # 선택: x=40~60m μ=0.5 저마찰 패치
     control_dt=0.1,                      # = MPC sample (ZOH). substep_dt로 나누어떨어져야 함
@@ -122,14 +122,14 @@ plant(load-dependent)의 mismatch는 의도된 robustness stress — matched pla
    거동이 thesis 시나리오에 쓸만한가? μ/Fz 수치가 기대범위인가?
 3. 누락 채널 — MPC/estimator가 필요한데 obs에 없는 양(예: 개별 휠 Fz GT 외 추가 신호)?
 4. 성능 — 당신 sweep 규모에서 속도/결정론이 충분한가?
-5. 파라미터 — ioniq5_awd 제원이 thesis 차량 가정과 어긋나는 부분?
+5. 파라미터 — 차량 프리셋 제원이 thesis 차량 가정과 어긋나는 부분?
 
 회신 형식 자유(슬랙/이슈/메모). 회신 받으면 VDSim-Thesis 브랜치에서 개선 → 안정화 후 main 병합.
 
 ## 6. 제약 (참고)
 
 - 현재 VDSim-Thesis 브랜치. main은 보호 중(아직 미병합).
-- tyre 계수는 전부 public-synthetic Ioniq5급 근사 — 실측/대외비 데이터 아님.
+- 번들 tyre 계수는 generic(솔버 기본값) — 실측/대외비 데이터 아님. 비공개 차량은 `VDSIM_PRIVATE_CONFIGS`로 주입.
 
 ---
 

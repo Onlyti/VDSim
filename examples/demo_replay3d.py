@@ -26,7 +26,7 @@ def record(out: Path, seconds: float, control_dt: float) -> Path:
     from vdsim_plant import VDSimPlant
 
     trace = out / "run.vdtrace"
-    plant = VDSimPlant(config="ioniq5_awd.yaml", control_dt=control_dt,
+    plant = VDSimPlant(config="generic_sedan.yaml", control_dt=control_dt,
                        substep_dt=5e-4, base_mu=0.95, level="L3",
                        friction_map=[(120.0, 190.0, 0.45)])
     plant.reset([0.0, 0.0, 0.0, 22.0, 0.0, 0.0])

@@ -42,13 +42,13 @@ Lee, J.; Jo, K. "MPC with Powertrain Delay Consideration for Longitudinal Speed
 Tracking of Autonomous EVs," World Electric Vehicle Journal 15(10):433, 2024.
 DOI 10.3390/wevj15100433. [S]
 
-- plant 측 actuator(CarMaker IONIQ5): pure delay D=0.1 s (queue/ring buffer) +
+- plant 측 actuator(논문 실험 차량의 CarMaker 모델): pure delay D=0.1 s (queue/ring buffer) +
   first-order lag tau=0.15 s, throttle/brake 입력 직전 적용. 실측 총지연 ~0.2 s.
 - MPC 측 보상: state augmentation `x=[v,F]→[v,F_lag,F_{Nd-1},...,F_0,F]`,
   N_d=5, dt=0.02 s. Taylor 선형화 → QP → HPIPM(BLASFEO).
 - MPC param: dt 0.02, T 100, N_d 5, tau 0.15, Q diag(300,0,..), R 1e-4,
   F_max 10819 N, F_min -14485 N.
-- IONIQ5 (public): m 2300 kg, f 0.015, rho 1.21, A 2.88 m², Cd 0.35, r_wheel 0.32 m.
+- 논문 기재 차량 제원(공개 문헌): m 2300 kg, f 0.015, rho 1.21, A 2.88 m², Cd 0.35, r_wheel 0.32 m.
 - 결과: real-vehicle mean speed error 0.54 km/h, compute 1.32 ms.
 
 이 값들이 VDSim powertrain actuator 채널 + thesis MPC augmentation 의 seed.

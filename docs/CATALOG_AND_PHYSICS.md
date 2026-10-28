@@ -41,7 +41,8 @@ feature of L2, not the level name.
 
 ## Computational cost per step
 
-**Benchmark** (ioniq5_awd, dt=5e-4, MF2002 tire, flat ground):
+**Benchmark** (dt=5e-4, MF2002 tire, flat ground; measured with a vehicle preset removed in
+0.7.0 — `examples/bench_dynamics_levels.cpp` reruns it on `generic_sedan`):
 
 | Level | Model | ms/step | Realtime factor |
 |-------|-------|--------:|-----------------|

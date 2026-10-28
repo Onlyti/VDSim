@@ -13,7 +13,7 @@
 `97c3d7a` Win32 plugin loader, `bfcc5cd` wheel `vehicles/` + `vdsim_plant.py`).  
 **C CI:** `workflow_dispatch` run [28213027035](https://github.com/Onlyti/VDSim/actions/runs/28213027035) —
 `wheels` cp310/311/312 × linux+win + `sdist` + `verify` green; **`publish` skipped** (no tag).  
-**Local conda (Linux):** clean py3.10/3.11/3.12 — import + Sim 3종 (sedan L2, ioniq5 L2, L1) +
+**Local conda (Linux):** clean py3.10/3.11/3.12 — import + Sim 3종 (sedan L2, 두 번째 차량 프리셋 L2, L1) +
 `vdsim-quickstart` + `demo_grip_loss.py` green on CI artifacts (`0.7.0.dev26`).  
 **D setuptools-scm:** `0.7.0.dev26` now; `SETUPTOOLS_SCM_PRETEND_VERSION=0.7.0` → `0.7.0` (> 0.0.0).  
 **HOLD:** no `v0.7.0` tag / PyPI / public release until PO GO.
@@ -241,7 +241,7 @@ python3 tests/scripts/test_vla_plant.py`
 ## 0. 2026-06-18 Dynamics ladder bench L0–L5 — DONE
 
 **Shipped:** `tools/bench_dynamics_levels.py` + `examples/bench_dynamics_levels.cpp`
-(`vdsim_bench_levels`) — ioniq5_awd, dt=5e-4, 500 step, SimSession.tick() ms/step.
+(`vdsim_bench_levels`) — 당시 차량 프리셋(0.7.0에서 제거), dt=5e-4, 500 step, SimSession.tick() ms/step.
 
 | level | ms/step (AILAB-12, Release) |
 |-------|----------------------------:|
@@ -286,14 +286,13 @@ alongside existing contact `wheel.mu`. Friction-circle GT metric
 
 ## 0b. 2026-06-18 VLA plant tyre → MF2002 (T-IVb) — DONE
 
-**Shipped:** Ioniq5-class VLA plant now uses **MF2002** (load-dependent `PKY*` cornering stiffness +
+**Shipped:** the VLA plant preset now uses **MF2002** (load-dependent `PKY*` cornering stiffness +
 `PDY2` peak-μ load sensitivity) instead of MF96.
 
 **Deliverables:**
-- **`configs/parts/tire/ioniq5_pac2002.tir`** — public-synthetic Pacejka-2002 (gitignore-excepted)
-- **`configs/parts/tire/ioniq5_pac2002.yaml`** — `backend: mf2002` + `tir_path`
-- **`configs/vehicles/ioniq5_awd.yaml`** — `tire_yaml: parts/tire/ioniq5_pac2002.yaml`
-- MF96 yaml **`ioniq5_pacejka.yaml`** kept (not deleted)
+- the plant vehicle preset, its MF2002 tyre YAML + `.tir` and an MF96 tyre YAML (all four
+  removed from the public tree in 0.7.0 and kept privately; the MF2002 tests now run on
+  `external/chrono_parity/sample_pac02.tir`)
 - **`python/vdsim_plant.py`** — resolves relative `tir_path` from configs root
 - **`python/bindings.cpp`** — exposes `TireParams.backend` / `tir_path` to Python
 - **Tests** (`test_vla_plant.cpp`): `DryHandlingMatchesLinearBicycleRealMf2002Tire`,
@@ -312,7 +311,7 @@ alongside existing contact `wheel.mu`. Friction-circle GT metric
 - **#0** Ld2 native `CmdL1` torque path (Fx→per-wheel τ, bypass throttle map) + `plant_path` kinematic-blend bypass
 - **#1** `create_friction_patch_ground(base_mu, [(x0,x1,mu)...])` + pybind
 - **#2** `wheel_mu()` on Ld2 + pybind
-- **#3** `configs/vehicles/ioniq5_awd.yaml` + `configs/parts/tire/ioniq5_pacejka.yaml`
+- **#3** plant vehicle preset + MF96 tyre YAML (removed in 0.7.0)
 - **#4** `python/vdsim_plant.py` on `vdsim_lab` / `make_vla_plant_session` (direct CmdL1, ZOH two-tier dt)
 - **#5** smokes: `tests/scripts/test_vla_plant.py` + `examples/vla_plant_demo.py` + `python/VDSIM_PLANT_README.md`
 
