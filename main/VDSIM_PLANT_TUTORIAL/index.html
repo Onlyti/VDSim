@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -27,10 +27,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -2785,22 +2785,44 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#9-parameter-file-ioniq5_awdyaml" class="md-nav__link">
+  <a href="#9-parameter-file-generic_sedanyaml" class="md-nav__link">
     <span class="md-ellipsis">
       
-        9. Parameter file — ioniq5_awd.yaml
+        9. Parameter file — generic_sedan.yaml
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="9. Parameter file — ioniq5_awd.yaml">
+    <nav class="md-nav" aria-label="9. Parameter file — generic_sedan.yaml">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mf2002-tir-tyres" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MF2002 (.tir) tyres
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#making-your-own-vehicle" class="md-nav__link">
     <span class="md-ellipsis">
       
         Making your own vehicle
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#private-vehicles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Private vehicles
       
     </span>
   </a>
@@ -2918,8 +2940,9 @@
 <h1 id="vdsim-plant-tutorial-closed-loop-control-plant">VDSim Plant — tutorial (closed-loop control plant)<a class="headerlink" href="#vdsim-plant-tutorial-closed-loop-control-plant" title="Permanent link">&para;</a></h1>
 <p>A step-by-step guide to using <strong>VDSim as the vehicle-dynamics plant</strong> for a closed-loop
 controller (e.g. an MPC). You call <code>step()</code>; VDSim integrates one control period and returns
-ground-truth state + per-wheel tyre forces. Mid-fidelity (7-DOF + Pacejka MF2002 <code>.tir</code> with
-load-dependent coefficients + load transfer), deterministic, sub-real-time — a drop-in upgrade
+ground-truth state + per-wheel tyre forces. Mid-fidelity (7-DOF + Pacejka MF tyres — MF96 by
+default, MF2002 <code>.tir</code> with load-dependent coefficients when you supply one — + load transfer),
+deterministic, sub-real-time — a drop-in upgrade
 from a single-track bicycle plant.</p>
 <blockquote>
 <p>Status: <strong>BETA</strong> (first release). The API below is stable for use; expect refinements from
@@ -2976,7 +2999,7 @@ Point Python at both:</p>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">vdsim_plant</span><span class="w"> </span><span class="kn">import</span> <span class="n">VDSimPlant</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">plant</span> <span class="o">=</span> <span class="n">VDSimPlant</span><span class="p">(</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">config</span><span class="o">=</span><span class="s2">"ioniq5_awd"</span><span class="p">,</span>     <span class="c1"># bundled preset (configs/vehicles/ioniq5_awd.yaml)</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">config</span><span class="o">=</span><span class="s2">"generic_sedan"</span><span class="p">,</span>  <span class="c1"># bundled preset (configs/vehicles/generic_sedan.yaml)</span>
 </span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="n">base_mu</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span>             <span class="c1"># uniform dry friction</span>
 </span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="n">control_dt</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>         <span class="c1"># one step() = 0.05 s of sim, held ZOH</span>
 </span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="n">substep_dt</span><span class="o">=</span><span class="mf">5e-4</span><span class="p">,</span>         <span class="c1"># internal fixed integration step (stiff wheel spin)</span>
@@ -3149,15 +3172,15 @@ runtime itself stays flat):</p>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="c1"># Preferred: the LIVE tyre the plant runs (single source of truth, no .tir re-load):</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">tire</span> <span class="o">=</span> <span class="n">plant</span><span class="o">.</span><span class="n">vehicle</span><span class="o">.</span><span class="n">tire</span><span class="o">.</span><span class="n">model</span>            <span class="c1"># or the shortcut plant.tire_model</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Or load a standalone instance from a .tir:</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c1"># tire = vdsim.create_magic_formula_tire_from_tir("configs/parts/tire/ioniq5_pac2002.tir")</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c1"># tire = vdsim.create_magic_formula_tire_from_tir("external/chrono_parity/sample_pac02.tir")</span>
 </span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="k">def</span><span class="w"> </span><span class="nf">F</span><span class="p">(</span><span class="n">kappa</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">Fz</span><span class="o">=</span><span class="mf">5764.0</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.9</span><span class="p">):</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="k">def</span><span class="w"> </span><span class="nf">F</span><span class="p">(</span><span class="n">kappa</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">Fz</span><span class="o">=</span><span class="mf">4000.0</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.9</span><span class="p">):</span>
 </span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="n">i</span> <span class="o">=</span> <span class="n">vdsim</span><span class="o">.</span><span class="n">TireInput</span><span class="p">();</span> <span class="n">i</span><span class="o">.</span><span class="n">Fz</span><span class="o">=</span><span class="n">Fz</span><span class="p">;</span> <span class="n">i</span><span class="o">.</span><span class="n">kappa</span><span class="o">=</span><span class="n">kappa</span><span class="p">;</span> <span class="n">i</span><span class="o">.</span><span class="n">alpha</span><span class="o">=</span><span class="n">alpha</span><span class="p">;</span> <span class="n">i</span><span class="o">.</span><span class="n">mu_long</span><span class="o">=</span><span class="n">mu</span><span class="p">;</span> <span class="n">i</span><span class="o">.</span><span class="n">mu_lat</span><span class="o">=</span><span class="n">mu</span>
 </span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>    <span class="n">o</span> <span class="o">=</span> <span class="n">tire</span><span class="o">.</span><span class="n">compute</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>            <span class="c1"># also exposes o.mu_peak / o.alpha_peak / o.kappa_peak</span>
 </span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>    <span class="k">return</span> <span class="n">o</span><span class="o">.</span><span class="n">Fx</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">Fy</span>
 </span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
 </span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="c1"># combined peak along a fixed slip direction (kappa:alpha ratio): 1-D search</span>
-</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="k">def</span><span class="w"> </span><span class="nf">combined_peak</span><span class="p">(</span><span class="n">ratio</span><span class="p">,</span> <span class="n">Fz</span><span class="o">=</span><span class="mf">5764.0</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.9</span><span class="p">):</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="k">def</span><span class="w"> </span><span class="nf">combined_peak</span><span class="p">(</span><span class="n">ratio</span><span class="p">,</span> <span class="n">Fz</span><span class="o">=</span><span class="mf">4000.0</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.9</span><span class="p">):</span>
 </span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>    <span class="n">best</span><span class="p">,</span> <span class="n">bestm</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span> <span class="mf">0.0</span>
 </span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>    <span class="n">s</span> <span class="o">=</span> <span class="mf">0.0</span>
 </span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>    <span class="k">while</span> <span class="n">s</span> <span class="o">&lt;=</span> <span class="mf">0.5</span><span class="p">:</span>
@@ -3166,8 +3189,8 @@ runtime itself stays flat):</p>
 </span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>        <span class="n">s</span> <span class="o">+=</span> <span class="mf">0.001</span>
 </span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>    <span class="k">return</span> <span class="n">best</span><span class="p">,</span> <span class="n">bestm</span>                <span class="c1"># ((kappa*, alpha*), |F|*)</span>
 </span></code></pre></div>
-<p>E.g. for this <code>.tir</code> at Fz=5764, μ=0.9: pure-lat peak α≈0.130; at κ:α=1 the combined peak is at
-α≈0.079 with a larger resultant — the load-dependent shift the pure <code>alpha_peak</code> cannot show.</p>
+<p>For an MF2002 <code>.tir</code>, the combined peak at κ:α=1 sits at a smaller α than the pure-lateral
+peak, with a larger resultant — the shift the pure <code>alpha_peak</code> cannot show.</p>
 <hr />
 <h2 id="5-control-input-u-delta-fx_total">5. Control input <code>u = [delta, Fx_total]</code><a class="headerlink" href="#5-control-input-u-delta-fx_total" title="Permanent link">&para;</a></h2>
 <ul>
@@ -3187,7 +3210,7 @@ linearly over <strong>1.0 m</strong> (entry and exit); <code>x &lt; x0 − 1</co
 Overlapping patches take the <strong>minimum</strong> μ. Friction is per-wheel by contact x, so the front
 axle enters a patch before the rear (real time lag).</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">plant</span> <span class="o">=</span> <span class="n">VDSimPlant</span><span class="p">(</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="n">config</span><span class="o">=</span><span class="s2">"ioniq5_awd"</span><span class="p">,</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="n">config</span><span class="o">=</span><span class="s2">"generic_sedan"</span><span class="p">,</span>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="n">base_mu</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span>
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="n">friction_map</span><span class="o">=</span><span class="p">[(</span><span class="mf">40.0</span><span class="p">,</span> <span class="mf">60.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)],</span>   <span class="c1"># μ=0.5 ice patch from x=40 m to x=60 m</span>
 </span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="n">control_dt</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">substep_dt</span><span class="o">=</span><span class="mf">5e-4</span><span class="p">,</span>
@@ -3202,7 +3225,7 @@ linear blend to <code>base_mu</code> over <strong>1.0 m</strong> from the polygo
 Overlapping patches take the <strong>minimum</strong> μ (most restrictive grip). Mutually exclusive with
 <code>friction_map</code> (pass one or the other).</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">plant</span> <span class="o">=</span> <span class="n">VDSimPlant</span><span class="p">(</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="n">config</span><span class="o">=</span><span class="s2">"ioniq5_awd"</span><span class="p">,</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="n">config</span><span class="o">=</span><span class="s2">"generic_sedan"</span><span class="p">,</span>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="n">base_mu</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span>
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="n">friction_map_2d</span><span class="o">=</span><span class="p">[{</span>
 </span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>        <span class="s2">"polygon"</span><span class="p">:</span> <span class="p">[(</span><span class="mf">80.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.0</span><span class="p">),</span> <span class="p">(</span><span class="mf">120.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.0</span><span class="p">),</span> <span class="p">(</span><span class="mf">120.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">),</span> <span class="p">(</span><span class="mf">80.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">)],</span>
@@ -3233,7 +3256,7 @@ manual workflows <strong>before</strong> the session is created:</p>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">vdsim</span>
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">vdsim_plant</span><span class="w"> </span><span class="kn">import</span> <span class="n">VDSimPlant</span><span class="p">,</span> <span class="n">resolve_vehicle_config</span>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="n">vp_path</span> <span class="o">=</span> <span class="n">resolve_vehicle_config</span><span class="p">(</span><span class="s2">"ioniq5_awd"</span><span class="p">)</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="n">vp_path</span> <span class="o">=</span> <span class="n">resolve_vehicle_config</span><span class="p">(</span><span class="s2">"generic_sedan"</span><span class="p">)</span>
 </span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="n">vp</span> <span class="o">=</span> <span class="n">vdsim</span><span class="o">.</span><span class="n">VehicleParams</span><span class="o">.</span><span class="n">from_yaml</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">vp_path</span><span class="p">))</span>
 </span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="n">vp</span><span class="o">.</span><span class="n">steer_deadtime_s</span> <span class="o">=</span> <span class="mf">0.05</span>
 </span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s2">".yaml"</span><span class="p">,</span> <span class="n">delete</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
@@ -3253,7 +3276,7 @@ manual workflows <strong>before</strong> the session is created:</p>
 <hr />
 <h2 id="8-closed-loop-with-your-controller-drop-in">8. Closed-loop with your controller (drop-in)<a class="headerlink" href="#8-closed-loop-with-your-controller-drop-in" title="Permanent link">&para;</a></h2>
 <p>The plant replaces a Python bicycle plant with no controller change. Pattern:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">plant</span> <span class="o">=</span> <span class="n">VDSimPlant</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="s2">"ioniq5_awd"</span><span class="p">,</span> <span class="n">base_mu</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">plant</span> <span class="o">=</span> <span class="n">VDSimPlant</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="s2">"generic_sedan"</span><span class="p">,</span> <span class="n">base_mu</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>                   <span class="n">friction_map</span><span class="o">=</span><span class="p">[(</span><span class="mf">40.0</span><span class="p">,</span> <span class="mf">60.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)],</span>
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>                   <span class="n">control_dt</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">substep_dt</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">)</span>   <span class="c1"># control_dt = your MPC sample</span>
 </span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="n">obs</span> <span class="o">=</span> <span class="n">plant</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">state0</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">16.7</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
@@ -3269,40 +3292,33 @@ for <code>VDSimPlant</code> and feed <code>step([delta, Fx])</code> instead of t
 must divide <code>control_dt</code> evenly. The MPC at dt=0.1 with <code>control_dt=0.1, substep_dt=1e-3</code> runs
 100 internal substeps per control step.</p>
 <hr />
-<h2 id="9-parameter-file-ioniq5_awdyaml">9. Parameter file — <code>ioniq5_awd.yaml</code><a class="headerlink" href="#9-parameter-file-ioniq5_awdyaml" title="Permanent link">&para;</a></h2>
-<p>The bundled vehicle preset (<code>configs/vehicles/ioniq5_awd.yaml</code>), public Ioniq5-class:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nt">mass</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2359.0</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="nt">mass_sprung</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2200.0</span>
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="nt">inertia_diag</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1200.0</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">4200.0</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">3400.0</span><span class="p p-Indicator">]</span><span class="w">   </span><span class="c1"># [Ixx, Iyy, Izz]; Izz=3400 is the yaw inertia</span>
-</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="nt">wheelbase</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.97</span>
-</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="nt">cg_to_front</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.17</span><span class="w">                         </span><span class="c1"># lf</span>
-</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="nt">cg_to_rear</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.80</span><span class="w">                          </span><span class="c1"># lr</span>
-</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="nt">track_front</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.635</span>
-</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="nt">track_rear</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.635</span>
-</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="nt">cg_height</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.58</span>
-</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="nt">wheel_radius_nominal</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.338</span>
-</span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="nt">drive_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">AWD</span>
-</span><span id="__span-13-12"><a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="nt">drive_split_front</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.5</span><span class="w">                    </span><span class="c1"># 50/50 front/rear Fx split (drive AND brake)</span>
-</span><span id="__span-13-13"><a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="nt">plant_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">                          </span><span class="c1"># bypass the vehicle low-speed kinematic blend</span>
-</span><span id="__span-13-14"><a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a><span class="nt">differential</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Open</span>
-</span><span id="__span-13-15"><a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a><span class="nt">steering_ratio</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">14.0</span>
-</span><span id="__span-13-16"><a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a><span class="nt">aero_drag_coeff</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.28</span>
-</span><span id="__span-13-17"><a id="__codelineno-13-17" name="__codelineno-13-17" href="#__codelineno-13-17"></a><span class="nt">frontal_area</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.45</span>
-</span><span id="__span-13-18"><a id="__codelineno-13-18" name="__codelineno-13-18" href="#__codelineno-13-18"></a><span class="nt">tire_yaml</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">parts/tire/ioniq5_pac2002.yaml</span><span class="w">  </span><span class="c1"># the tyre sidecar (below)</span>
+<h2 id="9-parameter-file-generic_sedanyaml">9. Parameter file — <code>generic_sedan.yaml</code><a class="headerlink" href="#9-parameter-file-generic_sedanyaml" title="Permanent link">&para;</a></h2>
+<p>The default vehicle preset (<code>configs/vehicles/generic_sedan.yaml</code>) holds the solver
+defaults of <code>vdsim.VehicleParams()</code> — a generic mid-size sedan, not a measured car:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nt">mass</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1500.0</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="nt">mass_sprung</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1350.0</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="nt">inertia_diag</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">500.0</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">2000.0</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">2500.0</span><span class="p p-Indicator">]</span><span class="w">   </span><span class="c1"># [Ixx, Iyy, Izz]; Izz is the yaw inertia</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="nt">wheelbase</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.7</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="nt">cg_to_front</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.2</span><span class="w">                          </span><span class="c1"># lf</span>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="nt">cg_to_rear</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.5</span><span class="w">                           </span><span class="c1"># lr</span>
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="nt">track_front</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.55</span>
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="nt">track_rear</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.55</span>
+</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="nt">cg_height</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.55</span>
+</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="nt">wheel_radius_nominal</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.32</span>
+</span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="nt">drive_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">RWD</span>
+</span><span id="__span-13-12"><a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="nt">steering_ratio</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">15.0</span>
+</span><span id="__span-13-13"><a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="nt">aero_drag_coeff</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.3</span>
+</span><span id="__span-13-14"><a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a><span class="nt">frontal_area</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.2</span>
+</span><span id="__span-13-15"><a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a><span class="nt">tire_yaml</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">parts/tire/generic_pacejka.yaml</span><span class="w">  </span><span class="c1"># the tyre sidecar</span>
 </span></code></pre></div>
-<p>Tyre <code>configs/parts/tire/ioniq5_pac2002.yaml</code> (MF2002 <code>.tir</code> backend, LuGre OFF, combined-slip
-ON). Unlike the old MF96 (constant B/C/E), the MF2002 coefficients are <strong>load-dependent</strong>, so
-cornering stiffness and peak μ change with Fz — the load-transfer / limit behaviour an MPC
-robustness study needs:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nt">backend</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mf2002</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="nt">tir_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ioniq5_pac2002.tir</span><span class="w">   </span><span class="c1"># Pacejka-2002 coefficient file (next to this yaml)</span>
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="nt">mu_nominal</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.9</span>
-</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="nt">Fz_nominal</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5764.0</span>
-</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="nt">combined_slip_enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="nt">lugre</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> enabled</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="w"> </span><span class="p p-Indicator">}</span>
-</span></code></pre></div>
-<p>The <code>.tir</code> (<code>configs/parts/tire/ioniq5_pac2002.tir</code>, public-synthetic — no measured data) holds
-the Pacejka-2002 coefficients. The load-shaping ones:</p>
+<p>(excerpt; the file also carries suspension, drivetrain and brake fields). Its tyre
+<code>configs/parts/tire/generic_pacejka.yaml</code> is the MF96 default tyre (constant B/C/D/E).</p>
+<h3 id="mf2002-tir-tyres">MF2002 (<code>.tir</code>) tyres<a class="headerlink" href="#mf2002-tir-tyres" title="Permanent link">&para;</a></h3>
+<p>A tyre YAML with <code>backend: mf2002</code> and <code>tir_path: &lt;file&gt;.tir</code> evaluates the full
+Pacejka-2002 model from a coefficient file. No <code>.tir</code> ships in the package: <code>.tir</code> files
+usually hold measured data, so they stay with their owner (see <em>Private vehicles</em> below).
+The repository's public synthetic <code>external/chrono_parity/sample_pac02.tir</code> (hand-authored,
+no measured data) is the test input. The load-shaping coefficients:</p>
 <table>
 <thead>
 <tr>
@@ -3330,39 +3346,42 @@ the Pacejka-2002 coefficients. The load-shaping ones:</p>
 </tbody>
 </table>
 <h3 id="making-your-own-vehicle">Making your own vehicle<a class="headerlink" href="#making-your-own-vehicle" title="Permanent link">&para;</a></h3>
-<p>Copy <code>ioniq5_awd.yaml</code>, edit mass/geometry. The MF2002 cornering stiffness per wheel is
+<p>Copy <code>generic_sedan.yaml</code>, edit mass/geometry. The MF2002 cornering stiffness per wheel is
 <code>Kya(Fz) = PKY1 · FNOMIN · sin( 2·atan( Fz / (PKY2·FNOMIN) ) ) · LKY</code> — load-dependent, so a
 <strong>single</strong> <code>.tir</code> reproduces different front/rear axle stiffness automatically from each axle's
 static Fz (no per-axle file needed). To target known axle stiffnesses, pick <code>PKY1</code> (overall
 magnitude) and <code>PKY2</code> (where it saturates) so that <code>2·Kya(Fz_front)=Ca_f</code> and
 <code>2·Kya(Fz_rear)=Ca_r</code>.</p>
-<p>Worked example (Ioniq5, this preset): <code>PKY1=-24.6, PKY2=2.56</code> give
-<code>Kya(7011 N)=109.3k</code> → axle <code>Ca_f≈218k</code> and <code>Kya(4558 N)=79.5k</code> → axle <code>Ca_r≈159k</code>
-(targets 220k / 160k, ~1 %). Because <code>Kya</code> is concave, <code>Kya(2·Fz0)/Kya(Fz0)=1.435</code> (&lt; 2 =
-saturating, not linear), and <code>PDY2=-0.10</code> drops peak μ from 0.90 to 0.81 at 2·Fz0.</p>
+<h3 id="private-vehicles">Private vehicles<a class="headerlink" href="#private-vehicles" title="Permanent link">&para;</a></h3>
+<p>A car whose parameters must not be published lives outside the package, in a root with
+the <code>configs/</code> layout: <code>&lt;root&gt;/vehicles/&lt;name&gt;.yaml</code>, <code>&lt;root&gt;/parts/tire/&lt;tyre&gt;.yaml</code> (+ its
+<code>.tir</code>). Set <code>VDSIM_PRIVATE_CONFIGS=&lt;root&gt;</code>; <code>VDSimPlant(config="&lt;name&gt;.yaml")</code> and
+<code>vdsim_rl</code> then search that root before the bundled presets, and the vehicle's <code>tire_yaml</code>
+is resolved in the same root first.</p>
 <hr />
 <h2 id="10-api-reference">10. API reference<a class="headerlink" href="#10-api-reference" title="Permanent link">&para;</a></h2>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="n">VDSimPlant</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="s2">"ioniq5_awd"</span><span class="p">,</span>   <span class="c1"># vehicle preset name or path</span>
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>           <span class="n">friction_map</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>     <span class="c1"># [(x0, x1, mu), ...] 1-D bands along x</span>
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>           <span class="n">friction_map_2d</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># [{"polygon": [(x,y),...], "mu": ...}, ...]</span>
-</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>           <span class="n">base_mu</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span>           <span class="c1"># (0, 1.2]</span>
-</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>           <span class="n">control_dt</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>       <span class="c1"># s, one step() period (ZOH); &gt;= substep_dt</span>
-</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>           <span class="n">substep_dt</span><span class="o">=</span><span class="mf">5e-4</span><span class="p">)</span>       <span class="c1"># s, internal fixed integration step; divides control_dt</span>
-</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>
-</span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="n">plant</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">state0</span><span class="o">=</span><span class="p">[</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">psi</span><span class="p">,</span> <span class="n">vx</span><span class="p">,</span> <span class="n">vy</span><span class="p">,</span> <span class="n">r</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">obs</span>   <span class="c1"># seeds wheel spin = vx / R_eff</span>
-</span><span id="__span-15-9"><a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="n">plant</span><span class="o">.</span><span class="n">step</span><span class="p">([</span><span class="n">delta_rad</span><span class="p">,</span> <span class="n">Fx_total_N</span><span class="p">])</span>         <span class="o">-&gt;</span> <span class="n">obs</span>   <span class="c1"># advance one control period</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="n">VDSimPlant</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="s2">"generic_sedan"</span><span class="p">,</span>   <span class="c1"># vehicle preset name or path</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>           <span class="n">friction_map</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>     <span class="c1"># [(x0, x1, mu), ...] 1-D bands along x</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>           <span class="n">friction_map_2d</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># [{"polygon": [(x,y),...], "mu": ...}, ...]</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>           <span class="n">base_mu</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span>           <span class="c1"># (0, 1.2]</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>           <span class="n">control_dt</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>       <span class="c1"># s, one step() period (ZOH); &gt;= substep_dt</span>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>           <span class="n">substep_dt</span><span class="o">=</span><span class="mf">5e-4</span><span class="p">)</span>       <span class="c1"># s, internal fixed integration step; divides control_dt</span>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="n">plant</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">state0</span><span class="o">=</span><span class="p">[</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">psi</span><span class="p">,</span> <span class="n">vx</span><span class="p">,</span> <span class="n">vy</span><span class="p">,</span> <span class="n">r</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">obs</span>   <span class="c1"># seeds wheel spin = vx / R_eff</span>
+</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="n">plant</span><span class="o">.</span><span class="n">step</span><span class="p">([</span><span class="n">delta_rad</span><span class="p">,</span> <span class="n">Fx_total_N</span><span class="p">])</span>         <span class="o">-&gt;</span> <span class="n">obs</span>   <span class="c1"># advance one control period</span>
 </span></code></pre></div>
 <p>Inputs are validated; bad ones raise a clear <code>ValueError</code>/<code>TypeError</code> (see Troubleshooting).</p>
 <hr />
 <h2 id="11-whats-validated-so-you-can-trust-it">11. What's validated (so you can trust it)<a class="headerlink" href="#11-whats-validated-so-you-can-trust-it" title="Permanent link">&para;</a></h2>
 <p>Gated by <code>ctest -R VlaPlant</code>; the current full-suite result and measurement
 configuration are tracked in <a href="../VALIDATION/">Validation</a>:
-- <strong>Dry handling = linear bicycle within ~4 %</strong> (steady yaw-rate gain vs the single-track model
+- <strong>Dry handling = linear bicycle within 15 %</strong> (steady yaw-rate gain vs the single-track model
   with the same <code>Caf/Car</code>) — your bicycle results carry over. Checked for both the analytic-B
-  tyre and the real MF2002 <code>.tir</code>.
+  tyre and an MF2002 <code>.tir</code> (the public synthetic <code>sample_pac02.tir</code>, axle stiffness taken
+  from the same file at the static loads).
 - <strong>Load-dependent tyre (MF2002)</strong>: cornering stiffness concave in Fz
-  (<code>Kya(2Fz0)/Kya(Fz0)=1.435 &lt; 2</code>) and peak μ falls with load (<code>0.90→0.81</code> at 2·Fz0) — the
-  load-transfer limit behaviour MF96 could not represent.
+  (<code>Kya(2Fz0) &lt; 2·Kya(Fz0)</code>) and peak μ falls with load — the load-transfer limit behaviour
+  MF96 could not represent.
 - <strong>Friction circle held</strong>: <code>‖[Fx,Fy]‖ ≤ mu·Fz</code> every step; over-command ⇒ real slip + the
   vehicle cannot deliver the commanded Fx (grip loss), and a brake never spins a wheel
   backwards.
@@ -3414,7 +3433,7 @@ chance-constraint study wants to stress.</p>
 </tr>
 <tr>
 <td><code>FileNotFoundError: ... config</code></td>
-<td>use a bundled name (<code>ioniq5_awd</code>) or an absolute YAML path</td>
+<td>use a bundled name (<code>generic_sedan</code>) or a car under <code>$VDSIM_PRIVATE_CONFIGS/vehicles/</code></td>
 </tr>
 <tr>
 <td><code>import vdsim</code> fails</td>
@@ -3509,10 +3528,10 @@ chance-constraint study wants to stress.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.expand", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.expand", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
       
         <script src="../javascripts/mathjax.js"></script>
       

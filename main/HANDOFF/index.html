@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -27,10 +27,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -3058,7 +3058,7 @@ GUI v3 frozen on <code>VDSim-Thesis</code> only (<code>a44b593</code>). VLA plan
 <code>97c3d7a</code> Win32 plugin loader, <code>bfcc5cd</code> wheel <code>vehicles/</code> + <code>vdsim_plant.py</code>).<br />
 <strong>C CI:</strong> <code>workflow_dispatch</code> run <a href="https://github.com/Onlyti/VDSim/actions/runs/28213027035">28213027035</a> —
 <code>wheels</code> cp310/311/312 × linux+win + <code>sdist</code> + <code>verify</code> green; <strong><code>publish</code> skipped</strong> (no tag).<br />
-<strong>Local conda (Linux):</strong> clean py3.10/3.11/3.12 — import + Sim 3종 (sedan L2, ioniq5 L2, L1) +
+<strong>Local conda (Linux):</strong> clean py3.10/3.11/3.12 — import + Sim 3종 (sedan L2, 두 번째 차량 프리셋 L2, L1) +
 <code>vdsim-quickstart</code> + <code>demo_grip_loss.py</code> green on CI artifacts (<code>0.7.0.dev26</code>).<br />
 <strong>D setuptools-scm:</strong> <code>0.7.0.dev26</code> now; <code>SETUPTOOLS_SCM_PRETEND_VERSION=0.7.0</code> → <code>0.7.0</code> (&gt; 0.0.0).<br />
 <strong>HOLD:</strong> no <code>v0.7.0</code> tag / PyPI / public release until PO GO.</p>
@@ -3095,7 +3095,7 @@ GUI v3 frozen on <code>VDSim-Thesis</code> only (<code>a44b593</code>). VLA plan
 <p><strong>Plant API (P1 wedge):</strong> open — thesis / external MPC (<code>vdsim_plant</code>, CmdL1 path).</p>
 <p><strong>Wheel CI (P0-1):</strong> <code>.github/workflows/wheels.yml</code> — tag <code>v*</code> → cibuildwheel + PyPI (trusted publisher).<br />
 <strong>HOLD:</strong> no <code>v0.7.0</code> tag / PyPI publish / main merge until PO decision-4 gate (PO signal).<br />
-Pre-publish: <code>python3 tools/verify_wheel_packaging.py wheelhouse/*.whl</code> (1 public <code>.tir</code>, 0 measured).</p>
+Pre-publish: <code>python3 tools/verify_wheel_packaging.py wheelhouse/*.whl</code> (no <code>.tir</code>, no withheld names or run-output folders, generic presets present; also takes the sdist).</p>
 <p><strong>P0-2 quickstart:</strong> <code>examples/quickstart.py</code> + <code>vdsim-quickstart</code>; README cites <strong>~6 s cold</strong> (measured, not "5 min").<br />
 <strong>P0-3 demo:</strong> <code>examples/demo_grip_loss.py</code> → <code>docs/assets/demo_grip_loss.gif</code> (headless, pillow).<br />
 <strong>P0-4 VALIDATION:</strong> currency v0.5.1+, <strong>404/404 ctest</strong>; README validation summary; tire cross-check wording (not product parity). ISO numbers unchanged (IsoBaseline gated).</p>
@@ -3218,7 +3218,7 @@ compatible). Catalog optional <code>tire_rear</code> slot → <code>tire_rear.ya
 python3 tests/scripts/test_vla_plant.py</code></p>
 <h2 id="0-2026-06-18-dynamics-ladder-bench-l0l5-done">0. 2026-06-18 Dynamics ladder bench L0–L5 — DONE<a class="headerlink" href="#0-2026-06-18-dynamics-ladder-bench-l0l5-done" title="Permanent link">&para;</a></h2>
 <p><strong>Shipped:</strong> <code>tools/bench_dynamics_levels.py</code> + <code>examples/bench_dynamics_levels.cpp</code>
-(<code>vdsim_bench_levels</code>) — ioniq5_awd, dt=5e-4, 500 step, SimSession.tick() ms/step.</p>
+(<code>vdsim_bench_levels</code>) — 당시 차량 프리셋(0.7.0에서 제거), dt=5e-4, 500 step, SimSession.tick() ms/step.</p>
 <table>
 <thead>
 <tr>
@@ -3276,13 +3276,12 @@ alongside existing contact <code>wheel.mu</code>. Friction-circle GT metric
 - <strong>Test</strong> <code>VlaPlant.RealizedPeakMuBoundsFrictionCircle</code></p>
 <p><strong>Verify:</strong> <code>cmake --build build -j &amp;&amp; cd build &amp;&amp; ctest -R VlaPlant --output-on-failure</code></p>
 <h2 id="0b-2026-06-18-vla-plant-tyre-mf2002-t-ivb-done">0b. 2026-06-18 VLA plant tyre → MF2002 (T-IVb) — DONE<a class="headerlink" href="#0b-2026-06-18-vla-plant-tyre-mf2002-t-ivb-done" title="Permanent link">&para;</a></h2>
-<p><strong>Shipped:</strong> Ioniq5-class VLA plant now uses <strong>MF2002</strong> (load-dependent <code>PKY*</code> cornering stiffness +
+<p><strong>Shipped:</strong> the VLA plant preset now uses <strong>MF2002</strong> (load-dependent <code>PKY*</code> cornering stiffness +
 <code>PDY2</code> peak-μ load sensitivity) instead of MF96.</p>
 <p><strong>Deliverables:</strong>
-- <strong><code>configs/parts/tire/ioniq5_pac2002.tir</code></strong> — public-synthetic Pacejka-2002 (gitignore-excepted)
-- <strong><code>configs/parts/tire/ioniq5_pac2002.yaml</code></strong> — <code>backend: mf2002</code> + <code>tir_path</code>
-- <strong><code>configs/vehicles/ioniq5_awd.yaml</code></strong> — <code>tire_yaml: parts/tire/ioniq5_pac2002.yaml</code>
-- MF96 yaml <strong><code>ioniq5_pacejka.yaml</code></strong> kept (not deleted)
+- the plant vehicle preset, its MF2002 tyre YAML + <code>.tir</code> and an MF96 tyre YAML (all four
+  removed from the public tree in 0.7.0 and kept privately; the MF2002 tests now run on
+  <code>external/chrono_parity/sample_pac02.tir</code>)
 - <strong><code>python/vdsim_plant.py</code></strong> — resolves relative <code>tir_path</code> from configs root
 - <strong><code>python/bindings.cpp</code></strong> — exposes <code>TireParams.backend</code> / <code>tir_path</code> to Python
 - <strong>Tests</strong> (<code>test_vla_plant.cpp</code>): <code>DryHandlingMatchesLinearBicycleRealMf2002Tire</code>,
@@ -3296,7 +3295,7 @@ alongside existing contact <code>wheel.mu</code>. Friction-circle GT metric
 - <strong>#0</strong> Ld2 native <code>CmdL1</code> torque path (Fx→per-wheel τ, bypass throttle map) + <code>plant_path</code> kinematic-blend bypass
 - <strong>#1</strong> <code>create_friction_patch_ground(base_mu, [(x0,x1,mu)...])</code> + pybind
 - <strong>#2</strong> <code>wheel_mu()</code> on Ld2 + pybind
-- <strong>#3</strong> <code>configs/vehicles/ioniq5_awd.yaml</code> + <code>configs/parts/tire/ioniq5_pacejka.yaml</code>
+- <strong>#3</strong> plant vehicle preset + MF96 tyre YAML (removed in 0.7.0)
 - <strong>#4</strong> <code>python/vdsim_plant.py</code> on <code>vdsim_lab</code> / <code>make_vla_plant_session</code> (direct CmdL1, ZOH two-tier dt)
 - <strong>#5</strong> smokes: <code>tests/scripts/test_vla_plant.py</code> + <code>examples/vla_plant_demo.py</code> + <code>python/VDSIM_PLANT_README.md</code></p>
 <p><strong>Verify:</strong> <code>cmake --build build -j &amp;&amp; cd build &amp;&amp; ctest -R vla_plant --output-on-failure</code> (headline #2 brake+turn on μ=0.5 patch).</p>
@@ -3615,10 +3614,10 @@ module workshop; L1 has no subsystem objects (out of scope).
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.expand", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.expand", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
       
         <script src="../javascripts/mathjax.js"></script>
       
