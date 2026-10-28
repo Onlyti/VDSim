@@ -1,0 +1,59 @@
+== python
+Python 3.12.10
+== venv
+== install wheel
+== installed:
+Name: vdsim
+Version: 0.7.0.dev134
+Summary: VDSim — open-core vehicle-dynamics simulator (validated L1–L3 dynamics, Pacejka MF, hardpoint kinematics, FMI 2.0)
+== source tree check (no VDSim source tree under work)
+demo
+src markers: []
+== import smoke (all 13 shipped modules)
+  vdsim C:\Users\jiwon\AppData\Local\Temp\q19b2win\venv\Lib\site-packages\vdsim.cp312-win_amd64.pyd
+  vdsim_lab C:\Users\jiwon\AppData\Local\Temp\q19b2win\venv\Lib\site-packages\vdsim_lab.py
+  vdsim_plant C:\Users\jiwon\AppData\Local\Temp\q19b2win\venv\Lib\site-packages\vdsim_plant.py
+  vdsim_trace C:\Users\jiwon\AppData\Local\Temp\q19b2win\venv\Lib\site-packages\vdsim_trace.py
+  vdsim_render C:\Users\jiwon\AppData\Local\Temp\q19b2win\venv\Lib\site-packages\vdsim_render.py
+  vdsim_render3d C:\Users\jiwon\AppData\Local\Temp\q19b2win\venv\Lib\site-packages\vdsim_render3d.py
+  vdsim_preset C:\Users\jiwon\AppData\Local\Temp\q19b2win\venv\Lib\site-packages\vdsim_preset.py
+  protocol C:\Users\jiwon\AppData\Local\Temp\q19b2win\venv\Lib\site-packages\protocol.py
+  opendrive C:\Users\jiwon\AppData\Local\Temp\q19b2win\venv\Lib\site-packages\opendrive.py
+  rd5_route C:\Users\jiwon\AppData\Local\Temp\q19b2win\venv\Lib\site-packages\rd5_route.py
+  quickstart C:\Users\jiwon\AppData\Local\Temp\q19b2win\venv\Lib\site-packages\quickstart.py
+  catalog C:\Users\jiwon\AppData\Local\Temp\q19b2win\venv\Lib\site-packages\catalog\__init__.py
+  vdsim_rl C:\Users\jiwon\AppData\Local\Temp\q19b2win\venv\Lib\site-packages\vdsim_rl\__init__.py
+all 13 shipped modules import from the installed wheel
+== 06 quickstart (console entry point, cwd=/c/Users/jiwon/AppData/Local/Temp/q19b2win/work)
+/c/Users/jiwon/AppData/Local/Temp/q19b2win/run_c2_win.sh: line 30: /c/Users/jiwon/AppData/Local/Temp/q19b2win/venv/Scripts/quickstart.exe: No such file or directory
+1601 steps, t=8.0s | vx 12.2..24.7 | |ay|max 0.00 | |r|max 0.000
+wrote run.csv run.png
+-rw-r--r-- 1 jiwon 197609 276904 Sep 21 10:08 /c/Users/jiwon/AppData/Local/Temp/q19b2win/work/run.csv
+-rw-r--r-- 1 jiwon 197609  41076 Sep 21 10:08 /c/Users/jiwon/AppData/Local/Temp/q19b2win/work/run.png
+quickstart csv rows 1602 cols 30
+== 07 demo (script copied outside any source tree)
+recorded demo.vdtrace (peak slip/peak-slip ratio 16.42)
+wrote C:\Users\jiwon\AppData\Local\Temp\q19b2win\work\demo\demo_grip_loss.gif (120 frames, 12.0 fps) + demo_grip_loss_preview.png in 42.90s wall-clock
+total 2452
+drwxr-xr-x 1 jiwon 197609       0 Sep 21 10:09 .
+drwxr-xr-x 1 jiwon 197609       0 Sep 21 10:08 ..
+-rw-r--r-- 1 jiwon 197609   39718 Sep 21 10:08 demo.vdtrace
+-rw-r--r-- 1 jiwon 197609 2386928 Sep 21 10:09 demo_grip_loss.gif
+-rwxr-xr-x 1 jiwon 197609    4310 Sep 21 10:07 demo_grip_loss.py
+-rw-r--r-- 1 jiwon 197609   66309 Sep 21 10:08 demo_grip_loss_preview.png
+== C2 WINDOWS OK
+-rw-r--r-- 1 jiwon 197609 276904 Sep 21 10:09 run.csv
+-rw-r--r-- 1 jiwon 197609  41076 Sep 21 10:09 run.png
+
+== note (harness, not a product defect)
+The `quickstart.exe: No such file or directory` line above is a harness typo in the
+driver script: the declared console script name is `vdsim-quickstart` (pyproject
+[project.scripts]), not `quickstart`. The run continued via the `-m quickstart`
+fallback on the same line. Re-run with the correct entry point:
+  $ ./venv/Scripts/vdsim-quickstart.exe
+  1601 steps, t=8.0s | vx 12.2..24.7 | |ay|max 0.00 | |r|max 0.000
+  wrote run.csv run.png
+  -rw-r--r-- 1 jiwon 197609 276904 Sep 21 10:09 run.csv
+  -rw-r--r-- 1 jiwon 197609  41076 Sep 21 10:09 run.png
+Installed console scripts in the venv: vdsim-quickstart.exe, vdsim-render.exe,
+vdsim-render3d.exe  (all three declared entry points present on Windows).
