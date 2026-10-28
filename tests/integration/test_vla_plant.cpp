@@ -219,7 +219,14 @@ TEST(VlaPlant, DryHandlingMatchesLinearBicycle) {
     vdsim::SolverParams sp;
     const double R = vp.wheel_radius_nominal;
     const double m = vp.mass, lf = vp.cg_to_front, lr = vp.cg_to_rear, L = lf + lr;
-    const double Caf = 2.2e5, Car = 1.6e5, V = 16.7, delta = 0.04;
+    // Axle cornering stiffness of the plant tyre itself at the static wheel loads
+    // (same derivation as the MF2002 variant below), so the gate checks the plant.
+    const auto tire = vdsim::create_tire_from_params(tp);
+    ASSERT_NE(tire, nullptr);
+    const double g = 9.81;
+    const double Caf = 2.0 * std::abs(finite_diff_kya(*tire, 0.5 * m * g * lr / L));
+    const double Car = 2.0 * std::abs(finite_diff_kya(*tire, 0.5 * m * g * lf / L));
+    const double V = 16.7, delta = 0.04;
     const double K_us = m * (lr * Car - lf * Caf) / (L * Caf * Car);
     const double r_bicycle = delta * V / (L + K_us * V * V);   // linear single-track yaw gain
 
@@ -327,7 +334,7 @@ TEST(VlaPlant, CombinedBrakeTurnGripLossOnPatchMf2002) {
         if (dyn->state().velocity.x() < 2.0) break;
         const auto Fw = dyn->tire_forces_wheel();
         const auto Fb = dyn->tire_forces_body();
-        const auto mu = dyn->wheel_mu();
+        const auto mu_peak = dyn->wheel_mu_peak();
         const auto kappa = dyn->wheel_slip_ratio();
         const auto Fz = dyn->tire_Fz();
         double sumFx_body = 0.0;
@@ -335,7 +342,9 @@ TEST(VlaPlant, CombinedBrakeTurnGripLossOnPatchMf2002) {
             sumFx_body += Fb[i].x();
             if (Fz[i] < 200.0) continue;
             const double fxy = std::hypot(Fw[i].x(), Fw[i].y());
-            const double cap = mu[i] * Fz[i];
+            // Realized peak circle: the public .tir peaks above contact mu (PDX1, PDY1 > 1),
+            // so contact_mu*Fz is the old metric RealizedPeakMuBoundsFrictionCircle retires.
+            const double cap = mu_peak[i] * Fz[i];
             if (fxy > 1.08 * cap) circle_ok = false;
             if (fxy >= 0.30 * cap) engaged = true;
             if (std::abs(kappa[i]) > 0.1) slipped = true;
