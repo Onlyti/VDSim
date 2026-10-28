@@ -2,8 +2,9 @@
 
 A step-by-step guide to using **VDSim as the vehicle-dynamics plant** for a closed-loop
 controller (e.g. an MPC). You call `step()`; VDSim integrates one control period and returns
-ground-truth state + per-wheel tyre forces. Mid-fidelity (7-DOF + Pacejka MF2002 `.tir` with
-load-dependent coefficients + load transfer), deterministic, sub-real-time — a drop-in upgrade
+ground-truth state + per-wheel tyre forces. Mid-fidelity (7-DOF + Pacejka MF tyres — MF96 by
+default, MF2002 `.tir` with load-dependent coefficients when you supply one — + load transfer),
+deterministic, sub-real-time — a drop-in upgrade
 from a single-track bicycle plant.
 
 > Status: **BETA** (first release). The API below is stable for use; expect refinements from
@@ -81,7 +82,7 @@ sys.path += ["/path/to/VDSim/build/python", "/path/to/VDSim/python"]
 from vdsim_plant import VDSimPlant
 
 plant = VDSimPlant(
-    config="ioniq5_awd",     # bundled preset (configs/vehicles/ioniq5_awd.yaml)
+    config="generic_sedan",  # bundled preset (configs/vehicles/generic_sedan.yaml)
     base_mu=0.9,             # uniform dry friction
     control_dt=0.05,         # one step() = 0.05 s of sim, held ZOH
     substep_dt=5e-4,         # internal fixed integration step (stiff wheel spin)
@@ -183,15 +184,15 @@ import vdsim, math
 # Preferred: the LIVE tyre the plant runs (single source of truth, no .tir re-load):
 tire = plant.vehicle.tire.model            # or the shortcut plant.tire_model
 # Or load a standalone instance from a .tir:
-# tire = vdsim.create_magic_formula_tire_from_tir("configs/parts/tire/ioniq5_pac2002.tir")
+# tire = vdsim.create_magic_formula_tire_from_tir("external/chrono_parity/sample_pac02.tir")
 
-def F(kappa, alpha, Fz=5764.0, mu=0.9):
+def F(kappa, alpha, Fz=4000.0, mu=0.9):
     i = vdsim.TireInput(); i.Fz=Fz; i.kappa=kappa; i.alpha=alpha; i.mu_long=mu; i.mu_lat=mu
     o = tire.compute(i)            # also exposes o.mu_peak / o.alpha_peak / o.kappa_peak
     return o.Fx, o.Fy
 
 # combined peak along a fixed slip direction (kappa:alpha ratio): 1-D search
-def combined_peak(ratio, Fz=5764.0, mu=0.9):
+def combined_peak(ratio, Fz=4000.0, mu=0.9):
     best, bestm = (0.0, 0.0), 0.0
     s = 0.0
     while s <= 0.5:
@@ -201,8 +202,8 @@ def combined_peak(ratio, Fz=5764.0, mu=0.9):
     return best, bestm                # ((kappa*, alpha*), |F|*)
 ```
 
-E.g. for this `.tir` at Fz=5764, μ=0.9: pure-lat peak α≈0.130; at κ:α=1 the combined peak is at
-α≈0.079 with a larger resultant — the load-dependent shift the pure `alpha_peak` cannot show.
+For an MF2002 `.tir`, the combined peak at κ:α=1 sits at a smaller α than the pure-lateral
+peak, with a larger resultant — the shift the pure `alpha_peak` cannot show.
 
 ---
 
@@ -229,7 +230,7 @@ axle enters a patch before the rear (real time lag).
 
 ```python
 plant = VDSimPlant(
-    config="ioniq5_awd",
+    config="generic_sedan",
     base_mu=0.9,
     friction_map=[(40.0, 60.0, 0.5)],   # μ=0.5 ice patch from x=40 m to x=60 m
     control_dt=0.05, substep_dt=5e-4,
@@ -249,7 +250,7 @@ Overlapping patches take the **minimum** μ (most restrictive grip). Mutually ex
 
 ```python
 plant = VDSimPlant(
-    config="ioniq5_awd",
+    config="generic_sedan",
     base_mu=0.9,
     friction_map_2d=[{
         "polygon": [(80.0, -2.0), (120.0, -2.0), (120.0, 2.0), (80.0, 2.0)],
@@ -293,7 +294,7 @@ import tempfile
 import vdsim
 from vdsim_plant import VDSimPlant, resolve_vehicle_config
 
-vp_path = resolve_vehicle_config("ioniq5_awd")
+vp_path = resolve_vehicle_config("generic_sedan")
 vp = vdsim.VehicleParams.from_yaml(str(vp_path))
 vp.steer_deadtime_s = 0.05
 with tempfile.NamedTemporaryFile(suffix=".yaml", delete=False) as f:
@@ -322,7 +323,7 @@ Compare against `steer_deadtime_s: 0` (or default) on the same manoeuvre; larger
 The plant replaces a Python bicycle plant with no controller change. Pattern:
 
 ```python
-plant = VDSimPlant(config="ioniq5_awd", base_mu=0.9,
+plant = VDSimPlant(config="generic_sedan", base_mu=0.9,
                    friction_map=[(40.0, 60.0, 0.5)],
                    control_dt=0.1, substep_dt=1e-3)   # control_dt = your MPC sample
 obs = plant.reset(state0=[0, 0, 0, 16.7, 0, 0])
@@ -342,47 +343,39 @@ must divide `control_dt` evenly. The MPC at dt=0.1 with `control_dt=0.1, substep
 
 ---
 
-## 9. Parameter file — `ioniq5_awd.yaml`
+## 9. Parameter file — `generic_sedan.yaml`
 
-The bundled vehicle preset (`configs/vehicles/ioniq5_awd.yaml`), public Ioniq5-class:
-
-```yaml
-mass: 2359.0
-mass_sprung: 2200.0
-inertia_diag: [1200.0, 4200.0, 3400.0]   # [Ixx, Iyy, Izz]; Izz=3400 is the yaw inertia
-wheelbase: 2.97
-cg_to_front: 1.17                         # lf
-cg_to_rear: 1.80                          # lr
-track_front: 1.635
-track_rear: 1.635
-cg_height: 0.58
-wheel_radius_nominal: 0.338
-drive_type: AWD
-drive_split_front: 0.5                    # 50/50 front/rear Fx split (drive AND brake)
-plant_path: true                          # bypass the vehicle low-speed kinematic blend
-differential: Open
-steering_ratio: 14.0
-aero_drag_coeff: 0.28
-frontal_area: 2.45
-tire_yaml: parts/tire/ioniq5_pac2002.yaml  # the tyre sidecar (below)
-```
-
-Tyre `configs/parts/tire/ioniq5_pac2002.yaml` (MF2002 `.tir` backend, LuGre OFF, combined-slip
-ON). Unlike the old MF96 (constant B/C/E), the MF2002 coefficients are **load-dependent**, so
-cornering stiffness and peak μ change with Fz — the load-transfer / limit behaviour an MPC
-robustness study needs:
+The default vehicle preset (`configs/vehicles/generic_sedan.yaml`) holds the solver
+defaults of `vdsim.VehicleParams()` — a generic mid-size sedan, not a measured car:
 
 ```yaml
-backend: mf2002
-tir_path: ioniq5_pac2002.tir   # Pacejka-2002 coefficient file (next to this yaml)
-mu_nominal: 0.9
-Fz_nominal: 5764.0
-combined_slip_enabled: true
-lugre: { enabled: false }
+mass: 1500.0
+mass_sprung: 1350.0
+inertia_diag: [500.0, 2000.0, 2500.0]   # [Ixx, Iyy, Izz]; Izz is the yaw inertia
+wheelbase: 2.7
+cg_to_front: 1.2                          # lf
+cg_to_rear: 1.5                           # lr
+track_front: 1.55
+track_rear: 1.55
+cg_height: 0.55
+wheel_radius_nominal: 0.32
+drive_type: RWD
+steering_ratio: 15.0
+aero_drag_coeff: 0.3
+frontal_area: 2.2
+tire_yaml: parts/tire/generic_pacejka.yaml  # the tyre sidecar
 ```
 
-The `.tir` (`configs/parts/tire/ioniq5_pac2002.tir`, public-synthetic — no measured data) holds
-the Pacejka-2002 coefficients. The load-shaping ones:
+(excerpt; the file also carries suspension, drivetrain and brake fields). Its tyre
+`configs/parts/tire/generic_pacejka.yaml` is the MF96 default tyre (constant B/C/D/E).
+
+### MF2002 (`.tir`) tyres
+
+A tyre YAML with `backend: mf2002` and `tir_path: <file>.tir` evaluates the full
+Pacejka-2002 model from a coefficient file. No `.tir` ships in the package: `.tir` files
+usually hold measured data, so they stay with their owner (see *Private vehicles* below).
+The repository's public synthetic `external/chrono_parity/sample_pac02.tir` (hand-authored,
+no measured data) is the test input. The load-shaping coefficients:
 
 | coeff | role |
 |---|---|
@@ -393,24 +386,27 @@ the Pacejka-2002 coefficients. The load-shaping ones:
 
 ### Making your own vehicle
 
-Copy `ioniq5_awd.yaml`, edit mass/geometry. The MF2002 cornering stiffness per wheel is
+Copy `generic_sedan.yaml`, edit mass/geometry. The MF2002 cornering stiffness per wheel is
 `Kya(Fz) = PKY1 · FNOMIN · sin( 2·atan( Fz / (PKY2·FNOMIN) ) ) · LKY` — load-dependent, so a
 **single** `.tir` reproduces different front/rear axle stiffness automatically from each axle's
 static Fz (no per-axle file needed). To target known axle stiffnesses, pick `PKY1` (overall
 magnitude) and `PKY2` (where it saturates) so that `2·Kya(Fz_front)=Ca_f` and
 `2·Kya(Fz_rear)=Ca_r`.
 
-Worked example (Ioniq5, this preset): `PKY1=-24.6, PKY2=2.56` give
-`Kya(7011 N)=109.3k` → axle `Ca_f≈218k` and `Kya(4558 N)=79.5k` → axle `Ca_r≈159k`
-(targets 220k / 160k, ~1 %). Because `Kya` is concave, `Kya(2·Fz0)/Kya(Fz0)=1.435` (< 2 =
-saturating, not linear), and `PDY2=-0.10` drops peak μ from 0.90 to 0.81 at 2·Fz0.
+### Private vehicles
+
+A car whose parameters must not be published lives outside the package, in a root with
+the `configs/` layout: `<root>/vehicles/<name>.yaml`, `<root>/parts/tire/<tyre>.yaml` (+ its
+`.tir`). Set `VDSIM_PRIVATE_CONFIGS=<root>`; `VDSimPlant(config="<name>.yaml")` and
+`vdsim_rl` then search that root before the bundled presets, and the vehicle's `tire_yaml`
+is resolved in the same root first.
 
 ---
 
 ## 10. API reference
 
 ```python
-VDSimPlant(config="ioniq5_awd",   # vehicle preset name or path
+VDSimPlant(config="generic_sedan",   # vehicle preset name or path
            friction_map=None,     # [(x0, x1, mu), ...] 1-D bands along x
            friction_map_2d=None,  # [{"polygon": [(x,y),...], "mu": ...}, ...]
            base_mu=0.9,           # (0, 1.2]
@@ -429,12 +425,13 @@ Inputs are validated; bad ones raise a clear `ValueError`/`TypeError` (see Troub
 
 Gated by `ctest -R VlaPlant`; the current full-suite result and measurement
 configuration are tracked in [Validation](VALIDATION.md):
-- **Dry handling = linear bicycle within ~4 %** (steady yaw-rate gain vs the single-track model
+- **Dry handling = linear bicycle within 15 %** (steady yaw-rate gain vs the single-track model
   with the same `Caf/Car`) — your bicycle results carry over. Checked for both the analytic-B
-  tyre and the real MF2002 `.tir`.
+  tyre and an MF2002 `.tir` (the public synthetic `sample_pac02.tir`, axle stiffness taken
+  from the same file at the static loads).
 - **Load-dependent tyre (MF2002)**: cornering stiffness concave in Fz
-  (`Kya(2Fz0)/Kya(Fz0)=1.435 < 2`) and peak μ falls with load (`0.90→0.81` at 2·Fz0) — the
-  load-transfer limit behaviour MF96 could not represent.
+  (`Kya(2Fz0) < 2·Kya(Fz0)`) and peak μ falls with load — the load-transfer limit behaviour
+  MF96 could not represent.
 - **Friction circle held**: `‖[Fx,Fy]‖ ≤ mu·Fz` every step; over-command ⇒ real slip + the
   vehicle cannot deliver the commanded Fx (grip loss), and a brake never spins a wheel
   backwards.
@@ -471,7 +468,7 @@ chance-constraint study wants to stress.
 | `ValueError: ... mu=... outside (0, 1.2]` | friction must be in (0, 1.2] |
 | `ValueError: substep_dt must divide control_dt evenly` | pick e.g. control_dt=0.05, substep_dt=5e-4 (×100) |
 | `ValueError: step(u): u must be [delta_rad, Fx_total_N]` | pass a 2-element `[delta, Fx]` |
-| `FileNotFoundError: ... config` | use a bundled name (`ioniq5_awd`) or an absolute YAML path |
+| `FileNotFoundError: ... config` | use a bundled name (`generic_sedan`) or a car under `$VDSIM_PRIVATE_CONFIGS/vehicles/` |
 | `import vdsim` fails | build first (`cmake --build build -j`) and add `build/python` to `sys.path` |
 | car won't slow under braking | `Fx` is a force intent; on low μ the realised brake force is capped at grip — expected |
 

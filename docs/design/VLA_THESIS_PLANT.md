@@ -36,9 +36,10 @@ the plant is swapped. Reference behaviour: `~/vla_design/sim/closed_loop_sim.py`
    kStickBlend so it rarely engages, but bypass it for grip-loss consistency. (Aligns with
    roadmap T3 "VLOW-class unified low speed".)
 
-## ioniq5_awd.yaml (values FINAL)
-`m=2359, Iz=3400, lf=1.17, lr=1.80, mu_nom=0.9, drive_split_front=0.5`. track / h_cg = public
-Ioniq5-class (NO confidential/measured data). MF96 BCD `D=mu·Fz, C=1.3, B=Ca/(C·D)`.
+## Vehicle preset
+The thesis vehicle preset and its values were removed from the public tree in 0.7.0 (they are
+kept outside the package and injected through `$VDSIM_PRIVATE_CONFIGS`); the bundled default
+is `generic_sedan`. MF96 BCD `D=mu·Fz, C=1.3, B=Ca/(C·D)`.
 **TRAP: `Ca_f=2.2e5 / Ca_r=1.6e5` are AXLE values** (the thesis bicycle is single-track), but
 7DOF has 4 wheels with PER-WHEEL MF. So per front wheel use `Ca=Ca_f/2` and
 `D=mu·Fz_front_wheel` (`Fz_front_wheel = m·g·lr/L / 2`); likewise rear. Calibrate B at the
@@ -91,7 +92,7 @@ is exactly the pedal/throttle map the thesis forbids (P0.2). Steer (δ) IS clean
    wheel world-x (front-before-rear lag). C++ provider + pybind. (μ(x,y) general = bonus.)
 2. **`wheel_mu()` getter** on the dynamics (the real μ each wheel used this step) + pybind.
    (forces/Fz already exposed.) No usage computation.
-3. **`configs/.../ioniq5_awd.yaml`** with the §8 values + the BCD mapping.
+3. **a vehicle preset YAML** with the §8 values + the BCD mapping.
 4. **`VDSimPlant` Python wrapper** (`from vdsim_plant import VDSimPlant`): ctor(config,
    friction_patch, base_mu, dt) → `reset(state0)` → `step([delta, Fx]) -> obs dict`. Internally:
    Ld2 SimSession + CmdL3 + the getters, on top of `vdsim_lab`. obs (per §API).
@@ -106,7 +107,7 @@ is exactly the pedal/throttle map the thesis forbids (P0.2). Steer (δ) IS clean
 
 ## Target API (drop-in)
 ```python
-plant = VDSimPlant(config="ioniq5_awd.yaml", friction_map=[(s0,s1,0.5)], base_mu=0.9,
+plant = VDSimPlant(config="generic_sedan.yaml", friction_map=[(s0,s1,0.5)], base_mu=0.9,
                    control_dt=0.05, substep_dt=5e-4)   # control_dt <= MPC dt (0.1); ZOH
 plant.reset(state0=[X,Y,psi,vx,vy,r])                  # seeds wheel_spin = vx/R internally
 for k in range(N):
@@ -158,7 +159,7 @@ product surface, not a one-off test helper. Build to these bars (reviewed next s
   copy-paste snippet.
 - **Reproducibility guarantee**: deterministic, no RNG by default; document "same input ⇒ same
   output" and the fixed-substep requirement. A determinism test is part of the smokes.
-- **Sensible defaults + discoverable preset**: `ioniq5_awd` resolvable like other presets
+- **Sensible defaults + discoverable preset**: the vehicle preset resolvable like other presets
   (via `vdsim_lab` config resolution); friction_map optional (uniform `base_mu` default).
 - **Drop-in proof**: demonstrate the `from vdsim_plant import VDSimPlant` import works from a
   sibling project (path/install noted), and that it replaces `closed_loop_sim.py`'s plant with
@@ -168,7 +169,7 @@ product surface, not a one-off test helper. Build to these bars (reviewed next s
 
 ## Guardrails
 wheel FL0/FR1/RL2/RR3, ISO 8855, YAML params, estimation noise = Q-process/R-meas (plant-
-irrelevant). No confidential/measured tyre data (Ioniq5 = public approx). No push/force/tag
+irrelevant). No confidential/measured tyre data in the public tree. No push/force/tag
 before approval; keep tests green. Fidelity discipline: 7DOF + MF + load transfer is enough —
 no new dynamics, no full suspension (P2). Reuse Ld2 + MF96 + SimSession + vdsim_lab; only add
 the patch provider, the μ getter, the yaml, the wrapper, the smokes.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Benchmark VDSim dynamics ladder L0–L5: ms/step (ioniq5_awd, dt=5e-4, 500 steps).
+"""Benchmark VDSim dynamics ladder L0–L5: ms/step (generic_sedan, dt=5e-4, 500 steps).
 
 L0–L4: SimSession.tick() via pybind. L5 (Free3D stunt): C++ vdsim_bench_levels
 (not wired into make_sim_session in pybind).
@@ -34,15 +34,15 @@ PY_LEVELS = [
 BENCH_BIN = REPO / "build" / "bin" / "vdsim_bench_levels"
 
 
-def _load_ioniq5():
-    vp_path = resolve_vehicle_config("ioniq5_awd")
+def _load_preset():
+    vp_path = resolve_vehicle_config("generic_sedan")
     vp = vdsim.VehicleParams.from_yaml(str(vp_path))
     tp = _load_tire_for_vehicle(vp_path)
     return vp, tp
 
 
 def bench_py(level_code: str) -> float:
-    vp, tp = _load_ioniq5()
+    vp, tp = _load_preset()
     solver = vdsim.SolverParams()
     sess = vdsim.make_sim_session(
         vp, tp, level_code, nominal_dt=DT, solver=solver, mu=tp.mu_nominal

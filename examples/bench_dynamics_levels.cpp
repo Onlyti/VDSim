@@ -1,4 +1,4 @@
-// Benchmark one dynamics level via SimSession::tick (ioniq5_awd, dt, N steps).
+// Benchmark one dynamics level via SimSession::tick (generic_sedan + public MF2002 .tir, dt, N steps).
 // Used when a level is not exposed in pybind (L5) or for cross-checks.
 //
 // Usage: vdsim_bench_levels --level=L5 [--dt=5e-4] [--steps=500] [--warmup=50]
@@ -41,15 +41,17 @@ std::string opt_s(int argc, char** argv, const char* key, const std::string& def
     return def;
 }
 
-vdsim::VehicleParams ioniq5_vp() {
+vdsim::VehicleParams generic_vp() {
     return vdsim::VehicleParams::from_yaml(
-        std::string(kRepo) + "/configs/vehicles/ioniq5_awd.yaml");
+        std::string(kRepo) + "/configs/vehicles/generic_sedan.yaml");
 }
 
-vdsim::TireParams ioniq5_tp() {
+// MF2002 from the public synthetic .tir (not measured data).
+vdsim::TireParams mf2002_tp() {
     vdsim::TireParams tp = vdsim::TireParams::from_yaml(
-        std::string(kRepo) + "/configs/parts/tire/ioniq5_pac2002.yaml");
-    tp.tir_path = std::string(kRepo) + "/configs/parts/tire/ioniq5_pac2002.tir";
+        std::string(kRepo) + "/configs/parts/tire/generic_pacejka.yaml");
+    tp.backend = "mf2002";
+    tp.tir_path = std::string(kRepo) + "/external/chrono_parity/sample_pac02.tir";
     tp.lugre.enabled = false;
     return tp;
 }
@@ -75,8 +77,8 @@ vdsim::State init_state(const vdsim::VehicleParams& vp, const vdsim::TireParams&
 }
 
 double bench(const std::string& level, double dt, int steps, int warmup, double v0) {
-    const auto vp = ioniq5_vp();
-    const auto tp = ioniq5_tp();
+    const auto vp = generic_vp();
+    const auto tp = mf2002_tp();
     vdsim::SolverParams sp;
     if (level == "L5") sp.stunt_physics = true;
 

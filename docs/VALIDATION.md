@@ -87,8 +87,8 @@ tests:    543/543
 config:   cmake --preset validation && cmake --build --preset validation && ctest --preset validation
 presets:  CMakePresets.json@c4d279dcd60c661b61f480db95f5fe86fa82a7b8
 toolchain: cmake 3.31.10
-commit:   6181746
-date:     2026-10-17
+commit:   8fd2589
+date:     2026-10-28
 excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: closedloop_wallclock_timing (label timing, excluded by the validation test preset: wall-clock S6/S7 verdicts depend on host load -- local low-load evidence in the work order 31 PR description)

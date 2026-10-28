@@ -41,6 +41,25 @@ cmake.args = [
     "-DVDSIM_BUILD_COSIM=OFF",
 ]
 wheel.install-dir = "."
+# The sdist is the source tree minus build/run outputs, tyre .tir files (none
+# is published; the MF2002 tests read the public synthetic one from git) and
+# the folder kept for withheld validation data;
+# tools/verify_wheel_packaging.py checks the result.
+# Build directories are listed here as well as in .gitignore: its
+# "!CMakeLists.txt" line would otherwise pull their CMakeLists.txt back in.
+sdist.exclude = [
+    "**/results/",
+    "**/runs/",
+    "**/logs/",
+    "build/",
+    "build-*/",
+    "build_*/",
+    "cmake-build-*/",
+    "out/",
+    "dist/",
+    "*.tir",
+    "tests/validation/carmaker/",
+]
 
 [tool.scikit-build.metadata.version]
 provider = "scikit_build_core.metadata.setuptools_scm"

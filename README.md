@@ -46,13 +46,18 @@ Docs (theory + reports): **https://onlyti.github.io/VDSim/** · all run modes
 
 ## Quickstart (pip wheel)
 
-Prerequisites: Python 3.10–3.12. Install a pre-built wheel (or build locally — see
-[from source](#from-source) below).
+Prerequisites: Python 3.8–3.12 (pre-built wheels for Linux x86_64 and Windows
+AMD64). Install from PyPI (or build locally — see [from source](#from-source) below).
 
 ```bash
-pip install "./vdsim-*.whl[plot]"
+pip install "vdsim[plot]"           # or a local wheel: pip install "./vdsim-*.whl[plot]"
 vdsim-quickstart          # writes run.csv + run.png in the current directory
 ```
+
+The package ships generic presets only; `VDSimPlant()` defaults to `generic_sedan`.
+A car whose parameters must stay private is kept outside the package and found first:
+`export VDSIM_PRIVATE_CONFIGS=/abs/root` with `/abs/root/vehicles/<name>.yaml` (tyre under
+`/abs/root/parts/tire/`), then `VDSimPlant(config="<name>.yaml")`.
 
 Install into a clean environment: another distribution also provides a top-level
 `vdsim` package, and if both are present that one wins the import. VDSim detects
@@ -488,7 +493,7 @@ The plant picks its level at construction, and the control contract
 ```python
 from vdsim_plant import VDSimPlant
 
-plant = VDSimPlant(config="ioniq5_awd.yaml", level="L3")   # 14-DOF ride model
+plant = VDSimPlant(config="generic_sedan.yaml", level="L3")   # 14-DOF ride model
 plant.reset([0, 0, 0, 22.0, 0, 0])
 plant.enable_trace("run.vdtrace", seed=0, run_id="demo")
 ...

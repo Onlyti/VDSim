@@ -45,12 +45,17 @@ hardpoint 서스펜션 운동학 + 양방향 FMI 2.0. 렌더링·센서는 CARLA
 
 ## Quickstart (pip wheel)
 
-전제: Python 3.10–3.12. 미리 빌드된 wheel 설치(로컬 빌드는 [소스](#소스-빌드) 참고).
+전제: Python 3.8–3.12(Linux x86_64·Windows AMD64용 wheel 제공). PyPI에서 설치(로컬 빌드는 [소스](#소스-빌드) 참고).
 
 ```bash
-pip install "./vdsim-*.whl[plot]"
+pip install "vdsim[plot]"           # 로컬 wheel: pip install "./vdsim-*.whl[plot]"
 vdsim-quickstart          # cwd 에 run.csv + run.png 생성
 ```
+
+패키지에는 generic 프리셋만 들어 있고 `VDSimPlant()` 기본 차량은 `generic_sedan`이다.
+제원을 공개할 수 없는 차량은 패키지 밖에 두고 먼저 찾게 한다:
+`export VDSIM_PRIVATE_CONFIGS=/abs/root`에 `/abs/root/vehicles/<name>.yaml`(타이어는
+`/abs/root/parts/tire/`)을 두고 `VDSimPlant(config="<name>.yaml")`로 부른다.
 
 깨끗한 환경에 설치할 것 — 최상위 `vdsim` 패키지를 제공하는 다른 배포판이 함께 설치되면
 그쪽이 import 를 가져간다. VDSim 은 이를 감지해 실제 로드된 파일 경로와 함께
@@ -448,7 +453,7 @@ python3 examples/demo_replay3d.py --out results/replay3d
 ```python
 from vdsim_plant import VDSimPlant
 
-plant = VDSimPlant(config="ioniq5_awd.yaml", level="L3")   # 14-DOF 승차 모델
+plant = VDSimPlant(config="generic_sedan.yaml", level="L3")   # 14-DOF 승차 모델
 plant.reset([0, 0, 0, 22.0, 0, 0])
 plant.enable_trace("run.vdtrace", seed=0, run_id="demo")
 ...

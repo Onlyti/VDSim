@@ -49,7 +49,7 @@ def record(trace_path: Path, base_mu: float, run_id: str,
     :returns: the written trace path.
     """
     plant = VDSimPlant(
-        config="ioniq5_awd.yaml",
+        config="generic_sedan.yaml",
         friction_map=[PATCH],
         base_mu=base_mu,
         control_dt=DT,

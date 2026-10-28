@@ -231,7 +231,7 @@ def _step_with_normal(maker, tilted, bank, n=400, dt=0.002):
     import vdsim
     import vdsim_plant
 
-    vp_path = vdsim_plant.resolve_vehicle_config("ioniq5_awd.yaml")
+    vp_path = vdsim_plant.resolve_vehicle_config("generic_sedan.yaml")
     vp = vdsim.VehicleParams.from_yaml(str(vp_path))
     tp = vdsim_plant._load_tire_setup_for_vehicle(vp_path).wheel[0]
     sp = vdsim.SolverParams()

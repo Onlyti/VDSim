@@ -1,54 +1,101 @@
 #!/usr/bin/env python3
-"""Verify wheel/sdist data packaging before PyPI publish (PO gate)."""
+"""Verify wheel/sdist data packaging before PyPI publish (PO gate).
+
+A published version can never be replaced, so this refuses an archive that
+carries vehicle data or run outputs that must not leave the repository:
+
+* a member whose path names a withheld source (``FORBIDDEN_NAME_PARTS``),
+* any ``.tir`` (tyre coefficient files are measured data; none ships),
+* a run-output directory (``ARTIFACT_DIRS``) anywhere in the path,
+
+and refuses a wheel that lacks the public generic presets or the Python
+modules the entry points import.  Usage: ``verify_wheel_packaging.py <file> ...``
+with ``.whl`` and/or ``.tar.gz`` files.
+"""
 from __future__ import annotations
 
 import sys
+import tarfile
 import zipfile
 from pathlib import Path
 
+#: Path fragments (lower case) no published member may contain.
+FORBIDDEN_NAME_PARTS = ("ioniq", "carmaker", "private")
+#: Directory names of build products and run outputs, and build-directory
+#: name prefixes (``build-validation/``, ``cmake-build-debug/``).
+ARTIFACT_DIRS = ("build", "dist", "runs", "results", "logs")
+ARTIFACT_DIR_PREFIXES = ("build-", "build_", "cmake-build-")
+#: Wheel members the default plant and the RL default car need.
+GENERIC_PRESETS = ("vdsim_configs/vehicles/generic_sedan.yaml",
+                   "vdsim_configs/parts/tire/generic_pacejka.yaml")
+#: Wheel members the entry points and documented imports need.
+REQUIRED_MODULES = ("vdsim_lab.py", "vdsim_plant.py", "catalog/__init__.py",
+                    "quickstart.py")
 
-def _check_member(names: list[str]) -> tuple[int, int, list[str]]:
-  yaml = [n for n in names if n.endswith(".yaml") and "vdsim_configs/" in n]
-  tir = [n for n in names if n.endswith(".tir")]
-  public = [n for n in tir if n.endswith("ioniq5_pac2002.tir")]
-  measured = [n for n in tir if not n.endswith("ioniq5_pac2002.tir")]
-  return len(yaml), len(public), measured
+
+def archive_members(path: Path) -> list[str]:
+  """Member paths of a wheel (zip) or an sdist (tar.gz), ``/``-separated.
+
+  :param path: the archive.
+  :returns: every member name (directories included for tar).
+  """
+  if path.suffix == ".whl":
+    with zipfile.ZipFile(path) as zf:
+      return zf.namelist()
+  with tarfile.open(path) as tf:
+    return tf.getnames()
 
 
-def verify_wheel(path: Path) -> None:
-  with zipfile.ZipFile(path) as zf:
-    names = zf.namelist()
-  ny, n_pub, bad = _check_member(names)
-  if ny < 5:
-    raise SystemExit(f"FAIL {path.name}: too few yaml presets ({ny})")
-  if n_pub != 1:
-    raise SystemExit(f"FAIL {path.name}: expected 1 public .tir, got {n_pub}")
+def forbidden_members(names: list[str]) -> list[str]:
+  """Members that may not be published (rules in the module docstring).
+
+  :param names: archive member paths.
+  :returns: the offending paths, in archive order.
+  """
+  bad = []
+  for n in names:
+    low = n.lower()
+    parts = low.split("/")
+    if (any(f in low for f in FORBIDDEN_NAME_PARTS) or low.endswith(".tir")
+        or any(p in ARTIFACT_DIRS or p.startswith(ARTIFACT_DIR_PREFIXES)
+               for p in parts[:-1])):
+      bad.append(n)
+  return bad
+
+
+def verify_archive(path: Path) -> None:
+  """Raise ``SystemExit("FAIL ...")`` unless ``path`` passes the gate.
+
+  :param path: a ``.whl`` or ``.tar.gz``; required members are checked for
+    wheels only (an sdist is source, the build places them).
+  """
+  names = archive_members(path)
+  bad = forbidden_members(names)
   if bad:
-    raise SystemExit(f"FAIL {path.name}: confidential .tir in wheel: {bad}")
-  need = "vdsim_configs/parts/tire/ioniq5_pac2002.tir"
-  if not any(n.endswith(need) for n in names):
-    raise SystemExit(f"FAIL {path.name}: missing {need}")
-  if not any("vdsim_configs/vehicles/ioniq5_awd.yaml" in n for n in names):
-    raise SystemExit(f"FAIL {path.name}: missing ioniq5_awd.yaml preset")
-  if not any(n.endswith("vdsim_lab.py") for n in names):
-    raise SystemExit(f"FAIL {path.name}: missing vdsim_lab.py")
-  if not any(n.endswith("vdsim_plant.py") for n in names):
-    raise SystemExit(f"FAIL {path.name}: missing vdsim_plant.py")
-  if not any(n.endswith("catalog/__init__.py") for n in names):
-    raise SystemExit(f"FAIL {path.name}: missing catalog package")
-  if not any(n.endswith("/quickstart.py") or n.endswith("quickstart.py") for n in names):
-    raise SystemExit(f"FAIL {path.name}: missing quickstart.py")
-  print(
-      f"OK {path.name}: yaml={ny} public_tir=1 measured_tir=0 "
-      f"vdsim_lab=yes vdsim_plant=yes quickstart=yes")
+    raise SystemExit(f"FAIL {path.name}: {len(bad)} member(s) may not be published: "
+                     f"{bad[:10]}")
+  if path.suffix != ".whl":
+    print(f"OK {path.name}: members={len(names)} forbidden=0")
+    return
+  yaml = [n for n in names if n.endswith(".yaml") and "vdsim_configs/" in n]
+  if len(yaml) < 5:
+    raise SystemExit(f"FAIL {path.name}: too few yaml presets ({len(yaml)})")
+  for need in GENERIC_PRESETS:
+    if not any(n.endswith(need) for n in names):
+      raise SystemExit(f"FAIL {path.name}: missing generic preset {need}")
+  for need in REQUIRED_MODULES:
+    if not any(n == need or n.endswith("/" + need) for n in names):
+      raise SystemExit(f"FAIL {path.name}: missing {need}")
+  print(f"OK {path.name}: yaml={len(yaml)} forbidden=0 generic presets=yes "
+        f"modules=yes")
 
 
 def main(argv: list[str]) -> int:
   if len(argv) < 2:
-    print("usage: verify_wheel_packaging.py <wheel> [wheel ...]", file=sys.stderr)
+    print("usage: verify_wheel_packaging.py <wheel|sdist> [...]", file=sys.stderr)
     return 2
   for p in argv[1:]:
-    verify_wheel(Path(p))
+    verify_archive(Path(p))
   return 0
 
 

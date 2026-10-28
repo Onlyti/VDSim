@@ -31,7 +31,7 @@ PYTHONPATH=build/python:python python3 examples/vla_plant_demo.py
 
 ```python
 plant = VDSimPlant(
-    config="ioniq5_awd.yaml",   # preset under configs/vehicles/
+    config="generic_sedan.yaml",   # preset under configs/vehicles/ (default)
     friction_map=[(x0, x1, mu), ...],  # optional x-interval patches
     base_mu=0.9,
     control_dt=0.05,            # MPC sample (ZOH); must be >= substep_dt
@@ -67,17 +67,17 @@ Data-access path (read-only view, vehicle → part → physics): `plant.vehicle.
 
 No usage / violation metrics in the plant (thesis-side only).
 
-## Preset: `ioniq5_awd`
+## Preset: `generic_sedan` (default)
 
-`configs/vehicles/ioniq5_awd.yaml` + `configs/parts/tire/ioniq5_pac2002.yaml` (+ `.tir`)  
-m=2359 kg, Iz=3400, lf=1.17 m, lr=1.80 m, μ_nom=0.9, AWD 50/50
-(`drive_split_front=0.5`). MF2002 `.tir` with load-dependent coefficients: a single tyre
-recovers axle `Ca_f≈218k / Ca_r≈159k` from each axle's static Fz (`PKY1=-24.6, PKY2=2.56`),
-cornering stiffness concave in load, peak μ falls with load (`PDY2=-0.10`).
+`configs/vehicles/generic_sedan.yaml` + `configs/parts/tire/generic_pacejka.yaml` — the
+solver defaults of `vdsim.VehicleParams()` / `vdsim.TireParams()` (generic mid-size sedan,
+MF96 tyre), not a measured car. A private car (vehicle + tyre + `.tir`) is kept outside the
+package under `$VDSIM_PRIVATE_CONFIGS` (`<root>/vehicles/`, `<root>/parts/tire/`), which is
+searched before the bundled presets.
 
 ## Physics path
 
-- **Ld2 7DOF** (`create_seven_dof`), LuGre OFF, MF2002 `.tir` combined slip (load-dependent).
+- **Ld2 7DOF** (`create_seven_dof`), LuGre OFF, the vehicle's tyre with combined slip (MF96, or MF2002 `.tir` when the tyre YAML names one).
 - **Fx_total → per-wheel torque** (CmdL1), bypassing throttle / drivetrain map.
 - **Friction patches** via `create_friction_patch_ground` (per-wheel μ by contact x).
 - **Plant path** bypasses vehicle kinematic low-speed blend (tyre VLOW only).
@@ -100,7 +100,7 @@ Typical 5 s trajectory ≪ 1 s wall-clock on a desktop CPU.
 ```python
 from vdsim_plant import VDSimPlant
 
-plant = VDSimPlant(config="ioniq5_awd.yaml", base_mu=0.9,
+plant = VDSimPlant(config="generic_sedan.yaml", base_mu=0.9,
                    control_dt=0.1, substep_dt=1e-3)
 plant.reset(state0=[0, 0, 0, 16.7, 0, 0])
 for k in range(N):

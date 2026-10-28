@@ -24,7 +24,6 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import json
-import os
 import warnings
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
@@ -168,19 +167,9 @@ def _read_yaml(path: Path) -> dict:
 
 #: Environment variable naming a preset root outside the repository, for cars
 #: whose parameters must not be published.  Same layout as ``configs/``:
-#: ``<root>/vehicles/<stem>.yaml``, ``<root>/parts/tire/<stem>.yaml``.
+#: ``<root>/vehicles/<stem>.yaml``, ``<root>/parts/tire/<stem>.yaml``.  The
+#: search itself is ``vdsim_plant.find_preset`` (one rule for plant and RL).
 PRIVATE_ROOT_ENV = "VDSIM_PRIVATE_CONFIGS"
-
-
-def _private_root() -> Optional[Path]:
-    """``$VDSIM_PRIVATE_CONFIGS`` as a directory, or None when it is unset."""
-    raw = os.environ.get(PRIVATE_ROOT_ENV, "").strip()
-    if not raw:
-        return None
-    root = Path(raw).expanduser()
-    if not root.is_dir():
-        raise FileNotFoundError(f"{PRIVATE_ROOT_ENV}={raw!r} is not a directory")
-    return root
 
 
 def _preset_source(path: Path) -> str:
@@ -203,7 +192,7 @@ def _resolve_preset_path(rel: str, explicit: Optional[str], what: str) -> Path:
     directory, so one declaration would load different cars depending on where
     the run was started.
     """
-    from vdsim_plant import _conf_root
+    from vdsim_plant import find_preset
 
     if explicit:
         p = Path(explicit).expanduser()
@@ -212,12 +201,7 @@ def _resolve_preset_path(rel: str, explicit: Optional[str], what: str) -> Path:
         if not p.is_file():
             raise FileNotFoundError(f"{what}_file not found: {p}")
         return p
-    roots = [r for r in (_private_root(), _conf_root()) if r is not None]
-    for root in roots:
-        if (root / rel).is_file():
-            return root / rel
-    raise FileNotFoundError(f"{what} preset '{rel}' not found under "
-                            + ", ".join(str(r) for r in roots))
+    return find_preset(rel, what)
 
 
 def load_vehicle_preset(vehicle: Optional[str], tire: Optional[str], *,

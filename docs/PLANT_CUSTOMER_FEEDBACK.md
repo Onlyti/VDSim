@@ -82,8 +82,8 @@
 
 ## 4. 내가 돌린 검증 (VDSim 신뢰도 근거로 공유)
 
-- **dry 정합**: δ0.04 → r≈0.205 (understeer 정합), 좌선회 시 FzFR>FzFL(하중이전 방향 정확), 정적 전축 Fz≈7050 N
-  (Ioniq5 제원 정합).
+- **dry 정합**: δ0.04 → r≈0.205 (understeer 정합), 좌선회 시 FzFR>FzFL(하중이전 방향 정확), 정적 전축 Fz가
+  당시 차량 프리셋 제원과 정합.
 - **patch 거동**: μ patch서 컨트롤러가 grip 초과 demand하면 per-wheel α가 α_peak 넘어가며 drift>1(슬립) =
   요구한 "clamp 아닌 grip loss" 정확히 작동.
 - **결정론**: 동일 입력 재현 OK.

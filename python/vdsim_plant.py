@@ -27,6 +27,7 @@ See :mod:`vdsim_trace` for the container contract.
 from __future__ import annotations
 
 import math
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -44,17 +45,64 @@ def _conf_root():
     return REPO / "configs"
 
 
-def resolve_vehicle_config(name: str = "ioniq5_awd") -> Path:
-    """Resolve a vehicle preset YAML (e.g. ``ioniq5_awd``)."""
+#: Environment variable naming a preset root outside the repository, for cars
+#: whose parameters must not be published.  Same layout as ``configs/``:
+#: ``<root>/vehicles/<stem>.yaml``, ``<root>/parts/tire/<stem>.yaml``.
+PRIVATE_ROOT_ENV = "VDSIM_PRIVATE_CONFIGS"
+
+
+def _private_root() -> Path | None:
+    """``$VDSIM_PRIVATE_CONFIGS`` as a directory, or None when it is unset.
+
+    :raises FileNotFoundError: the variable is set but names no directory.
+    """
+    raw = os.environ.get(PRIVATE_ROOT_ENV, "").strip()
+    if not raw:
+        return None
+    root = Path(raw).expanduser()
+    if not root.is_dir():
+        raise FileNotFoundError(f"{PRIVATE_ROOT_ENV}={raw!r} is not a directory")
+    return root
+
+
+def preset_roots() -> list:
+    """Preset roots in search order: ``$VDSIM_PRIVATE_CONFIGS`` (when set), then
+    :func:`_conf_root`.  The one search rule shared by this plant and
+    ``vdsim_rl``, so a private car loads the same way in both.
+    """
+    return [r for r in (_private_root(), _conf_root()) if r is not None]
+
+
+def find_preset(rel: str, what: str = "preset") -> Path:
+    """First ``<root>/<rel>`` over :func:`preset_roots` that is a file.
+
+    :param rel: path inside a preset root (``vehicles/x.yaml``, ``parts/tire/x.yaml``).
+    :param what: word for the error message (``vehicle``, ``tire``).
+    :raises FileNotFoundError: no root holds ``rel``.
+    """
+    roots = preset_roots()
+    for root in roots:
+        if (root / rel).is_file():
+            return root / rel
+    raise FileNotFoundError(f"{what} preset '{rel}' not found under "
+                            + ", ".join(str(r) for r in roots))
+
+
+def resolve_vehicle_config(name: str = "generic_sedan") -> Path:
+    """Resolve a vehicle preset YAML (e.g. ``generic_sedan``).
+
+    Searches ``vehicles/<stem>.yaml`` (then ``<stem>.yaml``) in each of
+    :func:`preset_roots`, so ``$VDSIM_PRIVATE_CONFIGS`` is looked at first.
+    """
     stem = Path(name).stem
-    root = _conf_root()
-    for sub in ("vehicles", ""):
-        p = root / sub / f"{stem}.yaml" if sub else root / f"{stem}.yaml"
-        if p.is_file():
-            return p
+    roots = preset_roots()
+    for root in roots:
+        for p in (root / "vehicles" / f"{stem}.yaml", root / f"{stem}.yaml"):
+            if p.is_file():
+                return p
     raise FileNotFoundError(
-        f"vehicle config '{name}' not found under configs/vehicles/ "
-        f"(searched {_conf_root()})")
+        f"vehicle config '{name}' not found under vehicles/ of "
+        + ", ".join(str(r) for r in roots))
 
 
 def _load_yaml_sidecar(path: Path, key: str) -> str | None:
@@ -82,13 +130,15 @@ def _resolve_tir_path(tp_path: Path, tir_rel: str) -> str:
 
 
 def _load_tire_setup_for_vehicle(vp_path: Path) -> vdsim.TireSetup:
-    rel = _load_yaml_sidecar(vp_path, "tire_yaml")
-    if not rel:
-        tp_path = _conf_root() / "parts/tire/ioniq5_pac2002.yaml"
-    else:
-        tp_path = _conf_root() / rel
-    if not tp_path.is_file():
-        raise FileNotFoundError(f"tire yaml '{rel}' not found (from {vp_path})")
+    """Tyre setup named by the vehicle file's ``tire_yaml``.
+
+    ``tire_yaml`` is looked up beside the vehicle file's own root first (a
+    private car keeps its private tyre), then over :func:`preset_roots`; a
+    vehicle file without ``tire_yaml`` gets ``parts/tire/generic_pacejka.yaml``.
+    """
+    rel = _load_yaml_sidecar(vp_path, "tire_yaml") or "parts/tire/generic_pacejka.yaml"
+    sibling = vp_path.parent.parent / rel
+    tp_path = sibling if sibling.is_file() else find_preset(rel, "tire")
     tp = vdsim.TireParams.from_yaml(str(tp_path))
     if tp.tir_path:
         tp.tir_path = _resolve_tir_path(tp_path, tp.tir_path)
@@ -743,7 +793,7 @@ class VDSimPlant:
 
   def __init__(
       self,
-      config: str = "ioniq5_awd.yaml",
+      config: str = "generic_sedan.yaml",
       friction_map=None,
       friction_map_2d=None,
       base_mu: float = 0.9,
