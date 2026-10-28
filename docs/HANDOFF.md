@@ -67,7 +67,7 @@
 
 **Wheel CI (P0-1):** `.github/workflows/wheels.yml` — tag `v*` → cibuildwheel + PyPI (trusted publisher).  
 **HOLD:** no `v0.7.0` tag / PyPI publish / main merge until PO decision-4 gate (PO signal).  
-Pre-publish: `python3 tools/verify_wheel_packaging.py wheelhouse/*.whl` (1 public `.tir`, 0 measured).
+Pre-publish: `python3 tools/verify_wheel_packaging.py wheelhouse/*.whl` (no `.tir`, no withheld names or run-output folders, generic presets present; also takes the sdist).
 
 **P0-2 quickstart:** `examples/quickstart.py` + `vdsim-quickstart`; README cites **~6 s cold** (measured, not "5 min").  
 **P0-3 demo:** `examples/demo_grip_loss.py` → `docs/assets/demo_grip_loss.gif` (headless, pillow).  

@@ -21,8 +21,10 @@ from pathlib import Path
 
 #: Path fragments (lower case) no published member may contain.
 FORBIDDEN_NAME_PARTS = ("ioniq", "carmaker", "private")
-#: Directory names of build products and run outputs.
+#: Directory names of build products and run outputs, and build-directory
+#: name prefixes (``build-validation/``, ``cmake-build-debug/``).
 ARTIFACT_DIRS = ("build", "dist", "runs", "results", "logs")
+ARTIFACT_DIR_PREFIXES = ("build-", "build_", "cmake-build-")
 #: Wheel members the default plant and the RL default car need.
 GENERIC_PRESETS = ("vdsim_configs/vehicles/generic_sedan.yaml",
                    "vdsim_configs/parts/tire/generic_pacejka.yaml")
@@ -55,7 +57,8 @@ def forbidden_members(names: list[str]) -> list[str]:
     low = n.lower()
     parts = low.split("/")
     if (any(f in low for f in FORBIDDEN_NAME_PARTS) or low.endswith(".tir")
-        or any(p in ARTIFACT_DIRS for p in parts[:-1])):
+        or any(p in ARTIFACT_DIRS or p.startswith(ARTIFACT_DIR_PREFIXES)
+               for p in parts[:-1])):
       bad.append(n)
   return bad
 
