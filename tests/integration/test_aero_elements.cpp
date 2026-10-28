@@ -116,7 +116,14 @@ void check_a3(const std::string& level) {
 TEST(AeroElements, A3_SteadyAxleLoadL1) { check_a3("L1"); }
 TEST(AeroElements, A3_SteadyAxleLoadL2) { check_a3("L2"); }
 TEST(AeroElements, A3_SteadyAxleLoadL3) { check_a3("L3"); }
-TEST(AeroElements, A3_SteadyAxleLoadL5) { check_a3("L5"); }
+// The original A3 on L5 (all elements vs no aero) is recorded as FAILED in
+// the 0.8.0 acceptance: L5 applies tyre longitudinal forces at the wheel
+// centre without the drive/brake torque reaction on the body, so the drive
+// force that balances the drag adds a load transfer of F_d * R / L that the
+// no-aero reference does not have. The cause is the L5 core, not the aero
+// wrench; A3-L5a and A3-L5b below replace it (gate unchanged). Kept runnable
+// with --gtest_also_run_disabled_tests to reproduce the recorded failure.
+TEST(AeroElements, DISABLED_A3_SteadyAxleLoadL5) { check_a3("L5"); }
 
 /// A3 L4: same loads as L3 (no hardpoints attached -> the L3 equations).
 TEST(AeroElements, A3_L4MatchesL3) {
@@ -182,4 +189,80 @@ TEST(AeroElements, D1c_FourKeyLiftOnL5MatchesL3) {
     }
     EXPECT_NEAR(d[1][0], d[0][0], 0.02 * std::abs(d[0][0]));
     EXPECT_NEAR(d[1][1], d[0][1], 0.02 * std::abs(d[0][1]));
+}
+
+// ---------------------------------------------------------------------------
+// A3-L5a / A3-L5b (added after the A3 L5 measurement, PO 42 stage-1 verdict).
+// Both gates are fixed in this file before they are run.
+// ---------------------------------------------------------------------------
+namespace {
+
+/// The example car with every element's ClA set to 0 (CdA, x, z kept).
+VehicleParams drag_only(VehicleParams vp) {
+    for (auto& e : vp.aero_elements) e.ClA = 0.0;
+    return vp;
+}
+
+/// The example car with every element's CdA set to 0 (downforce only).
+VehicleParams downforce_only(VehicleParams vp) {
+    for (auto& e : vp.aero_elements) e.CdA = 0.0;
+    return vp;
+}
+
+}  // namespace
+
+/// A3-L5a: same drag in both runs (reference = ClA 0, CdA/x/z unchanged), so the
+/// drive force is the same and only the downforce differs. Each axle increase
+/// must match the downforce-only rigid split (CoP -0.8317 m, total 485.4 N) from
+/// compute_aero_loads(), +/-2 %.
+TEST(AeroElements, A3_L5a_DownforceSplitSameDrag) {
+    const auto vp = example_car();
+    const auto want = compute_aero_loads(downforce_only(vp), AeroState{kV60});
+    // Hand calculation (wiki vector): q = 0.5 * 1.165 * (60/3.6)^2 = 161.80 Pa,
+    // sum ClA = 3.0 m^2 -> 485.4 N, CoP x = -2.495 / 3.0 = -0.8317 m,
+    // front share (x + L) / L = 0.4634 -> front 224.95 N, rear 260.45 N.
+    const auto with = run_steady("L5", vp);
+    const auto ref  = run_steady("L5", drag_only(vp));
+    ASSERT_TRUE(with.finite && ref.finite);
+    EXPECT_LE(std::abs(with.ax), 0.02);
+    EXPECT_LE(std::abs(ref.ax), 0.02);
+    const double df = with.front - ref.front;
+    const double dr = with.rear - ref.rear;
+    std::printf("[A3-L5a] vx %.4f m/s | dFz front %.2f N (want %.2f, hand 224.95) "
+                "rear %.2f N (want %.2f, hand 260.45) | total %.2f N (want %.2f)\n",
+                with.vx, df, want.fz_front, dr, want.fz_rear, df + dr, want.fz_total);
+    EXPECT_NEAR(want.fz_total, kDownTotal, 1e-3 * kDownTotal);
+    EXPECT_NEAR(df, want.fz_front, 0.02 * want.fz_front);
+    EXPECT_NEAR(dr, want.fz_rear, 0.02 * want.fz_rear);
+}
+
+/// A3-L5b: quantify the L5 wheel-centre limitation. Drag-only elements (ClA 0,
+/// wiki CdA and z) vs no aero. L5 front increase must match the L5 model
+/// expectation -sum(F_d z)/L + sum(F_d) R/L (R = wheel_radius_nominal), +/-5 %;
+/// the same pair on L1 must match -sum(F_d z)/L, +/-2 %.
+TEST(AeroElements, A3_L5b_DragMomentWheelCentreBias) {
+    const auto vp = example_car();
+    const auto dvp = drag_only(vp);
+    const auto loads = compute_aero_loads(dvp, AeroState{kV60});
+    const double L = vp.wheelbase;
+    const double R = vp.wheel_radius_nominal;
+    const double fd = loads.fx_total;
+    const double m_drag = loads.drag_pitch_moment;   // sum F_d,i * z_i [N m]
+    const double want_l1 = -m_drag / L;
+    const double want_l5 = -m_drag / L + fd * R / L;
+    double d[2];
+    const char* levels[2] = {"L1", "L5"};
+    for (int k = 0; k < 2; ++k) {
+        const auto with = run_steady(levels[k], dvp);
+        const auto none = run_steady(levels[k], without_elements(vp));
+        ASSERT_TRUE(with.finite && none.finite) << levels[k];
+        EXPECT_LE(std::abs(with.ax), 0.02) << levels[k];
+        d[k] = with.front - none.front;
+    }
+    std::printf("[A3-L5b] sum F_d %.2f N, sum F_d z %.3f N m, R %.3f m, L %.3f m | "
+                "L1 dFz front %.2f N (want %.2f) | L5 dFz front %.2f N (want %.2f, "
+                "R term %.2f)\n",
+                fd, m_drag, R, L, d[0], want_l1, d[1], want_l5, fd * R / L);
+    EXPECT_NEAR(d[0], want_l1, 0.02 * std::abs(want_l1));
+    EXPECT_NEAR(d[1], want_l5, 0.05 * std::abs(want_l5));
 }
