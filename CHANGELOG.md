@@ -6,7 +6,7 @@ All notable changes to VDSim are documented here. Format follows
 
 ## [Unreleased]
 
-Planned as 0.8.0 (work order 42, per-element aero). Not released yet.
+## [0.8.0] - 2026-10-29
 
 ### Changed — BREAKING: the four lift keys now act on L5
 - `aero_lift_front` / `aero_lift_rear` were ignored by the L5 (free 3D) model.

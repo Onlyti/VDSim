@@ -93,13 +93,23 @@ extra:
     default: latest
 
 # Task logs and the refactor handoff are intentionally not in the nav.
+# SIMULINK_GUIDE: the FMU is built by scripts outside CMake and is not run in CI
+#   or ctest, so the guide cannot be kept current; kept for reference only.
+# TIRE_VALIDATION: a dated report (2026-06-15); current results are in VALIDATION.md.
 not_in_nav: |
   /tasks/**
+  /SIMULINK_GUIDE.md
+  /TIRE_VALIDATION.md
   /theory/_REFACTOR_HANDOFF.md
   /REPORT_TEMPLATE.md
   /README.md
   /SUMMARY.md
   /figures_src/**
+
+# docs/README.md is the GitHub landing page and collides with index.md as the
+# site home; the leading slash keeps docs/theory/README.md (theory index) built.
+exclude_docs: |
+  /README.md
 
 nav:
   - Home:
@@ -136,6 +146,9 @@ nav:
       - "Product roadmap": ROADMAP.md
       - "Catalog, scenes & physics": CATALOG_AND_PHYSICS.md
       - Running VDSim: RUNNING.md
+      - "Configuration files (batch / scenario / comms)": CONFIG_GUIDE.md
+      - "Experiment API (Python harness)": EXPERIMENT_API.md
+      - "Closed-loop plant tutorial (VDSimPlant)": VDSIM_PLANT_TUTORIAL.md
       - "RL environment (vdsim_rl)": RL_GUIDE.md
       - "Actuator model guide": ACTUATOR_GUIDE.md
       - "Closed-loop evaluation modes": guides/CLOSED_LOOP_EVAL.md

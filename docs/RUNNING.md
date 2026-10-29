@@ -22,7 +22,7 @@ Tabs save validated YAML: **Vehicle** → catalog parts / blueprints (or legacy
 experiment vehicle YAML), **Sensors** (suite) → `configs/sensors/`, **Map**
 (driving line + surface) → `configs/maps/`, **Comms** (data routing) →
 `configs/comms/`, **Scenario** (composes all + run mode) → `configs/experiments/`.
-(See [builder/README](../builder/README.md).)
+(See [builder/README](https://github.com/Onlyti/VDSim/blob/main/builder/README.md).)
 
 ## 2. Run an experiment — four modes (same scenario)
 
@@ -93,7 +93,7 @@ python3 gui/server.py --port 8100              # browser viewer + live sim
   python3 tools/wheel_ffb.py     --server <host> --udp-port 8101   # Linux evdev
   ```
   Autostart units in `tools/autostart/`. FFB torque = VDSim aligning moment
-  (`rack_torque`). (See [tools/autostart/README](../tools/autostart/README.md).)
+  (`rack_torque`). (See [tools/autostart/README](https://github.com/Onlyti/VDSim/blob/main/tools/autostart/README.md).)
 
 ## 3. Industrial / interop
 
