@@ -208,8 +208,7 @@ TEST(L5ReactionKnuckle, J6a_PitchRateMatchesHandCalc) {
     const auto tr = detail::knuckle_pitch_rate(*r, 0.0, 0.0, Vec3::Zero());
     ASSERT_TRUE(tf && tr);
     std::printf("[J6a] front %.6f rad/m (ref %.6f; side-angle -0.426005, IC hand -0.4975 info), "
-                "rear %.6f rad/m (ref %.6f)
-", *tf, kRefFront, *tr, kRefRear);
+                "rear %.6f rad/m (ref %.6f)\n", *tf, kRefFront, *tr, kRefRear);
     EXPECT_NEAR(*tf, kRefFront, 0.02 * std::abs(kRefFront));
     EXPECT_NEAR(*tr, kRefRear, 0.02 * std::abs(kRefRear));
 }
