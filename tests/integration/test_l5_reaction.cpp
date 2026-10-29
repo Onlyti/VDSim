@@ -13,6 +13,15 @@
 // valid only if the 50 ms moving average of ax has a regression slope
 // |dax/dt| <= 0.10 m/s^3 and the mean |pitch rate| <= 2e-3 rad/s; otherwise the test
 // fails (stop and report). Static reference: the same car at rest, mean over [1, 2) s.
+//
+// Acceleration in every expectation (PO 3rd verdict G1-G3, changed after measurement):
+// a_g = least-squares slope over the window of the CG velocity in world coordinates,
+// horizontal component along the heading. The body output ax is the body-frame specific
+// force and carries g * sin(theta) at window pitch theta, so it is not the horizontal
+// inertial acceleration of m * a * h / L. ax stays as an info column (original formula),
+// and still drives the window steadiness check above (a validity condition, not an
+// expectation). a_pos = 0.5 s second difference of the heading-projected CG position
+// (the D4 probe) is info only.
 #include "vdsim/contact.hpp"
 #include "vdsim/control.hpp"
 #include "vdsim/drivetrain_inertia.hpp"
@@ -102,7 +111,9 @@ SolverParams solver(Path p) {
 
 struct Window {
     double front {0.0}, rear {0.0};               // axle Fz [N]
-    double ax {0.0};                               // body specific force x [m/s^2]
+    double ax {0.0};                               // body specific force x [m/s^2] (info)
+    double a_g {0.0};                              // G1 ground horizontal CG accel [m/s^2]
+    double a_pos {0.0};                            // info: 0.5 s position 2nd diff [m/s^2]
     std::array<double, NUM_WHEELS> alpha {};       // wheel-spin accel [rad/s^2]
     std::array<double, NUM_WHEELS> conn_x {};      // tire_forces_body x [N]
     std::array<double, NUM_WHEELS> spring {};      // strut spring + stop [N]
@@ -111,6 +122,19 @@ struct Window {
     double pitch_rate {0.0};                       // mean |omega_y| [rad/s]
     bool finite {true};
 };
+
+/// Least-squares slope dy/dt.
+double slope(const std::vector<double>& t, const std::vector<double>& y) {
+    double mt = 0.0, my = 0.0;
+    for (std::size_t j = 0; j < t.size(); ++j) { mt += t[j]; my += y[j]; }
+    mt /= t.size(); my /= y.size();
+    double sxy = 0.0, sxx = 0.0;
+    for (std::size_t j = 0; j < t.size(); ++j) {
+        sxy += (t[j] - mt) * (y[j] - my);
+        sxx += (t[j] - mt) * (t[j] - mt);
+    }
+    return sxy / sxx;
+}
 
 /// One run. move == nullptr -> the static reference (at rest, mean over [1, 2) s).
 Window run(const VehicleParams& vp, Path p, const Move* move, double v0) {
@@ -135,6 +159,9 @@ Window run(const VehicleParams& vp, Path p, const Move* move, double v0) {
     Window r;
     std::vector<double> ax_hist, ma_t, ma_v;
     std::array<double, NUM_WHEELS> spin0 {};
+    std::vector<double> vg_t, vg_v;                 // heading-projected world CG velocity
+    Vec3 head {1.0, 0.0, 0.0};
+    double x0 = 0.0, xm = 0.0;
     for (int k = 0; k < w1; ++k) {
         CmdL4 u;
         if (move && k >= kStepTick) {
@@ -145,8 +172,17 @@ Window run(const VehicleParams& vp, Path p, const Move* move, double v0) {
         s.tick(kDt);
         const auto o = s.output();
         ax_hist.push_back(o.ax);
-        if (k == w0 - 1) spin0 = o.state.wheel_spin;
+        if (k == w0 - 1) {
+            spin0 = o.state.wheel_spin;
+            const double psi = o.state.yaw();
+            head = Vec3(std::cos(psi), std::sin(psi), 0.0);
+            x0 = o.state.position.dot(head);
+        }
+        if (k == (w0 + w1) / 2 - 1) xm = o.state.position.dot(head);
         if (k < w0) continue;
+        const Vec3 v_world = o.state.orientation.toRotationMatrix() * o.state.velocity;
+        vg_t.push_back((k + 1) * kDt);
+        vg_v.push_back(v_world.dot(head));
         r.front += o.Fz[WHEEL_FL] + o.Fz[WHEEL_FR];
         r.rear  += o.Fz[WHEEL_RL] + o.Fz[WHEEL_RR];
         r.ax += o.ax;
@@ -167,6 +203,8 @@ Window run(const VehicleParams& vp, Path p, const Move* move, double v0) {
             const double T = (w1 - w0) * kDt;
             for (int i = 0; i < NUM_WHEELS; ++i)
                 r.alpha[i] = (o.state.wheel_spin[i] - spin0[i]) / T;
+            const double half = 0.5 * T;
+            r.a_pos = (o.state.position.dot(head) - 2.0 * xm + x0) / (half * half);
         }
     }
     const double n = static_cast<double>(w1 - w0);
@@ -174,6 +212,7 @@ Window run(const VehicleParams& vp, Path p, const Move* move, double v0) {
     for (int i = 0; i < NUM_WHEELS; ++i) {
         r.conn_x[i] /= n; r.spring[i] /= n; r.travel[i] /= n;
     }
+    r.a_g = slope(vg_t, vg_v);
     // Least-squares slope of the moving average over the window.
     double mt = 0.0, mv = 0.0;
     for (std::size_t j = 0; j < ma_t.size(); ++j) { mt += ma_t[j]; mv += ma_v[j]; }
@@ -197,7 +236,7 @@ struct Transfer {
     double want_front;          // Q1 expectation, front [N]; rear = -want_front
     double sum_I_alpha;         // [N m]
     double moment_lhs;          // R6: -(dF_front * a - dF_rear * b) [N m]
-    double moment_rhs;          // R6: m * ax * h_x + sum I_eff alpha [N m]
+    double moment_rhs;          // R6: m * a_g * h_x + sum I_eff alpha [N m]
     Window win, stat;
 };
 
@@ -219,16 +258,20 @@ Transfer transfer(const char* tag, const VehicleParams& vp, Path p, Move m, doub
     t.sum_I_alpha = sIa;
     const double h = h_x(vp, p);
     const double L = vp.wheelbase;
-    t.want_front = -(vp.mass * w.ax * h + sIa) / L;
+    t.want_front = -(vp.mass * w.a_g * h + sIa) / L;
     t.moment_lhs = -(t.d_front * vp.cg_to_front - t.d_rear * vp.cg_to_rear);
-    t.moment_rhs = vp.mass * w.ax * h + sIa;
+    t.moment_rhs = vp.mass * w.a_g * h + sIa;
     const double original = -vp.mass * w.ax * vp.cg_height / L;   // work-order formula
-    std::printf("[%s] ax %.4f m/s^2 slope %.4f m/s^3 |q| %.2e rad/s | dFz front %.2f "
-                "(want %.2f) rear %.2f (want %.2f) N | h_x %.4f m, sum I*alpha %.3f N m | "
-                "J1a front/original %.4f | J1b engine share %.4f | R6 %.3f vs %.3f N m\n",
-                tag, w.ax, w.ax_slope, w.pitch_rate, t.d_front, t.want_front, t.d_rear,
-                -t.want_front, h, sIa, t.d_front / original, sIeng / sIeff,
-                t.moment_lhs, t.moment_rhs);
+    const double want_ax = -(vp.mass * w.ax * h + sIa) / L;       // info: pre-G1 gate
+    std::printf("[%s] a_g %.5f m/s^2 (ax %.5f, a_pos %.5f) slope %.4f m/s^3 |q| %.2e rad/s | "
+                "dFz front %.2f (want %.2f) rear %.2f (want %.2f) N | h_x %.4f m, "
+                "sum I*alpha %.3f N m | J1a front/original %.4f | J1b engine share %.4f | "
+                "R6 %.3f vs %.3f N m\n",
+                tag, w.a_g, w.ax, w.a_pos, w.ax_slope, w.pitch_rate, t.d_front,
+                t.want_front, t.d_rear, -t.want_front, h, sIa, t.d_front / original,
+                sIeng / sIeff, t.moment_lhs, t.moment_rhs);
+    std::printf("[%s info] pre-G1 ax gate: want front %.2f N, resid %.2f %%\n", tag, want_ax,
+                100.0 * (t.d_front - want_ax) / std::abs(want_ax));
     return t;
 }
 
@@ -300,7 +343,7 @@ TEST(L5Reaction, R2_StrutBrakeSprungVsUnsprung) { r2(Move::Brake); }
 
 // ---- R3: strut + corner model, anti geometry (static instant-centre hand calc) ----
 // Spring change of one axle (sum of its two struts):
-//   dF_spring = dFz_axle + (sum Fx_axle - sum m_u * ax) * dx/dz [+ sum M_i * theta'],
+//   dF_spring = dFz_axle + (sum Fx_axle - sum m_u * a_g) * dx/dz [+ sum M_i * theta'],
 //   M_i = -(Fx_i * R + I_eff,i * alpha_i) on the knuckle (unsprung only).
 // Front DW sample (PO 2nd-resume verdict, changed after measurement): dx/dz -0.039112 and
 // theta' -0.353893 rad/m from the independent linkage solve
@@ -309,9 +352,9 @@ TEST(L5Reaction, R2_StrutBrakeSprungVsUnsprung) { r2(Move::Brake); }
 // 3D linkage and is no longer the reference. Rear TA dx/dz +0.1891, theta' +1.5625 rad/m
 // (hand calc, equal to the same script). Gate +/-5 %.
 // Fx_i: on the strut path tire_forces_body() is the mount connection force, so the
-// window-mean tyre force is that plus m_u * ax (particle inertia); with an unsprung
+// window-mean tyre force is that plus m_u * a_g (particle inertia); with an unsprung
 // reaction the particle also carries F_eq = M * theta' * t / |t|^2, solved as
-// Fx = (C + I_eff * alpha * k) / (1 - R k), C = conn_x + m_u * ax, k = theta' t_x / |t|^2.
+// Fx = (C + I_eff * alpha * k) / (1 - R k), C = conn_x + m_u * a_g, k = theta' t_x / |t|^2.
 namespace {
 struct Axle { int l, r; double dxdz, theta_p; };
 constexpr Axle kFront {WHEEL_FL, WHEEL_FR, -0.039112, -0.353893};
@@ -332,7 +375,7 @@ void r3(const char* tag, Move m, const Axle& ax_, bool unsprung) {
     double sFx = 0.0, sMu = 0.0, sM = 0.0, d_spring = 0.0, travel = 0.0;
     for (const int i : {ax_.l, ax_.r}) {
         const double Ie = I_wheel(vp, i) + I_eng(vp, i);
-        const double C = w.conn_x[i] + m_u(vp, i) * w.ax;
+        const double C = w.conn_x[i] + m_u(vp, i) * w.a_g;
         const double Fx = unsprung ? (C + Ie * w.alpha[i] * k) / (1.0 - R * k) : C;
         sFx += Fx;
         sMu += m_u(vp, i);
@@ -341,7 +384,7 @@ void r3(const char* tag, Move m, const Axle& ax_, bool unsprung) {
         travel = std::max(travel, std::abs(w.travel[i] - tr.stat.travel[i]));
     }
     const double dFz = (ax_.l == WHEEL_FL) ? tr.d_front : tr.d_rear;
-    const double want = dFz + (sFx - sMu * w.ax) * ax_.dxdz
+    const double want = dFz + (sFx - sMu * w.a_g) * ax_.dxdz
                       + (unsprung ? sM * ax_.theta_p : 0.0);
     const double anti = 1.0 - want / dFz;
     std::printf("[%s] dF_spring %.2f N (want %.2f) | anti %.4f | sum Fx %.2f N | "

@@ -36,8 +36,12 @@ TireParams example_tire() {
     return TireParams::from_yaml(kSrc + "/configs/parts/tire/generic_pacejka.yaml");
 }
 
+// Steady-speed condition (PO 43 3rd verdict G3, changed after measurement): |a_g| <= 0.02
+// with a_g = least-squares slope over the window of the CG velocity in world coordinates,
+// horizontal component along the heading. ax (body specific force, carries g sin(pitch))
+// stays as info.
 struct Steady {
-    double front {0.0}, rear {0.0}, ax {0.0}, vx {0.0};
+    double front {0.0}, rear {0.0}, ax {0.0}, vx {0.0}, a_g {0.0};
     bool finite {true};
 };
 
@@ -71,11 +75,17 @@ Steady run_steady(const std::string& level, const VehicleParams& vp) {
     cmd.v_target = kV60;
     Steady r;
     int n = 0;
+    double st = 0.0, sv = 0.0, stt = 0.0, stv = 0.0;
     for (int k = 0; k < 12000; ++k) {
         s.set_input(cmd);
         s.tick(1e-3);
         if (k < 8000 || k >= 11000) continue;
         const auto o = s.output();
+        const double psi = o.state.yaw();
+        const Vec3 head(std::cos(psi), std::sin(psi), 0.0);
+        const double vg = (o.state.orientation.toRotationMatrix() * o.state.velocity).dot(head);
+        const double tk = (k + 1) * 1e-3;
+        st += tk; sv += vg; stt += tk * tk; stv += tk * vg;
         r.front += o.Fz[WHEEL_FL] + o.Fz[WHEEL_FR];
         r.rear  += o.Fz[WHEEL_RL] + o.Fz[WHEEL_RR];
         r.ax += o.ax;
@@ -83,6 +93,7 @@ Steady run_steady(const std::string& level, const VehicleParams& vp) {
         r.finite = r.finite && std::isfinite(o.Fz[0] + o.Fz[1] + o.Fz[2] + o.Fz[3]);
         ++n;
     }
+    r.a_g = (n * stv - st * sv) / (n * stt - st * st);
     r.front /= n; r.rear /= n; r.ax /= n; r.vx /= n;
     return r;
 }
@@ -99,13 +110,13 @@ void check_a3(const std::string& level) {
     const auto with = run_steady(level, vp);
     const auto none = run_steady(level, without_elements(vp));
     ASSERT_TRUE(with.finite && none.finite);
-    EXPECT_LE(std::abs(with.ax), 0.02) << level;
-    EXPECT_LE(std::abs(none.ax), 0.02) << level;
+    EXPECT_LE(std::abs(with.a_g), 0.02) << level;
+    EXPECT_LE(std::abs(none.a_g), 0.02) << level;
     const double df = with.front - none.front;
     const double dr = with.rear - none.rear;
-    std::printf("[A3 %s] vx %.4f m/s ax %.5f | dFz front %.2f N (want %.2f) rear %.2f N "
+    std::printf("[A3 %s] vx %.4f m/s a_g %.5f (ax %.5f, none a_g %.5f) | dFz front %.2f N (want %.2f) rear %.2f N "
                 "(want %.2f) | total %.2f N\n",
-                level.c_str(), with.vx, with.ax, df, 0.294 * kDownTotal, dr,
+                level.c_str(), with.vx, with.a_g, with.ax, none.a_g, df, 0.294 * kDownTotal, dr,
                 0.706 * kDownTotal, df + dr);
     EXPECT_NEAR(df, 0.294 * kDownTotal, 0.02 * 0.294 * kDownTotal) << level;
     EXPECT_NEAR(dr, 0.706 * kDownTotal, 0.02 * 0.706 * kDownTotal) << level;
@@ -220,8 +231,8 @@ TEST(AeroElements, A3_L5a_DownforceSplitSameDrag) {
     const auto with = run_steady("L5", vp);
     const auto ref  = run_steady("L5", drag_only(vp));
     ASSERT_TRUE(with.finite && ref.finite);
-    EXPECT_LE(std::abs(with.ax), 0.02);
-    EXPECT_LE(std::abs(ref.ax), 0.02);
+    EXPECT_LE(std::abs(with.a_g), 0.02);
+    EXPECT_LE(std::abs(ref.a_g), 0.02);
     const double df = with.front - ref.front;
     const double dr = with.rear - ref.rear;
     std::printf("[A3-L5a] vx %.4f m/s | dFz front %.2f N (want %.2f, hand 224.95) "
@@ -252,7 +263,7 @@ TEST(AeroElements, A3_L5b_DragMomentWheelCentreBias) {
         const auto with = run_steady(levels[k], dvp);
         const auto none = run_steady(levels[k], without_elements(vp));
         ASSERT_TRUE(with.finite && none.finite) << levels[k];
-        EXPECT_LE(std::abs(with.ax), 0.02) << levels[k];
+        EXPECT_LE(std::abs(with.a_g), 0.02) << levels[k];
         d[k] = with.front - none.front;
     }
     std::printf("[A3-L5b] sum F_d %.2f N, sum F_d z %.3f N m, R %.3f m, L %.3f m | "
