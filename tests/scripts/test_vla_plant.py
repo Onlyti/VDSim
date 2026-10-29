@@ -232,7 +232,8 @@ def test_level_default_and_rejects():
     Ported from feat/direct-control-dynamics-level: an unknown level is refused
     by name, and the default plant equals an explicit level='L2' bit for bit.
     """
-    for bad in ("L5", "l3", "7dof", ""):
+    # L5 is a valid plant level since work order 44; L6 stays unknown.
+    for bad in ("L6", "l3", "7dof", ""):
         try:
             VDSimPlant(level=bad)
         except ValueError as e:
