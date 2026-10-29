@@ -302,15 +302,19 @@ TEST(L5Reaction, R2_StrutBrakeSprungVsUnsprung) { r2(Move::Brake); }
 // Spring change of one axle (sum of its two struts):
 //   dF_spring = dFz_axle + (sum Fx_axle - sum m_u * ax) * dx/dz [+ sum M_i * theta'],
 //   M_i = -(Fx_i * R + I_eff,i * alpha_i) on the knuckle (unsprung only).
-// Hand calc (1st design reply 3.3): front DW sample dx/dz -0.0896, theta' -0.4975 rad/m;
-// rear TA dx/dz +0.1891, theta' +1.5625 rad/m. Gate +/-5 %.
+// Front DW sample (PO 2nd-resume verdict, changed after measurement): dx/dz -0.039112 and
+// theta' -0.353893 rad/m from the independent linkage solve
+// tests/validation/analytical/l5_knuckle_reference.py (LK-UK-TK knuckle frame omega_y,
+// +/-1 mm); the side-view hand calc (dx/dz -0.0896, theta' -0.4975) is a projection of the
+// 3D linkage and is no longer the reference. Rear TA dx/dz +0.1891, theta' +1.5625 rad/m
+// (hand calc, equal to the same script). Gate +/-5 %.
 // Fx_i: on the strut path tire_forces_body() is the mount connection force, so the
 // window-mean tyre force is that plus m_u * ax (particle inertia); with an unsprung
 // reaction the particle also carries F_eq = M * theta' * t / |t|^2, solved as
 // Fx = (C + I_eff * alpha * k) / (1 - R k), C = conn_x + m_u * ax, k = theta' t_x / |t|^2.
 namespace {
 struct Axle { int l, r; double dxdz, theta_p; };
-constexpr Axle kFront {WHEEL_FL, WHEEL_FR, -0.0896, -0.4975};
+constexpr Axle kFront {WHEEL_FL, WHEEL_FR, -0.039112, -0.353893};
 constexpr Axle kRear  {WHEEL_RL, WHEEL_RR, +0.1891, +1.5625};
 
 void r3(const char* tag, Move m, const Axle& ax_, bool unsprung) {

@@ -193,17 +193,25 @@ TEST(L5ReactionKeys, ExplicitUnsprungWithoutLinkageWarnsOnce) {
 }
 
 // ---- J6 ----
-// (a) knuckle pitch rate at the static travel vs the instant-centre hand calc, +/-2 %.
+// (a) knuckle pitch rate at the static travel vs an independent linkage solve, +/-2 %.
+// Reference (PO 2nd-resume verdict, changed after measurement): omega_y of the LK-UK-TK
+// knuckle frame from tests/validation/analytical/l5_knuckle_reference.py (numpy + yaml
+// only, no VDSim code), +/-1 mm central difference. The side-view ball-joint angle rate
+// (-0.426005 rad/m) and the side-view instant-centre hand calc (-0.4975 rad/m) mix the
+// camber / toe rotation of the inclined kingpin and are info only.
 TEST(L5ReactionKnuckle, J6a_PitchRateMatchesHandCalc) {
+    constexpr double kRefFront = -0.353893;   // [rad/m] DW sample, LK-UK-TK frame omega_y
+    constexpr double kRefRear = 1.562501;     // [rad/m] TA, arm axis_y / (dz / dtheta)
     const auto f = dae("/tests/fixtures/dw_front_antidive_sample.yaml");
     const auto r = dae("/configs/parts/susp_kinematics/kin/ta_rear_sedan.yaml");
     const auto tf = detail::knuckle_pitch_rate(*f, 0.0, 0.0, Vec3::Zero());
     const auto tr = detail::knuckle_pitch_rate(*r, 0.0, 0.0, Vec3::Zero());
     ASSERT_TRUE(tf && tr);
-    std::printf("[J6a] front %.5f rad/m (hand -0.4975), rear %.5f rad/m (hand +1.5625)\n",
-                *tf, *tr);
-    EXPECT_NEAR(*tf, -0.4975, 0.02 * 0.4975);
-    EXPECT_NEAR(*tr, 1.5625, 0.02 * 1.5625);
+    std::printf("[J6a] front %.6f rad/m (ref %.6f; side-angle -0.426005, IC hand -0.4975 info), "
+                "rear %.6f rad/m (ref %.6f)
+", *tf, kRefFront, *tr, kRefRear);
+    EXPECT_NEAR(*tf, kRefFront, 0.02 * std::abs(kRefFront));
+    EXPECT_NEAR(*tr, kRefRear, 0.02 * std::abs(kRefRear));
 }
 
 // (b) +/-0.5 mm vs +/-1 mm central difference, <= 1 %.
