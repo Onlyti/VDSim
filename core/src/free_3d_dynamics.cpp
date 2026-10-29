@@ -8,12 +8,16 @@
 #include "vdsim/multibody.hpp"
 #include "vdsim/subsystems.hpp"
 
+#include "free_3d_reaction_internal.hpp"
+
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cmath>
 #include <cstdlib>
+#include <limits>
 #include <memory>
 #include <numeric>
 #include <type_traits>
@@ -130,6 +134,14 @@ public:
         drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
         brake_      = make_default_brake(vp_, vp_.brake_deadtime_s);
         steering_   = make_default_steering(vp_, vp_.steer_deadtime_s);
+        for (int axle = 0; axle < 2; ++axle) {
+            const bool front = (axle == 0);
+            drive_unsprung_[axle] = resolved_torque_reaction(vp_, true, front)
+                                    == VehicleParams::TorqueReaction::Unsprung;
+            brake_unsprung_[axle] = resolved_torque_reaction(vp_, false, front)
+                                    == VehicleParams::TorqueReaction::Unsprung;
+        }
+        targets_checked_ = false;
         if (const char* kl = std::getenv("VDSIM_KLINK")) k_link_ = std::atof(kl);
         spdlog::debug("[L5 free-3D] init: mass={:.0f} kg, I=({:.0f},{:.0f},{:.0f})",
                       vp.mass, vp.inertia_diag.x(), vp.inertia_diag.y(), vp.inertia_diag.z());
@@ -200,6 +212,8 @@ public:
         path_valid_.fill(false);
         path_off_.fill(Vec3::Zero());
         path_tan_.fill(Vec3::UnitZ());
+        theta_p_.fill(0.0);
+        theta_valid_.fill(false);
         spring_valid_.fill(false);
         const mb::PrescribedCornerMotion mot {};
         if (mb_dae_front_) {
@@ -219,6 +233,7 @@ public:
               double dt) noexcept override {
         const CmdL4 cmd = lower_to_l4(u);
         if (!(dt > 0.0)) return;
+        if (!targets_checked_) warn_equivalent_reactions();
 
         const DriverCmd driver_cmd{
             cmd.steer_angle_wheel, cmd.throttle, cmd.brake, cmd.gear, cmd.handbrake};
@@ -271,6 +286,7 @@ public:
     // topology drives both corners; each keeps its own DAE state fed by its strut travel.
     void attach_mb_corner(bool front, mb::SuspensionTopology topo, bool enable) {
         mb::PrescribedCornerMotion mot {};
+        targets_checked_ = false;
         if (front) {
             mb_topo_front_   = std::move(topo);
             mb_enabled_front_ = enable;
@@ -313,6 +329,44 @@ public:
     std::array<double, NUM_WHEELS> wheel_camber() const noexcept { return gamma_dae_; }
     std::array<double, NUM_WHEELS> wheel_toe()    const noexcept { return toe_dae_; }
 
+    // Strut spring + stop force [N] at the current state (damper excluded); NaN off
+    // the spatial-strut path.
+    std::array<double, NUM_WHEELS> strut_force() const noexcept {
+        std::array<double, NUM_WHEELS> f;
+        f.fill(std::numeric_limits<double>::quiet_NaN());
+        if (!sp_.l5_spatial_suspension) return f;
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            double F_spring = 0.0, F_stop = 0.0;
+            strut_spring(i, state_.susp_compression[i], F_spring, F_stop);
+            f[i] = F_spring + F_stop;
+        }
+        return f;
+    }
+
+    // A corner linkage resolves an unsprung reaction only on the strut path with an
+    // attached corner model that reports the knuckle orientation.
+    bool linkage_available(int axle) const {
+        if (!sp_.l5_spatial_suspension) return false;
+        const mb::IHardJointDaeModel* dae = axle == 0 ? mb_dae_front_.get()
+                                                      : mb_dae_rear_.get();
+        return dae && detail::knuckle_pitch_rate(*dae, 0.0, 0.0, Vec3::Zero()).has_value();
+    }
+
+    // drive_front, drive_rear, brake_front, brake_rear -> sprung/unsprung/equivalent.
+    std::array<std::string, 4> reaction_targets() const {
+        std::array<std::string, 4> out;
+        int k = 0;
+        for (const bool drive : {true, false}) {
+            for (const bool front : {true, false}) {
+                const bool uns = resolved_torque_reaction(vp_, drive, front)
+                                 == VehicleParams::TorqueReaction::Unsprung;
+                out[k++] = !uns ? "sprung"
+                                : (linkage_available(front ? 0 : 1) ? "unsprung" : "equivalent");
+            }
+        }
+        return out;
+    }
+
     std::array<Vec3, NUM_WHEELS>   tire_forces_body() const override { return tire_F_; }
     std::array<double, NUM_WHEELS> tire_Fz()           const override { return tire_Fz_; }
     std::array<double, NUM_WHEELS> wheel_slip_ratio()  const override { return slip_ratio_; }
@@ -335,6 +389,48 @@ public:
     }
 
 private:
+    // Strut spring force along the strut axis at compression comp (+ toward body):
+    // coil rate via the held eye-to-eye length and motion ratio when the DAE exposes
+    // the spring geometry, else the constant wheel rate; plus the bump/rebound stop.
+    void strut_spring(int i, double comp, double& F_spring, double& F_stop) const noexcept {
+        const double ks  = std::max(1.0, vp_.spring_stiffness[i]);
+        if (spring_valid_[i]) {
+            const double MR = motion_ratio_[i];
+            const double l_local = spring_len_[i] + MR * (comp - comp_held_[i]);
+            F_spring = k_coil_[i] * (l_local - l_free_[i]) * MR;
+        } else {
+            F_spring = F_preload_[i] + ks * comp;
+        }
+        if (F_spring < 0.0) F_spring = 0.0;          // coilover cannot pull
+        F_stop = 0.0;
+        if (comp > comp_max_[i])                     // bump/rebound stops engage at
+            F_stop = kStopStiffness * (comp - comp_max_[i]);   // the real wheel travel
+        else if (comp < comp_min_[i])                // (comp), so they stay on comp.
+            F_stop = kStopStiffness * (comp - comp_min_[i]);
+    }
+
+    // An explicit "unsprung" that the current path resolves like sprung is reported
+    // once per process (the unset default is not).
+    void warn_equivalent_reactions() {
+        targets_checked_ = true;
+        static std::atomic<bool> warned{false};
+        const char* names[4] = {"drive_reaction_front", "drive_reaction_rear",
+                                "brake_reaction_front", "brake_reaction_rear"};
+        const std::optional<VehicleParams::TorqueReaction>* vals[4] = {
+            &vp_.drive_reaction_front, &vp_.drive_reaction_rear,
+            &vp_.brake_reaction_front, &vp_.brake_reaction_rear};
+        for (int k = 0; k < 4; ++k) {
+            const bool front = (k % 2 == 0);
+            if (*vals[k] && **vals[k] == VehicleParams::TorqueReaction::Unsprung
+                && !linkage_available(front ? 0 : 1) && !warned.exchange(true)) {
+                spdlog::warn("[vdsim L5] {}=unsprung has no corner linkage on this path "
+                             "(penalty, or strut without a corner model); the reaction "
+                             "goes to the chassis, same as sprung", names[k]);
+                break;
+            }
+        }
+    }
+
     struct Deriv {
         Vec3 dp_world {Vec3::Zero()};
         Vec3 d_v_body {Vec3::Zero()};
@@ -506,27 +602,14 @@ private:
                 const Vec3 vrel = v_u - v_mount;
                 const double comp     = rel.dot(u_hat);   // strut compression (+ toward body)
                 const double comp_dot = vrel.dot(u_hat);
-                const double ks  = std::max(1.0, vp_.spring_stiffness[i]);
                 const double cs  = std::max(0.0, vp_.damper_coefficient[i]);
                 // Strut spring force (body-up, +up when compressed). With a DAE exposing the
                 // real spring geometry: coil rate via eye-to-eye length and motion ratio,
                 // F = k_coil*(l-l_free)*MR, linearised in comp within the step (slope =
                 // k_coil*MR^2 = local wheel rate) -> progressive + bump/rebound asymmetric.
-                // Otherwise: constant wheel rate (preload + ks*comp).
-                double F_spring;
-                if (spring_valid_[i]) {
-                    const double MR = motion_ratio_[i];
-                    const double l_local = spring_len_[i] + MR * (comp - comp_held_[i]);
-                    F_spring = k_coil_[i] * (l_local - l_free_[i]) * MR;
-                } else {
-                    F_spring = F_preload_[i] + ks * comp;
-                }
-                if (F_spring < 0.0) F_spring = 0.0;          // coilover cannot pull
-                double F_stop = 0.0;
-                if (comp > comp_max_[i])                     // bump/rebound stops engage at
-                    F_stop = kStopStiffness * (comp - comp_max_[i]);   // the real wheel travel
-                else if (comp < comp_min_[i])                // (comp), so they stay on comp.
-                    F_stop = kStopStiffness * (comp - comp_min_[i]);
+                // Otherwise: constant wheel rate (preload + ks*comp). Plus the stops.
+                double F_spring = 0.0, F_stop = 0.0;
+                strut_spring(i, comp, F_spring, F_stop);
                 // Damper: coil-over rate scales with MR^2 too (force along the strut =
                 // c_coil*MR*comp_dot, generalized force = *MR), matched to cs at static.
                 double cs_eff = cs;
@@ -720,6 +803,41 @@ private:
         const SubsystemContext ctx_brake{s, cmd_residual, ctx.dt, ctx.Fz};
         const std::array<double, NUM_WHEELS> Tb = brake_->wheel_torque(ctx_brake);
 
+        // Drive / brake torque reactions (work order 43). The spin equation below puts
+        // Td + Tb on the wheel; the equal-opposite moment -(Td + Tb) about the spin axis
+        // (body-y turned by the steer, as in the gyroscopic term) lands on the reaction
+        // body. The chassis takes it directly (sprung, and any path without a corner
+        // linkage); on the strut + corner-model path an unsprung reaction goes through
+        // the knuckle: a travel-direction force on the wheel particle plus the matching
+        // chassis force and couple (detail::split_knuckle_reaction). Td uses the spin
+        // equation's ground gate, so each reaction pairs exactly with the applied torque.
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            const bool grounded = contacts[i].is_valid && contacts[i].penetration > 0.0
+                                  && Fz[i] >= 1.0;
+            const double T_drive = grounded ? Td[i] : 0.0;
+            const int axle = (i == WHEEL_FL || i == WHEEL_FR) ? 0 : 1;
+            const double delta = d_wheel[i] + toe_dae_[i];
+            Vec3 s_hat(-delta, 1.0, 0.0);
+            s_hat.normalize();
+            double T_knuckle = 0.0;
+            if (strut && path_valid_[i] && theta_valid_[i])
+                T_knuckle = (drive_unsprung_[axle] ? T_drive : 0.0)
+                          + (brake_unsprung_[axle] ? Tb[i] : 0.0);
+            tau_body -= ((T_drive + Tb[i]) - T_knuckle) * s_hat;
+            if (T_knuckle != 0.0) {
+                const Vec3 M_k = -T_knuckle * s_hat;               // moment on the knuckle
+                const double M_pitch = M_k.y();
+                tau_body += M_k - Vec3(0.0, M_pitch, 0.0);         // steer-tilted part: chassis
+                const Vec3 r_wheel = R.transpose() * (s.unsprung_pos[i] - s.position);
+                const detail::KnuckleReactionSplit sp = detail::split_knuckle_reaction(
+                    M_pitch, theta_p_[i], path_tan_[i], r_wheel, r_body_[i]);
+                const double m_u = std::max(1.0, vp_.unsprung_mass[i]);
+                d_uvel[i] += (R * sp.force_on_wheel) / m_u;
+                F_total_world += R * sp.force_on_body;
+                tau_body += r_body_[i].cross(sp.force_on_body) + sp.couple_on_body;
+            }
+        }
+
         // Free-3D strut path: the body is purely the sprung mass (m_body = mass - sum
         // unsprung); each unsprung is its own inertial particle, so there is no mass split
         // and no frame-coupling shortcut — the body feels only the mount connection forces.
@@ -883,6 +1001,17 @@ private:
             path_off_[i] = Vec3(dwr.x(), s * dwr.y(), dwr.z());
             path_tan_[i] = Vec3(tm.w_dq.x(), s * tm.w_dq.y(), tm.w_dq.z());
             path_valid_[i] = true;
+            // Knuckle pitch rate for an unsprung torque reaction (pitch is unchanged by
+            // the left/right mirror). Only evaluated when the axle needs it.
+            const int axle = front ? 0 : 1;
+            if (drive_unsprung_[axle] || brake_unsprung_[axle]) {
+                const std::optional<double> tp = detail::knuckle_pitch_rate(
+                    *dae, mot.travel_z, mot.steer_rack_dy, mb_state_[i].knuckle_aa);
+                theta_valid_[i] = tp.has_value();
+                theta_p_[i] = tp.value_or(0.0);
+            } else {
+                theta_valid_[i] = false;
+            }
             // Coil spring: hold l(z_v), MR(z_v) and the travel they were sampled at (the
             // strut force is linearised in comp around this point within the substeps).
             if (tm.spring_len >= 0.0 && k_coil_[i] > 0.0) {
@@ -1011,6 +1140,13 @@ private:
     std::array<Vec3, NUM_WHEELS> path_tan_ {{Vec3::UnitZ(), Vec3::UnitZ(),
                                              Vec3::UnitZ(), Vec3::UnitZ()}};
     std::array<bool, NUM_WHEELS> path_valid_ {{false, false, false, false}};
+    // Knuckle pitch rate dtheta/dz_v [rad/m] at the held travel (unsprung reactions).
+    std::array<double, NUM_WHEELS> theta_p_ {};
+    std::array<bool, NUM_WHEELS> theta_valid_ {{false, false, false, false}};
+    // Resolved L5 torque-reaction target per axle (0 front, 1 rear): true = knuckle.
+    std::array<bool, 2> drive_unsprung_ {{false, false}};
+    std::array<bool, 2> brake_unsprung_ {{true, true}};
+    bool targets_checked_ {false};
     // Coil-rate spring via the real eye-to-eye length l(z_v) and motion ratio MR=dl/dz_v
     // (from travel_maps): F_susp = k_coil*(l-l_free)*MR -> progressive + bump/rebound
     // asymmetric. k_coil and l_free are cached at attach so the STATIC load and rate match
@@ -1076,6 +1212,18 @@ std::array<double, NUM_WHEELS> free_3d_wheel_camber(const IVehicleDynamics& dyn)
 std::array<double, NUM_WHEELS> free_3d_wheel_toe(const IVehicleDynamics& dyn) {
     const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);
     return p ? p->wheel_toe() : std::array<double, NUM_WHEELS>{};
+}
+
+std::array<double, NUM_WHEELS> free_3d_strut_force(const IVehicleDynamics& dyn) {
+    if (const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn)) return p->strut_force();
+    std::array<double, NUM_WHEELS> f;
+    f.fill(std::numeric_limits<double>::quiet_NaN());
+    return f;
+}
+
+std::array<std::string, 4> free_3d_torque_reaction_targets(const IVehicleDynamics& dyn) {
+    const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);
+    return p ? p->reaction_targets() : std::array<std::string, 4>{};
 }
 
 }  // namespace vdsim

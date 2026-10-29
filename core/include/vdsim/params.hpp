@@ -122,9 +122,46 @@ struct VehicleParams {
     // four-key path (aero_drag_coeff/frontal_area/aero_lift_*). See aero.hpp.
     std::vector<AeroElement> aero_elements;
 
+    // ---- L5 drive / brake torque reaction target (per axle) ----
+    // Body that carries the equal-opposite moment of the torque the wheel-spin
+    // equation applies: Sprung = chassis (inboard motor / half-shaft, inboard
+    // disc), Unsprung = knuckle (in-wheel motor, outboard caliper). Unset =
+    // L5 default (drive Sprung, brake Unsprung). Read by L5 only; L1-L4 warn
+    // once and ignore. YAML: "sprung" | "unsprung".
+    enum class TorqueReaction { Sprung, Unsprung };
+    std::optional<TorqueReaction> drive_reaction_front;
+    std::optional<TorqueReaction> drive_reaction_rear;
+    std::optional<TorqueReaction> brake_reaction_front;
+    std::optional<TorqueReaction> brake_reaction_rear;
+
     static VehicleParams from_yaml(const std::string& path);
     void to_yaml(const std::string& path) const;
 };
+
+/**
+ * @brief Parse a torque-reaction YAML / Python value.
+ * @param s   "sprung" or "unsprung".
+ * @param key Field name used in the error message.
+ * @return The reaction target.
+ * @throws std::invalid_argument for any other value.
+ */
+VehicleParams::TorqueReaction parse_torque_reaction(const std::string& s,
+                                                    const std::string& key);
+
+/**
+ * @brief Lower-case name of a torque-reaction target ("sprung" / "unsprung").
+ */
+const char* torque_reaction_name(VehicleParams::TorqueReaction r);
+
+/**
+ * @brief L5 reaction target of one axle with the default applied.
+ * @param vp    Vehicle parameters.
+ * @param drive true for the drive torque, false for the brake torque.
+ * @param front true for the front axle.
+ * @return Explicit value, else drive Sprung / brake Unsprung.
+ */
+VehicleParams::TorqueReaction resolved_torque_reaction(const VehicleParams& vp,
+                                                       bool drive, bool front);
 
 // Axle roll stiffness [N m/rad] derived from the corner springs plus the ARB.
 // Two springs at half-track produce K = (k_left + k_right) * (track/2)^2; the

@@ -945,6 +945,13 @@ class VDSimPlant:
               "tir": Path(self._ts.wheel[0].tir_path).name if self._ts.wheel[0].tir_path else "",
           },
       }
+      if level == "L5":
+          # Where the drive/brake torque reactions land on this path (sprung,
+          # unsprung through the corner linkage, or equivalent = unsprung
+          # requested without a linkage, resolved like sprung).
+          self._plant_params["torque_reaction"] = dict(zip(
+              ("drive_front", "drive_rear", "brake_front", "brake_rear"),
+              vdsim.free_3d_torque_reaction_targets(self._dyn)))
 
       # Live monitor is opt-in; `_mon is None` is the OFF path (nothing
       # imported, no socket, no thread).

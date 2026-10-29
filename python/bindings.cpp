@@ -348,6 +348,21 @@ PYBIND11_MODULE(vdsim, m) {
     m.def("aero_uses_element_path", &vdsim::aero_uses_element_path, py::arg("vp"));
 
     // -------- VehicleParams --------
+    // Torque-reaction fields as str | None ('sprung' / 'unsprung'); other strings raise
+    // ValueError through parse_torque_reaction's std::invalid_argument.
+    using ReactionSlot = std::optional<vdsim::VehicleParams::TorqueReaction> vdsim::VehicleParams::*;
+    auto reaction_getter = [](ReactionSlot f) {
+        return [f](const vdsim::VehicleParams& p) -> std::optional<std::string> {
+            if (!(p.*f)) return std::nullopt;
+            return std::string(vdsim::torque_reaction_name(*(p.*f)));
+        };
+    };
+    auto reaction_setter = [](ReactionSlot f, const char* key) {
+        return [f, key](vdsim::VehicleParams& p, const std::optional<std::string>& v) {
+            if (!v) { p.*f = std::nullopt; return; }
+            p.*f = vdsim::parse_torque_reaction(*v, key);
+        };
+    };
     py::class_<vdsim::VehicleParams>(m, "VehicleParams")
         .def(py::init<>())
         .def_readwrite("mass",                 &vdsim::VehicleParams::mass)
@@ -414,6 +429,26 @@ PYBIND11_MODULE(vdsim, m) {
                        "returned copy do not write back)")
         .def_readwrite("anti_dive_front",      &vdsim::VehicleParams::anti_dive_front)
         .def_readwrite("anti_squat_rear",      &vdsim::VehicleParams::anti_squat_rear)
+        .def_property("drive_reaction_front",
+                      reaction_getter(&vdsim::VehicleParams::drive_reaction_front),
+                      reaction_setter(&vdsim::VehicleParams::drive_reaction_front,
+                                      "drive_reaction_front"),
+                      "L5 drive torque reaction, front axle: 'sprung' | 'unsprung' | None")
+        .def_property("drive_reaction_rear",
+                      reaction_getter(&vdsim::VehicleParams::drive_reaction_rear),
+                      reaction_setter(&vdsim::VehicleParams::drive_reaction_rear,
+                                      "drive_reaction_rear"),
+                      "L5 drive torque reaction, rear axle: 'sprung' | 'unsprung' | None")
+        .def_property("brake_reaction_front",
+                      reaction_getter(&vdsim::VehicleParams::brake_reaction_front),
+                      reaction_setter(&vdsim::VehicleParams::brake_reaction_front,
+                                      "brake_reaction_front"),
+                      "L5 brake torque reaction, front axle: 'sprung' | 'unsprung' | None")
+        .def_property("brake_reaction_rear",
+                      reaction_getter(&vdsim::VehicleParams::brake_reaction_rear),
+                      reaction_setter(&vdsim::VehicleParams::brake_reaction_rear,
+                                      "brake_reaction_rear"),
+                      "L5 brake torque reaction, rear axle: 'sprung' | 'unsprung' | None")
         .def_static("from_yaml", &vdsim::VehicleParams::from_yaml)
         .def("to_yaml",          &vdsim::VehicleParams::to_yaml);
 
@@ -547,6 +582,18 @@ PYBIND11_MODULE(vdsim, m) {
           [](const std::string& yaml_path) {
               return vdsim::create_5link_native_kinematics(yaml_path);
           });
+    m.def("free_3d_strut_force",
+          [](const vdsim::IVehicleDynamics& dyn) { return vdsim::free_3d_strut_force(dyn); },
+          py::arg("dyn"),
+          "L5 spatial-strut spring + stop force per wheel [N] (compression +, damper "
+          "excluded); NaN on any other model or path");
+    m.def("free_3d_torque_reaction_targets",
+          [](const vdsim::IVehicleDynamics& dyn) {
+              return vdsim::free_3d_torque_reaction_targets(dyn);
+          },
+          py::arg("dyn"),
+          "Effective L5 torque-reaction target [drive_front, drive_rear, brake_front, "
+          "brake_rear]: 'sprung' | 'unsprung' | 'equivalent'; empty strings off L5");
     m.def("attach_front_kinematics",
           [](vdsim::IVehicleDynamics& dyn, const std::string& csv_path) {
               auto k = vdsim::create_lookup_kinematics(csv_path);

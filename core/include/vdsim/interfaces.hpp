@@ -4,6 +4,7 @@
 #include <cmath>
 #include <limits>
 #include <memory>
+#include <string>
 #include <tuple>
 #include <vector>
 
@@ -226,6 +227,16 @@ bool free_3d_mb_dynamics_enabled(const IVehicleDynamics& dyn, int axle);
 // Zero for any other model. For inspection / suspension-vs-L4 validation.
 std::array<double, NUM_WHEELS> free_3d_wheel_camber(const IVehicleDynamics& dyn);
 std::array<double, NUM_WHEELS> free_3d_wheel_toe(const IVehicleDynamics& dyn);
+// Per-wheel strut spring force [N] on the L5 spatial-strut path at the current state:
+// coil (or wheel-rate) spring + bump/rebound stop along the strut axis, compression
+// positive; the damper is excluded. NaN for every wheel on any other model or path
+// (no silent zero).
+std::array<double, NUM_WHEELS> free_3d_strut_force(const IVehicleDynamics& dyn);
+// Effective L5 torque-reaction target per axle, in the order drive_front, drive_rear,
+// brake_front, brake_rear: "sprung", "unsprung" (resolved through the corner linkage)
+// or "equivalent" (unsprung requested but the path has no linkage, so the moment goes
+// to the chassis like sprung). Empty strings on any other model.
+std::array<std::string, 4> free_3d_torque_reaction_targets(const IVehicleDynamics& dyn);
 // Attach a contact provider for per-substep contact re-query (free-3D strut path). The
 // dynamics then refreshes the contact at each internal substep pose, shrinking the
 // once-per-step frozen-contact discretization error on curved surfaces. Non-owning: the
