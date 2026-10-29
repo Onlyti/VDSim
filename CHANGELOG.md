@@ -29,6 +29,8 @@ Planned as 0.8.1 (work order 43, L5 longitudinal reactions). Not released yet.
   N, compression positive, damping excluded; NaN off the strut path) and
   `free_3d_torque_reaction_targets()` (effective reaction body per key:
   `sprung`, `unsprung` or `equivalent`; empty outside L5), with Python bindings.
+- `SolverParams.stunt_physics` is exposed to Python (read/write, default `False`),
+  matching the C++ field the L5 Python tests and the real-time server path set.
 
 ### Compatibility
 - L1-L4 results, the RL observation/reward digests and the closed-loop
