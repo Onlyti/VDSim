@@ -12,6 +12,7 @@ add_executable(vdsim_integration_tests
     test_stunt.cpp
     test_l5_driving.cpp
     test_l5_strut_validation.cpp
+    test_l5_reaction.cpp
     test_terrain_l5.cpp
     test_belt_transient.cpp
     test_belt_validation.cpp
@@ -61,11 +62,15 @@ gtest_discover_tests(vdsim_integration_tests)
 add_executable(vdsim_l5_ref_dump l5_ref_dump.cpp)
 target_link_libraries(vdsim_l5_ref_dump PRIVATE vdsim::core)
 
-# Known failures: tests that state a real acceptance gate the code does not
-# meet yet. They stay runnable (`ctest -L known_failure`) and fail visibly;
-# the validation preset and CI exclude the label. When the cause is fixed the
-# test moves back into vdsim_integration_tests and the label goes away.
-add_executable(vdsim_known_failure_tests test_aero_elements.cpp)
+# Tests with label `known_failure` state gates the code does not meet in this
+# release. They stay runnable (`ctest -L known_failure`) and fail visibly; the
+# validation preset and CI exclude the label. When the cause is fixed the test
+# moves back into vdsim_integration_tests and the label goes away.
+# L5Reaction.R2_*: strut-path axle load transfer, out of the 0.8.1 verdict
+# (PROP-1924 option 1), re-judged in 0.8.2.
+add_executable(vdsim_known_failure_tests test_l5_reaction.cpp)
+target_include_directories(vdsim_known_failure_tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../support)
 target_compile_definitions(vdsim_known_failure_tests PRIVATE
     VDSIM_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
     VDSIM_KNOWN_FAILURE_TESTS)
@@ -74,8 +79,8 @@ target_link_libraries(vdsim_known_failure_tests PRIVATE
     GTest::gtest
     GTest::gtest_main
 )
-add_test(NAME AeroElements.A3_SteadyAxleLoadL5
-         COMMAND vdsim_known_failure_tests
-                 --gtest_filter=AeroElements.A3_SteadyAxleLoadL5)
-set_tests_properties(AeroElements.A3_SteadyAxleLoadL5 PROPERTIES
-    LABELS known_failure)
+foreach(_kf L5Reaction.R2_StrutAccelSprungVsUnsprung
+            L5Reaction.R2_StrutBrakeSprungVsUnsprung)
+    add_test(NAME ${_kf} COMMAND vdsim_known_failure_tests --gtest_filter=${_kf})
+    set_tests_properties(${_kf} PROPERTIES LABELS known_failure)
+endforeach()

@@ -6,8 +6,24 @@ All notable changes to VDSim are documented here. Format follows
 
 ## [Unreleased]
 
-Planned as 0.8.1 (work order 44: one level-id factory, L5 from Python). Not
-released yet.
+Planned as 0.8.1 (work order 43: L5 longitudinal reactions; work order 44:
+one level-id factory, L5 from Python). Not released yet.
+
+### Changed — BREAKING: L5 drive/brake torque reactions and the LuGre spin reaction
+- L5 now returns each wheel's drive and brake torque reaction to a reaction body
+  chosen per axle: `drive_reaction_front` / `drive_reaction_rear` (default
+  `sprung`) and `brake_reaction_front` / `brake_reaction_rear` (default
+  `unsprung`). L5 longitudinal load transfer now uses the CG height instead of
+  (h_cg − R). Every L5 run with drive or brake torque changes.
+- `unsprung` currently resolves like `sprung` on every path, the corner-linkage
+  (multibody DAE) strut path included: the reaction goes to the chassis. An
+  explicit `unsprung` key warns once per process; the unset brake default does
+  not. The reaction through the knuckle (anti-dive / anti-squat from the link
+  geometry) is planned for 0.8.2 together with the corner-model pitch fix.
+- L5 with a LuGre tyre (the default `generic_pacejka` tyre included) changes:
+  the LuGre contact branches never fed the tyre longitudinal force into the
+  wheel spin equation, so the spin had no tyre reaction torque. Both the
+  penalty and the strut branch now use the clamped force, as the L2 model does.
 
 ### Changed — BREAKING: an unknown level id is an error
 - Every place that turns a level string into a model now goes through one
@@ -22,6 +38,12 @@ released yet.
   model (`create_stunt_dof()`); `VDSimPlant` used to refuse `L5`.
 
 ### Added
+- `free_3d_strut_force()` (read-only strut spring + bump-stop force per corner,
+  N, compression positive, damping excluded; NaN off the strut path) and
+  `free_3d_torque_reaction_targets()` (effective reaction body per key:
+  `sprung`, `unsprung` or `equivalent`; empty outside L5), with Python bindings.
+- `SolverParams.l5_spatial_suspension` is exposed to Python (read/write,
+  default `False`), matching the C++ field that the L5 Python tests set.
 - `vdsim.Level.L5_Stunt`, `vdsim.create_stunt_dof`, `SolverParams.stunt_physics`.
 - L5 from Python runs with the `vdsim_realtime` L5 solver settings unless the
   caller picks finer ones: `stunt_physics` on, `max_substep_dt` at most
@@ -39,7 +61,26 @@ released yet.
   supported in VecSession in 0.8.1").
 - L5 with suspension hardpoints is not wired from Python.
 
+### Compatibility
+- L1-L4 results, the RL observation/reward digests and the closed-loop
+  evaluation dumps are bit-identical to 0.8.0.
+
 ### Known limitations
+- The lumped drivetrain puts the reflected inertia I_m·G² into the wheel spin,
+  so once the reaction is returned the rotor angular momentum shows up in the
+  pitch moment about G times larger than the real I_m·G·α. Not fixed in 0.8.1.
+- On the strut path `cg_height` is the sprung-mass CG height, so the CG of the
+  whole car sits lower than `cg_height` (the four wheel particles ride at R).
+- On the corner-linkage (multibody DAE) path the body pitches at steady speed
+  without any input (present since 0.8.0); `brake_reaction_*: unsprung` there is
+  not yet routed through the knuckle (see above). Both are 0.8.2 work.
+- On the strut path (no corner model) the L5 axle load transfer comes out about
+  1-3 % larger than the expected (m·a·h + ΣI·α)/L. It is not part of the 0.8.1 verdict:
+  `L5Reaction.R2_*` carry label `known_failure` (reproduce with
+  `ctest -L known_failure`) and are re-judged with the same gate in 0.8.2
+  together with the `cg_height` meaning fix.
+- `AeroElements.A3_SteadyAxleLoadL5` (label `known_failure` in 0.8.0) passes and
+  is back in the canonical suite.
 - The L5 penalty contact caps the tyre vertical stiffness at 80000 N/m
   (`core/src/free_3d_dynamics.cpp`, penalty branch): when the tyre file gives a
   stiffer tyre, the L5 static sink is larger than the file value implies. The
@@ -87,7 +128,7 @@ released yet.
   closed-loop evaluation dumps are unchanged.
 
 ### Known limitations
-- L5 applies tyre longitudinal forces at the wheel centre and does not return drive/brake torque reactions to the body, so longitudinal load transfer uses (h_cg − R) instead of h_cg; with aero drag the front axle share is biased by ΣF_d·R/L. Check aero balance numbers on L1-L3 (see docs/theory/26_aero_elements.md).
+- L5 axle loads carry two core defects: tyre longitudinal forces act at the wheel centre with no drive/brake torque reaction on the body, and with a LuGre tyre the wheel spin equation has no tyre reaction torque. Together they bias longitudinal load transfer and the front axle share under aero drag. Check aero balance numbers on L1-L3 (see docs/theory/26_aero_elements.md). Both defects are fixed in 0.8.1.
   The original A3 L5 gate is kept as the ctest `AeroElements.A3_SteadyAxleLoadL5` with label `known_failure`; reproduce it with `ctest -L known_failure` (the validation preset and CI exclude this label).
   When the L5 core is fixed, the label is dropped and the test joins the canonical suite.
 - The L3 output `Fz` is the internal quasi-static 7-DOF wheel load.

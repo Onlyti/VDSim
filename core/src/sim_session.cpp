@@ -82,6 +82,17 @@ SimSession::SimSession(std::unique_ptr<IVehicleDynamics> dyn,
             }
         }
     }
+    {
+        // Torque-reaction targets are an L5 model; L1-L4 read them and ignore them.
+        if (dyn_->level() != IVehicleDynamics::Level::L5_Stunt &&
+            (vp.drive_reaction_front || vp.drive_reaction_rear ||
+             vp.brake_reaction_front || vp.brake_reaction_rear)) {
+            static std::atomic<bool> warned{false};   // once per process
+            if (!warned.exchange(true))
+                spdlog::warn("[vdsim] drive_reaction_* / brake_reaction_* are ignored "
+                             "below L5 (torque reactions are modelled on L5 only)");
+        }
+    }
     free_3d_attach_contact_provider(*dyn_, ground_.get());
     network_ = make_default_veh_network(cfg.veh_network);
     SimConfig cfg_act = cfg;

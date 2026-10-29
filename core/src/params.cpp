@@ -14,12 +14,14 @@
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <cmath>
 #include <fstream>
 #include <mutex>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 namespace vdsim {
 
@@ -57,6 +59,21 @@ void pull_vec3(const YAML::Node& node, const char* key, Vec3& dst) {
     dst.x() = sub[0].as<double>();
     dst.y() = sub[1].as<double>();
     dst.z() = sub[2].as<double>();
+}
+
+/**
+ * @brief The four torque-reaction fields with their YAML keys (front/rear x drive/brake).
+ * @param p Parameters whose fields are exposed (const or non-const).
+ * @return Key / field-pointer pairs in a fixed order.
+ */
+template <typename VP>
+auto torque_reaction_slots(VP& p) {
+    using Slot = decltype(&p.drive_reaction_front);
+    return std::array<std::pair<const char*, Slot>, 4>{{
+        {"drive_reaction_front", &p.drive_reaction_front},
+        {"drive_reaction_rear",  &p.drive_reaction_rear},
+        {"brake_reaction_front", &p.brake_reaction_front},
+        {"brake_reaction_rear",  &p.brake_reaction_rear}}};
 }
 
 VehicleParams::Drive parse_drive(const std::string& s) {
@@ -202,6 +219,27 @@ void parse_aero_elements(const YAML::Node& root, VehicleParams& p) {
 
 }  // namespace
 
+VehicleParams::TorqueReaction parse_torque_reaction(const std::string& s,
+                                                    const std::string& key) {
+    if (s == "sprung")   return VehicleParams::TorqueReaction::Sprung;
+    if (s == "unsprung") return VehicleParams::TorqueReaction::Unsprung;
+    throw std::invalid_argument("'" + key + "': unknown value '" + s +
+                                "' (expected sprung/unsprung)");
+}
+
+const char* torque_reaction_name(VehicleParams::TorqueReaction r) {
+    return r == VehicleParams::TorqueReaction::Unsprung ? "unsprung" : "sprung";
+}
+
+VehicleParams::TorqueReaction resolved_torque_reaction(const VehicleParams& vp,
+                                                       bool drive, bool front) {
+    const auto& v = drive ? (front ? vp.drive_reaction_front : vp.drive_reaction_rear)
+                          : (front ? vp.brake_reaction_front : vp.brake_reaction_rear);
+    if (v) return *v;
+    return drive ? VehicleParams::TorqueReaction::Sprung
+                 : VehicleParams::TorqueReaction::Unsprung;
+}
+
 // =============================================================================
 // VehicleParams
 // =============================================================================
@@ -271,6 +309,9 @@ VehicleParams VehicleParams::from_yaml(const std::string& path) {
         p.aero_drag_height = n.as<double>();
     parse_aero_elements(root, p);
     validate_aero_params(p);
+    for (const auto& [key, slot] : torque_reaction_slots(p))
+        if (const auto n = root[key]; n && !n.IsNull())
+            *slot = parse_torque_reaction(n.as<std::string>(), key);
 
     // Self-consistency: cg_to_front + cg_to_rear should equal wheelbase.
     const double sum = p.cg_to_front + p.cg_to_rear;
@@ -360,6 +401,11 @@ void VehicleParams::to_yaml(const std::string& path) const {
         out << YAML::EndMap;
     }
     out << YAML::Key << "air_density" << YAML::Value << air_density;
+    // Written only when set: an unset reaction keeps the L5 default and the
+    // file of a vehicle without the keys is byte-identical to before.
+    for (const auto& [key, slot] : torque_reaction_slots(*this))
+        if (*slot)
+            out << YAML::Key << key << YAML::Value << torque_reaction_name(**slot);
 
     out << YAML::EndMap;
 

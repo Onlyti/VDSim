@@ -198,7 +198,9 @@ private:
         const Mat3 R = rodrigues(axis_, theta);
         const Vec3 wheel = pivot_ + R * wheel_off_;
         const Vec3 spin = R * wheel_spin_axis_;
-        return pose_from_spin(wheel, spin, wheel_static_, side_);
+        WheelPose wp = pose_from_spin(wheel, spin, wheel_static_, side_);
+        wp.orientation = Quat(R).normalized();   // knuckle rotation vs static
+        return wp;
     }
 
     std::string side_;
@@ -342,7 +344,9 @@ private:
 
     WheelPose pose_at(double theta, double steer_dy, const Vec3& aa) const {
         const auto g = geometry_at(theta, steer_dy, aa);
-        return pose_from_spin(g.wheel, g.spin, wheel_static_, side_, g.sk, strut_top_);
+        WheelPose wp = pose_from_spin(g.wheel, g.spin, wheel_static_, side_, g.sk, strut_top_);
+        wp.orientation = Quat(axis_angle_to_R(g.aa)).normalized();   // knuckle rotation
+        return wp;
     }
 
     // MacPherson spring/strut = eye-to-eye from the body top mount to the knuckle strut
@@ -538,6 +542,7 @@ private:
         if (!kinematic_at(theta, steer_dy, s)) return {};
         WheelPose wp = pose_from_spin(s.wheel_pos, s.spin_axis_world, wheel_static_, side_,
                                       s.uk - s.lk);
+        wp.orientation = Quat(s.R_now * R0_.transpose()).normalized();   // knuckle rotation
         return wp;
     }
 
@@ -666,7 +671,9 @@ private:
 
     WheelPose pose_at_travel(double travel_z, double /*steer*/, const Vec3& seed) const override {
         const Geom g = full_pose_at(travel_z, seed);
-        return pose_from_spin(g.wheel, g.spin, wheel_static_, side_);
+        WheelPose wp = pose_from_spin(g.wheel, g.spin, wheel_static_, side_);
+        wp.orientation = Quat(axis_angle_to_R(g.aa)).normalized();   // knuckle rotation
+        return wp;
     }
 
     Geom driven_pose_at(double theta, Vec3 aa0) const {

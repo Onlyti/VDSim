@@ -75,12 +75,13 @@ unchanged and a trace without them is bit-identical.
 
 ## 26.5 Limits
 
-- **Check aero balance numbers on L1–L3.** L5 axle loads include the L5 limit
-  below: L5 applies tyre longitudinal forces at the wheel centre and does not
-  return the drive/brake torque reactions to the body, so longitudinal load
-  transfer uses $(h_{cg} - R)$ instead of $h_{cg}$; with aero drag the front
-  axle share is biased by $\sum F_d R / L$ ($R$ = wheel radius). The aero
-  wrench itself is applied correctly (equal-drag and drag-only checks below).
+- **Check aero balance numbers on L1–L3.** Up to 0.8.0, L5 axle loads carried
+  two core defects: tyre longitudinal forces acted at the wheel centre with no
+  drive/brake torque reaction on the body, and with a LuGre tyre the wheel spin
+  equation had no tyre reaction torque. With aero drag this biased the front
+  axle share (0.8.0 drag-only check: $\sum F_d R / L$, $R$ = wheel radius).
+  Both are fixed in 0.8.1 (see the changelog). The aero wrench itself was
+  applied correctly (equal-drag and drag-only checks below).
 - L3/L4 downforce is added to the tyre loads only; it does not press the
   suspension (no body heave or pitch from aero).
 - The L3 output `Fz` is the internal quasi-static 7-DOF wheel load.

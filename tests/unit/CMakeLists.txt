@@ -8,6 +8,7 @@ add_executable(vdsim_unit_tests
     test_powertrain.cpp
     test_params_yaml.cpp
     test_aero.cpp
+    test_l5_reaction_keys.cpp
     test_scenario_yaml.cpp
     test_control_converter.cpp
     test_control_l6_l7.cpp
@@ -34,6 +35,8 @@ target_link_libraries(vdsim_unit_tests PRIVATE vdsim_carla_plugin)
 
 # cosim/ is header-only for the wire protocol + TX templates (comms_templates.hpp).
 target_include_directories(vdsim_unit_tests PRIVATE ${CMAKE_SOURCE_DIR}/cosim)
+# Core-internal helpers checked directly (L5 knuckle reaction split, work order 43).
+target_include_directories(vdsim_unit_tests PRIVATE ${CMAKE_SOURCE_DIR}/core/src)
 
 target_compile_definitions(vdsim_unit_tests PRIVATE
     VDSIM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")

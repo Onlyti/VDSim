@@ -36,8 +36,12 @@ TireParams example_tire() {
     return TireParams::from_yaml(kSrc + "/configs/parts/tire/generic_pacejka.yaml");
 }
 
+// Steady-speed condition (PO 43 3rd verdict G3, changed after measurement): |a_g| <= 0.02
+// with a_g = least-squares slope over the window of the CG velocity in world coordinates,
+// horizontal component along the heading. ax (body specific force, carries g sin(pitch))
+// stays as info.
 struct Steady {
-    double front {0.0}, rear {0.0}, ax {0.0}, vx {0.0};
+    double front {0.0}, rear {0.0}, ax {0.0}, vx {0.0}, a_g {0.0};
     bool finite {true};
 };
 
@@ -71,11 +75,17 @@ Steady run_steady(const std::string& level, const VehicleParams& vp) {
     cmd.v_target = kV60;
     Steady r;
     int n = 0;
+    double st = 0.0, sv = 0.0, stt = 0.0, stv = 0.0;
     for (int k = 0; k < 12000; ++k) {
         s.set_input(cmd);
         s.tick(1e-3);
         if (k < 8000 || k >= 11000) continue;
         const auto o = s.output();
+        const double psi = o.state.yaw();
+        const Vec3 head(std::cos(psi), std::sin(psi), 0.0);
+        const double vg = (o.state.orientation.toRotationMatrix() * o.state.velocity).dot(head);
+        const double tk = (k + 1) * 1e-3;
+        st += tk; sv += vg; stt += tk * tk; stv += tk * vg;
         r.front += o.Fz[WHEEL_FL] + o.Fz[WHEEL_FR];
         r.rear  += o.Fz[WHEEL_RL] + o.Fz[WHEEL_RR];
         r.ax += o.ax;
@@ -83,6 +93,7 @@ Steady run_steady(const std::string& level, const VehicleParams& vp) {
         r.finite = r.finite && std::isfinite(o.Fz[0] + o.Fz[1] + o.Fz[2] + o.Fz[3]);
         ++n;
     }
+    r.a_g = (n * stv - st * sv) / (n * stt - st * st);
     r.front /= n; r.rear /= n; r.ax /= n; r.vx /= n;
     return r;
 }
@@ -99,13 +110,13 @@ void check_a3(const std::string& level) {
     const auto with = run_steady(level, vp);
     const auto none = run_steady(level, without_elements(vp));
     ASSERT_TRUE(with.finite && none.finite);
-    EXPECT_LE(std::abs(with.ax), 0.02) << level;
-    EXPECT_LE(std::abs(none.ax), 0.02) << level;
+    EXPECT_LE(std::abs(with.a_g), 0.02) << level;
+    EXPECT_LE(std::abs(none.a_g), 0.02) << level;
     const double df = with.front - none.front;
     const double dr = with.rear - none.rear;
-    std::printf("[A3 %s] vx %.4f m/s ax %.5f | dFz front %.2f N (want %.2f) rear %.2f N "
+    std::printf("[A3 %s] vx %.4f m/s a_g %.5f (ax %.5f, none a_g %.5f) | dFz front %.2f N (want %.2f) rear %.2f N "
                 "(want %.2f) | total %.2f N\n",
-                level.c_str(), with.vx, with.ax, df, 0.294 * kDownTotal, dr,
+                level.c_str(), with.vx, with.a_g, with.ax, none.a_g, df, 0.294 * kDownTotal, dr,
                 0.706 * kDownTotal, df + dr);
     EXPECT_NEAR(df, 0.294 * kDownTotal, 0.02 * 0.294 * kDownTotal) << level;
     EXPECT_NEAR(dr, 0.706 * kDownTotal, 0.02 * 0.706 * kDownTotal) << level;
@@ -116,19 +127,10 @@ void check_a3(const std::string& level) {
 TEST(AeroElements, A3_SteadyAxleLoadL1) { check_a3("L1"); }
 TEST(AeroElements, A3_SteadyAxleLoadL2) { check_a3("L2"); }
 TEST(AeroElements, A3_SteadyAxleLoadL3) { check_a3("L3"); }
-// The original A3 on L5 (all elements vs no aero) is recorded as FAILED in
-// the 0.8.0 acceptance: L5 applies tyre longitudinal forces at the wheel
-// centre without the drive/brake torque reaction on the body, so the drive
-// force that balances the drag adds a load transfer of F_d * R / L that the
-// no-aero reference does not have. The cause is the L5 core, not the aero
-// wrench; A3-L5a and A3-L5b below replace it (gate unchanged). It is built
-// only into vdsim_known_failure_tests and registered as one ctest with label
-// known_failure (`ctest -L known_failure`), which the validation preset
-// excludes. It runs and fails until the L5 core is fixed; then the label is
-// dropped and the test joins the canonical suite.
-#ifdef VDSIM_KNOWN_FAILURE_TESTS
+// The original A3 on L5 (all elements vs no aero) failed in 0.8.0 (L5 tyre forces
+// at the wheel centre without the drive/brake torque reaction). With the reaction
+// on the body (0.8.1, work order 43) it is back in the canonical suite, gate unchanged.
 TEST(AeroElements, A3_SteadyAxleLoadL5) { check_a3("L5"); }
-#endif
 
 /// A3 L4: same loads as L3 (no hardpoints attached -> the L3 equations).
 TEST(AeroElements, A3_L4MatchesL3) {
@@ -229,8 +231,8 @@ TEST(AeroElements, A3_L5a_DownforceSplitSameDrag) {
     const auto with = run_steady("L5", vp);
     const auto ref  = run_steady("L5", drag_only(vp));
     ASSERT_TRUE(with.finite && ref.finite);
-    EXPECT_LE(std::abs(with.ax), 0.02);
-    EXPECT_LE(std::abs(ref.ax), 0.02);
+    EXPECT_LE(std::abs(with.a_g), 0.02);
+    EXPECT_LE(std::abs(ref.a_g), 0.02);
     const double df = with.front - ref.front;
     const double dr = with.rear - ref.rear;
     std::printf("[A3-L5a] vx %.4f m/s | dFz front %.2f N (want %.2f, hand 224.95) "
@@ -241,10 +243,10 @@ TEST(AeroElements, A3_L5a_DownforceSplitSameDrag) {
     EXPECT_NEAR(dr, want.fz_rear, 0.02 * want.fz_rear);
 }
 
-/// A3-L5b: quantify the L5 wheel-centre limitation. Drag-only elements (ClA 0,
-/// wiki CdA and z) vs no aero. L5 front increase must match the L5 model
-/// expectation -sum(F_d z)/L + sum(F_d) R/L (R = wheel_radius_nominal), +/-5 %;
-/// the same pair on L1 must match -sum(F_d z)/L, +/-2 %.
+/// A3-L5b: drag-only elements (ClA 0, wiki CdA and z) vs no aero. Since 0.8.1 the
+/// L5 drive torque reaction acts on the body, so the L5 front increase must match
+/// the L1 expression -sum(F_d z)/L (no wheel-centre term), +/-2 % (work order 43
+/// R5); the same pair on L1 keeps -sum(F_d z)/L, +/-2 %.
 TEST(AeroElements, A3_L5b_DragMomentWheelCentreBias) {
     const auto vp = example_car();
     const auto dvp = drag_only(vp);
@@ -254,20 +256,20 @@ TEST(AeroElements, A3_L5b_DragMomentWheelCentreBias) {
     const double fd = loads.fx_total;
     const double m_drag = loads.drag_pitch_moment;   // sum F_d,i * z_i [N m]
     const double want_l1 = -m_drag / L;
-    const double want_l5 = -m_drag / L + fd * R / L;
+    const double want_l5 = -m_drag / L;
     double d[2];
     const char* levels[2] = {"L1", "L5"};
     for (int k = 0; k < 2; ++k) {
         const auto with = run_steady(levels[k], dvp);
         const auto none = run_steady(levels[k], without_elements(vp));
         ASSERT_TRUE(with.finite && none.finite) << levels[k];
-        EXPECT_LE(std::abs(with.ax), 0.02) << levels[k];
+        EXPECT_LE(std::abs(with.a_g), 0.02) << levels[k];
         d[k] = with.front - none.front;
     }
     std::printf("[A3-L5b] sum F_d %.2f N, sum F_d z %.3f N m, R %.3f m, L %.3f m | "
                 "L1 dFz front %.2f N (want %.2f) | L5 dFz front %.2f N (want %.2f, "
-                "R term %.2f)\n",
+                "0.8.0 wheel-centre term would add %.2f)\n",
                 fd, m_drag, R, L, d[0], want_l1, d[1], want_l5, fd * R / L);
     EXPECT_NEAR(d[0], want_l1, 0.02 * std::abs(want_l1));
-    EXPECT_NEAR(d[1], want_l5, 0.05 * std::abs(want_l5));
+    EXPECT_NEAR(d[1], want_l5, 0.02 * std::abs(want_l5));
 }
