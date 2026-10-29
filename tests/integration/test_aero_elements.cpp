@@ -116,19 +116,10 @@ void check_a3(const std::string& level) {
 TEST(AeroElements, A3_SteadyAxleLoadL1) { check_a3("L1"); }
 TEST(AeroElements, A3_SteadyAxleLoadL2) { check_a3("L2"); }
 TEST(AeroElements, A3_SteadyAxleLoadL3) { check_a3("L3"); }
-// The original A3 on L5 (all elements vs no aero) is recorded as FAILED in
-// the 0.8.0 acceptance: L5 applies tyre longitudinal forces at the wheel
-// centre without the drive/brake torque reaction on the body, so the drive
-// force that balances the drag adds a load transfer of F_d * R / L that the
-// no-aero reference does not have. The cause is the L5 core, not the aero
-// wrench; A3-L5a and A3-L5b below replace it (gate unchanged). It is built
-// only into vdsim_known_failure_tests and registered as one ctest with label
-// known_failure (`ctest -L known_failure`), which the validation preset
-// excludes. It runs and fails until the L5 core is fixed; then the label is
-// dropped and the test joins the canonical suite.
-#ifdef VDSIM_KNOWN_FAILURE_TESTS
+// The original A3 on L5 (all elements vs no aero) failed in 0.8.0 (L5 tyre forces
+// at the wheel centre without the drive/brake torque reaction). With the reaction
+// on the body (0.8.1, work order 43) it is back in the canonical suite, gate unchanged.
 TEST(AeroElements, A3_SteadyAxleLoadL5) { check_a3("L5"); }
-#endif
 
 /// A3 L4: same loads as L3 (no hardpoints attached -> the L3 equations).
 TEST(AeroElements, A3_L4MatchesL3) {
@@ -241,10 +232,10 @@ TEST(AeroElements, A3_L5a_DownforceSplitSameDrag) {
     EXPECT_NEAR(dr, want.fz_rear, 0.02 * want.fz_rear);
 }
 
-/// A3-L5b: quantify the L5 wheel-centre limitation. Drag-only elements (ClA 0,
-/// wiki CdA and z) vs no aero. L5 front increase must match the L5 model
-/// expectation -sum(F_d z)/L + sum(F_d) R/L (R = wheel_radius_nominal), +/-5 %;
-/// the same pair on L1 must match -sum(F_d z)/L, +/-2 %.
+/// A3-L5b: drag-only elements (ClA 0, wiki CdA and z) vs no aero. Since 0.8.1 the
+/// L5 drive torque reaction acts on the body, so the L5 front increase must match
+/// the L1 expression -sum(F_d z)/L (no wheel-centre term), +/-2 % (work order 43
+/// R5); the same pair on L1 keeps -sum(F_d z)/L, +/-2 %.
 TEST(AeroElements, A3_L5b_DragMomentWheelCentreBias) {
     const auto vp = example_car();
     const auto dvp = drag_only(vp);
@@ -254,7 +245,7 @@ TEST(AeroElements, A3_L5b_DragMomentWheelCentreBias) {
     const double fd = loads.fx_total;
     const double m_drag = loads.drag_pitch_moment;   // sum F_d,i * z_i [N m]
     const double want_l1 = -m_drag / L;
-    const double want_l5 = -m_drag / L + fd * R / L;
+    const double want_l5 = -m_drag / L;
     double d[2];
     const char* levels[2] = {"L1", "L5"};
     for (int k = 0; k < 2; ++k) {
@@ -266,8 +257,8 @@ TEST(AeroElements, A3_L5b_DragMomentWheelCentreBias) {
     }
     std::printf("[A3-L5b] sum F_d %.2f N, sum F_d z %.3f N m, R %.3f m, L %.3f m | "
                 "L1 dFz front %.2f N (want %.2f) | L5 dFz front %.2f N (want %.2f, "
-                "R term %.2f)\n",
+                "0.8.0 wheel-centre term would add %.2f)\n",
                 fd, m_drag, R, L, d[0], want_l1, d[1], want_l5, fd * R / L);
     EXPECT_NEAR(d[0], want_l1, 0.02 * std::abs(want_l1));
-    EXPECT_NEAR(d[1], want_l5, 0.05 * std::abs(want_l5));
+    EXPECT_NEAR(d[1], want_l5, 0.02 * std::abs(want_l5));
 }
