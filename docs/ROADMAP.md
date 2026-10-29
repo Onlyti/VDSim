@@ -1,10 +1,11 @@
 # VDSim product roadmap
 
-**Last updated:** 2026-09-17 · **Tests:** [canonical validation status](VALIDATION.md)
+**Last updated:** 2026-10-29 · **Tests:** [canonical validation status](VALIDATION.md)
 
-Living roadmap from early PoC through v0.6. Tracks what shipped in **`main`** vs what
-is planned. The **VLA thesis closed-loop plant** (`python/vdsim_plant.py`) ships on
-`VDSim-Thesis` only (tag `vdsim-thesis-beta`); core APIs it depends on are on `main`.
+Living roadmap from early PoC through v0.8. Tracks what shipped in **`main`** vs what
+is planned. Releases from v0.7.0 on are published to PyPI (`pip install vdsim`); the
+per-release detail is in the [changelog](https://github.com/Onlyti/VDSim/blob/main/CHANGELOG.md).
+The closed-loop plant (`python/vdsim_plant.py`, [tutorial](VDSIM_PLANT_TUTORIAL.md)) is on `main`.
 Detail specs: `docs/design/*`; tire phases in [`design/TIRE_ROADMAP.md`](design/TIRE_ROADMAP.md).
 
 !!! note "How to read"
@@ -13,8 +14,8 @@ Detail specs: `docs/design/*`; tire phases in [`design/TIRE_ROADMAP.md`](design/
     - **Opt-in** — implemented but not default catalog (baseline frozen)
     - **Thesis-only** — on `VDSim-Thesis`; not merged to `main` yet
 
-**Velocity (recent):** v0.5 terrain + tire T1/T2 → **v0.6 L5 MBD** (untagged) → **per-wheel
-tire + direct-control session factory** on `main` → **VLA plant beta** on thesis branch.
+**Velocity (recent):** v0.6 L5 MBD → **v0.7.0 first PyPI release** (generic default
+vehicle) → **v0.8.0 aero elements** (per-element aero, `air_density`, L5 downforce).
 
 ---
 
@@ -22,12 +23,12 @@ tire + direct-control session factory** on `main` → **VLA plant beta** on thes
 
 | Area | Shipped (high level) | Next |
 |------|----------------------|------|
-| Dynamics L1–L5 | L1–L3 planar/14-DOF; **Ld4** hard-joint; **Ld5** stunt + terrain; **Ld5 high-fidelity MBD** ([design](design/L5_MBD_FREE3D_UNSPRUNG.md)) | **v0.6.0 tag**; KC compliance; GUI terrain Play (v0.5.2); V2V |
+| Dynamics L1–L5 | L1–L3 planar/14-DOF; **Ld4** hard-joint; **Ld5** stunt + terrain; **Ld5 high-fidelity MBD** ([design](design/L5_MBD_FREE3D_UNSPRUNG.md)); **aero elements + L5 downforce (v0.8.0)** | see [Next](#next) |
 | Tire | MF96 + LuGre **default**; **MF2002 `.tir` (T1)**; **belt transient (T2)**; **per-axle/per-wheel `TireSetup`** | GUI `.tir` import; T3 VLOW unified low-speed |
 | Drivetrain | Engine inertia + open-diff; **2D torque map + gearbox + shift policy (v2, opt-in)**; **catalog `drivetrain_v2` part** | Engine-map workshop (UI); L1 powertrain |
 | Brake / steer | Pluggable modules + deadtime; **user-defined modules (C++/Python subclass)** | Booster/MDPS physics |
 | Catalog / runtime | `--scene=`, fleet, FMI; **`make_direct_control_session`**, `FrictionMapConfig`, `SimOutput` wheel GT | External part packs; VDS1 v4; **Fx→τ contract (#1)** |
-| Closed-loop plant | Core session API on `main` | **VLA `VDSimPlant`** thesis-only → main PR when client done |
+| Closed-loop plant | `VDSimPlant` and closed-loop evaluation modes on `main`; generic default vehicle (v0.7.0) | see [Next](#next) |
 | GUI | 3-tab scene UI, catalog API, workshops, multi-vehicle compare | **GUI v2** (framework decision); terrain Play; `.tir` import; **expose user-defined modules (decide: C++ `.so` plugin / Python path / GUI authoring)** |
 | Reinforcement learning | **Vectorized RL env: `VecSession` C++ pool (11.9x, bitwise-equal to serial), gymnasium/SB3 adapter, snapshot/restore, domain randomization** (§10) | Training-loop ceiling (policy-bound at 16% of core); controller-in-the-loop snapshot |
 | Validation | ISO 7401/4138/3888 **re-baselined + CI-gated** (`IsoBaseline`); [canonical suite status](VALIDATION.md) | Adams x-check rtol; commercial cross-val |
@@ -53,17 +54,28 @@ timeline
         Terrain + L5 driving : 2026-06
         Tire T1 MF2002 backend : 2026-06
         Tire T2 belt transient : 2026-06
-    section v0.6 (untagged)
+    section v0.6
         L5 free-3D inertial unsprung MBD : 2026-06
         Hardpoint anti-dive/roll-centre + progressive coil : 2026-06
         Gyroscopic wheel-spin coupling : 2026-06
         Per-wheel tire + direct_control session : 2026-06
-    section Next
-        v0.6.0 tag : planned
-        GUI terrain Play (v0.5.2) : planned
-        VLA plant main merge : thesis channel
-        KC compliance + V2V : planned
+    section v0.7
+        First PyPI release + generic default vehicle : 2026-10-28
+    section v0.8
+        Aero elements + air density + L5 downforce : 2026-10-29
 ```
+
+## Next
+
+Plan, not a commitment: scope and order may change, and nothing here is promised
+for a date.
+
+| Version | Content |
+|---|---|
+| 0.8.1 | L5 tyre longitudinal-force torque reaction fix; L5 sessions from Python; error on an unknown `level` string |
+| 0.8.2 | L5 hardpoint attach from Python; steady-speed oscillation on the link path; `cg_height` meaning on the strut path; rack-ratio key; K&C sweep arguments and outputs |
+| 0.9.0 | Aero stage 2 (ride-height and pitch slopes, user aero module); per-axle tyres |
+| 0.10.0 | Driver and cone-course API; rocker and U-shaped anti-roll bars |
 
 ---
 
@@ -81,11 +93,11 @@ timeline
 | [x] Ld4 multibody M1–M7 | Shipped | [`LD4_MULTIBODY.md`](design/LD4_MULTIBODY.md); M4 runtime, M7 offline |
 | [x] Ld5 6-DOF 3D body + quaternion | Shipped v0.4 (stunt) | `free_3d_dynamics.cpp`; terrain → v0.5 |
 | [x] 3D contact / airborne / ramp jump | Shipped v0.4 | [`V0.4_SLOPE_JUMP_DYNAMICS.md`](design/V0.4_SLOPE_JUMP_DYNAMICS.md) |
-| [x] **Ld5 free-3D inertial unsprung MBD** (per-corner world point mass + anisotropic 2-point bushing; energy-consistent on any surface; replaces the B1 lumped strut) | Shipped v0.6 (untagged) | [`L5_MBD_FREE3D_UNSPRUNG.md`](design/L5_MBD_FREE3D_UNSPRUNG.md) |
-| [x] **Hardpoint-emergent anti-dive/squat + roll-centre migration** (wheel follows the real DAE travel path; tyre Fx/Fy → vertical reaction) | Shipped v0.6 (untagged) | active when a corner DAE is attached |
-| [x] **Progressive coil rate + damper** (k_coil·(l−l_free)·MR from real spring eye-to-eye; bump/rebound asymmetric) | Shipped v0.6 (untagged) | wheel-rate fallback w/o spring hardpoints |
-| [x] **Gyroscopic wheel-spin coupling** (Σ I_wheel·ω_spin lateral momentum; yaw↔roll at speed) | Shipped v0.6 (untagged) | `Stunt.GyroscopicWheelSpinCouplesYawToRoll` |
-| [x] Per-substep contact re-query default in `SimSession` (exact on curved surfaces) | Shipped v0.6 (untagged) | no-op for non-free_3d |
+| [x] **Ld5 free-3D inertial unsprung MBD** (per-corner world point mass + anisotropic 2-point bushing; energy-consistent on any surface; replaces the B1 lumped strut) | Shipped v0.6 | [`L5_MBD_FREE3D_UNSPRUNG.md`](design/L5_MBD_FREE3D_UNSPRUNG.md) |
+| [x] **Hardpoint-emergent anti-dive/squat + roll-centre migration** (wheel follows the real DAE travel path; tyre Fx/Fy → vertical reaction) | Shipped v0.6 | active when a corner DAE is attached |
+| [x] **Progressive coil rate + damper** (k_coil·(l−l_free)·MR from real spring eye-to-eye; bump/rebound asymmetric) | Shipped v0.6 | wheel-rate fallback w/o spring hardpoints |
+| [x] **Gyroscopic wheel-spin coupling** (Σ I_wheel·ω_spin lateral momentum; yaw↔roll at speed) | Shipped v0.6 | `Stunt.GyroscopicWheelSpinCouplesYawToRoll` |
+| [x] Per-substep contact re-query default in `SimSession` (exact on curved surfaces) | Shipped v0.6 | no-op for non-free_3d |
 | ~~Ld5 → full 6-DOF multibody~~ (superseded designs: `L5_6DOF_MULTIBODY`, `L5_MBD_DYNAMIC_COUPLING`, `L5_MBD_RIGOROUS`) | Superseded by free-3D MBD above | kept for history |
 | [x] **Terrain + L5 general driving** (heightmap hub contact, hill/cliff, inclined) | Shipped v0.5 (headless/batch/cosim; GUI → v0.5.2) | [`V0.5_TERRAIN_L5.md`](design/V0.5_TERRAIN_L5.md) |
 | [x] Curved banked track (`CurvedGround` + banked oval) | Shipped v0.5 (was v0.4 M3) | `V0.5_TERRAIN_L5.md` M5b |
@@ -204,8 +216,8 @@ LuGre (contact bristle, presliding). See [`TIRE_ROADMAP.md`](design/TIRE_ROADMAP
 | [x] Ld4 hardpoint toe/camber into dynamics | Shipped | Fleet `susp_kinematics` |
 | [x] Catalog `susp_ride`, `susp_kinematics` parts | Shipped | |
 | [x] Workshops: suspension tab | Shipped | WS2-1 |
-| [x] **Progressive coil rate + bump/rebound stops** (L5) | Shipped v0.6 (untagged) | MR(z_v) from real spring hardpoints; stops on wheel travel; [`L5_MBD_FREE3D_UNSPRUNG.md`](design/L5_MBD_FREE3D_UNSPRUNG.md) |
-| [x] **Genuine per-corner unsprung masses** (L5 free-3D) | Shipped v0.6 (untagged) | inertial world particles, not body-relative DOF |
+| [x] **Progressive coil rate + bump/rebound stops** (L5) | Shipped v0.6 | MR(z_v) from real spring hardpoints; stops on wheel travel; [`L5_MBD_FREE3D_UNSPRUNG.md`](design/L5_MBD_FREE3D_UNSPRUNG.md) |
+| [x] **Genuine per-corner unsprung masses** (L5 free-3D) | Shipped v0.6 | inertial world particles, not body-relative DOF |
 | [ ] Progressive / bump-stop spring curves (L3 catalog) | Planned | L3 ride model (L5 done) |
 | [ ] Unsprung vs sprung damper split (L3) | Planned | PoC backlog |
 | [ ] KC compliance (bushing) under load — full model | Planned | L5 link is a stiff penalty today |
@@ -399,7 +411,7 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 - [x] Tire T2 belt transient (L2/L3/L5, MF+LuGre, validation, theory ch.21)
 - [x] ISO re-baseline (flat, sedan L2 LuGre) + CI gate `IsoBaseline`
 
-### v0.6.0 — L5 high-fidelity MBD (2026-06, on `main`, untagged)
+### v0.6.0 — L5 high-fidelity MBD (2026-06, tagged)
 
 - [x] Ld5 free-3D inertial unsprung MBD (per-corner world point mass + anisotropic 2-point
   bushing; energy-consistent on any surface; replaces the B1 lumped strut)
@@ -426,6 +438,18 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 - [x] KC bushing compliance in L3/L4 hard-joint step (`compliance_targets_rad` under tire load)
 - [x] T3: `TireParams.low_speed_mode` (`kinematic_blend` | `tire_vlow`) + `vlow_speed_eps`
 
+### v0.7.0 — first PyPI release (2026-10-28, tagged)
+
+- [x] Published to PyPI (`pip install vdsim`); wheels for CPython 3.8–3.12 (Linux x86_64, Windows AMD64)
+- [x] Generic default vehicle (`generic_sedan` + `generic_pacejka`); non-public vehicles via `$VDSIM_PRIVATE_CONFIGS`
+- [x] Closed-loop evaluation modes, live 3D monitor, RL connection layer, actuator library (see the changelog)
+
+### v0.8.0 — aero elements (2026-10-29, tagged)
+
+- [x] `aero.elements` (per-element downforce and drag at its own point), `air_density`, `aero_drag_height`
+- [x] Four-key lift now acts on L5; L5 applies aero as a body wrench ([theory 26](theory/26_aero_elements.md))
+- [x] Opt-in aero trace channels (schema 0.5 unchanged)
+
 ### v0.5.2+ (planned)
 
 - [ ] GUI terrain Play (M4) + stunt authoring (M5c) + `.tir` import — browser-gated
@@ -451,7 +475,7 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 
 **In active development**
 
-> v0.6 release tag; Adams/KC cross-validation of hardpoint-emergent geometry; full bushing
+> Adams/KC cross-validation of hardpoint-emergent geometry; full bushing
 > compliance; workshop importers; GUI terrain play; VLA closed-loop plant (thesis channel,
 > merge to main after client sign-off) — default baselines frozen per phase.
 
@@ -487,6 +511,8 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 ---
 
 ## 16. Development priorities (`main`, 2026-06-20)
+
+Historical snapshot (2026-06-20). The current plan is the [Next](#next) table.
 
 Ordered for **implementation** (not doc-only). ISO / default subsystem numbers stay frozen
 unless an explicit re-baseline is agreed.

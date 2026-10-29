@@ -272,5 +272,5 @@ reference 이므로, gain 이 ±5 % 안에 들면 kinematic 모델의 신뢰성�
 > | M6 | done | Adams import x-check (5 gains, 5% rtol) |
 > | M7 | done | lumped 1-DOF revolute RNEA (**offline**, not L4 step) |
 >
-> Spec: [`docs/design/LD4_MULTIBODY.md`](../../design/LD4_MULTIBODY.md). Full loop
+> Spec: [`docs/design/LD4_MULTIBODY.md`](../design/LD4_MULTIBODY.md). Full loop
 > Featherstone / augmented Lagrangian → v0.6+.
