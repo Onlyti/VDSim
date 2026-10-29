@@ -1391,6 +1391,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -1510,6 +1516,90 @@
     
   
     Running VDSim
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONFIG_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration files (batch / scenario / comms)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../EXPERIMENT_API/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Experiment API (Python harness)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../VDSIM_PLANT_TUTORIAL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Closed-loop plant tutorial (VDSimPlant)
   
 
     
@@ -2913,13 +3003,28 @@ not, so that a result is never read outside its validity envelope.</p>
 </tr>
 <tr>
 <td>Aerodynamics</td>
-<td>drag + front/rear lift</td>
-<td>drag + front/rear lift</td>
-<td>drag + front/rear lift</td>
-<td><code>params.hpp</code> <code>aero_*</code></td>
+<td>drag + downforce split to the axles (four keys or <code>aero.elements</code>, with the drag pitch moment)</td>
+<td>as Ld1, halves per axle</td>
+<td>as Ld1, per wheel (element <code>y</code> split by each axle's track); added to tyre loads only, does not press the suspension</td>
+<td>theory 26; <code>params.hpp</code> <code>aero_*</code>, <code>air_density</code></td>
 </tr>
 </tbody>
 </table>
+<div class="admonition note">
+<p class="admonition-title">Aerodynamics on L5 and the shared inputs (0.8.0)</p>
+<ul>
+<li>Every aero path uses <code>air_density</code> (default 1.225 kg/m³); <code>aero.elements</code> places
+  each element at its own point; the four-key and element forms cannot be mixed
+  (<a href="../theory/26_aero_elements/">theory 26</a>).</li>
+<li>L5 (free 3D) applies aero as a body wrench: each element at its own point, the
+  four-key lift at the front and rear axle (ground height), and four-key drag at the
+  CG unless <code>aero_drag_height</code> is set (<a href="../theory/20_ld5_stunt/">theory 20</a> §20.3).</li>
+<li>L5 limit: tyre longitudinal forces act at the wheel centre and the drive/brake
+  torque reactions are not returned to the body, so L5 longitudinal load transfer
+  uses <span class="arithmatex">\((h_{cg} - R)\)</span> instead of <span class="arithmatex">\(h_{cg}\)</span>. Check aero balance numbers on L1–L3
+  (theory 26 §26.5).</li>
+</ul>
+</div>
 <div class="admonition note">
 <p class="admonition-title">Ld4 is not a separate plant without hardpoints</p>
 <p>Selecting level <code>L4</code> without attaching suspension hardpoints is rejected at session

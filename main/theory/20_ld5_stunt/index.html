@@ -1560,6 +1560,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -1678,6 +1684,90 @@
     
   
     Running VDSim
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CONFIG_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration files (batch / scenario / comms)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../EXPERIMENT_API/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Experiment API (Python harness)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../VDSIM_PLANT_TUTORIAL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Closed-loop plant tutorial (VDSimPlant)
   
 
     
@@ -3059,11 +3149,29 @@ wheel order FL=0, FR=1, RL=2, RR=3 (Chapter 01).</p>
 <div class="arithmatex">\[
 \mathbf{F}^{w} = -m g\,\hat{\mathbf{z}}
    \;+\; \sum_{i} \mathbf{F}_i^{w}
-   \;-\; \mathbf{R}\,(F_{\text{aero}} + F_{rr})\,\hat{\mathbf{x}}_b ,
+   \;+\; \mathbf{R}\,\mathbf{F}_{a}^{b}
+   \;-\; \mathbf{R}\,F_{rr}\,\hat{\mathbf{x}}_b ,
 \]</div>
-<p>where <span class="arithmatex">\(\mathbf{F}_i^{w}\)</span> is the contact force of wheel <span class="arithmatex">\(i\)</span> (§20.4–20.5), aero drag
-<span class="arithmatex">\(F_{\text{aero}} = \tfrac12 \rho C_d A\, v_x |v_x|\)</span> and rolling resistance act along
-the body longitudinal axis. The <strong>body-frame</strong> linear acceleration follows from
+<p>where <span class="arithmatex">\(\mathbf{F}_i^{w}\)</span> is the contact force of wheel <span class="arithmatex">\(i\)</span> (§20.4–20.5) and rolling
+resistance <span class="arithmatex">\(F_{rr}\)</span> acts along the body longitudinal axis. The aero force
+<span class="arithmatex">\(\mathbf{F}_a^{b}\)</span> is a body-frame sum over aero pieces <span class="arithmatex">\(j\)</span> (Chapter 26), with
+<span class="arithmatex">\(q = \tfrac12 \rho\, v_x |v_x|\)</span> and <span class="arithmatex">\(\rho\)</span> = <code>air_density</code> (default 1.225 kg/m³):</p>
+<div class="arithmatex">\[
+\mathbf{F}_a^{b} = \sum_j \big(-F_{\text{drag},j},\; 0,\; -F_{\text{down},j}\big), \qquad
+F_{\text{down},j} = \text{ClA}_j\,|q|, \qquad
+F_{\text{drag},j} = \text{CdA}_j\, q ,
+\]</div>
+<p>each acting at <span class="arithmatex">\((x_j, y_j, z_j)\)</span> in the vehicle-file axes (origin on the ground below
+the front axle). Since 0.8.0 the pieces are:</p>
+<ul>
+<li><strong>Elements path</strong> (<code>aero.elements</code>): one piece per element at its own
+  <span class="arithmatex">\((x_j, y_j, z_j)\)</span>.</li>
+<li><strong>Four-key path</strong>: downforce $\text{ClA} = $ <code>aero_lift_front</code>·<span class="arithmatex">\(A\)</span> at the front
+  axle (<span class="arithmatex">\(x = 0\)</span>) and <code>aero_lift_rear</code>·<span class="arithmatex">\(A\)</span> at the rear axle (<span class="arithmatex">\(x = -L\)</span>), both at ground
+  height (<span class="arithmatex">\(z = 0\)</span>); drag $\text{CdA} = $ <code>aero_drag_coeff</code>·<span class="arithmatex">\(A\)</span> at the CG, or at
+  <code>aero_drag_height</code> when that key is set. Before 0.8.0 L5 ignored the two lift keys.</li>
+</ul>
+<p>The <strong>body-frame</strong> linear acceleration follows from
 differentiating <span class="arithmatex">\(\mathbf{v}^{w} = \mathbf{R}\mathbf{v}\)</span> in a rotating frame:</p>
 <div class="arithmatex">\[
 \dot{\mathbf{v}} = \mathbf{R}^{\!\top}\frac{\mathbf{F}^{w}}{m}
@@ -3077,10 +3185,15 @@ differentiating <span class="arithmatex">\(\mathbf{v}^{w} = \mathbf{R}\mathbf{v}
 \right),
 \qquad
 \boldsymbol{\tau} = \sum_i \mathbf{r}_i\times\mathbf{F}_i^{b}
-                    \;+\; \Big(\textstyle\sum_i M_{z,i}\Big)\hat{\mathbf{z}}_b ,
+                    \;+\; \Big(\textstyle\sum_i M_{z,i}\Big)\hat{\mathbf{z}}_b
+                    \;+\; \sum_j \mathbf{r}_{a,j}\times\mathbf{F}_{a,j}^{b} ,
 \]</div>
 <p>with <span class="arithmatex">\(\mathbf{F}_i^{b} = \mathbf{R}^{\!\top}\mathbf{F}_i^{w}\)</span> the body-frame wheel
-force and <span class="arithmatex">\(M_{z,i}\)</span> the tire aligning moment about the body yaw axis. Position and
+force, <span class="arithmatex">\(M_{z,i}\)</span> the tire aligning moment about the body yaw axis, and
+<span class="arithmatex">\(\mathbf{r}_{a,j} = (x_j + a,\; y_j,\; z_j - h_{cg})\)</span> the arm from the CG (<span class="arithmatex">\(a\)</span> = CG
+behind the front axle) to aero piece <span class="arithmatex">\(j\)</span>. A piece at the CG has zero arm. See
+<a href="../26_aero_elements/">Chapter 26</a> for the inputs and §26.5 for the L5 limit on
+longitudinal load transfer (tyre longitudinal force at the wheel centre). Position and
 attitude integrate as</p>
 <div class="arithmatex">\[
 \dot{\mathbf{p}} = \mathbf{R}\,\mathbf{v}, \qquad

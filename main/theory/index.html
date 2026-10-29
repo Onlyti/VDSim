@@ -1392,6 +1392,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -1510,6 +1516,90 @@
     
   
     Running VDSim
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONFIG_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration files (batch / scenario / comms)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../EXPERIMENT_API/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Experiment API (Python harness)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../VDSIM_PLANT_TUTORIAL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Closed-loop plant tutorial (VDSimPlant)
   
 
     
@@ -3097,6 +3187,41 @@ loop / language binding / ABI 안정성에 관심 있는 reader.</p>
 <td>중</td>
 <td>17, 12</td>
 <td>SimSession kernel·run modes, RealTimeRunner watchdog, UDP wire protocol, GUI data port (JSON vs binary)</td>
+</tr>
+<tr>
+<td>20</td>
+<td><a href="20_ld5_stunt/">Ld5 — Free 3D Body (stunt)</a></td>
+<td>길음</td>
+<td>02, 06, 11, 19</td>
+<td>Quaternion 6-DOF Newton–Euler, penalty contact, wheel contact frame, loop entry speed</td>
+</tr>
+<tr>
+<td>21</td>
+<td><a href="21_belt_transient/">Tire — Belt Transient</a></td>
+<td>중</td>
+<td>03, 11, 19</td>
+<td>First-order belt relaxation (time constant <span class="arithmatex">\(\sigma / V_x\)</span>) 과 relaxation length·LuGre bristle 와의 구분</td>
+</tr>
+<tr>
+<td>22</td>
+<td><a href="22_drivetrain_v2/">Drivetrain v2</a></td>
+<td>중</td>
+<td>05</td>
+<td>Engine torque map + N-speed gearbox + shift policy (opt-in <code>powertrain:</code>)</td>
+</tr>
+<tr>
+<td>23</td>
+<td><a href="23_user_modules/">User-defined Subsystem Modules</a></td>
+<td>중</td>
+<td>12, 22</td>
+<td>C++/Python subclass 로 subsystem 을 교체하는 interface 와 호출 규칙</td>
+</tr>
+<tr>
+<td>24</td>
+<td><a href="24_module_plugins/">User Module Plugins</a></td>
+<td>짧음</td>
+<td>23</td>
+<td>Plugin <code>.so</code> C ABI, build / contract check / register workflow</td>
 </tr>
 </tbody>
 </table>

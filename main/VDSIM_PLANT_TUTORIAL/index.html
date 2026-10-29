@@ -13,6 +13,10 @@
         <link rel="canonical" href="https://onlyti.github.io/VDSim/main/VDSIM_PLANT_TUTORIAL/">
       
       
+        <link rel="prev" href="../EXPERIMENT_API/">
+      
+      
+        <link rel="next" href="../RL_GUIDE/">
       
       
         
@@ -23,7 +27,7 @@
     
     
       
-        <title>VDSim Plant — tutorial (closed-loop control plant) - VDSim</title>
+        <title>Closed-loop plant tutorial (VDSimPlant) - VDSim</title>
       
     
     
@@ -112,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              VDSim Plant — tutorial (closed-loop control plant)
+              Closed-loop plant tutorial (VDSimPlant)
             
           </span>
         </div>
@@ -272,10 +276,12 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
+      <li class="md-tabs__item md-tabs__item--active">
         <a href="../ROADMAP/" class="md-tabs__link">
           
   
@@ -1354,8 +1360,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -1383,25 +1391,32 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
             
   
   
@@ -1419,7 +1434,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1509,6 +1524,442 @@
   
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONFIG_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration files (batch / scenario / comms)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../EXPERIMENT_API/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Experiment API (Python harness)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Closed-loop plant tutorial (VDSimPlant)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Closed-loop plant tutorial (VDSimPlant)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#0-what-you-get" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0. What you get
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-build-one-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Build (one time)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Build (one time)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#critical-building-for-your-python-environment-conda-venv" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚠️ Critical: Building for your Python environment (conda / venv)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-import-the-plant" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Import the plant
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-quickstart-copy-paste-runs-in-seconds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Quickstart (copy-paste, runs in seconds)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-the-observation-dict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. The observation dict
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. The observation dict">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#recommended-safety-metric-slip-position-classification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended safety metric: slip-position classification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#offline-tyre-query-combined-slip-peak-friction-ellipse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Offline tyre query — combined-slip peak / friction ellipse
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-control-input-u-delta-fx_total" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Control input u = [delta, Fx_total]
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-low-patches-spatially-varying-friction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Low-μ patches (spatially varying friction)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Low-μ patches (spatially varying friction)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#6a-1-d-bands-along-the-road-friction_map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6a. 1-D bands along the road (friction_map)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6b-2-d-polygon-patches-friction_map_2d" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6b. 2-D polygon patches (friction_map_2d)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-steering-actuator-lag-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Steering actuator lag (optional)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-closed-loop-with-your-controller-drop-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Closed-loop with your controller (drop-in)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-parameter-file-generic_sedanyaml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Parameter file — generic_sedan.yaml
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. Parameter file — generic_sedan.yaml">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mf2002-tir-tyres" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MF2002 (.tir) tyres
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#making-your-own-vehicle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Making your own vehicle
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#private-vehicles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Private vehicles
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-api-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. API reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-whats-validated-so-you-can-trust-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. What's validated (so you can trust it)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-tips-gotchas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. Tips &amp; gotchas
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-planned-features-p2-next-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14. Planned features (P2 — next release)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="14. Planned features (P2 — next release)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#split-friction-map-leftright-different-grip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Split-μ friction map (left/right different grip)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#15-related-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15. Related documents
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
