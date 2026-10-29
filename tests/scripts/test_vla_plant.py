@@ -232,14 +232,19 @@ def test_level_default_and_rejects():
     Ported from feat/direct-control-dynamics-level: an unknown level is refused
     by name, and the default plant equals an explicit level='L2' bit for bit.
     """
-    # L5 is a valid plant level since work order 44; L6 stays unknown.
-    for bad in ("L6", "l3", "7dof", ""):
+    # Work order 44 made L5 a plant level, so it left this refusal list; L9
+    # takes its place as an id that no dynamics model answers to.
+    for bad in ("L9", "l3", "7dof", ""):
         try:
             VDSimPlant(level=bad)
         except ValueError as e:
             assert "level" in str(e), str(e)
         else:
             raise AssertionError(f"level={bad!r} should raise ValueError")
+    # ...and L5 now opens as the free-3D (stunt) model rather than being refused.
+    l5 = VDSimPlant(level="L5")
+    assert l5._sess.dynamics().level() == vdsim.Level.L5_Stunt, (
+        "level='L5' must build the L5_Stunt dynamics")
     traj_u = [(0.03, 800.0)] * 20
     runs = []
     for kw in ({}, {"level": "L2"}):
