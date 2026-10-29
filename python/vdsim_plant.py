@@ -213,12 +213,15 @@ def solver_record(sp):
 #: moves. On ``origin/main`` (D1/D2 merged) every level moves, so every level is
 #: ``C2``. ``tests/scripts/test_trace_0_3.py`` re-runs that comparison and fails
 #: if the declaration and the code ever drift apart, which is the only thing
-#: that keeps a hand-written constant honest.
+#: that keeps a hand-written constant honest. L5 (free-3D) is measured the same
+#: way with every contact at its static-equilibrium penetration (the free-3D
+#: contact reads zero penetration as no contact) and is declared from that run.
 CONTACT_SCOPE_BY_LEVEL = {
     "L1": "C2",
     "L2": "C2",
     "L3": "C2",
     "L4": "C2",
+    "L5": "C2",
 }
 
 
