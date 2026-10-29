@@ -75,12 +75,32 @@ Collect the world-frame resultant force on the CG,
 $$
 \mathbf{F}^{w} = -m g\,\hat{\mathbf{z}}
    \;+\; \sum_{i} \mathbf{F}_i^{w}
-   \;-\; \mathbf{R}\,(F_{\text{aero}} + F_{rr})\,\hat{\mathbf{x}}_b ,
+   \;+\; \mathbf{R}\,\mathbf{F}_{a}^{b}
+   \;-\; \mathbf{R}\,F_{rr}\,\hat{\mathbf{x}}_b ,
 $$
 
-where $\mathbf{F}_i^{w}$ is the contact force of wheel $i$ (§20.4–20.5), aero drag
-$F_{\text{aero}} = \tfrac12 \rho C_d A\, v_x |v_x|$ and rolling resistance act along
-the body longitudinal axis. The **body-frame** linear acceleration follows from
+where $\mathbf{F}_i^{w}$ is the contact force of wheel $i$ (§20.4–20.5) and rolling
+resistance $F_{rr}$ acts along the body longitudinal axis. The aero force
+$\mathbf{F}_a^{b}$ is a body-frame sum over aero pieces $j$ (Chapter 26), with
+$q = \tfrac12 \rho\, v_x |v_x|$ and $\rho$ = `air_density` (default 1.225 kg/m³):
+
+$$
+\mathbf{F}_a^{b} = \sum_j \big(-F_{\text{drag},j},\; 0,\; -F_{\text{down},j}\big), \qquad
+F_{\text{down},j} = \text{ClA}_j\,|q|, \qquad
+F_{\text{drag},j} = \text{CdA}_j\, q ,
+$$
+
+each acting at $(x_j, y_j, z_j)$ in the vehicle-file axes (origin on the ground below
+the front axle). Since 0.8.0 the pieces are:
+
+- **Elements path** (`aero.elements`): one piece per element at its own
+  $(x_j, y_j, z_j)$.
+- **Four-key path**: downforce $\text{ClA} = $ `aero_lift_front`·$A$ at the front
+  axle ($x = 0$) and `aero_lift_rear`·$A$ at the rear axle ($x = -L$), both at ground
+  height ($z = 0$); drag $\text{CdA} = $ `aero_drag_coeff`·$A$ at the CG, or at
+  `aero_drag_height` when that key is set. Before 0.8.0 L5 ignored the two lift keys.
+
+The **body-frame** linear acceleration follows from
 differentiating $\mathbf{v}^{w} = \mathbf{R}\mathbf{v}$ in a rotating frame:
 
 $$
@@ -97,11 +117,16 @@ $$
 \right),
 \qquad
 \boldsymbol{\tau} = \sum_i \mathbf{r}_i\times\mathbf{F}_i^{b}
-                    \;+\; \Big(\textstyle\sum_i M_{z,i}\Big)\hat{\mathbf{z}}_b ,
+                    \;+\; \Big(\textstyle\sum_i M_{z,i}\Big)\hat{\mathbf{z}}_b
+                    \;+\; \sum_j \mathbf{r}_{a,j}\times\mathbf{F}_{a,j}^{b} ,
 $$
 
 with $\mathbf{F}_i^{b} = \mathbf{R}^{\!\top}\mathbf{F}_i^{w}$ the body-frame wheel
-force and $M_{z,i}$ the tire aligning moment about the body yaw axis. Position and
+force, $M_{z,i}$ the tire aligning moment about the body yaw axis, and
+$\mathbf{r}_{a,j} = (x_j + a,\; y_j,\; z_j - h_{cg})$ the arm from the CG ($a$ = CG
+behind the front axle) to aero piece $j$. A piece at the CG has zero arm. See
+[Chapter 26](26_aero_elements.md) for the inputs and §26.5 for the L5 limit on
+longitudinal load transfer (tyre longitudinal force at the wheel centre). Position and
 attitude integrate as
 
 $$

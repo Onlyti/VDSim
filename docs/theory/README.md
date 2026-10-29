@@ -117,6 +117,11 @@ lumped 14-DOF 의 한계 → hardpoint kinematics → ISO 표준 maneuver / DOE
 | 16 | [FMI 2.0 Integration](16_fmi_integration.md) | 짧음 | 12 | FMU export / import + co-simulation 의 양방향 통합 |
 | 17 | [Actuator Dynamics & Sensing](17_actuator_and_sensing.md) | 중 | 11, 07 | FOPDT·rate·sat·dead-zone, steering servo(PD+inertia+LuGre) vs lag, brake mu(T), sensor delay |
 | 18 | [Runtime Kernel & Co-simulation](18_runtime_and_cosim.md) | 중 | 17, 12 | SimSession kernel·run modes, RealTimeRunner watchdog, UDP wire protocol, GUI data port (JSON vs binary) |
+| 20 | [Ld5 — Free 3D Body (stunt)](20_ld5_stunt.md) | 길음 | 02, 06, 11, 19 | Quaternion 6-DOF Newton–Euler, penalty contact, wheel contact frame, loop entry speed |
+| 21 | [Tire — Belt Transient](21_belt_transient.md) | 중 | 03, 11, 19 | First-order belt relaxation (time constant $\sigma / V_x$) 과 relaxation length·LuGre bristle 와의 구분 |
+| 22 | [Drivetrain v2](22_drivetrain_v2.md) | 중 | 05 | Engine torque map + N-speed gearbox + shift policy (opt-in `powertrain:`) |
+| 23 | [User-defined Subsystem Modules](23_user_modules.md) | 중 | 12, 22 | C++/Python subclass 로 subsystem 을 교체하는 interface 와 호출 규칙 |
+| 24 | [User Module Plugins](24_module_plugins.md) | 짧음 | 23 | Plugin `.so` C ABI, build / contract check / register workflow |
 
 ---
 
