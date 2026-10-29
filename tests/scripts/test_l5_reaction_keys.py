@@ -54,11 +54,9 @@ def _l5_session(strut):
     sp.max_substep_dt = 2e-4
     sp.max_substeps = 16
     sp.l5_spatial_suspension = strut
-    cfg = vdsim.SimConfig()
-    cfg.nominal_dt = 1e-3
     vp = vdsim.VehicleParams.from_yaml(str(SEDAN))
-    return vdsim.SimSession(vdsim.create_stunt_dof(), vdsim.create_flat_ground(0.0, 1.0),
-                            vp, vdsim.TireSetup(vdsim.TireParams()), sp, cfg), vp
+    return vdsim.make_sim_session(vp, vdsim.TireParams(), level="L5",
+                                  nominal_dt=1e-3, solver=sp), vp
 
 
 def test_j4_strut_force_nan_off_path():
@@ -66,7 +64,7 @@ def test_j4_strut_force_nan_off_path():
     assert all(math.isnan(f) for f in vdsim.free_3d_strut_force(pen.dynamics()))
     strut, vp = _l5_session(True)
     s0 = vdsim.State()
-    pos = s0.position
+    pos = s0.position.copy()
     pos[2] = vp.cg_height
     s0.position = pos
     strut.reset_settled(s0)
