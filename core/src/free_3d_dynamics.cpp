@@ -681,6 +681,7 @@ private:
                         && Fmag > muFz && Fmag > 1e-9) {
                         const double c = muFz / Fmag; Fx_w *= c; Fy_w *= c;
                     }
+                    if (lugre_i) fx_kin[i] = Fx_w;
                     tire_total = Fx_w * t_long + Fy_w * t_lat + Fz[i] * n;
                 } else {
                     ci_[i] = ITireModel::ContactInput{};   // neutral: no transient evolution
@@ -759,6 +760,7 @@ private:
                 Fx_w *= c;
                 Fy_w *= c;
             }
+            if (lugre_i) fx_kin[i] = Fx_w;
             Vec3 F_w = Fx_w * t_long + Fy_w * t_lat + Fz[i] * n;
             F_total_world += F_w;
             F_body[i] = R.transpose() * F_w;
