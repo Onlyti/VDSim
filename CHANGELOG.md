@@ -43,6 +43,13 @@ Planned as 0.8.1 (work order 43, L5 longitudinal reactions). Not released yet.
 - On the corner-linkage (multibody DAE) path the body pitches at steady speed
   without any input (present since 0.8.0); `brake_reaction_*: unsprung` there is
   not yet routed through the knuckle (see above). Both are 0.8.2 work.
+- On the strut path (no corner model) the L5 axle load transfer comes out about
+  1-3 % larger than the expected (m·a·h + ΣI·α)/L. It is not part of the 0.8.1 verdict:
+  `L5Reaction.R2_*` carry label `known_failure` (reproduce with
+  `ctest -L known_failure`) and are re-judged with the same gate in 0.8.2
+  together with the `cg_height` meaning fix.
+- `AeroElements.A3_SteadyAxleLoadL5` (label `known_failure` in 0.8.0) passes and
+  is back in the canonical suite.
 
 ## [0.8.0] - 2026-10-29
 
