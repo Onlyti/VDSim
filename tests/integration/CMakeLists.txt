@@ -56,6 +56,11 @@ target_link_libraries(vdsim_integration_tests PRIVATE
 
 gtest_discover_tests(vdsim_integration_tests)
 
+# Work order 44 E4: C++ reference trajectories of the L5 model built directly,
+# compared bit for bit by tests/scripts/test_level_parse.py (ctest level_parse).
+add_executable(vdsim_l5_ref_dump l5_ref_dump.cpp)
+target_link_libraries(vdsim_l5_ref_dump PRIVATE vdsim::core)
+
 # Known failures: tests that state a real acceptance gate the code does not
 # meet yet. They stay runnable (`ctest -L known_failure`) and fail visibly;
 # the validation preset and CI exclude the label. When the cause is fixed the
