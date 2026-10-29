@@ -226,20 +226,35 @@ def test_display_only_label_rule():
 
 
 # ------------------------------------------------- 3. declaration vs the core
+#: Tyre vertical stiffness cap of the free-3D penalty contact [N/m]; mirrors
+#: core/src/free_3d_dynamics.cpp:442 (k_tire_i = min(80000, max(1, Kz))).
+PENALTY_TIRE_STIFFNESS_CAP = 80000.0
+
+
 def _static_penetration(vp, ts):
     """Per-wheel static-equilibrium tyre penetration [m], from the vehicle file.
 
-    pen_i = Fz_static,i / tire_vertical_stiffness_i, with the level-ground static
-    axle split Fz_static = 0.5*m*g*cg_to_rear/wheelbase (front wheels) and
+    pen_i = Fz_static,i / k_eff,i, with the level-ground static axle split
+    Fz_static = 0.5*m*g*cg_to_rear/wheelbase (front wheels) and
     0.5*m*g*cg_to_front/wheelbase (rear wheels); keys ``mass``, ``cg_to_front``,
     ``cg_to_rear``, ``wheelbase`` (vehicle YAML) and ``tire_vertical_stiffness``
     (tyre part of that vehicle). Wheel order FL, FR, RL, RR.
+
+    k_eff,i is the stiffness the free-3D penalty contact actually applies,
+    min(PENALTY_TIRE_STIFFNESS_CAP, max(1, tire_vertical_stiffness_i)); the cap
+    mirrors core/src/free_3d_dynamics.cpp:442. Equilibrium only holds at the
+    stiffness the contact path uses, so the file value alone would leave the
+    free-3D body sinking. If this constant drifts from the core, the free-3D run
+    no longer balances and the PROBE_Z_BAND_M guard fails the probe.
     """
     g = 9.80665
     front = 0.5 * vp.mass * g * vp.cg_to_rear / vp.wheelbase
     rear = 0.5 * vp.mass * g * vp.cg_to_front / vp.wheelbase
     loads = (front, front, rear, rear)
-    return [loads[i] / ts.wheel[i].tire_vertical_stiffness for i in range(4)]
+    k_eff = [min(PENALTY_TIRE_STIFFNESS_CAP,
+                 max(1.0, ts.wheel[i].tire_vertical_stiffness))
+             for i in range(4)]
+    return [loads[i] / k_eff[i] for i in range(4)]
 
 
 def _step_with_normal(maker, tilted, bank, n=400, dt=0.002):
