@@ -6,7 +6,40 @@ All notable changes to VDSim are documented here. Format follows
 
 ## [Unreleased]
 
-Planned as 0.8.0 (work order 42, per-element aero). Not released yet.
+Planned as 0.8.1 (work order 43, L5 longitudinal reactions). Not released yet.
+
+### Changed — BREAKING: L5 drive/brake torque reactions and the LuGre spin reaction
+- L5 now returns each wheel's drive and brake torque reaction to a reaction body
+  chosen per axle: `drive_reaction_front` / `drive_reaction_rear` (default
+  `sprung`) and `brake_reaction_front` / `brake_reaction_rear` (default
+  `unsprung`). L5 longitudinal load transfer now uses the CG height instead of
+  (h_cg − R). Every L5 run with drive or brake torque changes.
+- On the strut path with a corner linkage (multibody DAE) the `unsprung` brake
+  default sends the brake reaction through the knuckle, so such a car gets
+  anti-dive from its link geometry without setting any key.
+- L5 with a LuGre tyre (the default `generic_pacejka` tyre included) changes:
+  the LuGre contact branches never fed the tyre longitudinal force into the
+  wheel spin equation, so the spin had no tyre reaction torque. Both the
+  penalty and the strut branch now use the clamped force, as the L2 model does.
+
+### Added
+- `free_3d_strut_force()` (read-only strut spring + bump-stop force per corner,
+  N, compression positive, damping excluded; NaN off the strut path) and
+  `free_3d_torque_reaction_targets()` (effective reaction body per key:
+  `sprung`, `unsprung` or `equivalent`; empty outside L5), with Python bindings.
+
+### Compatibility
+- L1-L4 results, the RL observation/reward digests and the closed-loop
+  evaluation dumps are bit-identical to 0.8.0.
+
+### Known limitations
+- The lumped drivetrain puts the reflected inertia I_m·G² into the wheel spin,
+  so once the reaction is returned the rotor angular momentum shows up in the
+  pitch moment about G times larger than the real I_m·G·α. Not fixed in 0.8.1.
+- On the strut path `cg_height` is the sprung-mass CG height, so the CG of the
+  whole car sits lower than `cg_height` (the four wheel particles ride at R).
+
+## [0.8.0] - 2026-10-29
 
 ### Changed — BREAKING: the four lift keys now act on L5
 - `aero_lift_front` / `aero_lift_rear` were ignored by the L5 (free 3D) model.
@@ -41,7 +74,7 @@ Planned as 0.8.0 (work order 42, per-element aero). Not released yet.
   closed-loop evaluation dumps are unchanged.
 
 ### Known limitations
-- L5 applies tyre longitudinal forces at the wheel centre and does not return drive/brake torque reactions to the body, so longitudinal load transfer uses (h_cg − R) instead of h_cg; with aero drag the front axle share is biased by ΣF_d·R/L. Check aero balance numbers on L1-L3 (see docs/theory/26_aero_elements.md).
+- L5 axle loads carry two core defects: tyre longitudinal forces act at the wheel centre with no drive/brake torque reaction on the body, and with a LuGre tyre the wheel spin equation has no tyre reaction torque. Together they bias longitudinal load transfer and the front axle share under aero drag. Check aero balance numbers on L1-L3 (see docs/theory/26_aero_elements.md). Both defects are fixed in 0.8.1.
   The original A3 L5 gate is kept as the ctest `AeroElements.A3_SteadyAxleLoadL5` with label `known_failure`; reproduce it with `ctest -L known_failure` (the validation preset and CI exclude this label).
   When the L5 core is fixed, the label is dropped and the test joins the canonical suite.
 - The L3 output `Fz` is the internal quasi-static 7-DOF wheel load.
