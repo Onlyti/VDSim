@@ -127,11 +127,7 @@ vdsim::TireSetup load_tire_setup(const vdsim::cosim::VehicleSpawn& spn) {
     return vdsim::TireSetup(vdsim::TireParams::from_yaml(spn.tire_yaml));
 }
 std::unique_ptr<vdsim::IVehicleDynamics> make_dyn(const std::string& lvl) {
-    if (lvl == "L1") return vdsim::create_bicycle();
-    if (lvl == "L3") return vdsim::create_fourteen_dof();
-    if (lvl == "L4") return vdsim::create_fourteen_dof_kinematic();
-    if (lvl == "L5") return vdsim::create_stunt_dof();
-    return vdsim::create_seven_dof();
+    return vdsim::create_dynamics_for_level(lvl);
 }
 std::string resolve_susp_yaml(std::string ref) {
     if (ref.empty()) return ref;
@@ -426,6 +422,17 @@ int run_scene(const std::string& scene_path, int argc, char** argv) {
     } catch (const std::exception& e) {
         std::fprintf(stderr, "[vdsim_realtime] scene: %s\n", e.what());
         return 1;
+    }
+    // An unknown level id is a scene error: report it before any socket opens
+    // (it used to start the vehicle as L2 without a word).
+    for (const auto& spn : world.vehicles) {
+        try {
+            (void)vdsim::create_dynamics_for_level(spn.level);
+        } catch (const std::exception& e) {
+            std::fprintf(stderr, "[vdsim_realtime] scene: vehicle %u: %s\n",
+                         static_cast<unsigned>(spn.id), e.what());
+            return 1;
+        }
     }
 
     const int cmd_port = static_cast<int>(optd(argc, argv, "--cmd-port=", 7001));

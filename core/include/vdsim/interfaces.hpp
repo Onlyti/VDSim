@@ -4,6 +4,7 @@
 #include <cmath>
 #include <limits>
 #include <memory>
+#include <string>
 #include <tuple>
 #include <vector>
 
@@ -234,6 +235,18 @@ bool free_3d_attach_contact_provider(IVehicleDynamics& dyn, IContactProvider* pr
 // Kinematic bicycle (no tire forces / no slip): yaw_rate = v*tan(delta)/L.
 // For path-planning / kinematic-MPC use and as the simplest ladder rung.
 std::unique_ptr<IVehicleDynamics> create_kinematic();
+
+/**
+ * @brief Build the dynamics model for a ladder id -- the one place a level
+ *        string becomes a model.
+ * @param level exact, case-sensitive id: K and L0 (kinematic bicycle), L1, L2,
+ *        L3, L4 (the L3 model that accepts hardpoint kinematics), L5 (free 3D,
+ *        create_stunt_dof()).
+ * @return a fresh, uninitialised model.
+ * @throws std::invalid_argument for any other string; the message lists the
+ *         accepted ids. Earlier releases sent unknown ids to L2 without a word.
+ */
+std::unique_ptr<IVehicleDynamics> create_dynamics_for_level(const std::string& level);
 
 // =============================================================================
 // ITireModel — tire force model (Pacejka MF96, linear, ...)

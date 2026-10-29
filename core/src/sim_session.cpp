@@ -638,6 +638,18 @@ std::unique_ptr<IContactProvider> make_friction_ground(const FrictionMapConfig& 
         cfg.z, cfg.base_mu, poly, cfg.blend_distance);
 }
 
+std::unique_ptr<IVehicleDynamics> create_dynamics_for_level(const std::string& level) {
+    if (level == "K" || level == "L0") return create_kinematic();
+    if (level == "L1") return create_bicycle();
+    if (level == "L2") return create_seven_dof();
+    if (level == "L3") return create_fourteen_dof();
+    if (level == "L4") return create_fourteen_dof_kinematic();
+    if (level == "L5") return create_stunt_dof();
+    throw std::invalid_argument(
+        "unknown dynamics level \"" + level +
+        "\"; expected one of K, L0, L1, L2, L3, L4, L5 (case-sensitive)");
+}
+
 std::unique_ptr<SimSession> make_direct_control_session(
     const VehicleParams& vp,
     const TireSetup& ts,
@@ -652,13 +664,8 @@ std::unique_ptr<SimSession> make_direct_control_session(
     apply_vehicle_steer_deadtime(cfg, vp);
     VehicleParams vp_dc = vp;
     vp_dc.plant_path = true;
+    auto dyn = create_dynamics_for_level(opts.level);
     auto ground = make_friction_ground(opts.friction);
-    auto dyn =
-        (opts.level == "K" || opts.level == "L0") ? create_kinematic()
-        : (opts.level == "L1") ? create_bicycle()
-        : (opts.level == "L3") ? create_fourteen_dof()
-        : (opts.level == "L4") ? create_fourteen_dof_kinematic()
-                               : create_seven_dof();
     return std::make_unique<SimSession>(
         std::move(dyn), std::move(ground), vp_dc, ts, sp, cfg);
 }
