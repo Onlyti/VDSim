@@ -1,4 +1,4 @@
-// L5 drive / brake torque reactions (work order 43, 0.8.1): R1, R2, R3, R6.
+// L5 drive / brake torque reactions (work order 43, 0.8.1): R1, R2, R6 (R3 moved to 0.8.2).
 //
 // Gates fixed before measurement (PO 1st verdict, Q1 / Q2 / J1 / J8):
 //   axle load transfer  dFz_front = -(m * ax_meas * h_x + sum_i I_eff,i * alpha_i) / L,
@@ -341,60 +341,10 @@ void r2(Move m) {
 TEST(L5Reaction, R2_StrutAccelSprungVsUnsprung) { r2(Move::Accel); }
 TEST(L5Reaction, R2_StrutBrakeSprungVsUnsprung) { r2(Move::Brake); }
 
-// ---- R3: strut + corner model, anti geometry (static instant-centre hand calc) ----
-// Spring change of one axle (sum of its two struts):
-//   dF_spring = dFz_axle + (sum Fx_axle - sum m_u * a_g) * dx/dz [+ sum M_i * theta'],
-//   M_i = -(Fx_i * R + I_eff,i * alpha_i) on the knuckle (unsprung only).
-// Front DW sample (PO 2nd-resume verdict, changed after measurement): dx/dz -0.039112 and
-// theta' -0.353893 rad/m from the independent linkage solve
-// tests/validation/analytical/l5_knuckle_reference.py (LK-UK-TK knuckle frame omega_y,
-// +/-1 mm); the side-view hand calc (dx/dz -0.0896, theta' -0.4975) is a projection of the
-// 3D linkage and is no longer the reference. Rear TA dx/dz +0.1891, theta' +1.5625 rad/m
-// (hand calc, equal to the same script). Gate +/-5 %.
-// Fx_i: on the strut path tire_forces_body() is the mount connection force, so the
-// window-mean tyre force is that plus m_u * a_g (particle inertia); with an unsprung
-// reaction the particle also carries F_eq = M * theta' * t / |t|^2, solved as
-// Fx = (C + I_eff * alpha * k) / (1 - R k), C = conn_x + m_u * a_g, k = theta' t_x / |t|^2.
-namespace {
-struct Axle { int l, r; double dxdz, theta_p; };
-constexpr Axle kFront {WHEEL_FL, WHEEL_FR, -0.039112, -0.353893};
-constexpr Axle kRear  {WHEEL_RL, WHEEL_RR, +0.1891, +1.5625};
-
-void r3(const char* tag, Move m, const Axle& ax_, bool unsprung) {
-    auto vp = car(Car::Sedan);
-    const auto t = unsprung ? VehicleParams::TorqueReaction::Unsprung
-                            : VehicleParams::TorqueReaction::Sprung;
-    if (m == Move::Brake) vp.brake_reaction_front = t;
-    else vp.drive_reaction_rear = t;
-    const auto tr = transfer(tag, vp, Path::StrutDae, m, v_start(Car::Sedan, m));
-    expect_transfer(tr, tag);
-    const auto& w = tr.win;
-    const double R = vp.wheel_radius_nominal;
-    const double tt = 1.0 + ax_.dxdz * ax_.dxdz;
-    const double k = ax_.theta_p * ax_.dxdz / tt;
-    double sFx = 0.0, sMu = 0.0, sM = 0.0, d_spring = 0.0, travel = 0.0;
-    for (const int i : {ax_.l, ax_.r}) {
-        const double Ie = I_wheel(vp, i) + I_eng(vp, i);
-        const double C = w.conn_x[i] + m_u(vp, i) * w.a_g;
-        const double Fx = unsprung ? (C + Ie * w.alpha[i] * k) / (1.0 - R * k) : C;
-        sFx += Fx;
-        sMu += m_u(vp, i);
-        sM += -(Fx * R + Ie * w.alpha[i]);
-        d_spring += w.spring[i] - tr.stat.spring[i];
-        travel = std::max(travel, std::abs(w.travel[i] - tr.stat.travel[i]));
-    }
-    const double dFz = (ax_.l == WHEEL_FL) ? tr.d_front : tr.d_rear;
-    const double want = dFz + (sFx - sMu * w.a_g) * ax_.dxdz
-                      + (unsprung ? sM * ax_.theta_p : 0.0);
-    const double anti = 1.0 - want / dFz;
-    std::printf("[%s] dF_spring %.2f N (want %.2f) | anti %.4f | sum Fx %.2f N | "
-                "max travel %.2f mm%s\n",
-                tag, d_spring, want, anti, sFx, 1e3 * travel,
-                travel > 5e-3 ? " (> 5 mm: static-IC gate, moved IC is info only)" : "");
-    EXPECT_NEAR(d_spring, want, 0.05 * std::abs(want)) << tag;
-}
-}  // namespace
-TEST(L5Reaction, R3_FrontBrakeSprung)   { r3("R3 front brake sprung",   Move::Brake, kFront, false); }
-TEST(L5Reaction, R3_FrontBrakeUnsprung) { r3("R3 front brake unsprung", Move::Brake, kFront, true); }
-TEST(L5Reaction, R3_RearAccelSprung)    { r3("R3 rear accel sprung",    Move::Accel, kRear,  false); }
-TEST(L5Reaction, R3_RearAccelUnsprung)  { r3("R3 rear accel unsprung",  Move::Accel, kRear,  true); }
+// ---- R3 (anti geometry through the corner linkage): not judged in 0.8.1 ----
+// User decision 10-29 (PROP-1915 option 1): the corner-linkage (DAE) path resolves an
+// unsprung reaction like sprung until the knuckle route and the DAE cruise pitch
+// oscillation are validated in 0.8.2, so the anti-geometry gate has nothing to judge.
+// The R3 gate and its fixed references (front DW dx/dz -0.039112, theta' -0.353893 rad/m;
+// rear TA dx/dz +0.1891, theta' +1.5625 rad/m) stay in commit ab74229 for 0.8.2. The
+// sprung-equivalence on that path is L5ReactionKeys.LinkageUnsprungResolvesLikeSprungAndWarnsOnce.

@@ -2,6 +2,7 @@
 // rejection, defaults, strut-force / target queries, the below-L5 and
 // equivalent-path warnings, and J6 (knuckle pitch rate, reaction split).
 #include "vdsim/contact.hpp"
+#include "vdsim/control.hpp"
 #include "vdsim/interfaces.hpp"
 #include "vdsim/multibody.hpp"
 #include "vdsim/params.hpp"
@@ -20,6 +21,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 using namespace vdsim;
 using TR = VehicleParams::TorqueReaction;
@@ -155,9 +157,12 @@ TEST(L5ReactionKeys, EffectiveTargetsPerPath) {
     const auto a = free_3d_torque_reaction_targets(pen->dynamics());
     EXPECT_EQ(a[0], "sprung");      EXPECT_EQ(a[1], "sprung");
     EXPECT_EQ(a[2], "equivalent");  EXPECT_EQ(a[3], "equivalent");
+    // Corner-linkage (DAE) path: the knuckle route is off until validated (PROP-1915),
+    // so the unsprung brake default resolves like sprung there too.
     const auto dae_s = l5_session(vp, true, true);
     const auto b = free_3d_torque_reaction_targets(dae_s->dynamics());
-    EXPECT_EQ(b[2], "unsprung");    EXPECT_EQ(b[3], "unsprung");
+    EXPECT_EQ(b[0], "sprung");      EXPECT_EQ(b[1], "sprung");
+    EXPECT_EQ(b[2], "equivalent");  EXPECT_EQ(b[3], "equivalent");
     auto l2 = create_seven_dof();
     for (const auto& t : free_3d_torque_reaction_targets(*l2)) EXPECT_TRUE(t.empty());
 }
@@ -190,6 +195,72 @@ TEST(L5ReactionKeys, ExplicitUnsprungWithoutLinkageWarnsOnce) {
         }
     });
     EXPECT_EQ(n, 1);
+}
+
+namespace {
+/// Per-tick trace of a corner-linkage (DAE) L5 run: coast, throttle 0.4, brake 0.4.
+/// Tyre Fz, CG position / velocity / body rates, wheel spin, strut travel and force.
+std::vector<double> dae_trace(const VehicleParams& vp) {
+    auto s = l5_session(vp, true, true);
+    State s0;
+    s0.position.z() = vp.cg_height;
+    s0.velocity.x() = 15.0;
+    const double w = 15.0 / vp.wheel_radius_nominal;
+    s0.wheel_spin = {{w, w, w, w}};
+    s->reset_settled(s0);
+    std::vector<double> tr;
+    for (int k = 0; k < 600; ++k) {
+        CmdL4 u;
+        if (k >= 400) u.brake = 0.4;
+        else if (k >= 200) u.throttle = 0.4;
+        s->set_input(u);
+        s->tick(1e-3);
+        const auto o = s->output();
+        const auto sf = free_3d_strut_force(s->dynamics());
+        for (int i = 0; i < 3; ++i) {
+            tr.push_back(o.state.position[i]);
+            tr.push_back(o.state.velocity[i]);
+            tr.push_back(o.state.angular_velocity[i]);
+        }
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            tr.push_back(o.Fz[i]);
+            tr.push_back(o.state.wheel_spin[i]);
+            tr.push_back(o.state.susp_compression[i]);
+            tr.push_back(sf[i]);
+        }
+    }
+    return tr;
+}
+}  // namespace
+
+// PROP-1915 (user decision 10-29): on the corner-linkage (DAE) path an unsprung reaction,
+// explicit or the brake default, is resolved like sprung until the knuckle route is
+// validated; the run is bit-identical to all-sprung and an explicit key warns once.
+TEST(L5ReactionKeys, LinkageUnsprungResolvesLikeSprungAndWarnsOnce) {
+    const std::string needle = "through the corner linkage is not validated yet";
+    VehicleParams vs;
+    vs.drive_reaction_front = vs.drive_reaction_rear = TR::Sprung;
+    vs.brake_reaction_front = vs.brake_reaction_rear = TR::Sprung;
+    VehicleParams vu;
+    vu.drive_reaction_front = vu.drive_reaction_rear = TR::Unsprung;
+    vu.brake_reaction_front = vu.brake_reaction_rear = TR::Unsprung;
+    const VehicleParams vd;   // keys unset: brake default unsprung
+
+    const auto ref = dae_trace(vs);
+    std::vector<double> dflt, uns;
+    EXPECT_EQ(count_log(needle, [&] { dflt = dae_trace(vd); }), 0);
+    EXPECT_EQ(count_log(needle, [&] {
+        uns = dae_trace(vu);
+        dae_trace(vu);
+    }), 1);
+    ASSERT_EQ(ref.size(), uns.size());
+    bool finite = true;
+    for (const double v : ref) finite = finite && std::isfinite(v);
+    EXPECT_TRUE(finite);
+    EXPECT_TRUE(uns == ref) << "explicit unsprung differs from sprung on the DAE path";
+    EXPECT_TRUE(dflt == ref) << "unset keys differ from sprung on the DAE path";
+    const auto t = free_3d_torque_reaction_targets(l5_session(vu, true, true)->dynamics());
+    for (const auto& x : t) EXPECT_EQ(x, "equivalent");
 }
 
 // ---- J6 ----
