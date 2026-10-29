@@ -680,6 +680,7 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("max_substep_dt", &vdsim::SolverParams::max_substep_dt)
         .def_readwrite("max_substeps",   &vdsim::SolverParams::max_substeps)
         .def_readwrite("stunt_physics",  &vdsim::SolverParams::stunt_physics)
+        .def_readwrite("l5_spatial_suspension", &vdsim::SolverParams::l5_spatial_suspension)
         .def_static("from_yaml", &vdsim::SolverParams::from_yaml)
         .def("to_yaml",          &vdsim::SolverParams::to_yaml);
 
