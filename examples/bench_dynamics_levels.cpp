@@ -57,12 +57,7 @@ vdsim::TireParams mf2002_tp() {
 }
 
 std::unique_ptr<vdsim::IVehicleDynamics> make_dyn(const std::string& level) {
-    if (level == "K" || level == "L0") return vdsim::create_kinematic();
-    if (level == "L1") return vdsim::create_bicycle();
-    if (level == "L3") return vdsim::create_fourteen_dof();
-    if (level == "L4") return vdsim::create_fourteen_dof_kinematic();
-    if (level == "L5") return vdsim::create_stunt_dof();
-    return vdsim::create_seven_dof();
+    return vdsim::create_dynamics_for_level(level);
 }
 
 vdsim::State init_state(const vdsim::VehicleParams& vp, const vdsim::TireParams& tp,

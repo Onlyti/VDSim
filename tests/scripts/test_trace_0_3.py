@@ -226,32 +226,85 @@ def test_display_only_label_rule():
 
 
 # ------------------------------------------------- 3. declaration vs the core
+#: Tyre vertical stiffness cap of the free-3D penalty contact [N/m]; mirrors
+#: core/src/free_3d_dynamics.cpp:442 (k_tire_i = min(80000, max(1, Kz))).
+PENALTY_TIRE_STIFFNESS_CAP = 80000.0
+
+
+def _static_penetration(vp, ts):
+    """Per-wheel static-equilibrium tyre penetration [m], from the vehicle file.
+
+    pen_i = Fz_static,i / k_eff,i, with the level-ground static axle split
+    Fz_static = 0.5*m*g*cg_to_rear/wheelbase (front wheels) and
+    0.5*m*g*cg_to_front/wheelbase (rear wheels); keys ``mass``, ``cg_to_front``,
+    ``cg_to_rear``, ``wheelbase`` (vehicle YAML) and ``tire_vertical_stiffness``
+    (tyre part of that vehicle). Wheel order FL, FR, RL, RR.
+
+    k_eff,i is the stiffness the free-3D penalty contact actually applies,
+    min(PENALTY_TIRE_STIFFNESS_CAP, max(1, tire_vertical_stiffness_i)); the cap
+    mirrors core/src/free_3d_dynamics.cpp:442. Equilibrium only holds at the
+    stiffness the contact path uses, so the file value alone would leave the
+    free-3D body sinking. If this constant drifts from the core, the free-3D run
+    no longer balances and the PROBE_Z_BAND_M guard fails the probe.
+    """
+    g = 9.80665
+    front = 0.5 * vp.mass * g * vp.cg_to_rear / vp.wheelbase
+    rear = 0.5 * vp.mass * g * vp.cg_to_front / vp.wheelbase
+    loads = (front, front, rear, rear)
+    k_eff = [min(PENALTY_TIRE_STIFFNESS_CAP,
+                 max(1.0, ts.wheel[i].tire_vertical_stiffness))
+             for i in range(4)]
+    return [loads[i] / k_eff[i] for i in range(4)]
+
+
 def _step_with_normal(maker, tilted, bank, n=400, dt=0.002):
-    """Run one dynamics model over contacts that differ only in the normal."""
+    """Run one dynamics model over contacts that differ only in the normal.
+
+    Every contact carries the static-equilibrium penetration of its wheel; the
+    planar levels ignore it, the free-3D level needs it to be in contact at all.
+    Returns ``(y_end, z_0, z_end, finite)`` so the caller can refuse a run that
+    left the ground or blew up instead of reading it as "the normal did nothing".
+    """
     import vdsim
     import vdsim_plant
 
     vp_path = vdsim_plant.resolve_vehicle_config("generic_sedan.yaml")
     vp = vdsim.VehicleParams.from_yaml(str(vp_path))
-    tp = vdsim_plant._load_tire_setup_for_vehicle(vp_path).wheel[0]
+    ts = vdsim_plant._load_tire_setup_for_vehicle(vp_path)
+    tp = ts.wheel[0]
+    pen = _static_penetration(vp, ts)
     sp = vdsim.SolverParams()
     sp.integrator = vdsim.Integrator.RK4
     dyn = maker()
     dyn.initialize(vp, tp, sp)
     dyn.reset(vdsim.make_init_state(vp, tp, x=0.0, y=0.0, yaw=0.0, v=10.0))
+    z0 = dyn.state().position[2]
     contacts = []
-    for _ in range(4):
+    for i in range(4):
         cp = vdsim.ContactPoint()
         cp.is_valid = True
         cp.mu_long = cp.mu_lat = 0.9
+        cp.penetration = pen[i]
         cp.normal = ([0.0, -math.sin(bank), math.cos(bank)] if tilted
                      else [0.0, 0.0, 1.0])
         contacts.append(cp)
     cmd = vdsim.CmdL4()
     cmd.gear = 1
+    finite = True
     for _ in range(n):
         dyn.step(cmd, contacts, dt)
-    return dyn.state().position[1]
+        pos = dyn.state().position
+        if not all(math.isfinite(v) for v in (pos[0], pos[1], pos[2])):
+            finite = False
+            break
+    pos = dyn.state().position
+    return pos[1], z0, pos[2], finite
+
+
+#: Probe validity guard: both runs finite to the end and the body height within
+#: this band of its start [m]. A run that falls through or leaves the road says
+#: nothing about the normal, so it is a failed probe, never a "C1" reading.
+PROBE_Z_BAND_M = 0.05
 
 
 def test_declared_contact_scope_matches_the_core():
@@ -276,12 +329,21 @@ def test_declared_contact_scope_matches_the_core():
         "L2": vdsim.create_seven_dof,
         "L3": vdsim.create_fourteen_dof,
         "L4": vdsim.create_fourteen_dof_kinematic,
+        "L5": vdsim.create_stunt_dof,
     }
     for level, maker in makers.items():
-        moved = abs(_step_with_normal(maker, True, bank)
-                    - _step_with_normal(maker, False, bank))
+        runs = [_step_with_normal(maker, tilted, bank) for tilted in (True, False)]
+        drift = max(abs(z_end - z_0) for _, z_0, z_end, _ in runs)
+        valid = all(ok for *_, ok in runs) and drift <= PROBE_Z_BAND_M
+        moved = abs(runs[0][0] - runs[1][0])
+        print("probe %s: |dy| = %r m, max |z_end - z_0| = %r m, finite = %s"
+              % (level, moved, drift, all(ok for *_, ok in runs)))
+        check(valid, "%s probe valid (finite, |dz| = %.3e <= %.2f m)"
+              % (level, drift, PROBE_Z_BAND_M))
+        if not valid:
+            continue                              # probe invalid: no C1/C2 reading
         observed = "C2" if moved > 1e-9 else "C1"
-        declared = vdsim_plant.CONTACT_SCOPE_BY_LEVEL[level]
+        declared = vdsim_plant.CONTACT_SCOPE_BY_LEVEL.get(level, "undeclared")
         check(declared == observed,
               "%s declares %s and the core behaves as %s (|dy| = %.3e m)"
               % (level, declared, observed, moved))

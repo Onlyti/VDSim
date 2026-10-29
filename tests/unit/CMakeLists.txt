@@ -27,6 +27,7 @@ add_executable(vdsim_unit_tests
     test_live_monitor_link.cpp
     test_contact_frame.cpp
     test_solver_substeps.cpp
+    test_level_factory.cpp
 )
 
 target_link_libraries(vdsim_unit_tests PRIVATE vdsim_carla_plugin)

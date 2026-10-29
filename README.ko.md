@@ -460,6 +460,11 @@ plant.enable_trace("run.vdtrace", seed=0, run_id="demo")
 plant.finalize_trace()
 ```
 
+`level` 은 `L1`..`L5` 중 하나다. `L5` 는 기본 penalty 접촉(하드포인트 없음)의
+free-3D 모델이며 `vdsim_realtime` 의 L5 솔버 설정으로 돈다. 그 밖의 레벨 문자열은
+여기와 코어의 다른 모든 진입점에서 `ValueError` 다(세션 생성 함수는 `K`·`L0` 도 받는다).
+0.8.1 에서 L5 선형화와 `VecSession` 의 L5 는 명시적으로 거부된다.
+
 `0.1`·`0.2` trace는 계속 읽힌다. `0.3` 파일에서 필수 필드가 빠지면 경고가 아니라
 에러다.
 

@@ -44,9 +44,7 @@ std::string opt_str(int argc, char** argv, const char* key, const std::string& d
 }
 
 std::unique_ptr<vdsim::IVehicleDynamics> make_dyn(const std::string& level) {
-    if (level == "L1") return vdsim::create_bicycle();
-    if (level == "L3") return vdsim::create_fourteen_dof();
-    return vdsim::create_seven_dof();   // default L2
+    return vdsim::create_dynamics_for_level(level);
 }
 
 }  // namespace
