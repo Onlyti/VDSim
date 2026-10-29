@@ -89,7 +89,8 @@ presets:  CMakePresets.json@c98fe5e64c842faaeb06598af46476f3507c18a6
 toolchain: cmake 3.31.10
 commit:   PENDING
 pending:  registration surface changed (A3 L5 rejoins the canonical suite, the two
-          R2 strut tests move to label known_failure); no canonical 3-run measurement yet
+          R2 strut tests move to label known_failure, main with work order 44 merged in);
+          no canonical 3-run measurement yet
 date:     2026-10-29
 excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)

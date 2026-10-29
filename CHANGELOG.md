@@ -6,7 +6,8 @@ All notable changes to VDSim are documented here. Format follows
 
 ## [Unreleased]
 
-Planned as 0.8.1 (work order 43, L5 longitudinal reactions). Not released yet.
+Planned as 0.8.1 (work order 43: L5 longitudinal reactions; work order 44:
+one level-id factory, L5 from Python). Not released yet.
 
 ### Changed — BREAKING: L5 drive/brake torque reactions and the LuGre spin reaction
 - L5 now returns each wheel's drive and brake torque reaction to a reaction body
@@ -24,14 +25,41 @@ Planned as 0.8.1 (work order 43, L5 longitudinal reactions). Not released yet.
   wheel spin equation, so the spin had no tyre reaction torque. Both the
   penalty and the strut branch now use the clamped force, as the L2 model does.
 
+### Changed — BREAKING: an unknown level id is an error
+- Every place that turns a level string into a model now goes through one
+  factory, `create_dynamics_for_level()` (`core/include/vdsim/interfaces.hpp`,
+  also `vdsim.create_dynamics_for_level`). The accepted ids are exactly `K`,
+  `L0`, `L1`, `L2`, `L3`, `L4`, `L5` (case-sensitive). Any other string raises
+  (`std::invalid_argument` in C++, `ValueError` in Python) with the accepted
+  ids in the message; earlier releases built L2 without a word.
+- `vdsim_realtime`: `K` and `L0` now build the kinematic bicycle (they built
+  L2), and an unknown level stops the server at start-up.
+- `VDSimPlant(level="L5")` and `vdsim_lab.Sim(level="L5")` open the free-3D
+  model (`create_stunt_dof()`); `VDSimPlant` used to refuse `L5`.
+
 ### Added
 - `free_3d_strut_force()` (read-only strut spring + bump-stop force per corner,
   N, compression positive, damping excluded; NaN off the strut path) and
   `free_3d_torque_reaction_targets()` (effective reaction body per key:
   `sprung`, `unsprung` or `equivalent`; empty outside L5), with Python bindings.
-- `SolverParams.stunt_physics` and `SolverParams.l5_spatial_suspension` are exposed
-  to Python (read/write, default `False`),
-  matching the C++ fields that the L5 Python tests set.
+- `SolverParams.l5_spatial_suspension` is exposed to Python (read/write,
+  default `False`), matching the C++ field that the L5 Python tests set.
+- `vdsim.Level.L5_Stunt`, `vdsim.create_stunt_dof`, `SolverParams.stunt_physics`.
+- L5 from Python runs with the `vdsim_realtime` L5 solver settings unless the
+  caller picks finer ones: `stunt_physics` on, `max_substep_dt` at most
+  `vdsim_plant.L5_MAX_SUBSTEP_DT`, and `max_substeps` raised so one outer step
+  is never clamped (`vdsim_plant.level_solver_params`). The settings used are
+  written to the result meta (`vdsim_plant.solver_record`).
+- `CONTACT_SCOPE_BY_LEVEL["L5"] = "C2"`, measured by the contact-scope probe
+  with every contact at its static-equilibrium penetration, so an L5 run can
+  record a trace.
+
+### Not supported in 0.8.1 (explicit errors)
+- `linearize` with L5 raises `ValueError` ("L5 linearization is not supported
+  in 0.8.1").
+- `make_vec_session` / `VDSimVecEnv` with L5 raise `ValueError` ("L5 is not
+  supported in VecSession in 0.8.1").
+- L5 with suspension hardpoints is not wired from Python.
 
 ### Compatibility
 - L1-L4 results, the RL observation/reward digests and the closed-loop
@@ -53,6 +81,17 @@ Planned as 0.8.1 (work order 43, L5 longitudinal reactions). Not released yet.
   together with the `cg_height` meaning fix.
 - `AeroElements.A3_SteadyAxleLoadL5` (label `known_failure` in 0.8.0) passes and
   is back in the canonical suite.
+- The L5 penalty contact caps the tyre vertical stiffness at 80000 N/m
+  (`core/src/free_3d_dynamics.cpp`, penalty branch): when the tyre file gives a
+  stiffer tyre, the L5 static sink is larger than the file value implies. The
+  strut contact path has no cap.
+- Some Python scripts still pick their model from a level string themselves and
+  send an unknown id to L2 without a word (unchanged in 0.8.1):
+  `apps/doe/sweep_runner.py`, `apps/validation/iso_3888.py`,
+  `apps/validation/iso_4138.py`, `apps/validation/iso_7401.py`,
+  `apps/validation/run_validation.py`,
+  `carla_integration/python/vdsim_carla_bridge.py`,
+  `docs/figures_src/plot_theory_figures.py`.
 
 ## [0.8.0] - 2026-10-29
 

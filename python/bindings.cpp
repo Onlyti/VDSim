@@ -163,11 +163,7 @@ static std::unique_ptr<vdsim::SimSession> build_ground_session(
             "psd_n and psd_gd must have the same length (both empty = no table), got " +
             std::to_string(psd_n.size()) + " and " + std::to_string(psd_gd.size()));
     std::unique_ptr<vdsim::IVehicleDynamics> dyn =
-        (level == "K" || level == "L0") ? vdsim::create_kinematic()
-        : (level == "L1") ? vdsim::create_bicycle()
-        : (level == "L3") ? vdsim::create_fourteen_dof()
-        : (level == "L4") ? vdsim::create_fourteen_dof_kinematic()
-                          : vdsim::create_seven_dof();
+        vdsim::create_dynamics_for_level(level);
     vdsim::SimConfig cfg;
     cfg.actuator       = actuator;
     cfg.sensors        = sensors;
@@ -288,6 +284,7 @@ PYBIND11_MODULE(vdsim, m) {
         .value("L2_SevenDOF",    vdsim::IVehicleDynamics::Level::L2_SevenDOF)
         .value("L3_FourteenDOF", vdsim::IVehicleDynamics::Level::L3_FourteenDOF)
         .value("L4_Kinematic",   vdsim::IVehicleDynamics::Level::L4_Kinematic)
+        .value("L5_Stunt",       vdsim::IVehicleDynamics::Level::L5_Stunt)
         .value("Lk_Kinematic",   vdsim::IVehicleDynamics::Level::Lk_Kinematic)
         .export_values();
     py::enum_<vdsim::IVehicleDynamics::ModeledChannel>(m, "ModeledChannel")
@@ -766,14 +763,14 @@ PYBIND11_MODULE(vdsim, m) {
           [](const vdsim::VehicleParams& vp, const vdsim::TireParams& tp,
              const std::string& level, std::vector<double> x0,
              std::vector<double> u0, double dt, double mu) {
-              auto make_dyn = [&]() -> std::unique_ptr<vdsim::IVehicleDynamics> {
-                  if (level == "K" || level == "L0") return vdsim::create_kinematic();
-                  if (level == "L1") return vdsim::create_bicycle();
-                  if (level == "L3") return vdsim::create_fourteen_dof();
-                  if (level == "L4") return vdsim::create_fourteen_dof_kinematic();
-                  return vdsim::create_seven_dof();
-              };
-              auto dyn = make_dyn();
+              // The planar state map below has never been checked against the
+              // free-3D state (quaternion, world z); refuse L5 by name rather
+              // than return a Jacobian nobody has validated.
+              if (level == "L5")
+                  throw std::invalid_argument(
+                      "L5 linearization is not supported in 0.8.1 (the planar "
+                      "[X,Y,psi,vx,vy,r] map is not validated on the free-3D state)");
+              auto dyn = vdsim::create_dynamics_for_level(level);
               vdsim::SolverParams sp;
               dyn->initialize(vp, tp, sp);
               auto ground = vdsim::create_flat_ground(0.0, mu);
@@ -1073,6 +1070,10 @@ PYBIND11_MODULE(vdsim, m) {
     m.def("create_fourteen_dof", static_cast<DynFactory>(&vdsim::create_fourteen_dof));
     m.def("create_fourteen_dof_kinematic",
           static_cast<DynFactory>(&vdsim::create_fourteen_dof_kinematic));
+    m.def("create_stunt_dof",    static_cast<DynFactory>(&vdsim::create_stunt_dof));
+    m.def("create_dynamics_for_level", &vdsim::create_dynamics_for_level,
+          py::arg("level"),
+          "Model for a ladder id (K, L0, L1..L5); ValueError for any other string.");
     // Opaque holder so create_*_ground can return providers to Python and be
     // handed to make_sim_session_ground (ownership transfers on that call).
     py::class_<vdsim::IContactProvider>(m, "ContactProvider");
@@ -1611,6 +1612,11 @@ PYBIND11_MODULE(vdsim, m) {
              const std::vector<double>& psd_gd) {
               if (num_envs < 1)
                   throw std::invalid_argument("make_vec_session: num_envs must be >= 1");
+              // RL on L5 has not been validated (observation layout, solver
+              // resolution, reset); refuse it until a work order opens it.
+              if (level == "L5")
+                  throw std::invalid_argument(
+                      "L5 is not supported in VecSession in 0.8.1");
               std::vector<std::unique_ptr<vdsim::SimSession>> v;
               v.reserve(static_cast<std::size_t>(num_envs));
               for (int i = 0; i < num_envs; ++i)
@@ -1659,11 +1665,7 @@ PYBIND11_MODULE(vdsim, m) {
               const double* p = static_cast<double*>(info.ptr);
               std::vector<double> h(p, p + (size_t)nx * ny);
               std::unique_ptr<vdsim::IVehicleDynamics> dyn =
-                  (level == "K" || level == "L0") ? vdsim::create_kinematic()
-                  : (level == "L1") ? vdsim::create_bicycle()
-                  : (level == "L3") ? vdsim::create_fourteen_dof()
-                  : (level == "L4") ? vdsim::create_fourteen_dof_kinematic()
-                                    : vdsim::create_seven_dof();
+                  vdsim::create_dynamics_for_level(level);
               vdsim::SimConfig cfg; cfg.nominal_dt = nominal_dt;
               return std::make_unique<vdsim::SimSession>(
                   std::move(dyn),
@@ -1684,11 +1686,7 @@ PYBIND11_MODULE(vdsim, m) {
              double mu, std::vector<double> n, std::vector<double> gd,
              double nominal_dt, const vdsim::SolverParams& solver, unsigned seed) {
               std::unique_ptr<vdsim::IVehicleDynamics> dyn =
-                  (level == "K" || level == "L0") ? vdsim::create_kinematic()
-                  : (level == "L1") ? vdsim::create_bicycle()
-                  : (level == "L3") ? vdsim::create_fourteen_dof()
-                  : (level == "L4") ? vdsim::create_fourteen_dof_kinematic()
-                                    : vdsim::create_seven_dof();
+                  vdsim::create_dynamics_for_level(level);
               std::unique_ptr<vdsim::IContactProvider> ground =
                   (!n.empty() && n.size() == gd.size())
                   ? vdsim::create_psd_ground_table(0.0, mu, std::move(n), std::move(gd),

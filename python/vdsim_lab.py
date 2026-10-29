@@ -116,10 +116,17 @@ def _build_session(road, vp, tp, level, dt, sensors, kin=None):
     Refusing here, where the session first exists, covers traced and untraced
     runs alike.
 
+    For ``level="L5"`` the session gets the ``vdsim_realtime`` L5 solver
+    settings (:func:`vdsim_plant.level_solver_params`); the provenance then
+    carries them under ``"solver"``. Other levels keep the core defaults.
+
     :returns: ``(session, kinematics_provenance)``.
-    :raises ValueError: for ``level="L4"`` with no hardpoints attached.
+    :raises ValueError: for ``level="L4"`` with no hardpoints attached, or an
+        unknown level id (raised by the core).
     """
-    sess = road._session(vp, tp, level, dt, sensors)
+    import vdsim_plant                     # local, as elsewhere in this module
+    solver = (vdsim_plant.level_solver_params(level, dt) if level == "L5" else None)
+    sess = road._session(vp, tp, level, dt, sensors, solver)
     front, rear = _kin_spec(kin)
     info = attach_kinematics(sess, front, rear)
     if level == "L4" and not info["attached"]:
@@ -127,6 +134,8 @@ def _build_session(road, vp, tp, level, dt, sensors, kin=None):
             "level='L4' with no suspension hardpoints attached is L3 under another "
             "label (the two are bit-identical until an attach); pass kin=... "
             "(kinematics={'front': <stem>, 'rear': <stem>}) or use level='L3'")
+    if solver is not None:
+        info = dict(info, solver=vdsim_plant.solver_record(solver))
     return sess, info
 
 
@@ -345,21 +354,25 @@ class Road:
                    waviness_high=float(psd.get("waviness_high", 2.0)),
                    n_max=float(psd.get("n_max", 4.0)), mu=mu)
 
-    def _session(self, vp, tp, level, dt, sensors):
+    def _session(self, vp, tp, level, dt, sensors, solver=None):
         k, p = self.kind, self.p
+        # solver is passed only when set, so the calls for the other levels
+        # stay exactly what they were.
+        sk = {} if solver is None else {"solver": solver}
         if k == "iso":
             return vdsim.make_sim_session(vp, tp, level, nominal_dt=dt,
-                                          sensors=sensors, mu=p["mu"], iso_class=p["iso_class"])
+                                          sensors=sensors, mu=p["mu"], iso_class=p["iso_class"],
+                                          **sk)
         if k == "psd":
             return vdsim.make_sim_session_psd(vp, tp, level, mu=p["mu"], gd_n0=p["gd_n0"],
                                               waviness=p["waviness"], n_break=p["n_break"],
                                               waviness_high=p["waviness_high"],
-                                              n_max=p["n_max"], nominal_dt=dt)
+                                              n_max=p["n_max"], nominal_dt=dt, **sk)
         if k == "psd_table":
             return vdsim.make_sim_session_psd(vp, tp, level, mu=p["mu"], n=p["n"], gd=p["gd"],
-                                              n_max=p["n_max"], nominal_dt=dt)
+                                              n_max=p["n_max"], nominal_dt=dt, **sk)
         # flat / inclined / split share make_sim_session
-        kw = dict(nominal_dt=dt, sensors=sensors, mu=p.get("mu", 1.0))
+        kw = dict(nominal_dt=dt, sensors=sensors, mu=p.get("mu", 1.0), **sk)
         if k == "inclined":
             kw.update(grade=p["grade"], bank=p["bank"])
         elif k == "split":
@@ -792,6 +805,8 @@ class Experiment:
         import vdsim_trace
 
         spec, self._trace_pending = self._trace_pending, None
+        if self._kin_info.get("solver") is not None:   # L5: record the solver used
+            spec["extra"] = dict(spec["extra"], solver=self._kin_info["solver"])
         self._validity = vdsim_plant.channel_validity_from_dynamics(
             sess.dynamics(), spec["model_level"], spec["channels"])
         self._trace = vdsim_trace.TraceWriter(

@@ -169,6 +169,19 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 300
         ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
+    # Level ids at every Python entry point (work order 44): accepted set,
+    # ValueError for unknown ids, L5 sessions bit-identical to the C++ model
+    # built directly, L5 finiteness and solver record, realtime refusal.
+    if(TARGET vdsim_l5_ref_dump)
+        add_test(NAME level_parse
+            COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_SOURCE_DIR}/tests/scripts/test_level_parse.py
+                $<TARGET_FILE:vdsim_l5_ref_dump>)
+        set_tests_properties(level_parse PROPERTIES
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            TIMEOUT 600
+            ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
+    endif()
     # Closed-loop evaluation extensions (work order 34): early stop in the
     # virtual-clock modes, realized steer observation and trace channel.
     add_test(NAME closedloop_ext

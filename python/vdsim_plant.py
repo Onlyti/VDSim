@@ -158,7 +158,51 @@ SAMPLED_OPTIONAL_CHANNELS = ("steer_applied",)
 #: model behind the seam changes, and with it which trace channels exist.
 #: ``"L4"`` is listed so the name is recognised, and then refused in
 #: ``VDSimPlant.__init__``: without hardpoints it is L3 under another label.
-PLANT_LEVELS = ("L1", "L2", "L3", "L4")
+#: ``"L5"`` is the free-3D model on its default penalty contact (no hardpoints).
+PLANT_LEVELS = ("L1", "L2", "L3", "L4", "L5")
+
+#: Largest substep the L5 free-3D model runs at when the caller does not pick a
+#: finer one -- the value ``vdsim_realtime`` uses for an L5 vehicle
+#: (``cosim/realtime_server.cpp``). The ladder default of 1 ms is too coarse for
+#: the free body's penalty contact.
+L5_MAX_SUBSTEP_DT = 2e-4
+
+
+def level_solver_params(level, outer_dt, sp=None):
+    """Solver settings a high-level entry point uses for ``level``.
+
+    Levels other than ``"L5"`` get ``sp`` back untouched (a fresh
+    ``SolverParams`` when ``sp`` is None), so their results do not change. For
+    ``"L5"`` it applies the ``vdsim_realtime`` L5 settings -- ``stunt_physics``
+    on and ``max_substep_dt`` at most :data:`L5_MAX_SUBSTEP_DT` -- and raises
+    ``max_substeps`` to the count one outer step of ``outer_dt`` needs, with the
+    same ``ceil(dt / max_substep_dt)`` the core uses, so the substep is never
+    silently widened (``solver_substep_clamp_count`` stays 0).
+
+    :param level: ladder id.
+    :param outer_dt: [s] outer step the session is ticked with.
+    :param sp: ``vdsim.SolverParams`` to adjust in place, or None.
+    :returns: the adjusted ``vdsim.SolverParams``.
+    """
+    if sp is None:
+        sp = vdsim.SolverParams()
+    if level != "L5":
+        return sp
+    sp.stunt_physics = True
+    sp.max_substep_dt = min(sp.max_substep_dt, L5_MAX_SUBSTEP_DT)
+    sp.max_substeps = max(sp.max_substeps, int(math.ceil(outer_dt / sp.max_substep_dt)))
+    return sp
+
+
+def solver_record(sp):
+    """The solver settings a run actually used, as a JSON-ready dict.
+
+    :param sp: ``vdsim.SolverParams``.
+    :returns: ``{"max_substep_dt", "max_substeps", "stunt_physics"}``.
+    """
+    return {"max_substep_dt": float(sp.max_substep_dt),
+            "max_substeps": int(sp.max_substeps),
+            "stunt_physics": bool(sp.stunt_physics)}
 
 #: How far the road normal is coupled into the physics, per level
 #: (``11_trace_contract_spec`` §3.1.1 ``contact_scope``).
@@ -169,12 +213,15 @@ PLANT_LEVELS = ("L1", "L2", "L3", "L4")
 #: moves. On ``origin/main`` (D1/D2 merged) every level moves, so every level is
 #: ``C2``. ``tests/scripts/test_trace_0_3.py`` re-runs that comparison and fails
 #: if the declaration and the code ever drift apart, which is the only thing
-#: that keeps a hand-written constant honest.
+#: that keeps a hand-written constant honest. L5 (free-3D) is measured the same
+#: way with every contact at its static-equilibrium penetration (the free-3D
+#: contact reads zero penetration as no contact) and is declared from that run.
 CONTACT_SCOPE_BY_LEVEL = {
     "L1": "C2",
     "L2": "C2",
     "L3": "C2",
     "L4": "C2",
+    "L5": "C2",
 }
 
 
@@ -879,6 +926,8 @@ class VDSimPlant:
       sp = vdsim.SolverParams()
       sp.integrator = vdsim.Integrator.RK4
       sp.max_substep_dt = min(substep_dt, sp.max_substep_dt)
+      sp = level_solver_params(level, substep_dt, sp)
+      self._solver = solver_record(sp) if level == "L5" else None
 
       opts = vdsim.DirectControlSessionOptions()
       opts.nominal_dt = float(substep_dt)
@@ -1120,7 +1169,7 @@ class VDSimPlant:
               act_rec = {"param_hash": vdsim_trace.param_hash(act)}
           except (TypeError, ValueError):
               act_rec = {"param_hash": None}
-      return {
+      rec = {
           "vdsim_version": _vdsim_version(),
           "vdsim_git_sha": _git_sha(),
           "vdsim_git_dirty": getattr(vdsim, "__git_dirty__", None),
@@ -1129,6 +1178,11 @@ class VDSimPlant:
           "level": self.level,
           "actuator": act_rec,
       }
+      # L5 runs at solver settings the plant picked (level_solver_params);
+      # record what was used. Other levels keep their earlier record unchanged.
+      if self._solver is not None:
+          rec["solver"] = dict(self._solver)
+      return rec
 
   # ---- trace recording (opt-in) ---------------------------------------
   def enable_trace(self, path, decimation=None, seed=None, run_id=None,
