@@ -83,15 +83,12 @@ version and the new numbers have to land in the same commit.
 
 <!-- VALIDATION-CURRENCY BEGIN -->
 ```text
-tests:    PENDING
+tests:    585/585
 config:   cmake --preset validation && cmake --build --preset validation && ctest --preset validation
 presets:  CMakePresets.json@c98fe5e64c842faaeb06598af46476f3507c18a6
 toolchain: cmake 3.31.10
-commit:   PENDING
-pending:  registration surface changed (A3 L5 rejoins the canonical suite, the two
-          R2 strut tests move to label known_failure, main with work order 44 merged in);
-          no canonical 3-run measurement yet
-date:     2026-10-29
+commit:   fc897a014b54a541520be5be2c4082c8c509746d
+date:     2026-10-30
 excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: closedloop_wallclock_timing (label timing, excluded by the validation test preset: wall-clock S6/S7 verdicts depend on host load -- local low-load evidence in the work order 31 PR description)
