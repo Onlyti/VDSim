@@ -14,9 +14,11 @@ Planned as 0.8.1 (work order 43, L5 longitudinal reactions). Not released yet.
   `sprung`) and `brake_reaction_front` / `brake_reaction_rear` (default
   `unsprung`). L5 longitudinal load transfer now uses the CG height instead of
   (h_cg − R). Every L5 run with drive or brake torque changes.
-- On the strut path with a corner linkage (multibody DAE) the `unsprung` brake
-  default sends the brake reaction through the knuckle, so such a car gets
-  anti-dive from its link geometry without setting any key.
+- `unsprung` currently resolves like `sprung` on every path, the corner-linkage
+  (multibody DAE) strut path included: the reaction goes to the chassis. An
+  explicit `unsprung` key warns once per process; the unset brake default does
+  not. The reaction through the knuckle (anti-dive / anti-squat from the link
+  geometry) is planned for 0.8.2 together with the corner-model pitch fix.
 - L5 with a LuGre tyre (the default `generic_pacejka` tyre included) changes:
   the LuGre contact branches never fed the tyre longitudinal force into the
   wheel spin equation, so the spin had no tyre reaction torque. Both the
@@ -38,6 +40,9 @@ Planned as 0.8.1 (work order 43, L5 longitudinal reactions). Not released yet.
   pitch moment about G times larger than the real I_m·G·α. Not fixed in 0.8.1.
 - On the strut path `cg_height` is the sprung-mass CG height, so the CG of the
   whole car sits lower than `cg_height` (the four wheel particles ride at R).
+- On the corner-linkage (multibody DAE) path the body pitches at steady speed
+  without any input (present since 0.8.0); `brake_reaction_*: unsprung` there is
+  not yet routed through the knuckle (see above). Both are 0.8.2 work.
 
 ## [0.8.0] - 2026-10-29
 

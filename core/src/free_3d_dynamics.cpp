@@ -73,6 +73,11 @@ constexpr double kStopStiffness = 2.0e6;  // bump/rebound stop rate [N/m] (strut
 // already delivers the link reaction to the body, so it keeps the roll stiffness. Verified
 // stable up to 1e9 (4 um); 1e10 is RK4-unstable (omega*dt > 2.8). Env: VDSIM_KLINK.
 constexpr double kLinkStiffness = 1.0e8;   // [N/m] perpendicular (rigid-link penalty)
+// Unsprung drive/brake reaction through the corner linkage (knuckle pitch rate +
+// detail::split_knuckle_reaction). Off until that route is validated together with the
+// corner-model pitch behaviour (PROP-1915, user decision 10-29); while off, an unsprung
+// reaction on a linkage path resolves like sprung and an explicit key warns once.
+constexpr bool kKnuckleReactionRoute = false;
 
 class Free3DDynamics final : public IVehicleDynamics {
 public:
@@ -343,13 +348,20 @@ public:
         return f;
     }
 
-    // A corner linkage resolves an unsprung reaction only on the strut path with an
-    // attached corner model that reports the knuckle orientation.
-    bool linkage_available(int axle) const {
+    // A corner linkage exists only on the strut path with an attached corner model that
+    // reports the knuckle orientation.
+    bool linkage_present(int axle) const {
         if (!sp_.l5_spatial_suspension) return false;
         const mb::IHardJointDaeModel* dae = axle == 0 ? mb_dae_front_.get()
                                                       : mb_dae_rear_.get();
         return dae && detail::knuckle_pitch_rate(*dae, 0.0, 0.0, Vec3::Zero()).has_value();
+    }
+
+    // An unsprung reaction goes through the knuckle only where a linkage is present and
+    // the knuckle route is enabled; it is not, until that route is validated (PROP-1915),
+    // so every unsprung reaction currently lands on the chassis like sprung.
+    bool linkage_available(int axle) const {
+        return kKnuckleReactionRoute && linkage_present(axle);
     }
 
     // drive_front, drive_rear, brake_front, brake_rear -> sprung/unsprung/equivalent.
@@ -410,10 +422,12 @@ private:
     }
 
     // An explicit "unsprung" that the current path resolves like sprung is reported
-    // once per process (the unset default is not).
+    // once per process (the unset default is not): one warning where no linkage exists,
+    // a separate one where a linkage exists but the knuckle route is not enabled.
     void warn_equivalent_reactions() {
         targets_checked_ = true;
         static std::atomic<bool> warned{false};
+        static std::atomic<bool> warned_linkage{false};
         const char* names[4] = {"drive_reaction_front", "drive_reaction_rear",
                                 "brake_reaction_front", "brake_reaction_rear"};
         const std::optional<VehicleParams::TorqueReaction>* vals[4] = {
@@ -421,12 +435,18 @@ private:
             &vp_.brake_reaction_front, &vp_.brake_reaction_rear};
         for (int k = 0; k < 4; ++k) {
             const bool front = (k % 2 == 0);
-            if (*vals[k] && **vals[k] == VehicleParams::TorqueReaction::Unsprung
-                && !linkage_available(front ? 0 : 1) && !warned.exchange(true)) {
-                spdlog::warn("[vdsim L5] {}=unsprung has no corner linkage on this path "
-                             "(penalty, or strut without a corner model); the reaction "
-                             "goes to the chassis, same as sprung", names[k]);
-                break;
+            if (!(*vals[k] && **vals[k] == VehicleParams::TorqueReaction::Unsprung)
+                || linkage_available(front ? 0 : 1))
+                continue;
+            if (!linkage_present(front ? 0 : 1)) {
+                if (!warned.exchange(true))
+                    spdlog::warn("[vdsim L5] {}=unsprung has no corner linkage on this path "
+                                 "(penalty, or strut without a corner model); the reaction "
+                                 "goes to the chassis, same as sprung", names[k]);
+            } else if (!warned_linkage.exchange(true)) {
+                spdlog::warn("[vdsim L5] {}=unsprung through the corner linkage is not "
+                             "validated yet; the reaction goes to the chassis, same as "
+                             "sprung", names[k]);
             }
         }
     }
@@ -822,7 +842,7 @@ private:
             Vec3 s_hat(-delta, 1.0, 0.0);
             s_hat.normalize();
             double T_knuckle = 0.0;
-            if (strut && path_valid_[i] && theta_valid_[i])
+            if (kKnuckleReactionRoute && strut && path_valid_[i] && theta_valid_[i])
                 T_knuckle = (drive_unsprung_[axle] ? T_drive : 0.0)
                           + (brake_unsprung_[axle] ? Tb[i] : 0.0);
             tau_body -= ((T_drive + Tb[i]) - T_knuckle) * s_hat;
@@ -1006,7 +1026,7 @@ private:
             // Knuckle pitch rate for an unsprung torque reaction (pitch is unchanged by
             // the left/right mirror). Only evaluated when the axle needs it.
             const int axle = front ? 0 : 1;
-            if (drive_unsprung_[axle] || brake_unsprung_[axle]) {
+            if (kKnuckleReactionRoute && (drive_unsprung_[axle] || brake_unsprung_[axle])) {
                 const std::optional<double> tp = detail::knuckle_pitch_rate(
                     *dae, mot.travel_z, mot.steer_rack_dy, mb_state_[i].knuckle_aa);
                 theta_valid_[i] = tp.has_value();
