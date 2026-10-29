@@ -23,7 +23,19 @@ Legend: **yes** = modeled, **no** = not modeled, text = modeled with the stated 
 | Suspension transients | no | no | yes | theory 06 |
 | Suspension kinematics from hardpoints | no | no | only with Ld4 hardpoints attached | theory 13–14 |
 | Driveline (engine / gearbox / differential) | flat motor torque split by `drive_type`; opt-in engine map + gearbox; no differential (axle average) | flat motor torque; opt-in engine map + gearbox; open / locked / LSD differential | as Ld2 (through its inner Ld2) | theory 04, 05, 22 |
-| Aerodynamics | drag + front/rear lift | drag + front/rear lift | drag + front/rear lift | `params.hpp` `aero_*` |
+| Aerodynamics | drag + downforce split to the axles (four keys or `aero.elements`, with the drag pitch moment) | as Ld1, halves per axle | as Ld1, per wheel (element `y` split by each axle's track); added to tyre loads only, does not press the suspension | theory 26; `params.hpp` `aero_*`, `air_density` |
+
+!!! note "Aerodynamics on L5 and the shared inputs (0.8.0)"
+    - Every aero path uses `air_density` (default 1.225 kg/m³); `aero.elements` places
+      each element at its own point; the four-key and element forms cannot be mixed
+      ([theory 26](theory/26_aero_elements.md)).
+    - L5 (free 3D) applies aero as a body wrench: each element at its own point, the
+      four-key lift at the front and rear axle (ground height), and four-key drag at the
+      CG unless `aero_drag_height` is set ([theory 20](theory/20_ld5_stunt.md) §20.3).
+    - L5 limit: tyre longitudinal forces act at the wheel centre and the drive/brake
+      torque reactions are not returned to the body, so L5 longitudinal load transfer
+      uses $(h_{cg} - R)$ instead of $h_{cg}$. Check aero balance numbers on L1–L3
+      (theory 26 §26.5).
 
 !!! note "Ld4 is not a separate plant without hardpoints"
     Selecting level `L4` without attaching suspension hardpoints is rejected at session
