@@ -334,3 +334,20 @@ Product toe = `atan2(spin_x, spin_y)` with right-side `s=-1`
 Rear-of-axle rack sign correction is the builder's job, not a VDSim code flip.
 Hardpoints missing, Dynamic steering, or a bad key raise `ValueError`.
 L2-L4 ignore the key (one process warning if it is set).
+
+
+정지 기하 수용 범위는 적재 차량의 첫 공통 유한 시간 준정적 구간임.
+영·양·음 랙을 1 ms 간격으로 동기화하고 첫 0.2 s 영 입력 뒤 랙 적용함.
+최대 8 s 안에 모든 실행이 아래 조건을 동시에 0.5 s 연속 만족한 첫 구간만 판정에 사용함.
+
+| 감시량 | 연속 구간 조건 |
+|---|---|
+| 차체 속도 노름 | ≤ 0.001 m/s |
+| 차체 각속도 노름 | ≤ 0.001 rad/s |
+| 바퀴별 이동률 절댓값 | ≤ 0.001 m/s |
+| 제품 토 변화율 절댓값 | ≤ 0.01 deg/s |
+| 바퀴별 수직 하중 변화율 절댓값 | ≤ 1 N/s |
+| 감시 채널·수직 하중 | 전부 유한·모든 바퀴 하중 양수 |
+
+동일 시각의 영 랙 대비 제품 토 차분을 고정 기하표와 비교함.
+기한 내 공통 정착 부재는 실패이며 8 s 이후 영구 평형 보장은 범위 밖임.
