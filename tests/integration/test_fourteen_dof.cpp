@@ -88,6 +88,50 @@ TEST(FourteenDOF, L4KinematicLevelAndAttach) {
     EXPECT_GT(std::abs(dyn->state().velocity.x()), 5.0);
 }
 
+TEST(FourteenDOF, L4MirroredRackChangesFrontSlipInSameDirection) {
+    const std::string kin = std::string(VDSIM_SOURCE_DIR)
+        + "/configs/parts/susp_kinematics/kin/mp_front_sedan.yaml";
+    auto slip_for = [&](double steer, bool attach) {
+        auto dyn = vdsim::create_fourteen_dof_kinematic();
+        vdsim::VehicleParams vp;
+        vp.aero_drag_coeff = 0.0;
+        vp.camber_per_roll = 0.0;
+        vdsim::TireParams tp;
+        tp.lugre.enabled = false;
+        vdsim::SolverParams sp;
+        dyn->initialize(vp, tp, sp);
+        if (attach) {
+            auto topo = vdsim::mb::SuspensionTopology::from_yaml(kin);
+            EXPECT_TRUE(vdsim::mb::attach_topology_front(*dyn, topo));
+        }
+        dyn->reset(init_state(15.0, vp.wheel_radius_nominal));
+        vdsim::CmdL4 cmd;
+        cmd.steer_angle_wheel = steer;
+        dyn->step(cmd, flat_contacts(), 1e-6);
+        return dyn->wheel_slip_angle();
+    };
+
+    const auto attached_zero = slip_for(0.0, true);
+    const auto plain_zero = slip_for(0.0, false);
+    for (double steer : {0.06, -0.06}) {
+        const auto attached = slip_for(steer, true);
+        const auto plain = slip_for(steer, false);
+        const double kinematic_l =
+            (attached[vdsim::WHEEL_FL] - attached_zero[vdsim::WHEEL_FL])
+            - (plain[vdsim::WHEEL_FL] - plain_zero[vdsim::WHEEL_FL]);
+        const double kinematic_r =
+            (attached[vdsim::WHEEL_FR] - attached_zero[vdsim::WHEEL_FR])
+            - (plain[vdsim::WHEEL_FR] - plain_zero[vdsim::WHEEL_FR]);
+        EXPECT_GT(std::abs(kinematic_l), 1e-5);
+        EXPECT_GT(std::abs(kinematic_r), 1e-5);
+        EXPECT_GT(kinematic_l * kinematic_r, 0.0);
+    }
+
+    const auto attached_zero_again = slip_for(0.0, true);
+    EXPECT_EQ(attached_zero[vdsim::WHEEL_FL], attached_zero_again[vdsim::WHEEL_FL]);
+    EXPECT_EQ(attached_zero[vdsim::WHEEL_FR], attached_zero_again[vdsim::WHEEL_FR]);
+}
+
 TEST(FourteenDOF, StaticSuspensionPopulatedAtRest) {
     vdsim::VehicleParams vp; vp.aero_drag_coeff = 0.0;
     vdsim::TireParams tp;    vdsim::SolverParams sp;

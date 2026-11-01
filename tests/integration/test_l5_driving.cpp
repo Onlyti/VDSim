@@ -290,6 +290,41 @@ TEST(L5StrutDae, AttachReportsEnabled) {
     EXPECT_TRUE(vdsim::free_3d_mb_dynamics_enabled(*h.dyn, 1));
 }
 
+TEST(L5StrutDae, MirroredRackSteersFrontWheelsInSameDirection) {
+    auto toe_for = [](double steer) {
+        L5StrutSetup h;
+        attach_corner_dae(*h.dyn);
+        h.reset_level(0.0);
+        vdsim::CmdL4 cmd;
+        cmd.steer_angle_wheel = steer;
+        h.run(cmd, 1, 0.001);
+        return vdsim::free_3d_wheel_toe(*h.dyn);
+    };
+
+    const auto zero = toe_for(0.0);
+    const auto pos = toe_for(0.06);
+    const auto neg = toe_for(-0.06);
+    const double pos_l = pos[vdsim::WHEEL_FL] - zero[vdsim::WHEEL_FL];
+    const double pos_r = pos[vdsim::WHEEL_FR] - zero[vdsim::WHEEL_FR];
+    const double neg_l = neg[vdsim::WHEEL_FL] - zero[vdsim::WHEEL_FL];
+    const double neg_r = neg[vdsim::WHEEL_FR] - zero[vdsim::WHEEL_FR];
+
+    EXPECT_GT(pos_l, 1e-5);
+    EXPECT_GT(pos_r, 1e-5);
+    EXPECT_LT(neg_l, -1e-5);
+    EXPECT_LT(neg_r, -1e-5);
+    EXPECT_EQ(zero[vdsim::WHEEL_FL], zero[vdsim::WHEEL_FR]);
+    const auto camber = [&] {
+        L5StrutSetup h;
+        attach_corner_dae(*h.dyn);
+        h.reset_level(0.0);
+        vdsim::CmdL4 cmd;
+        h.run(cmd, 1, 0.001);
+        return vdsim::free_3d_wheel_camber(*h.dyn);
+    }();
+    EXPECT_EQ(camber[vdsim::WHEEL_FL], -camber[vdsim::WHEEL_FR]);
+}
+
 TEST(L5StrutDae, SettleStillHoldsWeight) {
     L5StrutSetup h;
     attach_corner_dae(*h.dyn);

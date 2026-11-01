@@ -1001,16 +1001,18 @@ private:
         const Mat3 R = state_.orientation.toRotationMatrix();
         for (int i = 0; i < NUM_WHEELS; ++i) {
             const bool front = (i == WHEEL_FL || i == WHEEL_FR);
+            const bool right = (i == WHEEL_FR || i == WHEEL_RR);
             mb::IHardJointDaeModel* dae = front ? mb_dae_front_.get() : mb_dae_rear_.get();
             if (!dae) continue;
             mb::PrescribedCornerMotion mot;
             mot.travel_z      = state_.susp_compression[i];
             mot.travel_z_dot  = state_.susp_velocity[i];
             mot.steer_rack_dy = front ? steer_rad * kRackPerRad : 0.0;
+            if (right) mot.steer_rack_dy = -mot.steer_rack_dy;
             mb::WheelLoad wl;
             wl.force_world = R * tire_F_[i];
             const mb::WheelPose wp = dae->step(mb_state_[i], mot, wl, dt);
-            const double s = (i == WHEEL_FR || i == WHEEL_RR) ? -1.0 : 1.0;
+            const double s = right ? -1.0 : 1.0;
             gamma_dae_[i] = s * wp.camber_rad;
             toe_dae_[i]   = s * wp.toe_rad;
             // Real linkage travel geometry at the current vertical travel: the wheel-centre
