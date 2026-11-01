@@ -1166,6 +1166,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#081" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        레벨 문자열의 단일 팩토리 계약 (0.8.1)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3026,6 +3037,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#081" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        레벨 문자열의 단일 팩토리 계약 (0.8.1)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3255,6 +3277,42 @@
 </span></code></pre></div>
 <p>기존 derived class 는 override 없이 빌드 + 기본값, 새 class 만 override 해서
 정확한 값을 반환한다. 이것이 interface 확장의 표준 backward-compat 패턴이다.</p>
+<h3 id="081">레벨 문자열의 단일 팩토리 계약 (0.8.1)<a class="headerlink" href="#081" title="Permanent link">&para;</a></h3>
+<p><code>create_dynamics_for_level(level)</code> 이 모든 C++ 세션 진입점의 레벨 해석을 담당한다.</p>
+<table>
+<thead>
+<tr>
+<th>입력</th>
+<th>생성 동역학</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>K</code>, <code>L0</code></td>
+<td>kinematic bicycle</td>
+</tr>
+<tr>
+<td><code>L1</code></td>
+<td>bicycle</td>
+</tr>
+<tr>
+<td><code>L2</code></td>
+<td>seven-DOF</td>
+</tr>
+<tr>
+<td><code>L3</code>, <code>L4</code></td>
+<td>fourteen-DOF</td>
+</tr>
+<tr>
+<td><code>L5</code></td>
+<td>stunt-DOF</td>
+</tr>
+</tbody>
+</table>
+<p>허용 집합 밖 문자열은 허용값 목록을 담은 예외로 종료하며 L2로 폴백하지 않는다.
+Python은 <code>Level.L5_Stunt</code>, <code>create_stunt_dof()</code>, <code>VDSimPlant(level="L5")</code>,
+<code>vdsim_lab.Sim(level="L5")</code>를 노출한다. 0.8.1에서 L5 선형화와 벡터 세션은
+각각 구분된 <code>ValueError</code>로 명시 거부한다.</p>
 <hr />
 <h2 id="123-type-safe-variant-dispatch">12.3 Type-safe variant dispatch<a class="headerlink" href="#123-type-safe-variant-dispatch" title="Permanent link">&para;</a></h2>
 <p>control 입력 8 tier 를 <code>variant&lt;CmdL1,...,CmdL8&gt;</code> 로 묶고 <code>visit</code> +
@@ -3424,8 +3482,10 @@ class 만 override. 기존 코드 수정 없이 interface 확장 가능.
 </span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">IVehicleDynamics</span><span class="o">&gt;</span><span class="w"> </span><span class="n">create_bicycle</span><span class="p">();</span>
 </span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">IVehicleDynamics</span><span class="o">&gt;</span><span class="w"> </span><span class="n">create_seven_dof</span><span class="p">();</span>
 </span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">IVehicleDynamics</span><span class="o">&gt;</span><span class="w"> </span><span class="n">create_fourteen_dof</span><span class="p">();</span>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="c1">// cpp:</span>
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="k">namespace</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">BicycleDynamics</span><span class="w"> </span><span class="k">final</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">IVehicleDynamics</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="p">};</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">IVehicleDynamics</span><span class="o">&gt;</span><span class="w"> </span><span class="n">create_stunt_dof</span><span class="p">();</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">IVehicleDynamics</span><span class="o">&gt;</span><span class="w"> </span><span class="n">create_dynamics_for_level</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">string_view</span><span class="w"> </span><span class="n">level</span><span class="p">);</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="c1">// cpp:</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="k">namespace</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">BicycleDynamics</span><span class="w"> </span><span class="k">final</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">IVehicleDynamics</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="p">};</span><span class="w"> </span><span class="p">}</span>
 </span></code></pre></div>
 확장 예: <code>steering_rack_torque()</code> default 0 (chapter 05 §5.7) → Ld1 은
 override 없이, Ld2/Ld3 만 override.</p>

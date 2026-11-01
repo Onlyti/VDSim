@@ -995,6 +995,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="20.3 Equations of motion (Newton–Euler, body frame)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#drive-and-brake-torque-reaction-081" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Drive and brake torque reaction (0.8.1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2962,6 +2979,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="20.3 Equations of motion (Newton–Euler, body frame)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#drive-and-brake-torque-reaction-081" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Drive and brake torque reaction (0.8.1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -3186,15 +3220,49 @@ differentiating <span class="arithmatex">\(\mathbf{v}^{w} = \mathbf{R}\mathbf{v}
 \qquad
 \boldsymbol{\tau} = \sum_i \mathbf{r}_i\times\mathbf{F}_i^{b}
                     \;+\; \Big(\textstyle\sum_i M_{z,i}\Big)\hat{\mathbf{z}}_b
-                    \;+\; \sum_j \mathbf{r}_{a,j}\times\mathbf{F}_{a,j}^{b} ,
+                    \;+\; \sum_j \mathbf{r}_{a,j}\times\mathbf{F}_{a,j}^{b}
+                    \;+\; \boldsymbol{\tau}_{\mathrm{reaction}} ,
 \]</div>
 <p>with <span class="arithmatex">\(\mathbf{F}_i^{b} = \mathbf{R}^{\!\top}\mathbf{F}_i^{w}\)</span> the body-frame wheel
 force, <span class="arithmatex">\(M_{z,i}\)</span> the tire aligning moment about the body yaw axis, and
 <span class="arithmatex">\(\mathbf{r}_{a,j} = (x_j + a,\; y_j,\; z_j - h_{cg})\)</span> the arm from the CG (<span class="arithmatex">\(a\)</span> = CG
 behind the front axle) to aero piece <span class="arithmatex">\(j\)</span>. A piece at the CG has zero arm. See
-<a href="../26_aero_elements/">Chapter 26</a> for the inputs and §26.5 for the L5 limit on
-longitudinal load transfer (tyre longitudinal force at the wheel centre). Position and
-attitude integrate as</p>
+<a href="../26_aero_elements/">Chapter 26</a> for the inputs and §26.5 for the aero contract.</p>
+<h3 id="drive-and-brake-torque-reaction-081">Drive and brake torque reaction (0.8.1)<a class="headerlink" href="#drive-and-brake-torque-reaction-081" title="Permanent link">&para;</a></h3>
+<p>The wheel torque has an equal-and-opposite reaction about the steered wheel-spin axis:</p>
+<div class="arithmatex">\[
+\boldsymbol{\tau}_{\mathrm{reaction},i} = -(T_{d,i}+T_{b,i})\,\hat{\mathbf{s}}_i.
+\]</div>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Default</th>
+<th>Accepted values</th>
+<th>Effective target in 0.8.1</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>drive_reaction_front</code>, <code>drive_reaction_rear</code></td>
+<td><code>sprung</code></td>
+<td><code>sprung</code>, <code>unsprung</code></td>
+<td>chassis</td>
+</tr>
+<tr>
+<td><code>brake_reaction_front</code>, <code>brake_reaction_rear</code></td>
+<td><code>unsprung</code></td>
+<td><code>sprung</code>, <code>unsprung</code></td>
+<td>chassis; explicit <code>unsprung</code> warns once</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>unsprung</code> request is reported as <code>equivalent</code> until the linkage route is validated.
+Penalty and spatial-strut paths therefore return the reaction through the chassis couple.
+Hard-joint DAE suspension also falls back to the same sprung result and warns once per
+process when <code>unsprung</code> is explicit. LuGre wheel-spin dynamics use the clamped tire
+longitudinal force for the tire reaction torque.</p>
+<p>Position and attitude integrate as</p>
 <div class="arithmatex">\[
 \dot{\mathbf{p}} = \mathbf{R}\,\mathbf{v}, \qquad
 \mathbf{q}_{n+1} = \big(\mathbf{q}_n \otimes \delta\mathbf{q}(\boldsymbol{\omega}\,h)\big)
@@ -3289,6 +3357,11 @@ v0.5 terrain note.</p>
   test_l5_driving.cpp</code>) are green. There is <strong>no</strong> quantitative cross-validation of
   loop contact loads — the stiffened/capped contact and radial penalty are
   robust-tuned, not measured (see <a href="../../VALIDATION/"><code>VALIDATION.md</code></a> "Stunt").</li>
+<li><strong>Longitudinal reaction limits (0.8.1).</strong> Penalty and spatial-strut paths return
+  drive/brake torque reactions through the chassis. An explicit <code>unsprung</code> target on a
+  hard-joint DAE path is treated as <code>sprung</code> with a once-per-process warning. Spatial-strut
+  axle load transfer remains about 1–3% above the analytical target and is tracked as an
+  informational known failure pending the 0.8.2 <code>cg_height</code> correction and revalidation.</li>
 <li><strong>Not yet (→ v0.5):</strong> general curved/banked track (<code>CurvedGround</code>, banked oval)
   and a GUI panel to <em>author</em> stunt scenes; today the GUI renders loaded ramp/loop
   scenes only. See <a href="../../design/V0.5_TERRAIN_L5/"><code>design/V0.5_TERRAIN_L5.md</code></a>.</li>
