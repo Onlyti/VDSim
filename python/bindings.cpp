@@ -409,6 +409,7 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("steering_ratio",       &vdsim::VehicleParams::steering_ratio)
         .def_readwrite("max_steer_angle_wheel",&vdsim::VehicleParams::max_steer_angle_wheel)
         .def_readwrite("ackerman_percent",     &vdsim::VehicleParams::ackerman_percent)
+        .def_readwrite("steer_input",          &vdsim::VehicleParams::steer_input)
         .def_readwrite("steering_dynamic",     &vdsim::VehicleParams::steering_dynamic)
         .def_readwrite("rack_mass",            &vdsim::VehicleParams::rack_mass)
         .def_readwrite("rack_damping",         &vdsim::VehicleParams::rack_damping)

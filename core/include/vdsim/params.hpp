@@ -101,6 +101,9 @@ struct VehicleParams {
     double steering_ratio        {15.0};                               // wheel/driver
     double max_steer_angle_wheel {0.5};                                // [rad]
     double ackerman_percent      {0.0};                                // 0 = parallel, 100 = perfect Ackerman
+    // Empty or "roadwheel" = L5 uses the wheel-angle command (bit-identical).
+    // "rack_travel" = L5 hardpoint path reads SteeringOutput.rack_travel as +y [m].
+    std::string steer_input;
     // Dynamic-steering Rack EOM params (used only when ISteeringSystem outputs mode=Dynamic).
     bool   steering_dynamic {false}; // true → DynamicSteering (Rack EOM, accepts torque/rate)
     double rack_mass     {30.0};    // [kg] effective rack + reflected column/motor inertia
@@ -162,6 +165,18 @@ const char* torque_reaction_name(VehicleParams::TorqueReaction r);
  */
 VehicleParams::TorqueReaction resolved_torque_reaction(const VehicleParams& vp,
                                                        bool drive, bool front);
+
+/** True when steer_input is the L5 rack-travel mode. Empty = roadwheel. */
+bool steer_input_is_rack(const VehicleParams& vp);
+
+/** Reject unknown steer_input strings. Empty, roadwheel, and rack_travel pass. */
+void validate_steer_input(const VehicleParams& vp);
+
+/** L5: validate_steer_input plus Dynamic+rack rejection. */
+void validate_l5_steer_input(const VehicleParams& vp);
+
+/** L2-L4: one warning per process if rack_travel was requested. */
+void warn_if_steer_input_unused(const VehicleParams& vp);
 
 // Axle roll stiffness [N m/rad] derived from the corner springs plus the ARB.
 // Two springs at half-track produce K = (k_left + k_right) * (track/2)^2; the

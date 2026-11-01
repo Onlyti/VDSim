@@ -93,6 +93,25 @@ one level-id factory, L5 from Python). Not released yet.
   `carla_integration/python/vdsim_carla_bridge.py`,
   `docs/figures_src/plot_theory_figures.py`.
 
+## [0.8.2]
+
+### Added
+- `VehicleParams.steer_input` (`roadwheel` | `rack_travel`). Empty is `roadwheel`.
+- L5 hardpoint path can read `SteeringOutput.rack_travel` as physical +y [m].
+  Rack mode skips `kRackPerRad` and Ackerman; wheel progress comes from DAE toe only.
+
+### `rack_travel` meaning by level
+
+| Level | Channel meaning | Left turn |
+|---|---|---|
+| L2-L4 | Wheel angle times `steering_ratio` (dimensionless) | + |
+| L5 `roadwheel` (default) | Channel is not the L5 steer command | n/a |
+| L5 `rack_travel` | Physical +y displacement [m] | Geometry decides. Rear-of-axle rack: left turn is -y |
+
+Product toe is `atan2(spin_x, spin_y)` with right-side `s=-1`.
+On the T5 fixture (tie-rod x behind the wheel centre) product-toe + is ISO 8855 steer -.
+VDSim does not flip rear-axle rack sign in code; that correction belongs to the builder.
+
 ## [0.8.0] - 2026-10-29
 
 ### Changed — BREAKING: the four lift keys now act on L5

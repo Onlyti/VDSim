@@ -158,8 +158,9 @@ UnitySteering::UnitySteering(double /*deadtime_s*/) {}
 SteeringOutput UnitySteering::apply(const SubsystemContext& ctx) {
     SteeringOutput out;
     out.roadwheel_angle = ctx.cmd.handwheel_angle;   // already realized by ActuatorModel
-    // rack_travel left at 0: UnitySteering is a kinematic simplification that
-    // maps handwheel_angle directly to wheel angle without rack geometry.
+    // CmdL4.steer_angle_wheel is wheel angle on the roadwheel path and physical
+    // +y rack travel [m] on the L5 rack_travel path.
+    out.rack_travel = ctx.cmd.handwheel_angle;
     return out;
 }
 

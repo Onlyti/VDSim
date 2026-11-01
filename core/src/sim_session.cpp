@@ -438,6 +438,14 @@ ControlInput with_steer_angle(const ControlInput& u, double steer) {
 void SimSession::tick(double dt) {
     if (!(dt > 0.0)) return;
 
+    // T3: rack_travel on L5 requires front hardpoints. Must throw here
+    // (not in IVehicleDynamics::step, which is noexcept).
+    if (steer_input_is_rack(vp_) && dyn_->level() == IVehicleDynamics::Level::L5_Stunt &&
+        !free_3d_mb_dynamics_enabled(*dyn_, 0)) {
+        throw std::invalid_argument(
+            "steer_input=rack_travel requires front suspension hardpoints on L5");
+    }
+
     ControlInput cmd;
     State s;
     {

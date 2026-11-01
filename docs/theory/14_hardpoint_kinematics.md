@@ -319,3 +319,18 @@ lookup 은 고정 hardpoint 의 사전 sweep. hardpoint 가 runtime 에 변하�
 > `diagnose.py` 출력 예: DW RC 7.5cm/camber −0.094°/mm/wheel-z err <0.1μm,
 > MP strut 19.4°, TA semi-trailing 14°/anti-dive 5.5°, 5-link lengths
 > [0.36,0.36,0.38,0.38,0.35].
+
+
+## 14.16 L5 `steer_input` and rack travel
+
+`VehicleParams.steer_input` selects how L5 hardpoint corners read the steer command.
+Empty and `roadwheel` keep the 0.8.1 path: wheel angle times `kRackPerRad`.
+`rack_travel` copies `SteeringOutput.rack_travel` as physical +y [m] into `steer_rack_dy`
+(front only). The S2 right-side invert stays. `kRackPerRad` and Ackerman are not used.
+`d_wheel` is `{0,0,0,0}`; the progress angle is DAE product toe (`toe_dae_`).
+
+Product toe = `atan2(spin_x, spin_y)` with right-side `s=-1`
+(`multibody_hard_dae.cpp`). On this product, left-wheel product-toe + is ISO 8855 steer -.
+Rear-of-axle rack sign correction is the builder's job, not a VDSim code flip.
+Hardpoints missing, Dynamic steering, or a bad key raise `ValueError`.
+L2-L4 ignore the key (one process warning if it is set).

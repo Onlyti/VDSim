@@ -118,6 +118,8 @@ public:
                       vp.mass, vp.wheelbase, vp.track_front,
                       static_cast<int>(vp.differential), vp.ackerman_percent,
                       vp.brake_ebd_enabled);
+        validate_steer_input(vp);
+        warn_if_steer_input_unused(vp);
     }
 
     // R8: the per-wheel tire relaxation (belt) transients are the model state
