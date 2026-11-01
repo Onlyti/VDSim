@@ -147,8 +147,10 @@ jobs:
       - name: Configure (validation preset)
         run: cmake --preset validation -Dpybind11_DIR="$(python3 -m pybind11 --cmakedir)"
 
+      # Bound validation compilation memory so hosted runners do not terminate
+      # concurrent compiler processes before the authoritative test run.
       - name: Build (validation preset)
-        run: cmake --build --preset validation
+        run: cmake --build --preset validation --parallel 2
 
       - name: List registered tests
         run: ctest --preset validation -N | tee ctest-list.txt
