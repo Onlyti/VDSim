@@ -83,13 +83,12 @@ version and the new numbers have to land in the same commit.
 
 <!-- VALIDATION-CURRENCY BEGIN -->
 ```text
-tests:    PENDING
+tests:    587/587
 config:   cmake --preset validation && cmake --build --preset validation && ctest --preset validation
 presets:  CMakePresets.json@c98fe5e64c842faaeb06598af46476f3507c18a6
 toolchain: cmake 3.31.10
-commit:   PENDING
-date:     2026-11-01
-pending:  rack-mirror regression tests changed the validation registration surface
+commit:   69d5da46f6aac8e4a937747c91d42e9caf145833
+date:     2026-11-02
 excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: closedloop_wallclock_timing (label timing, excluded by the validation test preset: wall-clock S6/S7 verdicts depend on host load -- local low-load evidence in the work order 31 PR description)
