@@ -97,6 +97,23 @@ virtual double steering_rack_torque() const { return 0.0; }   // default
 기존 derived class 는 override 없이 빌드 + 기본값, 새 class 만 override 해서
 정확한 값을 반환한다. 이것이 interface 확장의 표준 backward-compat 패턴이다.
 
+### 레벨 문자열의 단일 팩토리 계약 (0.8.1)
+
+`create_dynamics_for_level(level)` 이 모든 C++ 세션 진입점의 레벨 해석을 담당한다.
+
+| 입력 | 생성 동역학 |
+|---|---|
+| `K`, `L0` | kinematic bicycle |
+| `L1` | bicycle |
+| `L2` | seven-DOF |
+| `L3`, `L4` | fourteen-DOF |
+| `L5` | stunt-DOF |
+
+허용 집합 밖 문자열은 허용값 목록을 담은 예외로 종료하며 L2로 폴백하지 않는다.
+Python은 `Level.L5_Stunt`, `create_stunt_dof()`, `VDSimPlant(level="L5")`,
+`vdsim_lab.Sim(level="L5")`를 노출한다. 0.8.1에서 L5 선형화와 벡터 세션은
+각각 구분된 `ValueError`로 명시 거부한다.
+
 ---
 
 ## 12.3 Type-safe variant dispatch
@@ -264,6 +281,8 @@ class 만 override. 기존 코드 수정 없이 interface 확장 가능.
 > std::unique_ptr<IVehicleDynamics> create_bicycle();
 > std::unique_ptr<IVehicleDynamics> create_seven_dof();
 > std::unique_ptr<IVehicleDynamics> create_fourteen_dof();
+> std::unique_ptr<IVehicleDynamics> create_stunt_dof();
+> std::unique_ptr<IVehicleDynamics> create_dynamics_for_level(std::string_view level);
 > // cpp:
 > namespace { class BicycleDynamics final : public IVehicleDynamics { ... }; }
 > ```

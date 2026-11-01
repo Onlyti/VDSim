@@ -32,10 +32,17 @@ Legend: **yes** = modeled, **no** = not modeled, text = modeled with the stated 
     - L5 (free 3D) applies aero as a body wrench: each element at its own point, the
       four-key lift at the front and rear axle (ground height), and four-key drag at the
       CG unless `aero_drag_height` is set ([theory 20](theory/20_ld5_stunt.md) §20.3).
-    - L5 limit: tyre longitudinal forces act at the wheel centre and the drive/brake
-      torque reactions are not returned to the body, so L5 longitudinal load transfer
-      uses $(h_{cg} - R)$ instead of $h_{cg}$. Check aero balance numbers on L1–L3
-      (theory 26 §26.5).
+    - L5 0.8.1 returns equal-and-opposite drive/brake torque reactions through the chassis.
+      The axle keys are `drive_reaction_front`, `drive_reaction_rear`,
+      `brake_reaction_front`, and `brake_reaction_rear`; drive defaults to `sprung` and
+      brake defaults to `unsprung`.
+    - `unsprung` currently resolves to the equivalent chassis route. An explicit
+      `unsprung` target on a hard-joint DAE path warns once per process and produces the
+      bit-identical sprung result. The DAE knuckle route and its steady-speed pitch issue
+      remain 0.8.2 work.
+    - Spatial-strut load transfer uses a whole-system height derived from `cg_height`,
+      which still denotes sprung-mass height. Its axle transfer is about 1–3% above the
+      analytical target; the `cg_height` meaning and R2 revalidation remain 0.8.2 work.
 
 !!! note "Ld4 is not a separate plant without hardpoints"
     Selecting level `L4` without attaching suspension hardpoints is rejected at session

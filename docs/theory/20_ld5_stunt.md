@@ -118,16 +118,36 @@ $$
 \qquad
 \boldsymbol{\tau} = \sum_i \mathbf{r}_i\times\mathbf{F}_i^{b}
                     \;+\; \Big(\textstyle\sum_i M_{z,i}\Big)\hat{\mathbf{z}}_b
-                    \;+\; \sum_j \mathbf{r}_{a,j}\times\mathbf{F}_{a,j}^{b} ,
+                    \;+\; \sum_j \mathbf{r}_{a,j}\times\mathbf{F}_{a,j}^{b}
+                    \;+\; \boldsymbol{\tau}_{\mathrm{reaction}} ,
 $$
 
 with $\mathbf{F}_i^{b} = \mathbf{R}^{\!\top}\mathbf{F}_i^{w}$ the body-frame wheel
 force, $M_{z,i}$ the tire aligning moment about the body yaw axis, and
 $\mathbf{r}_{a,j} = (x_j + a,\; y_j,\; z_j - h_{cg})$ the arm from the CG ($a$ = CG
 behind the front axle) to aero piece $j$. A piece at the CG has zero arm. See
-[Chapter 26](26_aero_elements.md) for the inputs and §26.5 for the L5 limit on
-longitudinal load transfer (tyre longitudinal force at the wheel centre). Position and
-attitude integrate as
+[Chapter 26](26_aero_elements.md) for the inputs and §26.5 for the aero contract.
+
+### Drive and brake torque reaction (0.8.1)
+
+The wheel torque has an equal-and-opposite reaction about the steered wheel-spin axis:
+
+$$
+\boldsymbol{\tau}_{\mathrm{reaction},i} = -(T_{d,i}+T_{b,i})\,\hat{\mathbf{s}}_i.
+$$
+
+| Parameter | Default | Accepted values | Effective target in 0.8.1 |
+|---|---|---|---|
+| `drive_reaction_front`, `drive_reaction_rear` | `sprung` | `sprung`, `unsprung` | chassis |
+| `brake_reaction_front`, `brake_reaction_rear` | `unsprung` | `sprung`, `unsprung` | chassis; explicit `unsprung` warns once |
+
+The `unsprung` request is reported as `equivalent` until the linkage route is validated.
+Penalty and spatial-strut paths therefore return the reaction through the chassis couple.
+Hard-joint DAE suspension also falls back to the same sprung result and warns once per
+process when `unsprung` is explicit. LuGre wheel-spin dynamics use the clamped tire
+longitudinal force for the tire reaction torque.
+
+Position and attitude integrate as
 
 $$
 \dot{\mathbf{p}} = \mathbf{R}\,\mathbf{v}, \qquad
@@ -245,6 +265,11 @@ v0.5 terrain note.
   test_l5_driving.cpp`) are green. There is **no** quantitative cross-validation of
   loop contact loads — the stiffened/capped contact and radial penalty are
   robust-tuned, not measured (see [`VALIDATION.md`](../VALIDATION.md) "Stunt").
+- **Longitudinal reaction limits (0.8.1).** Penalty and spatial-strut paths return
+  drive/brake torque reactions through the chassis. An explicit `unsprung` target on a
+  hard-joint DAE path is treated as `sprung` with a once-per-process warning. Spatial-strut
+  axle load transfer remains about 1–3% above the analytical target and is tracked as an
+  informational known failure pending the 0.8.2 `cg_height` correction and revalidation.
 - **Not yet (→ v0.5):** general curved/banked track (`CurvedGround`, banked oval)
   and a GUI panel to *author* stunt scenes; today the GUI renders loaded ramp/loop
   scenes only. See [`design/V0.5_TERRAIN_L5.md`](../design/V0.5_TERRAIN_L5.md).
