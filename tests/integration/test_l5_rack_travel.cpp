@@ -122,6 +122,105 @@ std::array<double, NUM_WHEELS> toe_deg(IVehicleDynamics& dyn) {
     return d;
 }
 
+
+/** Synchronized loaded runs at the first common finite-time quasi-static window.
+ * Thresholds and the eight-second deadline are fixed by the work order.
+ * This does not assert permanent equilibrium after that window.
+ */
+struct SettledRackRuns {
+    int tick = 0;
+    std::array<std::vector<double>, 3> values;
+    std::array<std::array<double, NUM_WHEELS>, 3> toe;
+};
+
+/** Require every monitored state/load/geometry channel to remain finite. */
+bool monitored_finite(const SimOutput& o,
+                      const std::array<double, NUM_WHEELS>& toe,
+                      const std::array<double, NUM_WHEELS>& camber) {
+    const auto& st = o.state;
+    if (!st.position.allFinite() || !st.orientation.coeffs().allFinite() ||
+        !st.velocity.allFinite() || !st.angular_velocity.allFinite()) return false;
+    for (int i = 0; i < NUM_WHEELS; ++i) {
+        if (!std::isfinite(st.susp_compression[i]) ||
+            !std::isfinite(st.susp_velocity[i]) ||
+            !std::isfinite(st.wheel_spin[i]) ||
+            !st.unsprung_pos[i].allFinite() || !st.unsprung_vel[i].allFinite() ||
+            !std::isfinite(toe[i]) || !std::isfinite(camber[i]) ||
+            !std::isfinite(o.Fz[i]) || !o.tire_forces[i].allFinite()) return false;
+    }
+    return true;
+}
+
+/** Advance zero/positive/negative rack together; never search past the first window. */
+SettledRackRuns first_common_settlement(double ackerman) {
+    const std::array<double, 3> racks{0.0, kRackM, -kRackM};
+    std::array<std::unique_ptr<SimSession>, 3> sessions;
+    std::array<std::array<double, NUM_WHEELS>, 3> previous_toe{}, previous_fz{};
+    for (int r = 0; r < 3; ++r) {
+        auto vp = sedan();
+        vp.steer_input = "rack_travel";
+        vp.ackerman_percent = ackerman;
+        sessions[r] = make_l5(vp, true);
+        inject_rack(*sessions[r], 0.0);
+        previous_toe[r] = toe_deg(sessions[r]->dynamics());
+        previous_fz[r] = sessions[r]->output().Fz;
+    }
+    int common_ticks = 0;
+    SettledRackRuns result;
+    for (int k = 1; k <= 8000; ++k) {
+        bool common_stable = k > 200;
+        for (int r = 0; r < 3; ++r) {
+            if (k == 201) inject_rack(*sessions[r], racks[r]);
+            sessions[r]->set_input(CmdL4{});
+            sessions[r]->tick(kDt);
+            const auto o = sessions[r]->output();
+            const auto toe = toe_deg(sessions[r]->dynamics());
+            const auto camber = free_3d_wheel_camber(sessions[r]->dynamics());
+            if (!monitored_finite(o, toe, camber))
+                throw std::runtime_error("non-finite loaded rack run");
+            bool stable = o.state.velocity.norm() <= 0.001 &&
+                          o.state.angular_velocity.norm() <= 0.001;
+            for (int i = 0; i < NUM_WHEELS; ++i) {
+                if (!(o.Fz[i] > 0.0))
+                    throw std::runtime_error("non-positive loaded rack wheel force");
+                stable = stable && std::abs(o.state.susp_velocity[i]) <= 0.001 &&
+                    std::abs(toe[i] - previous_toe[r][i]) / kDt <= 0.01 &&
+                    std::abs(o.Fz[i] - previous_fz[r][i]) / kDt <= 1.0;
+            }
+            common_stable = common_stable && stable;
+            previous_toe[r] = toe;
+            previous_fz[r] = o.Fz;
+            result.toe[r] = toe;
+        }
+        common_ticks = common_stable ? common_ticks + 1 : 0;
+        if (common_ticks >= 500) {
+            result.tick = k;
+            for (int r = 0; r < 3; ++r) {
+                result.values[r] = dump(*sessions[r]);
+                for (double x : result.toe[r]) result.values[r].push_back(x);
+            }
+            std::printf("first_common_settlement t=%.3f s held=%d dt=%.3f ack=%.0f\n",
+                        k * kDt, common_ticks, kDt, ackerman);
+            return result;
+        }
+    }
+    throw std::runtime_error("no common 0.5 s settlement within 8 s");
+}
+
+/** Compare same-time differences with the original locked table and tolerances. */
+bool locked_geometry_matches(const SettledRackRuns& result) {
+    bool matches = true;
+    for (int sign = 0; sign < 2; ++sign) {
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            const double delta = result.toe[sign + 1][i] - result.toe[0][i];
+            const double expected = kT5[sign][i];
+            const double band = i < 2 ? std::abs(expected) * kTol : 1e-6;
+            matches = matches && std::abs(delta - expected) <= band;
+        }
+    }
+    return matches;
+}
+
 void set_disable_env(bool on) {
 #ifdef _WIN32
     _putenv_s("VDSIM_DISABLE_L5_RACK_TRAVEL", on ? "1" : "");
@@ -177,101 +276,45 @@ TEST(L5RackTravel, T7_BadKeyThrows) {
 }
 
 TEST(L5RackTravel, T5T6T8_LockedTableAndSameSign) {
-    VehicleParams vp = sedan();
-    vp.steer_input = "rack_travel";
-    auto s0 = make_l5(vp, true);
-    inject_rack(*s0, 0.0);
-    tick_n(*s0, CmdL4{}, 300);
-    const auto base = toe_deg(s0->dynamics());
-
-    auto run_rack = [&](double rack, double ack) {
-        VehicleParams v = sedan();
-        v.steer_input = "rack_travel";
-        v.ackerman_percent = ack;
-        auto s = make_l5(v, true);
-        tick_n(*s, CmdL4{}, 200);
-        CmdL4 u;
-        inject_rack(*s, rack);
-        tick_n(*s, u, 100);
-        auto t = toe_deg(s->dynamics());
-        for (int i = 0; i < NUM_WHEELS; ++i) t[i] -= base[i];
-        return t;
-    };
-
-    const auto plus = run_rack(+kRackM, 0.0);
-    const auto minus = run_rack(-kRackM, 0.0);
-    const auto plus_ack = run_rack(+kRackM, 100.0);
-
-    std::printf("T5 +22.5 dtoe deg FL=%.6f FR=%.6f RL=%.6f RR=%.6f\n",
-                plus[0], plus[1], plus[2], plus[3]);
-    std::printf("T5 -22.5 dtoe deg FL=%.6f FR=%.6f RL=%.6f RR=%.6f\n",
-                minus[0], minus[1], minus[2], minus[3]);
-
-    for (int i = 0; i < 4; ++i) {
-        const double exp_p = kT5[0][i];
-        const double exp_m = kT5[1][i];
-        const double band_p = std::max(1e-6, std::abs(exp_p) * kTol);
-        const double band_m = std::max(1e-6, std::abs(exp_m) * kTol);
-        EXPECT_NEAR(plus[i], exp_p, band_p) << "T5 + wheel " << i;
-        EXPECT_NEAR(minus[i], exp_m, band_m) << "T5 - wheel " << i;
-        EXPECT_NEAR(plus_ack[i], plus[i], 1e-12) << "T8 ackerman unused wheel " << i;
-    }
-    EXPECT_GT(plus[0], 0.0);
-    EXPECT_GT(plus[1], 0.0);
-}
-
-/** Ackerman isolation independently of the pending static-geometry acceptance. */
-TEST(L5RackTravel, T8_AckermanDoesNotChangeRackOutput) {
-    for (double rack : {-kRackM, kRackM}) {
-        std::array<std::vector<double>, 2> values;
-        for (int j = 0; j < 2; ++j) {
-            auto vp = sedan(); vp.steer_input = "rack_travel";
-            vp.ackerman_percent = j ? 100.0 : 0.0;
-            auto session = make_l5(vp, true);
-            inject_rack(*session, 0.0);
-            tick_n(*session, CmdL4{}, 200);
-            inject_rack(*session, rack);
-            tick_n(*session, CmdL4{}, 100);
-            values[j] = dump(*session);
-            for (double x : free_3d_wheel_toe(session->dynamics())) values[j].push_back(x);
+    const auto settled = first_common_settlement(0.0);
+    for (int sign = 0; sign < 2; ++sign) {
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            const double delta = settled.toe[sign + 1][i] - settled.toe[0][i];
+            const double expected = kT5[sign][i];
+            const double band = i < 2 ? std::abs(expected) * kTol : 1e-6;
+            std::printf("T5 sign=%d wheel=%d delta=%.12f expected=%.6f band=%.9f\n",
+                        sign, i, delta, expected, band);
+            EXPECT_NEAR(delta, expected, band) << "T5 sign/wheel " << sign << '/' << i;
+            if (i < 2) {
+                EXPECT_GT(delta * expected, 0.0) << "T6 both input signs";
+            }
         }
-        ASSERT_EQ(values[0].size(), values[1].size());
-        EXPECT_EQ(0, std::memcmp(values[0].data(), values[1].data(), values[0].size()*sizeof(double)));
     }
 }
 
+/** Independent both-sign Ackerman byte comparison at common settled observations. */
+TEST(L5RackTravel, T8_AckermanDoesNotChangeRackOutput) {
+    const auto no_ackerman = first_common_settlement(0.0);
+    const auto full_ackerman = first_common_settlement(100.0);
+    ASSERT_EQ(no_ackerman.tick, full_ackerman.tick);
+    for (int r = 0; r < 3; ++r) {
+        const auto& a = no_ackerman.values[r];
+        const auto& b = full_ackerman.values[r];
+        ASSERT_EQ(a.size(), b.size());
+        EXPECT_EQ(0, std::memcmp(a.data(), b.data(), a.size() * sizeof(double)))
+            << "T8 zero/positive/negative run " << r;
+    }
+}
+
+/** The removed direct path must miss the same formal settled table; restore must pass. */
 TEST(L5RackTravel, T9_DisableEnvFailsT5ThenRestores) {
-    VehicleParams vp = sedan();
-    vp.steer_input = "rack_travel";
-
-    auto s0 = make_l5(vp, true);
-    inject_rack(*s0, 0.0);
-    tick_n(*s0, CmdL4{}, 300);
-    const auto base = toe_deg(s0->dynamics());
-
+    struct RestoreDirectPath {
+        ~RestoreDirectPath() { set_disable_env(false); }
+    } restore;
     set_disable_env(true);
-    {
-        auto s = make_l5(vp, true);
-        tick_n(*s, CmdL4{}, 200);
-        CmdL4 u;
-        inject_rack(*s, +kRackM);
-        tick_n(*s, u, 100);
-        auto t = toe_deg(s->dynamics());
-        const double dfl = t[0] - base[0];
-        const double band = std::abs(kT5[0][0]) * kTol;
-        EXPECT_GT(std::abs(dfl - kT5[0][0]), band) << "T9 disabled path must miss the table";
-        std::printf("T9 disabled dFL=%.6f (table %.6f)\n", dfl, kT5[0][0]);
-    }
+    const auto disabled = first_common_settlement(0.0);
+    EXPECT_FALSE(locked_geometry_matches(disabled));
     set_disable_env(false);
-    {
-        auto s = make_l5(vp, true);
-        tick_n(*s, CmdL4{}, 200);
-        CmdL4 u;
-        inject_rack(*s, +kRackM);
-        tick_n(*s, u, 100);
-        auto t = toe_deg(s->dynamics());
-        const double dfl = t[0] - base[0];
-        const double band = std::max(1e-6, std::abs(kT5[0][0]) * kTol);
-        EXPECT_NEAR(dfl, kT5[0][0], band);
-    }
+    const auto enabled = first_common_settlement(0.0);
+    EXPECT_TRUE(locked_geometry_matches(enabled));
 }
