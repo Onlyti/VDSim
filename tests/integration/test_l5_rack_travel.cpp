@@ -11,6 +11,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -34,6 +35,26 @@ constexpr double kT5[2][4] = {
     /* +22.5 mm */ {+4.546251, +4.554464, 0.0, 0.0},
     /* -22.5 mm */ {-4.554464, -4.546251, 0.0, 0.0},
 };
+
+/** Test-only physical rack source; CmdL4 keeps its wheel-angle contract. */
+class RackOutput final : public ISteeringSystem {
+public:
+    explicit RackOutput(double rack) : rack_(rack) {}
+    SteeringOutput apply(const SubsystemContext&) override {
+        SteeringOutput out;
+        out.roadwheel_angle = 0.0;
+        out.rack_travel = rack_;
+        return out;
+    }
+private:
+    double rack_;
+};
+
+/** Replace only the approved steering module slot with a physical test input. */
+void inject_rack(SimSession& session, double rack) {
+    if (!session.dynamics().set_steering_module(std::make_shared<RackOutput>(rack)))
+        throw std::runtime_error("L5 steering module replacement rejected");
+}
 
 VehicleParams sedan() {
     return VehicleParams::from_yaml(kSrc + "/configs/vehicles/generic_sedan.yaml");
@@ -125,9 +146,7 @@ TEST(L5RackTravel, T1T2_DefaultMatchesRoadwheel) {
     const auto da = dump(*sa);
     const auto db = dump(*sb);
     ASSERT_EQ(da.size(), db.size());
-    for (size_t i = 0; i < da.size(); ++i) {
-        EXPECT_DOUBLE_EQ(da[i], db[i]) << "field " << i;
-    }
+    EXPECT_EQ(0, std::memcmp(da.data(), db.data(), da.size() * sizeof(double)));
 }
 
 TEST(L5RackTravel, T3_RackWithoutHardpointThrows) {
@@ -161,7 +180,8 @@ TEST(L5RackTravel, T5T6T8_LockedTableAndSameSign) {
     VehicleParams vp = sedan();
     vp.steer_input = "rack_travel";
     auto s0 = make_l5(vp, true);
-    tick_n(*s0, CmdL4{}, 200);
+    inject_rack(*s0, 0.0);
+    tick_n(*s0, CmdL4{}, 300);
     const auto base = toe_deg(s0->dynamics());
 
     auto run_rack = [&](double rack, double ack) {
@@ -171,7 +191,7 @@ TEST(L5RackTravel, T5T6T8_LockedTableAndSameSign) {
         auto s = make_l5(v, true);
         tick_n(*s, CmdL4{}, 200);
         CmdL4 u;
-        u.steer_angle_wheel = rack;
+        inject_rack(*s, rack);
         tick_n(*s, u, 100);
         auto t = toe_deg(s->dynamics());
         for (int i = 0; i < NUM_WHEELS; ++i) t[i] -= base[i];
@@ -200,12 +220,33 @@ TEST(L5RackTravel, T5T6T8_LockedTableAndSameSign) {
     EXPECT_GT(plus[1], 0.0);
 }
 
+/** Ackerman isolation independently of the pending static-geometry acceptance. */
+TEST(L5RackTravel, T8_AckermanDoesNotChangeRackOutput) {
+    for (double rack : {-kRackM, kRackM}) {
+        std::array<std::vector<double>, 2> values;
+        for (int j = 0; j < 2; ++j) {
+            auto vp = sedan(); vp.steer_input = "rack_travel";
+            vp.ackerman_percent = j ? 100.0 : 0.0;
+            auto session = make_l5(vp, true);
+            inject_rack(*session, 0.0);
+            tick_n(*session, CmdL4{}, 200);
+            inject_rack(*session, rack);
+            tick_n(*session, CmdL4{}, 100);
+            values[j] = dump(*session);
+            for (double x : free_3d_wheel_toe(session->dynamics())) values[j].push_back(x);
+        }
+        ASSERT_EQ(values[0].size(), values[1].size());
+        EXPECT_EQ(0, std::memcmp(values[0].data(), values[1].data(), values[0].size()*sizeof(double)));
+    }
+}
+
 TEST(L5RackTravel, T9_DisableEnvFailsT5ThenRestores) {
     VehicleParams vp = sedan();
     vp.steer_input = "rack_travel";
 
     auto s0 = make_l5(vp, true);
-    tick_n(*s0, CmdL4{}, 200);
+    inject_rack(*s0, 0.0);
+    tick_n(*s0, CmdL4{}, 300);
     const auto base = toe_deg(s0->dynamics());
 
     set_disable_env(true);
@@ -213,7 +254,7 @@ TEST(L5RackTravel, T9_DisableEnvFailsT5ThenRestores) {
         auto s = make_l5(vp, true);
         tick_n(*s, CmdL4{}, 200);
         CmdL4 u;
-        u.steer_angle_wheel = +kRackM;
+        inject_rack(*s, +kRackM);
         tick_n(*s, u, 100);
         auto t = toe_deg(s->dynamics());
         const double dfl = t[0] - base[0];
@@ -226,7 +267,7 @@ TEST(L5RackTravel, T9_DisableEnvFailsT5ThenRestores) {
         auto s = make_l5(vp, true);
         tick_n(*s, CmdL4{}, 200);
         CmdL4 u;
-        u.steer_angle_wheel = +kRackM;
+        inject_rack(*s, +kRackM);
         tick_n(*s, u, 100);
         auto t = toe_deg(s->dynamics());
         const double dfl = t[0] - base[0];
