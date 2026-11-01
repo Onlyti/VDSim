@@ -377,8 +377,14 @@ public:
         mb::WheelLoad wl {};
         const auto F = inner_->tire_forces_body();
         wl.force_world = 0.5 * (F[wheel_base] + F[wheel_base + 1]);
-        const auto mot = axle_prescribed_motion(wheel_base, steer_rad);
-        const auto wp = dae->step(*st, mot, wl, 0.0);
+        const auto mot_left = axle_prescribed_motion(wheel_base, steer_rad);
+        auto mot_right = mot_left;
+        mot_right.steer_rack_dy = -mot_left.steer_rack_dy;
+        auto st_left = *st;
+        auto st_right = *st;
+        const auto wp_left = dae->step(st_left, mot_left, wl, 0.0);
+        const auto wp_right = dae->step(st_right, mot_right, wl, 0.0);
+        *st = std::move(st_left);
         double toe_comp = 0.0, camber_comp = 0.0;
         mb::compliance_targets_rad(*topo, wl, toe_comp, camber_comp);
         mb_compliance_toe_rad_[wheel_base == 0 ? 0 : 1] = toe_comp;
@@ -386,6 +392,7 @@ public:
             const int i = wheel_base + j;
             const bool right = (i == WHEEL_FR || i == WHEEL_RR);
             const double s = right ? -1.0 : 1.0;
+            const auto& wp = right ? wp_right : wp_left;
             gamma[i] = s * (wp.camber_rad + camber_comp);
             toe[i]   = s * (wp.toe_rad + toe_comp);
         }
