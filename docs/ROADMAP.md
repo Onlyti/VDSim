@@ -258,18 +258,16 @@ LuGre (contact bristle, presliding). See [`TIRE_ROADMAP.md`](design/TIRE_ROADMAP
 | [x] Steer deadtime via **ActuatorModel** (not ad-hoc lag) | Shipped 2026-06-20 | `vp.steer_deadtime_s` on direct path |
 | [x] Plant data-access view `plant.vehicle.tire.{model,params}` (vehicle→part→physics, read-only) | Shipped 2026-06-18 | tyre only |
 | [ ] Extend the data-access view to brake/steering/drivetrain/suspension/ARB parts | TODO | needs const module getters on IVehicleDynamics (only set_*_module exists); tyre is the only part with a live model handle today |
-| [ ] **VLA Thesis Plant API P1:** roll angle in obs (`obs["roll"]`, `obs["pitch"]`) | Planned | BETA #1 customer request; already computed in L2–L5 |
+| [x] **VLA Plant API P1:** roll angle in obs (`obs["roll"]`, `obs["pitch"]`) | Shipped on `main` | `VDSimPlant` observation contract |
 | [ ] **VLA Thesis Plant API P1:** split-μ friction map (left/right different grip) | Planned | `create_split_mu_ground` exists in C++; needs Python API surface |
-| [ ] **VLA Thesis Plant API P2:** steering actuator lag option (selectable 1st-order LPF) | Planned | `VehicleParams.steer_deadtime_s` implemented; needs API convenience + docs |
+| [x] **VLA Plant API P2:** steering actuator lag option (selectable 1st-order LPF) | Shipped on `main` | `VehicleParams.steer_deadtime_s`; plant tutorial §7 |
 | [ ] **VLA Thesis Plant API P2:** smooth friction patch transition (tanh vs step μ) | Planned | Reduces numerical jitter at patch boundaries |
 | [x] `tools/import_part_pack.py` stub | Shipped | M5 |
-| [x] **VLA plant beta** (`VDSimPlant`, friction patch, obs contract) | **Thesis-only** | tag `vdsim-thesis-beta`; [`design/VLA_THESIS_PLANT.md`](design/VLA_THESIS_PLANT.md) |
-| [x] VLA P1: `obs["roll"]`, `obs["pitch"]` | **Thesis-only** | L2–L5 qs angles |
-| [x] VLA P1: 1-D + **2-D polygon** friction map | **Thesis-only** | `PolygonFrictionGround` |
-| [x] VLA P2: smooth patch blend (1 m) + steer lag docs | **Thesis-only** | [`VDSIM_PLANT_TUTORIAL.md`](VDSIM_PLANT_TUTORIAL.md) |
-| [x] VLA: **`mu_peak`** per wheel (realized friction circle) | **Thesis-only** | fixes useGT>1 artifact |
+| [x] **VLA plant** (`VDSimPlant`, friction patch, obs contract) | Shipped on `main` and PyPI since v0.7.0 | [`VDSIM_PLANT_TUTORIAL.md`](VDSIM_PLANT_TUTORIAL.md) |
+| [x] VLA P1: 1-D + **2-D polygon** friction map | Shipped on `main` | `PolygonFrictionGround` |
+| [x] VLA P2: smooth patch blend (1 m) | Shipped on `main` | [`VDSIM_PLANT_TUTORIAL.md`](VDSIM_PLANT_TUTORIAL.md) |
+| [x] VLA: **`mu_peak`** per wheel (realized friction circle) | Shipped on `main` | fixes useGT>1 artifact |
 | [ ] VLA **#0 Fx→τ** C++ contract + **`drive_split_front`** (#6) | Planned | spec in `VLA_THESIS_PLANT.md`; thesis uses CmdL1 shim |
-| [ ] VLA plant merge to `main` | Planned | after client delivery; single PR |
 | [ ] C++ in-process catalog resolver | Planned | PARTS_CATALOG §12 |
 | [ ] External catalog zip import (full) | Planned | |
 | [ ] VDS1 protocol v4 (`vehicle_id` field) | Planned | Multi-vehicle I/O |

@@ -7,8 +7,9 @@ default, MF2002 `.tir` with load-dependent coefficients when you supply one — 
 deterministic, sub-real-time — a drop-in upgrade
 from a single-track bicycle plant.
 
-> Status: **BETA** (first release). The API below is stable for use; expect refinements from
-> early feedback. Branch `VDSim-Thesis`.
+> Status: shipped on `main` and published on PyPI since v0.7.0. The API below is the
+> maintained public plant contract; changes are recorded in the
+> [project changelog](https://github.com/Onlyti/VDSim/blob/main/CHANGELOG.md).
 
 ---
 
