@@ -1,0 +1,5 @@
+wheels windows-latest	success
+sdist	success
+wheels ubuntu-latest	success
+verify	success
+publish	skipped

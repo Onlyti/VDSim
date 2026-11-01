@@ -1,0 +1,38 @@
+== wheel: vdsim-0.7.0.dev134-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+Python 3.11.16
+== source tree check
+cwd /work
+argv0-parent-tree []
+== install
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+== installed:
+Name: vdsim
+Version: 0.7.0.dev134
+Summary: VDSim — open-core vehicle-dynamics simulator (validated L1–L3 dynamics, Pacejka MF, hardpoint kinematics, FMI 2.0)
+Home-page: 
+ERROR: Pipe to stdout was broken
+Exception ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>
+BrokenPipeError: [Errno 32] Broken pipe
+== import smoke
+vdsim /usr/local/lib/python3.11/site-packages/vdsim.cpython-311-x86_64-linux-gnu.so
+vdsim_lab /usr/local/lib/python3.11/site-packages/vdsim_lab.py
+vdsim_plant /usr/local/lib/python3.11/site-packages/vdsim_plant.py
+== 06 quickstart (console entry point, cwd=/work)
+1601 steps, t=8.0s | vx 12.2..24.7 | |ay|max 0.00 | |r|max 0.000
+wrote run.csv run.png
+-rw-r--r-- 1 root root 275302 Sep 21 01:06 /work/run.csv
+-rw-r--r-- 1 root root  45041 Sep 21 01:06 /work/run.png
+quickstart csv rows 1602 cols 30
+== 07 demo (script copied outside any source tree)
+recorded /work/demo/demo.vdtrace (peak slip/peak-slip ratio 16.44)
+wrote /work/demo/demo_grip_loss.gif (120 frames, 12.0 fps) + demo_grip_loss_preview.png in 16.04s wall-clock
+total 2432
+drwxr-xr-x 2 root root    4096 Sep 21 01:06 .
+drwxr-xr-x 3 root root    4096 Sep 21 01:06 ..
+-rw-r--r-- 1 root root   39718 Sep 21 01:06 demo.vdtrace
+-rw-r--r-- 1 root root 2352713 Sep 21 01:06 demo_grip_loss.gif
+-rw-r--r-- 1 root root    4310 Sep 21 01:06 demo_grip_loss.py
+-rw-r--r-- 1 root root   75131 Sep 21 01:06 demo_grip_loss_preview.png
+gif bytes 2352713
+trace bytes 39718 members 14
+== C2 LINUX OK

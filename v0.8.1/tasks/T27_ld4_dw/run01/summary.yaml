@@ -1,0 +1,14 @@
+camber_gain_deg_per_mm: -0.09190407606313683
+instant_center_valid: true
+instant_center_yz:
+- 0.16656976744186064
+- 0.05924418604651166
+roll_center_height_m: 0.07507320712487184
+side: left
+tire_contact_yz:
+- 0.79
+- 0.0
+track_change_per_unit_travel: -0.43430010258323243
+wheel_center_yz:
+- 0.79
+- 0.33

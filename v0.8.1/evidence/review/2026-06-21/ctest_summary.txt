@@ -1,0 +1,24 @@
+# Review evidence — 2026-06-21
+
+Tag: `main-review-2026-06-21`
+
+## Lane: validation — PASS
+- `ChronoKcParity`: 1 passed, 0 failed (exit 0)
+- `IsoBaseline`: 1 passed, 0 failed (exit 0)
+
+## Lane: core_session — PASS
+- `PerWheel`: 1 passed, 0 failed (exit 0)
+- `PerAxle`: 1 passed, 0 failed (exit 0)
+- `SimSession`: 1 passed, 0 failed (exit 0)
+- `DragCoast`: 1 passed, 0 failed (exit 0)
+
+## Lane: catalog — PASS
+- `catalog`: 1 passed, 0 failed (exit 0)
+- `assembly`: 1 passed, 0 failed (exit 0)
+- `blueprint`: 1 passed, 0 failed (exit 0)
+- `multi_vehicle`: 1 passed, 0 failed (exit 0)
+
+## Full ctest
+- passed=1 failed=0 exit=0
+
+Regenerate: `python3 tools/review_evidence_bundle.py`
