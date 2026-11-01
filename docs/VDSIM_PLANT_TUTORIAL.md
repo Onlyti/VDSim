@@ -8,7 +8,8 @@ deterministic, sub-real-time — a drop-in upgrade
 from a single-track bicycle plant.
 
 > Status: shipped on `main` and published on PyPI since v0.7.0. The API below is the
-> maintained public plant contract; changes are recorded in [`CHANGELOG.md`](../CHANGELOG.md).
+> maintained public plant contract; changes are recorded in the
+> [project changelog](https://github.com/Onlyti/VDSim/blob/main/CHANGELOG.md).
 
 ---
 
