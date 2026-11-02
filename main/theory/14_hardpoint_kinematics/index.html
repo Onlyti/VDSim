@@ -1353,6 +1353,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#1416-l5-steer_input-and-rack-travel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.16 L5 steer_input and rack travel
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -3162,6 +3173,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#1416-l5-steer_input-and-rack-travel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.16 L5 steer_input and rack travel
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -3575,6 +3597,56 @@ lookup 은 고정 hardpoint 의 사전 sweep. hardpoint 가 runtime 에 변하�
 MP strut 19.4°, TA semi-trailing 14°/anti-dive 5.5°, 5-link lengths
 [0.36,0.36,0.38,0.38,0.35].</p>
 </blockquote>
+<h2 id="1416-l5-steer_input-and-rack-travel">14.16 L5 <code>steer_input</code> and rack travel<a class="headerlink" href="#1416-l5-steer_input-and-rack-travel" title="Permanent link">&para;</a></h2>
+<p><code>VehicleParams.steer_input</code> selects how L5 hardpoint corners read the steer command.
+Empty and <code>roadwheel</code> keep the 0.8.1 path: wheel angle times <code>kRackPerRad</code>.
+<code>rack_travel</code> copies <code>SteeringOutput.rack_travel</code> as physical +y [m] into <code>steer_rack_dy</code>
+(front only). The S2 right-side invert stays. <code>kRackPerRad</code> and Ackerman are not used.
+<code>d_wheel</code> is <code>{0,0,0,0}</code>; the progress angle is DAE product toe (<code>toe_dae_</code>).</p>
+<p>Product toe = <code>atan2(spin_x, spin_y)</code> with right-side <code>s=-1</code>
+(<code>multibody_hard_dae.cpp</code>). On this product, left-wheel product-toe + is ISO 8855 steer -.
+Rear-of-axle rack sign correction is the builder's job, not a VDSim code flip.
+Hardpoints missing, Dynamic steering, or a bad key raise <code>ValueError</code>.
+L2-L4 ignore the key (one process warning if it is set).</p>
+<p>정지 기하 수용 범위는 적재 차량의 첫 공통 유한 시간 준정적 구간임.
+영·양·음 랙을 1 ms 간격으로 동기화하고 첫 0.2 s 영 입력 뒤 랙 적용함.
+최대 8 s 안에 모든 실행이 아래 조건을 동시에 0.5 s 연속 만족한 첫 구간만 판정에 사용함.</p>
+<table>
+<thead>
+<tr>
+<th>감시량</th>
+<th>연속 구간 조건</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>차체 속도 노름</td>
+<td>≤ 0.001 m/s</td>
+</tr>
+<tr>
+<td>차체 각속도 노름</td>
+<td>≤ 0.001 rad/s</td>
+</tr>
+<tr>
+<td>바퀴별 이동률 절댓값</td>
+<td>≤ 0.001 m/s</td>
+</tr>
+<tr>
+<td>제품 토 변화율 절댓값</td>
+<td>≤ 0.01 deg/s</td>
+</tr>
+<tr>
+<td>바퀴별 수직 하중 변화율 절댓값</td>
+<td>≤ 1 N/s</td>
+</tr>
+<tr>
+<td>감시 채널·수직 하중</td>
+<td>전부 유한·모든 바퀴 하중 양수</td>
+</tr>
+</tbody>
+</table>
+<p>동일 시각의 영 랙 대비 제품 토 차분을 고정 기하표와 비교함.
+기한 내 공통 정착 부재는 실패이며 8 s 이후 영구 평형 보장은 범위 밖임.</p>
 
 
 
