@@ -17,6 +17,7 @@
 #include <atomic>
 #include <cmath>
 #include <cstdlib>
+#include <stdexcept>
 #include <limits>
 #include <memory>
 #include <numeric>
@@ -139,6 +140,8 @@ public:
         drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
         brake_      = make_default_brake(vp_, vp_.brake_deadtime_s);
         steering_   = make_default_steering(vp_, vp_.steer_deadtime_s);
+        validate_steer_input(vp_);
+        validate_l5_steer_input(vp_);
         for (int axle = 0; axle < 2; ++axle) {
             const bool front = (axle == 0);
             drive_unsprung_[axle] = resolved_torque_reaction(vp_, true, front)
@@ -560,10 +563,11 @@ private:
             Fz[i] = std::clamp(k_tire_i * pen + c_vert * vn, 0.0, Fz_cap);
         }
         ctx.Fz = Fz;
-        const double d = steering_->apply(ctx).roadwheel_angle;
+        const bool rack_mode = steer_input_is_rack(vp_);
+        const double d = rack_mode ? 0.0 : steering_->apply(ctx).roadwheel_angle;
 
         double d_FL = d, d_FR = d;
-        if (std::abs(d) > 1e-6 && vp_.ackerman_percent > 1e-9) {
+        if (!rack_mode && std::abs(d) > 1e-6 && vp_.ackerman_percent > 1e-9) {
             const double frac = std::clamp(vp_.ackerman_percent / 100.0, 0.0, 1.0);
             const double half = Tw_f * 0.5;
             const double sgn  = (d >= 0.0) ? 1.0 : -1.0;
@@ -997,7 +1001,11 @@ private:
         const DriverCmd dc{cmd.steer_angle_wheel, cmd.throttle, cmd.brake,
                            cmd.gear, cmd.handbrake};
         SubsystemContext ctx{state_, dc, 0.0};
-        const double steer_rad = steering_->apply(ctx).roadwheel_angle;
+        const SteeringOutput so = steering_->apply(ctx);
+        const char* disable = std::getenv("VDSIM_DISABLE_L5_RACK_TRAVEL");
+        const bool rack_disabled = disable && disable[0] == '1';
+        const bool rack = steer_input_is_rack(vp_) && !rack_disabled;
+        const double steer_rad = so.roadwheel_angle;
         const Mat3 R = state_.orientation.toRotationMatrix();
         for (int i = 0; i < NUM_WHEELS; ++i) {
             const bool front = (i == WHEEL_FL || i == WHEEL_FR);
@@ -1007,7 +1015,9 @@ private:
             mb::PrescribedCornerMotion mot;
             mot.travel_z      = state_.susp_compression[i];
             mot.travel_z_dot  = state_.susp_velocity[i];
-            mot.steer_rack_dy = front ? steer_rad * kRackPerRad : 0.0;
+            mot.steer_rack_dy = front
+                ? (rack ? so.rack_travel : steer_rad * kRackPerRad)
+                : 0.0;
             if (right) mot.steer_rack_dy = -mot.steer_rack_dy;
             mb::WheelLoad wl;
             wl.force_world = R * tire_F_[i];

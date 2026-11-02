@@ -240,6 +240,37 @@ VehicleParams::TorqueReaction resolved_torque_reaction(const VehicleParams& vp,
                  : VehicleParams::TorqueReaction::Unsprung;
 }
 
+bool steer_input_is_rack(const VehicleParams& vp) {
+    return vp.steer_input == "rack_travel";
+}
+
+void validate_steer_input(const VehicleParams& vp) {
+    const auto& s = vp.steer_input;
+    if (s.empty() || s == "roadwheel" || s == "rack_travel") return;
+    throw std::invalid_argument(
+        "steer_input: unknown value '" + s +
+        "' (expected roadwheel or rack_travel)");
+}
+
+void validate_l5_steer_input(const VehicleParams& vp) {
+    validate_steer_input(vp);
+    if (steer_input_is_rack(vp) && vp.steering_dynamic) {
+        throw std::invalid_argument(
+            "steer_input=rack_travel is not supported with Dynamic steering");
+    }
+}
+
+void warn_if_steer_input_unused(const VehicleParams& vp) {
+    if (vp.steer_input.empty() || vp.steer_input == "roadwheel") return;
+    validate_steer_input(vp);
+    static std::once_flag once;
+    std::call_once(once, [&] {
+        spdlog::warn(
+            "[vdsim] steer_input='{}' is ignored on L2-L4; L5 hardpoint path only",
+            vp.steer_input);
+    });
+}
+
 // =============================================================================
 // VehicleParams
 // =============================================================================
@@ -299,6 +330,8 @@ VehicleParams VehicleParams::from_yaml(const std::string& path) {
     pull(root, "steering_ratio",        p.steering_ratio);
     pull(root, "max_steer_angle_wheel", p.max_steer_angle_wheel);
     pull(root, "ackerman_percent",      p.ackerman_percent);
+    pull(root, "steer_input",           p.steer_input);
+    validate_steer_input(p);
 
     pull(root, "aero_drag_coeff", p.aero_drag_coeff);
     pull(root, "frontal_area",    p.frontal_area);
@@ -376,6 +409,8 @@ void VehicleParams::to_yaml(const std::string& path) const {
     out << YAML::Key << "steering_ratio"        << YAML::Value << steering_ratio;
     out << YAML::Key << "max_steer_angle_wheel" << YAML::Value << max_steer_angle_wheel;
     out << YAML::Key << "ackerman_percent"      << YAML::Value << ackerman_percent;
+    if (!steer_input.empty())
+        out << YAML::Key << "steer_input" << YAML::Value << steer_input;
 
     if (aero_elements.empty()) {
         out << YAML::Key << "aero_drag_coeff" << YAML::Value << aero_drag_coeff;
