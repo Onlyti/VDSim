@@ -5,6 +5,7 @@
 // - ISO 8608 PSD roughness: not yet implemented.
 
 #include "vdsim/interfaces.hpp"
+#include "spawn_settle_internal.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -18,23 +19,40 @@ namespace vdsim {
 
 namespace {
 
-void wheel_world_positions(const State& vehicle, const VehicleParams& vp,
-                           std::array<Vec3, NUM_WHEELS>& pw) {
+/**
+ * @brief Body-rigid wheel-centre positions in world.
+ * @param vehicle     Body pose (origin = the body CG).
+ * @param vp          Vehicle parameters (a, b, tracks, wheel radius).
+ * @param body_height Height of the body origin above ground at design attitude [m];
+ *                    the hub sits at z = -(body_height - R) in the body frame.
+ * @param pw          Output wheel-centre positions, FL FR RL RR.
+ */
+void rigid_wheel_positions(const State& vehicle, const VehicleParams& vp,
+                           double body_height, std::array<Vec3, NUM_WHEELS>& pw) {
     const double a = vp.cg_to_front, b = vp.cg_to_rear;
     const double tf2 = 0.5 * vp.track_front, tr2 = 0.5 * vp.track_rear;
-    const double hz  = -(vp.cg_height - vp.wheel_radius_nominal);
+    const double hz  = -(body_height - vp.wheel_radius_nominal);
     const Vec3 body_offsets[NUM_WHEELS] = {
         Vec3(a, tf2, hz), Vec3(a, -tf2, hz),
         Vec3(-b, tr2, hz), Vec3(-b, -tr2, hz)};
+    for (int i = 0; i < NUM_WHEELS; ++i)
+        pw[i] = vehicle.position + vehicle.orientation * body_offsets[i];
+}
+
+void wheel_world_positions(const State& vehicle, const VehicleParams& vp,
+                           std::array<Vec3, NUM_WHEELS>& pw) {
+    // Rigid fallback: L1-L4 and the L5 penalty path, whose body origin is the
+    // whole-vehicle CG at cg_height. The L5 strut / DAE path always carries
+    // unsprung_pos (seeded at its h_s mounts by reset(), and during the spawn settle
+    // by detail::settle_spawn_on_ground_at), so it does not use this fallback.
+    rigid_wheel_positions(vehicle, vp, vp.cg_height, pw);
     for (int i = 0; i < NUM_WHEELS; ++i) {
         // L5 free-3D: the wheel centre is a genuine inertial particle (unsprung_pos),
         // which can deviate from the body-rigid mount. Evaluate the contact at the ACTUAL
         // wheel position so penetration is exact on curved surfaces (no planar extrapolation
         // from the rigid hub -> no false contact when the wheel leaves a loop/bank). Other
         // levels leave unsprung_pos zero and use the rigid body-attached position.
-        pw[i] = (vehicle.unsprung_pos[i].squaredNorm() > 1e-12)
-                    ? vehicle.unsprung_pos[i]
-                    : vehicle.position + vehicle.orientation * body_offsets[i];
+        if (vehicle.unsprung_pos[i].squaredNorm() > 1e-12) pw[i] = vehicle.unsprung_pos[i];
     }
 }
 
@@ -689,15 +707,34 @@ std::unique_ptr<IRoughnessProvider> create_iso8608_psd(int grade) {
 // python, RL respawn -- settles a spawn the same way).
 void settle_spawn_on_ground(IContactProvider& ground,
                             const VehicleParams& vp, State& s) {
+    detail::settle_spawn_on_ground_at(ground, vp, s, vp.cg_height);
+}
+
+namespace detail {
+
+void settle_spawn_on_ground_at(IContactProvider& ground, const VehicleParams& vp,
+                               State& s, double body_height) {
     auto max_pen = [&]() {
         ContactArray c{};
-        ground.query(s, vp, c);
+        if (body_height == vp.cg_height) {
+            ground.query(s, vp, c);
+        } else {
+            // Strut / DAE body: query with the wheel centres at its own rigid mounts
+            // (a wheel the caller already placed keeps its unsprung_pos, as in
+            // wheel_world_positions).
+            State q = s;
+            std::array<Vec3, NUM_WHEELS> pw;
+            rigid_wheel_positions(s, vp, body_height, pw);
+            for (int i = 0; i < NUM_WHEELS; ++i)
+                if (q.unsprung_pos[i].squaredNorm() <= 1e-12) q.unsprung_pos[i] = pw[i];
+            ground.query(q, vp, c);
+        }
         double lift = 0.0;
         for (int i = 0; i < NUM_WHEELS; ++i)
             if (c[i].is_valid) lift = std::max(lift, c[i].penetration);
         return lift;
     };
-    if (s.position.z() < 1e-6) s.position.z() = vp.cg_height;
+    if (s.position.z() < 1e-6) s.position.z() = body_height;
     for (int drop = 0; drop < 120; ++drop) {         // fall to the surface
         if (max_pen() > 1e-5) break;
         s.position.z() -= 0.04;
@@ -720,5 +757,7 @@ void settle_spawn_on_ground(IContactProvider& ground,
     }
     s.velocity.z() = 0.0;
 }
+
+}  // namespace detail
 
 }  // namespace vdsim

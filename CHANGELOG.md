@@ -95,7 +95,25 @@ one level-id factory, L5 from Python). Not released yet.
 
 ## [0.8.2]
 
+### Changed — BREAKING: `cg_height` is the whole-vehicle CG on the L5 strut / DAE path
+- On the L5 spatial-strut path (`l5_spatial_suspension`, with or without a corner
+  model) `cg_height` now means the whole-vehicle CG height above ground (sprung +
+  unsprung), as on L1-L4 and the L5 penalty path. The sprung body sits at the derived
+  h_s = (m·h − Σm_u·R)/(m − Σm_u), m_u = max(1, `unsprung_mass`); the wheel mounts,
+  the spawn height and the aero arm origin follow h_s. Every strut-path run changes.
+- The previous meaning (sprung body at `cg_height`) is `cg_height_ref: sprung`.
+- h_s ≤ `wheel_radius_nominal` + 0.01 m raises `std::invalid_argument` /
+  `ValueError` on the strut path (mass and height do not fit together).
+- Aero on the strut path: drag still acts at `cg_height` above ground (four-key
+  path) or at `aero_drag_height`; element points keep their own z. Only the arm
+  origin moved to the body CG.
+
 ### Added
+- `VehicleParams.cg_height_ref` (`vehicle` | `sprung`). Empty is `vehicle`. YAML,
+  Python and `to_yaml` (written only when set). L1-L4 and the L5 penalty path read it
+  and ignore it, with one warning per process when it is set.
+- Optional trace geometry key `body_cg_height_m` (L5 strut / DAE pose origin height);
+  the 3D renderer places the wheels at −(h_s − R) below the pose when it is present.
 - `VehicleParams.steer_input` (`roadwheel` | `rack_travel`). Empty is `roadwheel`.
 - L5 hardpoint path can read `SteeringOutput.rack_travel` as physical +y [m].
   Rack mode skips `kRackPerRad` and Ackerman; wheel progress comes from DAE toe only.

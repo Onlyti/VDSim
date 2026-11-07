@@ -115,7 +115,17 @@ public:
         }
         const double a = vp.cg_to_front, b = vp.cg_to_rear;
         const double tw_f = vp.track_front * 0.5, tw_r = vp.track_rear * 0.5;
-        const double hz  = -(vp.cg_height - R);
+        // cg_height is the whole-vehicle CG (work order 47). The penalty path rides the
+        // whole vehicle as one rigid body, so its origin is that CG. The strut / DAE path
+        // integrates the sprung body alone, whose CG sits at the derived h_s above
+        // ground; cg_height_ref=sprung keeps the 0.8.1 body-at-cg_height meaning.
+        validate_cg_height_ref(vp);
+        const double h_body = sp.l5_spatial_suspension ? l5_strut_body_height(vp)
+                                                       : vp.cg_height;
+        // Aero wrenches are formed about the ground-referenced point at cg_height
+        // (aero.cpp); shifting them to the body origin adds dz x F with dz = h - h_body.
+        aero_origin_dz_ = vp.cg_height - h_body;
+        const double hz  = -(h_body - R);
         r_body_[WHEEL_FL] = Vec3(a,  tw_f, hz);
         r_body_[WHEEL_FR] = Vec3(a, -tw_f, hz);
         r_body_[WHEEL_RL] = Vec3(-b,  tw_r, hz);
@@ -794,11 +804,16 @@ private:
 
         const double vx_fwd = v_body.x();
         if (!aero_uses_element_path(vp_)) {
-            // Four-key path: drag at the CG exactly as before; the lift keys now
-            // also act on L5 (front axle x=0 / rear axle x=-L at the ground).
+            // Four-key path: drag at the whole-vehicle CG height (cg_height above
+            // ground); the lift keys now also act on L5 (front axle x=0 / rear axle
+            // x=-L at the ground). The penalty path's body origin is that CG (zero
+            // arm); the strut / DAE body origin sits at h_s, so the drag gets the arm
+            // (cg_height - h_s).
             const double F_aero = 0.5 * vp_.air_density * vp_.aero_drag_coeff *
                                   vp_.frontal_area * vx_fwd * std::abs(vx_fwd);
             F_total_world -= R * Vec3(F_aero, 0.0, 0.0);
+            if (aero_origin_dz_ != 0.0)
+                tau_body += Vec3(0.0, 0.0, aero_origin_dz_).cross(Vec3(-F_aero, 0.0, 0.0));
             if (vp_.aero_lift_front != 0.0 || vp_.aero_lift_rear != 0.0) {
                 // The drag piece sits at the CG (zero arm), so torque_body is
                 // the lift moment alone; take only the vertical force here.
@@ -811,6 +826,8 @@ private:
             const AeroLoads al = compute_aero_loads(vp_, AeroState{vx_fwd});
             F_total_world += R * al.force_body;
             tau_body += al.torque_body;
+            if (aero_origin_dz_ != 0.0)
+                tau_body += Vec3(0.0, 0.0, aero_origin_dz_).cross(al.force_body);
         }
 
         double F_rr = 0.0;
@@ -1138,6 +1155,7 @@ private:
     std::shared_ptr<IBrakeSystem> brake_;
     std::shared_ptr<ISteeringSystem> steering_;
     std::array<Vec3, NUM_WHEELS> r_body_ {};
+    double aero_origin_dz_ {0.0};   // cg_height - body origin height [m] (aero arm shift)
     std::array<double, NUM_WHEELS> I_wheel_ {};
     Vec3 I_body_inv_ {Vec3::Zero()};
     // Spatial strut (l5_spatial_suspension): per-corner sprung static load (preload so
