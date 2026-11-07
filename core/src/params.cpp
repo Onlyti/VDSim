@@ -260,6 +260,14 @@ void validate_l5_steer_input(const VehicleParams& vp) {
     }
 }
 
+void validate_rack_per_rad(const VehicleParams& vp) {
+    if (!std::isfinite(vp.rack_per_rad) || vp.rack_per_rad <= 0.0) {
+        throw std::invalid_argument(
+            "rack_per_rad must be a finite value > 0 [m/rad], got " +
+            std::to_string(vp.rack_per_rad));
+    }
+}
+
 void warn_if_steer_input_unused(const VehicleParams& vp) {
     if (vp.steer_input.empty() || vp.steer_input == "roadwheel") return;
     validate_steer_input(vp);
@@ -332,6 +340,8 @@ VehicleParams VehicleParams::from_yaml(const std::string& path) {
     pull(root, "ackerman_percent",      p.ackerman_percent);
     pull(root, "steer_input",           p.steer_input);
     validate_steer_input(p);
+    pull(root, "rack_per_rad",          p.rack_per_rad);
+    validate_rack_per_rad(p);
 
     pull(root, "aero_drag_coeff", p.aero_drag_coeff);
     pull(root, "frontal_area",    p.frontal_area);
@@ -411,6 +421,7 @@ void VehicleParams::to_yaml(const std::string& path) const {
     out << YAML::Key << "ackerman_percent"      << YAML::Value << ackerman_percent;
     if (!steer_input.empty())
         out << YAML::Key << "steer_input" << YAML::Value << steer_input;
+    out << YAML::Key << "rack_per_rad"          << YAML::Value << rack_per_rad;
 
     if (aero_elements.empty()) {
         out << YAML::Key << "aero_drag_coeff" << YAML::Value << aero_drag_coeff;

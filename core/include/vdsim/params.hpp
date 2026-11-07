@@ -104,6 +104,9 @@ struct VehicleParams {
     // Empty or "roadwheel" = L5 uses the wheel-angle command (bit-identical).
     // "rack_travel" = L5 hardpoint path reads SteeringOutput.rack_travel as +y [m].
     std::string steer_input;
+    // Tie-rod rack travel per road-wheel rad [m/rad] on the hardpoint paths (L4 native
+    // kinematics, L5 corner model) when the command is a road-wheel angle. Must be > 0.
+    double rack_per_rad {0.08};
     // Dynamic-steering Rack EOM params (used only when ISteeringSystem outputs mode=Dynamic).
     bool   steering_dynamic {false}; // true → DynamicSteering (Rack EOM, accepts torque/rate)
     double rack_mass     {30.0};    // [kg] effective rack + reflected column/motor inertia
@@ -174,6 +177,13 @@ void validate_steer_input(const VehicleParams& vp);
 
 /** L5: validate_steer_input plus Dynamic+rack rejection. */
 void validate_l5_steer_input(const VehicleParams& vp);
+
+/**
+ * @brief Reject a non-finite or non-positive rack_per_rad.
+ * @param vp Vehicle parameters.
+ * @throws std::invalid_argument when rack_per_rad is NaN, infinite or <= 0.
+ */
+void validate_rack_per_rad(const VehicleParams& vp);
 
 /** L2-L4: one warning per process if rack_travel was requested. */
 void warn_if_steer_input_unused(const VehicleParams& vp);

@@ -68,9 +68,12 @@ def resolve_susp_kinematics(ref):
 def attach_kinematics(sess, front=None, rear=None):
     """Attach native suspension kinematics to a session's plant.
 
-    Only Ld3 (``level`` ``L3`` or ``L4``) carries per-wheel suspension state;
-    the core returns false for anything else and this raises rather than
-    leaving a run labelled with physics it does not have.
+    ``L3``/``L4`` take the native kinematics; an ``L5`` plant takes the same
+    part YAMLs as corner models through :func:`vdsim.attach_l5_hardpoints`
+    (work order 48c; the session must run the L5 strut path, which
+    :func:`_build_session` turns on when hardpoints are requested). Any other
+    plant refuses and this raises rather than leaving a run labelled with
+    physics it does not have.
 
     :param sess: a ``vdsim.SimSession``.
     :param front: front-axle hardpoint YAML (path or stem), or ``None``.
@@ -79,6 +82,19 @@ def attach_kinematics(sess, front=None, rear=None):
         "attached": bool}`` -- stems only, never absolute paths.
     """
     info = {"front": None, "rear": None, "attached": False}
+    dyn = sess.dynamics()
+    if dyn.level() == vdsim.Level.L5_Stunt and (front is not None or rear is not None):
+        paths = {side: (resolve_susp_kinematics(ref) if ref is not None else None)
+                 for side, ref in (("front", front), ("rear", rear))}
+        if not vdsim.attach_l5_hardpoints(
+                dyn, front_yaml=None if paths["front"] is None else str(paths["front"]),
+                rear_yaml=None if paths["rear"] is None else str(paths["rear"])):
+            raise RuntimeError("L5 suspension hardpoints refused by the plant")
+        for side, p in paths.items():
+            if p is not None:
+                info[side] = p.stem
+        info["attached"] = True
+        return info
     for side, ref in (("front", front), ("rear", rear)):
         if ref is None:
             continue
@@ -92,6 +108,75 @@ def attach_kinematics(sess, front=None, rear=None):
         info[side] = path.stem
         info["attached"] = True
     return info
+
+
+#: Frame of the exported L5 hardpoints, as written to the trace manifest.
+HARDPOINT_FRAME = (
+    "vehicle design frame: body-fixed, x forward, y left, z up; origin on the ground "
+    "below the front-axle centre (ISO 8855); rear part YAML shifted by axle_offset_x; "
+    "right-hand wheels are the left part YAML mirrored in y")
+
+
+def _hardpoint_trace_layout(sess, vp, kin_info):
+    """Trace channels and manifest block of an L5 hardpoint run (work order 48c).
+
+    :param sess: the built ``vdsim.SimSession``.
+    :param vp: ``vdsim.VehicleParams`` of the run.
+    :param kin_info: provenance returned by :func:`attach_kinematics`.
+    :returns: ``(channels, {channel: (wheel, point)}, manifest_block)``, or None
+        when no wheel runs a corner model (any level but an L5 hardpoint run).
+    """
+    import yaml
+    import vdsim_trace
+
+    dyn = sess.dynamics()
+    valid = list(vdsim.free_3d_wheel_kin_valid(dyn))
+    if not any(valid):
+        return None
+    lay = vdsim.free_3d_hardpoint_layout(dyn)
+    stems = (kin_info.get("front"), kin_info.get("rear"))
+    types = [None, None]
+    for axle, stem in enumerate(stems):
+        if stem is not None:
+            root = yaml.safe_load(resolve_susp_kinematics(stem).read_text())
+            types[axle] = root.get("type")
+    mapping, corners = {}, {}
+    for i, label in enumerate(vdsim_trace.WHEELS):
+        wheel = label.lower()
+        axle = 0 if i < 2 else 1
+        if not valid[i]:
+            continue
+        if lay.excluded[axle]:
+            # Corner model present but its points are not exported (five-link,
+            # CHANGELOG 0.8.2 known limitations): no channels, reason recorded.
+            corners[wheel] = {"type": types[axle], "part": stems[axle], "points": {},
+                              "excluded": str(lay.excluded[axle])}
+            continue
+        if not lay.names[axle]:
+            continue
+        points = {}
+        for j, key in enumerate(lay.names[axle]):
+            ch = vdsim_trace.hardpoint_channel_name(wheel, key)
+            points[key] = ch
+            mapping[ch] = (i, j)
+        corners[wheel] = {"type": types[axle], "part": stems[axle], "points": points}
+    block = {
+        "frame": HARDPOINT_FRAME,
+        "unit": "m",
+        "invalid_wheel": "NaN",
+        "channel_rule": vdsim_trace.HARDPOINT_CHANNEL_RE.pattern,
+        "axle_offset_x": [float(v) for v in lay.axle_offset_x],
+        "wheel_center_dy": [float(v) for v in lay.wheel_center_dy],
+        "cg": {
+            "position_m": [-float(vp.cg_to_front), 0.0, float(vp.cg_height)],
+            "meaning": "whole-vehicle CG (sprung + unsprung) above ground, design attitude",
+            # Before work order 47 the L5 strut path places the sprung body at
+            # cg_height (0.8.1 behaviour); a build with the key reports its value.
+            "cg_height_ref": str(getattr(vp, "cg_height_ref", "sprung")),
+        },
+        "corners": corners,
+    }
+    return ("wheel_camber", "wheel_toe") + tuple(mapping), mapping, block
 
 
 def _kin_spec(kin):
@@ -126,8 +211,12 @@ def _build_session(road, vp, tp, level, dt, sensors, kin=None):
     """
     import vdsim_plant                     # local, as elsewhere in this module
     solver = (vdsim_plant.level_solver_params(level, dt) if level == "L5" else None)
-    sess = road._session(vp, tp, level, dt, sensors, solver)
     front, rear = _kin_spec(kin)
+    if solver is not None and (front is not None or rear is not None):
+        # L5 hardpoints act through the corner model, which only the strut path
+        # runs (48c). Before 0.8.2 this request raised, so no earlier run changes.
+        solver.l5_spatial_suspension = True
+    sess = road._session(vp, tp, level, dt, sensors, solver)
     info = attach_kinematics(sess, front, rear)
     if level == "L4" and not info["attached"]:
         raise ValueError(
@@ -604,7 +693,8 @@ class Experiment:
     def sensors(self, s): self._sensors = s; return self
 
     def kinematics(self, front=None, rear=None):
-        """Attach per-axle suspension hardpoints (L3/L4 only).
+        """Attach per-axle suspension hardpoints (L3/L4 native kinematics; L5
+        corner models on the strut path, 48c).
 
         :param front: front hardpoint YAML path or stem (``mp_front_sedan``).
         :param rear: rear hardpoint YAML path or stem (``ta_rear_sedan``).
@@ -809,6 +899,13 @@ class Experiment:
             spec["extra"] = dict(spec["extra"], solver=self._kin_info["solver"])
         self._validity = vdsim_plant.channel_validity_from_dynamics(
             sess.dynamics(), spec["model_level"], spec["channels"])
+        hp = _hardpoint_trace_layout(sess, self._veh.vp, self._kin_info)
+        self._hp_channels = None
+        if hp is not None:
+            channels, self._hp_channels, block = hp
+            spec["channels"] = tuple(spec["channels"]) + channels
+            self._channels = spec["channels"]
+            spec["extra"] = dict(spec["extra"], hardpoints=block)
         self._trace = vdsim_trace.TraceWriter(
             kinematics_attached=bool(self._kin_info["attached"]),
             channel_validity=self._validity, **spec)
@@ -817,7 +914,8 @@ class Experiment:
         """Offer one sample of the pre-step state to the writer."""
         self._trace.append(self._sample(o, o.sim_time,
                                         float(cmd.steer_angle_wheel), None,
-                                        self._channels, self._validity))
+                                        self._channels, self._validity,
+                                        hardpoints=getattr(self, "_hp_channels", None)))
 
     def run(self, duration=None):
         if duration is None:

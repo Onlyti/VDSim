@@ -176,6 +176,15 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 300
         ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
+    # L5 hardpoint output, Python side (work order 48c): attach_l5_hardpoints,
+    # camber/toe/hardpoints bit-equal to the C++ values, rack_per_rad, trace channels.
+    add_test(NAME l5_hardpoints
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_l5_hardpoints.py)
+    set_tests_properties(l5_hardpoints PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 300
+        ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
     # Level ids at every Python entry point (work order 44): accepted set,
     # ValueError for unknown ids, L5 sessions bit-identical to the C++ model
     # built directly, L5 finiteness and solver record, realtime refusal.

@@ -217,6 +217,11 @@ struct CornerTravelMaps {
     double motion_ratio  {0.0};    // [-] dl/dz_v
 };
 
+/// Upper bound on the named hardpoints one corner model exports (double wishbone: 11).
+constexpr int kMaxCornerHardpoints = 12;
+/// Fixed-size point buffer of one corner (no heap allocation per tick).
+using CornerPoints = std::array<Vec3, kMaxCornerHardpoints>;
+
 class IHardJointDaeModel {
 public:
     virtual ~IHardJointDaeModel() = default;
@@ -243,7 +248,55 @@ public:
     // pose_at_travel. Drives the Ld5 coupled solve along the real linkage path.
     CornerTravelMaps travel_maps(double travel_z, double steer_rad,
                                  const Vec3& seed) const;
+
+    /**
+     * @brief Hardpoints this corner model exports, as dotted part-YAML keys
+     *        ("lca.knuckle"), in the order hardpoints_at() writes them.
+     * @return the names; empty when the topology exports none.
+     */
+    virtual std::vector<std::string> hardpoint_names() const { return {}; }
+
+    /**
+     * @brief Hardpoint coordinates in the part-YAML (left-side design) frame.
+     * @param st            corner state (the state the last step() left).
+     * @param steer_rack_dy rack input [m] the corner was stepped with.
+     * @param out           written in hardpoint_names() order [m].
+     * @return number of points written; 0 when the topology exports none or the
+     *         linkage has no solution at st.
+     */
+    virtual int hardpoints_at(const HardJointCornerState& st, double steer_rack_dy,
+                              CornerPoints& out) const {
+        (void)st;
+        (void)steer_rack_dy;
+        (void)out;
+        return 0;
+    }
+
+    /** @brief Static wheel centre of the part YAML [m], design frame. */
+    virtual Vec3 wheel_center_design() const { return Vec3::Zero(); }
+
+    /**
+     * @brief Why this corner's hardpoints are kept out of the session output.
+     *
+     * hardpoint_names()/hardpoints_at() stay callable on the model for diagnosis;
+     * a non-empty reason makes the L5 session export no points for the corner
+     * (count 0, no names), while camber/toe are still reported.
+     * @return empty when the points are exported; otherwise the reason text.
+     */
+    virtual std::string hardpoint_export_excluded() const { return {}; }
 };
+
+/**
+ * @brief Map corner points from the part-YAML (left-side) frame to the vehicle
+ *        output frame: x shifted by dx, y negated on the right-hand corner.
+ * @param in    points in the part-YAML frame [m].
+ * @param n     number of valid points in `in` (0..kMaxCornerHardpoints).
+ * @param right true for the FR/RR corner.
+ * @param dx    axle x offset [m] added to every point.
+ * @param out   first n entries written; the rest set to zero.
+ */
+void corner_points_to_vehicle(const CornerPoints& in, int n, bool right, double dx,
+                              CornerPoints& out);
 
 class IMultibodySolver {
 public:
