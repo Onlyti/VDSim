@@ -3,10 +3,10 @@
 // Gates fixed before measurement (PO 1st verdict, Q1 / Q2 / J1 / J8):
 //   axle load transfer  dFz_front = -(m * ax_meas * h_x + sum_i I_eff,i * alpha_i) / L,
 //                       dFz_rear  = -dFz_front, +/-2 % per axle;
-//   h_x = cg_height on the penalty path, h_sys = ((m - sum m_u) h + sum m_u R) / m on the
-//   strut path (the body there is the sprung mass at cg_height, the four wheel
-//   particles ride at R); I_eff = I_wheel + reflected engine share; alpha = window
-//   mean wheel-spin acceleration.
+//   h_x = cg_height on every path (0.8.2, work order 47: cg_height is the whole-vehicle
+//   CG; 0.8.1 used h_sys = ((m - sum m_u) h + sum m_u R) / m on the strut path, where
+//   the body was the sprung mass at cg_height); I_eff = I_wheel + reflected engine
+//   share; alpha = window mean wheel-spin acceleration.
 // Manoeuvre: flat ground mu 1.0, no aero, generic_pacejka (rolling resistance 0),
 // 1 ms ticks, CmdL4 step at t = 2.0 s (throttle 0.4 from 10 m/s, or brake 0.4 from
 // 25 m/s; 20 m/s for the FS car). One window [4.0, 5.0) s, no search. The window is
@@ -74,20 +74,9 @@ TireParams tire() {
 std::string dw_sample() { return kSrc + "/tests/fixtures/dw_front_antidive_sample.yaml"; }
 std::string ta_rear() { return kSrc + "/configs/parts/susp_kinematics/kin/ta_rear_sedan.yaml"; }
 
-double m_u(const VehicleParams& vp, int i) { return std::max(1.0, vp.unsprung_mass[i]); }
-
-double sum_m_u(const VehicleParams& vp) {
-    double s = 0.0;
-    for (int i = 0; i < NUM_WHEELS; ++i) s += m_u(vp, i);
-    return s;
-}
-
-/// Q2: pitch arm of the whole vehicle on each path.
-double h_x(const VehicleParams& vp, Path p) {
-    if (p == Path::Penalty) return vp.cg_height;
-    const double mu = sum_m_u(vp);
-    return ((vp.mass - mu) * vp.cg_height + mu * vp.wheel_radius_nominal) / vp.mass;
-}
+/// Q2: pitch arm of the whole vehicle. Since 0.8.2 (work order 47 sec. 3, fixed before
+/// measurement) cg_height is the whole-vehicle CG on every path, so h = cg_height.
+double h_x(const VehicleParams& vp, Path /*p*/) { return vp.cg_height; }
 
 /// Wheel spin inertia as the L5 core derives it (wheel_inertia 0 -> solid disc).
 double I_wheel(const VehicleParams& vp, int i) {

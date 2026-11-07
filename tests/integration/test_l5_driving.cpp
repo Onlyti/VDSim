@@ -196,9 +196,11 @@ TEST(L5Strut, SettlesToStaticEquilibrium) {
     // comp=0 is the static ride position by preload construction.
     for (int i = 0; i < vdsim::NUM_WHEELS; ++i)
         EXPECT_NEAR(s.susp_compression[i], 0.0, 0.012) << "corner " << i;
-    // Body sits just below design ride height by the tire static deflection.
+    // Body sits just below design ride height by the tire static deflection. Since
+    // 0.8.2 (work order 47) the strut body is the sprung CG at the derived h_s, so the
+    // upper bound is h_s + 5 mm (was cg_height + 5 mm; changed with the definition).
     EXPECT_GT(s.position.z(), 0.50);
-    EXPECT_LT(s.position.z(), h.vp.cg_height + 0.005);
+    EXPECT_LT(s.position.z(), vdsim::l5_strut_body_height(h.vp) + 0.005);
     EXPECT_LT(std::abs(h.dyn->pitch_angle_qs()), 0.03);
     EXPECT_LT(std::abs(h.dyn->roll_angle_qs()), 0.03);
 }

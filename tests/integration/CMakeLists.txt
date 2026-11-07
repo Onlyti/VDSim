@@ -14,6 +14,7 @@ add_executable(vdsim_integration_tests
     test_l5_strut_validation.cpp
     test_l5_reaction.cpp
     test_l5_rack_travel.cpp
+    test_cg_height_ref.cpp
     test_terrain_l5.cpp
     test_belt_transient.cpp
     test_belt_validation.cpp
