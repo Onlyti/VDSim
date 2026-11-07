@@ -47,6 +47,13 @@ NAMES = {
                   "links.toe_link.chassis", "links.toe_link.knuckle", "wheel.center"],
 }
 PAIRS = (("mp_front_sedan", "ta_rear_sedan"), ("dw_front_sports", "5link_rear_sports"))
+# Changed after measurement (PO verdict 2026-11-07, 48c K4 option 1): the five-link
+# corner exports no points (layout names empty, excluded reason set).
+EXCLUDED = {"five_link": "five_link driven-coordinate least-squares, see CHANGELOG"}
+
+
+def exported(typ):
+    return [] if typ in EXCLUDED else NAMES[typ]
 COUNTS = {"cpp_like": 0}
 
 
@@ -112,7 +119,7 @@ def expected_static(vp, front_stem, rear_stem):
         wx = pts["wheel.center"][0]
         dx = (0.0 - wx) if front else (-vp.wheelbase - wx)
         out.append([np.array([p[0] + dx, -p[1] if right else p[1], p[2]])
-                    for p in (pts[n] for n in NAMES[typ])])
+                    for p in (pts[n] for n in exported(typ))])
     return out
 
 
@@ -138,8 +145,11 @@ def test_attach_and_k3():
                                          rear_yaml=str(KIN / (pair[1] + ".yaml"))) is True,
               "attach_l5_hardpoints True")
         lay = vdsim.free_3d_hardpoint_layout(dyn)
-        check(list(lay.names[0]) == NAMES[load_kin(pair[0])[0]], "layout names front")
-        check(list(lay.names[1]) == NAMES[load_kin(pair[1])[0]], "layout names rear")
+        tf, tr_ = load_kin(pair[0])[0], load_kin(pair[1])[0]
+        check(list(lay.names[0]) == exported(tf), "layout names front")
+        check(list(lay.names[1]) == exported(tr_), "layout names rear")
+        check(lay.excluded[0] == EXCLUDED.get(tf, ""), "layout excluded front")
+        check(lay.excluded[1] == EXCLUDED.get(tr_, ""), "layout excluded rear")
         assert_static(vp, vdsim.free_3d_wheel_hardpoints(dyn),
                       vdsim.free_3d_wheel_kin_valid(dyn), pair, pair[0] + " attach")
         o = s.output()
@@ -262,9 +272,37 @@ def test_lab_trace():
             check(np.all(np.isfinite(wc)), "hp finite")
 
 
+def test_lab_trace_five_link():
+    import vdsim_lab
+    import vdsim_trace
+    with tempfile.TemporaryDirectory() as d:
+        path = Path(d) / "l5_5link.vdtrace"
+        exp = vdsim_lab.Experiment(level="L5", dt=DT).kinematics(
+            "dw_front_sports", "5link_rear_sports")
+        exp.maneuver(vdsim_lab.Maneuver.constant_speed(8.0))
+        exp.enable_trace(path, decimation=10, seed=0)
+        exp.run(duration=0.3)
+        exp.finalize_trace()
+        with vdsim_trace.TraceReader(path) as tr:
+            hp = tr.manifest["hardpoints"]
+            check(set(hp["corners"]) == {"fl", "fr", "rl", "rr"}, "5link corners listed")
+            for w in ("rl", "rr"):
+                check(hp["corners"][w]["points"] == {}, "5link %s no points" % w)
+                check(hp["corners"][w]["excluded"] == EXCLUDED["five_link"],
+                      "5link %s excluded reason" % w)
+            check("excluded" not in hp["corners"]["fl"], "front not excluded")
+            names = tr.channel_names() if hasattr(tr, "channel_names") else tr.channels
+            check(not any(n.startswith(("hp_rl_", "hp_rr_")) for n in names),
+                  "no five-link hp channels")
+            check(any(n.startswith("hp_fl_") for n in names), "front hp channels")
+            cam = tr.channel("wheel_camber")
+            check(np.all(np.isfinite(cam)), "five-link camber still recorded")
+
+
 test_attach_and_k3()
 test_k8_bits_every_tick()
 test_invalid_outputs()
 test_rack_per_rad()
 test_lab_trace()
+test_lab_trace_five_link()
 print("l5_hardpoints python checks OK (%d assertions)" % COUNTS["cpp_like"])

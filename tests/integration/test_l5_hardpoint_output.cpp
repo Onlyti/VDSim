@@ -20,6 +20,14 @@
 //   D2  L4 and any non-hardpoint path: camber/toe 0, valid false, no points.
 // K7 (negative check) is a manual procedure: delete the per-tick hardpoint refresh in
 // Free3DDynamics::update_corner_dae -> K4 fails; restore -> passes.
+//
+// Changed after measurement (PO verdict 2026-11-07, 48c K4 halt, option 1): the five-link
+// corner's driven pose is a least-squares fit (7 residuals, 6 unknowns), so its links do
+// not keep their lengths to the K4 line. Its points are no longer exported (count 0,
+// layout names empty, layout excluded set; camber/toe still valid). K4 is judged on
+// MacPherson, trailing arm and double wishbone, thresholds unchanged. The five-link
+// prescribed sweep moved to the known_failure executable (L5HardpointKnownFailure.*) as
+// an information item, and FiveLinkCornerExportsNoPoints asserts the exclusion.
 #include "vdsim/control.hpp"
 #include "vdsim/interfaces.hpp"
 #include "vdsim/multibody.hpp"
@@ -79,6 +87,15 @@ const std::map<std::string, std::vector<std::string>> kNames = {
                    "links.lower_aft.chassis", "links.lower_aft.knuckle",
                    "links.toe_link.chassis", "links.toe_link.knuckle", "wheel.center"}},
 };
+
+/** Topologies whose points the L5 session does not export (48c K4 verdict, option 1). */
+bool excluded_type(const std::string& type) { return type == "five_link"; }
+
+/** Names the session exports for a topology: none for an excluded one. */
+const std::vector<std::string>& exported_names(const std::string& type) {
+    static const std::vector<std::string> none;
+    return excluded_type(type) ? none : kNames.at(type);
+}
 
 /** Rigid pairs per topology (links + the knuckle body, wheel centre on the knuckle). */
 const std::map<std::string, std::vector<std::pair<std::string, std::string>>> kRigid = {
@@ -211,7 +228,7 @@ void check_static(const std::array<WheelHardpoints, NUM_WHEELS>& hp,
         const bool front = (i == WHEEL_FL || i == WHEEL_FR);
         const bool right = (i == WHEEL_FR || i == WHEEL_RR);
         const KinYaml& k = front ? kf : kr;
-        const auto& names = kNames.at(k.type);
+        const auto& names = exported_names(k.type);
         ASSERT_TRUE(valid[i]);
         ASSERT_EQ(hp[i].count, static_cast<int>(names.size()));
         const double dx = axle_dx(k, front, vp);
@@ -254,8 +271,10 @@ TEST(L5HardpointOutput, LayoutNamesAndOffsets) {
         attach_pair(*s, pr);
         const KinYaml kf = load_kin(pr.front), kr = load_kin(pr.rear);
         const HardpointLayout lay = free_3d_hardpoint_layout(s->dynamics());
-        EXPECT_EQ(lay.names[0], kNames.at(kf.type));
-        EXPECT_EQ(lay.names[1], kNames.at(kr.type));
+        EXPECT_EQ(lay.names[0], exported_names(kf.type));
+        EXPECT_EQ(lay.names[1], exported_names(kr.type));
+        EXPECT_EQ(lay.excluded[0].empty(), !excluded_type(kf.type));
+        EXPECT_EQ(lay.excluded[1].empty(), !excluded_type(kr.type));
         EXPECT_EQ(lay.axle_offset_x[0], axle_dx(kf, true, vp));
         EXPECT_EQ(lay.axle_offset_x[1], axle_dx(kr, false, vp));
         EXPECT_EQ(lay.wheel_center_dy[0], kf.pts.at("wheel.center").y() - 0.5 * vp.track_front);
@@ -295,48 +314,72 @@ TEST(L5HardpointOutput, K3StaticCoordinatesAtAttachAndAfterReset) {
 
 // --- K4: rigid links over a prescribed bump x rack sweep (corner model) ------------
 
-TEST(L5HardpointOutput, K4LinkLengthsPrescribedSweep) {
-    const char* stems[] = {"mp_front_sedan", "ta_rear_sedan", "dw_front_sports",
-                           "5link_rear_sports"};
-    for (const char* stem : stems) {
-        SCOPED_TRACE(stem);
-        const KinYaml k = load_kin(stem);
-        const auto model = mb::create_hard_joint_dae_model(
-            mb::SuspensionTopology::from_yaml(kKin + std::string(stem) + ".yaml"));
-        const std::vector<std::string> names = model->hardpoint_names();
-        ASSERT_EQ(names, kNames.at(k.type));
-        const bool steered = index_of(names, "tie_rod.rack") >= 0;
-        const int iw = index_of(names, "wheel.center");
-        double worst = 0.0;
-        for (int a = -4; a <= 4; ++a) {
-            const double travel = kBumpM * a / 4.0;
-            for (int r = -1; r <= 1; ++r) {
-                const double rack = steered ? kRackM * r : 0.0;
-                for (int side = 0; side < 2; ++side) {
-                    const bool right = (side == 1);
-                    mb::HardJointCornerState st;
-                    mb::PrescribedCornerMotion mot;
-                    mot.travel_z = travel;
-                    mot.steer_rack_dy = right ? -rack : rack;
-                    model->initialize(st, mot);
-                    std::array<Vec3, mb::kMaxCornerHardpoints> raw {};
-                    const int n = model->hardpoints_at(st, mot.steer_rack_dy, raw);
-                    ASSERT_EQ(n, static_cast<int>(names.size()));
-                    std::array<Vec3, kMaxWheelHardpoints> out {};
-                    mb::corner_points_to_vehicle(raw, n, right, 0.0, out);
-                    std::map<std::string, Vec3> design;
-                    for (const auto& [nm, v] : k.pts) design[nm] = expected_point(v, 0.0, right);
-                    // Sweep check: the wheel centre really sits at the commanded travel.
-                    EXPECT_NEAR(out[iw].z() - design.at("wheel.center").z(), travel, kTolLink)
-                        << "travel " << travel << " rack " << rack;
-                    worst = std::max(worst, max_link_error(k.type, names, out, design));
-                }
+namespace {
+
+/**
+ * @brief K4 prescribed sweep of one part YAML on the corner model itself.
+ * @param stem  part YAML stem under configs/parts/susp_kinematics/kin.
+ * @param worst out: max rigid-pair length change [m] over bump x rack x side.
+ */
+void k4_prescribed_sweep(const char* stem, double& worst) {
+    const KinYaml k = load_kin(stem);
+    const auto model = mb::create_hard_joint_dae_model(
+        mb::SuspensionTopology::from_yaml(kKin + std::string(stem) + ".yaml"));
+    const std::vector<std::string> names = model->hardpoint_names();
+    ASSERT_EQ(names, kNames.at(k.type));
+    const bool steered = index_of(names, "tie_rod.rack") >= 0;
+    const int iw = index_of(names, "wheel.center");
+    worst = 0.0;
+    for (int a = -4; a <= 4; ++a) {
+        const double travel = kBumpM * a / 4.0;
+        for (int r = -1; r <= 1; ++r) {
+            const double rack = steered ? kRackM * r : 0.0;
+            for (int side = 0; side < 2; ++side) {
+                const bool right = (side == 1);
+                mb::HardJointCornerState st;
+                mb::PrescribedCornerMotion mot;
+                mot.travel_z = travel;
+                mot.steer_rack_dy = right ? -rack : rack;
+                model->initialize(st, mot);
+                std::array<Vec3, mb::kMaxCornerHardpoints> raw {};
+                const int n = model->hardpoints_at(st, mot.steer_rack_dy, raw);
+                ASSERT_EQ(n, static_cast<int>(names.size()));
+                std::array<Vec3, kMaxWheelHardpoints> out {};
+                mb::corner_points_to_vehicle(raw, n, right, 0.0, out);
+                std::map<std::string, Vec3> design;
+                for (const auto& [nm, v] : k.pts) design[nm] = expected_point(v, 0.0, right);
+                // Sweep check: the wheel centre really sits at the commanded travel.
+                EXPECT_NEAR(out[iw].z() - design.at("wheel.center").z(), travel, kTolLink)
+                    << "travel " << travel << " rack " << rack;
+                worst = std::max(worst, max_link_error(k.type, names, out, design));
             }
         }
-        std::printf("[K4 sweep] %s max link-length change %.3e m\n", stem, worst);
+    }
+    std::printf("[K4 sweep] %s max link-length change %.3e m\n", stem, worst);
+}
+
+}  // namespace
+
+TEST(L5HardpointOutput, K4LinkLengthsPrescribedSweep) {
+    // Five-link excluded from the export (header note); its sweep is a known_failure item.
+    const char* stems[] = {"mp_front_sedan", "ta_rear_sedan", "dw_front_sports"};
+    for (const char* stem : stems) {
+        SCOPED_TRACE(stem);
+        double worst = 0.0;
+        k4_prescribed_sweep(stem, worst);
         EXPECT_LE(worst, kTolLink);
     }
 }
+
+#ifdef VDSIM_KNOWN_FAILURE_TESTS
+// Information item (PO verdict 48c K4, option 1): the five-link driven pose does not
+// keep its link lengths to the K4 line. Kept runnable as the evidence for the repair.
+TEST(L5HardpointKnownFailure, K4FiveLinkPrescribedSweep) {
+    double worst = 0.0;
+    k4_prescribed_sweep("5link_rear_sports", worst);
+    EXPECT_LE(worst, kTolLink);
+}
+#endif  // VDSIM_KNOWN_FAILURE_TESTS
 
 // --- K4 on the session output + rack sweep check ------------------------------------
 
@@ -375,6 +418,10 @@ TEST(L5HardpointOutput, K4LinkLengthsEveryTickAndRackFollows) {
                 const bool right = (i == WHEEL_FR || i == WHEEL_RR);
                 const KinYaml& kk = front ? kf : kr;
                 ASSERT_TRUE(o.wheel_kin_valid[i]);
+                if (excluded_type(kk.type)) {
+                    ASSERT_EQ(o.hardpoints[i].count, 0);
+                    continue;
+                }
                 std::map<std::string, Vec3> design;
                 const double dx = axle_dx(kk, front, vp);
                 for (const auto& [nm, v] : kk.pts) design[nm] = expected_point(v, dx, right);
@@ -433,6 +480,7 @@ TEST(L5HardpointOutput, K5MirrorSessionSymmetricBump) {
         SCOPED_TRACE(pr.front);
         auto s = make_session(vp, l5_dae());
         attach_pair(*s, pr);
+        const KinYaml kf = load_kin(pr.front), kr = load_kin(pr.rear);
         State s0;
         s0.position.z() = vp.cg_height;
         s0.susp_compression = {{0.02, 0.02, -0.01, -0.01}};
@@ -444,6 +492,10 @@ TEST(L5HardpointOutput, K5MirrorSessionSymmetricBump) {
             const int l = axle == 0 ? WHEEL_FL : WHEEL_RL;
             const int r = axle == 0 ? WHEEL_FR : WHEEL_RR;
             ASSERT_EQ(o.hardpoints[l].count, o.hardpoints[r].count);
+            if (excluded_type(axle == 0 ? kf.type : kr.type)) {
+                ASSERT_EQ(o.hardpoints[l].count, 0);
+                continue;
+            }
             ASSERT_GT(o.hardpoints[l].count, 0);
             for (int j = 0; j < o.hardpoints[l].count; ++j) {
                 const Vec3& pl = o.hardpoints[l].p[j];
@@ -454,6 +506,44 @@ TEST(L5HardpointOutput, K5MirrorSessionSymmetricBump) {
             }
         }
     }
+}
+
+// --- Five-link exclusion: no points, camber/toe still reported ----------------------
+
+TEST(L5HardpointOutput, FiveLinkCornerExportsNoPoints) {
+    const VehicleParams vp = sedan();
+    auto s = make_session(vp, l5_dae());
+    attach_pair(*s, kPairs[1]);
+    ASSERT_EQ(load_kin(kPairs[1].rear).type, "five_link");
+    const HardpointLayout lay = free_3d_hardpoint_layout(s->dynamics());
+    EXPECT_TRUE(lay.names[1].empty());
+    EXPECT_EQ(lay.excluded[1], "five_link driven-coordinate least-squares, see CHANGELOG");
+    EXPECT_TRUE(lay.excluded[0].empty());
+    State s0;
+    s0.position.z() = vp.cg_height;
+    s0.velocity.x() = 8.0;
+    const double w = 8.0 / vp.wheel_radius_nominal;
+    s0.wheel_spin = {{w, w, w, w}};
+    s->reset_settled(s0);
+    double max_rear_camber = 0.0;
+    const int n_front = static_cast<int>(kNames.at("double_wishbone").size());
+    for (int k = 0; k < 500; ++k) {
+        CmdL4 u;
+        u.throttle = 0.3;
+        u.steer_angle_wheel = k < 100 ? 0.0 : 0.05;
+        s->set_input(u);
+        s->tick(kDt);
+        const SimOutput o = s->output();
+        const auto hp = free_3d_wheel_hardpoints(s->dynamics());
+        for (int i : {WHEEL_RL, WHEEL_RR}) {
+            ASSERT_TRUE(o.wheel_kin_valid[i]);
+            ASSERT_EQ(o.hardpoints[i].count, 0);
+            ASSERT_EQ(hp[i].count, 0);
+            max_rear_camber = std::max(max_rear_camber, std::abs(o.wheel_camber[i]));
+        }
+        for (int i : {WHEEL_FL, WHEEL_FR}) ASSERT_EQ(o.hardpoints[i].count, n_front);
+    }
+    EXPECT_GT(max_rear_camber, 0.0);   // rear camber is still reported
 }
 
 // --- K2: SimOutput camber/toe == free functions every tick ---------------------------
