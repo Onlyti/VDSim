@@ -628,11 +628,13 @@ PYBIND11_MODULE(vdsim, m) {
     py::class_<vdsim::HardpointLayout>(m, "HardpointLayout")
         .def_readonly("names", &vdsim::HardpointLayout::names)
         .def_readonly("axle_offset_x", &vdsim::HardpointLayout::axle_offset_x)
-        .def_readonly("wheel_center_dy", &vdsim::HardpointLayout::wheel_center_dy);
+        .def_readonly("wheel_center_dy", &vdsim::HardpointLayout::wheel_center_dy)
+        .def_readonly("excluded", &vdsim::HardpointLayout::excluded);
     m.def("free_3d_hardpoint_layout",
           [](const vdsim::IVehicleDynamics& dyn) { return vdsim::free_3d_hardpoint_layout(dyn); },
           py::arg("dyn"),
-          "Exported hardpoint names [front, rear], axle x offsets and wheel-centre y gaps [m]");
+          "Exported hardpoint names [front, rear], axle x offsets, wheel-centre y gaps [m]\n"
+          "and per-axle exclusion reason (non-empty: corner model present, no points exported)");
     // L5 hardpoints (48c C4): the L3/L4 attach above keeps returning False on L5.
     m.def("attach_l5_hardpoints",
           [](vdsim::IVehicleDynamics& dyn, py::object front_yaml, py::object rear_yaml,

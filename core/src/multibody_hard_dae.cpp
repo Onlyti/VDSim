@@ -727,6 +727,13 @@ public:
 
     Vec3 wheel_center_design() const override { return wheel_static_; }
 
+    // driven_pose_at() is a least-squares fit with the lower_aft knuckle point held on
+    // its axis circle (7 residuals, 6 unknowns), so the five links do not keep their
+    // lengths exactly; the points are kept for diagnosis but not exported (48c K4).
+    std::string hardpoint_export_excluded() const override {
+        return "five_link driven-coordinate least-squares, see CHANGELOG";
+    }
+
 private:
     struct Geom {
         Vec3 wheel, spin, aa, la_attach;

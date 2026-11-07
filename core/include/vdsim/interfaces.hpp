@@ -253,11 +253,14 @@ struct WheelHardpoints {
  * rear: -wheelbase - w.x, w = YAML wheel.center). wheel_center_dy [m]: YAML
  * wheel.center.y - track/2, the y gap between the exported geometry and the
  * dynamics wheel mount (the coordinates are not shifted in y).
+ * excluded: non-empty when the axle has a corner model whose points are kept out
+ * of the output (names empty, count 0; camber/toe still valid) -- the reason text.
  */
 struct HardpointLayout {
     std::array<std::vector<std::string>, 2> names;
     std::array<double, 2> axle_offset_x {{0.0, 0.0}};
     std::array<double, 2> wheel_center_dy {{0.0, 0.0}};
+    std::array<std::string, 2> excluded;
 };
 
 /**

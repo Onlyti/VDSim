@@ -144,7 +144,15 @@ def _hardpoint_trace_layout(sess, vp, kin_info):
     for i, label in enumerate(vdsim_trace.WHEELS):
         wheel = label.lower()
         axle = 0 if i < 2 else 1
-        if not valid[i] or not lay.names[axle]:
+        if not valid[i]:
+            continue
+        if lay.excluded[axle]:
+            # Corner model present but its points are not exported (five-link,
+            # CHANGELOG 0.8.2 known limitations): no channels, reason recorded.
+            corners[wheel] = {"type": types[axle], "part": stems[axle], "points": {},
+                              "excluded": str(lay.excluded[axle])}
+            continue
+        if not lay.names[axle]:
             continue
         points = {}
         for j, key in enumerate(lay.names[axle]):

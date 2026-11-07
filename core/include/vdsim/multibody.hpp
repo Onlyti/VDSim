@@ -274,6 +274,16 @@ public:
 
     /** @brief Static wheel centre of the part YAML [m], design frame. */
     virtual Vec3 wheel_center_design() const { return Vec3::Zero(); }
+
+    /**
+     * @brief Why this corner's hardpoints are kept out of the session output.
+     *
+     * hardpoint_names()/hardpoints_at() stay callable on the model for diagnosis;
+     * a non-empty reason makes the L5 session export no points for the corner
+     * (count 0, no names), while camber/toe are still reported.
+     * @return empty when the points are exported; otherwise the reason text.
+     */
+    virtual std::string hardpoint_export_excluded() const { return {}; }
 };
 
 /**

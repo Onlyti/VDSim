@@ -330,12 +330,15 @@ public:
                                                       : mb_dae_rear_.get();
         if (!dae) {
             hp_names_[axle].clear();
+            hp_excluded_[axle].clear();
             hp_dx_[axle] = 0.0;
             hp_dy_[axle] = 0.0;
             return;
         }
         const Vec3 w = dae->wheel_center_design();
-        hp_names_[axle] = dae->hardpoint_names();
+        hp_excluded_[axle] = dae->hardpoint_export_excluded();
+        hp_names_[axle] = hp_excluded_[axle].empty() ? dae->hardpoint_names()
+                                                     : std::vector<std::string>{};
         hp_dx_[axle] = axle == 0 ? (0.0 - w.x()) : (-vp_.wheelbase - w.x());
         hp_dy_[axle] = w.y() - 0.5 * (axle == 0 ? vp_.track_front : vp_.track_rear);
     }
@@ -345,7 +348,7 @@ public:
         const bool front = (i == WHEEL_FL || i == WHEEL_FR);
         const bool right = (i == WHEEL_FR || i == WHEEL_RR);
         const mb::IHardJointDaeModel* dae = front ? mb_dae_front_.get() : mb_dae_rear_.get();
-        if (!dae) {
+        if (!dae || !hp_excluded_[front ? 0 : 1].empty()) {
             hp_count_[i] = 0;
             hp_[i].fill(Vec3::Zero());
             return;
@@ -404,6 +407,7 @@ public:
         lay.names = hp_names_;
         lay.axle_offset_x = hp_dx_;
         lay.wheel_center_dy = hp_dy_;
+        lay.excluded = hp_excluded_;
         return lay;
     }
 
@@ -1241,6 +1245,7 @@ private:
     std::array<mb::CornerPoints, NUM_WHEELS> hp_ {};
     std::array<int, NUM_WHEELS> hp_count_ {};
     std::array<std::vector<std::string>, 2> hp_names_;
+    std::array<std::string, 2> hp_excluded_;   // non-empty: axle points not exported
     std::array<double, 2> hp_dx_ {{0.0, 0.0}};
     std::array<double, 2> hp_dy_ {{0.0, 0.0}};
     // High-fidelity linkage geometry (when a corner DAE is attached): the real wheel-centre
