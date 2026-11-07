@@ -308,14 +308,10 @@ TEST(L5Reaction, R6_PitchMomentBalance) {
 }
 
 // ---- R2: strut path without a corner model, sprung vs unsprung ----
-// Out of the 0.8.1 release verdict (user decision 10-29, PROP-1924 option 1).
-// The gate is unchanged and still runs: these two tests are built only into
-// vdsim_known_failure_tests, registered with label `known_failure`
-// (`ctest -L known_failure`), and re-judged with the same gate in 0.8.2 after
-// the strut-path `cg_height` fix and the strut-path reaction arm R0 - penetration
-// (work order 47 scope extension, user decision 11-07: R2 has to pass before 0.8.2
-// ships; gate and expectation unchanged, fixed before measurement).
-#ifdef VDSIM_KNOWN_FAILURE_TESTS
+// Out of the 0.8.1 release verdict (user decision 10-29, PROP-1924 option 1); back in
+// the release verdict in 0.8.2 with the same gate and expectation, after the strut-path
+// `cg_height` fix and the strut-path reaction arm R0 - penetration (work order 47 scope
+// extension, user decision 11-07).
 namespace {
 void r2(Move m) {
     const char* tag[2] = {"R2 sprung", "R2 unsprung"};
@@ -337,7 +333,6 @@ void r2(Move m) {
 }  // namespace
 TEST(L5Reaction, R2_StrutAccelSprungVsUnsprung) { r2(Move::Accel); }
 TEST(L5Reaction, R2_StrutBrakeSprungVsUnsprung) { r2(Move::Brake); }
-#endif  // VDSIM_KNOWN_FAILURE_TESTS
 
 // ---- R3 (anti geometry through the corner linkage): not judged in 0.8.1 ----
 // User decision 10-29 (PROP-1915 option 1): the corner-linkage (DAE) path resolves an
