@@ -63,8 +63,27 @@ spin states. Flat L2/L3 road behaviour is unchanged — Ld5 is opt-in via
 
 Let $\mathbf{R} = \mathbf{R}(\mathbf{q})$ be the body→world rotation. Wheel $i$ has
 a fixed body-frame mount $\mathbf{r}_i$ (track/wheelbase offsets, with vertical
-$-(h_{cg}-R_w)$ so the hub sits a wheel radius below the CG). ISO 8855 RH applies;
-wheel order FL=0, FR=1, RL=2, RR=3 (Chapter 01).
+$-(h_o-R_w)$ so the hub sits a wheel radius above the ground plane the body origin
+height $h_o$ is measured from). ISO 8855 RH applies; wheel order FL=0, FR=1, RL=2,
+RR=3 (Chapter 01).
+
+**CG heights (0.8.2).** $h$ = `cg_height` is the whole-vehicle CG height above ground
+(sprung + unsprung) on every level and path. The body origin $h_o$ depends on what the
+6-DOF body carries:
+
+| Path | Body mass | Body origin $h_o$ |
+|------|-----------|-------------------|
+| Penalty (default) | $m$ (whole vehicle, wheels rigid) | $h$ |
+| Spatial strut, with or without a corner DAE | $m - \sum_i m_{u,i}$ (sprung) | $h_s$ |
+
+$$
+h_s = \frac{m\,h - \sum_i m_{u,i}\,R_w}{m - \sum_i m_{u,i}}, \qquad
+m_{u,i} = \max(1, \texttt{unsprung\_mass}_i),
+$$
+
+so the sprung body at $h_s$ and the four wheel particles at $R_w$ put the system CG
+back at $h$. $h_s \le R_w + 0.01$ m is rejected. `cg_height_ref: sprung` restores the
+0.8.1 strut meaning ($h_o = h$, system CG below $h$).
 
 ---
 
@@ -124,8 +143,10 @@ $$
 
 with $\mathbf{F}_i^{b} = \mathbf{R}^{\!\top}\mathbf{F}_i^{w}$ the body-frame wheel
 force, $M_{z,i}$ the tire aligning moment about the body yaw axis, and
-$\mathbf{r}_{a,j} = (x_j + a,\; y_j,\; z_j - h_{cg})$ the arm from the CG ($a$ = CG
-behind the front axle) to aero piece $j$. A piece at the CG has zero arm. See
+$\mathbf{r}_{a,j} = (x_j + a,\; y_j,\; z_j - h_o)$ the arm from the body origin ($a$ =
+CG behind the front axle, $h_o$ from §20.2) to aero piece $j$. The four-key drag piece
+sits at $z_j = h$ (or `aero_drag_height`), so it has zero arm on the penalty path and
+the arm $h - h_s$ on the strut path. See
 [Chapter 26](26_aero_elements.md) for the inputs and §26.5 for the aero contract.
 
 ### Drive and brake torque reaction (0.8.1)
@@ -267,9 +288,12 @@ v0.5 terrain note.
   robust-tuned, not measured (see [`VALIDATION.md`](../VALIDATION.md) "Stunt").
 - **Longitudinal reaction limits (0.8.1).** Penalty and spatial-strut paths return
   drive/brake torque reactions through the chassis. An explicit `unsprung` target on a
-  hard-joint DAE path is treated as `sprung` with a once-per-process warning. Spatial-strut
-  axle load transfer remains about 1–3% above the analytical target and is tracked as an
-  informational known failure pending the 0.8.2 `cg_height` correction and revalidation.
+  hard-joint DAE path is treated as `sprung` with a once-per-process warning. On the
+  spatial-strut path (0.8.2) the tire longitudinal force reacts on the wheel spin about the
+  wheel-centre height R0 − penetration, while slip keeps the effective rolling radius;
+  with that arm and the whole-vehicle `cg_height` (§20.2) the strut-path axle load
+  transfer (`L5Reaction.R2_*`) passes its ±2 % gate. `cg_height_ref: sprung` keeps the
+  0.8.1 arm.
 - **Not yet (→ v0.5):** general curved/banked track (`CurvedGround`, banked oval)
   and a GUI panel to *author* stunt scenes; today the GUI renders loaded ramp/loop
   scenes only. See [`design/V0.5_TERRAIN_L5.md`](../design/V0.5_TERRAIN_L5.md).
