@@ -120,6 +120,7 @@ public:
         // integrates the sprung body alone, whose CG sits at the derived h_s above
         // ground; cg_height_ref=sprung keeps the 0.8.1 body-at-cg_height meaning.
         validate_cg_height_ref(vp);
+        sprung_ref_ = cg_height_ref_is_sprung(vp);
         const double h_body = sp.l5_spatial_suspension ? l5_strut_body_height(vp)
                                                        : vp.cg_height;
         // Aero wrenches are formed about the ground-referenced point at cg_height
@@ -945,8 +946,11 @@ private:
             const bool grounded = contacts[i].is_valid && contacts[i].penetration > 0.0
                                   && Fz[i] >= 1.0;
             const double T_drive = grounded ? Td[i] : 0.0;
+            // Strut / DAE path: the contact force acts at the wheel-centre height
+            // (work order 47 scope extension); penalty and cg_height_ref=sprung keep Re.
             const double T_react = grounded
-                ? fx_kin[i] * Re_w_[i]
+                ? fx_kin[i] * detail::wheel_reaction_arm(strut, sprung_ref_, Re_w_[i], Rwh,
+                                                         contacts[i].penetration)
                 : kWheelSpinDrag * s.wheel_spin[i];
             T_net[i]   = T_drive + Tb[i] - T_react;
             I_eng_w[i] = grounded ? eff_wheel_I(i) : 0.0;
@@ -1156,6 +1160,7 @@ private:
     std::shared_ptr<ISteeringSystem> steering_;
     std::array<Vec3, NUM_WHEELS> r_body_ {};
     double aero_origin_dz_ {0.0};   // cg_height - body origin height [m] (aero arm shift)
+    bool sprung_ref_ {false};       // cg_height_ref = sprung: 0.8.1 strut behaviour (Re arm)
     std::array<double, NUM_WHEELS> I_wheel_ {};
     Vec3 I_body_inv_ {Vec3::Zero()};
     // Spatial strut (l5_spatial_suspension): per-corner sprung static load (preload so
