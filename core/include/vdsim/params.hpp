@@ -44,7 +44,8 @@ struct VehicleParams {
     // Meaning of cg_height on the L5 strut / DAE path (l5_spatial_suspension).
     // Empty or "vehicle" = whole-vehicle CG; the sprung body sits at the derived
     // h_s = (m h - sum m_u R) / (m - sum m_u). "sprung" = the 0.8.1 behaviour
-    // (sprung body at cg_height). L1-L4 and the L5 penalty path read it and
+    // (sprung body at cg_height, wheel reaction arm = effective rolling radius).
+    // L1-L4 and the L5 penalty path read it and
     // ignore it (one warning when set).
     std::string cg_height_ref;
 

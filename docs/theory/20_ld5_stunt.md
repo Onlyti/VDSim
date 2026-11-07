@@ -288,11 +288,12 @@ v0.5 terrain note.
   robust-tuned, not measured (see [`VALIDATION.md`](../VALIDATION.md) "Stunt").
 - **Longitudinal reaction limits (0.8.1).** Penalty and spatial-strut paths return
   drive/brake torque reactions through the chassis. An explicit `unsprung` target on a
-  hard-joint DAE path is treated as `sprung` with a once-per-process warning. Spatial-strut
-  axle load transfer remains about 1–3% above the analytical target and is tracked as an
-  informational known failure (`L5Reaction.R2_*`, label `known_failure`). The 0.8.2
-  `cg_height` correction (§20.2) moves the simulation and the expectation together and
-  does not remove it.
+  hard-joint DAE path is treated as `sprung` with a once-per-process warning. On the
+  spatial-strut path (0.8.2) the tire longitudinal force reacts on the wheel spin about the
+  wheel-centre height R0 − penetration, while slip keeps the effective rolling radius;
+  with that arm and the whole-vehicle `cg_height` (§20.2) the strut-path axle load
+  transfer (`L5Reaction.R2_*`) passes its ±2 % gate. `cg_height_ref: sprung` keeps the
+  0.8.1 arm.
 - **Not yet (→ v0.5):** general curved/banked track (`CurvedGround`, banked oval)
   and a GUI panel to *author* stunt scenes; today the GUI renders loaded ramp/loop
   scenes only. See [`design/V0.5_TERRAIN_L5.md`](../design/V0.5_TERRAIN_L5.md).

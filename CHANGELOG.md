@@ -101,7 +101,8 @@ one level-id factory, L5 from Python). Not released yet.
   unsprung), as on L1-L4 and the L5 penalty path. The sprung body sits at the derived
   h_s = (m·h − Σm_u·R)/(m − Σm_u), m_u = max(1, `unsprung_mass`); the wheel mounts,
   the spawn height and the aero arm origin follow h_s. Every strut-path run changes.
-- The previous meaning (sprung body at `cg_height`) is `cg_height_ref: sprung`.
+- `cg_height_ref: sprung` reproduces the 0.8.1 strut-path behaviour as a whole: sprung
+  body at `cg_height` and the effective-rolling-radius wheel reaction arm (below).
 - h_s ≤ `wheel_radius_nominal` + 0.01 m raises `std::invalid_argument` /
   `ValueError` on the strut path (mass and height do not fit together).
 - Aero on the strut path: drag still acts at `cg_height` above ground (four-key
@@ -118,14 +119,14 @@ one level-id factory, L5 from Python). Not released yet.
 - L5 hardpoint path can read `SteeringOutput.rack_travel` as physical +y [m].
   Rack mode skips `kRackPerRad` and Ackerman; wheel progress comes from DAE toe only.
 
-### Known limitations
-- Strut-path axle load transfer (`L5Reaction.R2_*`, label `known_failure`) was re-judged
-  with h = `cg_height` on every path and is still outside the +/-2 % gate: acceleration
-  front +3.3 % / rear +2.9 %, braking front +1.3 % / rear +1.7 %. The `cg_height` fix
-  moves the simulation and the expectation together; the residual comes mainly from the
-  pitch-induced CG shift, with the static tyre deflection and the wheel-spin reaction
-  arm (R0 instead of the loaded radius) cancelling each other. Handling is pending a
-  user decision.
+### Fixed
+- L5 strut / DAE path: the tire longitudinal force reacts on the wheel spin about the
+  wheel-centre height (`wheel_radius_nominal` minus the tire penetration) instead of the
+  effective rolling radius. Slip and the tire model keep the effective rolling radius;
+  the penalty path is unchanged. The same drive or brake torque now gives a larger tire
+  force on the strut path (about 5 % on `generic_sedan` in the R2 manoeuvre).
+- Strut-path axle load transfer (`L5Reaction.R2_*`, a 0.8.1 known limitation with label
+  `known_failure`) is back in the release verdict and passes the unchanged +/-2 % gate.
 
 ### `rack_travel` meaning by level
 

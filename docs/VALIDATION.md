@@ -89,12 +89,10 @@ presets:  CMakePresets.json@c98fe5e64c842faaeb06598af46476f3507c18a6
 toolchain: cmake 3.31.10
 commit:   PENDING
 date:     2026-11-07
-pending:  whole-vehicle cg_height on the L5 strut / DAE path and the cg_height_ref key; same-head CI measurement pending
+pending:  whole-vehicle cg_height and the wheel-centre reaction arm on the L5 strut / DAE path, the cg_height_ref key, L5Reaction.R2_* back in the verdict; same-head CI measurement pending
 excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: closedloop_wallclock_timing (label timing, excluded by the validation test preset: wall-clock S6/S7 verdicts depend on host load -- local low-load evidence in the work order 31 PR description)
-excluded: L5Reaction.R2_StrutAccelSprungVsUnsprung (known_failure -- strut-path axle load transfer out of the 0.8.1 verdict, PROP-1924 option 1; re-judged in 0.8.2 after the whole-vehicle cg_height fix and still outside the gate, handling pending a user decision)
-excluded: L5Reaction.R2_StrutBrakeSprungVsUnsprung (known_failure -- strut-path axle load transfer out of the 0.8.1 verdict, PROP-1924 option 1; re-judged in 0.8.2 after the whole-vehicle cg_height fix and still outside the gate, handling pending a user decision)
 ```
 <!-- VALIDATION-CURRENCY END -->
 
