@@ -312,7 +312,9 @@ TEST(L5Reaction, R6_PitchMomentBalance) {
 // The gate is unchanged and still runs: these two tests are built only into
 // vdsim_known_failure_tests, registered with label `known_failure`
 // (`ctest -L known_failure`), and re-judged with the same gate in 0.8.2 after
-// the strut-path `cg_height` fix.
+// the strut-path `cg_height` fix and the strut-path reaction arm R0 - penetration
+// (work order 47 scope extension, user decision 11-07: R2 has to pass before 0.8.2
+// ships; gate and expectation unchanged, fixed before measurement).
 #ifdef VDSIM_KNOWN_FAILURE_TESTS
 namespace {
 void r2(Move m) {
