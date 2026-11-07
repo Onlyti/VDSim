@@ -118,6 +118,15 @@ one level-id factory, L5 from Python). Not released yet.
 - L5 hardpoint path can read `SteeringOutput.rack_travel` as physical +y [m].
   Rack mode skips `kRackPerRad` and Ackerman; wheel progress comes from DAE toe only.
 
+### Known limitations
+- Strut-path axle load transfer (`L5Reaction.R2_*`, label `known_failure`) was re-judged
+  with h = `cg_height` on every path and is still outside the +/-2 % gate: acceleration
+  front +3.3 % / rear +2.9 %, braking front +1.3 % / rear +1.7 %. The `cg_height` fix
+  moves the simulation and the expectation together; the residual comes mainly from the
+  pitch-induced CG shift, with the static tyre deflection and the wheel-spin reaction
+  arm (R0 instead of the loaded radius) cancelling each other. Handling is pending a
+  user decision.
+
 ### `rack_travel` meaning by level
 
 | Level | Channel meaning | Left turn |
