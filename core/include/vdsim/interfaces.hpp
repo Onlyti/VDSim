@@ -227,6 +227,58 @@ bool free_3d_mb_dynamics_enabled(const IVehicleDynamics& dyn, int axle);
 // Zero for any other model. For inspection / suspension-vs-L4 validation.
 std::array<double, NUM_WHEELS> free_3d_wheel_camber(const IVehicleDynamics& dyn);
 std::array<double, NUM_WHEELS> free_3d_wheel_toe(const IVehicleDynamics& dyn);
+
+/// Upper bound on the named hardpoints one wheel exports (double wishbone: 11).
+constexpr int kMaxWheelHardpoints = 12;
+
+/**
+ * @brief Hardpoint coordinates of one wheel in the vehicle design frame [m].
+ *
+ * Frame: body-fixed, x forward, y left, z up, origin on the ground below the
+ * front-axle centre (the part-YAML frame of a front axle). A rear part YAML is
+ * shifted by its axle x offset; right-hand wheels are the left part mirrored in y.
+ * Only the first `count` entries are meaningful; names come from
+ * free_3d_hardpoint_layout().
+ */
+struct WheelHardpoints {
+    int count {0};
+    std::array<Vec3, kMaxWheelHardpoints> p {};
+};
+
+/**
+ * @brief Per-axle description of the exported hardpoints (index 0 front, 1 rear).
+ *
+ * names: dotted part-YAML keys in output order, empty when the axle exports none.
+ * axle_offset_x [m]: x added to the part-YAML coordinates (front: 0 - w.x,
+ * rear: -wheelbase - w.x, w = YAML wheel.center). wheel_center_dy [m]: YAML
+ * wheel.center.y - track/2, the y gap between the exported geometry and the
+ * dynamics wheel mount (the coordinates are not shifted in y).
+ */
+struct HardpointLayout {
+    std::array<std::vector<std::string>, 2> names;
+    std::array<double, 2> axle_offset_x {{0.0, 0.0}};
+    std::array<double, 2> wheel_center_dy {{0.0, 0.0}};
+};
+
+/**
+ * @brief True per wheel when the L5 strut path is on and a corner model is
+ *        attached to that wheel's axle (camber/toe/hardpoints are then computed).
+ *        All false on any other model or path.
+ */
+std::array<bool, NUM_WHEELS> free_3d_wheel_kin_valid(const IVehicleDynamics& dyn);
+/**
+ * @brief Hardpoint coordinates per wheel at the current corner state (the state
+ *        that produced free_3d_wheel_camber/toe). count 0 where not valid.
+ */
+std::array<WheelHardpoints, NUM_WHEELS> free_3d_wheel_hardpoints(const IVehicleDynamics& dyn);
+/** @brief Names and offsets of the exported hardpoints; empty off L5. */
+HardpointLayout free_3d_hardpoint_layout(const IVehicleDynamics& dyn);
+/**
+ * @brief Tie-rod rack input [m] last fed to each corner model, part-YAML (left)
+ *        frame, so the right-hand corner carries the negated physical rack.
+ *        Zero on wheels without a steered corner model and on other models.
+ */
+std::array<double, NUM_WHEELS> free_3d_rack_dy(const IVehicleDynamics& dyn);
 // Per-wheel strut spring force [N] on the L5 spatial-strut path at the current state:
 // coil (or wheel-rate) spring + bump/rebound stop along the strut axis, compression
 // positive; the damper is excluded. NaN for every wheel on any other model or path

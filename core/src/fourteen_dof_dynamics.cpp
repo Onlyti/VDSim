@@ -60,7 +60,6 @@ namespace vdsim {
 namespace {
 
 constexpr double kGravity = 9.80665;
-constexpr double kRackPerRad = 0.08;
 
 double steer_wheel_rad(const ControlInput& u) noexcept {
     return std::visit([](const auto& cmd) -> double {
@@ -91,6 +90,7 @@ public:
     void initialize(const VehicleParams& vp,
                     const TireSetup& ts,
                     const SolverParams& sp) override {
+        validate_rack_per_rad(vp);
         vp_ = vp; ts_ = ts; sp_ = sp;
         inner_->initialize(vp, ts, sp);
         suspension_ = make_default_suspension(vp);
@@ -199,7 +199,7 @@ public:
                 ISuspensionKinematics* k = (i < 2) ? kine_front_.get()
                                                    : kine_rear_.get();
                 if (k) {
-                    const double rack_dy = (i < 2) ? steer_rad * kRackPerRad : 0.0;
+                    const double rack_dy = (i < 2) ? steer_rad * vp_.rack_per_rad : 0.0;
                     const auto o = k->compute(wheel_travel, rack_dy);
                     const bool right = (i == WHEEL_FR || i == WHEEL_RR);
                     const double s = right ? -1.0 : 1.0;
@@ -360,7 +360,7 @@ public:
         }
         mot.travel_z = travel;
         mot.travel_z_dot = travel_dot;
-        mot.steer_rack_dy = (wheel_base == 0) ? steer_rad * kRackPerRad : 0.0;
+        mot.steer_rack_dy = (wheel_base == 0) ? steer_rad * vp_.rack_per_rad : 0.0;
         return mot;
     }
 

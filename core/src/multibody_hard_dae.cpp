@@ -134,8 +134,8 @@ public:
         wheel_static_ = yaml_vec3(root["wheel"]["center"]);
         wheel_spin_axis_ = yaml_vec3(root["wheel"]["spin_axis"]);
         pivot_ = yaml_vec3(root["arm_pivot"]["chassis_inboard"]);
-        const Vec3 pivot_out = yaml_vec3(root["arm_pivot"]["chassis_outboard"]);
-        axis_ = (pivot_out - pivot_).normalized();
+        pivot_out_ = yaml_vec3(root["arm_pivot"]["chassis_outboard"]);
+        axis_ = (pivot_out_ - pivot_).normalized();
         wheel_off_ = wheel_static_ - pivot_;
         I_theta_ = corner_inertia_about_axis(topo.bodies, axis_, pivot_);
     }
@@ -169,6 +169,20 @@ public:
         }
         return pose_at(st.q, mot.steer_rack_dy);
     }
+
+    std::vector<std::string> hardpoint_names() const override {
+        return {"arm_pivot.chassis_inboard", "arm_pivot.chassis_outboard", "wheel.center"};
+    }
+
+    int hardpoints_at(const HardJointCornerState& st, double /*steer_rack_dy*/,
+                      CornerPoints& out) const override {
+        out[0] = pivot_;
+        out[1] = pivot_out_;
+        out[2] = wheel_at(st.q);
+        return 3;
+    }
+
+    Vec3 wheel_center_design() const override { return wheel_static_; }
 
 private:
     Vec3 wheel_at(double theta) const {
@@ -204,7 +218,7 @@ private:
     }
 
     std::string side_;
-    Vec3 wheel_static_, wheel_spin_axis_, pivot_, axis_, wheel_off_;
+    Vec3 wheel_static_, wheel_spin_axis_, pivot_, pivot_out_, axis_, wheel_off_;
     double I_theta_ {1.0};
 };
 
@@ -269,6 +283,29 @@ public:
         }
         return pose_at(st.q, mot.steer_rack_dy, st.knuckle_aa);
     }
+
+    std::vector<std::string> hardpoint_names() const override {
+        return {"lca.chassis_front", "lca.chassis_rear", "lca.knuckle", "strut.top",
+                "strut.bottom", "tie_rod.rack", "tie_rod.knuckle", "wheel.center"};
+    }
+
+    // Same geometry_at() call as pose_at(), so the points match the returned pose.
+    int hardpoints_at(const HardJointCornerState& st, double steer_rack_dy,
+                      CornerPoints& out) const override {
+        const auto g = geometry_at(st.q, steer_rack_dy, st.knuckle_aa);
+        const Vec3 lk = lca_knuckle_at(st.q);
+        out[0] = lca_cf_;
+        out[1] = lca_cr_;
+        out[2] = lk;
+        out[3] = strut_top_;
+        out[4] = g.sk;
+        out[5] = tr_inner_static_ + Vec3(0.0, steer_rack_dy, 0.0);
+        out[6] = lk + axis_angle_to_R(g.aa) * off_tk_;
+        out[7] = g.wheel;
+        return 8;
+    }
+
+    Vec3 wheel_center_design() const override { return wheel_static_; }
 
 private:
     struct Geom { Vec3 wheel, sk, spin, aa; };
@@ -465,6 +502,42 @@ public:
         return pose_at(st.q, mot.steer_rack_dy);
     }
 
+    std::vector<std::string> hardpoint_names() const override {
+        std::vector<std::string> n = {"lca.chassis_front", "lca.chassis_rear", "lca.knuckle",
+                                      "uca.chassis_front", "uca.chassis_rear", "uca.knuckle",
+                                      "tie_rod.rack", "tie_rod.knuckle"};
+        if (has_spring_) {
+            n.emplace_back("spring_damper.chassis");
+            n.emplace_back("spring_damper.lca");
+        }
+        n.emplace_back("wheel.center");
+        return n;
+    }
+
+    // Same kinematic_at() call as pose_at(), so the points match the returned pose.
+    int hardpoints_at(const HardJointCornerState& st, double steer_rack_dy,
+                      CornerPoints& out) const override {
+        KinState s;
+        if (!kinematic_at(st.q, steer_rack_dy, s)) return 0;
+        int k = 0;
+        out[k++] = lca_cf_;
+        out[k++] = lca_cr_;
+        out[k++] = s.lk;
+        out[k++] = uca_cf_;
+        out[k++] = uca_cr_;
+        out[k++] = s.uk;
+        out[k++] = tr_inner_static_ + Vec3(0.0, steer_rack_dy, 0.0);
+        out[k++] = s.tk;
+        if (has_spring_) {
+            out[k++] = sd_chassis_;
+            out[k++] = lca_pivot_ + rodrigues(lca_axis_, st.q) * (sd_lca_static_ - lca_pivot_);
+        }
+        out[k++] = s.wheel_pos;
+        return k;
+    }
+
+    Vec3 wheel_center_design() const override { return wheel_static_; }
+
 private:
     struct KinState {
         Vec3 lk, uk, tk, wheel_pos, spin_axis_world;
@@ -559,6 +632,11 @@ private:
     double I_theta_ {1.0};
 };
 
+/// Five-link YAML link keys, in the order the model stores and exports them.
+constexpr const char* kLinkNames[5] = {
+    "upper_fore", "upper_aft", "lower_fore", "lower_aft", "toe_link",
+};
+
 class FiveLinkHardJointDae final : public IHardJointDaeModel {
 public:
     explicit FiveLinkHardJointDae(const std::string& yaml_path,
@@ -567,12 +645,9 @@ public:
         side_ = root["side"] ? root["side"].as<std::string>() : "left";
         wheel_static_ = yaml_vec3(root["wheel"]["center"]);
         wheel_spin_axis_ = yaml_vec3(root["wheel"]["spin_axis"]);
-        static constexpr const char* LINK_NAMES[5] = {
-            "upper_fore", "upper_aft", "lower_fore", "lower_aft", "toe_link",
-        };
         const YAML::Node& links = root["links"];
         for (int i = 0; i < 5; ++i) {
-            const auto& L = links[LINK_NAMES[i]];
+            const auto& L = links[kLinkNames[i]];
             chassis_pts_[i] = yaml_vec3(L["chassis"]);
             knuckle_pts_static_[i] = yaml_vec3(L["knuckle"]);
             link_len_[i] = (knuckle_pts_static_[i] - chassis_pts_[i]).norm();
@@ -625,6 +700,32 @@ public:
         const auto g = driven_pose_at(st.q, st.knuckle_aa);
         return pose_from_spin(g.wheel, g.spin, wheel_static_, side_);
     }
+
+    std::vector<std::string> hardpoint_names() const override {
+        std::vector<std::string> n;
+        for (const char* link : kLinkNames) {
+            n.emplace_back(std::string("links.") + link + ".chassis");
+            n.emplace_back(std::string("links.") + link + ".knuckle");
+        }
+        n.emplace_back("wheel.center");
+        return n;
+    }
+
+    // Same driven_pose_at() call as step() returns, so the points match its pose.
+    int hardpoints_at(const HardJointCornerState& st, double /*steer_rack_dy*/,
+                      CornerPoints& out) const override {
+        const auto g = driven_pose_at(st.q, st.knuckle_aa);
+        const Mat3 R = axis_angle_to_R(g.aa);
+        int k = 0;
+        for (int i = 0; i < 5; ++i) {
+            out[k++] = chassis_pts_[i];
+            out[k++] = g.wheel + R * knuckle_off_[i];
+        }
+        out[k++] = g.wheel;
+        return k;
+    }
+
+    Vec3 wheel_center_design() const override { return wheel_static_; }
 
 private:
     struct Geom {
@@ -744,6 +845,14 @@ private:
 };
 
 }  // namespace
+
+void corner_points_to_vehicle(const CornerPoints& in, int n, bool right, double dx,
+                              CornerPoints& out) {
+    const double sy = right ? -1.0 : 1.0;
+    for (int j = 0; j < kMaxCornerHardpoints; ++j) {
+        out[j] = (j < n) ? Vec3(in[j].x() + dx, sy * in[j].y(), in[j].z()) : Vec3::Zero();
+    }
+}
 
 CornerTravelMaps IHardJointDaeModel::travel_maps(double travel_z, double steer_rad,
                                                  const Vec3& seed) const {
