@@ -30,6 +30,12 @@
 //         for rounding only).
 //     Paths: L2 kinematic blend, L2 plant path (VehicleParams::plant_path, the
 //     VDSimPlant setting of the probe), L5 penalty.
+//     Measurement correction (11-14, PO mail 13399c6a rule (ga), limit unchanged): the
+//     L5 free-3D model reports tire_forces_wheel in the body frame, so its y component
+//     carries Fz x (body roll) and is not the tyre lateral force. For L5 penalty the
+//     judged force is the contact-plane magnitude |F - (F.n_b) n_b|, n_b = R^T e_z (flat
+//     ground normal in the body frame), which bounds the tyre lateral force from above.
+//     Diagnostic before this change: every RK stage had |Fy_tyre| <= mu Fz_in.
 // U5  low-speed key `tire_low_speed: relaxed` (vehicle YAML): start 5 m/s, constant brake
 //     pedal 0.3 (CmdL4), t_stop = first tick with |vx| < 0.01 m/s (must come within 6 s),
 //     then 3 s more:
@@ -321,7 +327,15 @@ TEST(ReverseSlip, U4SideSlideAndReverseSpinFiniteAndFrictionBounded) {
                 }
                 for (int i = 0; i < NUM_WHEELS; ++i) {
                     const double lim = mu * o.Fz[i];
-                    const double fy = std::abs(o.tire_forces_wheel[i].y());
+                    double fy = std::abs(o.tire_forces_wheel[i].y());
+                    if (p == Path::L5Penalty) {
+                        // L5 reports this field in the body frame (normal force included);
+                        // judge the tyre's contact-plane force instead (>= its lateral part).
+                        const Vec3 nb = o.state.orientation.toRotationMatrix().transpose() *
+                                        Vec3(0.0, 0.0, 1.0);
+                        const Vec3& F = o.tire_forces_wheel[i];
+                        fy = (F - F.dot(nb) * nb).norm();
+                    }
                     const double ex = fy - lim - (1e-9 * std::abs(lim) + 1e-6);
                     worst = std::max(worst, ex);
                 }
