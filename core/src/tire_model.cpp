@@ -97,9 +97,11 @@ ITireModel::Transient ITireModel::advance_relaxation(const ContactInput& ci,
         // Belt on the LuGre path relaxes the slip *velocities* feeding the bristle.
         if (params_.belt.enabled) {
             out.belt_vlong = belt_relax(tr.belt_vlong, ck.vsx, ci.Vx,
-                                        params_.belt.sigma_long, dt);
+                                        params_.belt.sigma_long, dt,
+                                        params_.belt.v_low);
             out.belt_vlat  = belt_relax(tr.belt_vlat, ck.vsy, ci.Vx,
-                                        params_.belt.sigma_lat, dt);
+                                        params_.belt.sigma_lat, dt,
+                                        params_.belt.v_low);
         }
     } else {
         // Relaxation-length transient slip angle (exponential lag toward geometric).
@@ -111,9 +113,11 @@ ITireModel::Transient ITireModel::advance_relaxation(const ContactInput& ci,
         // Belt on the MF path relaxes kappa / alpha directly.
         if (params_.belt.enabled) {
             out.belt_kappa = belt_relax(tr.belt_kappa, ck.kappa, ci.Vx,
-                                        params_.belt.sigma_long, dt);
+                                        params_.belt.sigma_long, dt,
+                                        params_.belt.v_low);
             out.belt_alpha = belt_relax(tr.belt_alpha, ck.alpha, ci.Vx,
-                                        params_.belt.sigma_lat, dt);
+                                        params_.belt.sigma_lat, dt,
+                                        params_.belt.v_low);
         }
     }
     return out;

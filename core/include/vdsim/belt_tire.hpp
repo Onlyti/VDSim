@@ -25,12 +25,23 @@
 
 namespace vdsim {
 
-// Relax one slip component (kappa or alpha) toward its geometric value over dt.
-// sigma <= 0 disables the lag (returns the geometric slip = instant response).
+/**
+ * @brief Relax one slip component (kappa or alpha) toward its geometric value over dt.
+ * @param s_eff  Relaxed slip before the step.
+ * @param s_geom Geometric slip held over the step.
+ * @param Vx     Longitudinal contact speed [m/s].
+ * @param sigma  Relaxation length [m]; <= 0 disables the lag (returns s_geom).
+ * @param dt     Step [s].
+ * @param v_low  Low-speed floor [m/s]: the decay uses max(|Vx|, v_low) so the state keeps
+ *               relaxing at standstill (tire_low_speed: relaxed). 0 = no floor (the state
+ *               freezes at |Vx| = 0, the original behaviour).
+ * @return Relaxed slip after the step.
+ */
 inline double belt_relax(double s_eff, double s_geom, double Vx,
-                         double sigma, double dt) {
+                         double sigma, double dt, double v_low = 0.0) {
     if (!(sigma > 1e-6) || !(dt > 0.0)) return s_geom;
-    const double decay = std::exp(-std::fabs(Vx) * dt / sigma);
+    const double v = v_low > 0.0 ? std::fmax(std::fabs(Vx), v_low) : std::fabs(Vx);
+    const double decay = std::exp(-v * dt / sigma);
     return s_geom + (s_eff - s_geom) * decay;
 }
 

@@ -9,6 +9,7 @@
 #include "vdsim/params.hpp"
 #include "vdsim/aero.hpp"
 #include "vdsim/sensors.hpp"
+#include "vdsim/tire_low_speed.hpp"
 
 #include <yaml-cpp/yaml.h>
 #include <spdlog/spdlog.h>
@@ -288,6 +289,30 @@ WheelGyro wheel_gyro_mode(const VehicleParams& vp) {
         "wheel_gyro: unknown value '" + s + "' (expected legacy, full or off)");
 }
 
+TireLowSpeed tire_low_speed_mode(const VehicleParams& vp) {
+    const auto& s = vp.tire_low_speed;
+    if (s.empty() || s == "off") return TireLowSpeed::Off;
+    if (s == "relaxed") return TireLowSpeed::Relaxed;
+    throw std::invalid_argument(
+        "tire_low_speed: unknown value '" + s + "' (expected off or relaxed)");
+}
+
+TireSetup apply_tire_low_speed(const VehicleParams& vp, const TireSetup& ts) {
+    if (tire_low_speed_mode(vp) == TireLowSpeed::Off) return ts;
+    TireSetup out = ts;
+    for (auto& t : out.wheel) {
+        if (!t.belt.enabled) {
+            t.belt.enabled = true;
+            t.belt.sigma_lat = t.relaxation_length_lat > 1e-6 ? t.relaxation_length_lat
+                                                              : kRelaxedSigmaLat;
+            t.belt.sigma_long = t.relaxation_length_long > 1e-6 ? t.relaxation_length_long
+                                                                : kRelaxedSigmaLong;
+        }
+        t.belt.v_low = kRelaxedVLow;
+    }
+    return out;
+}
+
 void warn_if_wheel_gyro_unused(const VehicleParams& vp) {
     (void)wheel_gyro_mode(vp);
     if (vp.wheel_gyro.empty()) return;
@@ -394,6 +419,8 @@ VehicleParams VehicleParams::from_yaml(const std::string& path) {
     validate_steer_input(p);
     pull(root, "wheel_gyro",            p.wheel_gyro);
     (void)wheel_gyro_mode(p);
+    pull(root, "tire_low_speed",        p.tire_low_speed);
+    (void)tire_low_speed_mode(p);
     pull(root, "rack_per_rad",          p.rack_per_rad);
     validate_rack_per_rad(p);
 
@@ -479,6 +506,9 @@ void VehicleParams::to_yaml(const std::string& path) const {
         out << YAML::Key << "steer_input" << YAML::Value << steer_input;
     if (!wheel_gyro.empty())
         out << YAML::Key << "wheel_gyro" << YAML::Value << wheel_gyro;
+    if (!tire_low_speed.empty())   // quoted: "off" is a YAML 1.1 boolean to other readers
+        out << YAML::Key << "tire_low_speed" << YAML::Value << YAML::DoubleQuoted
+            << tire_low_speed;
     out << YAML::Key << "rack_per_rad"          << YAML::Value << rack_per_rad;
 
     if (aero_elements.empty()) {
