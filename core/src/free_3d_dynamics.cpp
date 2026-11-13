@@ -8,6 +8,7 @@
 #include "vdsim/multibody.hpp"
 #include "vdsim/subsystems.hpp"
 
+#include "free_3d_aero_internal.hpp"
 #include "free_3d_reaction_internal.hpp"
 #include "free_3d_wheel_gyro_internal.hpp"
 
@@ -126,6 +127,7 @@ public:
         // Aero wrenches are formed about the ground-referenced point at cg_height
         // (aero.cpp); shifting them to the body origin adds dz x F with dz = h - h_body.
         aero_origin_dz_ = vp.cg_height - h_body;
+        aero_slopes_ = aero_has_active_slopes(vp);
         const double hz  = -(h_body - R);
         r_body_[WHEEL_FL] = Vec3(a,  tw_f, hz);
         r_body_[WHEEL_FR] = Vec3(a, -tw_f, hz);
@@ -391,6 +393,14 @@ public:
         return axle == 0 ? mb_enabled_front_ : mb_enabled_rear_;
     }
     void set_contact_provider(IContactProvider* p) noexcept { provider_ = p; }
+    // Work order 51: static aero reference hooks (free_3d_aero_internal.hpp).
+    bool aero_needs_settle() const noexcept { return aero_slopes_; }
+    void set_aero_settling(bool on) noexcept { aero_settling_ = on; }
+    void set_aero_reference(double z, double pitch, double roll) noexcept {
+        aero_ref_z_ = z;
+        aero_ref_pitch_ = pitch;
+        aero_ref_roll_ = roll;
+    }
     std::array<double, NUM_WHEELS> wheel_camber() const noexcept { return gamma_dae_; }
     std::array<double, NUM_WHEELS> wheel_toe()    const noexcept { return toe_dae_; }
     std::array<double, NUM_WHEELS> rack_dy()      const noexcept { return rack_dy_; }
@@ -880,7 +890,9 @@ private:
         }
 
         const double vx_fwd = v_body.x();
-        if (!aero_uses_element_path(vp_)) {
+        if (aero_settling_) {
+            // In-reset settle run (work order 51): aero contributes exactly 0.
+        } else if (!aero_uses_element_path(vp_)) {
             // Four-key path: drag at the whole-vehicle CG height (cg_height above
             // ground); the lift keys now also act on L5 (front axle x=0 / rear axle
             // x=-L at the ground). The penalty path's body origin is that CG (zero
@@ -900,7 +912,18 @@ private:
             }
         } else {
             // Elements / drag height: each force at its own point (wrench about the CG).
-            const AeroLoads al = compute_aero_loads(vp_, AeroState{vx_fwd});
+            // Ride slopes read heave / pitch of the body origin relative to the static
+            // reference of the in-reset settle run (work order 51).
+            AeroState as;
+            as.vx = vx_fwd;
+            if (aero_slopes_) {
+                const Euler e = euler_from_quat(s.orientation);
+                as.dz = s.position.z() - aero_ref_z_;
+                as.pitch = e.pitch - aero_ref_pitch_;
+                as.roll = e.roll - aero_ref_roll_;
+            }
+            const AeroLoads al = compute_aero_loads(vp_, as);
+            warn_negative_element_height(vp_, al, aero_h_warned_);
             F_total_world += R * al.force_body;
             tau_body += al.torque_body;
             if (aero_origin_dz_ != 0.0)
@@ -1236,6 +1259,12 @@ private:
     std::shared_ptr<ISteeringSystem> steering_;
     std::array<Vec3, NUM_WHEELS> r_body_ {};
     double aero_origin_dz_ {0.0};   // cg_height - body origin height [m] (aero arm shift)
+    // Work order 51: static aero reference (body-origin z [m], pitch / roll [rad]) set by
+    // SimSession's in-reset settle run; reset() leaves it alone (snapshot restore keeps it).
+    bool   aero_slopes_ {false};     // some element has a non-zero ride slope
+    bool   aero_settling_ {false};   // settle run in progress: aero off
+    bool   aero_h_warned_ {false};   // element below ground warned (once per model)
+    double aero_ref_z_ {0.0}, aero_ref_pitch_ {0.0}, aero_ref_roll_ {0.0};
     bool sprung_ref_ {false};       // cg_height_ref = sprung: 0.8.1 strut behaviour (Re arm)
     std::array<double, NUM_WHEELS> I_wheel_ {};
     WheelGyro gyro_mode_ {WheelGyro::Legacy};   // VehicleParams::wheel_gyro
@@ -1346,6 +1375,23 @@ bool free_3d_attach_contact_provider(IVehicleDynamics& dyn, IContactProvider* pr
     p->set_contact_provider(provider);
     return true;
 }
+
+namespace detail {
+
+bool free_3d_aero_needs_settle(const IVehicleDynamics& dyn) {
+    const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);
+    return p != nullptr && p->aero_needs_settle();
+}
+
+void free_3d_set_aero_settling(IVehicleDynamics& dyn, bool on) {
+    if (auto* p = dynamic_cast<Free3DDynamics*>(&dyn)) p->set_aero_settling(on);
+}
+
+void free_3d_set_aero_reference(IVehicleDynamics& dyn, double z, double pitch, double roll) {
+    if (auto* p = dynamic_cast<Free3DDynamics*>(&dyn)) p->set_aero_reference(z, pitch, roll);
+}
+
+}  // namespace detail
 
 std::array<double, NUM_WHEELS> free_3d_wheel_camber(const IVehicleDynamics& dyn) {
     const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);
