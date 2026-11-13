@@ -70,7 +70,9 @@ target_link_libraries(vdsim_l5_ref_dump PRIVATE vdsim::core)
 # moves back into vdsim_integration_tests and the label goes away.
 # L5Reaction.R2_*: strut-path axle load transfer, out of the 0.8.1 verdict
 # (PROP-1924 option 1), re-judged in 0.8.2.
-add_executable(vdsim_known_failure_tests test_l5_reaction.cpp)
+# L5WheelGyro.V3_SkidpadRollMomentStrut: strut path misses the mount couple, out of
+# the 0.8.2 verdict (PROP-2741 option 2); the couple repair is planned for 0.8.3.
+add_executable(vdsim_known_failure_tests test_l5_reaction.cpp test_l5_wheel_gyro.cpp)
 target_include_directories(vdsim_known_failure_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../support)
 target_compile_definitions(vdsim_known_failure_tests PRIVATE
@@ -82,7 +84,8 @@ target_link_libraries(vdsim_known_failure_tests PRIVATE
     GTest::gtest_main
 )
 foreach(_kf L5Reaction.R2_StrutAccelSprungVsUnsprung
-            L5Reaction.R2_StrutBrakeSprungVsUnsprung)
+            L5Reaction.R2_StrutBrakeSprungVsUnsprung
+            L5WheelGyro.V3_SkidpadRollMomentStrut)
     add_test(NAME ${_kf} COMMAND vdsim_known_failure_tests --gtest_filter=${_kf})
     set_tests_properties(${_kf} PROPERTIES LABELS known_failure)
 endforeach()
