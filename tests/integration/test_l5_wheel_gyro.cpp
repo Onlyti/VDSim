@@ -25,6 +25,22 @@
 //   Gate: | dM / (-G_w) - 1 | <= 0.02 on both L5 paths.
 //   Precondition (both runs): last 2 s max |V - 7| <= 0.05 m/s, |V/r - 8.5| / 8.5 <= 1 %,
 //   std(r) / mean(r) <= 0.5 %.
+//
+// V3b (added after the V3 measurement, PO verdict on the V3 strut stop): exact angular
+// momentum budget about the whole-vehicle CG, heading-frame x axis, same skidpad, same
+// off/full a_y normalisation, same gate +-2 % against -G_w, both L5 paths.
+//   e_x = (cos psi, sin psi, 0), omega_w = R omega, a_k = omega_w x v_k (steady turn).
+//   E = sum_i (p_i - G) x F_i,  F_i = R F_tire,i (penalty)
+//                               F_i = m_u a_u,i + R F_tire,i + m_u g e_z (strut particle)
+//   T = (x_b - G) x m_b a_b + sum_i (strut) (x_u,i - G) x m_u a_u,i
+//   B = omega_w x (R I_b omega)                 (sprung body spin)
+//   L = sum_i (strut) (x_b + R r_i - x_u,i) x R F_tire,i  (mount-to-particle couple of
+//       the strut connection; 0 on the penalty path)
+//   D = (E + L - T - B) . e_x
+//   dD = mean(D)_full - mean(D)_off * mean(a)_full / mean(a)_off
+//   Gate: | dD / (-G_w) - 1 | <= 0.02, preconditions as V3 with the condition's V and R.
+//   Condition 1: R 8.5 m, V 7 m/s (the V3 skidpad; seen in the stop diagnostic).
+//   Condition 2: R 15 m, V 9.5 m/s (a_y ~ 6.0 m/s2), fixed here before any run of it.
 #include "vdsim/control.hpp"
 #include "vdsim/interfaces.hpp"
 #include "vdsim/multibody.hpp"
@@ -139,11 +155,12 @@ VehicleParams with_gyro(const char* mode) {
 
 struct Skid {
     double M {0}, a {0}, Gw {0}, V {0}, r {0};
+    double E {0}, T {0}, B {0}, L {0};   // V3b budget terms, heading-frame x [N m]
     double max_dV {0}, R_rel {0}, r_cv {0};
 };
 
-Skid skidpad(const char* mode, bool strut) {
-    constexpr double kV = 7.0, kR = 8.5, kT = 15.0, kAvg = 2.0;
+Skid skidpad(const char* mode, bool strut, double kV = 7.0, double kR = 8.5) {
+    constexpr double kT = 15.0, kAvg = 2.0;
     VehicleParams vp = with_gyro(mode);
     vp.aero_drag_coeff = 0.0;
     vp.aero_lift_front = 0.0;
@@ -215,6 +232,30 @@ Skid skidpad(const char* mode, bool strut) {
                 const double d = i < 2 ? steer : 0.0;
                 H_y += I_w[i] * st.wheel_spin[i] / std::sqrt(1.0 + d * d);
             }
+            // V3b budget (exact angular momentum about G, heading-frame x)
+            const Vec3 e_x(std::cos(psi), std::sin(psi), 0.0);
+            const Vec3 w_w = Rm * st.angular_velocity;
+            Vec3 E = Vec3::Zero(), T = Vec3::Zero(), L = Vec3::Zero();
+            T += (st.position - G).cross(m_b * w_w.cross(v_w));
+            for (int i = 0; i < NUM_WHEELS; ++i) {
+                const Vec3 F_t = Rm * o.tire_forces[i];
+                Vec3 F = F_t;
+                if (strut) {
+                    const Vec3 a_u = w_w.cross(st.unsprung_vel[i]);
+                    F += m_u[i] * a_u + Vec3(0.0, 0.0, m_u[i] * 9.80665);
+                    T += (st.unsprung_pos[i] - G).cross(m_u[i] * a_u);
+                    L += (st.position + Rm * r_mount[i] - st.unsprung_pos[i]).cross(F_t);
+                }
+                E += (p[i] - G).cross(F);
+            }
+            const Vec3& Ib = vp.inertia_diag;
+            const Vec3 H_b = Rm * Vec3(Ib.x() * st.angular_velocity.x(),
+                                       Ib.y() * st.angular_velocity.y(),
+                                       Ib.z() * st.angular_velocity.z());
+            out.E += E.dot(e_x) / n_avg;
+            out.T += T.dot(e_x) / n_avg;
+            out.B += w_w.cross(H_b).dot(e_x) / n_avg;
+            out.L += L.dot(e_x) / n_avg;
             out.M += M / n_avg;
             out.a += V * r / n_avg;
             out.Gw += st.angular_velocity.z() * H_y / n_avg;
@@ -257,6 +298,29 @@ void v3(bool strut) {
     EXPECT_LE(std::abs(rel), 0.02);
 }
 
+void v3b(bool strut, double V, double R) {
+    const Skid off = skidpad("off", strut, V, R);
+    const Skid full = skidpad("full", strut, V, R);
+    const char* path = strut ? "strut" : "penalty";
+    for (const auto* run : {&off, &full}) {
+        std::printf("V3b %s R=%.1f V=%.1f %s V=%.6f r=%.6f R=%.6f max|dV|=%.3e R_rel=%.3e "
+                    "r_cv=%.3e E=%.6f T=%.6f B=%.6f L=%.6f N m a=%.6f m/s2 Gw=%.6f N m\n",
+                    path, R, V, run == &off ? "off " : "full", run->V, run->r, run->V / run->r,
+                    run->max_dV, run->R_rel, run->r_cv, run->E, run->T, run->B, run->L, run->a,
+                    run->Gw);
+        EXPECT_LE(run->max_dV, 0.05) << "precondition: speed hold";
+        EXPECT_LE(run->R_rel, 0.01) << "precondition: radius hold";
+        EXPECT_LE(run->r_cv, 0.005) << "precondition: steady yaw rate";
+    }
+    const auto D = [](const Skid& x) { return x.E + x.L - x.T - x.B; };
+    const double dD = D(full) - D(off) * full.a / off.a;
+    const double expected = -full.Gw;
+    const double rel = dD / expected - 1.0;
+    std::printf("V3b %s R=%.1f V=%.1f dD=%.6f N m expected=%.6f N m rel=%+.4f %% (gate +-2 %%)\n",
+                path, R, V, dD, expected, 100.0 * rel);
+    EXPECT_LE(std::abs(rel), 0.02);
+}
+
 }  // namespace
 
 // ---- V2 (sim level) --------------------------------------------------------------------
@@ -290,3 +354,13 @@ TEST(L5WheelGyro, V2_CornerModelUnsetLegacyAndFullReactsToCamber) {
 TEST(L5WheelGyro, V3_SkidpadRollMomentPenalty) { v3(false); }
 
 TEST(L5WheelGyro, V3_SkidpadRollMomentStrut) { v3(true); }
+
+// ---- V3b (exact budget incl. the strut mount couple) ----------------------------------
+
+TEST(L5WheelGyro, V3b_ExactBudgetPenaltyR8p5V7) { v3b(false, 7.0, 8.5); }
+
+TEST(L5WheelGyro, V3b_ExactBudgetStrutR8p5V7) { v3b(true, 7.0, 8.5); }
+
+TEST(L5WheelGyro, V3b_ExactBudgetPenaltyR15V9p5) { v3b(false, 9.5, 15.0); }
+
+TEST(L5WheelGyro, V3b_ExactBudgetStrutR15V9p5) { v3b(true, 9.5, 15.0); }
