@@ -9,6 +9,7 @@ add_executable(vdsim_unit_tests
     test_params_yaml.cpp
     test_aero.cpp
     test_l5_reaction_keys.cpp
+    test_wheel_gyro_keys.cpp
     test_rack_per_rad_key.cpp
     test_cg_height_ref_keys.cpp
     test_scenario_yaml.cpp

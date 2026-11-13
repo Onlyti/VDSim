@@ -138,7 +138,8 @@ $$
 \boldsymbol{\tau} = \sum_i \mathbf{r}_i\times\mathbf{F}_i^{b}
                     \;+\; \Big(\textstyle\sum_i M_{z,i}\Big)\hat{\mathbf{z}}_b
                     \;+\; \sum_j \mathbf{r}_{a,j}\times\mathbf{F}_{a,j}^{b}
-                    \;+\; \boldsymbol{\tau}_{\mathrm{reaction}} ,
+                    \;+\; \boldsymbol{\tau}_{\mathrm{reaction}}
+                    \;+\; \boldsymbol{\tau}_{\mathrm{gyro}} ,
 $$
 
 with $\mathbf{F}_i^{b} = \mathbf{R}^{\!\top}\mathbf{F}_i^{w}$ the body-frame wheel
@@ -167,6 +168,51 @@ Penalty and spatial-strut paths therefore return the reaction through the chassi
 Hard-joint DAE suspension also falls back to the same sprung result and warns once per
 process when `unsprung` is explicit. LuGre wheel-spin dynamics use the clamped tire
 longitudinal force for the tire reaction torque.
+
+### Wheel-spin gyroscopic term (`wheel_gyro`, 0.8.2)
+
+Each wheel carries spin angular momentum $I_{w,i}\,\omega_i$ along its spin axis
+$\hat{\mathbf{s}}_i$. A body turning at $\boldsymbol{\omega}$ has to supply the rate of
+change $\boldsymbol{\omega}\times\mathbf{H}$, so the body feels the reaction
+
+$$
+\boldsymbol{\tau}_{\mathrm{gyro}} = -\,\boldsymbol{\omega}\times
+   \sum_i I_{w,i}\,\omega_i\,\hat{\mathbf{s}}_i ,
+\qquad
+\hat{\mathbf{s}}_i = \frac{(-\delta_i,\; 1,\; \sigma_i)}{\lVert(-\delta_i,\; 1,\; \sigma_i)\rVert},
+\qquad
+\delta_i = \delta_{\mathrm{steer},i} + \delta_{\mathrm{toe},i}.
+$$
+
+| `wheel_gyro` | $\sigma_i$ | Meaning |
+|---|---|---|
+| unset / `legacy` | $0$ | 0.8.1 term: spin axis tilted by steer and corner-model toe |
+| `full` | $-\tan\gamma_i$ | legacy plus the corner-model camber tilt |
+| `off` | — | $\boldsymbol{\tau}_{\mathrm{gyro}} = 0$ |
+
+$\gamma_i$ is the vehicle-frame camber of the corner model (+ = wheel top toward body
+$+y$, as `free_3d_wheel_camber` reports it), so at zero steer
+$\hat{\mathbf{s}}_i = (0,\ \cos\gamma_i,\ -\sin\gamma_i)$. $\hat{\mathbf{s}}_i$ points to
+body $+y$ on both sides; forward rolling is $\omega_i > 0$. $I_{w,i}$ is `wheel_inertia`,
+or $\tfrac12 m_{u,i} R^2$ when it is 0. Code: `detail::wheel_gyro_moment`
+(`core/src/free_3d_wheel_gyro_internal.hpp`), called from `free_3d_dynamics.cpp` on the
+penalty and the strut path.
+
+Steady turn at yaw rate $r$ (no roll or pitch rate): the roll component is
+$\tau_{\mathrm{gyro},x} = r\sum_i I_{w,i}\,\omega_i\,(\hat{\mathbf{s}}_i\cdot\hat{\mathbf{y}})$,
+toward the outside of the turn, so the tyres carry an extra outside load transfer of the
+same moment. The camber enters this steady term only through
+$\hat{\mathbf{s}}_i\cdot\hat{\mathbf{y}}$ (order $1-\cos\gamma$); it acts at first order
+only with a roll or pitch rate, through $\omega_{x,y}\,H_z$.
+
+Assumptions: the steer-rate contribution to the wheel angular velocity is omitted; the
+reflected drivetrain and engine inertia is not part of $\mathbf{H}$ (it enters the spin
+equation only); the steer tilt keeps the 0.8.1 small-angle form; the camber is non-zero
+only with an attached corner model (without it `full` equals `legacy` bit for bit).
+Rotor gyroscopics (`rotor_*`) are not in this term (0.9.0).
+Tests: `tests/unit/test_wheel_gyro_keys.cpp` (key, helper, zero-camber identity),
+`tests/integration/test_l5_wheel_gyro.cpp` (corner-model wiring, steady skidpad roll
+moment against the term above), `Stunt.GyroscopicWheelSpinCouplesYawToRoll`.
 
 Position and attitude integrate as
 

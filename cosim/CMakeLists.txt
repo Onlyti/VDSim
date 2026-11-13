@@ -176,6 +176,15 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 300
         ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
+    # wheel_gyro key, Python side (work order 50): round trip, ValueError cases,
+    # one warning below L5, L5 zero-camber bit identity.
+    add_test(NAME wheel_gyro
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_wheel_gyro.py)
+    set_tests_properties(wheel_gyro PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 300
+        ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
     # L5 hardpoint output, Python side (work order 48c): attach_l5_hardpoints,
     # camber/toe/hardpoints bit-equal to the C++ values, rack_per_rad, trace channels.
     add_test(NAME l5_hardpoints
