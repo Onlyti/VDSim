@@ -60,7 +60,6 @@ constexpr double kStickBlend   = 3.0;
 constexpr double kStickC       = 6.0e4;
 constexpr double kWheelSpinDrag = 2.5;
 constexpr double kTireDampRatio = 0.08;   // tire-spring damping ratio (strut path)
-constexpr double kRackPerRad    = 0.08;   // tie-rod rack travel per roadwheel rad (mirrors L4)
 constexpr double kStopStiffness = 2.0e6;  // bump/rebound stop rate [N/m] (strut path)
 // Free-3D unsprung: stiff perpendicular bushing standing in for the rigid suspension
 // links (the wheel is located horizontally by the A-arms). Soft along the strut axis
@@ -153,6 +152,7 @@ public:
         steering_   = make_default_steering(vp_, vp_.steer_deadtime_s);
         validate_steer_input(vp_);
         validate_l5_steer_input(vp_);
+        validate_rack_per_rad(vp_);
         for (int axle = 0; axle < 2; ++axle) {
             const bool front = (axle == 0);
             drive_unsprung_[axle] = resolved_torque_reaction(vp_, true, front)
@@ -161,6 +161,7 @@ public:
                                     == VehicleParams::TorqueReaction::Unsprung;
         }
         targets_checked_ = false;
+        refresh_all_hardpoints();
         if (const char* kl = std::getenv("VDSIM_KLINK")) k_link_ = std::atof(kl);
         spdlog::debug("[L5 free-3D] init: mass={:.0f} kg, I=({:.0f},{:.0f},{:.0f})",
                       vp.mass, vp.inertia_diag.x(), vp.inertia_diag.y(), vp.inertia_diag.z());
@@ -228,6 +229,7 @@ public:
         mz_front_sum_ = 0.0;
         gamma_dae_.fill(0.0);
         toe_dae_.fill(0.0);
+        rack_dy_.fill(0.0);
         path_valid_.fill(false);
         path_off_.fill(Vec3::Zero());
         path_tan_.fill(Vec3::UnitZ());
@@ -245,6 +247,7 @@ public:
             mb_dae_rear_->initialize(mb_state_[WHEEL_RL], mot);
             mb_dae_rear_->initialize(mb_state_[WHEEL_RR], mot);
         }
+        refresh_all_hardpoints();
     }
 
     void step(const ControlInput& u,
@@ -329,6 +332,47 @@ public:
                 cache_coil(WHEEL_RL, t0); cache_coil(WHEEL_RR, t0);
             }
         }
+        refresh_all_hardpoints();
+    }
+
+    // 48c: exported names and axle offsets of one axle, from its corner model and vp_.
+    void update_hardpoint_layout(int axle) {
+        const mb::IHardJointDaeModel* dae = axle == 0 ? mb_dae_front_.get()
+                                                      : mb_dae_rear_.get();
+        if (!dae) {
+            hp_names_[axle].clear();
+            hp_excluded_[axle].clear();
+            hp_dx_[axle] = 0.0;
+            hp_dy_[axle] = 0.0;
+            return;
+        }
+        const Vec3 w = dae->wheel_center_design();
+        hp_excluded_[axle] = dae->hardpoint_export_excluded();
+        hp_names_[axle] = hp_excluded_[axle].empty() ? dae->hardpoint_names()
+                                                     : std::vector<std::string>{};
+        hp_dx_[axle] = axle == 0 ? (0.0 - w.x()) : (-vp_.wheelbase - w.x());
+        hp_dy_[axle] = w.y() - 0.5 * (axle == 0 ? vp_.track_front : vp_.track_rear);
+    }
+    // 48c: hardpoints of wheel i at its current corner state and rack input, in the
+    // vehicle design frame (axle x offset, right side mirrored). Pure read of the model.
+    void refresh_hardpoints(int i, double rack_dy) {
+        const bool front = (i == WHEEL_FL || i == WHEEL_FR);
+        const bool right = (i == WHEEL_FR || i == WHEEL_RR);
+        const mb::IHardJointDaeModel* dae = front ? mb_dae_front_.get() : mb_dae_rear_.get();
+        if (!dae || !hp_excluded_[front ? 0 : 1].empty()) {
+            hp_count_[i] = 0;
+            hp_[i].fill(Vec3::Zero());
+            return;
+        }
+        mb::CornerPoints raw {};
+        const int n = dae->hardpoints_at(mb_state_[i], rack_dy, raw);
+        mb::corner_points_to_vehicle(raw, n, right, hp_dx_[front ? 0 : 1], hp_[i]);
+        hp_count_[i] = n;
+    }
+    void refresh_all_hardpoints() {
+        update_hardpoint_layout(0);
+        update_hardpoint_layout(1);
+        for (int i = 0; i < NUM_WHEELS; ++i) refresh_hardpoints(i, rack_dy_[i]);
     }
     // Cache the coil rate / free length at attach so the coil-spring (k_coil*(l-l_free)*MR)
     // reproduces the wheel-rate model's STATIC load and rate (k_coil = ks/MR0^2), then turns
@@ -347,6 +391,36 @@ public:
     void set_contact_provider(IContactProvider* p) noexcept { provider_ = p; }
     std::array<double, NUM_WHEELS> wheel_camber() const noexcept { return gamma_dae_; }
     std::array<double, NUM_WHEELS> wheel_toe()    const noexcept { return toe_dae_; }
+    std::array<double, NUM_WHEELS> rack_dy()      const noexcept { return rack_dy_; }
+    std::array<bool, NUM_WHEELS> kin_valid() const noexcept {
+        std::array<bool, NUM_WHEELS> v {};
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            const bool front = (i == WHEEL_FL || i == WHEEL_FR);
+            v[i] = sp_.l5_spatial_suspension &&
+                   (front ? mb_dae_front_ != nullptr : mb_dae_rear_ != nullptr);
+        }
+        return v;
+    }
+    std::array<WheelHardpoints, NUM_WHEELS> wheel_hardpoints() const {
+        static_assert(kMaxWheelHardpoints == mb::kMaxCornerHardpoints,
+                      "WheelHardpoints and CornerPoints must hold the same count");
+        const auto valid = kin_valid();
+        std::array<WheelHardpoints, NUM_WHEELS> out {};
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            if (!valid[i]) continue;
+            out[i].count = hp_count_[i];
+            out[i].p = hp_[i];
+        }
+        return out;
+    }
+    HardpointLayout hardpoint_layout() const {
+        HardpointLayout lay;
+        lay.names = hp_names_;
+        lay.axle_offset_x = hp_dx_;
+        lay.wheel_center_dy = hp_dy_;
+        lay.excluded = hp_excluded_;
+        return lay;
+    }
 
     // Strut spring + stop force [N] at the current state (damper excluded); NaN off
     // the spatial-strut path.
@@ -1037,7 +1111,7 @@ private:
             mot.travel_z      = state_.susp_compression[i];
             mot.travel_z_dot  = state_.susp_velocity[i];
             mot.steer_rack_dy = front
-                ? (rack ? so.rack_travel : steer_rad * kRackPerRad)
+                ? (rack ? so.rack_travel : steer_rad * vp_.rack_per_rad)
                 : 0.0;
             if (right) mot.steer_rack_dy = -mot.steer_rack_dy;
             mb::WheelLoad wl;
@@ -1046,6 +1120,8 @@ private:
             const double s = right ? -1.0 : 1.0;
             gamma_dae_[i] = s * wp.camber_rad;
             toe_dae_[i]   = s * wp.toe_rad;
+            rack_dy_[i]   = mot.steer_rack_dy;
+            refresh_hardpoints(i, mot.steer_rack_dy);
             // Real linkage travel geometry at the current vertical travel: the wheel-centre
             // migration (vs static) and the path tangent, so the strut bushing follows the
             // hardpoint path instead of a straight line -> anti-dive/squat + roll-centre
@@ -1186,6 +1262,15 @@ private:
     bool mb_enabled_front_ {false}, mb_enabled_rear_ {false};
     std::array<double, NUM_WHEELS> gamma_dae_ {};   // per-wheel camber [rad] from the DAE
     std::array<double, NUM_WHEELS> toe_dae_ {};     // per-wheel toe [rad] from the DAE
+    // 48c output: rack input last fed to each corner (part-YAML frame), hardpoints in the
+    // vehicle design frame, per-axle names / x offset / wheel-centre y gap.
+    std::array<double, NUM_WHEELS> rack_dy_ {};
+    std::array<mb::CornerPoints, NUM_WHEELS> hp_ {};
+    std::array<int, NUM_WHEELS> hp_count_ {};
+    std::array<std::vector<std::string>, 2> hp_names_;
+    std::array<std::string, 2> hp_excluded_;   // non-empty: axle points not exported
+    std::array<double, 2> hp_dx_ {{0.0, 0.0}};
+    std::array<double, 2> hp_dy_ {{0.0, 0.0}};
     // High-fidelity linkage geometry (when a corner DAE is attached): the real wheel-centre
     // travel path from the hardpoints, so anti-dive/squat and roll-centre migration emerge
     // from geometry instead of a straight body-up strut. w0_ = static path point (body, DAE
@@ -1269,6 +1354,26 @@ std::array<double, NUM_WHEELS> free_3d_wheel_camber(const IVehicleDynamics& dyn)
 std::array<double, NUM_WHEELS> free_3d_wheel_toe(const IVehicleDynamics& dyn) {
     const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);
     return p ? p->wheel_toe() : std::array<double, NUM_WHEELS>{};
+}
+
+std::array<bool, NUM_WHEELS> free_3d_wheel_kin_valid(const IVehicleDynamics& dyn) {
+    const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);
+    return p ? p->kin_valid() : std::array<bool, NUM_WHEELS>{};
+}
+
+std::array<WheelHardpoints, NUM_WHEELS> free_3d_wheel_hardpoints(const IVehicleDynamics& dyn) {
+    const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);
+    return p ? p->wheel_hardpoints() : std::array<WheelHardpoints, NUM_WHEELS>{};
+}
+
+HardpointLayout free_3d_hardpoint_layout(const IVehicleDynamics& dyn) {
+    const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);
+    return p ? p->hardpoint_layout() : HardpointLayout{};
+}
+
+std::array<double, NUM_WHEELS> free_3d_rack_dy(const IVehicleDynamics& dyn) {
+    const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);
+    return p ? p->rack_dy() : std::array<double, NUM_WHEELS>{};
 }
 
 std::array<double, NUM_WHEELS> free_3d_strut_force(const IVehicleDynamics& dyn) {

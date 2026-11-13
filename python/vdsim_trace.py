@@ -166,6 +166,11 @@ CHANNEL_SPECS = {
     # -- producer records its command here and leaves u_fx out, so u_fx is a
     # -- force [N] to every reader. Optional and additive like the above.
     "u_ax":              ("m/s^2",     ()),
+    # -- L5 hardpoint output (work order 48c). Optional and additive like the
+    # -- timing channels: an L5 run with a corner model on the strut path records
+    # -- them by itself; a wheel without one is NaN, never a zero standing in.
+    "wheel_camber":      ("rad",       (4,)),
+    "wheel_toe":         ("rad",       (4,)),
 }
 
 #: Timing channels of a closed-loop evaluation run. Recorded only by the
@@ -180,7 +185,22 @@ EVAL_TIMING_MODES = ("virtual_async", "wallclock")
 #: Opt-in channels: never part of the default set, recorded only when a
 #: producer lists them (``extra_channels``) or, for ``u_ax``, when the
 #: producer's command is an acceleration target.
-OPTIONAL_CHANNELS = EVAL_CHANNELS + ("steer_applied", "u_ax")
+OPTIONAL_CHANNELS = EVAL_CHANNELS + ("steer_applied", "u_ax", "wheel_camber", "wheel_toe")
+
+#: Hardpoint channels (work order 48c): one (3,) channel [m] per exported point,
+#: ``hp_<wheel>_<point>`` with the part-YAML key's dots written as ``_``. The
+#: manifest ``hardpoints.corners.<wheel>.points`` maps each YAML key to its channel.
+HARDPOINT_CHANNEL_RE = re.compile(r"^hp_(fl|fr|rl|rr)_[a-z0-9_]+$")
+
+
+def hardpoint_channel_name(wheel, key):
+    """Channel name of one exported hardpoint.
+
+    :param wheel: ``"fl"``, ``"fr"``, ``"rl"`` or ``"rr"``.
+    :param key: dotted part-YAML key, e.g. ``"lca.knuckle"``.
+    :returns: e.g. ``"hp_fl_lca_knuckle"``; matches :data:`HARDPOINT_CHANNEL_RE`.
+    """
+    return "hp_%s_%s" % (wheel, key.replace(".", "_"))
 
 #: Aero channels (work order 42). Opt-in and additive like the channels
 #: above. The totals have fixed names; each element of ``aero.elements`` adds
@@ -208,13 +228,16 @@ def channel_spec(name):
         return spec
     if _AERO_ELEMENT_RE.match(name):
         return ("N", ())
+    if HARDPOINT_CHANNEL_RE.match(name):
+        return ("m", (3,))
     return None
 
 
 def is_optional_channel(name):
     """True for opt-in channels (never in a level's default set)."""
     return name in OPTIONAL_CHANNELS or (
-        name.startswith("aero_") and channel_spec(name) is not None)
+        name.startswith("aero_") and channel_spec(name) is not None) or bool(
+        HARDPOINT_CHANNEL_RE.match(name))
 
 
 def aero_channel_names(element_names=()):

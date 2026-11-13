@@ -641,6 +641,16 @@ SimOutput SimSession::output() const {
     o.wheel_alpha_peak = wheel_alpha_peak_;
     o.wheel_kappa_peak = wheel_kappa_peak_;
     o.sensors = sensors_meas_;
+    if (dyn_->level() == IVehicleDynamics::Level::L5_Stunt) {
+        o.wheel_kin_valid = free_3d_wheel_kin_valid(*dyn_);
+        const auto camber = free_3d_wheel_camber(*dyn_);
+        const auto toe = free_3d_wheel_toe(*dyn_);
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            o.wheel_camber[i] = o.wheel_kin_valid[i] ? camber[i] : 0.0;
+            o.wheel_toe[i] = o.wheel_kin_valid[i] ? toe[i] : 0.0;
+        }
+        o.hardpoints = free_3d_wheel_hardpoints(*dyn_);
+    }
     return o;
 }
 
