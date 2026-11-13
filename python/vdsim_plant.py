@@ -649,7 +649,7 @@ def _drive_brake_refs(vp: vdsim.VehicleParams, drive_torque_ref, brake_torque_re
     return drive, brake
 
 
-def trace_sample(o, t, u_steer, u_fx, channels, validity, vp=None):
+def trace_sample(o, t, u_steer, u_fx, channels, validity, vp=None, hardpoints=None):
   """Map one session output onto a trace sample (3.2 / 3.2.1).
 
   Shared by the plant path (:class:`VDSimPlant`) and the scenario path
@@ -671,6 +671,8 @@ def trace_sample(o, t, u_steer, u_fx, channels, validity, vp=None):
   :param validity: ``channel_validity`` of the run (see
       :func:`channel_validity_from_dynamics`); a not-modeled channel is written
       as exactly ``0.0``.
+  :param hardpoints: ``{channel: (wheel index, point index)}`` of the L5
+      hardpoint channels this run records (work order 48c), or None.
   :returns: sample dict accepted by ``vdsim_trace.TraceWriter.append``.
   """
   st = o.state
@@ -696,6 +698,21 @@ def trace_sample(o, t, u_steer, u_fx, channels, validity, vp=None):
       # Opt-in channel (vdsim_trace.OPTIONAL_CHANNELS): the realized steer, not
       # the command, so the actuator chain is visible next to u_steer.
       sample["steer_applied"] = float(o.steer_applied)
+  # L5 hardpoint output (48c): a wheel without a corner model is NaN, so a
+  # missing quantity never reads as a measured zero.
+  if "wheel_camber" in channels or "wheel_toe" in channels:
+      valid = o.wheel_kin_valid
+      if "wheel_camber" in channels:
+          sample["wheel_camber"] = [float(o.wheel_camber[i]) if valid[i] else math.nan
+                                    for i in range(4)]
+      if "wheel_toe" in channels:
+          sample["wheel_toe"] = [float(o.wheel_toe[i]) if valid[i] else math.nan
+                                 for i in range(4)]
+  if hardpoints:
+      hp = o.hardpoints
+      for name, (i, j) in hardpoints.items():
+          sample[name] = (tuple(hp[i][j]) if j < len(hp[i])
+                          else (math.nan, math.nan, math.nan))
   # 0.3 channels. `channels` already excludes anything this level does not
   # produce, so no branch here can write a zero standing in for a quantity the
   # model does not have (3.2.1).

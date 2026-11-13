@@ -313,6 +313,10 @@ class Scene3D:
         self.wheel_radius = float(g.get("wheel_radius_m", 0.32))
         self.wheel_width = float(g.get("wheel_width_m", 0.22))
         self.cg_height = float(g.get("cg_height_m", 0.55))
+        #: Height of the pose origin above ground at design attitude [m]. The
+        #: whole-vehicle CG (cg_height_m) unless the producer declares the L5
+        #: strut / DAE sprung-body height h_s (optional key, work order 47).
+        self.body_height = float(g.get("body_cg_height_m", self.cg_height))
         self.mass = float(g.get("mass_kg", 1500.0))
         lwh = g.get("body_lwh_m")
         self.body_lwh = ([float(v) for v in lwh] if lwh else
@@ -328,8 +332,8 @@ class Scene3D:
                 % (self.manifest.get("schema_version"), self.model_level))
 
         # Wheel hub positions in the body frame, FL FR RL RR. z puts the hub one
-        # wheel radius above the ground plane the CG height is measured from.
-        hub_z = -(self.cg_height - self.wheel_radius)
+        # wheel radius above the ground plane the pose origin height is measured from.
+        hub_z = -(self.body_height - self.wheel_radius)
         self.hub_body = np.array([
             [+self.a_front, +0.5 * self.track, hub_z],
             [+self.a_front, -0.5 * self.track, hub_z],
@@ -341,7 +345,7 @@ class Scene3D:
         # other number above comes from the file.
         self.body_center_body = np.array(
             [0.5 * (self.a_front - self.b_rear), 0.0,
-             -self.cg_height + 0.5 * self.body_lwh[2]])
+             -self.body_height + 0.5 * self.body_lwh[2]])
 
         self.trajectory = self.pose[:, :2]
         self.traj_z = (self.pose_zrp[:, 0] if self.pose_zrp is not None

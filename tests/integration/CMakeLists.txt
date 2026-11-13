@@ -15,6 +15,8 @@ add_executable(vdsim_integration_tests
     test_l5_reaction.cpp
     test_l5_rack_travel.cpp
     test_l5_wheel_gyro.cpp
+    test_l5_hardpoint_output.cpp
+    test_cg_height_ref.cpp
     test_terrain_l5.cpp
     test_belt_transient.cpp
     test_belt_validation.cpp
@@ -64,15 +66,16 @@ gtest_discover_tests(vdsim_integration_tests)
 add_executable(vdsim_l5_ref_dump l5_ref_dump.cpp)
 target_link_libraries(vdsim_l5_ref_dump PRIVATE vdsim::core)
 
-# Tests with label `known_failure` state gates the code does not meet in this
-# release. They stay runnable (`ctest -L known_failure`) and fail visibly; the
-# validation preset and CI exclude the label. When the cause is fixed the test
-# moves back into vdsim_integration_tests and the label goes away.
-# L5Reaction.R2_*: strut-path axle load transfer, out of the 0.8.1 verdict
-# (PROP-1924 option 1), re-judged in 0.8.2.
+# Label `known_failure` (stated gates the code does not meet in a release) is excluded
+# by the validation preset and CI. L5Reaction.R2_* returned to the release verdict in
+# 0.8.2 (work order 47). They stay runnable (`ctest -L known_failure`) and fail visibly;
+# when the cause is fixed the test moves back into vdsim_integration_tests.
+# L5HardpointKnownFailure.K4FiveLinkPrescribedSweep: the five-link driven pose is a
+# least-squares fit, links off the K4 line; its points are not exported in 0.8.2
+# (48c K4 verdict, option 1). Information item for the repair.
 # L5WheelGyro.V3_SkidpadRollMomentStrut: strut path misses the mount couple, out of
 # the 0.8.2 verdict (PROP-2741 option 2); the couple repair is planned for 0.8.3.
-add_executable(vdsim_known_failure_tests test_l5_reaction.cpp test_l5_wheel_gyro.cpp)
+add_executable(vdsim_known_failure_tests test_l5_hardpoint_output.cpp test_l5_wheel_gyro.cpp)
 target_include_directories(vdsim_known_failure_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../support)
 target_compile_definitions(vdsim_known_failure_tests PRIVATE
@@ -83,8 +86,7 @@ target_link_libraries(vdsim_known_failure_tests PRIVATE
     GTest::gtest
     GTest::gtest_main
 )
-foreach(_kf L5Reaction.R2_StrutAccelSprungVsUnsprung
-            L5Reaction.R2_StrutBrakeSprungVsUnsprung
+foreach(_kf L5HardpointKnownFailure.K4FiveLinkPrescribedSweep
             L5WheelGyro.V3_SkidpadRollMomentStrut)
     add_test(NAME ${_kf} COMMAND vdsim_known_failure_tests --gtest_filter=${_kf})
     set_tests_properties(${_kf} PROPERTIES LABELS known_failure)

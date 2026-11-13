@@ -2,6 +2,7 @@
 #include "vdsim/sim_session.hpp"
 
 #include "vdsim/aero.hpp"
+#include "spawn_settle_internal.hpp"
 
 #include <spdlog/spdlog.h>
 
@@ -95,6 +96,20 @@ SimSession::SimSession(std::unique_ptr<IVehicleDynamics> dyn,
     }
     // wheel_gyro is an L5 term; L1-L4 validate it, ignore it and warn once per process.
     if (dyn_->level() != IVehicleDynamics::Level::L5_Stunt) warn_if_wheel_gyro_unused(vp);
+    {
+        // cg_height_ref selects a meaning on the L5 strut / DAE path only; L1-L4 and
+        // the L5 penalty path always treat cg_height as the whole-vehicle CG.
+        validate_cg_height_ref(vp);
+        const bool strut = dyn_->level() == IVehicleDynamics::Level::L5_Stunt &&
+                           sp.l5_spatial_suspension;
+        if (!strut && !vp.cg_height_ref.empty()) {
+            static std::atomic<bool> warned{false};   // once per process
+            if (!warned.exchange(true))
+                spdlog::warn("[vdsim] cg_height_ref='{}' is ignored on L1-L4 and the L5 "
+                             "penalty path (cg_height is the whole-vehicle CG there)",
+                             vp.cg_height_ref);
+        }
+    }
     free_3d_attach_contact_provider(*dyn_, ground_.get());
     network_ = make_default_veh_network(cfg.veh_network);
     SimConfig cfg_act = cfg;
@@ -250,7 +265,14 @@ void SimSession::restore(const SessionSnapshot& s) {
 
 void SimSession::settle_on_ground(State& s) {
     std::lock_guard<std::mutex> lk(mtx_);
-    settle_spawn_on_ground(*ground_, vp_, s);
+    // The L5 strut / DAE body origin is the sprung CG at h_s (work order 47);
+    // every other path keeps the public settle (body origin = whole-vehicle CG).
+    const bool strut = dyn_->level() == IVehicleDynamics::Level::L5_Stunt &&
+                       base_sp_.l5_spatial_suspension;
+    if (strut)
+        detail::settle_spawn_on_ground_at(*ground_, vp_, s, l5_strut_body_height(vp_));
+    else
+        settle_spawn_on_ground(*ground_, vp_, s);
 }
 
 State SimSession::reset_settled(const State& s0) {
@@ -621,6 +643,16 @@ SimOutput SimSession::output() const {
     o.wheel_alpha_peak = wheel_alpha_peak_;
     o.wheel_kappa_peak = wheel_kappa_peak_;
     o.sensors = sensors_meas_;
+    if (dyn_->level() == IVehicleDynamics::Level::L5_Stunt) {
+        o.wheel_kin_valid = free_3d_wheel_kin_valid(*dyn_);
+        const auto camber = free_3d_wheel_camber(*dyn_);
+        const auto toe = free_3d_wheel_toe(*dyn_);
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            o.wheel_camber[i] = o.wheel_kin_valid[i] ? camber[i] : 0.0;
+            o.wheel_toe[i] = o.wheel_kin_valid[i] ? toe[i] : 0.0;
+        }
+        o.hardpoints = free_3d_wheel_hardpoints(*dyn_);
+    }
     return o;
 }
 

@@ -141,6 +141,23 @@ void bind_wheel_array_type(py::module& m) {
 
 }  // namespace
 
+/**
+ * @brief Python view of per-wheel hardpoints: 4 lists of (x, y, z) float tuples [m],
+ *        each holding the wheel's `count` points (empty for an invalid wheel).
+ * @param hp per-wheel hardpoints (vehicle design frame).
+ * @return Python list; doubles are passed through unchanged (bit-exact).
+ */
+static py::list hardpoints_to_py(const std::array<vdsim::WheelHardpoints, vdsim::NUM_WHEELS>& hp) {
+    py::list out;
+    for (const auto& w : hp) {
+        py::list pts;
+        for (int j = 0; j < w.count; ++j)
+            pts.append(py::make_tuple(w.p[j].x(), w.p[j].y(), w.p[j].z()));
+        out.append(pts);
+    }
+    return out;
+}
+
 // Flat / split-mu / inclined / rough / ISO-8608 ground session builder, shared
 // by make_sim_session() and the RL vector factory make_vec_session() so the two
 // cannot drift apart.
@@ -369,8 +386,13 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("cg_to_rear",           &vdsim::VehicleParams::cg_to_rear)
         .def_readwrite("track_front",          &vdsim::VehicleParams::track_front)
         .def_readwrite("track_rear",           &vdsim::VehicleParams::track_rear)
-        .def_readwrite("cg_height",            &vdsim::VehicleParams::cg_height)
+        .def_readwrite("cg_height",            &vdsim::VehicleParams::cg_height,
+                       "Whole-vehicle CG height above ground (sprung + unsprung) [m].")
         .def_readwrite("wheel_radius_nominal", &vdsim::VehicleParams::wheel_radius_nominal)
+        .def_readwrite("cg_height_ref",        &vdsim::VehicleParams::cg_height_ref,
+                       "L5 strut / DAE meaning of cg_height: '' or 'vehicle' (whole "
+                       "vehicle, default) or 'sprung' (0.8.1 body height). Other "
+                       "values raise ValueError when a session is built.")
         .def_readwrite("arb_stiffness_front",  &vdsim::VehicleParams::arb_stiffness_front)
         .def_readwrite("arb_stiffness_rear",   &vdsim::VehicleParams::arb_stiffness_rear)
         .def_readwrite("roll_center_height_front", &vdsim::VehicleParams::roll_center_height_front)
@@ -411,6 +433,7 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("ackerman_percent",     &vdsim::VehicleParams::ackerman_percent)
         .def_readwrite("steer_input",          &vdsim::VehicleParams::steer_input)
         .def_readwrite("wheel_gyro",           &vdsim::VehicleParams::wheel_gyro)
+        .def_readwrite("rack_per_rad",         &vdsim::VehicleParams::rack_per_rad)
         .def_readwrite("steering_dynamic",     &vdsim::VehicleParams::steering_dynamic)
         .def_readwrite("rack_mass",            &vdsim::VehicleParams::rack_mass)
         .def_readwrite("rack_damping",         &vdsim::VehicleParams::rack_damping)
@@ -586,6 +609,61 @@ PYBIND11_MODULE(vdsim, m) {
           py::arg("dyn"),
           "L5 spatial-strut spring + stop force per wheel [N] (compression +, damper "
           "excluded); NaN on any other model or path");
+    m.def("free_3d_wheel_camber",
+          [](const vdsim::IVehicleDynamics& dyn) { return vdsim::free_3d_wheel_camber(dyn); },
+          py::arg("dyn"),
+          "L5 per-wheel suspension camber [rad] last applied to the tire; zeros elsewhere");
+    m.def("free_3d_wheel_toe",
+          [](const vdsim::IVehicleDynamics& dyn) { return vdsim::free_3d_wheel_toe(dyn); },
+          py::arg("dyn"),
+          "L5 per-wheel suspension toe [rad] (product toe sign); zeros elsewhere");
+    m.def("free_3d_wheel_kin_valid",
+          [](const vdsim::IVehicleDynamics& dyn) { return vdsim::free_3d_wheel_kin_valid(dyn); },
+          py::arg("dyn"),
+          "Per wheel: True when the L5 strut path runs a corner model on that axle");
+    m.def("free_3d_wheel_hardpoints",
+          [](const vdsim::IVehicleDynamics& dyn) {
+              return hardpoints_to_py(vdsim::free_3d_wheel_hardpoints(dyn));
+          },
+          py::arg("dyn"),
+          "Per-wheel hardpoints [m], vehicle design frame: 4 lists of (x, y, z)");
+    m.def("free_3d_rack_dy",
+          [](const vdsim::IVehicleDynamics& dyn) { return vdsim::free_3d_rack_dy(dyn); },
+          py::arg("dyn"),
+          "Rack input [m] last fed to each L5 corner model (part-YAML frame)");
+    py::class_<vdsim::HardpointLayout>(m, "HardpointLayout")
+        .def_readonly("names", &vdsim::HardpointLayout::names)
+        .def_readonly("axle_offset_x", &vdsim::HardpointLayout::axle_offset_x)
+        .def_readonly("wheel_center_dy", &vdsim::HardpointLayout::wheel_center_dy)
+        .def_readonly("excluded", &vdsim::HardpointLayout::excluded);
+    m.def("free_3d_hardpoint_layout",
+          [](const vdsim::IVehicleDynamics& dyn) { return vdsim::free_3d_hardpoint_layout(dyn); },
+          py::arg("dyn"),
+          "Exported hardpoint names [front, rear], axle x offsets, wheel-centre y gaps [m]\n"
+          "and per-axle exclusion reason (non-empty: corner model present, no points exported)");
+    // L5 hardpoints (48c C4): the L3/L4 attach above keeps returning False on L5.
+    m.def("attach_l5_hardpoints",
+          [](vdsim::IVehicleDynamics& dyn, py::object front_yaml, py::object rear_yaml,
+             bool enable_dynamics) {
+              if (front_yaml.is_none() && rear_yaml.is_none())
+                  throw std::invalid_argument(
+                      "attach_l5_hardpoints: give front_yaml and/or rear_yaml");
+              const std::pair<bool, py::object> sides[2] = {{true, front_yaml},
+                                                            {false, rear_yaml}};
+              for (const auto& [front, ref] : sides) {
+                  if (ref.is_none()) continue;
+                  const auto path = py::str(ref).cast<std::string>();
+                  if (!vdsim::free_3d_attach_multibody(
+                          dyn, front, vdsim::mb::SuspensionTopology::from_yaml(path),
+                          enable_dynamics))
+                      return false;
+              }
+              return true;
+          },
+          py::arg("dyn"), py::arg("front_yaml") = py::none(),
+          py::arg("rear_yaml") = py::none(), py::arg("enable_dynamics") = true,
+          "Attach per-axle part YAML hardpoints to an L5 plant (corner model on the "
+          "strut path). Returns False on any other model.");
     m.def("free_3d_torque_reaction_targets",
           [](const vdsim::IVehicleDynamics& dyn) {
               return vdsim::free_3d_torque_reaction_targets(dyn);
@@ -1314,7 +1392,13 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readonly("throttle_applied",  &vdsim::SimOutput::throttle_applied)
         .def_readonly("brake_applied",     &vdsim::SimOutput::brake_applied)
         .def_readonly("rack_torque",   &vdsim::SimOutput::rack_torque)
-        .def_readonly("sensors",       &vdsim::SimOutput::sensors);
+        .def_readonly("sensors",       &vdsim::SimOutput::sensors)
+        .def_readonly("wheel_camber",    &vdsim::SimOutput::wheel_camber)
+        .def_readonly("wheel_toe",       &vdsim::SimOutput::wheel_toe)
+        .def_readonly("wheel_kin_valid", &vdsim::SimOutput::wheel_kin_valid)
+        .def_property_readonly("hardpoints",
+             [](const vdsim::SimOutput& o) { return hardpoints_to_py(o.hardpoints); },
+             "Per-wheel hardpoints [m], vehicle design frame: 4 lists of (x, y, z)");
 
     // -------- R5: runtime domain randomization --------
     py::class_<vdsim::DomainRandomization>(m, "DomainRandomization")
