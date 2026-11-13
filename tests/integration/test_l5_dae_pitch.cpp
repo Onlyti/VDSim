@@ -27,7 +27,11 @@
 //        m_u,i = max(1, unsprung_mass[i]), m_b = m - sum m_u, G = (m_b x_b + sum m_u x_u,i)/m
 //        h_s   = (m cg_height - sum m_u R) / m_b   (whole-vehicle cg_height, work order 47)
 //        x_m,i = x_b + R_wb (+a or -b, +-track/2, -(h_s - R))  strut mount on the body
-//        F_t,i = R_wb tire_forces[i]  (tyre force on the wheel particle)
+//        F_t,i = tyre force on the wheel particle. On the strut path
+//                SimOutput::tire_forces[i] is the connection force on the body (body
+//                frame), so F_t,i = R_wb tire_forces[i] + m_u a_u,i + m_u g e_z (particle
+//                Newton, as the work order 50 V3b budget). x_m uses the body origin height
+//                the core uses (h_s above).
 //        E = sum (x_u,i - G) x F_t,i
 //        L = sum (x_m,i - x_u,i) x (F_t,i - m_u a_u,i - m_u g e_z)
 //            (moment of the strut connection pair: force on the particle at x_u, its
@@ -41,7 +45,8 @@
 //      Gate: |mean D| <= 0.02 mean S on both fixtures, V3 preconditions (last 2 s
 //      max |V - 7| <= 0.05 m/s, |V/r - 8.5| / 8.5 <= 1 %, std(r)/mean(r) <= 0.5 %).
 //      Not in D: torques along the wheel spin axes (drive/brake and tyre rolling reaction);
-//      their roll part is bounded by sum |Fx,i| R |sin delta_i| and printed (information).
+//      their roll part is bounded by sum |Fx,i| R |sin delta_i| and printed (information),
+//      Fx,i = body-frame x of F_t,i.
 // P10b: reaction pair (added by the second gate commit, before the implementation commits).
 //      The P10 skidpad and the P1 25 m/s coast, both fixtures, with the diagnostic
 //      connection probe (detail::free_3d_set_jacking_probe; it observes, never feeds back).
@@ -290,14 +295,16 @@ Budget skidpad(int fixture, const detail::JackingPairProbe& probe = {}) {
             for (int i = 0; i < NUM_WHEELS; ++i) {
                 const Vec3& x_u = st.unsprung_pos[i];
                 const Vec3 x_m = st.position + Rm * r_mount[i];
-                const Vec3 F_t = Rm * o.tire_forces[i];
                 const Vec3 a_u = w_w.cross(st.unsprung_vel[i]);
+                const Vec3 W_u(0.0, 0.0, m_u[i] * kG);
+                const Vec3 F_c = Rm * o.tire_forces[i];   // strut path: connection force
+                const Vec3 F_t = F_c + m_u[i] * a_u + W_u;  // tyre force (particle Newton)
                 E += (x_u - G).cross(F_t);
-                L += (x_m - x_u).cross(F_t - m_u[i] * a_u - Vec3(0.0, 0.0, m_u[i] * kG));
+                L += (x_m - x_u).cross(F_t - m_u[i] * a_u - W_u);
                 T += (x_u - G).cross(m_u[i] * a_u);
                 const double d = i < 2 ? steer : 0.0;
                 H_y += I_w[i] * st.wheel_spin[i] / std::sqrt(1.0 + d * d);
-                spin += std::abs(o.tire_forces[i].x()) * R_w * std::abs(std::sin(d));
+                spin += std::abs((Rm.transpose() * F_t).x()) * R_w * std::abs(std::sin(d));
             }
             const Vec3& Ib = vp.inertia_diag;
             const Vec3 H_b = Rm * Vec3(Ib.x() * st.angular_velocity.x(),
