@@ -1156,6 +1156,13 @@ private:
             const Vec3 dwr = tm.w - w0_[i];
             path_off_[i] = Vec3(dwr.x(), s * dwr.y(), dwr.z());
             path_tan_[i] = Vec3(tm.w_dq.x(), s * tm.w_dq.y(), tm.w_dq.z());
+            // Work order 49a: the tyre lateral force acts at the contact patch, so the
+            // lateral slope that turns it into a vertical (jacking) reaction is the
+            // contact-patch slope dy_cp/dz_v = dy_wc/dz_v - R dgamma/dz_v, R being the
+            // radius the contact query reads. x and z stay those of the wheel-centre path.
+            jack_radius_[i] = vp_.wheel_radius_nominal;
+            path_tan_[i].y() = s * detail::contact_patch_lateral_slope(
+                *dae, mot.travel_z, mot.steer_rack_dy, mb_state_[i].knuckle_aa, jack_radius_[i]);
             if (jack_probe_)   // 49a P10c diagnostic: observes, never feeds back
                 probe_cp_slope_[i] = s * detail::contact_patch_lateral_slope(
                     *dae, mot.travel_z, mot.steer_rack_dy, mb_state_[i].knuckle_aa,
