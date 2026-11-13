@@ -175,6 +175,14 @@ B8:
   (Cd, frontal_area, aero_lift_*, element names).
 - Test: car with elements + module returning no forces vs the same car with no
   aero at all: warning count 1, outputs within 1e-12 relative for 2000 ticks.
+- "No aero at all" (PO clarification, before implementation): the comparison
+  car sets `aero_drag_coeff`, `frontal_area`, `aero_lift_front` and
+  `aero_lift_rear` explicitly to 0 and has no `aero.elements`. Omitting the
+  keys is not allowed (the default drag coefficient would stay on the
+  comparison car only and B8 would fail falsely).
+- The module car runs the D1 settle run and the comparison car does not. Both
+  compare from right after `reset()`; that difference is the range covered by
+  B1a. If B8 exceeds 1e-12, report it together with the B1a result.
 
 ### 2.7 B7
 Each negative build is made in a scratch copy, run once, then reverted:
