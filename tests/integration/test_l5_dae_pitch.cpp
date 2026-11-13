@@ -16,10 +16,15 @@
 //      Gate: q_rms <= 1e-3 rad/s and growth < 0.5, all four cases.
 //      Same windows as the diagnosis analysis script (analyze3.py, sha256 4c9a1a108ce24ef8),
 //      written here with integer tick indices.
-// P2 : the same probe at v0 10 m/s, both fixtures: q_rms <= the pre-fix value of the main
-//      this branch is merged onto (PRs #37 and #38 merged), same window. The pre-fix values
-//      are recorded in kP2PreFix by a separate commit on the merged main before the
-//      implementation commits; until then the test fails ("not recorded").
+// P2': the same probe at v0 10 m/s, both fixtures (gate changed by user decision PROP-2782,
+//      replacing P2 after the measurement; PO mail c337f6ec). Over the P1 window ticks
+//      k = 4999..9998 (t in [5, 10) s), fit q_k = a + b (k - 4999) by least squares and take
+//      the RMS of the residual q_k - (a + b (k - 4999)).
+//      Gate: P2'(this build) <= P2'(pre-fix), no tolerance. The pre-fix value kP2PrimePreFix
+//      is the same computation on commit 2508f15 (merged main before the implementation
+//      commits), printed with %.17g.
+//      Information: the former P2 (q_rms about the mean, same window) and its recorded
+//      pre-fix value kP2PreFix are printed, not judged.
 // P10: reaction consistency. Steady circle R 8.5 m, V 7 m/s (the work order 50 V3/V3b
 //      skidpad: ackerman 0, curvature + speed PI hold with the same gains, 15 s, last 2 s
 //      mean), both fixtures. Exact angular momentum budget about the whole-vehicle CG G,
@@ -120,6 +125,11 @@ constexpr double kG = 9.80665;
 constexpr std::array<double, 2> kP2PreFix {{0.00012974147274599979,
                                             9.1742208689179954e-05}};
 
+/// P2' pre-fix detrended RMS [rad/s] at 10 m/s, {antidive, sports}: the P2' computation on
+/// commit 2508f15 (merged main, before the implementation commits), printed with %.17g.
+constexpr std::array<double, 2> kP2PrimePreFix {{0.00012964913924520176,
+                                                 9.1193032563258546e-05}};
+
 /**
  * @brief Generic sedan with aero off, as the diagnosis probe.
  * @return vehicle parameters
@@ -181,7 +191,7 @@ std::unique_ptr<SimSession> make(const VehicleParams& vp, int fixture, double v0
 const char* name(int fixture) { return fixture == 0 ? "antidive" : "sports"; }
 
 struct Pitch {
-    double q_rms {0}, growth {0};
+    double q_rms {0}, growth {0}, detrended {0};
 };
 
 /**
@@ -201,11 +211,38 @@ double rms(const std::vector<double>& q, int k0, int k1) {
 }
 
 /**
+ * @brief RMS of q after removing its least-squares line over ticks [k0, k1] (P2').
+ * @param q  per-tick pitch rate [rad/s]
+ * @param k0 first tick index
+ * @param k1 last tick index (inclusive)
+ * @return RMS of the residual [rad/s]
+ */
+double detrended_rms(const std::vector<double>& q, int k0, int k1) {
+    const double n = k1 - k0 + 1;
+    double sx = 0.0, sy = 0.0, sxx = 0.0, sxy = 0.0;
+    for (int k = k0; k <= k1; ++k) {
+        const double x = k - k0;
+        sx += x;
+        sy += q[k];
+        sxx += x * x;
+        sxy += x * q[k];
+    }
+    const double b = (n * sxy - sx * sy) / (n * sxx - sx * sx);
+    const double a = (sy - b * sx) / n;
+    double acc = 0.0;
+    for (int k = k0; k <= k1; ++k) {
+        const double r = q[k] - (a + b * (k - k0));
+        acc += r * r;
+    }
+    return std::sqrt(acc / n);
+}
+
+/**
  * @brief Coast probe (zero command, 10 s) and the P1 window metrics.
  * @param fixture 0 = antidive, 1 = sports
  * @param v0      initial speed [m/s]
  * @param probe   optional P10b connection-pair probe
- * @return q_rms (t in [5,10) s) and growth ([8,10) / [2,4) s)
+ * @return q_rms (t in [5,10) s), growth ([8,10) / [2,4) s) and the P2' detrended RMS
  */
 Pitch coast(int fixture, double v0, const detail::JackingPairProbe& probe = {}) {
     const VehicleParams vp = sedan();
@@ -220,6 +257,7 @@ Pitch coast(int fixture, double v0, const detail::JackingPairProbe& probe = {}) 
     Pitch p;
     p.q_rms = rms(q, 4999, 9998);
     p.growth = rms(q, 7999, 9998) / std::max(rms(q, 1999, 3998), 1e-15);
+    p.detrended = detrended_rms(q, 4999, 9998);
     std::printf("P1-probe %s v0=%.0f q_rms=%.17g rad/s growth=%.17g\n", name(fixture), v0,
                 p.q_rms, p.growth);
     return p;
@@ -237,15 +275,17 @@ void p1(int fixture, double v0) {
 }
 
 /**
- * @brief P2 gate: 10 m/s q_rms not above the recorded pre-fix value.
+ * @brief P2' gate: 10 m/s detrended pitch-rate RMS not above the pre-fix value.
  * @param fixture 0 = antidive, 1 = sports
  */
-void p2(int fixture) {
+void p2prime(int fixture) {
     const Pitch p = coast(fixture, 10.0);
-    const double base = kP2PreFix[fixture];
-    ASSERT_FALSE(std::isnan(base)) << "P2 pre-fix baseline not recorded for " << name(fixture);
-    std::printf("P2 %s q_rms=%.4e pre-fix=%.4e rad/s\n", name(fixture), p.q_rms, base);
-    EXPECT_LE(p.q_rms, base) << name(fixture);
+    const double base = kP2PrimePreFix[fixture];
+    std::printf("P2' %s detrended=%.17g pre-fix=%.17g rad/s ratio=%.6f\n", name(fixture),
+                p.detrended, base, p.detrended / base);
+    std::printf("P2 (information) %s q_rms=%.4e pre-fix=%.4e rad/s\n", name(fixture), p.q_rms,
+                kP2PreFix[fixture]);
+    EXPECT_LE(p.detrended, base) << name(fixture);
 }
 
 struct Budget {
@@ -529,8 +569,8 @@ TEST(L5DaePitch, P1_Antidive25) { p1(0, 25.0); }
 TEST(L5DaePitch, P1_Antidive35) { p1(0, 35.0); }
 TEST(L5DaePitch, P1_Sports25) { p1(1, 25.0); }
 TEST(L5DaePitch, P1_Sports35) { p1(1, 35.0); }
-TEST(L5DaePitch, P2_Antidive10NotWorse) { p2(0); }
-TEST(L5DaePitch, P2_Sports10NotWorse) { p2(1); }
+TEST(L5DaePitch, P2prime_Antidive10NotWorse) { p2prime(0); }
+TEST(L5DaePitch, P2prime_Sports10NotWorse) { p2prime(1); }
 TEST(L5DaePitch, P10_AntidiveSkidpadRollBudget) { p10(0); }
 TEST(L5DaePitch, P10_SportsSkidpadRollBudget) { p10(1); }
 TEST(L5DaePitch, P10b_AntidiveReactionPair) { p10b(0); }
