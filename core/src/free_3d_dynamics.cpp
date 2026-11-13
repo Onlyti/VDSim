@@ -223,6 +223,7 @@ public:
         transient_.fill(ITireModel::Transient{});
         ci_.fill(ITireModel::ContactInput{});
         Re_w_.fill(vp_.wheel_radius_nominal > 1e-6 ? vp_.wheel_radius_nominal : 0.32);
+        if (aero_module_ && !aero_settling_) aero_module_->reset();
         drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
         brake_      = make_default_brake(vp_, vp_.brake_deadtime_s);
         steering_   = make_default_steering(vp_, vp_.steer_deadtime_s);
@@ -267,6 +268,7 @@ public:
         brake_->begin_step(ctx, dt);
         drivetrain_->begin_step(ctx, dt);
         steering_->begin_step(ctx, dt);
+        if (aero_module_ && !aero_settling_) aero_module_->begin_step(ctx, dt);
 
         // Free-3D strut: freeze the wheel-particle position the (once-per-step) contact
         // query evaluated penetration at (the provider now samples the surface at the actual
@@ -305,6 +307,14 @@ public:
     bool set_drivetrain_module(std::shared_ptr<IDrivetrain> m) override {
         if (!m) return false;
         drivetrain_ = std::move(m);
+        return true;
+    }
+    // Aero module (work order 51). Attach before reset(): reset runs the settle run that
+    // gives the module its static reference.
+    bool set_aero_module(std::shared_ptr<IAeroModel> m) override {
+        if (!m) return false;
+        warn_aero_module_replaces(vp_);
+        aero_module_ = std::move(m);
         return true;
     }
 
@@ -394,7 +404,7 @@ public:
     }
     void set_contact_provider(IContactProvider* p) noexcept { provider_ = p; }
     // Work order 51: static aero reference hooks (free_3d_aero_internal.hpp).
-    bool aero_needs_settle() const noexcept { return aero_slopes_; }
+    bool aero_needs_settle() const noexcept { return aero_slopes_ || aero_module_ != nullptr; }
     void set_aero_settling(bool on) noexcept { aero_settling_ = on; }
     void set_aero_reference(double z, double pitch, double roll) noexcept {
         aero_ref_z_ = z;
@@ -892,6 +902,22 @@ private:
         const double vx_fwd = v_body.x();
         if (aero_settling_) {
             // In-reset settle run (work order 51): aero contributes exactly 0.
+        } else if (aero_module_) {
+            // Aero module (work order 51): the whole built-in aero is replaced; Fy acts.
+            AeroState as;
+            const Euler e = euler_from_quat(s.orientation);
+            as.dz = s.position.z() - aero_ref_z_;
+            as.pitch = e.pitch - aero_ref_pitch_;
+            as.roll = e.roll - aero_ref_roll_;
+            const DriverCmd aero_cmd{
+                cmd.steer_angle_wheel, cmd.throttle, cmd.brake, cmd.gear, cmd.handbrake};
+            const SubsystemContext actx{s, aero_cmd, 0.0};
+            const AeroLoads al = aero_loads_from_forces(
+                vp_, aero_module_->compute(actx, make_aero_input(vp_, v_body, as)), true);
+            F_total_world += R * al.force_body;
+            tau_body += al.torque_body;
+            if (aero_origin_dz_ != 0.0)
+                tau_body += Vec3(0.0, 0.0, aero_origin_dz_).cross(al.force_body);
         } else if (!aero_uses_element_path(vp_)) {
             // Four-key path: drag at the whole-vehicle CG height (cg_height above
             // ground); the lift keys now also act on L5 (front axle x=0 / rear axle
@@ -1261,6 +1287,7 @@ private:
     double aero_origin_dz_ {0.0};   // cg_height - body origin height [m] (aero arm shift)
     // Work order 51: static aero reference (body-origin z [m], pitch / roll [rad]) set by
     // SimSession's in-reset settle run; reset() leaves it alone (snapshot restore keeps it).
+    std::shared_ptr<IAeroModel> aero_module_;   // null = built-in aero
     bool   aero_slopes_ {false};     // some element has a non-zero ride slope
     bool   aero_settling_ {false};   // settle run in progress: aero off
     bool   aero_h_warned_ {false};   // element below ground warned (once per model)

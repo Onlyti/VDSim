@@ -19,6 +19,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <limits>
@@ -26,6 +27,7 @@
 #include <memory>
 #include <sstream>
 #include <stdexcept>
+#include <utility>
 #include <string>
 #include <vector>
 
@@ -423,4 +425,430 @@ TEST(AeroRide51, Info_SettleRunWallClock) {
         std::printf("INFO settle_wall_ms %s median=%.1f settled=%d\n", strut ? "strut" : "penalty",
                     ms[1], int(settled));
     }
+}
+
+// ---------------------------------------------------------------- B3' / B3b helpers
+
+namespace {
+
+constexpr double kGuardN = 10.0;   // |expected| below this: not judgeable (PO D2)
+constexpr double kTolB3 = 0.02;
+
+/// Front / rear rigid-axle aero load of vp's elements at q (drag moment included,
+/// handcalc.rigid_split), with the ride change (dz, theta).
+std::pair<double, double> rigid_split(const VehicleParams& vp, double q, double dz = 0.0,
+                                      double theta = 0.0) {
+    const double L = vp.wheelbase;
+    const double x_o = -vp.cg_to_front;
+    double ff = 0.0, tot = 0.0, md = 0.0;
+    for (const auto& e : vp.aero_elements) {
+        const double dh = dz - (e.x - x_o) * theta;
+        double cla = e.ClA;
+        if (e.has_ride_slopes()) cla += *e.dClA_dh * dh + *e.dClA_dpitch * theta;
+        const double f = q * cla;
+        ff += f * (e.x + L) / L;
+        tot += f;
+        md += q * e.CdA * e.z;
+    }
+    ff -= md / L;
+    return {ff, tot - ff};
+}
+
+double mean(const std::vector<double>& v) {
+    double s = 0.0;
+    for (double x : v) s += x;
+    return v.empty() ? 0.0 : s / static_cast<double>(v.size());
+}
+
+/// Least-squares slope of y(t).
+double ls_slope(const std::vector<double>& t, const std::vector<double>& y) {
+    const double mt = mean(t), my = mean(y);
+    double num = 0.0, den = 0.0;
+    for (std::size_t i = 0; i < t.size(); ++i) {
+        num += (t[i] - mt) * (y[i] - my);
+        den += (t[i] - mt) * (t[i] - mt);
+    }
+    return den > 0.0 ? num / den : 0.0;
+}
+
+/// Window record of one run.
+struct Win {
+    std::vector<double> t, q, dz, theta, ax, fzf, fzr, sumfz, vh;
+};
+
+/// Body-origin heave and pitch relative to a static reference (L5).
+void ride_l5(const SimOutput& o, const AeroReference& ref, double& dz, double& th) {
+    dz = o.state.position.z() - ref.ref_z;
+    th = o.pitch - ref.ref_pitch;   // L5 pitch_angle_qs = euler pitch of the body
+}
+
+std::string out_dir() {
+    const char* d = std::getenv("VDSIM_AERO51_OUT");
+    return d ? std::string(d) + "/" : ::testing::TempDir();
+}
+
+/// Run L5 at constant speed `v` (CmdL6) for `t_end` s; record [t0, t_end).
+Win run_cruise_l5(SimSession& s, const VehicleParams& vp, double v, double t0, double t_end,
+                  const AeroReference& ref) {
+    State s0;
+    s0.position.z() = vp.cg_height;
+    s0.velocity.x() = v;
+    const double w = v / vp.wheel_radius_nominal;
+    s0.wheel_spin = {{w, w, w, w}};
+    s.reset_settled(s0);
+    CmdL6 cmd;
+    cmd.v_target = v;
+    Win r;
+    const int n = static_cast<int>(std::lround(t_end / 1e-3));
+    for (int k = 0; k < n; ++k) {
+        s.set_input(cmd);
+        s.tick(1e-3);
+        const SimOutput o = s.output();
+        if (o.sim_time < t0 - 1e-9) continue;
+        double dz = 0.0, th = 0.0;
+        ride_l5(o, ref, dz, th);
+        const double vx = o.state.velocity.x();
+        r.t.push_back(o.sim_time);
+        r.q.push_back(0.5 * vp.air_density * vx * vx);
+        r.dz.push_back(dz);
+        r.theta.push_back(th);
+        r.ax.push_back(o.ax);
+        r.fzf.push_back(o.Fz[WHEEL_FL] + o.Fz[WHEEL_FR]);
+        r.fzr.push_back(o.Fz[WHEEL_RL] + o.Fz[WHEEL_RR]);
+        r.sumfz.push_back(o.Fz[0] + o.Fz[1] + o.Fz[2] + o.Fz[3]);
+        // A3 validity: CG velocity in world axes, horizontal component along the heading.
+        const Mat3 Rm = o.state.orientation.toRotationMatrix();
+        const Vec3 vw = Rm * o.state.velocity;
+        const double yaw = o.state.yaw();
+        r.vh.push_back(vw.x() * std::cos(yaw) + vw.y() * std::sin(yaw));
+    }
+    return r;
+}
+
+/// Car of DEFINITION 2.4 (undertray keys, slope dClA_dh).
+VehicleParams b3l5_car(double dclh) {
+    return with_slopes(fs_car(), {{"undertray", {0.040, dclh, 0.0}}});
+}
+
+}  // namespace
+
+// ---------------------------------------------------------------- B3'-L5
+
+TEST(AeroRide51, B3p_L5_UndertraySelfSagFixedPoint) {
+    for (const bool strut : {false, true}) {
+        const VehicleParams on_vp = b3l5_car(-2.0);
+        const VehicleParams off_vp = b3l5_car(0.0);
+        auto on = session("L5", on_vp, strut);
+        auto off = session("L5", off_vp, strut);
+        // Spawn states of the two runs must be bit identical (static reference shared).
+        State s0;
+        s0.position.z() = on_vp.cg_height;
+        s0.velocity.x() = 35.0;
+        const double w = 35.0 / on_vp.wheel_radius_nominal;
+        s0.wheel_spin = {{w, w, w, w}};
+        on->reset_settled(s0);
+        off->reset_settled(s0);
+        ASSERT_TRUE(bits_equal(dump(on->output()), dump(off->output())));
+        const AeroReference ref = on->aero_reference();
+        ASSERT_TRUE(ref.ran);
+        EXPECT_FALSE(off->aero_reference().ran);
+        const Win a = run_cruise_l5(*on, on_vp, 35.0, 10.0, 12.0, ref);
+        const Win b = run_cruise_l5(*off, off_vp, 35.0, 10.0, 12.0, ref);
+        const double ag_on = ls_slope(a.t, a.vh), ag_off = ls_slope(b.t, b.vh);
+        EXPECT_LE(std::abs(ag_on), 0.02) << "validity (stop and report)";
+        EXPECT_LE(std::abs(ag_off), 0.02) << "validity (stop and report)";
+        // Expectation (handcalc.b3l5).
+        const double L = on_vp.wheelbase, a_cg = on_vp.cg_to_front, b_cg = on_vp.cg_to_rear;
+        const double q_on = mean(a.q), q_off = mean(b.q);
+        const double dz_off = mean(b.dz), th_off = mean(b.theta);
+        const double dzf_off = dz_off - a_cg * th_off;
+        const double dzr_off = dz_off + b_cg * th_off;
+        const auto split = rigid_split(off_vp, q_off);
+        const double kf = split.first / (-dzf_off), kr = split.second / (-dzr_off);
+        double xu = 0.0, cla_sum = 0.0;
+        for (const auto& e : off_vp.aero_elements) {
+            if (e.name == "undertray") xu = e.x;
+            cla_sum += e.ClA;
+        }
+        const double su = (xu + L) / L;
+        const double D = q_on * -2.0;
+        const double dh0 = su * dzf_off + (1.0 - su) * dzr_off;
+        const double dh = dh0 / (1.0 + D * (su * su / kf + (1.0 - su) * (1.0 - su) / kr));
+        const double exp_dF = cla_sum * (q_on - q_off) + D * dh;
+        const double meas = mean(a.sumfz) - mean(b.sumfz);
+        const double dh_u_on = mean(a.dz) - (xu + a_cg) * mean(a.theta);
+        const double info = cla_sum * (q_on - q_off) + D * dh_u_on;
+        const std::string tag = strut ? "strut" : "penalty";
+        std::printf("B3p_L5 %s: dF_meas=%.6f dF_exp=%.6f rel=%+.5f K_f=%.1f K_r=%.1f "
+                    "dh_fixed=%.6e dh_meas=%.6e info_dF_meas_dh=%.6f a_g=%.2e/%.2e\n",
+                    tag.c_str(), meas, exp_dF, meas / exp_dF - 1.0, kf, kr, dh, dh_u_on, info,
+                    ag_on, ag_off);
+        {
+            std::ofstream f(out_dir() + "b3l5_" + tag + ".json");
+            f.precision(17);
+            f << "{\"q_on\": " << q_on << ", \"q_off\": " << q_off << ", \"dzf_off\": " << dzf_off
+              << ", \"dzr_off\": " << dzr_off << ", \"sumfz_on\": " << mean(a.sumfz)
+              << ", \"sumfz_off\": " << mean(b.sumfz) << ", \"dh_u_on\": " << dh_u_on << "}\n";
+        }
+        EXPECT_GE(std::abs(exp_dF), kGuardN) << tag << " not judgeable (stop and report)";
+        if (std::abs(exp_dF) >= kGuardN) EXPECT_LE(std::abs(meas / exp_dF - 1.0), kTolB3) << tag;
+    }
+}
+
+// ---------------------------------------------------------------- B3'-L3 (L3, L4)
+
+TEST(AeroRide51, B3p_L3_InjectedRideFirstTick) {
+    for (const std::string lvl : {"L3", "L4"}) {
+        const VehicleParams on_vp = b3l5_car(-2.0);
+        const VehicleParams off_vp = b3l5_car(0.0);
+        double sum[2] = {0.0, 0.0};
+        int k = 0;
+        for (const VehicleParams* vp : {&on_vp, &off_vp}) {
+            auto s = session(lvl, *vp);
+            State s0;
+            s0.position.z() = vp->cg_height;
+            s0.velocity.x() = 35.0;
+            const double w = 35.0 / vp->wheel_radius_nominal;
+            s0.wheel_spin = {{w, w, w, w}};
+            s->reset_settled(s0);
+            // Inject z_s and theta through the model's own aux restore (L3 layout:
+            // z_s, z_s_dot, phi, phi_dot, th, th_dot, ...).
+            std::vector<double> aux;
+            s->dynamics().save_aux(aux);
+            aux[0] = -0.010;
+            aux[4] = +0.010;
+            std::size_t p = 0;
+            s->dynamics().restore_aux(aux, p);
+            s->set_input(CmdL4{});
+            s->tick(1e-3);
+            const auto Fz = s->output().Fz;
+            sum[k++] = Fz[0] + Fz[1] + Fz[2] + Fz[3];
+        }
+        const double exp_dF = 713.5625 * (-2.0) * (-0.0107);   // handcalc.b3l3
+        const double meas = sum[0] - sum[1];
+        std::printf("B3p_L3 %s: dF_meas=%.9f dF_exp=%.9f rel=%+.3e\n", lvl.c_str(), meas, exp_dF,
+                    meas / exp_dF - 1.0);
+        ASSERT_GE(std::abs(exp_dF), kGuardN);
+        EXPECT_LE(std::abs(meas / exp_dF - 1.0), kTolB3) << lvl;
+    }
+}
+
+// ---------------------------------------------------------------- B3b
+
+TEST(AeroRide51, B3b_FrontWingPitchSlopeBraking) {
+    struct Case { std::string lvl; bool strut; };
+    for (const Case& c : {Case{"L3", false}, Case{"L5", false}, Case{"L5", true}}) {
+        const VehicleParams on_vp = with_slopes(fs_car(), {{"front_wing", {0.100, 0.0, 30.0}}});
+        const VehicleParams off_vp = fs_car();
+        Win w[2];
+        AeroReference ref_on;
+        for (int r = 0; r < 2; ++r) {
+            const VehicleParams& vp = r == 0 ? on_vp : off_vp;
+            auto s = session(c.lvl, vp, c.strut);
+            State s0;
+            s0.position.z() = vp.cg_height;
+            s0.velocity.x() = 32.0;
+            const double wsp = 32.0 / vp.wheel_radius_nominal;
+            s0.wheel_spin = {{wsp, wsp, wsp, wsp}};
+            s->reset_settled(s0);
+            if (r == 0) ref_on = s->aero_reference();
+            CmdL5 cmd;
+            cmd.ax_target = -4.0;
+            for (int k = 0; k < 3000; ++k) {
+                s->set_input(cmd);
+                s->tick(1e-3);
+                const SimOutput o = s->output();
+                if (o.sim_time < 1.0 - 1e-9) continue;
+                double th = o.pitch;   // L3: pitch_angle_qs = ride state theta
+                if (c.lvl == "L5") {
+                    double dz = 0.0;
+                    ride_l5(o, ref_on, dz, th);
+                }
+                const double vx = o.state.velocity.x();
+                w[r].t.push_back(o.sim_time);
+                w[r].q.push_back(0.5 * vp.air_density * vx * vx);
+                w[r].theta.push_back(th);
+                w[r].ax.push_back(o.ax);
+                w[r].fzf.push_back(o.Fz[WHEEL_FL] + o.Fz[WHEEL_FR]);
+                w[r].fzr.push_back(o.Fz[WHEEL_RL] + o.Fz[WHEEL_RR]);
+            }
+        }
+        if (c.lvl == "L5") ASSERT_TRUE(ref_on.ran);
+        // Expectation (handcalc.b3b).
+        std::vector<double> fon_f, fon_r, foff_f, foff_r;
+        for (std::size_t i = 0; i < w[0].q.size(); ++i) {
+            const auto f = rigid_split(on_vp, w[0].q[i], 0.0, w[0].theta[i]);
+            fon_f.push_back(f.first);
+            fon_r.push_back(f.second);
+        }
+        for (std::size_t i = 0; i < w[1].q.size(); ++i) {
+            const auto f = rigid_split(off_vp, w[1].q[i]);
+            foff_f.push_back(f.first);
+            foff_r.push_back(f.second);
+        }
+        const double dax = mean(w[0].ax) - mean(w[1].ax);
+        const double inert = on_vp.mass * dax * on_vp.cg_height / on_vp.wheelbase;
+        const double ef = mean(fon_f) - mean(foff_f) - inert;
+        const double er = mean(fon_r) - mean(foff_r) + inert;
+        const double mf = mean(w[0].fzf) - mean(w[1].fzf);
+        const double mr = mean(w[0].fzr) - mean(w[1].fzr);
+        const std::string tag = c.lvl + (c.strut ? "_strut" : (c.lvl == "L5" ? "_penalty" : ""));
+        std::printf("B3b %s: front meas=%.6f exp=%.6f rel=%+.5f | rear meas=%.6f exp=%.6f "
+                    "rel=%+.5f | theta_mean=%.4e dax=%.4e\n",
+                    tag.c_str(), mf, ef, mf / ef - 1.0, mr, er, mr / er - 1.0, mean(w[0].theta),
+                    dax);
+        {
+            std::ofstream f(out_dir() + "b3b_" + tag + ".json");
+            f.precision(17);
+            const auto arr = [&f](const std::vector<double>& v) {
+                f << "[";
+                for (std::size_t i = 0; i < v.size(); ++i) f << (i ? ", " : "") << v[i];
+                f << "]";
+            };
+            f << "{\"on\": {\"q\": ";
+            arr(w[0].q);
+            f << ", \"theta\": ";
+            arr(w[0].theta);
+            f << ", \"ax\": ";
+            arr(w[0].ax);
+            f << ", \"fz_front\": ";
+            arr(w[0].fzf);
+            f << ", \"fz_rear\": ";
+            arr(w[0].fzr);
+            f << "}, \"off\": {\"q\": ";
+            arr(w[1].q);
+            f << ", \"ax\": ";
+            arr(w[1].ax);
+            f << ", \"fz_front\": ";
+            arr(w[1].fzf);
+            f << ", \"fz_rear\": ";
+            arr(w[1].fzr);
+            f << "}}\n";
+        }
+        // DEFINITION: the guard applies to each axle; a not-judgeable axle fails the gate.
+        EXPECT_GE(std::abs(ef), kGuardN) << tag << " front not judgeable (stop and report)";
+        EXPECT_GE(std::abs(er), kGuardN) << tag << " rear not judgeable (stop and report)";
+        if (std::abs(ef) >= kGuardN) EXPECT_LE(std::abs(mf / ef - 1.0), kTolB3) << tag << " front";
+        if (std::abs(er) >= kGuardN) EXPECT_LE(std::abs(mr / er - 1.0), kTolB3) << tag << " rear";
+    }
+}
+
+// ---------------------------------------------------------------- aero module (C++)
+
+namespace {
+
+/// Counts the module calls; returns no force.
+struct CountingAero final : IAeroModel {
+    int n_reset = 0, n_begin = 0, n_compute = 0;
+    std::vector<AeroForce> compute(const SubsystemContext&, const AeroInput&) override {
+        ++n_compute;
+        return {};
+    }
+    void begin_step(const SubsystemContext&, double) override { ++n_begin; }
+    void reset() override { ++n_reset; }
+};
+
+/// Returns a fixed lateral force (Fy only).
+struct LateralAero final : IAeroModel {
+    double fy = 0.0;
+    std::vector<AeroForce> compute(const SubsystemContext&, const AeroInput&) override {
+        return {AeroForce{"side", Vec3(0.0, fy, 0.0), Vec3(-0.5, 0.0, 0.3)}};
+    }
+};
+
+/// fs_aero_example with the built-in aero switched off explicitly (DEFINITION 2.6).
+VehicleParams no_aero_car() {
+    VehicleParams vp = fs_car();
+    vp.aero_elements.clear();
+    vp.aero_drag_coeff = 0.0;
+    vp.frontal_area = 0.0;
+    vp.aero_lift_front = 0.0;
+    vp.aero_lift_rear = 0.0;
+    vp.aero_drag_height.reset();
+    return vp;
+}
+
+}  // namespace
+
+TEST(AeroRide51, B1a_CountingModuleCalls) {
+    const VehicleParams vp = fs_car();
+    for (const bool strut : {false, true}) {
+        auto s = session("L5", vp, strut);
+        auto m = std::make_shared<CountingAero>();
+        ASSERT_TRUE(s->dynamics().set_aero_module(m));
+        s->reset_settled(spawn60(vp));
+        ASSERT_TRUE(s->aero_reference().ran);
+        EXPECT_EQ(m->n_reset, 1);
+        EXPECT_EQ(m->n_begin, 0);
+        EXPECT_EQ(m->n_compute, 0);   // nothing during the settle run
+        CmdL6 cmd;
+        cmd.v_target = kV60;
+        for (int k = 0; k < 100; ++k) {
+            s->set_input(cmd);
+            s->tick(1e-3);
+        }
+        EXPECT_EQ(m->n_begin, 100);
+        EXPECT_GT(m->n_compute, 0);
+        EXPECT_EQ(m->n_reset, 1);
+    }
+}
+
+TEST(AeroRide51, B8_ModuleReplacesBuiltInAero) {
+    const VehicleParams with_aero = fs_car();
+    const VehicleParams none = no_aero_car();
+    int warn = 0;
+    struct Case { std::string lvl; bool strut; };
+    const std::vector<Case> cases = {{"L2", false}, {"L3", false}, {"L5", false}, {"L5", true}};
+    warn = count_log("aero module replaces the built-in aero", [&] {
+        for (const Case& c : cases) {
+            auto a = session(c.lvl, with_aero, c.strut);
+            auto b = session(c.lvl, none, c.strut);
+            ASSERT_TRUE(a->dynamics().set_aero_module(std::make_shared<CountingAero>()));
+            const auto ra = run60(*a, with_aero, 2000);
+            const auto rb = run60(*b, none, 2000);
+            ASSERT_EQ(ra.size(), rb.size());
+            double worst = 0.0;
+            for (std::size_t k = 0; k < ra.size(); ++k)
+                for (std::size_t i = 0; i < ra[k].size(); ++i) {
+                    const double d = std::abs(ra[k][i] - rb[k][i]) /
+                                     std::max(1.0, std::abs(rb[k][i]));
+                    if (!(d <= worst)) worst = d;
+                }
+            std::printf("B8 %s%s: max rel diff %.3e\n", c.lvl.c_str(), c.strut ? " strut" : "",
+                        worst);
+            EXPECT_LE(worst, 1e-12) << c.lvl << (c.strut ? " strut" : "");
+        }
+    });
+    EXPECT_EQ(warn, 1);
+    auto l1 = session("L1", with_aero);
+    EXPECT_FALSE(l1->dynamics().set_aero_module(std::make_shared<CountingAero>()));
+}
+
+TEST(AeroRide51, B6_ModuleFyIgnoredBelowL5) {
+    const VehicleParams vp = no_aero_car();
+    int warn = 0;
+    warn = count_log("returned a lateral force Fy", [&] {
+        for (const std::string lvl : {"L2", "L3"}) {
+            auto a = session(lvl, vp);
+            auto b = session(lvl, vp);
+            auto fa = std::make_shared<LateralAero>();
+            fa->fy = 500.0;
+            auto fb = std::make_shared<LateralAero>();
+            ASSERT_TRUE(a->dynamics().set_aero_module(fa));
+            ASSERT_TRUE(b->dynamics().set_aero_module(fb));
+            const auto ra = run60(*a, vp, 500);
+            const auto rb = run60(*b, vp, 500);
+            bool same = true;
+            for (std::size_t k = 0; k < ra.size(); ++k) same = same && bits_equal(ra[k], rb[k]);
+            EXPECT_TRUE(same) << lvl;
+        }
+        // L5 takes Fy: the lateral force moves the car sideways.
+        auto c = session("L5", vp);
+        auto fc = std::make_shared<LateralAero>();
+        fc->fy = 500.0;
+        ASSERT_TRUE(c->dynamics().set_aero_module(fc));
+        run60(*c, vp, 500);
+        EXPECT_GT(std::abs(c->output().state.position.y()), 1e-3);
+    });
+    EXPECT_EQ(warn, 1);
 }

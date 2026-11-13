@@ -16,6 +16,7 @@
 
 #include "vdsim/snapshot.hpp"
 #include "vdsim/aero.hpp"
+#include "seven_dof_aero_internal.hpp"
 #include "vdsim/coordinate.hpp"
 #include "vdsim/contact_frame.hpp"
 #include "vdsim/default_subsystems.hpp"
@@ -106,6 +107,7 @@ public:
                 I_wheel_[i] = std::max(0.01, 0.5 * m_w * R * R);
             }
         }
+        if (aero_module_) aero_module_->reset();
         drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
         brake_      = make_default_brake(vp_, vp_.brake_deadtime_s);
         steering_   = vp_.steering_dynamic
@@ -222,6 +224,7 @@ public:
             brake_->begin_step(ctx, dt);
             drivetrain_->begin_step(ctx, dt);
             steering_->begin_step(ctx, dt);
+            if (aero_module_) aero_module_->begin_step(ctx, dt);
         } else {
             const DriverCmd driver_cmd{
                 cmd_l1_.steer_angle_wheel, 0.0, 0.0, 1, false,
@@ -229,6 +232,7 @@ public:
             };
             SubsystemContext ctx{state_, driver_cmd, dt};
             steering_->begin_step(ctx, dt);
+            if (aero_module_) aero_module_->begin_step(ctx, dt);
         }
 
         const int N = solver_substeps(sp_, dt);
@@ -267,6 +271,17 @@ public:
     bool   set_drivetrain_module(std::shared_ptr<IDrivetrain> m) override {
         if (!m) return false;
         drivetrain_ = std::move(m);
+        return true;
+    }
+    void set_aero_ride(double dz, double pitch, double roll) noexcept {
+        aero_ride_.dz = dz;
+        aero_ride_.pitch = pitch;
+        aero_ride_.roll = roll;
+    }
+    bool   set_aero_module(std::shared_ptr<IAeroModel> m) override {
+        if (!m) return false;
+        warn_aero_module_replaces(vp_);
+        aero_module_ = std::move(m);
         return true;
     }
     std::array<double, NUM_WHEELS> tire_Fz()           const override { return tire_Fz_; }
@@ -420,8 +435,29 @@ private:
         // ---- Per-tire Fz with 1-step lag weight transfer + aero downforce ----
         // Four-key path keeps its original arithmetic; elements / drag height
         // use compute_aero_loads (left/right halves, y ignored on L2).
-        const bool aero_el = aero_uses_element_path(vp_);
-        const AeroLoads aero = aero_el ? compute_aero_loads(vp_, AeroState{vx}) : AeroLoads{};
+        // An aero module (work order 51) replaces the built-in aero. A stand-alone L2 has
+        // no ride states; inside L3 / L4 the host sets them each step (aero_ride_).
+        const bool aero_el = aero_module_ != nullptr || aero_uses_element_path(vp_);
+        AeroLoads aero;
+        if (aero_module_) {
+            const DriverCmd aero_cmd{
+                steer_cmd,
+                direct_l1_ ? 0.0 : cmd.throttle,
+                direct_l1_ ? 0.0 : cmd.brake,
+                direct_l1_ ? 1   : cmd.gear,
+                direct_l1_ ? false : cmd.handbrake,
+                direct_l1_ ? SteerMode::Angle : cmd.steer_mode,
+                direct_l1_ ? 0.0 : cmd.steer_actuator,
+            };
+            const SubsystemContext actx{s, aero_cmd, 0.0};
+            aero = aero_loads_from_forces(
+                vp_, aero_module_->compute(actx, make_aero_input(vp_, s.velocity, aero_ride_)),
+                false);
+        } else if (aero_el) {
+            AeroState as = aero_ride_;   // ride states from the L3 host (0 on L2)
+            as.vx = vx;
+            aero = compute_aero_loads(vp_, as);
+        }
         const double q_aero  = 0.5 * vp_.air_density * vp_.frontal_area * vx * std::abs(vx);
         const double Fz_aero_f_per = aero_el ? aero.fz_wheel_split[WHEEL_FL]
                                              : 0.5 * vp_.aero_lift_front * q_aero;
@@ -1051,6 +1087,8 @@ private:
     std::unique_ptr<ITireModel> inj_tire_;
     std::array<std::unique_ptr<ITireModel>, NUM_WHEELS> tire_ {};
     std::shared_ptr<IDrivetrain>         drivetrain_;
+    std::shared_ptr<IAeroModel> aero_module_;   // work order 51 (null = built-in aero)
+    AeroState aero_ride_ {};   // ride states of the L3 host (work order 51); vx unused
     std::shared_ptr<IBrakeSystem>        brake_;
     std::shared_ptr<ISteeringSystem>     steering_;
     std::unique_ptr<ISteeringKinematics> steer_kin_;  // rack_travel → FL/FR angles
@@ -1128,5 +1166,13 @@ std::array<detail::ContactLoad, NUM_WHEELS> detail::contact_loads(
     if (seven == nullptr) return {};
     return seven->contact_loads();
 }
+
+namespace detail {
+
+void seven_dof_set_aero_ride(IVehicleDynamics& dyn, double dz, double pitch, double roll) {
+    if (auto* p = dynamic_cast<SevenDOFDynamics*>(&dyn)) p->set_aero_ride(dz, pitch, roll);
+}
+
+}  // namespace detail
 
 }  // namespace vdsim

@@ -4,6 +4,7 @@
 #include <cmath>
 #include <limits>
 #include <algorithm>
+#include <atomic>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -202,6 +203,70 @@ void warn_negative_element_height(const VehicleParams& vp, const AeroLoads& load
             return;
         }
     }
+}
+
+AeroInput make_aero_input(const VehicleParams& vp, const Vec3& v_body, const AeroState& s) {
+    AeroInput in;
+    in.v_air_body = v_body;
+    in.slip_angle = std::atan2(v_body.y(), v_body.x());
+    in.dz_heave = s.dz;
+    in.pitch = s.pitch;
+    in.roll = s.roll;
+    in.dh_front = s.dz - vp.cg_to_front * s.pitch;
+    in.dh_rear = s.dz + vp.cg_to_rear * s.pitch;
+    in.rho = vp.air_density;
+    return in;
+}
+
+AeroLoads aero_loads_from_forces(const VehicleParams& vp,
+                                 const std::vector<AeroForce>& forces, bool lateral) {
+    std::vector<Piece> pieces;
+    pieces.reserve(forces.size());
+    bool fy_dropped = false;
+    for (const auto& f : forces) {
+        double fy = f.force_body.y();
+        if (!lateral && fy != 0.0) {
+            fy = 0.0;
+            fy_dropped = true;
+        }
+        // Body force (-fx, fy, -fz): drag fx and downforce fz in the element form.
+        pieces.push_back({-f.force_body.z(), -f.force_body.x(), fy, f.point.x(), f.point.y(),
+                          f.point.z(), f.point.z()});
+    }
+    if (fy_dropped) {
+        static std::atomic<bool> warned{false};   // once per process
+        if (!warned.exchange(true))
+            spdlog::warn("[vdsim aero] aero module returned a lateral force Fy; it is ignored "
+                         "below L5 (L2-L4 have no lateral aero path)");
+    }
+    AeroLoads out;
+    distribute(vp, pieces, out);
+    return out;
+}
+
+void warn_aero_module_replaces(const VehicleParams& vp) {
+    std::string what;
+    const auto add = [&what](const std::string& s) {
+        if (!what.empty()) what += ", ";
+        what += s;
+    };
+    if (vp.aero_elements.empty()) {
+        if (vp.aero_drag_coeff != 0.0 && vp.frontal_area != 0.0)
+            add("Cd=" + std::to_string(vp.aero_drag_coeff) +
+                " frontal_area=" + std::to_string(vp.frontal_area));
+        if (vp.aero_lift_front != 0.0) add("aero_lift_front=" + std::to_string(vp.aero_lift_front));
+        if (vp.aero_lift_rear != 0.0) add("aero_lift_rear=" + std::to_string(vp.aero_lift_rear));
+        if (vp.aero_drag_height) add("aero_drag_height");
+    } else {
+        std::string names;
+        for (const auto& e : vp.aero_elements) names += (names.empty() ? "" : " ") + e.name;
+        add("aero.elements [" + names + "]");
+    }
+    if (what.empty()) return;
+    static std::atomic<bool> warned{false};   // once per process
+    if (!warned.exchange(true))
+        spdlog::warn("[vdsim aero] aero module replaces the built-in aero of the vehicle ({}); "
+                     "air_density is passed to the module as rho", what);
 }
 
 }  // namespace vdsim

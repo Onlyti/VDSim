@@ -42,6 +42,18 @@ struct PyBrakeSystem : vdsim::IBrakeSystem {
     void reset() override { PYBIND11_OVERRIDE(void, vdsim::IBrakeSystem, reset, ); }
 };
 
+struct PyAeroModel : vdsim::IAeroModel {
+    using vdsim::IAeroModel::IAeroModel;
+    std::vector<vdsim::AeroForce> compute(const vdsim::SubsystemContext& ctx,
+                                          const vdsim::AeroInput& in) override {
+        PYBIND11_OVERRIDE_PURE(std::vector<vdsim::AeroForce>, vdsim::IAeroModel, compute, ctx, in);
+    }
+    void begin_step(const vdsim::SubsystemContext& ctx, double dt) override {
+        PYBIND11_OVERRIDE(void, vdsim::IAeroModel, begin_step, ctx, dt);
+    }
+    void reset() override { PYBIND11_OVERRIDE(void, vdsim::IAeroModel, reset, ); }
+};
+
 struct PySteeringSystem : vdsim::ISteeringSystem {
     using vdsim::ISteeringSystem::ISteeringSystem;
     vdsim::SteeringOutput apply(const vdsim::SubsystemContext& ctx) override {
@@ -1059,6 +1071,57 @@ PYBIND11_MODULE(vdsim, m) {
         .def("wheel_torque", &vdsim::IBrakeSystem::wheel_torque)
         .def("begin_step",   &vdsim::IBrakeSystem::begin_step)
         .def("reset",        &vdsim::IBrakeSystem::reset);
+    py::class_<vdsim::AeroReference>(m, "AeroReference",
+        "L5 static aero reference of the last reset (in-reset settle run, work order 51).")
+        .def_readonly("ran",       &vdsim::AeroReference::ran)
+        .def_readonly("ref_z",     &vdsim::AeroReference::ref_z, "body-origin world z [m]")
+        .def_readonly("ref_pitch", &vdsim::AeroReference::ref_pitch, "pitch [rad]")
+        .def_readonly("ref_roll",  &vdsim::AeroReference::ref_roll, "roll [rad]")
+        .def_readonly("settled",   &vdsim::AeroReference::settled)
+        .def_readonly("t_settle",  &vdsim::AeroReference::t_settle, "[s]")
+        .def_readonly("unmet",     &vdsim::AeroReference::unmet);
+    // Aero module (work order 51): replaces the whole built-in aero of the vehicle.
+    py::class_<vdsim::AeroInput>(m, "AeroInput",
+        "Input of an aero module; ride quantities relative to the static reference.")
+        .def(py::init<>())
+        .def_readwrite("v_air_body", &vdsim::AeroInput::v_air_body, "air-relative velocity, body [m/s]")
+        .def_readwrite("slip_angle", &vdsim::AeroInput::slip_angle, "atan2(vy, vx) [rad]")
+        .def_readwrite("dz_heave",   &vdsim::AeroInput::dz_heave, "body-origin heave vs static [m], + up")
+        .def_readwrite("pitch",      &vdsim::AeroInput::pitch, "pitch vs static [rad], ISO + nose down")
+        .def_readwrite("roll",       &vdsim::AeroInput::roll, "roll vs static [rad]")
+        .def_readwrite("dh_front",   &vdsim::AeroInput::dh_front, "front-axle ride change [m]")
+        .def_readwrite("dh_rear",    &vdsim::AeroInput::dh_rear, "rear-axle ride change [m]")
+        .def_readwrite("rho",        &vdsim::AeroInput::rho, "air density [kg/m^3]");
+    py::class_<vdsim::AeroForce>(m, "AeroForce",
+        "One module force: force_body [N] in body axes (drag -x, downforce -z), point [m] "
+        "in the aero.elements frame (origin on the ground below the front axle).")
+        .def(py::init<>())
+        .def(py::init([](std::string name, vdsim::Vec3 force_body, vdsim::Vec3 point) {
+                 vdsim::AeroForce f;
+                 f.name = std::move(name);
+                 f.force_body = force_body;
+                 f.point = point;
+                 return f;
+             }),
+             py::arg("name"), py::arg("force_body"), py::arg("point"))
+        .def_readwrite("name",       &vdsim::AeroForce::name)
+        .def_readwrite("force_body", &vdsim::AeroForce::force_body)
+        .def_readwrite("point",      &vdsim::AeroForce::point);
+    py::class_<vdsim::IAeroModel, PyAeroModel, std::shared_ptr<vdsim::IAeroModel>>(
+            m, "AeroModule",
+            "Subclass and override compute(ctx, inp) -> list[AeroForce]. Replaces the "
+            "built-in aero; begin_step(ctx, dt) once per step, compute() per force "
+            "evaluation (pure), reset() on model reset. Install with dyn.set_aero_module().")
+        .def(py::init<>())
+        .def("compute",    &vdsim::IAeroModel::compute)
+        .def("begin_step", &vdsim::IAeroModel::begin_step)
+        .def("reset",      &vdsim::IAeroModel::reset);
+    m.def("make_aero_input", &vdsim::make_aero_input, py::arg("vp"), py::arg("v_body"),
+          py::arg("state"), "AeroInput from a body velocity and an AeroState (vx ignored).");
+    m.def("aero_loads_from_forces", &vdsim::aero_loads_from_forces, py::arg("vp"),
+          py::arg("forces"), py::arg("lateral"),
+          "Axle / wheel / wrench loads of module forces (same split as compute_aero_loads).");
+
     // SimpleABS reference module: dyn.set_brake_module(vdsim.make_simple_abs(vp)).
     m.def("make_simple_abs",
           [](const vdsim::VehicleParams& vp, double slip_target, double slip_release) {
@@ -1138,6 +1201,11 @@ PYBIND11_MODULE(vdsim, m) {
              "Install a user SteeringModule (L2/L3). False if unsupported.")
         .def("set_drivetrain_module",  &vdsim::IVehicleDynamics::set_drivetrain_module,
              "Install a user DrivetrainModule (L2/L3). False if unsupported.")
+        .def("set_aero_module",        &vdsim::IVehicleDynamics::set_aero_module,
+             py::keep_alive<1, 2>(),
+             "Install a user AeroModule (L2-L5; replaces the built-in aero). On L5 attach "
+             "before reset() so the static-reference settle run happens. False on L1. The "
+             "model keeps the Python module object alive.")
         .def("set_suspension_module",  &vdsim::IVehicleDynamics::set_suspension_module,
              "Install a user SuspensionModule (L3 only). False if unsupported.")
         .def("set_antirollbar_module", &vdsim::IVehicleDynamics::set_antirollbar_module,
@@ -1475,6 +1543,8 @@ PYBIND11_MODULE(vdsim, m) {
                  return st;
              }, py::arg("state"),
              "Return the spawn pose dropped onto this session's ground (R7).")
+        .def("aero_reference", &vdsim::SimSession::aero_reference,
+             "L5 static aero reference of the last reset (settle run, work order 51).")
         .def("reset_settled", &vdsim::SimSession::reset_settled, py::arg("state"),
              "settle_on_ground() then reset(); returns the settled state.")
         .def("set_seed", &vdsim::SimSession::set_seed, py::arg("seed"),
