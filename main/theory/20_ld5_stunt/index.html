@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
     
     
       
@@ -3175,8 +3175,40 @@ spin states. Flat L2/L3 road behaviour is unchanged — Ld5 is opt-in via
 </table>
 <p>Let <span class="arithmatex">\(\mathbf{R} = \mathbf{R}(\mathbf{q})\)</span> be the body→world rotation. Wheel <span class="arithmatex">\(i\)</span> has
 a fixed body-frame mount <span class="arithmatex">\(\mathbf{r}_i\)</span> (track/wheelbase offsets, with vertical
-<span class="arithmatex">\(-(h_{cg}-R_w)\)</span> so the hub sits a wheel radius below the CG). ISO 8855 RH applies;
-wheel order FL=0, FR=1, RL=2, RR=3 (Chapter 01).</p>
+<span class="arithmatex">\(-(h_o-R_w)\)</span> so the hub sits a wheel radius above the ground plane the body origin
+height <span class="arithmatex">\(h_o\)</span> is measured from). ISO 8855 RH applies; wheel order FL=0, FR=1, RL=2,
+RR=3 (Chapter 01).</p>
+<p><strong>CG heights (0.8.2).</strong> <span class="arithmatex">\(h\)</span> = <code>cg_height</code> is the whole-vehicle CG height above ground
+(sprung + unsprung) on every level and path. The body origin <span class="arithmatex">\(h_o\)</span> depends on what the
+6-DOF body carries:</p>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Body mass</th>
+<th>Body origin <span class="arithmatex">\(h_o\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Penalty (default)</td>
+<td><span class="arithmatex">\(m\)</span> (whole vehicle, wheels rigid)</td>
+<td><span class="arithmatex">\(h\)</span></td>
+</tr>
+<tr>
+<td>Spatial strut, with or without a corner DAE</td>
+<td><span class="arithmatex">\(m - \sum_i m_{u,i}\)</span> (sprung)</td>
+<td><span class="arithmatex">\(h_s\)</span></td>
+</tr>
+</tbody>
+</table>
+<div class="arithmatex">\[
+h_s = \frac{m\,h - \sum_i m_{u,i}\,R_w}{m - \sum_i m_{u,i}}, \qquad
+m_{u,i} = \max(1, \texttt{unsprung\_mass}_i),
+\]</div>
+<p>so the sprung body at <span class="arithmatex">\(h_s\)</span> and the four wheel particles at <span class="arithmatex">\(R_w\)</span> put the system CG
+back at <span class="arithmatex">\(h\)</span>. <span class="arithmatex">\(h_s \le R_w + 0.01\)</span> m is rejected. <code>cg_height_ref: sprung</code> restores the
+0.8.1 strut meaning (<span class="arithmatex">\(h_o = h\)</span>, system CG below <span class="arithmatex">\(h\)</span>).</p>
 <hr />
 <h2 id="203-equations-of-motion-newtoneuler-body-frame">20.3 Equations of motion (Newton–Euler, body frame)<a class="headerlink" href="#203-equations-of-motion-newtoneuler-body-frame" title="Permanent link">&para;</a></h2>
 <p>Collect the world-frame resultant force on the CG,</p>
@@ -3225,8 +3257,10 @@ differentiating <span class="arithmatex">\(\mathbf{v}^{w} = \mathbf{R}\mathbf{v}
 \]</div>
 <p>with <span class="arithmatex">\(\mathbf{F}_i^{b} = \mathbf{R}^{\!\top}\mathbf{F}_i^{w}\)</span> the body-frame wheel
 force, <span class="arithmatex">\(M_{z,i}\)</span> the tire aligning moment about the body yaw axis, and
-<span class="arithmatex">\(\mathbf{r}_{a,j} = (x_j + a,\; y_j,\; z_j - h_{cg})\)</span> the arm from the CG (<span class="arithmatex">\(a\)</span> = CG
-behind the front axle) to aero piece <span class="arithmatex">\(j\)</span>. A piece at the CG has zero arm. See
+<span class="arithmatex">\(\mathbf{r}_{a,j} = (x_j + a,\; y_j,\; z_j - h_o)\)</span> the arm from the body origin (<span class="arithmatex">\(a\)</span> =
+CG behind the front axle, <span class="arithmatex">\(h_o\)</span> from §20.2) to aero piece <span class="arithmatex">\(j\)</span>. The four-key drag piece
+sits at <span class="arithmatex">\(z_j = h\)</span> (or <code>aero_drag_height</code>), so it has zero arm on the penalty path and
+the arm <span class="arithmatex">\(h - h_s\)</span> on the strut path. See
 <a href="../26_aero_elements/">Chapter 26</a> for the inputs and §26.5 for the aero contract.</p>
 <h3 id="drive-and-brake-torque-reaction-081">Drive and brake torque reaction (0.8.1)<a class="headerlink" href="#drive-and-brake-torque-reaction-081" title="Permanent link">&para;</a></h3>
 <p>The wheel torque has an equal-and-opposite reaction about the steered wheel-spin axis:</p>
@@ -3305,7 +3339,7 @@ the <strong>contact plane</strong>, not from a global "forward/right":</p>
    speed <span class="arithmatex">\(R_w\omega_i\)</span>.</li>
 <li><span class="arithmatex">\(F_x, F_y\)</span> from the tire law (LuGre default, Chapter 19; MF96 + low-speed blend
    when LuGre is off), clipped to the friction ellipse <span class="arithmatex">\(\sqrt{F_x^2+F_y^2}\le \mu F_z\)</span>.</li>
-<li>World force $\mathbf{F}<em _text_long="\text{long">i^{w} = F_x\,\mathbf{t}</em>}} + F_y\,\mathbf{t}_{\text{lat}</li>
+<li>World force $\mathbf{F}<em _text_long>i^{w} = F_x\,\mathbf{t}</em>}} + F_y\,\mathbf{t}_{\text{lat}</li>
 <li>F_{z,i}\,\hat{\mathbf{n}}$.</li>
 </ol>
 <p>Building the frame from <span class="arithmatex">\(\hat{\mathbf{n}}\)</span> is the key step that makes traction at
@@ -3359,9 +3393,12 @@ v0.5 terrain note.</p>
   robust-tuned, not measured (see <a href="../../VALIDATION/"><code>VALIDATION.md</code></a> "Stunt").</li>
 <li><strong>Longitudinal reaction limits (0.8.1).</strong> Penalty and spatial-strut paths return
   drive/brake torque reactions through the chassis. An explicit <code>unsprung</code> target on a
-  hard-joint DAE path is treated as <code>sprung</code> with a once-per-process warning. Spatial-strut
-  axle load transfer remains about 1–3% above the analytical target and is tracked as an
-  informational known failure pending the 0.8.2 <code>cg_height</code> correction and revalidation.</li>
+  hard-joint DAE path is treated as <code>sprung</code> with a once-per-process warning. On the
+  spatial-strut path (0.8.2) the tire longitudinal force reacts on the wheel spin about the
+  wheel-centre height R0 − penetration, while slip keeps the effective rolling radius;
+  with that arm and the whole-vehicle <code>cg_height</code> (§20.2) the strut-path axle load
+  transfer (<code>L5Reaction.R2_*</code>) passes its ±2 % gate. <code>cg_height_ref: sprung</code> keeps the
+  0.8.1 arm.</li>
 <li><strong>Not yet (→ v0.5):</strong> general curved/banked track (<code>CurvedGround</code>, banked oval)
   and a GUI panel to <em>author</em> stunt scenes; today the GUI renders loaded ramp/loop
   scenes only. See <a href="../../design/V0.5_TERRAIN_L5/"><code>design/V0.5_TERRAIN_L5.md</code></a>.</li>
@@ -3445,7 +3482,7 @@ v0.5 terrain note.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.expand", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      <script src="../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
       
         <script src="../../javascripts/mathjax.js"></script>
       
