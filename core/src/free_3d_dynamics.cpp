@@ -8,6 +8,7 @@
 #include "vdsim/multibody.hpp"
 #include "vdsim/subsystems.hpp"
 
+#include "free_3d_jacking_internal.hpp"
 #include "free_3d_reaction_internal.hpp"
 
 #include <spdlog/spdlog.h>
@@ -22,6 +23,7 @@
 #include <memory>
 #include <numeric>
 #include <type_traits>
+#include <utility>
 #include <variant>
 
 namespace vdsim {
@@ -334,6 +336,8 @@ public:
         return axle == 0 ? mb_enabled_front_ : mb_enabled_rear_;
     }
     void set_contact_provider(IContactProvider* p) noexcept { provider_ = p; }
+    /// @brief Install the 49a P10b connection-pair probe (empty = off). @param p sink
+    void set_jacking_probe(detail::JackingPairProbe p) { jack_probe_ = std::move(p); }
     std::array<double, NUM_WHEELS> wheel_camber() const noexcept { return gamma_dae_; }
     std::array<double, NUM_WHEELS> wheel_toe()    const noexcept { return toe_dae_; }
 
@@ -616,6 +620,7 @@ private:
                 // the chassis through the bushing, so every body<->wheel force is a genuine
                 // two-point element and the strut roll moment is delivered directly.
                 const Vec3& rb = r_body_[i];
+                const Vec3 F_total_before = F_total_world;           // P10b probe only
                 const Vec3 mount   = s.position + R * rb;             // current mount, world
                 const Vec3 v_mount = R * (v_body + omega.cross(rb));  // its world velocity
                 const Vec3 u_hat   = ez_world;                        // strut axis (body up)
@@ -723,6 +728,18 @@ private:
                 F_body[i] = R.transpose() * F_conn;
                 tau_body += rb.cross(F_body[i]);
                 tau_body.z() += mz_wheel[i];
+                if (jack_probe_) {   // 49a P10b diagnostic: observes, never feeds back
+                    detail::JackingPairSample js;
+                    js.corner = i;
+                    js.path_valid = path_valid_[i];
+                    js.f_on_body = F_total_world - F_total_before;
+                    js.f_on_body_moment = R * F_body[i];
+                    js.f_on_wheel = m_u * a_u - tire_total
+                                    - Vec3(0.0, 0.0, -m_u * kGravity);
+                    js.jack_radius = jack_radius_[i];
+                    js.contact_radius = vp_.wheel_radius_nominal;
+                    jack_probe_(js);
+                }
                 continue;
             }
             if (!contacts[i].is_valid || contacts[i].penetration <= 0.0) {
@@ -1154,6 +1171,13 @@ private:
     // Optional contact provider for per-substep re-query (shrinks the once-per-step
     // frozen-contact O(dt) term). Non-owning; null -> use the frozen ContactArray passed in.
     IContactProvider* provider_ {nullptr};
+    // 49a P10b diagnostic sink (empty = off) and the radius the contact-patch jacking slope
+    // used per corner (NaN until that slope is in use).
+    detail::JackingPairProbe jack_probe_ {};
+    std::array<double, NUM_WHEELS> jack_radius_ {{std::numeric_limits<double>::quiet_NaN(),
+                                                  std::numeric_limits<double>::quiet_NaN(),
+                                                  std::numeric_limits<double>::quiet_NaN(),
+                                                  std::numeric_limits<double>::quiet_NaN()}};
     // Per-corner L4 hard-joint corner DAE (B2): one model per axle (front/rear) shared by
     // its two corners, each with its own state, fed the corner strut travel. Produces the
     // per-wheel toe/camber applied to the tire. Inactive unless attached AND strut path on.
@@ -1237,6 +1261,15 @@ bool free_3d_attach_contact_provider(IVehicleDynamics& dyn, IContactProvider* pr
     p->set_contact_provider(provider);
     return true;
 }
+
+namespace detail {
+bool free_3d_set_jacking_probe(IVehicleDynamics& dyn, JackingPairProbe probe) {
+    auto* p = dynamic_cast<Free3DDynamics*>(&dyn);
+    if (!p) return false;
+    p->set_jacking_probe(std::move(probe));
+    return true;
+}
+}  // namespace detail
 
 std::array<double, NUM_WHEELS> free_3d_wheel_camber(const IVehicleDynamics& dyn) {
     const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);

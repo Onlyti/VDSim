@@ -42,6 +42,22 @@
 //      max |V - 7| <= 0.05 m/s, |V/r - 8.5| / 8.5 <= 1 %, std(r)/mean(r) <= 0.5 %).
 //      Not in D: torques along the wheel spin axes (drive/brake and tyre rolling reaction);
 //      their roll part is bounded by sum |Fx,i| R |sin delta_i| and printed (information).
+// P10b: reaction pair (added by the second gate commit, before the implementation commits).
+//      The P10 skidpad and the P1 25 m/s coast, both fixtures, with the diagnostic
+//      connection probe (detail::free_3d_set_jacking_probe; it observes, never feeds back).
+//      For every derivative evaluation (every RK stage of every substep of every outer
+//      step) and every corner, world frame:
+//        F_wheel = m_u a_u - F_tyre - m_u g      (connection force from the applied a_u)
+//        F_body  = increment of the body's translational force from that corner
+//        F_body' = R_wb F_body[i]                (the force whose moment the body takes)
+//      Gate: |F_body + F_wheel| <= 1e-9 max(|F_body|, 1 N) and the same for F_body', for
+//      all samples; at least one corner-model (path-valid) sample per corner.
+// P10b radius source: the contact-patch jacking slope reads the same radius the contact
+//      query reads (VehicleParams::wheel_radius_nominal). Sample check jack_radius ==
+//      contact_radius (bitwise), on the sedan (0.32 m) and with wheel_radius_nominal set to
+//      0.33 m (the part YAML static_radius), so a hard-coded 0.32 also fails. Sports fixture,
+//      25 m/s coast, 300 ticks. Fails ("not used") until the contact-patch slope is used.
+#include "free_3d_jacking_internal.hpp"
 #include "vdsim/control.hpp"
 #include "vdsim/interfaces.hpp"
 #include "vdsim/multibody.hpp"
@@ -90,9 +106,11 @@ VehicleParams sedan() {
  * @param vp      vehicle parameters
  * @param fixture 0 = antidive, 1 = sports
  * @param v0      initial forward speed [m/s]
+ * @param probe   optional P10b connection-pair probe, installed before reset_settled
  * @return settled session
  */
-std::unique_ptr<SimSession> make(const VehicleParams& vp, int fixture, double v0) {
+std::unique_ptr<SimSession> make(const VehicleParams& vp, int fixture, double v0,
+                                 const detail::JackingPairProbe& probe = {}) {
     SolverParams sp;
     sp.max_substep_dt = 2e-4;
     sp.max_substeps = 64;
@@ -111,6 +129,9 @@ std::unique_ptr<SimSession> make(const VehicleParams& vp, int fixture, double v0
                                          mb::SuspensionTopology::from_yaml(ff), true));
     EXPECT_TRUE(free_3d_attach_multibody(s->dynamics(), false,
                                          mb::SuspensionTopology::from_yaml(rr), true));
+    if (probe) {
+        EXPECT_TRUE(detail::free_3d_set_jacking_probe(s->dynamics(), probe));
+    }
     State s0;
     s0.position.z() = vp.cg_height;
     s0.velocity.x() = v0;
@@ -151,11 +172,12 @@ double rms(const std::vector<double>& q, int k0, int k1) {
  * @brief Coast probe (zero command, 10 s) and the P1 window metrics.
  * @param fixture 0 = antidive, 1 = sports
  * @param v0      initial speed [m/s]
+ * @param probe   optional P10b connection-pair probe
  * @return q_rms (t in [5,10) s) and growth ([8,10) / [2,4) s)
  */
-Pitch coast(int fixture, double v0) {
+Pitch coast(int fixture, double v0, const detail::JackingPairProbe& probe = {}) {
     const VehicleParams vp = sedan();
-    auto s = make(vp, fixture, v0);
+    auto s = make(vp, fixture, v0, probe);
     std::vector<double> q(10000, 0.0);
     const CmdL4 u;
     for (int k = 0; k < 10000; ++k) {
@@ -202,13 +224,14 @@ struct Budget {
 /**
  * @brief P10 steady-circle exact roll budget about the whole-vehicle CG.
  * @param fixture 0 = antidive, 1 = sports
+ * @param probe   optional P10b connection-pair probe
  * @return mean residual D, scale S, spin-axis torque bound and the preconditions
  */
-Budget skidpad(int fixture) {
+Budget skidpad(int fixture, const detail::JackingPairProbe& probe = {}) {
     constexpr double kV = 7.0, kRad = 8.5, kT = 15.0, kAvg = 2.0;
     VehicleParams vp = sedan();
     vp.ackerman_percent = 0.0;
-    auto s = make(vp, fixture, kV);
+    auto s = make(vp, fixture, kV, probe);
 
     const double R_w = vp.wheel_radius_nominal;
     std::array<double, NUM_WHEELS> I_w {}, m_u {};
@@ -319,6 +342,83 @@ void p10(int fixture) {
     EXPECT_LE(std::abs(rel), 0.02) << name(fixture);
 }
 
+/// P10b accumulator over all probe samples of one run.
+struct PairStats {
+    long n {0};
+    std::array<long, NUM_WHEELS> n_path {{0, 0, 0, 0}};
+    long fail {0};
+    double worst {0.0};   ///< max |F_body + F_wheel| / max(|F_body|, 1 N) over both body forces
+};
+
+/**
+ * @brief Probe that folds every sample into a PairStats.
+ * @param ps accumulator (outlives the session run)
+ * @return probe
+ */
+detail::JackingPairProbe pair_probe(PairStats& ps) {
+    return [&ps](const detail::JackingPairSample& js) {
+        ++ps.n;
+        if (js.path_valid) ++ps.n_path[js.corner];
+        for (const Vec3& fb : {js.f_on_body, js.f_on_body_moment}) {
+            const double rel = (fb + js.f_on_wheel).norm() / std::max(fb.norm(), 1.0);
+            ps.worst = std::max(ps.worst, rel);
+            if (!(rel <= 1e-9)) ++ps.fail;
+        }
+    };
+}
+
+/**
+ * @brief P10b gate check for one run.
+ * @param what run label
+ * @param ps   accumulated samples
+ */
+void p10b_check(const std::string& what, const PairStats& ps) {
+    std::printf("P10b %s samples=%ld path=[%ld %ld %ld %ld] worst=%.3e fail=%ld (gate 1e-9)\n",
+                what.c_str(), ps.n, ps.n_path[0], ps.n_path[1], ps.n_path[2], ps.n_path[3],
+                ps.worst, ps.fail);
+    EXPECT_GT(ps.n, 0) << what;
+    for (int i = 0; i < NUM_WHEELS; ++i) EXPECT_GT(ps.n_path[i], 0) << what << " corner " << i;
+    EXPECT_EQ(ps.fail, 0) << what;
+}
+
+/**
+ * @brief P10b on the skidpad and the 25 m/s coast for one fixture.
+ * @param fixture 0 = antidive, 1 = sports
+ */
+void p10b(int fixture) {
+    PairStats sk, co;
+    (void)skidpad(fixture, pair_probe(sk));
+    p10b_check(std::string(name(fixture)) + " skidpad", sk);
+    (void)coast(fixture, 25.0, pair_probe(co));
+    p10b_check(std::string(name(fixture)) + " coast25", co);
+}
+
+/**
+ * @brief P10b radius source: jacking slope radius == contact radius, bitwise.
+ * @param radius wheel_radius_nominal for the run [m]
+ */
+void p10b_radius(double radius) {
+    VehicleParams vp = sedan();
+    vp.wheel_radius_nominal = radius;
+    long n = 0, bad = 0;
+    double seen = std::nan("");
+    auto s = make(vp, 1, 25.0, [&](const detail::JackingPairSample& js) {
+        if (!js.path_valid) return;
+        ++n;
+        seen = js.jack_radius;
+        if (!(js.jack_radius == js.contact_radius && js.contact_radius == radius)) ++bad;
+    });
+    const CmdL4 u;
+    for (int k = 0; k < 300; ++k) {
+        s->set_input(u);
+        s->tick(kDt);
+    }
+    std::printf("P10b-radius R=%.3f samples=%ld mismatch=%ld last jack_radius=%.6f\n", radius,
+                n, bad, seen);
+    EXPECT_GT(n, 0);
+    EXPECT_EQ(bad, 0) << "jacking slope radius is not the contact radius (NaN = not used)";
+}
+
 }  // namespace
 
 TEST(L5DaePitch, P1_Antidive25) { p1(0, 25.0); }
@@ -329,3 +429,9 @@ TEST(L5DaePitch, P2_Antidive10NotWorse) { p2(0); }
 TEST(L5DaePitch, P2_Sports10NotWorse) { p2(1); }
 TEST(L5DaePitch, P10_AntidiveSkidpadRollBudget) { p10(0); }
 TEST(L5DaePitch, P10_SportsSkidpadRollBudget) { p10(1); }
+TEST(L5DaePitch, P10b_AntidiveReactionPair) { p10b(0); }
+TEST(L5DaePitch, P10b_SportsReactionPair) { p10b(1); }
+TEST(L5DaePitch, P10b_JackRadiusSameSourceAsContact) {
+    p10b_radius(0.32);
+    p10b_radius(0.33);
+}

@@ -4,14 +4,46 @@
 // path tangent's lateral slope turns the tyre lateral force into a vertical (jacking)
 // reaction. The lateral force acts at the contact patch, so the slope that sets the
 // jacking is that of the contact patch, dy_cp/dz_v, not that of the wheel centre.
-// Internal to core/src; tests reach it through the unit-test include path.
+// Internal to core/src; tests reach it through the unit/integration test include paths.
 #pragma once
 
+#include "vdsim/interfaces.hpp"
 #include "vdsim/multibody.hpp"
 
 #include <cmath>
+#include <functional>
 
 namespace vdsim::detail {
+
+/**
+ * @brief One strut-path connection sample (work order 49a gate P10b, diagnostic only).
+ *
+ * Taken once per corner per derivative evaluation on the L5 strut path. Forces are world
+ * frame [N]. Recording never changes the dynamics.
+ */
+struct JackingPairSample {
+    int corner {0};                  ///< 0 FL, 1 FR, 2 RL, 3 RR
+    bool path_valid {false};         ///< corner-model travel path active (jacking present)
+    Vec3 f_on_body {Vec3::Zero()};   ///< connection force added to the body translation
+    Vec3 f_on_body_moment {Vec3::Zero()};  ///< R * F_body[i], the force whose moment the body takes
+    Vec3 f_on_wheel {Vec3::Zero()};  ///< connection force on the wheel particle,
+                                     ///< m_u a_u - tyre force - m_u g (from the applied a_u)
+    double jack_radius {std::nan("")};     ///< radius the contact-patch jacking slope used
+                                           ///< (NaN = not used on this path)
+    double contact_radius {std::nan("")};  ///< radius the contact query reads
+                                           ///< (VehicleParams::wheel_radius_nominal)
+};
+
+/// Diagnostic sink for JackingPairSample; empty = recording off.
+using JackingPairProbe = std::function<void(const JackingPairSample&)>;
+
+/**
+ * @brief Install (or clear with an empty function) the P10b connection-pair probe.
+ * @param dyn   vehicle dynamics; only the L5 free-3D model records
+ * @param probe sink called per corner per derivative evaluation on the strut path
+ * @return true if dyn is the L5 free-3D model
+ */
+bool free_3d_set_jacking_probe(IVehicleDynamics& dyn, JackingPairProbe probe);
 
 /// Central-difference step [m]; the same step as IHardJointDaeModel::travel_maps.
 inline constexpr double kContactSlopeStep = 1e-3;
