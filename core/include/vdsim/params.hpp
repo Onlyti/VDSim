@@ -104,6 +104,10 @@ struct VehicleParams {
     // Empty or "roadwheel" = L5 uses the wheel-angle command (bit-identical).
     // "rack_travel" = L5 hardpoint path reads SteeringOutput.rack_travel as +y [m].
     std::string steer_input;
+    // L5 wheel-spin gyroscopic term (work order 50). Empty or "legacy" = 0.8.1 term
+    // (spin axis tilted by steer + DAE toe), "full" = legacy + DAE camber tilt,
+    // "off" = no term. L1-L4 read it and ignore it (one warning per process).
+    std::string wheel_gyro;
     // Dynamic-steering Rack EOM params (used only when ISteeringSystem outputs mode=Dynamic).
     bool   steering_dynamic {false}; // true → DynamicSteering (Rack EOM, accepts torque/rate)
     double rack_mass     {30.0};    // [kg] effective rack + reflected column/motor inertia
@@ -177,6 +181,24 @@ void validate_l5_steer_input(const VehicleParams& vp);
 
 /** L2-L4: one warning per process if rack_travel was requested. */
 void warn_if_steer_input_unused(const VehicleParams& vp);
+
+/// L5 wheel-spin gyroscopic term selected by VehicleParams::wheel_gyro.
+enum class WheelGyro { Legacy, Full, Off };
+
+/**
+ * @brief Parse VehicleParams::wheel_gyro.
+ * @param vp Vehicle parameters.
+ * @return Legacy for empty or "legacy", Full for "full", Off for "off".
+ * @throws std::invalid_argument for any other string.
+ */
+WheelGyro wheel_gyro_mode(const VehicleParams& vp);
+
+/**
+ * @brief L1-L4: validate wheel_gyro and warn once per process when it is set.
+ * @param vp Vehicle parameters.
+ * @throws std::invalid_argument for an unknown value.
+ */
+void warn_if_wheel_gyro_unused(const VehicleParams& vp);
 
 // Axle roll stiffness [N m/rad] derived from the corner springs plus the ARB.
 // Two springs at half-track produce K = (k_left + k_right) * (track/2)^2; the

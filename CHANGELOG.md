@@ -96,6 +96,12 @@ one level-id factory, L5 from Python). Not released yet.
 ## [0.8.2]
 
 ### Added
+- `VehicleParams.wheel_gyro` (`legacy` | `full` | `off`, YAML / Python / `to_yaml`).
+  Unset is `legacy`, the 0.8.1 L5 wheel-spin gyroscopic term (bit-identical).
+  `full` also tilts the spin axis by the corner-model camber; without a corner model
+  the camber is zero and `full` equals `legacy`. `off` removes the term. Unknown
+  values raise `std::invalid_argument` / `ValueError`; L1-L4 ignore the key with one
+  warning per process. The term is written out in theory chapter 20.3.
 - `VehicleParams.steer_input` (`roadwheel` | `rack_travel`). Empty is `roadwheel`.
 - L5 hardpoint path can read `SteeringOutput.rack_travel` as physical +y [m].
   Rack mode skips `kRackPerRad` and Ackerman; wheel progress comes from DAE toe only.

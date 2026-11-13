@@ -93,6 +93,8 @@ SimSession::SimSession(std::unique_ptr<IVehicleDynamics> dyn,
                              "below L5 (torque reactions are modelled on L5 only)");
         }
     }
+    // wheel_gyro is an L5 term; L1-L4 validate it, ignore it and warn once per process.
+    if (dyn_->level() != IVehicleDynamics::Level::L5_Stunt) warn_if_wheel_gyro_unused(vp);
     free_3d_attach_contact_provider(*dyn_, ground_.get());
     network_ = make_default_veh_network(cfg.veh_network);
     SimConfig cfg_act = cfg;
