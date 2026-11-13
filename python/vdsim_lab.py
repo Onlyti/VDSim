@@ -170,9 +170,9 @@ def _hardpoint_trace_layout(sess, vp, kin_info):
         "cg": {
             "position_m": [-float(vp.cg_to_front), 0.0, float(vp.cg_height)],
             "meaning": "whole-vehicle CG (sprung + unsprung) above ground, design attitude",
-            # Before work order 47 the L5 strut path places the sprung body at
-            # cg_height (0.8.1 behaviour); a build with the key reports its value.
-            "cg_height_ref": str(getattr(vp, "cg_height_ref", "sprung")),
+            # Effective cg_height_ref of the run: empty is "vehicle" (work order 47);
+            # "sprung" reproduces the 0.8.1 strut path (sprung body at cg_height).
+            "cg_height_ref": str(vp.cg_height_ref or "vehicle"),
         },
         "corners": corners,
     }
