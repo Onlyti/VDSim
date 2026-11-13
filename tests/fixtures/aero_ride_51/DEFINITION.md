@@ -7,7 +7,9 @@ Numbers below do not change after measurement. A gate that misses stops the
 work and is reported; measurement-condition fixes and harness corrections are
 done first and reported afterwards (PROP-2775 item 3), gate numbers never.
 
-- `handcalc.py` sha256: `3c9c201653155c7b9a7ecc64c095283ad0090443cd9c8735c8246dbb740eabd5`
+- `handcalc.py` sha256: `7245be5206a5123ee78749eb73b1e672445fd1ef6e58768cd6f49c0387dbfdfd`
+  (re-fix before the re-measurement, PO mail 91b88183: per-path B3'-L5 slope,
+  `b3l5_select`, `b3l5i`; the first fixed file was `3c9c201653155c7b…eabd5`)
 - `b2_expected.json` sha256: `a2db9722c3a72b94fd403a996ee3bba9e2640777d1f82193ed4d8f497de2aa4c` (output of `handcalc.py b2`)
 
 ## 1. Definitions
@@ -56,7 +58,8 @@ three together or none.
 | B2 | ClA_eff and h_i on the fixed grid | relative error ≤ 1e-9 |
 | B3'-L5 | undertray self-sag fixed point, L5 penalty and L5 strut | ±2 % |
 | B3'-L3 | injected (dz, θ), first tick, L3 and L4 | ±2 % |
-| B3b | front-wing pitch slope in steady braking, L3 / L5 penalty / L5 strut, per axle | ±2 % |
+| B3b | front-wing pitch slope in steady braking, L3 per axle (L5 penalty / strut: information when not judgeable, 2.5) | ±2 % |
+| B3b-L5i | injected pitch, first aero evaluation, L5 penalty and L5 strut, per axle (2.5a) | ±2 % |
 | B4 | Python module re-implementing the built-in elements, L3 and L5 | state max diff ≤ 1e-9 relative |
 | B5 | module exception / non-finite output | same handling and message form as the 23 chapter modules |
 | B6 | rejection rules (table 2.6) | as tabled |
@@ -98,7 +101,8 @@ judgeable" and stops the work (no wider tolerance).
 42's "force the static ride height (added mass)" cancels against the settled
 reference, so the forcing is the car's own aero sag at speed.
 - Car: `fs_aero_example.yaml`; on run adds to `undertray`
-  `h_ref 0.040, dClA_dh −2.0, dClA_dpitch 0.0`; off run has the same three keys
+  `h_ref 0.040, dClA_dh s_p, dClA_dpitch 0.0` with s_p = −4.0 on L5 penalty and
+  −2.0 on L5 strut (`handcalc.B3L5_DCLH`); off run has the same three keys
   with `dClA_dh 0.0` (no settle run, static reference taken from the on run:
   at zero speed aero is 0 so the settled state is the same; the test asserts
   the two spawn states are bit identical).
@@ -115,6 +119,13 @@ reference, so the forcing is the car's own aero sag at speed.
   Δh_u = Δh_u0 / (1 + D·(s²/K_f + (1−s)²/K_r)), D = q_on·dClA_dh,
   ΔF_exp = ΣClA·(q_on − q_off) + D·Δh_u. Gate |ΔF/ΔF_exp − 1| ≤ 0.02.
 - Size check (info, `handcalc.py predict`): ΔF ≈ 25 N, Δh_u ≈ −17.7 mm.
+- Re-fix of the penalty slope (PO mail 91b88183, after the first measurement,
+  gate unchanged): with −2.0 the penalty expectation was 9.518 N (< 10 N, not
+  judgeable; measured 9.516 N, −0.016 %, kept as information for the PR body).
+  Rule: the smallest |slope| of {2, 3, 4, 5, 6} whose `handcalc.py b3l5_select`
+  expectation from the measured slope-0 penalty run is ≥ 15 N. Output:
+  −2.0 → 9.52 N, −3.0 → 14.31 N, −4.0 → 19.12 N → s_p = −4.0. If the
+  re-measurement misses ±2 %, stop and report (no further re-fix).
 - Info column: ΔF from the measured Δh_u (separates slope arithmetic from the
   stiffness model).
 
@@ -138,6 +149,31 @@ B3b (L3, L5 penalty, L5 strut):
   applies to each axle. Size check: front ≈ +69 N, rear ≈ −18 N.
 - On L3 θ comes from inertia only (aero does not drive the L3 ride states;
   known limitation, CHANGELOG line per PO D2).
+- L5 penalty and L5 strut (PO mail 91b88183): the braking pitch on L5 is about
+  1/10 of L3, so the expectation fell below 10 N per axle. The run stays in the
+  canonical test; on L5 only, a not-judgeable case prints `INFO not judgeable`
+  with the values and passes; a judgeable L5 case is judged as before. L3,
+  B3'-L3 and B3'-L5 still fail when not judgeable. The gate on L5 is B3b-L5i.
+
+### 2.5a B3b-L5i (injected pitch, L5)
+- Car: on = `fs_aero_example.yaml` with `front_wing` `h_ref 0.100, dClA_dh 0.0,
+  dClA_dpitch 30.0`; off = the same file without the keys. L5 penalty and L5
+  strut, settings as 2.4.
+- State: `reset_settled` at vx 25 m/s on the on car (settle run → reference);
+  in its snapshot only the true state is replaced: body z = ref_z, orientation
+  from (ref_roll, ref_pitch + θ_inj, yaw), body velocity (25, 0, 0) m/s, angular
+  velocity 0, wheel spin 25/R (strut: unsprung points rotated with the body,
+  their velocity = body velocity). θ_inj = +0.01 and −0.01 rad. The same
+  snapshot is restored into both sessions, one tick of 1 ms.
+- Measured: per-axle aero load (`AeroLoads::fz_front`, `fz_rear`) of the first
+  aero evaluation after the restore, on − off. Read through a read-only internal
+  observation (`detail::AeroObs`), which the model never reads.
+- Validity: the observed static-relative pitch equals θ_inj, heave 0 and vx 25
+  within 1e-9.
+- Expected (`handcalc.b3l5i`): front = q·30·θ_inj·s_e, rear = q·30·θ_inj·(1−s_e),
+  q = ½·ρ·25², s_e = (0.550 + L)/L: ±147.97 N / ∓38.76 N. ±2 % per axle, 10 N
+  guard per axle (not judgeable → fail). Negative check: N3 (θ sign flipped)
+  must fail B3b-L5i.
 
 The C++ tests compute the same expectations and write the window means to a
 JSON next to the test log; `handcalc.py b3l5|b3b` re-judges that JSON. A gate

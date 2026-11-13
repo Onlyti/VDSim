@@ -5,6 +5,8 @@
 #include "vdsim/aero.hpp"
 #include "vdsim/contact.hpp"
 #include "vdsim/control.hpp"
+#include "vdsim/coordinate.hpp"
+#include "vdsim/snapshot.hpp"
 #include "vdsim/interfaces.hpp"
 #include "vdsim/params.hpp"
 #include "vdsim/sim_session.hpp"
@@ -536,7 +538,10 @@ VehicleParams b3l5_car(double dclh) {
 
 TEST(AeroRide51, B3p_L5_UndertraySelfSagFixedPoint) {
     for (const bool strut : {false, true}) {
-        const VehicleParams on_vp = b3l5_car(-2.0);
+        // Undertray slope per path (handcalc.B3L5_DCLH): penalty re-fixed to -4.0 before
+        // the re-measurement (PO mail 91b88183, -2.0 was below the 10 N guard); strut -2.0.
+        const double dclh = strut ? -2.0 : -4.0;
+        const VehicleParams on_vp = b3l5_car(dclh);
         const VehicleParams off_vp = b3l5_car(0.0);
         auto on = session("L5", on_vp, strut);
         auto off = session("L5", off_vp, strut);
@@ -571,7 +576,7 @@ TEST(AeroRide51, B3p_L5_UndertraySelfSagFixedPoint) {
             cla_sum += e.ClA;
         }
         const double su = (xu + L) / L;
-        const double D = q_on * -2.0;
+        const double D = q_on * dclh;
         const double dh0 = su * dzf_off + (1.0 - su) * dzr_off;
         const double dh = dh0 / (1.0 + D * (su * su / kf + (1.0 - su) * (1.0 - su) / kr));
         const double exp_dF = cla_sum * (q_on - q_off) + D * dh;
@@ -588,7 +593,8 @@ TEST(AeroRide51, B3p_L5_UndertraySelfSagFixedPoint) {
             f.precision(17);
             f << "{\"q_on\": " << q_on << ", \"q_off\": " << q_off << ", \"dzf_off\": " << dzf_off
               << ", \"dzr_off\": " << dzr_off << ", \"sumfz_on\": " << mean(a.sumfz)
-              << ", \"sumfz_off\": " << mean(b.sumfz) << ", \"dh_u_on\": " << dh_u_on << "}\n";
+              << ", \"sumfz_off\": " << mean(b.sumfz) << ", \"dh_u_on\": " << dh_u_on
+              << ", \"dClA_dh\": " << dclh << "}\n";
         }
         EXPECT_GE(std::abs(exp_dF), kGuardN) << tag << " not judgeable (stop and report)";
         if (std::abs(exp_dF) >= kGuardN) EXPECT_LE(std::abs(meas / exp_dF - 1.0), kTolB3) << tag;
@@ -726,11 +732,116 @@ TEST(AeroRide51, B3b_FrontWingPitchSlopeBraking) {
             f << "}}\n";
         }
         // DEFINITION: the guard applies to each axle; a not-judgeable axle fails the gate.
+        // L5 only (PO mail 91b88183): the braking-pitch run is an information item there
+        // (judged by B3b-L5i); a not-judgeable L5 case prints INFO and passes. L3 unchanged.
+        if (c.lvl == "L5" && (std::abs(ef) < kGuardN || std::abs(er) < kGuardN)) {
+            std::printf("B3b %s INFO not judgeable (|exp| < %.0f N): front exp=%.6f rel=%+.5f, "
+                        "rear exp=%.6f rel=%+.5f\n",
+                        tag.c_str(), kGuardN, ef, mf / ef - 1.0, er, mr / er - 1.0);
+            continue;
+        }
         EXPECT_GE(std::abs(ef), kGuardN) << tag << " front not judgeable (stop and report)";
         EXPECT_GE(std::abs(er), kGuardN) << tag << " rear not judgeable (stop and report)";
         if (std::abs(ef) >= kGuardN) EXPECT_LE(std::abs(mf / ef - 1.0), kTolB3) << tag << " front";
         if (std::abs(er) >= kGuardN) EXPECT_LE(std::abs(mr / er - 1.0), kTolB3) << tag << " rear";
     }
+}
+
+// ---------------------------------------------------------------- B3b-L5i
+
+// Injected pitch on L5 (PO mail 91b88183, DEFINITION 2.5a): from the settled reference
+// state only the body pitch is changed by theta_inj (strut: the unsprung points rotate
+// with the body), restored at vx 25 m/s into the slope car and the no-key car; the
+// per-axle aero load of the first aero evaluation (detail::AeroObs, read-only) differs
+// by q * dClA_dpitch * theta * (s_e, 1 - s_e) (handcalc.b3l5i). +/-2 %, 10 N per axle.
+TEST(AeroRide51, B3b_L5i_InjectedPitchAxleLoads) {
+    std::ostringstream js;
+    js.precision(17);
+    for (const bool strut : {false, true}) {
+        const VehicleParams on_vp = with_slopes(fs_car(), {{"front_wing", {0.100, 0.0, 30.0}}});
+        const VehicleParams off_vp = fs_car();
+        const double vx = 25.0, L = on_vp.wheelbase;
+        double xe = 0.0;
+        for (const auto& e : on_vp.aero_elements)
+            if (e.name == "front_wing") xe = e.x;
+        const double s_e = (xe + L) / L;
+        const double q = 0.5 * on_vp.air_density * vx * vx;
+        const std::string tag = strut ? "strut" : "penalty";
+        js << (strut ? ", " : "") << "\"" << tag << "\": {\"cases\": [";
+        for (const double th_inj : {0.01, -0.01}) {
+            auto on = session("L5", on_vp, strut);
+            auto off = session("L5", off_vp, strut);
+            State s0;
+            s0.position.z() = on_vp.cg_height;
+            s0.velocity.x() = vx;
+            const double w = vx / on_vp.wheel_radius_nominal;
+            s0.wheel_spin = {{w, w, w, w}};
+            on->reset_settled(s0);
+            off->reset_settled(s0);
+            const AeroReference ref = on->aero_reference();
+            ASSERT_TRUE(ref.ran);
+            // Snapshot of the settled session; replace the true state only.
+            SessionSnapshot sn = on->snapshot();
+            std::size_t p = 0;
+            snap::check_header(sn.d, p);
+            const std::size_t p0 = p;
+            State st = snap::get_state(sn.d, p);
+            const std::size_t p1 = p;
+            const Euler e0 = euler_from_quat(st.orientation);
+            const Quat q_new = quat_from_euler(Euler{ref.ref_roll, ref.ref_pitch + th_inj, e0.yaw});
+            const Vec3 o_old = st.position;
+            Vec3 o_new = st.position;
+            o_new.z() = ref.ref_z;
+            const Mat3 dR = q_new.toRotationMatrix() * st.orientation.toRotationMatrix().transpose();
+            for (int i = 0; strut && i < NUM_WHEELS; ++i) {
+                st.unsprung_pos[i] = o_new + dR * (st.unsprung_pos[i] - o_old);
+                st.unsprung_vel[i] = q_new.toRotationMatrix() * Vec3(vx, 0.0, 0.0);
+            }
+            st.position = o_new;
+            st.orientation = q_new;
+            st.velocity = Vec3(vx, 0.0, 0.0);
+            st.angular_velocity = Vec3::Zero();
+            st.wheel_spin = {{w, w, w, w}};
+            std::vector<double> ns;
+            snap::put_state(ns, st);
+            ASSERT_EQ(ns.size(), p1 - p0);
+            std::copy(ns.begin(), ns.end(), sn.d.begin() + static_cast<long>(p0));
+            double ff[2] = {0.0, 0.0}, fr[2] = {0.0, 0.0};
+            detail::AeroObs obs_on;
+            int k = 0;
+            for (SimSession* s : {on.get(), off.get()}) {
+                s->restore(sn);
+                detail::free_3d_aero_obs_arm(s->dynamics());
+                s->set_input(CmdL6{});
+                s->tick(1e-3);
+                const detail::AeroObs o = detail::free_3d_aero_obs(s->dynamics());
+                ASSERT_GT(o.count, 0) << tag;
+                if (k == 0) obs_on = o;
+                ff[k] = o.fz_front;
+                fr[k] = o.fz_rear;
+                ++k;
+            }
+            // Validity: the slopes saw exactly the injected state.
+            EXPECT_LE(std::abs(obs_on.pitch - th_inj), 1e-9) << tag << " injected pitch";
+            EXPECT_LE(std::abs(obs_on.dz), 1e-9) << tag << " injected heave";
+            EXPECT_LE(std::abs(obs_on.vx - vx), 1e-9) << tag << " injected speed";
+            const double ef = q * 30.0 * th_inj * s_e, er = q * 30.0 * th_inj * (1.0 - s_e);
+            const double mf = ff[0] - ff[1], mr = fr[0] - fr[1];
+            std::printf("B3b_L5i %s theta=%+.3f: front meas=%.9f exp=%.9f rel=%+.3e | rear meas=%.9f "
+                        "exp=%.9f rel=%+.3e | seen pitch=%.12e dz=%.3e\n",
+                        tag.c_str(), th_inj, mf, ef, mf / ef - 1.0, mr, er, mr / er - 1.0,
+                        obs_on.pitch, obs_on.dz);
+            js << (th_inj > 0.0 ? "" : ", ") << "{\"theta\": " << th_inj << ", \"front_meas\": " << mf
+               << ", \"rear_meas\": " << mr << "}";
+            ASSERT_GE(std::abs(ef), kGuardN) << tag << " front not judgeable (stop and report)";
+            ASSERT_GE(std::abs(er), kGuardN) << tag << " rear not judgeable (stop and report)";
+            EXPECT_LE(std::abs(mf / ef - 1.0), kTolB3) << tag << " front";
+            EXPECT_LE(std::abs(mr / er - 1.0), kTolB3) << tag << " rear";
+        }
+        js << "]}";
+    }
+    std::ofstream f(out_dir() + "b3l5i.json");
+    f << "{" << js.str() << "}\n";
 }
 
 // ---------------------------------------------------------------- aero module (C++)

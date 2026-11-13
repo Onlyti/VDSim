@@ -4,6 +4,7 @@
 #pragma once
 
 #include "vdsim/sim_session.hpp"
+#include "../../core/src/free_3d_aero_internal.hpp"   // AeroObs (B3b-L5i observation)
 
 namespace vdsim::detail {
 

@@ -21,6 +21,9 @@ Usage:
   handcalc.py predict                          # B3'-L5 / B3b size check (info only)
   handcalc.py b3l5  measured.json              # verdict of one B3'-L5 pair of runs
   handcalc.py b3b   measured.json              # verdict of one B3b pair of runs
+  handcalc.py b3l5_select off.json             # B3'-L5 expectation per candidate slope
+  handcalc.py b3l5i                            # B3b-L5i injected-pitch expectations
+  handcalc.py b3l5i measured.json              # verdict of B3b-L5i
 """
 import json
 import sys
@@ -119,6 +122,13 @@ def b3l3():
 
 
 # ---------------------------------------------------------------- B3'-L5
+# Undertray dClA_dh per L5 path.  Penalty re-fixed from -2.0 to -4.0 before the
+# re-measurement (PO mail 91b88183): with -2.0 the penalty expectation was below
+# GUARD_N (axle rate about 160 kN/m).  The strut path keeps -2.0.
+B3L5_DCLH = {"penalty": -4.0, "strut": -2.0}
+B3L5_MIN_EXPECTED = 15.0   # selection rule of the re-fix: smallest |slope| giving >= 15 N
+
+
 def b3l5(m):
     """Self-sag fixed point of the undertray slope.
 
@@ -126,7 +136,8 @@ def b3l5(m):
       q_on, q_off [Pa]; dzf_off, dzr_off [m] = front / rear axle-point heave of
       the slope-0 run relative to the static reference (+ up);
       sumfz_on, sumfz_off [N] = window mean of the four tyre Fz;
-      dh_u_on [m] (info: measured undertray h - h_ref in the slope run).
+      dh_u_on [m] (info: measured undertray h - h_ref in the slope run);
+      dClA_dh [m^2/m] (slope of the on run, default -2.0).
     """
     L = FS["wheelbase"]
     els = FS["elements"]
@@ -135,14 +146,14 @@ def b3l5(m):
     ff0, fr0 = rigid_split(els, m["q_off"], L)
     kf = ff0 / (-m["dzf_off"])
     kr = fr0 / (-m["dzr_off"])
-    dclh = -2.0
+    dclh = m.get("dClA_dh", -2.0)
     D = m["q_on"] * dclh
     dh0 = s * m["dzf_off"] + (1.0 - s) * m["dzr_off"]
     dh = dh0 / (1.0 + D * (s * s / kf + (1.0 - s) * (1.0 - s) / kr))
     cla_sum = sum(e["ClA"] for e in els)
     exp = cla_sum * (m["q_on"] - m["q_off"]) + D * dh
     meas = m["sumfz_on"] - m["sumfz_off"]
-    out = {"K_f": kf, "K_r": kr, "s_u": s, "dh_u_fixed_point": dh,
+    out = {"K_f": kf, "K_r": kr, "s_u": s, "dh_u_fixed_point": dh, "dClA_dh": dclh,
            "dF_down_expected": exp, "dF_down_measured": meas,
            "rel_err": meas / exp - 1.0 if exp != 0.0 else float("nan"),
            "guard_ok": abs(exp) >= GUARD_N}
@@ -150,6 +161,26 @@ def b3l5(m):
         out["info_dF_from_measured_dh"] = cla_sum * (m["q_on"] - m["q_off"]) + D * m["dh_u_on"]
     out["pass"] = bool(out["guard_ok"] and abs(out["rel_err"]) <= TOL_B3)
     return out
+
+
+def b3l5_select(m):
+    """Expectation of B3'-L5 per candidate slope from one measured slope-0 run.
+
+    Uses q_on = q_off (the on run's q differs by the speed control only); the
+    stiffness K_f, K_r comes from the off run, which does not depend on the slope.
+    """
+    rows = []
+    for d in (-2.0, -3.0, -4.0, -5.0, -6.0):
+        mm = dict(m)
+        mm["q_on"] = m["q_off"]
+        mm["dClA_dh"] = d
+        mm.setdefault("sumfz_on", m["sumfz_off"])
+        r = b3l5(mm)
+        rows.append({"dClA_dh": d, "dF_down_expected": r["dF_down_expected"],
+                     "dh_u_fixed_point": r["dh_u_fixed_point"]})
+    pick = next((r["dClA_dh"] for r in rows
+                 if abs(r["dF_down_expected"]) >= B3L5_MIN_EXPECTED), None)
+    return {"rows": rows, "rule_min_expected_N": B3L5_MIN_EXPECTED, "pick": pick}
 
 
 # ---------------------------------------------------------------- B3b
@@ -196,6 +227,55 @@ def b3b(m):
     return out
 
 
+# ---------------------------------------------------------------- B3b-L5i
+# B3b on L5 replaced by an injected pitch (PO mail 91b88183): from the settled
+# reference state only the body pitch is changed by theta_inj, the state is
+# restored at vx 25 m/s, and the per-axle aero load of the first aero evaluation
+# (slope on - slope off, same state) is compared with the rigid split of the
+# front-wing pitch-slope term.
+B3L5I = {"vx": 25.0, "theta": [0.01, -0.01],
+         "front_wing": {"h_ref": 0.100, "dClA_dh": 0.0, "dClA_dpitch": 30.0}}
+
+
+def b3l5i_expected():
+    """Per theta: front = q*dClA_dpitch*theta*s_e, rear = q*dClA_dpitch*theta*(1-s_e)."""
+    L = FS["wheelbase"]
+    q = q_of(FS["rho"], B3L5I["vx"])
+    fw = next(e for e in FS["elements"] if e["name"] == "front_wing")
+    s_e = (fw["x"] + L) / L
+    k = B3L5I["front_wing"]["dClA_dpitch"]
+    cases = []
+    for th in B3L5I["theta"]:
+        f = q * k * th
+        cases.append({"theta": th, "dF_front_expected": f * s_e,
+                      "dF_rear_expected": f * (1.0 - s_e),
+                      "guard_ok": abs(f * s_e) >= GUARD_N and abs(f * (1.0 - s_e)) >= GUARD_N})
+    return {"q": q, "s_e": s_e, "cases": cases, "rel_tol": TOL_B3}
+
+
+def b3l5i(m):
+    """Verdict of B3b-L5i. m = {path: {"cases": [{"theta", "front_meas", "rear_meas"}]}}."""
+    paths = {k: _b3l5i_one(v) for k, v in m.items()}
+    return {"paths": paths, "pass": bool(paths) and all(v["pass"] for v in paths.values())}
+
+
+def _b3l5i_one(m):
+    """Verdict of one L5 path of B3b-L5i."""
+    exp = {c["theta"]: c for c in b3l5i_expected()["cases"]}
+    out = {"cases": [], "pass": True}
+    for c in m["cases"]:
+        e = exp[c["theta"]]
+        rf = c["front_meas"] / e["dF_front_expected"] - 1.0
+        rr = c["rear_meas"] / e["dF_rear_expected"] - 1.0
+        ok = bool(e["guard_ok"] and abs(rf) <= TOL_B3 and abs(rr) <= TOL_B3)
+        out["cases"].append({"theta": c["theta"], "rel_err_front": rf, "rel_err_rear": rr,
+                             "dF_front_expected": e["dF_front_expected"],
+                             "dF_rear_expected": e["dF_rear_expected"], "pass": ok})
+        out["pass"] = out["pass"] and ok
+    out["pass"] = bool(out["pass"] and len(out["cases"]) == len(B3L5I["theta"]))
+    return out
+
+
 # ---------------------------------------------------------------- size check
 def predict():
     """Order-of-magnitude check of the gates before any run (info only).
@@ -234,6 +314,12 @@ def main(argv):
         out = b3l3()
     elif cmd == "predict":
         out = predict()
+    elif cmd == "b3l5i" and len(argv) < 3:
+        out = b3l5i_expected()
+    elif cmd in ("b3l5_select", "b3l5i"):
+        with open(argv[2]) as f:
+            m = json.load(f)
+        out = b3l5_select(m) if cmd == "b3l5_select" else b3l5i(m)
     elif cmd in ("b3l5", "b3b"):
         with open(argv[2]) as f:
             m = json.load(f)

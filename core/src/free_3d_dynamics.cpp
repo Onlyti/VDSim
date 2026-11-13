@@ -406,6 +406,17 @@ public:
     // Work order 51: static aero reference hooks (free_3d_aero_internal.hpp).
     bool aero_needs_settle() const noexcept { return aero_slopes_ || aero_module_ != nullptr; }
     void set_aero_settling(bool on) noexcept { aero_settling_ = on; }
+    // Work order 51 B3b-L5i: read-only observation of the first aero evaluation.
+    void arm_aero_obs() noexcept { aero_obs_ = detail::AeroObs{}; }
+    detail::AeroObs aero_obs() const noexcept { return aero_obs_; }
+    void record_aero_obs(const AeroLoads& al, const AeroState& as, double vx) noexcept {
+        if (aero_obs_.count++ != 0) return;
+        aero_obs_.fz_front = al.fz_front;
+        aero_obs_.fz_rear = al.fz_rear;
+        aero_obs_.dz = as.dz;
+        aero_obs_.pitch = as.pitch;
+        aero_obs_.vx = vx;
+    }
     void set_aero_reference(double z, double pitch, double roll) noexcept {
         aero_ref_z_ = z;
         aero_ref_pitch_ = pitch;
@@ -914,6 +925,7 @@ private:
             const SubsystemContext actx{s, aero_cmd, 0.0};
             const AeroLoads al = aero_loads_from_forces(
                 vp_, aero_module_->compute(actx, make_aero_input(vp_, v_body, as)), true);
+            record_aero_obs(al, as, vx_fwd);
             F_total_world += R * al.force_body;
             tau_body += al.torque_body;
             if (aero_origin_dz_ != 0.0)
@@ -950,6 +962,7 @@ private:
             }
             const AeroLoads al = compute_aero_loads(vp_, as);
             warn_negative_element_height(vp_, al, aero_h_warned_);
+            record_aero_obs(al, as, vx_fwd);
             F_total_world += R * al.force_body;
             tau_body += al.torque_body;
             if (aero_origin_dz_ != 0.0)
@@ -1292,6 +1305,7 @@ private:
     bool   aero_settling_ {false};   // settle run in progress: aero off
     bool   aero_h_warned_ {false};   // element below ground warned (once per model)
     double aero_ref_z_ {0.0}, aero_ref_pitch_ {0.0}, aero_ref_roll_ {0.0};
+    detail::AeroObs aero_obs_ {};   // B3b-L5i observation (diagnostic only)
     bool sprung_ref_ {false};       // cg_height_ref = sprung: 0.8.1 strut behaviour (Re arm)
     std::array<double, NUM_WHEELS> I_wheel_ {};
     WheelGyro gyro_mode_ {WheelGyro::Legacy};   // VehicleParams::wheel_gyro
@@ -1416,6 +1430,15 @@ void free_3d_set_aero_settling(IVehicleDynamics& dyn, bool on) {
 
 void free_3d_set_aero_reference(IVehicleDynamics& dyn, double z, double pitch, double roll) {
     if (auto* p = dynamic_cast<Free3DDynamics*>(&dyn)) p->set_aero_reference(z, pitch, roll);
+}
+
+void free_3d_aero_obs_arm(IVehicleDynamics& dyn) {
+    if (auto* p = dynamic_cast<Free3DDynamics*>(&dyn)) p->arm_aero_obs();
+}
+
+AeroObs free_3d_aero_obs(const IVehicleDynamics& dyn) {
+    const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);
+    return p ? p->aero_obs() : AeroObs{};
 }
 
 }  // namespace detail

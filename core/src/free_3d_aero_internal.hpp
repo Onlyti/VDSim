@@ -32,4 +32,32 @@ void free_3d_set_aero_settling(IVehicleDynamics& dyn, bool on);
  */
 void free_3d_set_aero_reference(IVehicleDynamics& dyn, double z, double pitch, double roll);
 
+/**
+ * @brief Read-only observation of the L5 aero evaluation (work order 51 B3b-L5i).
+ *
+ * Holds the inputs and axle loads of the first aero evaluation after
+ * free_3d_aero_obs_arm(). Diagnostic only: nothing in the model reads it.
+ */
+struct AeroObs {
+    long   count {0};       ///< aero evaluations since arm
+    double fz_front {0.0};  ///< AeroLoads::fz_front of the first evaluation [N]
+    double fz_rear {0.0};   ///< AeroLoads::fz_rear of the first evaluation [N]
+    double dz {0.0};        ///< static-relative heave seen by the slopes [m]
+    double pitch {0.0};     ///< static-relative pitch seen by the slopes [rad]
+    double vx {0.0};        ///< body-frame forward speed [m/s]
+};
+
+/**
+ * @brief Clear the observation; the next aero evaluation is recorded.
+ * @param dyn dynamics (no-op unless L5 free-3D)
+ */
+void free_3d_aero_obs_arm(IVehicleDynamics& dyn);
+
+/**
+ * @brief Observation since the last arm.
+ * @param dyn dynamics
+ * @return the observation (count 0 unless L5 free-3D evaluated aero)
+ */
+AeroObs free_3d_aero_obs(const IVehicleDynamics& dyn);
+
 }  // namespace vdsim::detail
