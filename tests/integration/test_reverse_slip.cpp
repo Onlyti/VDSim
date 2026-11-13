@@ -261,8 +261,7 @@ TEST(ReverseSlip, U3aSymReverseDecelerationMirrorsForward) {
         const double mirror = -fwd.mean_ax;
         const double rel = (rev.mean_ax - mirror) / std::abs(fwd.mean_ax);
         std::printf("U3a-sym %s rev mean_ax=%+.6f fwd mean_ax=%+.6f rel=%+.4f %% "
-                    "rev brake_max=%.6f rev vx(0.5)=%+.6f vx(1.5)=%+.6f fwd brake_max=%.6f
-",
+                    "rev brake_max=%.6f rev vx(0.5)=%+.6f vx(1.5)=%+.6f fwd brake_max=%.6f\n",
                     path_name(p), rev.mean_ax, fwd.mean_ax, 100.0 * rel, rev.brake_max,
                     rev.vx05, rev.vx15, fwd.brake_max);
         EXPECT_TRUE(rev.finite && fwd.finite) << path_name(p);
