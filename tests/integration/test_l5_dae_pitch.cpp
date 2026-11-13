@@ -83,10 +83,11 @@ const std::string kSrc = VDSIM_SOURCE_DIR;
 constexpr double kDt = 1e-3;
 constexpr double kG = 9.80665;
 
-/// P2 pre-fix q_rms [rad/s] at 10 m/s on the merged main: {antidive, sports}. NaN = not yet
-/// recorded (filled by the baseline commit before the implementation commits).
-constexpr std::array<double, 2> kP2PreFix {{std::numeric_limits<double>::quiet_NaN(),
-                                            std::numeric_limits<double>::quiet_NaN()}};
+/// P2 pre-fix q_rms [rad/s] at 10 m/s on the merged main: {antidive, sports}. Measured on
+/// main e35255d merged into this branch (a5e6098), before the implementation commits; the
+/// values are the probe output printed with %.17g (exact round trip).
+constexpr std::array<double, 2> kP2PreFix {{0.00012974147274599979,
+                                            9.1742208689179954e-05}};
 
 /**
  * @brief Generic sedan with aero off, as the diagnosis probe.
@@ -188,7 +189,7 @@ Pitch coast(int fixture, double v0, const detail::JackingPairProbe& probe = {}) 
     Pitch p;
     p.q_rms = rms(q, 4999, 9998);
     p.growth = rms(q, 7999, 9998) / std::max(rms(q, 1999, 3998), 1e-15);
-    std::printf("P1-probe %s v0=%.0f q_rms=%.4e rad/s growth=%.4f\n", name(fixture), v0,
+    std::printf("P1-probe %s v0=%.0f q_rms=%.17g rad/s growth=%.17g\n", name(fixture), v0,
                 p.q_rms, p.growth);
     return p;
 }
