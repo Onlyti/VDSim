@@ -83,17 +83,16 @@ version and the new numbers have to land in the same commit.
 
 <!-- VALIDATION-CURRENCY BEGIN -->
 ```text
-tests:    595/595
+tests:    632/632
 config:   cmake --preset validation && cmake --build --preset validation && ctest --preset validation
 presets:  CMakePresets.json@c98fe5e64c842faaeb06598af46476f3507c18a6
 toolchain: cmake 3.31.10
-commit:   c63aa1fbcabd294aa1680d3a865cee2b8d402ae2
-date:     2026-11-02
+commit:   7693811889c4995198b4b1f01489f7f742e52dcb
+date:     2026-11-13
 excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: closedloop_wallclock_timing (label timing, excluded by the validation test preset: wall-clock S6/S7 verdicts depend on host load -- local low-load evidence in the work order 31 PR description)
-excluded: L5Reaction.R2_StrutAccelSprungVsUnsprung (known_failure -- strut-path axle load transfer out of the 0.8.1 verdict, PROP-1924 option 1, re-judged in 0.8.2)
-excluded: L5Reaction.R2_StrutBrakeSprungVsUnsprung (known_failure -- strut-path axle load transfer out of the 0.8.1 verdict, PROP-1924 option 1, re-judged in 0.8.2)
+excluded: L5HardpointKnownFailure.K4FiveLinkPrescribedSweep (known_failure -- five-link driven pose is a least-squares fit, link lengths off the K4 line; points not exported in 0.8.2, 48c K4 verdict option 1)
 ```
 <!-- VALIDATION-CURRENCY END -->
 

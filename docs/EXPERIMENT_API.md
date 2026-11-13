@@ -165,6 +165,9 @@ computes it from the per-wheel force, μ and the `mu_aniso` ellipse.
 - **`.vdtrace` channels** (schema 0.4) — `t, pose, v_body, yaw_rate, u_steer, u_fx,
   wheel_F, wheel_mu, wheel_kappa, wheel_alpha`, plus `a_body` (Ld2 and up) and
   `pose_zrp, wheel_road_dz, wheel_road_normal, wheel_travel` (Ld3 and up).
+  An L5 run with suspension hardpoints adds `wheel_camber`, `wheel_toe` and one
+  `hp_<wheel>_<key>` channel per exported hardpoint, described by the manifest
+  `hardpoints` block ([theory 14 §14.17](theory/14_hardpoint_kinematics.md)).
 
 ## Building the plant — `Sim(...)`
 

@@ -95,10 +95,74 @@ one level-id factory, L5 from Python). Not released yet.
 
 ## [0.8.2]
 
+### Changed — BREAKING: `cg_height` is the whole-vehicle CG on the L5 strut / DAE path
+- On the L5 spatial-strut path (`l5_spatial_suspension`, with or without a corner
+  model) `cg_height` now means the whole-vehicle CG height above ground (sprung +
+  unsprung), as on L1-L4 and the L5 penalty path. The sprung body sits at the derived
+  h_s = (m·h − Σm_u·R)/(m − Σm_u), m_u = max(1, `unsprung_mass`); the wheel mounts,
+  the spawn height and the aero arm origin follow h_s. Every strut-path run changes.
+- `cg_height_ref: sprung` reproduces the 0.8.1 strut-path behaviour as a whole: sprung
+  body at `cg_height` and the effective-rolling-radius wheel reaction arm (below).
+- h_s ≤ `wheel_radius_nominal` + 0.01 m raises `std::invalid_argument` /
+  `ValueError` on the strut path (mass and height do not fit together).
+- Aero on the strut path: drag still acts at `cg_height` above ground (four-key
+  path) or at `aero_drag_height`; element points keep their own z. Only the arm
+  origin moved to the body CG.
+
 ### Added
+- `VehicleParams.cg_height_ref` (`vehicle` | `sprung`). Empty is `vehicle`. YAML,
+  Python and `to_yaml` (written only when set). L1-L4 and the L5 penalty path read it
+  and ignore it, with one warning per process when it is set.
+- Optional trace geometry key `body_cg_height_m` (L5 strut / DAE pose origin height);
+  the 3D renderer places the wheels at −(h_s − R) below the pose when it is present.
 - `VehicleParams.steer_input` (`roadwheel` | `rack_travel`). Empty is `roadwheel`.
 - L5 hardpoint path can read `SteeringOutput.rack_travel` as physical +y [m].
-  Rack mode skips `kRackPerRad` and Ackerman; wheel progress comes from DAE toe only.
+  Rack mode skips `rack_per_rad` and Ackerman; wheel progress comes from DAE toe only.
+- `VehicleParams.rack_per_rad` [m/rad] (default 0.08): tie-rod rack travel per
+  roadwheel radian in `roadwheel` mode. It replaces the two constants of L4 and L5
+  (same value, so a vehicle without the key is unchanged). YAML, Python and
+  `to_yaml` round trip; a value <= 0 or not finite raises `ValueError`.
+- L5 per-wheel camber, toe and hardpoint output on the strut path with a corner
+  model attached: `SimOutput.wheel_camber` / `wheel_toe` [rad] (equal to
+  `free_3d_wheel_camber/toe`, product toe of theory 14 section 14.16),
+  `wheel_kin_valid`, and `hardpoints` (per wheel, `count` points [m] in the vehicle
+  design frame). Names and offsets per axle come from `free_3d_hardpoint_layout()`;
+  also `free_3d_wheel_kin_valid()`, `free_3d_wheel_hardpoints()`,
+  `free_3d_rack_dy()`. Every other level and path reports 0, valid false, no points.
+  Frame and channel rules: theory 14 section 14.17.
+- Python: the fields above, `vdsim.attach_l5_hardpoints(dyn, front_yaml=,
+  rear_yaml=, enable_dynamics=True)` and `vdsim_lab.attach_kinematics` delegating to
+  it on L5. `attach_front/rear_kinematics(_from_yaml)` keep returning `False` on L5.
+- `.vdtrace` (schema stays 0.5, channels are opt-in and additive): an L5 run with a
+  corner model records `wheel_camber`, `wheel_toe` (4,) [rad] and one (3,) [m]
+  channel per exported point, `hp_<wheel>_<key>` (regex
+  `^hp_(fl|fr|rl|rr)_[a-z0-9_]+$`), plus a manifest `hardpoints` block (frame,
+  `axle_offset_x`, `wheel_center_dy`, CG position, points per corner). A wheel
+  without a corner model is NaN. An older 0.5 reader opens such a trace and ignores
+  the new channels.
+
+### Known limitations
+- The L4 hardpoint path has no camber, toe or coordinate output (valid false, no
+  points).
+- The L5 five-link corner solves its driven coordinates as an over-determined
+  least-squares fit (the lower_aft knuckle point held on its axis circle), so its
+  links do not keep their lengths exactly: against the exact link-length solution
+  the toe differs by up to about 2.6 deg at +30 mm bump (1 s ramp under a 3000 N
+  vertical wheel load), wheel centre about 2.2 mm. Its hardpoints are therefore not
+  exported (count 0, manifest `points: {}` with `excluded`); camber and toe are
+  still reported. `ctest -L known_failure` keeps the link-length sweep runnable.
+- Hardpoint output is the part-YAML geometry. Where the YAML wheel centre y differs
+  from track/2, the coordinates sit `wheel_center_dy` (manifest) away from the
+  dynamics wheel mount; check that field for the pair in use.
+
+### Fixed
+- L5 strut / DAE path: the tire longitudinal force reacts on the wheel spin about the
+  wheel-centre height (`wheel_radius_nominal` minus the tire penetration) instead of the
+  effective rolling radius. Slip and the tire model keep the effective rolling radius;
+  the penalty path is unchanged. The same drive or brake torque now gives a larger tire
+  force on the strut path (about 5 % on `generic_sedan` in the R2 manoeuvre).
+- Strut-path axle load transfer (`L5Reaction.R2_*`, a 0.8.1 known limitation with label
+  `known_failure`) is back in the release verdict and passes the unchanged +/-2 % gate.
 
 ### `rack_travel` meaning by level
 

@@ -78,6 +78,14 @@ struct SimOutput {
     double throttle_applied {0.0};  // realized throttle after actuator [0,1]
     double brake_applied {0.0};     // realized brake after actuator [0,1]
     SensorMeas sensors {};        // noisy/biased measured signals (identity if disabled)
+    // L5 hardpoint path (48c): per-wheel camber/toe [rad] (= free_3d_wheel_camber/toe,
+    // product toe sign of theory 14 section 14.16) and hardpoint coordinates [m] in the
+    // vehicle design frame (see WheelHardpoints). A wheel without a corner model on the
+    // L5 strut path -- and every wheel of L1-L4 -- has 0, valid false and count 0.
+    std::array<double, NUM_WHEELS> wheel_camber {{0, 0, 0, 0}};
+    std::array<double, NUM_WHEELS> wheel_toe {{0, 0, 0, 0}};
+    std::array<bool, NUM_WHEELS> wheel_kin_valid {{false, false, false, false}};
+    std::array<WheelHardpoints, NUM_WHEELS> hardpoints {};
 };
 
 // R5: runtime domain randomization.  Stored on the session and applied at the

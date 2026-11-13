@@ -351,3 +351,56 @@ L2-L4 ignore the key (one process warning if it is set).
 
 동일 시각의 영 랙 대비 제품 토 차분을 고정 기하표와 비교함.
 기한 내 공통 정착 부재는 실패이며 8 s 이후 영구 평형 보장은 범위 밖임.
+
+## 14.17 L5 hardpoint output (0.8.2)
+
+L5 strut path에 corner model이 붙은 바퀴는 매 틱 캠버·토·하드포인트 좌표를 출력함.
+캠버·토 [rad]는 타이어에 들어간 값과 같은 `free_3d_wheel_camber/toe`이며, 토 부호는 §14.16 제품 토임.
+L1~L4(L4 하드포인트 경로 포함)와 corner model이 없는 바퀴는 0, `wheel_kin_valid` false, 점 0개임.
+
+### 출력 좌표계
+
+부품 YAML 설계 좌표계를 차량 하나로 묶은 차체 고정 좌표계임(x 전방, y 좌측, z 상방, ISO 8855).
+원점은 앞 차축 중심 아래 지면임.
+
+| 양 | 정의 |
+|---|---|
+| 앞 차축 x 이동 | Δx_front = 0 − w_front.x |
+| 뒤 차축 x 이동 | Δx_rear = −wheelbase − w_rear.x |
+| 출력 점 | p_out = p_yaml + Δx_axle·e_x, 우측 바퀴는 y 부호 반전 |
+| 바퀴 중심 y 차이 | wheel_center_dy = w.y − track/2 (좌표는 y로 옮기지 않음) |
+
+w는 부품 YAML `wheel.center`임.
+동역학 바퀴 장착점은 a·b·track/2를 쓰므로, wheel_center_dy가 0이 아닌 조합은 출력 기하와 장착점이 그만큼 어긋남.
+무게중심은 같은 좌표계에서 (−cg_to_front, 0, cg_height)로 manifest에 기록함.
+
+### 형식별 출력 점
+
+| 형식 | 점 (YAML 키, 출력 순서) |
+|---|---|
+| MacPherson | lca.chassis_front, lca.chassis_rear, lca.knuckle, strut.top, strut.bottom, tie_rod.rack, tie_rod.knuckle, wheel.center |
+| Double wishbone | lca.chassis_front, lca.chassis_rear, lca.knuckle, uca.chassis_front, uca.chassis_rear, uca.knuckle, tie_rod.rack, tie_rod.knuckle, (spring_damper.chassis, spring_damper.lca), wheel.center |
+| Trailing arm | arm_pivot.chassis_inboard, arm_pivot.chassis_outboard, wheel.center |
+| 5-link | 출력 안 함 (아래) |
+
+5-link corner의 구동 좌표 풀이는 미지수 6개에 잔차 7개를 두는 최소제곱 근사임(lower_aft 바깥점을 회전축 원 위에 묶음).
+그래서 링크 길이가 정확히 보존되지 않고, 정확해 대비 토가 +30 mm 범프에서 약 2.6° 어긋남.
+0.8.2는 5-link 코너의 좌표를 내보내지 않음(count 0, layout `names` 빈 목록, `excluded`에 사유).
+캠버·토는 타이어에 들어간 값 그대로 계속 출력함.
+
+### `rack_per_rad`
+
+`roadwheel` 모드의 랙 변위는 바퀴각 × `VehicleParams.rack_per_rad` [m/rad]임(기본 0.08, L4와 L5 공통).
+`rack_travel` 모드(§14.16)는 이 키를 쓰지 않음.
+
+### `.vdtrace` 채널과 manifest (schema 0.5)
+
+| 채널 | 모양·단위 | 무효 바퀴 |
+|---|---|---|
+| `wheel_camber`, `wheel_toe` | (N, 4) [rad] | NaN |
+| `hp_<wheel>_<key>` | (N, 3) [m] | 채널 없음 |
+
+채널 이름 규칙: `<wheel>`은 fl·fr·rl·rr, `<key>`는 YAML 키의 점을 `_`로 바꾼 것이며 정규식은 `^hp_(fl|fr|rl|rr)_[a-z0-9_]+$`임.
+manifest `hardpoints` 블록은 `frame`, `unit`, `invalid_wheel`(NaN), `channel_rule`, `axle_offset_x`, `wheel_center_dy`, `cg`, `corners`를 가짐.
+`corners.<wheel>.points`는 YAML 키 → 채널 이름 사전이며, 제외된 코너는 `points: {}`와 `excluded` 사유를 가짐.
+모든 채널은 선택·추가형이라 schema 판은 0.5 그대로이고, 이전 0.5 리더는 새 채널을 무시하고 읽음.
