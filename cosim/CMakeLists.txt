@@ -185,6 +185,15 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 300
         ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
+    # tire_low_speed key, Python side (work order 57): round trip, ValueError cases,
+    # explicit off == unset state bits on L2 and L5 penalty.
+    add_test(NAME tire_low_speed
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_tire_low_speed.py)
+    set_tests_properties(tire_low_speed PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 300
+        ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
     # L5 hardpoint output, Python side (work order 48c): attach_l5_hardpoints,
     # camber/toe/hardpoints bit-equal to the C++ values, rack_per_rad, trace channels.
     add_test(NAME l5_hardpoints
