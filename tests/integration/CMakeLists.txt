@@ -12,6 +12,7 @@ add_executable(vdsim_integration_tests
     test_stunt.cpp
     test_l5_driving.cpp
     test_l5_strut_validation.cpp
+    test_l5_dae_pitch.cpp
     test_l5_reaction.cpp
     test_l5_rack_travel.cpp
     test_terrain_l5.cpp
