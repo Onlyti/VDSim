@@ -386,8 +386,13 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("cg_to_rear",           &vdsim::VehicleParams::cg_to_rear)
         .def_readwrite("track_front",          &vdsim::VehicleParams::track_front)
         .def_readwrite("track_rear",           &vdsim::VehicleParams::track_rear)
-        .def_readwrite("cg_height",            &vdsim::VehicleParams::cg_height)
+        .def_readwrite("cg_height",            &vdsim::VehicleParams::cg_height,
+                       "Whole-vehicle CG height above ground (sprung + unsprung) [m].")
         .def_readwrite("wheel_radius_nominal", &vdsim::VehicleParams::wheel_radius_nominal)
+        .def_readwrite("cg_height_ref",        &vdsim::VehicleParams::cg_height_ref,
+                       "L5 strut / DAE meaning of cg_height: '' or 'vehicle' (whole "
+                       "vehicle, default) or 'sprung' (0.8.1 body height). Other "
+                       "values raise ValueError when a session is built.")
         .def_readwrite("arb_stiffness_front",  &vdsim::VehicleParams::arb_stiffness_front)
         .def_readwrite("arb_stiffness_rear",   &vdsim::VehicleParams::arb_stiffness_rear)
         .def_readwrite("roll_center_height_front", &vdsim::VehicleParams::roll_center_height_front)

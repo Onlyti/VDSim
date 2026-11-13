@@ -39,8 +39,15 @@ struct VehicleParams {
     double cg_to_rear           {1.5};                                 // b [m]
     double track_front          {1.55};                                // Tw_f [m]
     double track_rear           {1.55};                                // Tw_r [m]
-    double cg_height            {0.55};                                // h_cg [m]
+    double cg_height            {0.55};                                // whole-vehicle CG height above ground (sprung + unsprung) [m]
     double wheel_radius_nominal {0.32};                                // [m]
+    // Meaning of cg_height on the L5 strut / DAE path (l5_spatial_suspension).
+    // Empty or "vehicle" = whole-vehicle CG; the sprung body sits at the derived
+    // h_s = (m h - sum m_u R) / (m - sum m_u). "sprung" = the 0.8.1 behaviour
+    // (sprung body at cg_height, wheel reaction arm = effective rolling radius).
+    // L1-L4 and the L5 penalty path read it and
+    // ignore it (one warning when set).
+    std::string cg_height_ref;
 
     // ---- L3 suspension (per wheel) ----
     std::array<double, NUM_WHEELS> spring_stiffness   {{30000, 30000, 30000, 30000}};  // [N/m]
@@ -187,6 +194,25 @@ void validate_rack_per_rad(const VehicleParams& vp);
 
 /** L2-L4: one warning per process if rack_travel was requested. */
 void warn_if_steer_input_unused(const VehicleParams& vp);
+
+/**
+ * @brief Reject unknown cg_height_ref strings.
+ * @param vp Vehicle parameters. Empty, "vehicle" and "sprung" pass.
+ * @throws std::invalid_argument for any other value.
+ */
+void validate_cg_height_ref(const VehicleParams& vp);
+
+/** True when cg_height_ref selects the 0.8.1 sprung-body meaning. */
+bool cg_height_ref_is_sprung(const VehicleParams& vp);
+
+/**
+ * @brief Sprung-body CG height above ground on the L5 strut / DAE path [m].
+ * @param vp Vehicle parameters (cg_height = whole-vehicle CG height).
+ * @return h_s = (m h - sum m_u R) / (m - sum m_u), m_u = max(1, unsprung_mass[i]);
+ *         cg_height itself when cg_height_ref is "sprung".
+ * @throws std::invalid_argument when h_s <= R + 0.01 m or m <= sum m_u.
+ */
+double l5_strut_body_height(const VehicleParams& vp);
 
 // Axle roll stiffness [N m/rad] derived from the corner springs plus the ARB.
 // Two springs at half-track produce K = (k_left + k_right) * (track/2)^2; the

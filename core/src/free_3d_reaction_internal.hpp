@@ -54,4 +54,23 @@ KnuckleReactionSplit split_knuckle_reaction(double M_pitch, double theta_p,
                                             const Vec3& t_body, const Vec3& r_wheel,
                                             const Vec3& r_mount);
 
+/**
+ * @brief Lever arm of the tire longitudinal force in the wheel-spin balance [m].
+ *
+ * Work order 47 scope extension (0.8.2): on the L5 strut / DAE path the wheel is its
+ * own particle, so the force at the contact acts at the wheel-centre height above
+ * the ground, R0 - penetration. The penalty path and cg_height_ref = sprung keep the
+ * 0.8.1 arm, the tire's effective rolling radius Re (sprung reproduces the whole
+ * 0.8.1 strut-path behaviour). Slip keeps Re on every path; only the reaction moves.
+ *
+ * @param strut_path  SolverParams::l5_spatial_suspension (corner model or not).
+ * @param sprung_ref  cg_height_ref selects "sprung".
+ * @param Re          Tire effective rolling radius [m].
+ * @param R0          Nominal wheel radius [m].
+ * @param penetration Tire penetration at the contact [m].
+ * @return R0 - penetration on the strut path with the whole-vehicle cg_height, Re otherwise.
+ */
+double wheel_reaction_arm(bool strut_path, bool sprung_ref, double Re, double R0,
+                          double penetration);
+
 }  // namespace vdsim::detail

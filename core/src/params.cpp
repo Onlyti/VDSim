@@ -279,6 +279,37 @@ void warn_if_steer_input_unused(const VehicleParams& vp) {
     });
 }
 
+void validate_cg_height_ref(const VehicleParams& vp) {
+    const auto& s = vp.cg_height_ref;
+    if (s.empty() || s == "vehicle" || s == "sprung") return;
+    throw std::invalid_argument(
+        "cg_height_ref: unknown value '" + s + "' (expected vehicle or sprung)");
+}
+
+bool cg_height_ref_is_sprung(const VehicleParams& vp) {
+    return vp.cg_height_ref == "sprung";
+}
+
+double l5_strut_body_height(const VehicleParams& vp) {
+    validate_cg_height_ref(vp);
+    if (cg_height_ref_is_sprung(vp)) return vp.cg_height;
+    const double m = vp.mass;
+    const double R = vp.wheel_radius_nominal;
+    double m_u = 0.0;
+    for (int i = 0; i < NUM_WHEELS; ++i) m_u += std::max(1.0, vp.unsprung_mass[i]);
+    const double h_s = m > m_u ? (m * vp.cg_height - m_u * R) / (m - m_u) : 0.0;
+    if (!(m > m_u) || !(h_s > R + 0.01)) {
+        throw std::invalid_argument(
+            "cg_height (whole-vehicle CG) " + std::to_string(vp.cg_height) +
+            " m with mass " + std::to_string(m) + " kg and unsprung " +
+            std::to_string(m_u) + " kg puts the sprung body at h_s " +
+            std::to_string(h_s) + " m, not above wheel_radius_nominal + 0.01 m (" +
+            std::to_string(R + 0.01) + " m); use cg_height_ref: sprung for the "
+            "0.8.1 meaning");
+    }
+    return h_s;
+}
+
 // =============================================================================
 // VehicleParams
 // =============================================================================
@@ -298,6 +329,8 @@ VehicleParams VehicleParams::from_yaml(const std::string& path) {
     pull(root, "track_rear",           p.track_rear);
     pull(root, "cg_height",            p.cg_height);
     pull(root, "wheel_radius_nominal", p.wheel_radius_nominal);
+    pull(root, "cg_height_ref",        p.cg_height_ref);
+    validate_cg_height_ref(p);
 
     pull_array4(root, "spring_stiffness",   p.spring_stiffness);
     pull_array4(root, "damper_coefficient", p.damper_coefficient);
@@ -384,6 +417,8 @@ void VehicleParams::to_yaml(const std::string& path) const {
     out << YAML::Key << "track_rear"           << YAML::Value << track_rear;
     out << YAML::Key << "cg_height"            << YAML::Value << cg_height;
     out << YAML::Key << "wheel_radius_nominal" << YAML::Value << wheel_radius_nominal;
+    if (!cg_height_ref.empty())
+        out << YAML::Key << "cg_height_ref" << YAML::Value << cg_height_ref;
 
     write_seq_double(out, "spring_stiffness",   spring_stiffness);
     write_seq_double(out, "damper_coefficient", damper_coefficient);

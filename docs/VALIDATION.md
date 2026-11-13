@@ -89,12 +89,10 @@ presets:  CMakePresets.json@c98fe5e64c842faaeb06598af46476f3507c18a6
 toolchain: cmake 3.31.10
 commit:   PENDING
 date:     PENDING
-pending:  L5 hardpoint output, rack_per_rad key and five-link known_failure registration; same-head CI measurement pending
+pending:  L5 hardpoint output, rack_per_rad key and five-link known_failure registration, merged with main (whole-vehicle cg_height and the wheel-centre reaction arm on the L5 strut / DAE path, the cg_height_ref key, L5Reaction.R2_* back in the verdict); same-head CI measurement pending
 excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: closedloop_wallclock_timing (label timing, excluded by the validation test preset: wall-clock S6/S7 verdicts depend on host load -- local low-load evidence in the work order 31 PR description)
-excluded: L5Reaction.R2_StrutAccelSprungVsUnsprung (known_failure -- strut-path axle load transfer out of the 0.8.1 verdict, PROP-1924 option 1, re-judged in 0.8.2)
-excluded: L5Reaction.R2_StrutBrakeSprungVsUnsprung (known_failure -- strut-path axle load transfer out of the 0.8.1 verdict, PROP-1924 option 1, re-judged in 0.8.2)
 excluded: L5HardpointKnownFailure.K4FiveLinkPrescribedSweep (known_failure -- five-link driven pose is a least-squares fit, link lengths off the K4 line; points not exported in 0.8.2, 48c K4 verdict option 1)
 ```
 <!-- VALIDATION-CURRENCY END -->

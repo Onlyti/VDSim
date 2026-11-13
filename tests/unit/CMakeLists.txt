@@ -10,6 +10,7 @@ add_executable(vdsim_unit_tests
     test_aero.cpp
     test_l5_reaction_keys.cpp
     test_rack_per_rad_key.cpp
+    test_cg_height_ref_keys.cpp
     test_scenario_yaml.cpp
     test_control_converter.cpp
     test_control_l6_l7.cpp

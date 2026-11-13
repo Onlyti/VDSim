@@ -313,3 +313,22 @@ TEST(L5ReactionKnuckle, J6c_SplitConservesMoment) {
     EXPECT_NEAR(moment.z(), 0.0, 1e-9 * std::abs(M));
     EXPECT_NEAR(s.force_on_wheel.dot(t), M * th, 1e-9 * std::abs(M * th));
 }
+
+// ---- Work order 47 scope extension (0.8.2): reaction arm of the wheel-spin balance ----
+// Strut / DAE path with the whole-vehicle cg_height: wheel-centre height R0 - penetration.
+// Penalty path and cg_height_ref = sprung: the effective rolling radius Re (0.8.1).
+TEST(L5ReactionArm, StrutUsesWheelCentreHeight) {
+    const double Re = 0.3051, R0 = 0.316, pen = 0.0123;
+    EXPECT_EQ(detail::wheel_reaction_arm(true, false, Re, R0, pen), R0 - pen);
+}
+
+TEST(L5ReactionArm, PenaltyKeepsRollingRadius) {
+    const double Re = 0.3051, R0 = 0.316, pen = 0.0123;
+    EXPECT_EQ(detail::wheel_reaction_arm(false, false, Re, R0, pen), Re);
+    EXPECT_EQ(detail::wheel_reaction_arm(false, true, Re, R0, pen), Re);
+}
+
+TEST(L5ReactionArm, SprungRefKeepsRollingRadius) {
+    const double Re = 0.3051, R0 = 0.316, pen = 0.0123;
+    EXPECT_EQ(detail::wheel_reaction_arm(true, true, Re, R0, pen), Re);
+}
