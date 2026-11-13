@@ -85,6 +85,9 @@ unchanged and a trace without them is bit-identical.
 - L3/L4 downforce is added to the tyre loads only; it does not press the
   suspension (no body heave or pitch from aero).
 - The L3 output `Fz` is the internal quasi-static 7-DOF wheel load.
+- Ride slopes and the aero module (26.7, 26.8): the aero trace channels are
+  evaluated at the sample speed without ride states; a spawn on a slope mixes
+  the ground slope into the L5 pitch reference.
 
 ## 26.6 Verification
 
@@ -95,3 +98,65 @@ increase at a held speed on L1–L5, L4 = L3, L5 total reaction, four-key path
 vs elements, four-key lift on L5 vs L3). On L5 the axle split is checked
 against a reference run with the same drag (`A3_L5a`), and the wheel-centre
 term above is checked against a drag-only run (`A3_L5b`).
+Ride slopes and the module (work order 51): `ctest -R "AeroRide51|aero_ride_51"`
+(gates and expectations in `tests/fixtures/aero_ride_51/`).
+
+## 26.7 Ride-height and pitch slopes (0.9.0)
+
+An element may carry three more keys, all together or none:
+
+```yaml
+    - name: undertray
+      ClA: 0.80
+      CdA: 0.05
+      x: -0.750
+      z: 0.060
+      h_ref: 0.040          # [m] element height at the static reference
+      dClA_dh: -2.0         # [m^2/m] ClA change per metre of element height
+      dClA_dpitch: 0.0      # [m^2/rad] ClA change per radian of pitch (ISO, + nose down)
+```
+
+$$
+h_i - h_{\text{ref},i} = \Delta z - (x_i - x_o)\,\theta, \qquad
+\text{ClA}_{\text{eff},i} = \text{ClA}_i + \frac{\partial \text{ClA}_i}{\partial h}(h_i - h_{\text{ref},i})
+  + \frac{\partial \text{ClA}_i}{\partial \theta}\,\theta
+$$
+
+with $x_o = -a$ (`cg_to_front`, the body origin in the element frame), $\Delta z$
+the body-origin heave [m, + up] and $\theta$ the pitch [rad, + nose down], both
+relative to the **static reference**:
+
+| Level | Static reference | $\Delta z$, $\theta$ |
+|---|---|---|
+| L1, L2 | none (no ride states) | a non-zero slope is rejected |
+| L3, L4 | the reset equilibrium | the ride states $z_s$, $\theta$ |
+| L5 | settle run inside `reset()` | body z and pitch minus the settled values |
+
+The L5 settle run starts from the reset pose with zero speed and command, steps
+at 1 ms until the 0.8.2 settle condition (speed and angular rate ≤ 1e-3, wheel
+travel rate ≤ 1e-3 m/s, toe rate ≤ 0.01 °/s, load rate ≤ 1 N/s, loads > 0) holds
+for 0.5 s or 8 s pass, records the body-origin z, pitch and roll and restores the
+model exactly. Aero is off during the run. It runs only when a slope is non-zero
+or an aero module is attached. `AeroElementLoad.h` reports $h_i$; an element
+with slope keys below the ground warns once per session (the slope is linear,
+no clamp).
+
+## 26.8 Aero module (0.9.0)
+
+A user module replaces the whole built-in aero (see ch. 23 for the call rules):
+
+```python
+class MyAero(vdsim.AeroModule):
+    def compute(self, ctx, inp):           # -> list[vdsim.AeroForce]
+        q = 0.5 * inp.rho * inp.v_air_body[0] ** 2
+        return [vdsim.AeroForce("wing", (0.0, 0.0, -1.2 * q), (0.55, 0.0, 0.10))]
+
+dyn.set_aero_module(MyAero())              # L2-L5; on L5 before reset()
+```
+
+`force_body` is in body axes (drag −x, downforce −z) [N]; `point` is in the
+element frame of 26.1 [m]. The forces go through the axle / wheel / wrench split
+of 26.2 and 26.3, so a module that re-implements the elements reproduces the
+built-in path. `inp` carries `v_air_body`, `slip_angle`, `dz_heave`, `pitch`,
+`roll`, `dh_front` ($\Delta z - a\theta$), `dh_rear` ($\Delta z + b\theta$) and
+`rho` (`air_density`). Fy acts on L5; L2–L4 ignore it with one warning.

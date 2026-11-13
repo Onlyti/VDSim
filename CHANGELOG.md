@@ -4,6 +4,64 @@ All notable changes to VDSim are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow
 [SemVer](https://semver.org/).
 
+## [0.9.0] (not released)
+
+Work order 51: aero ride-height / pitch slopes and the aero user module. Merged
+after the v0.8.2 tag.
+
+### Added
+- Per-element ride slopes in `aero.elements`: `h_ref` [m], `dClA_dh` [m²/m] and
+  `dClA_dpitch` [m²/rad], all three or none. `ClA_eff = ClA + dClA_dh·(h − h_ref)
+  + dClA_dpitch·θ` with `h − h_ref = dz − (x − x_o)·θ`, `x_o = −cg_to_front`, `dz`
+  the heave of the body origin [m, + up] and `θ` its pitch [rad, ISO 8855, + nose
+  down], both relative to the static reference. A vehicle without the keys, or
+  with both slopes 0, runs bit for bit as before. Python: `AeroElement(...,
+  h_ref=, dClA_dh=, dClA_dpitch=)`, `AeroState(vx, dz, pitch, roll)`,
+  `AeroElementLoad.h` (element height above ground).
+- Static reference: L3/L4 use their ride states (deviations from the reset
+  equilibrium). L5 runs a settle run inside `reset()` / `reset_settled()` when a
+  slope is non-zero or an aero module is attached: zero speed and command until
+  the 0.8.2 settle condition holds for 0.5 s (limit 8 s), then the body-origin z,
+  pitch and roll are recorded and the model is restored exactly (time, actuator,
+  sensors and diagnostics untouched). `SimSession::aero_reference()` /
+  `sess.aero_reference()` returns it; the `vdsim_lab` trace manifest gets an `aero`
+  block (`ref_z`, `ref_pitch`, `ref_roll`, `settled`, `t_settle`) only when a
+  settle run happened. An unsettled run warns once naming the unmet channels.
+- Aero module: `IAeroModel` (C++) / `vdsim.AeroModule` (Python) with
+  `compute(ctx, inp) -> [AeroForce]`, `begin_step`, `reset`; installed with
+  `set_aero_module()` on L2–L5 (`False` on L1). It replaces the whole built-in
+  aero (four keys, default drag, elements, slopes, `aero_drag_height`);
+  `air_density` reaches it as `inp.rho`. Attaching warns once per process naming
+  the replaced built-in values. Forces go through the same axle / wheel / wrench
+  split as the elements, so a module re-implementing them reproduces the built-in
+  path. `AeroInput` carries the air-relative velocity, slip angle, `dz_heave`,
+  `pitch`, `roll`, `dh_front`, `dh_rear` and `rho`; `AeroForce.point` uses the
+  `aero.elements` frame. Fy acts on L5 only (ignored with one warning on L2–L4).
+
+### Changed
+- L3/L4 hand their ride states to the inner planar aero each step, so every RK
+  stage and the reported tyre `Fz` see the same ride slopes as the L3 tyre-load
+  path. No effect without a non-zero slope.
+
+### Rejected (`std::invalid_argument` / `ValueError`)
+- An element with one or two of the three slope keys; a non-finite slope key.
+- L1 or L2 with a non-zero slope (the keys with both slopes 0 are accepted).
+
+### Known limitations
+- L3/L4: downforce is added to the tyre loads only and does not change the
+  ride height; the ride slopes react to the inertial heave and pitch only.
+- L5 static reference: a spawn on a slope mixes the ground slope into θ (about
+  12 mm of element height per degree at x = 0.7 m).
+- L5: attach the aero module before `reset()`; a module attached after it has no
+  static reference until the next reset.
+- An aero module that raises or returns a non-finite force is handled like the
+  other user modules (docs/theory/23): an exception ends the process, a
+  non-finite value propagates. No dedicated handling.
+- The optional aero trace channels (`aero_<name>_fz`, …) are evaluated at the
+  sample's body-x speed without ride states; with a non-zero slope they are not
+  the applied load.
+- The L5 settle run costs about 0.1 s of wall clock per reset (example car).
+
 ## [Unreleased]
 
 Planned as 0.8.1 (work order 43: L5 longitudinal reactions; work order 44:
