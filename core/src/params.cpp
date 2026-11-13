@@ -279,6 +279,25 @@ void warn_if_steer_input_unused(const VehicleParams& vp) {
     });
 }
 
+WheelGyro wheel_gyro_mode(const VehicleParams& vp) {
+    const auto& s = vp.wheel_gyro;
+    if (s.empty() || s == "legacy") return WheelGyro::Legacy;
+    if (s == "full") return WheelGyro::Full;
+    if (s == "off") return WheelGyro::Off;
+    throw std::invalid_argument(
+        "wheel_gyro: unknown value '" + s + "' (expected legacy, full or off)");
+}
+
+void warn_if_wheel_gyro_unused(const VehicleParams& vp) {
+    (void)wheel_gyro_mode(vp);
+    if (vp.wheel_gyro.empty()) return;
+    static std::once_flag once;
+    std::call_once(once, [&] {
+        spdlog::warn("[vdsim] wheel_gyro='{}' is ignored on L1-L4; L5 only",
+                     vp.wheel_gyro);
+    });
+}
+
 void validate_cg_height_ref(const VehicleParams& vp) {
     const auto& s = vp.cg_height_ref;
     if (s.empty() || s == "vehicle" || s == "sprung") return;
@@ -373,6 +392,8 @@ VehicleParams VehicleParams::from_yaml(const std::string& path) {
     pull(root, "ackerman_percent",      p.ackerman_percent);
     pull(root, "steer_input",           p.steer_input);
     validate_steer_input(p);
+    pull(root, "wheel_gyro",            p.wheel_gyro);
+    (void)wheel_gyro_mode(p);
     pull(root, "rack_per_rad",          p.rack_per_rad);
     validate_rack_per_rad(p);
 
@@ -456,6 +477,8 @@ void VehicleParams::to_yaml(const std::string& path) const {
     out << YAML::Key << "ackerman_percent"      << YAML::Value << ackerman_percent;
     if (!steer_input.empty())
         out << YAML::Key << "steer_input" << YAML::Value << steer_input;
+    if (!wheel_gyro.empty())
+        out << YAML::Key << "wheel_gyro" << YAML::Value << wheel_gyro;
     out << YAML::Key << "rack_per_rad"          << YAML::Value << rack_per_rad;
 
     if (aero_elements.empty()) {

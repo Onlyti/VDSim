@@ -10,6 +10,7 @@
 
 #include "free_3d_jacking_internal.hpp"
 #include "free_3d_reaction_internal.hpp"
+#include "free_3d_wheel_gyro_internal.hpp"
 
 #include <spdlog/spdlog.h>
 
@@ -154,6 +155,7 @@ public:
         steering_   = make_default_steering(vp_, vp_.steer_deadtime_s);
         validate_steer_input(vp_);
         validate_l5_steer_input(vp_);
+        gyro_mode_ = wheel_gyro_mode(vp_);
         validate_rack_per_rad(vp_);
         for (int axle = 0; axle < 2; ++axle) {
             const bool front = (axle == 0);
@@ -995,23 +997,21 @@ private:
         // not the body-velocity derivative (which is ~0 in a steady turn).
         const Vec3 accel_sf_body =
             R.transpose() * (a_world + Vec3(0.0, 0.0, kGravity));
-        // Gyroscopic coupling of the spinning wheels. Each wheel carries spin angular
-        // momentum H_i = I_wheel*omega_spin along the lateral (body-y) axis; a body rotating
-        // at omega must supply omega x H, so the wheels exert the reaction -omega x H on the
-        // body. This couples yaw<->roll (and roll->yaw) at speed: a fast-spinning set of
-        // wheels resists tilting the spin axis. Spin axis approximated as body-y (steer/camber
-        // tilt is second order). Applies on both the strut and penalty paths.
-        Vec3 H_spin = Vec3::Zero();
-        for (int i = 0; i < NUM_WHEELS; ++i) {
-            // Spin axis = body-lateral, tilted by the steer angle (rotated about body-z):
-            // a steered spinning wheel's momentum points partly fore-aft. Camber tilt is
-            // omitted (smaller, sign-sensitive). Small-angle: yhat -> (-delta, 1, 0).
-            const double delta = d_wheel[i] + toe_dae_[i];
-            Vec3 s_hat(-delta, 1.0, 0.0);
-            s_hat.normalize();
-            H_spin += (I_wheel_[i] * s.wheel_spin[i]) * s_hat;
+        // Gyroscopic coupling of the spinning wheels (theory 20.3, work order 50). Each
+        // wheel carries spin angular momentum H_i = I_wheel*omega_spin along its spin axis;
+        // a body rotating at omega must supply omega x H, so the wheels exert the reaction
+        // -omega x H on the body (yaw<->roll coupling at speed). wheel_gyro selects the
+        // spin axis: legacy = steer + DAE toe tilt, full = legacy + DAE camber tilt,
+        // off = no term. Applies on both the strut and penalty paths.
+        if (gyro_mode_ != WheelGyro::Off) {
+            std::array<double, NUM_WHEELS> delta_g {}, gamma_g {};
+            for (int i = 0; i < NUM_WHEELS; ++i) {
+                delta_g[i] = d_wheel[i] + toe_dae_[i];
+                gamma_g[i] = gamma_dae_[i];
+            }
+            tau_body += detail::wheel_gyro_moment(gyro_mode_, omega, I_wheel_,
+                                                  s.wheel_spin, delta_g, gamma_g);
         }
-        tau_body -= omega.cross(H_spin);
         const Vec3 Iw(
             vp_.inertia_diag.x() * omega.x(),
             vp_.inertia_diag.y() * omega.y(),
@@ -1285,6 +1285,7 @@ private:
     std::array<bool, NUM_WHEELS> zdot_init_ {};
     bool sprung_ref_ {false};       // cg_height_ref = sprung: 0.8.1 strut behaviour (Re arm)
     std::array<double, NUM_WHEELS> I_wheel_ {};
+    WheelGyro gyro_mode_ {WheelGyro::Legacy};   // VehicleParams::wheel_gyro
     Vec3 I_body_inv_ {Vec3::Zero()};
     // Spatial strut (l5_spatial_suspension): per-corner sprung static load (preload so
     // comp=0 is the static ride position) and travel limits (bump / droop stops).

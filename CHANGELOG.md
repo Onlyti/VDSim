@@ -110,6 +110,12 @@ one level-id factory, L5 from Python). Not released yet.
   origin moved to the body CG.
 
 ### Added
+- `VehicleParams.wheel_gyro` (`legacy` | `full` | `off`, YAML / Python / `to_yaml`).
+  Unset is `legacy`, the 0.8.1 L5 wheel-spin gyroscopic term (bit-identical).
+  `full` also tilts the spin axis by the corner-model camber; without a corner model
+  the camber is zero and `full` equals `legacy`. `off` removes the term. Unknown
+  values raise `std::invalid_argument` / `ValueError`; L1-L4 ignore the key with one
+  warning per process. The term is written out in theory chapter 20.3.
 - `VehicleParams.cg_height_ref` (`vehicle` | `sprung`). Empty is `vehicle`. YAML,
   Python and `to_yaml` (written only when set). L1-L4 and the L5 penalty path read it
   and ignore it, with one warning per process when it is set.
@@ -154,6 +160,10 @@ one level-id factory, L5 from Python). Not released yet.
 - Hardpoint output is the part-YAML geometry. Where the YAML wheel centre y differs
   from track/2, the coordinates sit `wheel_center_dy` (manifest) away from the
   dynamics wheel mount; check that field for the pair in use.
+- L5 strut path does not pass the mount-to-wheel-mass couple to the chassis, so part of
+  the angular momentum is lost. The wheel gyro magnitude is exact (V3b). Repair in 0.8.3.
+  The strut skidpad roll-moment gate `L5WheelGyro.V3_SkidpadRollMomentStrut` carries
+  label `known_failure` (reproduce with `ctest -L known_failure`).
 
 ### Fixed
 - L5 strut / DAE path: the tire longitudinal force reacts on the wheel spin about the
