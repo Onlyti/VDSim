@@ -823,6 +823,14 @@ private:
                                     - Vec3(0.0, 0.0, -m_u * kGravity);
                     js.jack_radius = jack_radius_[i];
                     js.contact_radius = vp_.wheel_radius_nominal;
+                    js.tyre_force_body = R.transpose() * tire_total;
+                    js.unsprung_inertia_body = R.transpose() * (m_u * a_u);
+                    js.unsprung_weight_body =
+                        R.transpose() * Vec3(0.0, 0.0, -m_u * kGravity);
+                    js.conn_on_body_body = F_body[i];
+                    js.strut_force = F_susp;
+                    js.path_tangent_body = path_tan_[i];
+                    js.cp_slope_body = probe_cp_slope_[i];
                     jack_probe_(js);
                 }
                 continue;
@@ -1148,6 +1156,10 @@ private:
             const Vec3 dwr = tm.w - w0_[i];
             path_off_[i] = Vec3(dwr.x(), s * dwr.y(), dwr.z());
             path_tan_[i] = Vec3(tm.w_dq.x(), s * tm.w_dq.y(), tm.w_dq.z());
+            if (jack_probe_)   // 49a P10c diagnostic: observes, never feeds back
+                probe_cp_slope_[i] = s * detail::contact_patch_lateral_slope(
+                    *dae, mot.travel_z, mot.steer_rack_dy, mb_state_[i].knuckle_aa,
+                    vp_.wheel_radius_nominal);
             path_valid_[i] = true;
             // Knuckle pitch rate for an unsprung torque reaction (pitch is unchanged by
             // the left/right mirror). Only evaluated when the axle needs it.
@@ -1273,6 +1285,12 @@ private:
     // 49a P10b diagnostic sink (empty = off) and the radius the contact-patch jacking slope
     // used per corner (NaN until that slope is in use).
     detail::JackingPairProbe jack_probe_ {};
+    // 49a P10c diagnostic: contact-patch slope per corner at the last outer step, evaluated
+    // only while a probe is installed (NaN otherwise).
+    std::array<double, NUM_WHEELS> probe_cp_slope_ {{std::numeric_limits<double>::quiet_NaN(),
+                                                     std::numeric_limits<double>::quiet_NaN(),
+                                                     std::numeric_limits<double>::quiet_NaN(),
+                                                     std::numeric_limits<double>::quiet_NaN()}};
     std::array<double, NUM_WHEELS> jack_radius_ {{std::numeric_limits<double>::quiet_NaN(),
                                                   std::numeric_limits<double>::quiet_NaN(),
                                                   std::numeric_limits<double>::quiet_NaN(),

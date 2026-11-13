@@ -62,6 +62,32 @@
 //      contact_radius (bitwise), on the sedan (0.32 m) and with wheel_radius_nominal set to
 //      0.33 m (the part YAML static_radius), so a hard-coded 0.32 also fails. Sports fixture,
 //      25 m/s coast, 300 ticks. Fails ("not used") until the contact-patch slope is used.
+// P10c: jacking magnitude (added by the third gate commit, PO mail 2ec1380f, before the
+//      implementation commits). The P10 skidpad (R 8.5 m, 7 m/s, last 2 s = samples taken
+//      during ticks k = 13000..14999), both fixtures, the same probe. Per path-valid sample,
+//      body frame (z = strut axis u_hat = body up):
+//        J_meas = (F_body[i]).z - F_susp
+//                 strut-axis force the body actually receives from the corner, minus the
+//                 coilover/damper/stop force = the jacking reaction on the body
+//        F_t    = tyre force on the particle (the P10 F_t: connection + m_u a_u + m_u g e_z)
+//        H      = F_t + m_u g_vec - m_u a_u   (horizontal load the bushing carries;
+//                 g_vec = (0, 0, -g) world, rotated to the body frame)
+//        t      = travel path tangent the bushing used (t_x, t_y, t_z), body frame
+//        s_cp   = detail::contact_patch_lateral_slope at this outer step (P9-verified
+//                 helper, evaluated by the probe, right corner mirrored)
+//        J_exp  = -(H_x t_x + H_y s_cp) / t_z
+//                 (bushing force on the particle is perpendicular to the path tangent, so
+//                 its strut-axis part is fixed by its horizontal part and the slopes; the
+//                 lateral slope is the contact-patch slope)
+//      Means over the window: rel = mean J_meas / mean J_exp - 1.
+//      Gate: front corners |rel| <= 2 %; |mean J_exp| >= 1 % of that corner's static Fz
+//      (m g b / (2 L) front) or the case is undecidable = failure; at least one sample per
+//      front corner and no NaN slope. Rear corners: printed (information).
+//      Information: J_lit = -F_t,y s_cp (the mail's literal tyre-lateral-force form; it
+//      differs from J_exp by the unsprung inertia m_u a_y, the weight's roll component and
+//      the t_x, t_z terms) and the ratio mean J_meas / mean J_lit.
+//      Precondition: the probe does not change the run (P10 residual D with the probe ==
+//      without the probe, bitwise).
 #include "free_3d_jacking_internal.hpp"
 #include "vdsim/control.hpp"
 #include "vdsim/interfaces.hpp"
@@ -231,9 +257,12 @@ struct Budget {
  * @brief P10 steady-circle exact roll budget about the whole-vehicle CG.
  * @param fixture 0 = antidive, 1 = sports
  * @param probe   optional P10b connection-pair probe
+ * @param window_tick optional out: tick index k while k is in the last-2 s window, else -1
+ *                    (set before each tick, so probe samples can be windowed)
  * @return mean residual D, scale S, spin-axis torque bound and the preconditions
  */
-Budget skidpad(int fixture, const detail::JackingPairProbe& probe = {}) {
+Budget skidpad(int fixture, const detail::JackingPairProbe& probe = {},
+               int* window_tick = nullptr) {
     constexpr double kV = 7.0, kRad = 8.5, kT = 15.0, kAvg = 2.0;
     VehicleParams vp = sedan();
     vp.ackerman_percent = 0.0;
@@ -320,6 +349,7 @@ Budget skidpad(int fixture, const detail::JackingPairProbe& probe = {}) {
             Vs.push_back(V);
             rs.push_back(r);
         }
+        if (window_tick) *window_tick = k >= n_tot - n_avg ? k : -1;
         s->set_input(u);
         s->tick(kDt);
     }
@@ -427,6 +457,72 @@ void p10b_radius(double radius) {
     EXPECT_EQ(bad, 0) << "jacking slope radius is not the contact radius (NaN = not used)";
 }
 
+/// P10c per-corner sums over the window samples (path-valid only).
+struct JackStats {
+    std::array<long, NUM_WHEELS> n {{0, 0, 0, 0}};
+    std::array<long, NUM_WHEELS> nan_slope {{0, 0, 0, 0}};
+    std::array<double, NUM_WHEELS> meas {{0, 0, 0, 0}};
+    std::array<double, NUM_WHEELS> expect {{0, 0, 0, 0}};
+    std::array<double, NUM_WHEELS> literal {{0, 0, 0, 0}};
+};
+
+/**
+ * @brief Probe that folds window samples into a JackStats.
+ * @param js   accumulator (outlives the run)
+ * @param tick window tick written by skidpad (-1 outside the window)
+ * @return probe
+ */
+detail::JackingPairProbe jack_probe(JackStats& js, const int& tick) {
+    return [&js, &tick](const detail::JackingPairSample& p) {
+        if (tick < 0 || !p.path_valid) return;
+        const int i = p.corner;
+        if (!std::isfinite(p.cp_slope_body)) {
+            ++js.nan_slope[i];
+            return;
+        }
+        const Vec3 H = p.tyre_force_body + p.unsprung_weight_body - p.unsprung_inertia_body;
+        const Vec3& t = p.path_tangent_body;
+        js.meas[i] += p.conn_on_body_body.z() - p.strut_force;
+        js.expect[i] += -(H.x() * t.x() + H.y() * p.cp_slope_body) / t.z();
+        js.literal[i] += -p.tyre_force_body.y() * p.cp_slope_body;
+        ++js.n[i];
+    };
+}
+
+/**
+ * @brief P10c jacking magnitude gate for one fixture.
+ * @param fixture 0 = antidive, 1 = sports
+ */
+void p10c(int fixture) {
+    JackStats js;
+    int tick = -1;
+    const Budget b = skidpad(fixture, jack_probe(js, tick), &tick);
+    const Budget b0 = skidpad(fixture);
+    std::printf("P10c %s D probe=%.17g off=%.17g N m\n", name(fixture), b.D, b0.D);
+    EXPECT_EQ(b.D, b0.D) << "precondition: the probe changed the run";
+    const VehicleParams vp = sedan();
+    const std::array<double, 2> fz_static {{
+        0.5 * vp.mass * kG * vp.cg_to_rear / vp.wheelbase,
+        0.5 * vp.mass * kG * vp.cg_to_front / vp.wheelbase}};
+    static const char* kCorner[NUM_WHEELS] = {"FL", "FR", "RL", "RR"};
+    for (int i = 0; i < NUM_WHEELS; ++i) {
+        const double n = std::max<long>(js.n[i], 1);
+        const double jm = js.meas[i] / n, je = js.expect[i] / n, jl = js.literal[i] / n;
+        const double fz = fz_static[i < 2 ? 0 : 1];
+        std::printf("P10c %s %s n=%ld nan=%ld J_meas=%.6f J_exp=%.6f N rel=%+.4f %% "
+                    "|J_exp|/Fz_static=%.4f %% J_lit=%.6f N meas/lit-1=%+.4f %% %s\n",
+                    name(fixture), kCorner[i], js.n[i], js.nan_slope[i], jm, je,
+                    100.0 * (jm / je - 1.0), 100.0 * std::abs(je) / fz, jl,
+                    100.0 * (jm / jl - 1.0), i < 2 ? "(gate +-2 %)" : "(info)");
+        if (i >= 2) continue;
+        EXPECT_GT(js.n[i], 0) << name(fixture) << " " << kCorner[i];
+        EXPECT_EQ(js.nan_slope[i], 0) << name(fixture) << " " << kCorner[i];
+        EXPECT_GE(std::abs(je), 0.01 * fz)
+            << name(fixture) << " " << kCorner[i] << " undecidable (expected below 1 % Fz)";
+        EXPECT_LE(std::abs(jm / je - 1.0), 0.02) << name(fixture) << " " << kCorner[i];
+    }
+}
+
 }  // namespace
 
 TEST(L5DaePitch, P1_Antidive25) { p1(0, 25.0); }
@@ -443,3 +539,5 @@ TEST(L5DaePitch, P10b_JackRadiusSameSourceAsContact) {
     p10b_radius(0.32);
     p10b_radius(0.33);
 }
+TEST(L5DaePitch, P10c_AntidiveJackingMagnitude) { p10c(0); }
+TEST(L5DaePitch, P10c_SportsJackingMagnitude) { p10c(1); }

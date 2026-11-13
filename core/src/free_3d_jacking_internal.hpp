@@ -32,6 +32,18 @@ struct JackingPairSample {
                                            ///< (NaN = not used on this path)
     double contact_radius {std::nan("")};  ///< radius the contact query reads
                                            ///< (VehicleParams::wheel_radius_nominal)
+    // Work order 49a gate P10c (jacking magnitude). Body frame [N] unless noted.
+    Vec3 tyre_force_body {Vec3::Zero()};       ///< tyre force on the wheel particle
+    Vec3 unsprung_inertia_body {Vec3::Zero()}; ///< m_u a_u from the applied a_u
+    Vec3 unsprung_weight_body {Vec3::Zero()};  ///< m_u g, g = (0, 0, -9.80665) world
+    Vec3 conn_on_body_body {Vec3::Zero()};     ///< connection force on the body (F_body[i])
+    double strut_force {0.0};                  ///< coilover + damper + stop force along the
+                                               ///< strut axis (body up), F_susp
+    Vec3 path_tangent_body {Vec3::UnitZ()};    ///< travel path tangent the bushing used
+                                               ///< (body frame, unnormalised)
+    double cp_slope_body {std::nan("")};       ///< contact_patch_lateral_slope at this outer
+                                               ///< step, body sign (right corner mirrored);
+                                               ///< NaN = not evaluated
 };
 
 /// Diagnostic sink for JackingPairSample; empty = recording off.
