@@ -15,7 +15,11 @@
 //           = +1 +-10 %, and |vx(1.5 s)| < |vx(0.5 s)|.
 //       (b) ax_target = -0.5 (reverse acceleration): brake_applied == 0 on every tick,
 //           mean ax over [0.5, 1.5) s < 0.
-// U3a-sym (added 11-14 by PO mail 13399c6a before the B commit; U3a stays as written):
+//     Gate change (user decision PROP-2783, after the measurement, PO mail c337f6ec): the
+//     U3a absolute criterion (mean ax = +1 +-10 %) is printed as information and no longer
+//     judged; U3a-sym below is the U3a gate. U3a keeps its finiteness and |vx| checks.
+// U3a-sym (added 11-14 by PO mail 13399c6a before the B commit; the U3a gate since
+//     PROP-2783):
 //     same |vx0| = 3 m/s, |a_cmd| = 1 m/s^2, same window [0.5, 1.5) s, L2 and L5 penalty.
 //     Reverse deceleration (vx0 = -3, ax_target = +1) against forward deceleration
 //     (vx0 = +3, ax_target = -1):
@@ -249,13 +253,15 @@ U3Run run_u3(Path p, double a_cmd, double vx0 = -3.0) {
 }
 }  // namespace
 
-TEST(ReverseSlip, U3aReverseDecelerationCommand) {
+TEST(ReverseSlip, U3aReverseDecelerationAbsoluteInfo) {
     for (Path p : {Path::L2, Path::L5Penalty}) {
         const auto r = run_u3(p, +1.0);
-        std::printf("U3a %s mean_ax=%+.6f vx(0.5)=%+.6f vx(1.5)=%+.6f brake_max=%.6f\n",
-                    path_name(p), r.mean_ax, r.vx05, r.vx15, r.brake_max);
+        const bool within = std::abs(r.mean_ax - 1.0) <= 0.1;
+        std::printf("U3a (information, PROP-2783) %s mean_ax=%+.6f vx(0.5)=%+.6f vx(1.5)=%+.6f "
+                    "brake_max=%.6f absolute +1+-10%%=%s\n",
+                    path_name(p), r.mean_ax, r.vx05, r.vx15, r.brake_max,
+                    within ? "within" : "outside");
         EXPECT_TRUE(r.finite) << path_name(p);
-        EXPECT_NEAR(r.mean_ax, 1.0, 0.1) << path_name(p);
         EXPECT_LT(std::abs(r.vx15), std::abs(r.vx05)) << path_name(p);
     }
 }
