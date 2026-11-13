@@ -18,6 +18,14 @@
 //   u > 0  =>  throttle = clamp(u, 0, 1), brake = 0
 //   u <= 0 =>  throttle = 0, brake = clamp(-u, 0, 1)
 //
+// Direction of travel (update_directed): while reversing (vx < -kReverseVx) a
+// positive ax demand slows the car, so the same u maps to
+//   u >= 0 =>  brake = clamp(u, 0, 1),   throttle = 0, gear = -1
+//   u <  0 =>  throttle = clamp(-u, 0, 1), brake = 0, gear = -1 (drive backward)
+// The loop itself (error, integrator, feed-forward) stays in the body frame, so
+// the integrator is continuous through a direction change and forward motion is
+// the plain update() mapping with gear = +1.
+//
 // Integral anti-windup: clamp integral at +/- 1.0 / Ki.
 
 #include <utility>
@@ -45,6 +53,35 @@ public:
                                      double ax_meas,
                                      double dt) noexcept;
 
+    /// Pedal command for one step of the acceleration loop.
+    struct Pedals {
+        double throttle {0.0};   ///< [0, 1]
+        double brake    {0.0};   ///< [0, 1]
+        int    gear     {1};     ///< +1 forward, -1 reverse
+    };
+
+    /// Longitudinal speed [m/s] below which (vx < -kReverseVx) the car counts as
+    /// reversing. The band around standstill keeps the forward mapping so a held
+    /// stop does not toggle between gears on sensor-level speed noise.
+    static constexpr double kReverseVx = 0.05;
+
+    /**
+     * @brief One loop step with the pedal mapping chosen by the direction of travel.
+     *
+     * Forward or standing (vx >= -kReverseVx): identical to update() with gear +1.
+     * Reversing (vx < -kReverseVx): the same body-frame command u is mapped so that a
+     * positive ax demand (slowing the backward motion) brakes and a negative demand
+     * (speeding up backward) drives with gear -1.
+     *
+     * @param ax_target desired body longitudinal acceleration [m/s^2]
+     * @param ax_meas   measured body longitudinal acceleration [m/s^2]
+     * @param vx        measured body longitudinal speed [m/s]
+     * @param dt        step [s]; non-positive returns zero pedals without updating
+     * @return throttle, brake and gear for this step
+     */
+    Pedals update_directed(double ax_target, double ax_meas, double vx,
+                           double dt) noexcept;
+
     double last_error()    const noexcept { return prev_err_; }
     double integrator()    const noexcept { return integ_; }
 
@@ -62,6 +99,9 @@ public:
     void restore_state(const std::vector<double>& v, std::size_t& p);
 
 private:
+    /// PI-D + feed-forward command u for one step (advances integrator / error memory).
+    double command(double ax_target, double ax_meas, double dt) noexcept;
+
     Gains  g_;
     double integ_    {0.0};
     double prev_err_ {0.0};

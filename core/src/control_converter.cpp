@@ -31,10 +31,8 @@ void LongAxController::restore_state(const std::vector<double>& v, std::size_t& 
     first_    = snap::get(v, p) != 0.0;
 }
 
-std::pair<double, double> LongAxController::update(double ax_target,
-                                                    double ax_meas,
-                                                    double dt) noexcept {
-    if (!(dt > 0.0)) return {0.0, 0.0};
+double LongAxController::command(double ax_target, double ax_meas,
+                                 double dt) noexcept {
     const double e = ax_target - ax_meas;
     integ_ += e * dt;
     if (g_.ki > 0.0) {
@@ -46,11 +44,33 @@ std::pair<double, double> LongAxController::update(double ax_target,
     prev_err_ = e;
     first_ = false;
 
-    const double u = g_.kp * e + g_.ki * integ_ + g_.kd * de_dt + g_.kff * ax_target;
+    return g_.kp * e + g_.ki * integ_ + g_.kd * de_dt + g_.kff * ax_target;
+}
+
+std::pair<double, double> LongAxController::update(double ax_target,
+                                                    double ax_meas,
+                                                    double dt) noexcept {
+    if (!(dt > 0.0)) return {0.0, 0.0};
+    const double u = command(ax_target, ax_meas, dt);
     if (u >= 0.0) {
         return {std::clamp(u, 0.0, 1.0), 0.0};
     }
     return {0.0, std::clamp(-u, 0.0, 1.0)};
+}
+
+LongAxController::Pedals LongAxController::update_directed(double ax_target,
+                                                           double ax_meas,
+                                                           double vx,
+                                                           double dt) noexcept {
+    if (!(vx < -kReverseVx)) {
+        const auto [thr, brk] = update(ax_target, ax_meas, dt);
+        return {thr, brk, 1};
+    }
+    if (!(dt > 0.0)) return {0.0, 0.0, -1};
+    const double u = command(ax_target, ax_meas, dt);
+    // Reversing: +ax opposes the backward motion (brake), -ax speeds it up (drive).
+    if (u >= 0.0) return {0.0, std::clamp(u, 0.0, 1.0), -1};
+    return {std::clamp(-u, 0.0, 1.0), 0.0, -1};
 }
 
 // =============================================================================
@@ -261,12 +281,12 @@ void CascadeController::lon_to_pedals(const LcLonCmd& lon, const State& meas,
         } else if constexpr (std::is_same_v<T, LcLonL4>) {
             out.throttle = c.throttle; out.brake = c.brake; out.gear = c.gear;
         } else if constexpr (std::is_same_v<T, LcLonL5>) {
-            const auto [thr, brk] = axc_.update(c.ax_target, ax_meas, dt);
-            out.throttle = thr; out.brake = brk;
+            const auto pd = axc_.update_directed(c.ax_target, ax_meas, vx, dt);
+            out.throttle = pd.throttle; out.brake = pd.brake; out.gear = pd.gear;
         } else if constexpr (std::is_same_v<T, LcLonL6>) {
             const double ax_tgt = vxc_.update(c.vx_target, vx, dt);
-            const auto [thr, brk] = axc_.update(ax_tgt, ax_meas, dt);
-            out.throttle = thr; out.brake = brk;
+            const auto pd = axc_.update_directed(ax_tgt, ax_meas, vx, dt);
+            out.throttle = pd.throttle; out.brake = pd.brake; out.gear = pd.gear;
         }
     }, lon);
 }
@@ -348,22 +368,22 @@ CmdL4 CascadeController::to_l4(const ControlInput& u, const State& meas,
         }
         // ---- L5: ax_target → throttle/brake (LongAx, needs ax_meas) ----
         else if constexpr (std::is_same_v<T, CmdL5>) {
-            const auto [thr, brk] = axc_.update(cmd.ax_target, ax_meas, dt);
-            out.throttle = thr; out.brake = brk;
+            const auto pd = axc_.update_directed(cmd.ax_target, ax_meas, vx, dt);
+            out.throttle = pd.throttle; out.brake = pd.brake; out.gear = pd.gear;
             out.steer_angle_wheel = cmd.steer_angle_wheel;
         }
         // ---- L6: vx_target → ax_target → throttle/brake (LongVx → LongAx) ----
         else if constexpr (std::is_same_v<T, CmdL6>) {
             const double ax_tgt = vxc_.update(cmd.v_target, vx, dt);
-            const auto [thr, brk] = axc_.update(ax_tgt, ax_meas, dt);
-            out.throttle = thr; out.brake = brk;
+            const auto pd = axc_.update_directed(ax_tgt, ax_meas, vx, dt);
+            out.throttle = pd.throttle; out.brake = pd.brake; out.gear = pd.gear;
             out.steer_angle_wheel = cmd.steer_angle_wheel;
         }
         // ---- L7: (v_target, kappa) → speed cascade + steer = atan(kappa·L) ----
         else if constexpr (std::is_same_v<T, CmdL7>) {
             const double ax_tgt = vxc_.update(cmd.v_target, vx, dt);
-            const auto [thr, brk] = axc_.update(ax_tgt, ax_meas, dt);
-            out.throttle = thr; out.brake = brk;
+            const auto pd = axc_.update_directed(ax_tgt, ax_meas, vx, dt);
+            out.throttle = pd.throttle; out.brake = pd.brake; out.gear = pd.gear;
             out.steer_angle_wheel = std::clamp(std::atan(cmd.kappa * wheelbase_),
                                                -max_steer_, max_steer_);
         }
@@ -378,8 +398,8 @@ CmdL4 CascadeController::to_l4(const ControlInput& u, const State& meas,
                 out.steer_angle_wheel = pp_out.steer;
                 const double v_des = cmd.path[pp_out.idx].v_des;
                 const double ax_tgt = vxc_.update(v_des, vx, dt);
-                const auto [thr, brk] = axc_.update(ax_tgt, ax_meas, dt);
-                out.throttle = thr; out.brake = brk;
+                const auto pd = axc_.update_directed(ax_tgt, ax_meas, vx, dt);
+                out.throttle = pd.throttle; out.brake = pd.brake; out.gear = pd.gear;
             }
         }
         // ---- CmdSplit: independent lon + lat cascades ----
