@@ -365,14 +365,10 @@ TEST(L5WheelGyro, V2_CornerModelUnsetLegacyAndFullReactsToCamber) {
 
 TEST(L5WheelGyro, V3_SkidpadRollMomentPenalty) { v3(false); }
 
-// Strut path: the fixed V3 roll-moment gate is not met because the strut path does
-// not pass the mount-to-wheel-mass couple to the chassis (V3b, which includes that
-// couple, holds the gyro term itself). Built only into vdsim_known_failure_tests with
-// label `known_failure` (PROP-2741 option 2); gate and formula unchanged; the couple
-// repair is planned for 0.8.3.
-#ifdef VDSIM_KNOWN_FAILURE_TESTS
+// Strut path: out of the 0.8.2 verdict (known_failure, PROP-2741 option 2) while the
+// strut path did not pass the mount-to-wheel-mass couple to the chassis. Back in the
+// release verdict after work order 57 C delivers the couple; gate and formula unchanged.
 TEST(L5WheelGyro, V3_SkidpadRollMomentStrut) { v3(true); }
-#endif  // VDSIM_KNOWN_FAILURE_TESTS
 
 // ---- V3b (exact budget incl. the strut mount couple) ----------------------------------
 
