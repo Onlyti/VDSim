@@ -17,6 +17,7 @@
 #include "vdsim/snapshot.hpp"
 #include "vdsim/aero.hpp"
 #include "seven_dof_aero_internal.hpp"
+#include "module_guard_internal.hpp"
 #include "vdsim/coordinate.hpp"
 #include "vdsim/contact_frame.hpp"
 #include "vdsim/default_subsystems.hpp"
@@ -73,7 +74,7 @@ inline CmdL4 lower_to_l4(const ControlInput& u) {
 constexpr double kGravity    = 9.80665;
 // kStickBlend / kStickC / kKinTau: shared low-speed constants in vdsim/low_speed.hpp
 
-class SevenDOFDynamics final : public IVehicleDynamics {
+class SevenDOFDynamics final : public IVehicleDynamics, public detail::ModuleGuardHost {
 public:
     SevenDOFDynamics() = default;
     explicit SevenDOFDynamics(std::unique_ptr<ITireModel> tire)
@@ -260,17 +261,17 @@ public:
     }
     bool   set_brake_module(std::shared_ptr<IBrakeSystem> m) override {
         if (!m) return false;
-        brake_ = std::move(m);
+        brake_ = detail::guard_brake(std::move(m), &module_latch_);
         return true;
     }
     bool   set_steering_module(std::shared_ptr<ISteeringSystem> m) override {
         if (!m) return false;
-        steering_ = std::move(m);
+        steering_ = detail::guard_steering(std::move(m), &module_latch_);
         return true;
     }
     bool   set_drivetrain_module(std::shared_ptr<IDrivetrain> m) override {
         if (!m) return false;
-        drivetrain_ = std::move(m);
+        drivetrain_ = detail::guard_drivetrain(std::move(m), &module_latch_);
         return true;
     }
     void set_aero_ride(double dz, double pitch, double roll) noexcept {
@@ -281,7 +282,7 @@ public:
     bool   set_aero_module(std::shared_ptr<IAeroModel> m) override {
         if (!m) return false;
         warn_aero_module_replaces(vp_);
-        aero_module_ = std::move(m);
+        aero_module_ = detail::guard_aero(std::move(m), &module_latch_);
         return true;
     }
     std::array<double, NUM_WHEELS> tire_Fz()           const override { return tire_Fz_; }
@@ -325,7 +326,11 @@ public:
         ext_fz_ = fz; use_ext_fz_ = true;
     }
 
+    /// User-module fault latch (work order 51b).
+    detail::ModuleFaultLatch& module_latch() override { return module_latch_; }
+
 private:
+    detail::ModuleFaultLatch module_latch_;
     struct Deriv {
         double dx_world {0.0};
         double dy_world {0.0};
