@@ -67,6 +67,16 @@ SimSession::SimSession(std::unique_ptr<IVehicleDynamics> dyn,
     base_sensors_ = cfg.sensors;
     nominal_dt_ = cfg.nominal_dt;
     validate_aero_params(vp);
+    {
+        // Ride-height / pitch slopes need ride states (L3-L5). L1/L2 accept the
+        // keys only with both slopes 0 (then bit identical, work order 51 B6).
+        const auto lvl = dyn_->level();
+        if ((lvl == IVehicleDynamics::Level::L1_Bicycle ||
+             lvl == IVehicleDynamics::Level::L2_SevenDOF) && aero_has_active_slopes(vp))
+            throw std::invalid_argument(
+                "aero element ride-height / pitch slopes (dClA_dh, dClA_dpitch != 0) "
+                "need a ride model (L3-L5); L1/L2 have no heave or pitch");
+    }
     dyn_->initialize(vp, ts, sp);
     {
         // L1/L2 have no roll split for aero: an element y offset is ignored.

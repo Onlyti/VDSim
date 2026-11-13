@@ -176,7 +176,8 @@ void parse_powertrain(const YAML::Node& root, PowertrainParams& pt) {
 /**
  * @brief Parse `aero: {elements: [...]}` into vp.aero_elements.
  *
- * Each element needs name, ClA, CdA, x, z (y optional, default 0). With
+ * Each element needs name, ClA, CdA, x, z (y optional, default 0; h_ref,
+ * dClA_dh, dClA_dpitch optional, all three or none). With
  * elements present the four legacy keys and aero_drag_height must be absent
  * from the same file; a silent override is never allowed.
  * @throws std::invalid_argument on a malformed list or a double specification
@@ -206,6 +207,12 @@ void parse_aero_elements(const YAML::Node& root, VehicleParams& p) {
         el.x    = e["x"].as<double>();
         el.z    = e["z"].as<double>();
         if (e["y"] && !e["y"].IsNull()) el.y = e["y"].as<double>();
+        // Ride-height / pitch slopes (work order 51): all three or none,
+        // checked by validate_aero_params().
+        if (e["h_ref"] && !e["h_ref"].IsNull()) el.h_ref = e["h_ref"].as<double>();
+        if (e["dClA_dh"] && !e["dClA_dh"].IsNull()) el.dClA_dh = e["dClA_dh"].as<double>();
+        if (e["dClA_dpitch"] && !e["dClA_dpitch"].IsNull())
+            el.dClA_dpitch = e["dClA_dpitch"].as<double>();
         p.aero_elements.push_back(std::move(el));
     }
     if (p.aero_elements.empty()) return;
@@ -499,6 +506,12 @@ void VehicleParams::to_yaml(const std::string& path) const {
             out << YAML::Key << "x"    << YAML::Value << e.x;
             out << YAML::Key << "y"    << YAML::Value << e.y;
             out << YAML::Key << "z"    << YAML::Value << e.z;
+            if (e.h_ref)
+                out << YAML::Key << "h_ref" << YAML::Value << *e.h_ref;
+            if (e.dClA_dh)
+                out << YAML::Key << "dClA_dh" << YAML::Value << *e.dClA_dh;
+            if (e.dClA_dpitch)
+                out << YAML::Key << "dClA_dpitch" << YAML::Value << *e.dClA_dpitch;
             out << YAML::EndMap;
         }
         out << YAML::EndSeq;

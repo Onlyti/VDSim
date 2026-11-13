@@ -228,8 +228,19 @@ public:
             // Four-key path keeps its original arithmetic; elements / drag
             // height use compute_aero_loads with the per-axle-track roll split.
             // Aero only adds to the tire loads (no sprung-body heave/pitch).
+            // Ride slopes (work order 51) read the ride states, which are
+            // deviations from the static equilibrium of reset.
             const bool aero_el = aero_uses_element_path(vp_);
-            const AeroLoads aero = aero_el ? compute_aero_loads(vp_, AeroState{vx}) : AeroLoads{};
+            AeroLoads aero;
+            if (aero_el) {
+                AeroState as;
+                as.vx = vx;
+                as.dz = z_s_;
+                as.pitch = th_;
+                as.roll = phi_;
+                aero = compute_aero_loads(vp_, as);
+                warn_negative_element_height(vp_, aero, aero_h_warned_);
+            }
             const double q_aero = 0.5 * vp_.air_density * vp_.frontal_area * vx * std::abs(vx);
             const double aero_f = 0.5 * vp_.aero_lift_front * q_aero;
             const double aero_r = 0.5 * vp_.aero_lift_rear  * q_aero;
@@ -647,6 +658,7 @@ private:
     std::array<double, NUM_WHEELS> ry_                  {};
 
     State state_;
+    bool aero_h_warned_ {false};   // element below ground warned (once per model)
     double z_s_ {0.0}, z_s_dot_ {0.0};
     double az_est_ {0.0};   // [m/s^2] last integrated heave acceleration
     double phi_ {0.0}, phi_dot_ {0.0};

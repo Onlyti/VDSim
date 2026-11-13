@@ -314,20 +314,29 @@ PYBIND11_MODULE(vdsim, m) {
         "front axle [m]; ClA > 0 is downforce [m^2], CdA >= 0 [m^2].")
         .def(py::init<>())
         .def(py::init([](std::string name, double ClA, double CdA,
-                         double x, double z, double y) {
+                         double x, double z, double y, std::optional<double> h_ref,
+                         std::optional<double> dClA_dh, std::optional<double> dClA_dpitch) {
                  vdsim::AeroElement e;
                  e.name = std::move(name); e.ClA = ClA; e.CdA = CdA;
                  e.x = x; e.y = y; e.z = z;
+                 e.h_ref = h_ref; e.dClA_dh = dClA_dh; e.dClA_dpitch = dClA_dpitch;
                  return e;
              }),
              py::arg("name"), py::arg("ClA"), py::arg("CdA"),
-             py::arg("x"), py::arg("z"), py::arg("y") = 0.0)
+             py::arg("x"), py::arg("z"), py::arg("y") = 0.0,
+             py::arg("h_ref") = py::none(), py::arg("dClA_dh") = py::none(),
+             py::arg("dClA_dpitch") = py::none())
         .def_readwrite("name", &vdsim::AeroElement::name)
         .def_readwrite("ClA",  &vdsim::AeroElement::ClA)
         .def_readwrite("CdA",  &vdsim::AeroElement::CdA)
         .def_readwrite("x",    &vdsim::AeroElement::x)
         .def_readwrite("y",    &vdsim::AeroElement::y)
         .def_readwrite("z",    &vdsim::AeroElement::z)
+        .def_readwrite("h_ref",       &vdsim::AeroElement::h_ref,
+                       "static reference height [m] (None = no ride slopes)")
+        .def_readwrite("dClA_dh",     &vdsim::AeroElement::dClA_dh, "dClA/dh [m^2/m] or None")
+        .def_readwrite("dClA_dpitch", &vdsim::AeroElement::dClA_dpitch,
+                       "dClA/dtheta [m^2/rad] (ISO + nose down) or None")
         .def("__repr__", [](const vdsim::AeroElement& e) {
             return "AeroElement(name='" + e.name + "', ClA=" + std::to_string(e.ClA) +
                    ", CdA=" + std::to_string(e.CdA) + ", x=" + std::to_string(e.x) +
@@ -335,12 +344,22 @@ PYBIND11_MODULE(vdsim, m) {
         });
     py::class_<vdsim::AeroState>(m, "AeroState")
         .def(py::init<>())
-        .def(py::init([](double vx) { vdsim::AeroState s; s.vx = vx; return s; }),
-             py::arg("vx"))
-        .def_readwrite("vx", &vdsim::AeroState::vx);
+        .def(py::init([](double vx, double dz, double pitch, double roll) {
+                 vdsim::AeroState s;
+                 s.vx = vx; s.dz = dz; s.pitch = pitch; s.roll = roll;
+                 return s;
+             }),
+             py::arg("vx"), py::arg("dz") = 0.0, py::arg("pitch") = 0.0,
+             py::arg("roll") = 0.0)
+        .def_readwrite("vx", &vdsim::AeroState::vx)
+        .def_readwrite("dz", &vdsim::AeroState::dz, "heave vs the static reference [m], + up")
+        .def_readwrite("pitch", &vdsim::AeroState::pitch,
+                       "pitch vs the static reference [rad], ISO + nose down")
+        .def_readwrite("roll", &vdsim::AeroState::roll, "roll vs the static reference [rad]");
     py::class_<vdsim::AeroElementLoad>(m, "AeroElementLoad")
         .def_readonly("fz", &vdsim::AeroElementLoad::fz)
-        .def_readonly("fx", &vdsim::AeroElementLoad::fx);
+        .def_readonly("fx", &vdsim::AeroElementLoad::fx)
+        .def_readonly("h", &vdsim::AeroElementLoad::h, "element height above ground [m]");
     py::class_<vdsim::AeroLoads>(m, "AeroLoads")
         .def_readonly("elements",          &vdsim::AeroLoads::elements)
         .def_readonly("fz_total",          &vdsim::AeroLoads::fz_total)

@@ -3,9 +3,12 @@
 
 #include <cmath>
 #include <limits>
+#include <algorithm>
 #include <set>
 #include <stdexcept>
 #include <string>
+
+#include <spdlog/spdlog.h>
 
 namespace vdsim {
 
@@ -13,10 +16,71 @@ namespace {
 
 constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
 
-/// One force contribution in the common element form.
+/// One force contribution in the common element form: downforce fz and drag fx
+/// [N] (fx opposes forward motion), lateral fy [N] (body +y), point x, y [m] and
+/// the drag heights used for the axle split and the body wrench [m].
 struct Piece {
-    double ClA, CdA, x, y, z_split, z_wrench;
+    double fz, fx, fy, x, y, z_split, z_wrench;
 };
+
+/**
+ * @brief Axle / wheel / wrench distribution shared by the built-in elements and
+ *        the aero module (one arithmetic, so a re-implementing module matches).
+ * @param vp vehicle geometry
+ * @param pieces force contributions
+ * @param out loads to fill (elements left untouched)
+ */
+void distribute(const VehicleParams& vp, const std::vector<Piece>& pieces, AeroLoads& out) {
+    const double L  = vp.wheelbase;
+    const double a  = vp.cg_to_front;
+    const double h  = vp.cg_height;
+    const double tf = vp.track_front;
+    const double tr = vp.track_rear;
+    out.fz_wheel_split.fill(0.0);
+    out.fz_wheel_roll.fill(0.0);
+    double M_drag = 0.0;
+    for (const auto& p : pieces) {
+        const double fz = p.fz;
+        const double fx = p.fx;
+        out.fz_total += fz;
+        out.fx_total += fx;
+        M_drag += fx * p.z_split;
+        const double share_f = (L > 0.0) ? (p.x + L) / L : 0.5;
+        const double Ff = fz * share_f;
+        const double Fr = fz - Ff;
+        out.fz_front += Ff;
+        out.fz_rear  += Fr;
+        out.fz_wheel_split[WHEEL_FL] += 0.5 * Ff;
+        out.fz_wheel_split[WHEEL_FR] += 0.5 * Ff;
+        out.fz_wheel_split[WHEEL_RL] += 0.5 * Fr;
+        out.fz_wheel_split[WHEEL_RR] += 0.5 * Fr;
+        const double kf = (tf > 1e-3) ? p.y / tf : 0.0;
+        const double kr = (tr > 1e-3) ? p.y / tr : 0.0;
+        out.fz_wheel_roll[WHEEL_FL] += Ff * (0.5 + kf);
+        out.fz_wheel_roll[WHEEL_FR] += Ff * (0.5 - kf);
+        out.fz_wheel_roll[WHEEL_RL] += Fr * (0.5 + kr);
+        out.fz_wheel_roll[WHEEL_RR] += Fr * (0.5 - kr);
+        // Body wrench about the CG; arm from the CG to the element point.
+        const Vec3 r(p.x + a, p.y, p.z_wrench - h);
+        const Vec3 F(-fx, p.fy, -fz);
+        out.force_body  += F;
+        out.torque_body += r.cross(F);
+    }
+    out.drag_pitch_moment = M_drag;
+    const double dM = (L > 0.0) ? M_drag / L : 0.0;   // nose-up: front unloads
+    out.fz_front -= dM;
+    out.fz_rear  += dM;
+    out.fz_wheel_split[WHEEL_FL] -= 0.5 * dM;
+    out.fz_wheel_split[WHEEL_FR] -= 0.5 * dM;
+    out.fz_wheel_split[WHEEL_RL] += 0.5 * dM;
+    out.fz_wheel_split[WHEEL_RR] += 0.5 * dM;
+    out.fz_wheel_roll[WHEEL_FL] -= 0.5 * dM;
+    out.fz_wheel_roll[WHEEL_FR] -= 0.5 * dM;
+    out.fz_wheel_roll[WHEEL_RL] += 0.5 * dM;
+    out.fz_wheel_roll[WHEEL_RR] += 0.5 * dM;
+    out.balance_front = (out.fz_total != 0.0) ? out.fz_front / out.fz_total : kNaN;
+    out.ld = (out.fx_total != 0.0) ? out.fz_total / out.fx_total : kNaN;
+}
 
 bool valid_name(const std::string& n) {
     if (n.empty()) return false;
@@ -31,6 +95,12 @@ bool valid_name(const std::string& n) {
 
 bool aero_uses_element_path(const VehicleParams& vp) {
     return !vp.aero_elements.empty() || vp.aero_drag_height.has_value();
+}
+
+bool aero_has_active_slopes(const VehicleParams& vp) {
+    for (const auto& e : vp.aero_elements)
+        if (e.slopes_active()) return true;
+    return false;
 }
 
 void validate_aero_params(const VehicleParams& vp) {
@@ -63,6 +133,16 @@ void validate_aero_params(const VehicleParams& vp) {
             throw std::invalid_argument("aero element '" + e.name + "': CdA must be >= 0");
         if (e.z < 0.0)
             throw std::invalid_argument("aero element '" + e.name + "': z must be >= 0");
+        const int n_slope = int(e.h_ref.has_value()) + int(e.dClA_dh.has_value()) +
+                            int(e.dClA_dpitch.has_value());
+        if (n_slope != 0 && n_slope != 3)
+            throw std::invalid_argument("aero element '" + e.name +
+                                        "': h_ref, dClA_dh and dClA_dpitch go together "
+                                        "(all three or none)");
+        if (n_slope == 3 && !(std::isfinite(*e.h_ref) && std::isfinite(*e.dClA_dh) &&
+                              std::isfinite(*e.dClA_dpitch)))
+            throw std::invalid_argument("aero element '" + e.name +
+                                        "' has a non-finite h_ref / dClA_dh / dClA_dpitch");
     }
 }
 
@@ -74,74 +154,54 @@ AeroLoads compute_aero_loads(const VehicleParams& vp, const AeroState& s) {
     const double L  = vp.wheelbase;
     const double a  = vp.cg_to_front;
     const double h  = vp.cg_height;
-    const double tf = vp.track_front;
-    const double tr = vp.track_rear;
+    const double x_o = -a;   // body-origin x in the element frame (CG and sprung origin)
 
+    AeroLoads out;
     std::vector<Piece> pieces;
     if (!vp.aero_elements.empty()) {
         pieces.reserve(vp.aero_elements.size());
-        for (const auto& e : vp.aero_elements)
-            pieces.push_back({e.ClA, e.CdA, e.x, e.y, e.z, e.z});
+        out.elements.reserve(vp.aero_elements.size());
+        for (const auto& e : vp.aero_elements) {
+            // h - h_ref = dz - (x - x_o)*theta. The slope term is skipped (not
+            // multiplied by zero) when both slopes are 0, so ClA stays bit exact.
+            const double dh = s.dz - (e.x - x_o) * s.pitch;
+            double ClA = e.ClA;
+            if (e.slopes_active())
+                ClA = e.ClA + *e.dClA_dh * dh + *e.dClA_dpitch * s.pitch;
+            const double fz = ClA * q_down;
+            const double fx = e.CdA * q_drag;
+            pieces.push_back({fz, fx, 0.0, e.x, e.y, e.z, e.z});
+            out.elements.push_back({fz, fx, e.h_ref.value_or(e.z) + dh});
+        }
     } else {
         const double A = vp.frontal_area;
         const double zs = vp.aero_drag_height.value_or(0.0);  // L1-L4 legacy: ground
         const double zw = vp.aero_drag_height.value_or(h);    // L5 legacy: CG
-        pieces.push_back({vp.aero_lift_front * A, 0.0, 0.0, 0.0, 0.0, 0.0});
-        pieces.push_back({vp.aero_lift_rear  * A, 0.0, -L,  0.0, 0.0, 0.0});
-        pieces.push_back({0.0, vp.aero_drag_coeff * A, -a, 0.0, zs, zw});
+        pieces.push_back({vp.aero_lift_front * A * q_down, 0.0 * q_drag, 0.0,
+                          0.0, 0.0, 0.0, 0.0});
+        pieces.push_back({vp.aero_lift_rear * A * q_down, 0.0 * q_drag, 0.0,
+                          -L, 0.0, 0.0, 0.0});
+        pieces.push_back({0.0 * q_down, vp.aero_drag_coeff * A * q_drag, 0.0,
+                          -a, 0.0, zs, zw});
     }
-
-    AeroLoads out;
-    out.fz_wheel_split.fill(0.0);
-    out.fz_wheel_roll.fill(0.0);
-    double M_drag = 0.0;
-    for (const auto& p : pieces) {
-        const double fz = p.ClA * q_down;
-        const double fx = p.CdA * q_drag;
-        out.fz_total += fz;
-        out.fx_total += fx;
-        M_drag += fx * p.z_split;
-        const double share_f = (L > 0.0) ? (p.x + L) / L : 0.5;
-        const double Ff = fz * share_f;
-        const double Fr = fz - Ff;
-        out.fz_front += Ff;
-        out.fz_rear  += Fr;
-        out.fz_wheel_split[WHEEL_FL] += 0.5 * Ff;
-        out.fz_wheel_split[WHEEL_FR] += 0.5 * Ff;
-        out.fz_wheel_split[WHEEL_RL] += 0.5 * Fr;
-        out.fz_wheel_split[WHEEL_RR] += 0.5 * Fr;
-        const double kf = (tf > 1e-3) ? p.y / tf : 0.0;
-        const double kr = (tr > 1e-3) ? p.y / tr : 0.0;
-        out.fz_wheel_roll[WHEEL_FL] += Ff * (0.5 + kf);
-        out.fz_wheel_roll[WHEEL_FR] += Ff * (0.5 - kf);
-        out.fz_wheel_roll[WHEEL_RL] += Fr * (0.5 + kr);
-        out.fz_wheel_roll[WHEEL_RR] += Fr * (0.5 - kr);
-        // Body wrench about the CG; arm from the CG to the element point.
-        const Vec3 r(p.x + a, p.y, p.z_wrench - h);
-        const Vec3 F(-fx, 0.0, -fz);
-        out.force_body  += F;
-        out.torque_body += r.cross(F);
-    }
-    out.drag_pitch_moment = M_drag;
-    const double dM = (L > 0.0) ? M_drag / L : 0.0;   // nose-up: front unloads
-    out.fz_front -= dM;
-    out.fz_rear  += dM;
-    out.fz_wheel_split[WHEEL_FL] -= 0.5 * dM;
-    out.fz_wheel_split[WHEEL_FR] -= 0.5 * dM;
-    out.fz_wheel_split[WHEEL_RL] += 0.5 * dM;
-    out.fz_wheel_split[WHEEL_RR] += 0.5 * dM;
-    out.fz_wheel_roll[WHEEL_FL] -= 0.5 * dM;
-    out.fz_wheel_roll[WHEEL_FR] -= 0.5 * dM;
-    out.fz_wheel_roll[WHEEL_RL] += 0.5 * dM;
-    out.fz_wheel_roll[WHEEL_RR] += 0.5 * dM;
-
-    if (!vp.aero_elements.empty()) {
-        out.elements.reserve(pieces.size());
-        for (const auto& p : pieces) out.elements.push_back({p.ClA * q_down, p.CdA * q_drag});
-    }
-    out.balance_front = (out.fz_total != 0.0) ? out.fz_front / out.fz_total : kNaN;
-    out.ld = (out.fx_total != 0.0) ? out.fz_total / out.fx_total : kNaN;
+    distribute(vp, pieces, out);
     return out;
+}
+
+void warn_negative_element_height(const VehicleParams& vp, const AeroLoads& loads,
+                                  bool& warned) {
+    if (warned) return;
+    const std::size_t n = std::min(vp.aero_elements.size(), loads.elements.size());
+    for (std::size_t i = 0; i < n; ++i) {
+        if (!vp.aero_elements[i].has_ride_slopes()) continue;
+        if (loads.elements[i].h < 0.0) {
+            warned = true;
+            spdlog::warn("[vdsim aero] element '{}' is below the ground (h = {} m); its "
+                         "ride-height slope is extrapolated", vp.aero_elements[i].name,
+                         loads.elements[i].h);
+            return;
+        }
+    }
 }
 
 }  // namespace vdsim
