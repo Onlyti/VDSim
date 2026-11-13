@@ -9,6 +9,9 @@
 //     Tyres: configs/parts/tire/generic_pacejka.yaml as shipped (LuGre on) and the same
 //     file with LuGre off (pure magic formula). Steady state = 2 s of bristle advance at
 //     1e-4 s (LuGre), kappa = 0 by omega = vx / Re.
+//     Measurement correction (11-14, after the measurement, limit unchanged): the U2 harness
+//     now initializes the tyre model with the file parameters; before it ran the model on
+//     default TireParams, so the LuGre-on case was not exercised.
 // U3  reverse acceleration command (CmdL5 ax_target), vx0 = -3 m/s, generic sedan, flat
 //     ground mu 1, 1 ms ticks, 2 s, L2 and L5 penalty:
 //       (a) ax_target = +1 (reverse deceleration): mean ax over ticks with t in [0.5, 1.5) s
@@ -252,6 +255,7 @@ TEST(ReverseSlip, U2ReverseLateralForceEqualsForward) {
     const double R0 = vp.wheel_radius_nominal;
     for (bool lugre : {true, false}) {
         auto t = make_tire_model(tire(lugre));
+        t->initialize(tire(lugre));  // the factory does not load the parameters
         for (double adeg : {1.0, 5.0}) {
             const double vy = 10.0 * std::tan(adeg * kPi / 180.0);
             const double want = std::atan(vy / 10.0);
