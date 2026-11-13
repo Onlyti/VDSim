@@ -190,11 +190,20 @@ public:
         double throttle;
         double brake;
         double steer;
+        int    gear {1};   ///< +1 forward, -1 reversing (LongAxController::update_directed)
     };
 
     void initialize(const Gains& g) noexcept;
     void reset() noexcept;
-    // Update: returns Output (throttle, brake, steer).
+    /**
+     * @brief One driver step: steer (pure pursuit, delayed) and pedals from the speed loop.
+     *
+     * The pedal map follows the direction of travel (LongAxController::update_directed):
+     * while reversing (vx < -kReverseVx) a demand that speeds the car up backward is
+     * throttle with gear -1 and a demand that slows it is brake; forward it is the plain
+     * map with gear +1.
+     * @return Output (throttle, brake, steer, gear).
+     */
     Output update(double x, double y, double psi, double vx,
                   double v_target,
                   const double* path_x, const double* path_y, int n_pts,

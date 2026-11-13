@@ -202,7 +202,12 @@ DriverModel::Output DriverModel::update(double x, double y, double psi, double v
     // L6 vx -> L5 ax -> throttle/brake. Noise applied only to the active pedal so
     // it cannot spawn phantom simultaneous throttle+brake.
     const double ax_tgt = vxc_.update(v_target, vx, dt);
-    const auto [thr, brk] = axc_.update(ax_tgt, 0.0, dt);   // No ax_meas feedback (simplified)
+    // No ax_meas feedback (simplified). Direction-aware pedal map: reversing turns a
+    // backward-speed-up demand into throttle with gear -1 (work order 57 (d)).
+    const auto pd = axc_.update_directed(ax_tgt, 0.0, vx, dt);
+    const double thr = pd.throttle;
+    const double brk = pd.brake;
+    out.gear = pd.gear;
     if (brk > 0.0) {
         out.brake    = std::clamp(brk + g_.thr_noise_rms * z2, 0.0, 1.0);
         out.throttle = 0.0;

@@ -55,6 +55,10 @@ TERM_NAMES = {
     vdsim.TERM_STALL: "stall",
 }
 
+# Reverse threshold of the pedal direction [m/s], same as the C++
+# LongAxController::kReverseVx used by the accel action (CmdL5).
+REVERSE_VX = 0.05
+
 DEFAULT_OBS_FIELDS = [
     "vx", "vy", "yaw_rate", "beta", "ay", "y", "yaw",
     "slip_ratio", "slip_angle",
@@ -609,13 +613,25 @@ class _Core:
                 c.ax_target = float(a[i, 1]) * cfg.max_accel
             self.vs.set_inputs(self._cmds)
             return
+        vx = self._travel_vx()
         for i in range(self.num_envs):
             c = self._cmds[i]
             c.steer_angle_wheel = float(a[i, 0]) * cfg.max_steer
             p = float(a[i, 1])
             c.throttle = p if p > 0.0 else 0.0
             c.brake = -p if p < 0.0 else 0.0
+            # Pedal + accelerates along the direction of travel: reversing, the
+            # throttle drives backward (gear -1); forward is gear +1 as before.
+            c.gear = -1 if vx[i] < -REVERSE_VX else 1
         self.vs.set_inputs(self._cmds)
+
+    def _travel_vx(self) -> np.ndarray:
+        """Longitudinal speed per env for the pedal direction: the observed vx when
+        it is an obs column, else the plant state."""
+        j = self.col.get("vx")
+        if j is not None:
+            return self.obs[:, j]
+        return np.array([s.velocity[0] for s in self.vs.states()], dtype=np.float64)
 
     def step(self, actions: np.ndarray):
         """-> obs, reward, terminated, truncated, codes (no auto-reset here)."""
