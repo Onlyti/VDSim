@@ -3419,7 +3419,10 @@ peaks, are what make VDSim a control-research plant rather than a trajectory mod
   wheel_mu, tire_fx, tire_fy</code>; see the <a href="../RL_GUIDE/">RL guide</a>.</li>
 <li><strong><code>.vdtrace</code> channels</strong> (schema 0.4) — <code>t, pose, v_body, yaw_rate, u_steer, u_fx,
   wheel_F, wheel_mu, wheel_kappa, wheel_alpha</code>, plus <code>a_body</code> (Ld2 and up) and
-  <code>pose_zrp, wheel_road_dz, wheel_road_normal, wheel_travel</code> (Ld3 and up).</li>
+  <code>pose_zrp, wheel_road_dz, wheel_road_normal, wheel_travel</code> (Ld3 and up).
+  An L5 run with suspension hardpoints adds <code>wheel_camber</code>, <code>wheel_toe</code> and one
+  <code>hp_&lt;wheel&gt;_&lt;key&gt;</code> channel per exported hardpoint, described by the manifest
+  <code>hardpoints</code> block (<a href="../theory/14_hardpoint_kinematics/">theory 14 §14.17</a>).</li>
 </ul>
 <h2 id="building-the-plant-sim">Building the plant — <code>Sim(...)</code><a class="headerlink" href="#building-the-plant-sim" title="Permanent link">&para;</a></h2>
 <table>
