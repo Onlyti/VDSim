@@ -169,6 +169,36 @@ Hard-joint DAE suspension also falls back to the same sprung result and warns on
 process when `unsprung` is explicit. LuGre wheel-spin dynamics use the clamped tire
 longitudinal force for the tire reaction torque.
 
+### Corner-model jacking at the contact patch (0.8.2)
+
+With a hard-joint corner model the wheel particle moves along the travel path of the
+linkage, coordinate $q$ (positive in bump). The bushing carries the horizontal load
+$\mathbf{H}$ the particle needs and its strut-axis part follows from the path slopes,
+
+$$
+J_i = -\frac{H_x\,t_x + H_y\,s_{cp}}{t_z}, \qquad
+s_{cp} = \frac{\partial}{\partial q}\big(y_{wc} - R\sin\gamma\big),
+$$
+
+where $(t_x, t_y, t_z)$ is the path tangent, $y_{wc}$ the wheel-centre lateral position,
+$\gamma$ the camber and $R$ = `wheel_radius_nominal` (the radius the contact query
+uses), evaluated by a central difference of the linkage pose at $q \pm h$.
+$s_{cp}$ is the lateral slope of the contact patch: the tyre force acts there,
+not at the wheel centre. Up to 0.8.1 the wheel-centre slope $\partial y_{wc}/\partial q$
+was used; on the double-wishbone samples it has the opposite sign and puts the roll
+centre about 0.3 m below the ground, which together with the bump-steer slip path
+sustained a 1.8–2.2 Hz pitch oscillation at cruise.
+
+The corner model tracks the prescribed travel through constraint stabilisation
+(Baumgarte, $\alpha = \beta = 12$). It now also receives the travel acceleration
+$\ddot z$ (finite difference of the travel rate over the outer step), so the knuckle
+state follows the travel without the second-order lag
+$H(s) = (24s+144)/(s+12)^2$.
+Tests: `tests/integration/test_l5_dae_pitch.cpp` (P1 cruise pitch, P2' low-speed
+pitch rate, P10/P10b/P10c reaction consistency and jacking magnitude),
+`tests/unit/test_dae_contact_slope.cpp` (P9, slope against the independent solver
+`tools/kinematics/dw_3d_solver.py`).
+
 ### Wheel-spin gyroscopic term (`wheel_gyro`, 0.8.2)
 
 Each wheel carries spin angular momentum $I_{w,i}\,\omega_i$ along its spin axis
@@ -340,6 +370,9 @@ v0.5 terrain note.
   with that arm and the whole-vehicle `cg_height` (§20.2) the strut-path axle load
   transfer (`L5Reaction.R2_*`) passes its ±2 % gate. `cg_height_ref: sprung` keeps the
   0.8.1 arm.
+- **Corner-model limits (0.8.2).** The knuckle reaction route is off; the anti-geometry
+  gates R3 move to 0.9.0. The jacking slope is the contact-patch slope (§20.3); the
+  anti-dive (x) direction keeps the wheel-centre path.
 - **Not yet (→ v0.5):** general curved/banked track (`CurvedGround`, banked oval)
   and a GUI panel to *author* stunt scenes; today the GUI renders loaded ramp/loop
   scenes only. See [`design/V0.5_TERRAIN_L5.md`](../design/V0.5_TERRAIN_L5.md).
