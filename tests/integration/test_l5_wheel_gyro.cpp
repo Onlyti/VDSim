@@ -34,8 +34,14 @@
 //                               F_i = m_u a_u,i + R F_tire,i + m_u g e_z (strut particle)
 //   T = (x_b - G) x m_b a_b + sum_i (strut) (x_u,i - G) x m_u a_u,i
 //   B = omega_w x (R I_b omega)                 (sprung body spin)
-//   L = sum_i (strut) (x_b + R r_i - x_u,i) x R F_tire,i  (mount-to-particle couple of
-//       the strut connection; 0 on the penalty path)
+//   L = sum_i (strut) (r_arm,i - x_u,i) x R F_tire,i : the part of the strut connection
+//       couple that the core does not pass to the chassis. r_arm,i is the chassis torque
+//       arm of the core (work order 57 C, 61fc1cb): the mount x_b + R r_i under
+//       cg_height_ref: sprung (0.8.1 strut behaviour), the wheel particle x_u,i otherwise,
+//       so L == 0 with the vehicle key. Work order 50 wrote L with the mount arm, which
+//       was the core arm on every strut run then; once 57 C delivers the couple, that
+//       form counts it twice (PO verdict on 57 C, option 1). 0 on the penalty path.
+//       The gate, window, normalisation and expected value (-G_w) are unchanged.
 //   D = (E + L - T - B) . e_x
 //   dD = mean(D)_full - mean(D)_off * mean(a)_full / mean(a)_off
 //   Gate: | dD / (-G_w) - 1 | <= 0.02, preconditions as V3 with the condition's V and R.
@@ -159,9 +165,13 @@ struct Skid {
     double max_dV {0}, R_rel {0}, r_cv {0};
 };
 
-Skid skidpad(const char* mode, bool strut, double kV = 7.0, double kR = 8.5) {
+Skid skidpad(const char* mode, bool strut, double kV = 7.0, double kR = 8.5,
+             const char* cg_ref = nullptr) {
     constexpr double kT = 15.0, kAvg = 2.0;
     VehicleParams vp = with_gyro(mode);
+    if (cg_ref) vp.cg_height_ref = cg_ref;
+    // V3b L arm: the chassis torque arm of the core strut branch (57 C).
+    const bool mount_arm = strut && cg_height_ref_is_sprung(vp);
     vp.aero_drag_coeff = 0.0;
     vp.aero_lift_front = 0.0;
     vp.aero_lift_rear = 0.0;
@@ -244,7 +254,9 @@ Skid skidpad(const char* mode, bool strut, double kV = 7.0, double kR = 8.5) {
                     const Vec3 a_u = w_w.cross(st.unsprung_vel[i]);
                     F += m_u[i] * a_u + Vec3(0.0, 0.0, m_u[i] * 9.80665);
                     T += (st.unsprung_pos[i] - G).cross(m_u[i] * a_u);
-                    L += (st.position + Rm * r_mount[i] - st.unsprung_pos[i]).cross(F_t);
+                    const Vec3 r_arm = mount_arm ? Vec3(st.position + Rm * r_mount[i])
+                                                 : Vec3(st.unsprung_pos[i]);
+                    L += (r_arm - st.unsprung_pos[i]).cross(F_t);
                 }
                 E += (p[i] - G).cross(F);
             }
@@ -298,9 +310,9 @@ void v3(bool strut) {
     EXPECT_LE(std::abs(rel), 0.02);
 }
 
-void v3b(bool strut, double V, double R) {
-    const Skid off = skidpad("off", strut, V, R);
-    const Skid full = skidpad("full", strut, V, R);
+void v3b(bool strut, double V, double R, const char* cg_ref = nullptr) {
+    const Skid off = skidpad("off", strut, V, R, cg_ref);
+    const Skid full = skidpad("full", strut, V, R, cg_ref);
     const char* path = strut ? "strut" : "penalty";
     for (const auto* run : {&off, &full}) {
         std::printf("V3b %s R=%.1f V=%.1f %s V=%.6f r=%.6f R=%.6f max|dV|=%.3e R_rel=%.3e "
