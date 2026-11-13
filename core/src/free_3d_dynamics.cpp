@@ -233,6 +233,8 @@ public:
         toe_dae_.fill(0.0);
         rack_dy_.fill(0.0);
         path_valid_.fill(false);
+        zdot_prev_.fill(0.0);
+        zdot_init_.fill(false);
         path_off_.fill(Vec3::Zero());
         path_tan_.fill(Vec3::UnitZ());
         theta_p_.fill(0.0);
@@ -1135,6 +1137,13 @@ private:
             mb::PrescribedCornerMotion mot;
             mot.travel_z      = state_.susp_compression[i];
             mot.travel_z_dot  = state_.susp_velocity[i];
+            // Work order 49a: prescribed travel acceleration (finite difference of the strut
+            // travel rate over the outer step) so the corner DAE tracks the prescribed travel
+            // without the constraint-stabilisation lag.
+            if (dt > 0.0 && zdot_init_[i])
+                mot.travel_z_ddot = (mot.travel_z_dot - zdot_prev_[i]) / dt;
+            zdot_prev_[i] = mot.travel_z_dot;
+            zdot_init_[i] = true;
             mot.steer_rack_dy = front
                 ? (rack ? so.rack_travel : steer_rad * vp_.rack_per_rad)
                 : 0.0;
@@ -1272,6 +1281,8 @@ private:
     std::shared_ptr<ISteeringSystem> steering_;
     std::array<Vec3, NUM_WHEELS> r_body_ {};
     double aero_origin_dz_ {0.0};   // cg_height - body origin height [m] (aero arm shift)
+    std::array<double, NUM_WHEELS> zdot_prev_ {};   // 49a ZDDOT: last travel rate
+    std::array<bool, NUM_WHEELS> zdot_init_ {};
     bool sprung_ref_ {false};       // cg_height_ref = sprung: 0.8.1 strut behaviour (Re arm)
     std::array<double, NUM_WHEELS> I_wheel_ {};
     Vec3 I_body_inv_ {Vec3::Zero()};
