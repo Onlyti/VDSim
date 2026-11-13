@@ -26,6 +26,50 @@
 //       |mean_ax(rev) - (-mean_ax(fwd))| <= 0.02 |mean_ax(fwd)|,
 //     and the reverse run brakes (brake_applied > 0 on some tick) and |vx| falls
 //     (|vx(1.5 s)| < |vx(0.5 s)|).
+// U3c (PROP-2785 (b), work order 57 section 7.2): RL direct-control pedal path, Python side,
+//     tests/scripts/test_reverse_rl_pedal.py (ctest reverse_rl_pedal).
+// U3d (PROP-2785 (d)): DriverModel speed tracking while reversing. Generic sedan, flat
+//     ground mu 1, 1 ms ticks, 2 s, vx0 = -3 m/s, L2 and L5 penalty, DriverModel noise 0,
+//     steer to the plant 0 (the longitudinal chain is judged), the pedals and the gear
+//     the model returns go to CmdL4 (gear +1 while the model reports none):
+//       (a) reverse acceleration request v_target = -5 m/s: brake_applied == 0 on every
+//           tick and mean ax over t in [0.5, 1.5) s < 0,
+//       (b) reverse deceleration request v_target = -1 m/s: |vx(1.5 s)| < |vx(0.5 s)|,
+//       every value finite.
+//     Forward (vx0 = +3, v_target = +5 and +1): every tick, throttle and brake bit equal
+//     to the pre-57 chain LongVxController::update -> LongAxController::update with the
+//     same gains, and the gear is +1 (U1 for the driver model).
+// K1 (PROP-2784 option 2, section 7.3): relaxation effect, tyre alone. Generic tyre with
+//     the relaxed coefficients of vdsim/tire_low_speed.hpp (belt on, sigma_y =
+//     kRelaxedSigmaLat, sigma_x = kRelaxedSigmaLong), Fz = m g / 4, kappa = 0 by omega =
+//     vx / Re before the step. |vx| = 5 and 10 m/s, forward and reverse; step at t = 0
+//     of alpha 0 -> 1 deg (vy = |vx| tan 1 deg, sigma_y) and of kappa 0 -> 0.02 (omega =
+//     (vx + 0.02 |vx|) / Re, sigma_x). Judged quantity = the relaxed slip the force law
+//     reads (MF path, LuGre off: Transient belt_alpha / belt_kappa; LuGre path: belt_vlat
+//     / belt_vlong), advanced by advance_relaxation at dt = tau / 200 (record interval
+//     <= tau / 100). The first time it reaches (1 - 1/e) of its step (linear interpolation
+//     between records) = tau = sigma / |vx| within +-5 %. The force crossing time is
+//     printed as information (the MF force law is mildly non-linear in the slip, and the
+//     LuGre bristle adds its own lag). All judged speeds are above kRelaxedVLow.
+// K2 low-speed regression, L2 and L5 penalty, key `relaxed` against the key unset (off):
+//     C1 CmdL5 ax_target -1 from 5 m/s, switch to ax_target 0 at the first |vx| < 0.1 m/s,
+//        then 3 s; C3 state F (vx 0, vy 3, r 0), CmdL5 0, 3 s.
+//     Last 1 s: per wheel the number of Fx sign changes (consecutive ticks, exact zeros
+//     skipped) with relaxed <= the same count with off; every value finite; |vx| < 0.01
+//     m/s on the last tick (relaxed). C3 Fy sign changes are printed as information.
+//     The U5 brake-hold run below stays as a regression item (relaxed keeps standstill).
+// K3 DAE oscillation non-worsening: measured after 49a is on main, with the 49a P1 test
+//     (antidive and sports DAE, 25 and 35 m/s, command 0, last 5 s q_rms <= 1e-3 rad/s,
+//     growth < 0.5) run with tire_low_speed: relaxed. Its test is added in a separate gate
+//     commit after the main merge, before that measurement; sigma is not tuned on a miss.
+// K4 key contract: the U5 off == unset bit test and the ReverseSlipKeys tests below, and
+//     the Python test tire_low_speed.
+// K4b the key acts on the session (K1 checks the filter alone): L2 and L5 penalty, 10 m/s,
+//     CmdL4 throttle 0 brake 0, road-wheel steer 0 -> 0.05 rad at t = 0.1 s; mean |ay| over
+//     ticks with t in (0.1, 0.15] s with relaxed < the same mean with the key unset (the
+//     relaxed tyre builds lateral force later), every value finite.
+// K5 negative check (procedure, not a test): removing only the relaxation filter makes
+//     K1 fail; restoring it passes.
 // U4  pure side slide / reverse spin: the 11-13 probe states (vx < 0, vx ~ 0 with large
 //     |vy|, vx < 0 with large r) on the generic sedan, CmdL5 ax_target 0, steer 0, 2 s:
 //       - every state / output value finite (no NaN, no Inf) on every tick,
@@ -40,7 +84,8 @@
 //     judged force is the contact-plane magnitude |F - (F.n_b) n_b|, n_b = R^T e_z (flat
 //     ground normal in the body frame), which bounds the tyre lateral force from above.
 //     Diagnostic before this change: every RK stage had |Fy_tyre| <= mu Fz_in.
-// U5  low-speed key `tire_low_speed: relaxed` (vehicle YAML): start 5 m/s, constant brake
+// U5  (replaced by K1-K5 under PROP-2784; the brake-hold run stays as a regression item)
+//     low-speed key `tire_low_speed: relaxed` (vehicle YAML): start 5 m/s, constant brake
 //     pedal 0.3 (CmdL4), t_stop = first tick with |vx| < 0.01 m/s (must come within 6 s),
 //     then 3 s more:
 //       - hold: |vx| <= 0.05 m/s on every tick of (t_stop, t_stop + 3],
@@ -56,13 +101,16 @@
 //     Checked on the YAML text so this file builds before the key exists.
 #include "vdsim/contact.hpp"
 #include "vdsim/control.hpp"
+#include "vdsim/control_converter.hpp"
 #include "vdsim/interfaces.hpp"
 #include "vdsim/params.hpp"
 #include "vdsim/sim_session.hpp"
 #include "vdsim/tire_contact.hpp"
+#include "vdsim/tire_low_speed.hpp"
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdio>
@@ -73,6 +121,8 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 using namespace vdsim;
@@ -294,6 +344,141 @@ TEST(ReverseSlip, U3bReverseAccelerationCommandNoBrake) {
     }
 }
 
+// ---- U3d ----------------------------------------------------------------------------
+
+namespace {
+// The driver model reports a gear once (d) is in; before that the plant keeps +1.
+template <class O, class = void> struct HasGear : std::false_type {};
+template <class O>
+struct HasGear<O, std::void_t<decltype(std::declval<const O&>().gear)>> : std::true_type {};
+template <class O> int gear_of(const O& o) {
+    if constexpr (HasGear<O>::value) return o.gear;
+    else return 1;
+}
+
+DriverModel quiet_driver() {
+    DriverModel d;
+    DriverModel::Gains g;
+    g.steer_noise_rms = 0.0;
+    g.thr_noise_rms = 0.0;
+    d.initialize(g);
+    return d;
+}
+
+struct U3dRun {
+    double mean_ax {0.0}, vx05 {0.0}, vx15 {0.0}, brake_max {0.0};
+    int gear_min {1}, gear_max {1};
+    bool finite {true};
+};
+
+U3dRun run_u3d(Path p, double vx0, double v_target) {
+    const VehicleParams vp = sedan();
+    auto s = session(p, vp, tire(true));
+    s->reset_settled(start(vp, vx0, 0.0, 0.0));
+    DriverModel d = quiet_driver();
+    std::vector<double> px, py;
+    for (int i = -200; i <= 200; ++i) { px.push_back(i); py.push_back(0.0); }
+    U3dRun out;
+    out.gear_min = 99;
+    out.gear_max = -99;
+    double sum = 0.0;
+    int n = 0;
+    for (int k = 0; k < 2000; ++k) {
+        const auto o0 = s->output();
+        const auto& st = o0.state;
+        const double psi = std::atan2(2.0 * (st.orientation.w() * st.orientation.z() +
+                                             st.orientation.x() * st.orientation.y()),
+                                      1.0 - 2.0 * (st.orientation.y() * st.orientation.y() +
+                                                   st.orientation.z() * st.orientation.z()));
+        const auto dm = d.update(st.position.x(), st.position.y(), psi, st.velocity.x(),
+                                 v_target, px.data(), py.data(), (int)px.size(), kDt);
+        CmdL4 u;
+        u.throttle = dm.throttle;
+        u.brake = dm.brake;
+        u.steer_angle_wheel = 0.0;
+        u.gear = gear_of(dm);
+        out.gear_min = std::min(out.gear_min, u.gear);
+        out.gear_max = std::max(out.gear_max, u.gear);
+        s->set_input(u);
+        s->tick(kDt);
+        const auto o = s->output();
+        const double t = (k + 1) * kDt;
+        out.finite = out.finite && all_finite(o);
+        out.brake_max = std::max(out.brake_max, o.brake_applied);
+        if (k + 1 == 500) out.vx05 = o.state.velocity.x();
+        if (k + 1 == 1500) out.vx15 = o.state.velocity.x();
+        if (t >= 0.5 - 1e-12 && t < 1.5 - 1e-12) {
+            sum += o.ax;
+            ++n;
+        }
+    }
+    out.mean_ax = sum / n;
+    return out;
+}
+}  // namespace
+
+TEST(ReverseSlip, U3dDriverModelReverseAccelerationNoBrake) {
+    for (Path p : {Path::L2, Path::L5Penalty}) {
+        const auto r = run_u3d(p, -3.0, -5.0);
+        std::printf("U3d(a) %s v_target=-5 mean_ax=%+.6f vx(0.5)=%+.6f vx(1.5)=%+.6f "
+                    "brake_max=%.6f gear=[%d %d]\n",
+                    path_name(p), r.mean_ax, r.vx05, r.vx15, r.brake_max, r.gear_min, r.gear_max);
+        EXPECT_TRUE(r.finite) << path_name(p);
+        EXPECT_EQ(r.brake_max, 0.0) << path_name(p);
+        EXPECT_LT(r.mean_ax, 0.0) << path_name(p);
+    }
+}
+
+TEST(ReverseSlip, U3dDriverModelReverseDecelerationSlowsDown) {
+    for (Path p : {Path::L2, Path::L5Penalty}) {
+        const auto r = run_u3d(p, -3.0, -1.0);
+        std::printf("U3d(b) %s v_target=-1 mean_ax=%+.6f vx(0.5)=%+.6f vx(1.5)=%+.6f "
+                    "brake_max=%.6f gear=[%d %d]\n",
+                    path_name(p), r.mean_ax, r.vx05, r.vx15, r.brake_max, r.gear_min, r.gear_max);
+        EXPECT_TRUE(r.finite) << path_name(p);
+        EXPECT_LT(std::abs(r.vx15), std::abs(r.vx05)) << path_name(p);
+    }
+}
+
+TEST(ReverseSlip, U3dDriverModelForwardMatchesPre57Chain) {
+    // Pre-57 DriverModel longitudinal chain: vx PID -> LongAxController::update(ax, 0, dt).
+    DriverModel::Gains g;
+    g.steer_noise_rms = 0.0;
+    g.thr_noise_rms = 0.0;
+    std::vector<double> px, py;
+    for (int i = -200; i <= 200; ++i) { px.push_back(i); py.push_back(0.0); }
+    for (double v_target : {5.0, 1.0}) {
+        DriverModel d;
+        d.initialize(g);
+        LongVxController vxc;
+        LongVxController::Gains vg;
+        vg.kp = g.vx_kp;
+        vg.ki = g.vx_ki;
+        vxc.initialize(vg);
+        LongAxController axc;
+        axc.initialize({});
+        int mismatch = 0, gear_bad = 0;
+        double vx = 3.0;
+        for (int k = 0; k < 2000; ++k) {
+            const auto dm = d.update(0.0, 0.0, 0.0, vx, v_target, px.data(), py.data(),
+                                     (int)px.size(), kDt);
+            const double ax_tgt = vxc.update(v_target, vx, kDt);
+            const auto [thr, brk] = axc.update(ax_tgt, 0.0, kDt);
+            const double want_thr = brk > 0.0 ? 0.0 : std::clamp(thr, 0.0, 1.0);
+            const double want_brk = brk > 0.0 ? std::clamp(brk, 0.0, 1.0) : 0.0;
+            if (std::memcmp(&dm.throttle, &want_thr, sizeof(double)) != 0 ||
+                std::memcmp(&dm.brake, &want_brk, sizeof(double)) != 0)
+                ++mismatch;
+            if (gear_of(dm) != 1) ++gear_bad;
+            vx += 0.5 * (dm.throttle - dm.brake) * kDt;  // any forward speed path
+        }
+        std::printf("U3d forward v_target=%+.1f ticks=2000 pedal_mismatch=%d gear_not_1=%d\n",
+                    v_target, mismatch, gear_bad);
+        EXPECT_EQ(mismatch, 0) << v_target;
+        EXPECT_EQ(gear_bad, 0) << v_target;
+    }
+}
+
 // ---- U4 -----------------------------------------------------------------------------
 
 TEST(ReverseSlip, U4SideSlideAndReverseSpinFiniteAndFrictionBounded) {
@@ -444,6 +629,212 @@ TEST(ReverseSlip, U5OffEqualsUnsetBitForBit) {
         std::printf("U5 %s off==unset values=%zu t_stop=%.3f sign_changes(unset)=[%d %d %d %d] (info)\n",
                     path_name(p), a.bits.size(), a.t_stop, a.sign_changes[0], a.sign_changes[1],
                     a.sign_changes[2], a.sign_changes[3]);
+    }
+}
+
+// ---- K1 -----------------------------------------------------------------------------
+
+static_assert(kRelaxedSigmaLat == 0.6, "relaxed sigma_y fixed by the 57 gate commit");
+static_assert(kRelaxedSigmaLong == 0.15, "relaxed sigma_x fixed by the 57 gate commit");
+static_assert(kRelaxedVLow == 0.15, "relaxed v_low fixed by the 57 gate commit");
+
+namespace {
+struct K1Run {
+    double tau {0.0}, t_state {-1.0}, t_force {-1.0};
+};
+
+/// First time a monotone-ish record reaches `level` (linear interpolation), -1 if never.
+double first_crossing(const std::vector<double>& t, const std::vector<double>& v, double level) {
+    for (std::size_t k = 1; k < v.size(); ++k) {
+        const bool up = level >= v[0];
+        const bool hit = up ? (v[k] >= level) : (v[k] <= level);
+        if (hit) {
+            const double a = v[k - 1], b = v[k];
+            const double f = (b == a) ? 1.0 : (level - a) / (b - a);
+            return t[k - 1] + f * (t[k] - t[k - 1]);
+        }
+    }
+    return -1.0;
+}
+
+/// lateral = alpha 1 deg step, else kappa 0.02 step. vx signed.
+K1Run run_k1(bool lugre, bool lateral, double vx) {
+    TireParams tp = tire(lugre);
+    tp.belt.enabled = true;
+    tp.belt.sigma_lat = kRelaxedSigmaLat;
+    tp.belt.sigma_long = kRelaxedSigmaLong;
+    const VehicleParams vp = sedan();
+    auto tm = make_tire_model(tp);
+    tm->initialize(tp);
+    ITireModel::ContactInput ci;
+    ci.Fz = vp.mass * 9.81 / 4.0;
+    ci.Vx = vx;
+    ci.Vy = 0.0;
+    ci.R0 = vp.wheel_radius_nominal;
+    ci.omega = vx / ci.R0;
+    ITireModel::Transient tr;
+    const double Re = tm->evaluate(ci, tr).Re;
+    ci.omega = vx / Re;
+    const double sigma = lateral ? kRelaxedSigmaLat : kRelaxedSigmaLong;
+    K1Run out;
+    out.tau = sigma / std::abs(vx);
+    // step
+    if (lateral) ci.Vy = std::abs(vx) * std::tan(kPi / 180.0);
+    else ci.omega = (vx + 0.02 * std::abs(vx)) / Re;
+    const double dt = out.tau / 200.0;
+    std::vector<double> ts {0.0}, st {0.0}, fo;
+    fo.push_back(lateral ? tm->evaluate(ci, tr).Fy : tm->evaluate(ci, tr).Fx);
+    for (int k = 1; k <= 3000; ++k) {  // 15 tau
+        tr = tm->advance_relaxation(ci, tr, dt);
+        if (lugre)
+            for (int j = 0; j < 20; ++j) tr = tm->advance_bristle(ci, tr, dt / 20.0);
+        ts.push_back(k * dt);
+        st.push_back(lugre ? (lateral ? tr.belt_vlat : tr.belt_vlong)
+                           : (lateral ? tr.belt_alpha : tr.belt_kappa));
+        const auto w = tm->evaluate(ci, tr);
+        fo.push_back(lateral ? w.Fy : w.Fx);
+    }
+    const auto ck = tire_contact_kinematics(ci.Vx, ci.Vy, ci.omega, ci.Fz, 0.0, tp, ci.R0);
+    const double target = lugre ? (lateral ? ck.vsy : ck.vsx) : (lateral ? ck.alpha : ck.kappa);
+    const double frac = 1.0 - std::exp(-1.0);
+    out.t_state = first_crossing(ts, st, frac * target);
+    out.t_force = first_crossing(ts, fo, fo[0] + frac * (fo.back() - fo[0]));
+    return out;
+}
+}  // namespace
+
+TEST(ReverseSlipLowSpeed, K1RelaxationTimeConstantTyreAlone) {
+    for (bool lugre : {false, true}) {
+        for (bool lateral : {true, false}) {
+            for (double vx : {5.0, 10.0, -5.0, -10.0}) {
+                const auto r = run_k1(lugre, lateral, vx);
+                const double rel = r.t_state / r.tau - 1.0;
+                std::printf("K1 %s %s vx=%+5.1f tau=%.6f t632_state=%.6f rel=%+.4f %% "
+                            "t632_force=%.6f force_rel=%+.4f %% (info)\n",
+                            lugre ? "LuGre" : "MF   ", lateral ? "alpha" : "kappa", vx, r.tau,
+                            r.t_state, 100.0 * rel, r.t_force, 100.0 * (r.t_force / r.tau - 1.0));
+                EXPECT_GT(r.t_state, 0.0) << lugre << lateral << vx;
+                EXPECT_LE(std::abs(rel), 0.05) << lugre << lateral << vx;
+            }
+        }
+    }
+}
+
+// ---- K2 -----------------------------------------------------------------------------
+
+namespace {
+struct K2Run {
+    bool finite {true};
+    double vx_end {0.0};
+    std::array<int, NUM_WHEELS> fx_changes {{0, 0, 0, 0}}, fy_changes {{0, 0, 0, 0}};
+};
+
+struct SignCount {
+    std::array<int, NUM_WHEELS> last {{0, 0, 0, 0}};
+    void add(int i, double v, std::array<int, NUM_WHEELS>& changes) {
+        const int sg = v > 0.0 ? 1 : (v < 0.0 ? -1 : 0);
+        if (sg == 0) return;
+        if (last[i] != 0 && sg != last[i]) ++changes[i];
+        last[i] = sg;
+    }
+};
+
+/// cond 1 = C1 (decelerate, then a_cmd 0 for 3 s), 3 = C3 (state F, 3 s).
+K2Run run_k2(Path p, const std::string& key, int cond) {
+    const VehicleParams vp = sedan(key);
+    auto s = session(p, vp, tire(true));
+    s->reset_settled(cond == 1 ? start(vp, 5.0, 0.0, 0.0) : start(vp, 0.0, 3.0, 0.0));
+    K2Run out;
+    SignCount cx, cy;
+    int k_sw = (cond == 3) ? -2 : -1;  // C3 has no switch; its last 1 s is (2, 3] s
+    for (int k = 0; k < 20000; ++k) {
+        CmdL5 u;
+        u.ax_target = (cond == 1 && k_sw < 0) ? -1.0 : 0.0;
+        s->set_input(u);
+        s->tick(kDt);
+        const auto o = s->output();
+        out.finite = out.finite && all_finite(o);
+        out.vx_end = o.state.velocity.x();
+        int since;
+        if (cond == 1) {
+            if (k_sw < 0) {
+                if (std::abs(out.vx_end) < 0.1) k_sw = k;
+                continue;
+            }
+            since = k - k_sw;
+        } else {
+            since = k + 1;
+        }
+        if (since > 2000)
+            for (int i = 0; i < NUM_WHEELS; ++i) {
+                cx.add(i, o.tire_forces_wheel[i].x(), out.fx_changes);
+                cy.add(i, o.tire_forces_wheel[i].y(), out.fy_changes);
+            }
+        if (since >= 3000) break;
+    }
+    return out;
+}
+}  // namespace
+
+TEST(ReverseSlipLowSpeed, K2RelaxedNoMoreChatterThanOffAndHolds) {
+    for (Path p : {Path::L2, Path::L5Penalty}) {
+        for (int cond : {1, 3}) {
+            const auto off = run_k2(p, "", cond);
+            const auto rel = run_k2(p, "relaxed", cond);
+            std::printf("K2 %s C%d off Fx_changes=[%d %d %d %d] relaxed Fx_changes=[%d %d %d %d] "
+                        "relaxed vx_end=%+.3e off vx_end=%+.3e finite=%d "
+                        "Fy_changes off=[%d %d %d %d] relaxed=[%d %d %d %d] (Fy info)\n",
+                        path_name(p), cond, off.fx_changes[0], off.fx_changes[1],
+                        off.fx_changes[2], off.fx_changes[3], rel.fx_changes[0],
+                        rel.fx_changes[1], rel.fx_changes[2], rel.fx_changes[3], rel.vx_end,
+                        off.vx_end, (int)rel.finite, off.fy_changes[0], off.fy_changes[1],
+                        off.fy_changes[2], off.fy_changes[3], rel.fy_changes[0],
+                        rel.fy_changes[1], rel.fy_changes[2], rel.fy_changes[3]);
+            EXPECT_TRUE(rel.finite) << path_name(p) << " C" << cond;
+            EXPECT_LT(std::abs(rel.vx_end), 0.01) << path_name(p) << " C" << cond;
+            for (int i = 0; i < NUM_WHEELS; ++i)
+                EXPECT_LE(rel.fx_changes[i], off.fx_changes[i])
+                    << path_name(p) << " C" << cond << " wheel " << i;
+        }
+    }
+}
+
+// ---- K4b ----------------------------------------------------------------------------
+
+namespace {
+double k4b_mean_ay(Path p, const std::string& key, bool& finite) {
+    const VehicleParams vp = sedan(key);
+    auto s = session(p, vp, tire(true));
+    s->reset_settled(start(vp, 10.0, 0.0, 0.0));
+    double sum = 0.0;
+    int n = 0;
+    finite = true;
+    for (int k = 0; k < 150; ++k) {
+        CmdL4 u;
+        u.steer_angle_wheel = (k + 1) * kDt > 0.1 + 1e-12 ? 0.05 : 0.0;
+        s->set_input(u);
+        s->tick(kDt);
+        const auto o = s->output();
+        finite = finite && all_finite(o);
+        const double t = (k + 1) * kDt;
+        if (t > 0.1 + 1e-12 && t <= 0.15 + 1e-12) {
+            sum += std::abs(o.ay);
+            ++n;
+        }
+    }
+    return sum / n;
+}
+}  // namespace
+
+TEST(ReverseSlipLowSpeed, K4bRelaxedKeyDelaysLateralForceOnSession) {
+    for (Path p : {Path::L2, Path::L5Penalty}) {
+        bool fin_off = true, fin_rel = true;
+        const double off = k4b_mean_ay(p, "", fin_off);
+        const double rel = k4b_mean_ay(p, "relaxed", fin_rel);
+        std::printf("K4b %s mean|ay|(0.10,0.15] off=%.6f relaxed=%.6f ratio=%.4f\n", path_name(p),
+                    off, rel, rel / off);
+        EXPECT_TRUE(fin_off && fin_rel) << path_name(p);
+        EXPECT_LT(rel, off) << path_name(p);
     }
 }
 

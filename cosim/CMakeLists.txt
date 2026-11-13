@@ -194,6 +194,15 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 300
         ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
+    # Work order 57 U3c (PROP-2785 (b)): RL pedal action while reversing drives backward
+    # (throttle) or brakes, one L2 env from -3 m/s.
+    add_test(NAME reverse_rl_pedal
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_reverse_rl_pedal.py)
+    set_tests_properties(reverse_rl_pedal PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 300
+        ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
     # L5 hardpoint output, Python side (work order 48c): attach_l5_hardpoints,
     # camber/toe/hardpoints bit-equal to the C++ values, rack_per_rad, trace channels.
     add_test(NAME l5_hardpoints
