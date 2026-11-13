@@ -29,4 +29,9 @@ KnuckleReactionSplit split_knuckle_reaction(double M_pitch, double theta_p,
     return out;
 }
 
+double wheel_reaction_arm(bool strut_path, bool sprung_ref, double Re, double R0,
+                          double penetration) {
+    return (strut_path && !sprung_ref) ? R0 - penetration : Re;
+}
+
 }  // namespace vdsim::detail
