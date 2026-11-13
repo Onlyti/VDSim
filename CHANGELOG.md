@@ -118,6 +118,12 @@ Product toe is `atan2(spin_x, spin_y)` with right-side `s=-1`.
 On the T5 fixture (tie-rod x behind the wheel centre) product-toe + is ISO 8855 steer -.
 VDSim does not flip rear-axle rack sign in code; that correction belongs to the builder.
 
+### Known limitations
+- L5 strut path does not pass the mount-to-wheel-mass couple to the chassis, so part of
+  the angular momentum is lost. The wheel gyro magnitude is exact (V3b). Repair in 0.8.3.
+  The strut skidpad roll-moment gate `L5WheelGyro.V3_SkidpadRollMomentStrut` carries
+  label `known_failure` (reproduce with `ctest -L known_failure`).
+
 ## [0.8.0] - 2026-10-29
 
 ### Changed — BREAKING: the four lift keys now act on L5
