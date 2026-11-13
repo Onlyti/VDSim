@@ -15,6 +15,13 @@
 //           = +1 +-10 %, and |vx(1.5 s)| < |vx(0.5 s)|.
 //       (b) ax_target = -0.5 (reverse acceleration): brake_applied == 0 on every tick,
 //           mean ax over [0.5, 1.5) s < 0.
+// U3a-sym (added 11-14 by PO mail 13399c6a before the B commit; U3a stays as written):
+//     same |vx0| = 3 m/s, |a_cmd| = 1 m/s^2, same window [0.5, 1.5) s, L2 and L5 penalty.
+//     Reverse deceleration (vx0 = -3, ax_target = +1) against forward deceleration
+//     (vx0 = +3, ax_target = -1):
+//       |mean_ax(rev) - (-mean_ax(fwd))| <= 0.02 |mean_ax(fwd)|,
+//     and the reverse run brakes (brake_applied > 0 on some tick) and |vx| falls
+//     (|vx(1.5 s)| < |vx(0.5 s)|).
 // U4  pure side slide / reverse spin: the 11-13 probe states (vx < 0, vx ~ 0 with large
 //     |vy|, vx < 0 with large r) on the generic sedan, CmdL5 ax_target 0, steer 0, 2 s:
 //       - every state / output value finite (no NaN, no Inf) on every tick,
@@ -208,10 +215,10 @@ struct U3Run {
     bool finite {true};
 };
 
-U3Run run_u3(Path p, double a_cmd) {
+U3Run run_u3(Path p, double a_cmd, double vx0 = -3.0) {
     const VehicleParams vp = sedan();
     auto s = session(p, vp, tire(true));
-    s->reset_settled(start(vp, -3.0, 0.0, 0.0));
+    s->reset_settled(start(vp, vx0, 0.0, 0.0));
     U3Run out;
     double sum = 0.0;
     int n = 0;
@@ -244,6 +251,24 @@ TEST(ReverseSlip, U3aReverseDecelerationCommand) {
         EXPECT_TRUE(r.finite) << path_name(p);
         EXPECT_NEAR(r.mean_ax, 1.0, 0.1) << path_name(p);
         EXPECT_LT(std::abs(r.vx15), std::abs(r.vx05)) << path_name(p);
+    }
+}
+
+TEST(ReverseSlip, U3aSymReverseDecelerationMirrorsForward) {
+    for (Path p : {Path::L2, Path::L5Penalty}) {
+        const auto rev = run_u3(p, +1.0, -3.0);
+        const auto fwd = run_u3(p, -1.0, +3.0);
+        const double mirror = -fwd.mean_ax;
+        const double rel = (rev.mean_ax - mirror) / std::abs(fwd.mean_ax);
+        std::printf("U3a-sym %s rev mean_ax=%+.6f fwd mean_ax=%+.6f rel=%+.4f %% "
+                    "rev brake_max=%.6f rev vx(0.5)=%+.6f vx(1.5)=%+.6f fwd brake_max=%.6f
+",
+                    path_name(p), rev.mean_ax, fwd.mean_ax, 100.0 * rel, rev.brake_max,
+                    rev.vx05, rev.vx15, fwd.brake_max);
+        EXPECT_TRUE(rev.finite && fwd.finite) << path_name(p);
+        EXPECT_LE(std::abs(rev.mean_ax - mirror), 0.02 * std::abs(fwd.mean_ax)) << path_name(p);
+        EXPECT_GT(rev.brake_max, 0.0) << path_name(p);
+        EXPECT_LT(std::abs(rev.vx15), std::abs(rev.vx05)) << path_name(p);
     }
 }
 
