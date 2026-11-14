@@ -7,7 +7,8 @@
 // 300 <= k mod 600 < 450, road-wheel steer 0.03 sin(2 pi k / 700) rad.
 // Test modules ("keep" modules): each wraps a built-in default module of the same kind
 // (make_default_*, built from the same vehicle with the same dead time), scales its output
-// (brake torque x0.7, steering rack travel x0.8, drivetrain wheel torque x0.9, suspension
+// (brake torque x0.7, steering rack travel and road-wheel angle x0.8, drivetrain wheel
+// torque x0.9, suspension
 // force x1.1, anti-roll bar forces x1.2) and counts its force calls; reset() counts and
 // rebuilds the wrapped built-in module, so a reset module equals a new one.
 // Cases: L2, L3, L4, L5 x brake, steering, drivetrain; L3, L4 x suspension, anti-roll bar
@@ -139,6 +140,7 @@ public:
         ++c_->calls;
         SteeringOutput o = inner_->apply(ctx);
         o.rack_travel *= 0.8;
+        o.roadwheel_angle *= 0.8;  // the built-in steering sets this one
         return o;
     }
     void begin_step(const SubsystemContext& ctx, double dt) override { inner_->begin_step(ctx, dt); }

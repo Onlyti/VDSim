@@ -112,7 +112,8 @@ def child_single(kind):
     s = session()
     c = Counter()
     s.reset_settled(start())
-    if not getattr(s.dynamics(), setter)(cls(c)):
+    mod = cls(c)  # keep the Python object alive (the model holds the C++ side only)
+    if not getattr(s.dynamics(), setter)(mod):
         print(f"R3 {kind} not accepted")
         return 8
     run(s, 50)
@@ -133,8 +134,9 @@ def child_vec():
     vs = vdsim.make_vec_session(4, vp, tp, level="L2", nominal_dt=DT, threads=4)
     vs.reset_all([start() for _ in range(4)])
     cs = [Counter() for _ in range(4)]
+    mods = [PyKeepBrake(c) for c in cs]  # kept alive for the whole case
     for i in range(4):
-        vs.at(i).dynamics().set_brake_module(PyKeepBrake(cs[i]))
+        vs.at(i).dynamics().set_brake_module(mods[i])
     vs.set_input_all(cmd())
     vs.tick(DT, 10)
     vs.reset_all([start() for _ in range(4)])
@@ -154,7 +156,8 @@ def child_reset_raises():
     s = session()
     c = Counter()
     s.reset_settled(start())
-    s.dynamics().set_brake_module(PyKeepBrake(c, raise_on_reset=True))
+    mod = PyKeepBrake(c, raise_on_reset=True)  # kept alive for the whole case
+    s.dynamics().set_brake_module(mod)
     run(s, 4)
     s.reset_settled(start())
     msg, code = "", 1
