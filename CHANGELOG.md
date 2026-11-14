@@ -73,10 +73,6 @@ after the v0.8.2 tag.
   sample's body-x speed without ride states; with a non-zero slope they are not
   the applied load.
 - The L5 settle run costs about 0.1 s of wall clock per reset (example car).
-- Python brake / steering / drivetrain / suspension / anti-roll bar modules: keep a
-  reference to the module object while it is attached. The model holds the C++ side
-  only (the aero module is the exception); once the Python object is collected the
-  next call faults with "Tried to call pure virtual function".
 
 ## [Unreleased]
 

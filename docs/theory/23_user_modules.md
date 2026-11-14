@@ -75,8 +75,8 @@ resets (0.9.0, work order 51c): only built-in modules are rebuilt, so attaching 
 enough and attaching again after a reset still works. On L5 the aero settle run inside a
 reset uses the built-in brake / steering / drivetrain; your module is not called during
 it. A `reset()` that raises refuses the next tick with the module named (the process
-keeps running). In Python keep a reference to the module object while it is attached:
-the model holds the C++ side only (the aero module is the exception).
+keeps running). In Python the model holds the module object while it is attached, so
+`dyn.set_brake_module(MyBrake())` without a variable is fine.
 
 ## 4. Sign convention
 
