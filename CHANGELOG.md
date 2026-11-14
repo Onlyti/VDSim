@@ -17,6 +17,11 @@ All notable changes to VDSim are documented here. Format follows
   with slanted edges a point could be classed inside when outside and the other
   way round (mu wrong by the full patch step). Present since 0.7.0. Axis-aligned
   rectangles and `friction_map` x bands were not affected.
+- Test `closedloop_wallclock` (S8, threads joined after a mode C run): the check
+  compares the sets of Python thread ids, kernel thread ids and child PIDs created
+  by the run instead of their counts, so a thread that existed before the run and
+  ended meanwhile no longer fails it intermittently. Test definition only; no
+  behaviour change.
 
 ### Added
 - `VDSimPlant(blend_distance=1.0)`: friction blend width [m] shared by
