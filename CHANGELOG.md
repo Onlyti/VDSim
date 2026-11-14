@@ -93,6 +93,20 @@ one level-id factory, L5 from Python). Not released yet.
   `carla_integration/python/vdsim_carla_bridge.py`,
   `docs/figures_src/plot_theory_figures.py`.
 
+## [0.8.3]
+
+### Fixed
+- Polygon friction (`friction_map_2d`, `create_polygon_friction_ground`): the
+  inside test clipped the edge denominator to a positive floor, so on polygons
+  with slanted edges a point could be classed inside when outside and the other
+  way round (mu wrong by the full patch step). Present since 0.7.0. Axis-aligned
+  rectangles and `friction_map` x bands were not affected.
+
+### Added
+- `VDSimPlant(blend_distance=1.0)`: friction blend width [m] shared by
+  `friction_map` x bands and `friction_map_2d` polygons. Default unchanged; 0 gives
+  a step edge; negative or non-finite raises `ValueError`.
+
 ## [0.8.2]
 
 ### Changed — BREAKING: `cg_height` is the whole-vehicle CG on the L5 strut / DAE path
