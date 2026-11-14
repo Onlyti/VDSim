@@ -1,0 +1,4 @@
+scenario,L1 vx(T),L2 vx(T),delta vx %,L1 r_peak,L2 r_peak
+step_steer,9.7277,9.73431,0.06795028629583794,0.184407,0.184318
+double_lane_change,14.286,14.3049,0.13229735405292148,0.332189,0.331831
+throttle_brake_sequence,0.0234066,0.00953153,,0.0,0.000601326

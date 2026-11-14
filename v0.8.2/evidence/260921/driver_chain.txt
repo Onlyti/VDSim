@@ -1,0 +1,99 @@
+== phase1 build run 35547994686  2026-09-21T09:33:18+09:00
+clang-14 / Debug	success
+gcc-11 / Release	success
+validation preset / currency gate	success
+clang-14 / Release	success
+gcc-11 / Debug	success
+      1 UNKNOWN STEP	2026-09-21T00:32:33.9283337Z Using cmake version 3.31.10
+      1 UNKNOWN STEP	2026-09-21T00:32:34.4595482Z Using cmake version 3.31.10
+      1 UNKNOWN STEP	2026-09-21T00:32:34.4914343Z Using cmake version 3.31.10
+      1 UNKNOWN STEP	2026-09-21T00:32:35.1821429Z Using cmake version 3.31.10
+      1 UNKNOWN STEP	2026-09-21T00:32:49.0311568Z Using cmake version 3.31.10
+      1 UNKNOWN STEP	2026-09-21T00:36:07.5177135Z Total Tests: 492
+      1 UNKNOWN STEP	2026-09-21T00:37:50.6072288Z 100% tests passed, 0 tests failed out of 492
+      1 UNKNOWN STEP	2026-09-21T00:37:53.0331620Z 100% tests passed, 0 tests failed out of 492
+      1 UNKNOWN STEP	2026-09-21T00:38:09.2358733Z 100% tests passed, 0 tests failed out of 492
+      1 UNKNOWN STEP	2026-09-21T00:50:22.3379371Z 100% tests passed, 0 tests failed out of 492
+      1 UNKNOWN STEP	2026-09-21T00:51:32.0524452Z 100% tests passed, 0 tests failed out of 492
+== build conclusion=success
+== phase2 merge PR #8  2026-09-21T09:52:31+09:00
+== main head after merge: 3bf4e6fe8c3daf12ff0dabe95338e9a3688c5d1d
+pr8 state=MERGED merge=3bf4e6fe8c3daf12ff0dabe95338e9a3688c5d1d
+== phase3 dispatch wheels on main  2026-09-21T09:52:44+09:00
+https://github.com/Onlyti/VDSim/actions/runs/35549072933
+== wheels run id: 35549072933 (head 3bf4e6fe8c3daf12ff0dabe95338e9a3688c5d1d)
+wheels windows-latest	success
+sdist	success
+wheels ubuntu-latest	success
+verify	success
+publish	skipped
+== wheels conclusion=success
+== smoke evidence in main-head wheels run:
+      1 Run pypa/cibuildwheel@v2.21	2026-09-21T00:55:34.6951255Z all 13 shipped modules import from the installed wheel
+      1 Run pypa/cibuildwheel@v2.21	2026-09-21T00:56:34.7338294Z all 13 shipped modules import from the installed wheel
+      1 Run pypa/cibuildwheel@v2.21	2026-09-21T00:57:35.1030940Z all 13 shipped modules import from the installed wheel
+      1 Run pypa/cibuildwheel@v2.21	2026-09-21T00:59:13.6531974Z all 13 shipped modules import from the installed wheel
+      1 Run pypa/cibuildwheel@v2.21	2026-09-21T01:00:48.3961981Z all 13 shipped modules import from the installed wheel
+      1 Run pypa/cibuildwheel@v2.21	2026-09-21T01:01:35.2725012Z all 13 shipped modules import from the installed wheel
+      1 Run pypa/cibuildwheel@v2.21	2026-09-21T01:02:02.2784366Z all 13 shipped modules import from the installed wheel
+      1 Run pypa/cibuildwheel@v2.21	2026-09-21T01:03:16.6936761Z all 13 shipped modules import from the installed wheel
+      1 Run pypa/cibuildwheel@v2.21	2026-09-21T01:03:50.5816421Z all 13 shipped modules import from the installed wheel
+Run pypa/cibuildwheel@v2.21	2026-09-21T00:55:34.6936229Z modules to import (13): vdsim, vdsim_lab, vdsim_plant, vdsim_trace, vdsim_render, vdsim_render3d, vdsim_preset, protocol, opendrive, rd5_route, quickstart, catalog, vdsim_rl
+Run pypa/cibuildwheel@v2.21	2026-09-21T00:56:34.7320878Z modules to import (13): vdsim, vdsim_lab, vdsim_plant, vdsim_trace, vdsim_render, vdsim_render3d, vdsim_preset, protocol, opendrive, rd5_route, quickstart, catalog, vdsim_rl
+Run pypa/cibuildwheel@v2.21	2026-09-21T00:57:35.1017200Z modules to import (13): vdsim, vdsim_lab, vdsim_plant, vdsim_trace, vdsim_render, vdsim_render3d, vdsim_preset, protocol, opendrive, rd5_route, quickstart, catalog, vdsim_rl
+== phase4 C-2 linux  2026-09-21T10:04:40+09:00
+vdsim-0.7.0.dev134-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+vdsim-0.7.0.dev134-cp310-cp310-musllinux_1_2_x86_64.whl
+vdsim-0.7.0.dev134-cp310-cp310-win_amd64.whl
+vdsim-0.7.0.dev134-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+vdsim-0.7.0.dev134-cp311-cp311-musllinux_1_2_x86_64.whl
+vdsim-0.7.0.dev134-cp311-cp311-win_amd64.whl
+vdsim-0.7.0.dev134-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+vdsim-0.7.0.dev134-cp312-cp312-musllinux_1_2_x86_64.whl
+vdsim-0.7.0.dev134-cp312-cp312-win_amd64.whl
+wheel: vdsim-0.7.0.dev134-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+   vdsim_preset.py True
+   vdsim_render.py True
+   vdsim_render3d.py True
+   vdsim_plant.py True
+   quickstart.py True
+== wheel: vdsim-0.7.0.dev134-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+Python 3.11.16
+== source tree check
+cwd /work
+argv0-parent-tree []
+== install
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+== installed:
+Name: vdsim
+Version: 0.7.0.dev134
+Summary: VDSim — open-core vehicle-dynamics simulator (validated L1–L3 dynamics, Pacejka MF, hardpoint kinematics, FMI 2.0)
+Home-page: 
+ERROR: Pipe to stdout was broken
+Exception ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>
+BrokenPipeError: [Errno 32] Broken pipe
+== import smoke
+vdsim /usr/local/lib/python3.11/site-packages/vdsim.cpython-311-x86_64-linux-gnu.so
+vdsim_lab /usr/local/lib/python3.11/site-packages/vdsim_lab.py
+vdsim_plant /usr/local/lib/python3.11/site-packages/vdsim_plant.py
+== 06 quickstart (console entry point, cwd=/work)
+1601 steps, t=8.0s | vx 12.2..24.7 | |ay|max 0.00 | |r|max 0.000
+wrote run.csv run.png
+-rw-r--r-- 1 root root 275302 Sep 21 01:06 /work/run.csv
+-rw-r--r-- 1 root root  45041 Sep 21 01:06 /work/run.png
+quickstart csv rows 1602 cols 30
+== 07 demo (script copied outside any source tree)
+recorded /work/demo/demo.vdtrace (peak slip/peak-slip ratio 16.44)
+wrote /work/demo/demo_grip_loss.gif (120 frames, 12.0 fps) + demo_grip_loss_preview.png in 16.04s wall-clock
+total 2432
+drwxr-xr-x 2 root root    4096 Sep 21 01:06 .
+drwxr-xr-x 3 root root    4096 Sep 21 01:06 ..
+-rw-r--r-- 1 root root   39718 Sep 21 01:06 demo.vdtrace
+-rw-r--r-- 1 root root 2352713 Sep 21 01:06 demo_grip_loss.gif
+-rw-r--r-- 1 root root    4310 Sep 21 01:06 demo_grip_loss.py
+-rw-r--r-- 1 root root   75131 Sep 21 01:06 demo_grip_loss_preview.png
+gif bytes 2352713
+trace bytes 39718 members 14
+== C2 LINUX OK
+c2_linux_rc=0
+== DONE
