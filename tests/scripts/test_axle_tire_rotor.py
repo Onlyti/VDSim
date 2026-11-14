@@ -276,6 +276,13 @@ def rotor_keys():
             ("powertrain v2 inertia", pt + "rotor_inertia: 0.25\n"),
             ("powertrain v2 ratio", pt + "rotor_ratio: 5.0\n")):
         check(raises(ValueError, lambda t=text: vp_text(BASE + t)), f"R-py ValueError {label}")
+    # PO condition (mail c8103d86): range checks only for the rotor_* names.
+    for label, text in (("final_drive_ratio zero", "final_drive_ratio: 0.0\n"),
+                        ("final_drive_ratio negative", "final_drive_ratio: -5.0\n"),
+                        ("engine_rotational_inertia negative",
+                         "engine_rotational_inertia: -0.1\n")):
+        check(not raises(Exception, lambda t=text: vp_text(BASE + t)),
+              f"R-py existing name keeps no range check: {label}")
     check(not raises(Exception, lambda: vp_text(BASE + pt + "rotor_axis: \"+x\"\n")),
           "R-py powertrain v2 with rotor_axis accepted")
     bad = vdsim.VehicleParams()

@@ -7,7 +7,10 @@
 //         std::invalid_argument; equal values are accepted.
 //       * to_yaml keeps the names the input used; with neither alias written it writes
 //         no rotor_* key (the existing keys stay as before).
-//       * rotor_ratio <= 0 and rotor_inertia < 0 throw.
+//       * rotor_ratio <= 0 and rotor_inertia < 0 throw. The range check applies to the
+//         rotor_* names only: final_drive_ratio and engine_rotational_inertia keep their
+//         present behaviour (no range check), so existing YAML is unchanged (T1; PO
+//         condition, mail c8103d86).
 //       * powertrain v2 (a `powertrain:` map) together with rotor_inertia or rotor_ratio
 //         throws; rotor_axis alone is accepted there.
 //   - rotor_axis: none | +x | -x | +y | -y (body axes, x forward, y left). Anything else
@@ -229,6 +232,20 @@ TEST(RotorKeys, InvalidValuesThrow) {
     EXPECT_THROW(from_text("rk_ineg.yaml", base_text() + "rotor_inertia: -0.1\n"),
                  std::invalid_argument);
     EXPECT_NO_THROW(from_text("rk_i0.yaml", base_text() + "rotor_inertia: 0.0\n"));
+}
+
+// PO condition (mail c8103d86): the existing names get no new range check.
+TEST(RotorKeys, ExistingNamesKeepNoRangeCheck) {
+    for (const char* t : {"final_drive_ratio: 0.0\n", "final_drive_ratio: -5.0\n",
+                          "engine_rotational_inertia: -0.1\n"})
+        EXPECT_NO_THROW(from_text("rk_legacy_range.yaml", base_text() + t)) << t;
+    VehicleParams vp;
+    vp.final_drive_ratio = 0.0;
+    vp.engine_rotational_inertia = -0.1;
+    for (const char* lvl : {"L1", "L2", "L3", "L4"})
+        EXPECT_NO_THROW(session(lvl, vp)) << lvl;
+    EXPECT_NO_THROW(session("L5", vp, false));
+    EXPECT_NO_THROW(session("L5", vp, true));
 }
 
 TEST(RotorKeys, PowertrainV2RejectsInertiaAndRatio) {
