@@ -148,8 +148,12 @@ bool point_in_polygon(double px, double py,
     for (std::size_t i = 0, j = n - 1; i < n; j = i++) {
         const double xi = poly[i].first,  yi = poly[i].second;
         const double xj = poly[j].first,  yj = poly[j].second;
+        // The straddle test (yi > py) != (yj > py) already rejects horizontal
+        // edges, so yj - yi is nonzero here and keeps its sign. Clipping it to a
+        // positive floor made every edge whose y falls along the vertex order
+        // cross at +/- infinity, i.e. counted or skipped regardless of px.
         const bool intersect = ((yi > py) != (yj > py))
-            && (px < (xj - xi) * (py - yi) / std::max(1e-12, yj - yi) + xi);
+            && (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
         if (intersect) inside = !inside;
     }
     return inside;
