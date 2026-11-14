@@ -44,7 +44,8 @@ add_executable(vdsim_integration_tests
 
 target_include_directories(vdsim_integration_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../../cosim
-    ${CMAKE_CURRENT_SOURCE_DIR}/../support)
+    ${CMAKE_CURRENT_SOURCE_DIR}/../support
+    ${CMAKE_SOURCE_DIR}/core/src)   # internal L5 hooks (work order 52)
 
 target_compile_definitions(vdsim_integration_tests PRIVATE
     VDSIM_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
@@ -77,7 +78,8 @@ target_link_libraries(vdsim_l5_ref_dump PRIVATE vdsim::core)
 # the 0.8.2 verdict (PROP-2741 option 2); the couple repair is planned for 0.8.3.
 add_executable(vdsim_known_failure_tests test_l5_hardpoint_output.cpp test_l5_wheel_gyro.cpp)
 target_include_directories(vdsim_known_failure_tests PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../support)
+    ${CMAKE_CURRENT_SOURCE_DIR}/../support
+    ${CMAKE_SOURCE_DIR}/core/src)   # internal L5 hooks (work order 52)
 target_compile_definitions(vdsim_known_failure_tests PRIVATE
     VDSIM_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
     VDSIM_KNOWN_FAILURE_TESTS)

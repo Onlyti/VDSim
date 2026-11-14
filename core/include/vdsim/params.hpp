@@ -115,6 +115,15 @@ struct VehicleParams {
     // (spin axis tilted by steer + DAE toe), "full" = legacy + DAE camber tilt,
     // "off" = no term. L1-L4 read it and ignore it (one warning per process).
     std::string wheel_gyro;
+    // Rotor (work order 52). rotor_inertia / rotor_ratio are YAML and Python aliases of
+    // engine_rotational_inertia / final_drive_ratio (same storage); the two flags only
+    // record that the alias name was written, so to_yaml keeps that name.
+    // rotor_axis: none | +x | -x | +y | -y (body axes, x forward, y left); empty = none.
+    // L5 adds the rotor gyroscopic moment -omega x H_r, H_r = I_r * G * omega_c * e_axis
+    // (omega_c = driven-axle carrier speed); L1-L4 read the axis and ignore it.
+    std::string rotor_axis;
+    bool rotor_inertia_named {false};
+    bool rotor_ratio_named {false};
     // Tie-rod rack travel per road-wheel rad [m/rad] on the hardpoint paths (L4 native
     // kinematics, L5 corner model) when the command is a road-wheel angle. Must be > 0.
     double rack_per_rad {0.08};
@@ -216,6 +225,21 @@ WheelGyro wheel_gyro_mode(const VehicleParams& vp);
  * @throws std::invalid_argument for an unknown value.
  */
 void warn_if_wheel_gyro_unused(const VehicleParams& vp);
+
+/**
+ * @brief Body-axis unit vector of VehicleParams::rotor_axis (work order 52).
+ * @param vp Vehicle parameters.
+ * @return Zero for empty or "none"; +-e_x for "+x" / "-x"; +-e_y for "+y" / "-y".
+ * @throws std::invalid_argument for any other string.
+ */
+Vec3 rotor_axis_vector(const VehicleParams& vp);
+
+/**
+ * @brief L1-L4: validate rotor_axis and warn once per process for an axis other than none.
+ * @param vp Vehicle parameters.
+ * @throws std::invalid_argument for an unknown value.
+ */
+void warn_if_rotor_axis_unused(const VehicleParams& vp);
 
 /**
  * @brief Reject unknown cg_height_ref strings.
