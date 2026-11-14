@@ -42,6 +42,18 @@ after the v0.8.2 tag.
 - L3/L4 hand their ride states to the inner planar aero each step, so every RK
   stage and the reported tyre `Fz` see the same ride slopes as the L3 tyre-load
   path. No effect without a non-zero slope.
+- User modules stay attached across `reset()`, `reset_settled()`, `restore()` and
+  the randomized reset (work order 51c): brake / steering / drivetrain on L2–L5 and
+  suspension / anti-roll bar on L3/L4 installed with `set_*_module()` are kept and
+  their `reset()` is called. Before, L2–L5 rebuilt the built-in brake / steering /
+  drivetrain on every reset, so an RL episode reset dropped a user module without a
+  warning, and L3/L4 never called the suspension / anti-roll bar `reset()`. Built-in
+  modules are rebuilt as before, so a model without user modules runs bit for bit as
+  before. On L5 the aero settle run inside a reset uses the built-in actuators and
+  the user modules come back after it.
+- A user module `reset()` that throws no longer ends the process: the next `tick()`
+  raises `std::invalid_argument` / `ValueError` naming the module and
+  `exception in reset()`, until the next `reset()` / `restore()`.
 
 ### Rejected (`std::invalid_argument` / `ValueError`)
 - An element with one or two of the three slope keys; a non-finite slope key.
@@ -61,6 +73,10 @@ after the v0.8.2 tag.
   sample's body-x speed without ride states; with a non-zero slope they are not
   the applied load.
 - The L5 settle run costs about 0.1 s of wall clock per reset (example car).
+- Python brake / steering / drivetrain / suspension / anti-roll bar modules: keep a
+  reference to the module object while it is attached. The model holds the C++ side
+  only (the aero module is the exception); once the Python object is collected the
+  next call faults with "Tried to call pure virtual function".
 
 ## [Unreleased]
 
