@@ -25,6 +25,12 @@ All notable changes to VDSim are documented here. Format follows
   unchanged. L1–L4 read `rotor_axis` and ignore it (one warning per process); the
   reflected spin inertia applies on every level as before.
 
+### Changed
+- L3 and L4 `tire(wheel)` (C++ `IVehicleDynamics::tire`, Python `.tire()`) now
+  return the live tyre model of their inner planar core (per-axle `TireSetup`
+  included). Earlier releases returned `nullptr` / `None` on these levels.
+  Simulation results are unchanged.
+
 ### Rejected (`std::invalid_argument` / `ValueError`)
 - `rotor_inertia` < 0, `rotor_ratio` ≤ 0, an unknown `rotor_axis`.
 - `rotor_inertia` together with `engine_rotational_inertia` (or `rotor_ratio`
