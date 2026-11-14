@@ -293,8 +293,7 @@ void p1(int fixture, double v0) {
  */
 void k3(int fixture, double v0) {
     const Pitch p = coast(fixture, v0, {}, "relaxed");
-    std::printf("K3 relaxed %s v0=%.0f q_rms=%.17g rad/s growth=%.17g
-", name(fixture), v0,
+    std::printf("K3 relaxed %s v0=%.0f q_rms=%.17g rad/s growth=%.17g\n", name(fixture), v0,
                 p.q_rms, p.growth);
     EXPECT_LE(p.q_rms, 1e-3) << "K3 relaxed " << name(fixture) << " v0 " << v0;
     EXPECT_LT(p.growth, 0.5) << "K3 relaxed " << name(fixture) << " v0 " << v0;
