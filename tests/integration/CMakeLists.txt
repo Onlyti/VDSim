@@ -38,6 +38,7 @@ add_executable(vdsim_integration_tests
     test_contact_frame_dynamics.cpp
     test_d2_grade_bank.cpp
     test_module_fault.cpp
+    test_module_reset_keep.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../cosim/scene_loader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../cosim/world_scenario.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../parity/test_chrono_pac02_parity.cpp
