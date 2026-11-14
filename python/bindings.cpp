@@ -849,7 +849,7 @@ PYBIND11_MODULE(vdsim, m) {
               // than return a Jacobian nobody has validated.
               if (level == "L5")
                   throw std::invalid_argument(
-                      "L5 linearization is not supported in 0.8.1 (the planar "
+                      "L5 linearization is not supported yet (the planar "
                       "[X,Y,psi,vx,vy,r] map is not validated on the free-3D state)");
               auto dyn = vdsim::create_dynamics_for_level(level);
               vdsim::SolverParams sp;
@@ -1703,7 +1703,7 @@ PYBIND11_MODULE(vdsim, m) {
               // resolution, reset); refuse it until a work order opens it.
               if (level == "L5")
                   throw std::invalid_argument(
-                      "L5 is not supported in VecSession in 0.8.1");
+                      "L5 is not supported in VecSession yet");
               std::vector<std::unique_ptr<vdsim::SimSession>> v;
               v.reserve(static_cast<std::size_t>(num_envs));
               for (int i = 0; i < num_envs; ++i)

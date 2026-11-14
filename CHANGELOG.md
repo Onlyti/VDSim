@@ -4,6 +4,30 @@ All notable changes to VDSim are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow
 [SemVer](https://semver.org/).
 
+## [0.8.3]
+
+### Changed
+- The L5 refusal messages of `linearize` and `make_vec_session` no longer name a
+  release: "L5 linearization is not supported yet (...)" and "L5 is not supported
+  in VecSession yet". Both still raise `ValueError`.
+
+### Fixed
+- Polygon friction (`friction_map_2d`, `create_polygon_friction_ground`): the
+  inside test clipped the edge denominator to a positive floor, so on polygons
+  with slanted edges a point could be classed inside when outside and the other
+  way round (mu wrong by the full patch step). Present since 0.7.0. Axis-aligned
+  rectangles and `friction_map` x bands were not affected.
+- Test `closedloop_wallclock` (S8, threads joined after a mode C run): the check
+  compares the sets of Python thread ids, kernel thread ids and child PIDs created
+  by the run instead of their counts, so a thread that existed before the run and
+  ended meanwhile no longer fails it intermittently. Test definition only; no
+  behaviour change.
+
+### Added
+- `VDSimPlant(blend_distance=1.0)`: friction blend width [m] shared by
+  `friction_map` x bands and `friction_map_2d` polygons. Default unchanged; 0 gives
+  a step edge; negative or non-finite raises `ValueError`.
+
 ## [0.8.2] - 2026-11-14
 
 ### Changed — BREAKING: `cg_height` is the whole-vehicle CG on the L5 strut / DAE path
