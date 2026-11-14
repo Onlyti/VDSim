@@ -42,9 +42,14 @@
 //                Newton, as the work order 50 V3b budget). x_m uses the body origin height
 //                the core uses (h_s above).
 //        E = sum (x_u,i - G) x F_t,i
-//        L = sum (x_m,i - x_u,i) x (F_t,i - m_u a_u,i - m_u g e_z)
-//            (moment of the strut connection pair: force on the particle at x_u, its
-//             reaction on the body at the mount; g = 9.80665)
+//        L = sum (r_arm,i - x_u,i) x (F_t,i - m_u a_u,i - m_u g e_z): the part of the
+//            strut connection couple the core does not pass to the chassis (g = 9.80665).
+//            r_arm,i is the chassis torque arm of the core (work order 57 C): the mount
+//            x_m,i under cg_height_ref: sprung, the wheel particle x_u,i otherwise, so
+//            L == 0 with the vehicle key. 49a wrote L with the mount arm, the core arm on
+//            every strut run before 57 C; after 57 C that form counts the couple twice
+//            (same correction as the work order 50 V3b budget, PO verdict on 57 C
+//            condition 6). Gate, window, S and the preconditions are unchanged.
 //        T = (x_b - G) x m_b a_b + sum (x_u,i - G) x m_u a_u,i
 //        B = omega_w x (R_wb I_b omega_b)
 //        W = -Gw,  Gw = r_b sum I_w,i omega_w,i s_y,i  (wheel spin precession, as V3:
@@ -328,6 +333,8 @@ Budget skidpad(int fixture, const detail::JackingPairProbe& probe = {},
     VehicleParams vp = sedan();
     vp.ackerman_percent = 0.0;
     auto s = make(vp, fixture, kV, probe);
+    // L arm: the chassis torque arm of the core strut branch (57 C).
+    const bool mount_arm = cg_height_ref_is_sprung(vp);
 
     const double R_w = vp.wheel_radius_nominal;
     std::array<double, NUM_WHEELS> I_w {}, m_u {};
@@ -390,7 +397,8 @@ Budget skidpad(int fixture, const detail::JackingPairProbe& probe = {},
                 const Vec3 F_c = Rm * o.tire_forces[i];   // strut path: connection force
                 const Vec3 F_t = F_c + m_u[i] * a_u + W_u;  // tyre force (particle Newton)
                 E += (x_u - G).cross(F_t);
-                L += (x_m - x_u).cross(F_t - m_u[i] * a_u - W_u);
+                const Vec3 r_arm = mount_arm ? x_m : x_u;
+                L += (r_arm - x_u).cross(F_t - m_u[i] * a_u - W_u);
                 T += (x_u - G).cross(m_u[i] * a_u);
                 const double d = i < 2 ? steer : 0.0;
                 H_y += I_w[i] * st.wheel_spin[i] / std::sqrt(1.0 + d * d);
