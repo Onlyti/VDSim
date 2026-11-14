@@ -16,6 +16,10 @@
 //      Gate: q_rms <= 1e-3 rad/s and growth < 0.5, all four cases.
 //      Same windows as the diagnosis analysis script (analyze3.py, sha256 4c9a1a108ce24ef8),
 //      written here with integer tick indices.
+// K3 (work order 57 K3, gate commit after the 49a main merge, before the measurement):
+//      the P1 probe and gate unchanged (same fixtures, speeds, windows, q_rms <= 1e-3
+//      rad/s, growth < 0.5) with VehicleParams::tire_low_speed = "relaxed". The relaxed
+//      coefficients are not tuned on a miss (PROP-2784 option 2, work order 57 7.4).
 // P2': the same probe at v0 10 m/s, both fixtures (gate changed by user decision PROP-2782,
 //      replacing P2 after the measurement; PO mail c337f6ec). Over the P1 window ticks
 //      k = 4999..9998 (t in [5, 10) s), fit q_k = a + b (k - 4999) by least squares and take
@@ -242,10 +246,13 @@ double detrended_rms(const std::vector<double>& q, int k0, int k1) {
  * @param fixture 0 = antidive, 1 = sports
  * @param v0      initial speed [m/s]
  * @param probe   optional P10b connection-pair probe
+ * @param low_speed optional VehicleParams::tire_low_speed (K3: "relaxed")
  * @return q_rms (t in [5,10) s), growth ([8,10) / [2,4) s) and the P2' detrended RMS
  */
-Pitch coast(int fixture, double v0, const detail::JackingPairProbe& probe = {}) {
-    const VehicleParams vp = sedan();
+Pitch coast(int fixture, double v0, const detail::JackingPairProbe& probe = {},
+            const char* low_speed = nullptr) {
+    VehicleParams vp = sedan();
+    if (low_speed) vp.tire_low_speed = low_speed;
     auto s = make(vp, fixture, v0, probe);
     std::vector<double> q(10000, 0.0);
     const CmdL4 u;
@@ -272,6 +279,20 @@ void p1(int fixture, double v0) {
     const Pitch p = coast(fixture, v0);
     EXPECT_LE(p.q_rms, 1e-3) << name(fixture) << " v0 " << v0;
     EXPECT_LT(p.growth, 0.5) << name(fixture) << " v0 " << v0;
+}
+
+/**
+ * @brief K3 gate: the P1 gate with tire_low_speed relaxed.
+ * @param fixture 0 = antidive, 1 = sports
+ * @param v0      initial speed [m/s]
+ */
+void k3(int fixture, double v0) {
+    const Pitch p = coast(fixture, v0, {}, "relaxed");
+    std::printf("K3 relaxed %s v0=%.0f q_rms=%.17g rad/s growth=%.17g
+", name(fixture), v0,
+                p.q_rms, p.growth);
+    EXPECT_LE(p.q_rms, 1e-3) << "K3 relaxed " << name(fixture) << " v0 " << v0;
+    EXPECT_LT(p.growth, 0.5) << "K3 relaxed " << name(fixture) << " v0 " << v0;
 }
 
 /**
@@ -569,6 +590,10 @@ TEST(L5DaePitch, P1_Antidive25) { p1(0, 25.0); }
 TEST(L5DaePitch, P1_Antidive35) { p1(0, 35.0); }
 TEST(L5DaePitch, P1_Sports25) { p1(1, 25.0); }
 TEST(L5DaePitch, P1_Sports35) { p1(1, 35.0); }
+TEST(L5DaePitch, K3_RelaxedAntidive25) { k3(0, 25.0); }
+TEST(L5DaePitch, K3_RelaxedAntidive35) { k3(0, 35.0); }
+TEST(L5DaePitch, K3_RelaxedSports25) { k3(1, 25.0); }
+TEST(L5DaePitch, K3_RelaxedSports35) { k3(1, 35.0); }
 TEST(L5DaePitch, P2prime_Antidive10NotWorse) { p2prime(0); }
 TEST(L5DaePitch, P2prime_Sports10NotWorse) { p2prime(1); }
 TEST(L5DaePitch, P10_AntidiveSkidpadRollBudget) { p10(0); }
