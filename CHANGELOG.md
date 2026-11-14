@@ -6,6 +6,11 @@ All notable changes to VDSim are documented here. Format follows
 
 ## [0.8.3]
 
+### Changed
+- The L5 refusal messages of `linearize` and `make_vec_session` no longer name a
+  release: "L5 linearization is not supported yet (...)" and "L5 is not supported
+  in VecSession yet". Both still raise `ValueError`.
+
 ### Fixed
 - Polygon friction (`friction_map_2d`, `create_polygon_friction_ground`): the
   inside test clipped the edge denominator to a positive floor, so on polygons
