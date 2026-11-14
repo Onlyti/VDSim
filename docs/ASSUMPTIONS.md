@@ -38,11 +38,11 @@ Legend: **yes** = modeled, **no** = not modeled, text = modeled with the stated 
       brake defaults to `unsprung`.
     - `unsprung` currently resolves to the equivalent chassis route. An explicit
       `unsprung` target on a hard-joint DAE path warns once per process and produces the
-      bit-identical sprung result. The DAE knuckle route and its steady-speed pitch issue
-      remain 0.8.2 work.
-    - Spatial-strut load transfer uses a whole-system height derived from `cg_height`,
-      which still denotes sprung-mass height. Its axle transfer is about 1–3% above the
-      analytical target; the `cg_height` meaning and R2 revalidation remain 0.8.2 work.
+      bit-identical sprung result. The DAE knuckle route moves to 0.9.0; the DAE
+      steady-speed pitch oscillation is fixed in 0.8.2 (contact-patch jacking slope).
+    - Since 0.8.2 `cg_height` is the whole-vehicle CG height on the spatial-strut and DAE
+      paths as well (`cg_height_ref: sprung` keeps the 0.8.1 sprung-mass meaning), and
+      the strut-path axle load transfer passes the ±2 % R2 gate.
 
 !!! note "Ld4 is not a separate plant without hardpoints"
     Selecting level `L4` without attaching suspension hardpoints is rejected at session

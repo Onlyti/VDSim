@@ -15,7 +15,8 @@ Detail specs: `docs/design/*`; tire phases in [`design/TIRE_ROADMAP.md`](design/
     - **Thesis-only** — on `VDSim-Thesis`; not merged to `main` yet
 
 **Velocity (recent):** v0.6 L5 MBD → **v0.7.0 first PyPI release** (generic default
-vehicle) → **v0.8.0 aero elements** (per-element aero, `air_density`, L5 downforce).
+vehicle) → **v0.8.0 aero elements** (per-element aero, `air_density`, L5 downforce) →
+**v0.8.1 L5 reactions** → **v0.8.2 L5 strut path and hardpoint output**.
 
 ---
 
@@ -63,6 +64,8 @@ timeline
         First PyPI release + generic default vehicle : 2026-10-28
     section v0.8
         Aero elements + air density + L5 downforce : 2026-10-29
+        L5 drive and brake reactions + level ids : 2026-11-01
+        L5 strut CG meaning + DAE pitch fix + hardpoint output : 2026-11-14
 ```
 
 ## Next
@@ -72,9 +75,9 @@ for a date.
 
 | Version | Content |
 |---|---|
-| 0.8.1 | L5 tyre longitudinal-force torque reaction fix; L5 sessions from Python; error on an unknown `level` string |
-| 0.8.2 | L5 hardpoint attach from Python; steady-speed oscillation on the link path; `cg_height` meaning on the strut path; rack-ratio key; K&C sweep arguments and outputs |
-| 0.9.0 | Aero stage 2 (ride-height and pitch slopes, user aero module); per-axle tyres |
+| 0.8.3 | Reverse driving (slip angle, pedal and RL / driver-model direction); strut mount-to-wheel-mass couple; low-speed tyre key `tire_low_speed`; friction-polygon inside test |
+| 0.9.0 | Aero stage 2 (ride-height and pitch slopes, user aero module); per-axle tyres and rotor gyro; user-module fault boundary; five-link exact driven pose; knuckle reaction route |
+| later | K&C sweep arguments and outputs (roll centre, anti angles, bump steer, camber gain) |
 | 0.10.0 | Driver and cone-course API; rocker and U-shaped anti-roll bars |
 
 ---
@@ -447,6 +450,19 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 - [x] `aero.elements` (per-element downforce and drag at its own point), `air_density`, `aero_drag_height`
 - [x] Four-key lift now acts on L5; L5 applies aero as a body wrench ([theory 26](theory/26_aero_elements.md))
 - [x] Opt-in aero trace channels (schema 0.5 unchanged)
+
+### v0.8.1 — L5 reactions and level ids (2026-11-01, tagged)
+
+- [x] L5 drive / brake torque reactions per axle; LuGre wheel-spin reaction
+- [x] One level-id factory: an unknown `level` string is an error; L5 sessions from Python
+
+### v0.8.2 — L5 strut path and hardpoint output (2026-11-14)
+
+- [x] `cg_height` is the whole-vehicle CG on the L5 strut / DAE path (`cg_height_ref: sprung` keeps 0.8.1); strut-path axle transfer back in the verdict
+- [x] Cruise pitch oscillation on the corner-model (DAE) path fixed (contact-patch jacking slope, prescribed travel acceleration)
+- [x] Rack input mirrored on right-hand hardpoint corners; `steer_input: rack_travel`; `rack_per_rad`
+- [x] L5 per-wheel camber, toe and hardpoint output (C++, Python, `.vdtrace`); `vdsim.attach_l5_hardpoints`
+- [x] `wheel_gyro` (`legacy` | `full` | `off`)
 
 ### v0.5.2+ (planned)
 
