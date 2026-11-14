@@ -33,19 +33,26 @@ ITireModel::Wrench ITireModel::evaluate(const ContactInput& ci, const Transient&
     const bool belt_on    = params_.belt.enabled && !lugre_on;
     const bool belt_lugre = params_.belt.enabled && lugre_on;
 
+    // tire_low_speed: relaxed — near standstill the force law reads the key-off slip
+    // (w = 0 below v_low, linear to 1 at 2 v_low); w = 1 when v_low = 0.
+    const double w_belt = belt_force_weight(ci.Vx, params_.belt.v_low);
+    const double alpha_off =
+        (lugre_on || params_.relaxation_length_lat <= 1e-6) ? ck.alpha : tr.alpha_dyn;
+
     Input in;
     in.Fz    = ci.Fz;
-    in.kappa = belt_on ? tr.belt_kappa : ck.kappa;
-    in.alpha = belt_on ? tr.belt_alpha
-        : ((lugre_on || params_.relaxation_length_lat <= 1e-6) ? ck.alpha : tr.alpha_dyn);
+    in.kappa = belt_on ? belt_force_input(ck.kappa, tr.belt_kappa, w_belt) : ck.kappa;
+    in.alpha = belt_on ? belt_force_input(alpha_off, tr.belt_alpha, w_belt) : alpha_off;
     in.mu_long = ci.mu_long;
     in.mu_lat  = ci.mu_lat;
     in.Vx_wheel = ci.Vx;
     in.gamma    = ci.gamma;
 
     if (lugre_on) {
-        const double v_slip_long = belt_lugre ? tr.belt_vlong : ck.vsx;
-        const double v_slip_lat  = belt_lugre ? tr.belt_vlat  : ck.vsy;
+        const double v_slip_long =
+            belt_lugre ? belt_force_input(ck.vsx, tr.belt_vlong, w_belt) : ck.vsx;
+        const double v_slip_lat  =
+            belt_lugre ? belt_force_input(ck.vsy, tr.belt_vlat, w_belt) : ck.vsy;
         const auto l = lugre_wheel_forces(*this, params_, tr.lugre_z_long, tr.lugre_z_lat,
                                           v_slip_long, v_slip_lat, in);
         w.Fx = l.Fx;

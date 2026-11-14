@@ -8,6 +8,12 @@
 //   - sigma_y / sigma_x: the tyre's own relaxation_length_lat / _long when > 0,
 //     otherwise the defaults below,
 //   - v_low keeps the lag state relaxing at standstill instead of freezing it.
+//   - near standstill the force law does not read the lag state (section 7.4,
+//     PROP-2793 option 2): |Vx| <= v_low reads the key-off slip, v_low..2 v_low blends
+//     linearly, >= 2 v_low reads the relaxed state (belt_force_weight). Below 2 v_low =
+//     0.3 m/s relaxed therefore equals off; the standstill compliance is the LuGre
+//     bristle's. The state update itself is unchanged (it keeps tracking the geometric
+//     slip at standstill, so a restart does not read a stale value).
 //
 // Coefficients fixed before the measurement (gate commit). Changing them after the
 // measurement is a gate change (stop and report).

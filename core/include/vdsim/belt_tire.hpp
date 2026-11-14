@@ -45,4 +45,35 @@ inline double belt_relax(double s_eff, double s_geom, double Vx,
     return s_geom + (s_eff - s_geom) * decay;
 }
 
+/**
+ * @brief Weight of the relaxed slip in the force-law input near standstill
+ *        (tire_low_speed: relaxed, work order 57 section 7.4).
+ *
+ * The LuGre bristle already carries the standstill compliance; stacking the belt
+ * first-order lag on top of it near standstill closes a feedback loop (force chatter).
+ * Below v_low the force law reads the same slip as the key off, between v_low and
+ * 2 v_low it blends linearly, above 2 v_low it reads the relaxed state.
+ * @param Vx    Longitudinal contact speed [m/s] (the speed the relaxation uses).
+ * @param v_low Low-speed floor [m/s]; <= 0 (belt switched on from the tyre file) = 1.
+ * @return w in [0, 1]; 1 = relaxed state only, 0 = key-off input only.
+ */
+inline double belt_force_weight(double Vx, double v_low) {
+    if (!(v_low > 0.0)) return 1.0;
+    const double w = (std::fabs(Vx) - v_low) / v_low;
+    return w <= 0.0 ? 0.0 : (w >= 1.0 ? 1.0 : w);
+}
+
+/**
+ * @brief Force-law slip input s_off + w (s_relax - s_off), exact at the ends.
+ * @param s_off   Slip the force law reads with the key off.
+ * @param s_relax Relaxed slip state.
+ * @param w       Weight from belt_force_weight().
+ * @return s_relax for w >= 1, s_off for w <= 0, the linear blend otherwise.
+ */
+inline double belt_force_input(double s_off, double s_relax, double w) {
+    if (w >= 1.0) return s_relax;
+    if (w <= 0.0) return s_off;
+    return s_off + w * (s_relax - s_off);
+}
+
 }  // namespace vdsim
