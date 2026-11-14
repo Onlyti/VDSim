@@ -212,6 +212,15 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 900
         ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
+    # Work order 51c K1 (PROP-2796): a Python user module attached without a user
+    # reference stays alive; 2000 ticks bit identical to the kept-reference run.
+    add_test(NAME module_keep_alive
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_module_keep_alive.py)
+    set_tests_properties(module_keep_alive PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 900
+        ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
     # L5 hardpoint output, Python side (work order 48c): attach_l5_hardpoints,
     # camber/toe/hardpoints bit-equal to the C++ values, rack_per_rad, trace channels.
     add_test(NAME l5_hardpoints
