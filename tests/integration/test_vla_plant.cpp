@@ -10,10 +10,16 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdio>
+#include <functional>
+#include <limits>
 #include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace {
 
@@ -546,4 +552,156 @@ TEST(VlaPlant, PolygonFrictionBlendZone) {
     ground->query(s, vp, c);
     const double mu_exp = 0.5 + 0.5 * (0.9 - 0.5);
     EXPECT_NEAR(c[vdsim::WHEEL_FL].mu_long, mu_exp, 1e-9);
+}
+
+// ---------------------------------------------------------------------------
+// Work order 58 (gate fixed before the fix): polygon inside test on polygons
+// with slanted edges. Before the fix the crossing x of an edge whose y falls
+// along the vertex order was evaluated with a clipped (+1e-12) denominator, so
+// such edges were counted or skipped regardless of the query point.
+// ---------------------------------------------------------------------------
+namespace {
+
+/// @brief Friction seen by the FL wheel when its hub sits over world (x, y).
+/// @param g  polygon friction ground under test.
+/// @param vp vehicle whose rigid FL offset (cg_to_front, track_front/2) is used.
+/// @param x  world x of the FL hub [m].
+/// @param y  world y of the FL hub [m].
+/// @return   FL contact mu_long [-].
+double fl_mu_at(vdsim::IContactProvider& g, const vdsim::VehicleParams& vp,
+                double x, double y) {
+    vdsim::State s;
+    s.position.x() = x - vp.cg_to_front;
+    s.position.y() = y - 0.5 * vp.track_front;
+    vdsim::ContactArray c{};
+    g.query(s, vp, c);
+    EXPECT_NEAR(c[vdsim::WHEEL_FL].position.x(), x, 1e-12);
+    EXPECT_NEAR(c[vdsim::WHEEL_FL].position.y(), y, 1e-12);
+    return c[vdsim::WHEEL_FL].mu_long;
+}
+
+/// @brief Distance from (px, py) to segment (ax, ay)-(bx, by), test-local copy.
+double seg_dist(double px, double py, double ax, double ay, double bx, double by) {
+    const double ux = bx - ax, uy = by - ay;
+    const double L2 = ux * ux + uy * uy;
+    double t = L2 > 0.0 ? ((px - ax) * ux + (py - ay) * uy) / L2 : 0.0;
+    t = std::min(1.0, std::max(0.0, t));
+    return std::hypot(px - (ax + t * ux), py - (ay + t * uy));
+}
+
+/// @brief Distance from (px, py) to the closed polygon outline.
+double outline_dist(double px, double py,
+                    const std::vector<std::pair<double, double>>& poly) {
+    double d = std::numeric_limits<double>::infinity();
+    for (std::size_t i = 0, j = poly.size() - 1; i < poly.size(); j = i++)
+        d = std::min(d, seg_dist(px, py, poly[j].first, poly[j].second,
+                                 poly[i].first, poly[i].second));
+    return d;
+}
+
+/// @brief Grid comparison of the ground's inside classification (mu == patch mu)
+///        against an independent reference.
+/// @param poly   patch polygon.
+/// @param inside reference inside predicate.
+/// @param label  printed tag.
+void grid_against_reference(const std::vector<std::pair<double, double>>& poly,
+                            const std::function<bool(double, double)>& inside,
+                            const char* label) {
+    auto vp = generic_vp();
+    vdsim::PolygonMuPatch patch;
+    patch.polygon = poly;
+    patch.mu = 0.4;
+    auto g = vdsim::create_polygon_friction_ground(0.0, 0.9, {patch}, 0.5);
+    double x0 = 1e30, x1 = -1e30, y0 = 1e30, y1 = -1e30;
+    for (const auto& [x, y] : poly) {
+        x0 = std::min(x0, x); x1 = std::max(x1, x);
+        y0 = std::min(y0, y); y1 = std::max(y1, y);
+    }
+    x0 -= 1.0; x1 += 1.0; y0 -= 1.0; y1 += 1.0;
+    const int N = 21;  // 21 x 21 = 441 points
+    int evaluated = 0, excluded = 0, mismatch = 0, n_in = 0, n_out = 0;
+    for (int ix = 0; ix < N; ++ix) {
+        for (int iy = 0; iy < N; ++iy) {
+            const double x = x0 + (x1 - x0) * (ix + 0.0137) / (N - 1);
+            const double y = y0 + (y1 - y0) * (iy + 0.0291) / (N - 1);
+            if (outline_dist(x, y, poly) <= 1e-9) { ++excluded; continue; }
+            ++evaluated;
+            const bool ref = inside(x, y);
+            const bool got = (fl_mu_at(*g, vp, x, y) == 0.4);
+            (ref ? n_in : n_out) += 1;
+            if (ref != got) ++mismatch;
+        }
+    }
+    std::printf("[58 P2 %s] evaluated=%d excluded=%d inside=%d outside=%d mismatch=%d\n",
+                label, evaluated, excluded, n_in, n_out, mismatch);
+    EXPECT_GE(evaluated + excluded, 400);
+    EXPECT_GT(n_in, 0);
+    EXPECT_GT(n_out, 0);
+    EXPECT_EQ(mismatch, 0);
+}
+
+}  // namespace
+
+// P1: triangle (0,0)(4,0)(2,3); inside points carry the patch mu exactly,
+// outside points beyond the blend distance carry base_mu exactly.
+TEST(FrictionPolygon58, P1TriangleInsideOutside) {
+    auto vp = generic_vp();
+    const std::vector<std::pair<double, double>> tri = {{0.0, 0.0}, {4.0, 0.0}, {2.0, 3.0}};
+    vdsim::PolygonMuPatch patch;
+    patch.polygon = tri;
+    patch.mu = 0.4;
+    const double base = 0.9;
+    const double blend = 0.25;  // both outside points sit ~0.69 m from the outline
+    auto g = vdsim::create_polygon_friction_ground(0.0, base, {patch}, blend);
+    for (const auto& [x, y] : std::vector<std::pair<double, double>>{
+             {2.0, 1.0}, {2.0, 2.5}, {1.0, 0.5}}) {
+        EXPECT_EQ(fl_mu_at(*g, vp, x, y), 0.4) << "inside (" << x << ", " << y << ")";
+    }
+    for (const auto& [x, y] : std::vector<std::pair<double, double>>{
+             {0.5, 2.0}, {3.5, 2.0}}) {
+        ASSERT_GT(outline_dist(x, y, tri), blend);
+        EXPECT_EQ(fl_mu_at(*g, vp, x, y), base) << "outside (" << x << ", " << y << ")";
+    }
+}
+
+// P2a: square of side 4 rotated 30 deg about (10, 5); reference = half-plane
+// test on the counter-clockwise edges.
+TEST(FrictionPolygon58, P2RotatedSquareGrid) {
+    const double c = std::cos(M_PI / 6.0), s = std::sin(M_PI / 6.0);
+    std::vector<std::pair<double, double>> sq;
+    for (const auto& [u, v] : std::vector<std::pair<double, double>>{
+             {-2.0, -2.0}, {2.0, -2.0}, {2.0, 2.0}, {-2.0, 2.0}})
+        sq.emplace_back(10.0 + c * u - s * v, 5.0 + s * u + c * v);
+    auto half_planes = [sq](double x, double y) {
+        for (std::size_t i = 0; i < sq.size(); ++i) {
+            const auto& a = sq[i];
+            const auto& b = sq[(i + 1) % sq.size()];
+            const double cross = (b.first - a.first) * (y - a.second)
+                               - (b.second - a.second) * (x - a.first);
+            if (cross <= 0.0) return false;
+        }
+        return true;
+    };
+    grid_against_reference(sq, half_planes, "rotated_square");
+}
+
+// P2b: non-convex L (rect [0,6]x[0,2] union rect [0,2]x[0,6]) rotated 20 deg
+// and shifted by (30, -4); reference = point mapped back to the L frame and
+// tested against the two rectangles.
+TEST(FrictionPolygon58, P2RotatedLShapeGrid) {
+    const double th = 20.0 * M_PI / 180.0;
+    const double c = std::cos(th), s = std::sin(th);
+    const double tx = 30.0, ty = -4.0;
+    std::vector<std::pair<double, double>> L;
+    for (const auto& [u, v] : std::vector<std::pair<double, double>>{
+             {0.0, 0.0}, {6.0, 0.0}, {6.0, 2.0}, {2.0, 2.0}, {2.0, 6.0}, {0.0, 6.0}})
+        L.emplace_back(tx + c * u - s * v, ty + s * u + c * v);
+    auto two_rects = [=](double x, double y) {
+        const double dx = x - tx, dy = y - ty;
+        const double u = c * dx + s * dy, v = -s * dx + c * dy;
+        const bool in_a = u > 0.0 && u < 6.0 && v > 0.0 && v < 2.0;
+        const bool in_b = u > 0.0 && u < 2.0 && v > 0.0 && v < 6.0;
+        return in_a || in_b;
+    };
+    grid_against_reference(L, two_rects, "rotated_L");
 }

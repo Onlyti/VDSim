@@ -871,6 +871,12 @@ class VDSimPlant:
   observation (``X_ref``, ``Y_ref``, ``vx_ref``, ``vy_ref``); ``X`` / ``Y``
   stay at the CG.
 
+  ``blend_distance`` [m] (default 1.0) applies to both ``friction_map`` x bands
+  and ``friction_map_2d`` polygons: outside a patch, mu goes linearly from the
+  patch value to ``base_mu`` over that distance from the patch boundary. 0 gives
+  a step edge (the core floors it at 1e-6 m); negative or non-finite values
+  raise ``ValueError``.
+
   ``monitor`` (off by default) shows the run in the browser live monitor:
   ``True`` = port 8790, an ``int`` = that port, or a
   ``vdsim_livemonitor.LiveMonitor``. The world is declared here, the vehicle
@@ -899,6 +905,7 @@ class VDSimPlant:
       monitor=None,
       monitor_pace=None,
       monitor_wait_s: float = 0.0,
+      blend_distance: float = 1.0,
   ):
       if longitudinal not in LONGITUDINAL_MODES:
           raise ValueError(
@@ -924,6 +931,10 @@ class VDSimPlant:
               "kinematics={'front': <stem>, 'rear': <stem>}")
       if not math.isfinite(base_mu) or not (0.0 < base_mu <= 1.2):
           raise ValueError(f"base_mu={base_mu} outside (0, 1.2]")
+      blend_distance = float(blend_distance)
+      if not math.isfinite(blend_distance) or blend_distance < 0.0:
+          raise ValueError(
+              f"blend_distance={blend_distance} must be finite and >= 0 [m]")
       if friction_map is not None and friction_map_2d is not None:
           raise ValueError("pass friction_map or friction_map_2d, not both")
       _validate_friction_map(friction_map)
@@ -951,7 +962,7 @@ class VDSimPlant:
       opts.friction.base_mu = float(base_mu)
       opts.friction.x_bands = patches
       opts.friction.polygons = poly_patches
-      opts.friction.blend_distance = 1.0
+      opts.friction.blend_distance = blend_distance
       opts.level = level
       if actuator is not None:
           opts.actuator = build_actuator_params(actuator)
@@ -1011,6 +1022,10 @@ class VDSimPlant:
               "tir": Path(self._ts.wheel[0].tir_path).name if self._ts.wheel[0].tir_path else "",
           },
       }
+      # Only a non-default blend enters the parameter record, so the hash of
+      # every plant built without the argument stays what it was.
+      if blend_distance != 1.0:
+          self._plant_params["blend_distance"] = blend_distance
       if level == "L5":
           # Where the drive/brake torque reactions land on this path (sprung,
           # unsprung through the corner linkage, or equivalent = unsprung

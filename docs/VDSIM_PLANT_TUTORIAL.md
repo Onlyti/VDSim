@@ -245,7 +245,8 @@ pass `friction_map_2d` — a list of `{"polygon": [(x0,y0), ...], "mu": 0.5}` en
 frame, ISO 8855). Each polygon needs ≥3 vertices; edges close implicitly (last → first).
 
 Per-wheel μ is evaluated at the wheel contact `(x, y)`. Inside a polygon: patch μ. Outside:
-linear blend to `base_mu` over **1.0 m** from the polygon boundary (global `blend_distance`).
+linear blend to `base_mu` over **1.0 m** from the polygon boundary (global `blend_distance`;
+set it with `VDSimPlant(blend_distance=...)` [m], shared with `friction_map`, 0 = step edge).
 Overlapping patches take the **minimum** μ (most restrictive grip). Mutually exclusive with
 `friction_map` (pass one or the other).
 
@@ -412,7 +413,8 @@ VDSimPlant(config="generic_sedan",   # vehicle preset name or path
            friction_map_2d=None,  # [{"polygon": [(x,y),...], "mu": ...}, ...]
            base_mu=0.9,           # (0, 1.2]
            control_dt=0.05,       # s, one step() period (ZOH); >= substep_dt
-           substep_dt=5e-4)       # s, internal fixed integration step; divides control_dt
+           substep_dt=5e-4,       # s, internal fixed integration step; divides control_dt
+           blend_distance=1.0)    # m, friction blend outside a patch (x bands and polygons); 0 = step
 
 plant.reset(state0=[X, Y, psi, vx, vy, r]) -> obs   # seeds wheel spin = vx / R_eff
 plant.step([delta_rad, Fx_total_N])         -> obs   # advance one control period
