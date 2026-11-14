@@ -22,11 +22,32 @@ All notable changes to VDSim are documented here. Format follows
   by the run instead of their counts, so a thread that existed before the run and
   ended meanwhile no longer fails it intermittently. Test definition only; no
   behaviour change.
+- Reverse driving on the RL pedal action and the driver model. Reversing (vx < -0.05
+  m/s), the RL pedal action now selects gear -1 so the throttle drives backward, and
+  the driver model follows the acceleration target through the direction-aware pedal
+  map with the gear in its output. Forward driving is unchanged.
+- Tyre slip angle while reversing is atan2(Vy, |Vx|); before, reversing with a small
+  lateral velocity gave a slip angle near +-pi and a saturated side force. Unchanged
+  whenever Vx > 0.
+- Acceleration command (CmdL5 ax_target) while reversing: a positive demand now
+  brakes and a negative one drives in reverse gear. Forward mapping unchanged.
+- L5 strut path delivers the strut mount-to-wheel couple to the chassis (roll and
+  pitch angular momentum was partly missing). L5 strut results change; penalty path,
+  L1-L4 and DAE-free cases outside the strut branch are unchanged.
 
 ### Added
 - `VDSimPlant(blend_distance=1.0)`: friction blend width [m] shared by
   `friction_map` x bands and `friction_map_2d` polygons. Default unchanged; 0 gives
   a step edge; negative or non-finite raises `ValueError`.
+- Vehicle key `tire_low_speed: off | relaxed` (default off). relaxed switches the
+  belt slip relaxation on for every wheel (sigma_y 0.6 m, sigma_x 0.15 m unless the
+  tyre sets its own, low-speed floor 0.15 m/s). Below 0.3 m/s relaxed equals off:
+  the force law reads the key-off slip below 0.15 m/s and blends linearly up to 0.3
+  m/s; the standstill correction is the LuGre bristle's (theory 21.3.1).
+
+### Known limitations
+- `cg_height_ref: sprung` keeps the 0.8.1 mount arm, so the mount couple stays
+  missing in that mode (0.8.1 reproduction contract).
 
 ## [0.8.2] - 2026-11-14
 
