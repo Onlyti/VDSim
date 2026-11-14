@@ -1010,6 +1010,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#corner-model-jacking-at-the-contact-patch-082" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Corner-model jacking at the contact patch (0.8.2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#wheel-spin-gyroscopic-term-wheel_gyro-082" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3005,6 +3016,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#corner-model-jacking-at-the-contact-patch-082" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Corner-model jacking at the contact patch (0.8.2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#wheel-spin-gyroscopic-term-wheel_gyro-082" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3319,6 +3341,31 @@ Penalty and spatial-strut paths therefore return the reaction through the chassi
 Hard-joint DAE suspension also falls back to the same sprung result and warns once per
 process when <code>unsprung</code> is explicit. LuGre wheel-spin dynamics use the clamped tire
 longitudinal force for the tire reaction torque.</p>
+<h3 id="corner-model-jacking-at-the-contact-patch-082">Corner-model jacking at the contact patch (0.8.2)<a class="headerlink" href="#corner-model-jacking-at-the-contact-patch-082" title="Permanent link">&para;</a></h3>
+<p>With a hard-joint corner model the wheel particle moves along the travel path of the
+linkage, coordinate <span class="arithmatex">\(q\)</span> (positive in bump). The bushing carries the horizontal load
+<span class="arithmatex">\(\mathbf{H}\)</span> the particle needs and its strut-axis part follows from the path slopes,</p>
+<div class="arithmatex">\[
+J_i = -\frac{H_x\,t_x + H_y\,s_{cp}}{t_z}, \qquad
+s_{cp} = \frac{\partial}{\partial q}\big(y_{wc} - R\sin\gamma\big),
+\]</div>
+<p>where <span class="arithmatex">\((t_x, t_y, t_z)\)</span> is the path tangent, <span class="arithmatex">\(y_{wc}\)</span> the wheel-centre lateral position,
+<span class="arithmatex">\(\gamma\)</span> the camber and <span class="arithmatex">\(R\)</span> = <code>wheel_radius_nominal</code> (the radius the contact query
+uses), evaluated by a central difference of the linkage pose at <span class="arithmatex">\(q \pm h\)</span>.
+<span class="arithmatex">\(s_{cp}\)</span> is the lateral slope of the contact patch: the tyre force acts there,
+not at the wheel centre. Up to 0.8.1 the wheel-centre slope <span class="arithmatex">\(\partial y_{wc}/\partial q\)</span>
+was used; on the double-wishbone samples it has the opposite sign and puts the roll
+centre about 0.3 m below the ground, which together with the bump-steer slip path
+sustained a 1.8–2.2 Hz pitch oscillation at cruise.</p>
+<p>The corner model tracks the prescribed travel through constraint stabilisation
+(Baumgarte, <span class="arithmatex">\(\alpha = \beta = 12\)</span>). It now also receives the travel acceleration
+<span class="arithmatex">\(\ddot z\)</span> (finite difference of the travel rate over the outer step), so the knuckle
+state follows the travel without the second-order lag
+<span class="arithmatex">\(H(s) = (24s+144)/(s+12)^2\)</span>.
+Tests: <code>tests/integration/test_l5_dae_pitch.cpp</code> (P1 cruise pitch, P2' low-speed
+pitch rate, P10/P10b/P10c reaction consistency and jacking magnitude),
+<code>tests/unit/test_dae_contact_slope.cpp</code> (P9, slope against the independent solver
+<code>tools/kinematics/dw_3d_solver.py</code>).</p>
 <h3 id="wheel-spin-gyroscopic-term-wheel_gyro-082">Wheel-spin gyroscopic term (<code>wheel_gyro</code>, 0.8.2)<a class="headerlink" href="#wheel-spin-gyroscopic-term-wheel_gyro-082" title="Permanent link">&para;</a></h3>
 <p>Each wheel carries spin angular momentum <span class="arithmatex">\(I_{w,i}\,\omega_i\)</span> along its spin axis
 <span class="arithmatex">\(\hat{\mathbf{s}}_i\)</span>. A body turning at <span class="arithmatex">\(\boldsymbol{\omega}\)</span> has to supply the rate of
@@ -3481,6 +3528,9 @@ v0.5 terrain note.</p>
   with that arm and the whole-vehicle <code>cg_height</code> (§20.2) the strut-path axle load
   transfer (<code>L5Reaction.R2_*</code>) passes its ±2 % gate. <code>cg_height_ref: sprung</code> keeps the
   0.8.1 arm.</li>
+<li><strong>Corner-model limits (0.8.2).</strong> The knuckle reaction route is off; the anti-geometry
+  gates R3 move to 0.9.0. The jacking slope is the contact-patch slope (§20.3); the
+  anti-dive (x) direction keeps the wheel-centre path.</li>
 <li><strong>Not yet (→ v0.5):</strong> general curved/banked track (<code>CurvedGround</code>, banked oval)
   and a GUI panel to <em>author</em> stunt scenes; today the GUI renders loaded ramp/loop
   scenes only. See <a href="../../design/V0.5_TERRAIN_L5/"><code>design/V0.5_TERRAIN_L5.md</code></a>.</li>
