@@ -61,6 +61,14 @@
 //     skipped) with relaxed <= the same count with off; every value finite; |vx| < 0.01
 //     m/s on the last tick (relaxed). C3 Fy sign changes are printed as information.
 //     The U5 brake-hold run below stays as a regression item (relaxed keeps standstill).
+// K2' (replaces K2; PROP-2793 option 2, work order 57 section 7.4, fixed before the
+//     standstill redesign is implemented): same runs (L2 and L5 penalty x C1 and C3, same
+//     last 1 s window, same sign count). Per wheel relaxed Fx sign changes <= max(off, 2);
+//     every value finite; |vx_end| relaxed <= |vx_end| off + 0.005 m/s. The absolute
+//     |vx| < 0.01 m/s of K2 is dropped (off itself ends at 0.09 m/s in L5 C3).
+// K6 negative check for the standstill redesign (procedure, not a test): reverting only
+//     the near-standstill handling (relaxed back to the 2e67999 behaviour) makes K2' or
+//     the U5 regression fail; restoring it passes.
 // K3 DAE oscillation non-worsening: measured after 49a is on main, with the 49a P1 test
 //     (antidive and sports DAE, 25 and 35 m/s, command 0, last 5 s q_rms <= 1e-3 rad/s,
 //     growth < 0.5) run with tire_low_speed: relaxed. Its test is added in a separate gate
@@ -780,12 +788,12 @@ K2Run run_k2(Path p, const std::string& key, int cond) {
 }
 }  // namespace
 
-TEST(ReverseSlipLowSpeed, K2RelaxedNoMoreChatterThanOffAndHolds) {
+TEST(ReverseSlipLowSpeed, K2PrimeRelaxedNotWorseThanOffAtLowSpeed) {
     for (Path p : {Path::L2, Path::L5Penalty}) {
         for (int cond : {1, 3}) {
             const auto off = run_k2(p, "", cond);
             const auto rel = run_k2(p, "relaxed", cond);
-            std::printf("K2 %s C%d off Fx_changes=[%d %d %d %d] relaxed Fx_changes=[%d %d %d %d] "
+            std::printf("K2' %s C%d off Fx_changes=[%d %d %d %d] relaxed Fx_changes=[%d %d %d %d] "
                         "relaxed vx_end=%+.3e off vx_end=%+.3e finite=%d "
                         "Fy_changes off=[%d %d %d %d] relaxed=[%d %d %d %d] (Fy info)\n",
                         path_name(p), cond, off.fx_changes[0], off.fx_changes[1],
@@ -795,9 +803,10 @@ TEST(ReverseSlipLowSpeed, K2RelaxedNoMoreChatterThanOffAndHolds) {
                         off.fy_changes[2], off.fy_changes[3], rel.fy_changes[0],
                         rel.fy_changes[1], rel.fy_changes[2], rel.fy_changes[3]);
             EXPECT_TRUE(rel.finite) << path_name(p) << " C" << cond;
-            EXPECT_LT(std::abs(rel.vx_end), 0.01) << path_name(p) << " C" << cond;
+            EXPECT_LE(std::abs(rel.vx_end), std::abs(off.vx_end) + 0.005)
+                << path_name(p) << " C" << cond;
             for (int i = 0; i < NUM_WHEELS; ++i)
-                EXPECT_LE(rel.fx_changes[i], off.fx_changes[i])
+                EXPECT_LE(rel.fx_changes[i], std::max(off.fx_changes[i], 2))
                     << path_name(p) << " C" << cond << " wheel " << i;
         }
     }
