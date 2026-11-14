@@ -123,6 +123,10 @@ driven axle and coupled on open diffs (`core/include/vdsim/drivetrain_inertia.hp
 
 Set `engine_rotational_inertia: 0` for legacy wheel-only spin-up.
 
+`rotor_inertia` / `rotor_ratio` (0.9.0) are names of the same two parameters; giving
+both names with different values is an error. `rotor_axis` (`none`, `±x`, `±y`)
+adds the L5 rotor gyroscopic moment from the same values (theory ch. 20).
+
 ISO / accel benchmarks may shift vs pre-inertia baselines — re-run
 `apps/validation/run_validation.py` when re-baselining.
 

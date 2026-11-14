@@ -209,10 +209,42 @@ Assumptions: the steer-rate contribution to the wheel angular velocity is omitte
 reflected drivetrain and engine inertia is not part of $\mathbf{H}$ (it enters the spin
 equation only); the steer tilt keeps the 0.8.1 small-angle form; the camber is non-zero
 only with an attached corner model (without it `full` equals `legacy` bit for bit).
-Rotor gyroscopics (`rotor_*`) are not in this term (0.9.0).
+Rotor gyroscopics are the separate term below (`rotor_axis`, 0.9.0).
 Tests: `tests/unit/test_wheel_gyro_keys.cpp` (key, helper, zero-camber identity),
 `tests/integration/test_l5_wheel_gyro.cpp` (corner-model wiring, steady skidpad roll
 moment against the term above), `Stunt.GyroscopicWheelSpinCouplesYawToRoll`.
+
+### Rotor gyroscopic term (`rotor_axis`, 0.9.0)
+
+The motor or engine rotor spins at the carrier speed times the ratio about a
+body-fixed axis $\hat{\mathbf{e}}$ (`rotor_axis`), so it carries
+
+$$
+\mathbf{H}_r = I_r\,G\,\omega_c\,\hat{\mathbf{e}},
+\qquad
+\boldsymbol{\tau}_{\mathrm{rotor}} = -\,\boldsymbol{\omega}\times\mathbf{H}_r ,
+$$
+
+with $I_r$ = `rotor_inertia` (= `engine_rotational_inertia`, 0 when $\le 0$),
+$G$ = `rotor_ratio` (= `final_drive_ratio`) and $\omega_c$ the carrier speed of the
+driven axle: $(\omega_{RL}+\omega_{RR})/2$ (RWD), $(\omega_{FL}+\omega_{FR})/2$ (FWD),
+half of each (AWD). The same $I_r$ and $G$ give the reflected spin inertia
+$I_r G^2$ of the spin equation (one source).
+
+| `rotor_axis` | $\hat{\mathbf{e}}$ (body) | Steady-turn effect |
+|---|---|---|
+| unset / `none` | — | no term (bit identical to 0.8.2) |
+| `+y` / `-y` (transverse rotor) | $\pm\hat{\mathbf{y}}$ | roll moment $\tau_x = \pm r\,I_r G\,\omega_c$ |
+| `+x` / `-x` (longitudinal rotor) | $\pm\hat{\mathbf{x}}$ | pitch moment $\tau_y = \mp r\,I_r G\,\omega_c$ |
+
+The sign of `rotor_axis` is the rotor spin direction for forward rolling
+($\omega_c > 0$). The term is independent of `wheel_gyro` and of ground contact.
+With a `powertrain:` block the rotor is the engine: $\mathbf{H}_r = I_e\,\omega_e\,\hat{\mathbf{e}}$
+from the engine inertia and speed (information path, no gate). L1–L4 ignore the axis.
+Code: `free_3d_dynamics.cpp` (`rotor_axis_`), `rotor_axis_vector` (`params.cpp`).
+Tests: `tests/unit/test_rotor_keys.cpp` (keys, single source),
+`tests/integration/test_l5_wheel_gyro.cpp` `L5RotorGyro.*` (reflected inertia from the
+test constants, skidpad roll and pitch budget against $(\boldsymbol\omega\times\mathbf{H}_r)$).
 
 Position and attitude integrate as
 
