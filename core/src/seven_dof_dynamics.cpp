@@ -109,11 +109,7 @@ public:
             }
         }
         if (aero_module_) aero_module_->reset();
-        drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
-        brake_      = make_default_brake(vp_, vp_.brake_deadtime_s);
-        steering_   = vp_.steering_dynamic
-                          ? std::unique_ptr<ISteeringSystem>(std::make_unique<DynamicSteering>(vp_))
-                          : make_default_steering(vp_, vp_.steer_deadtime_s);
+        rebuild_actuators_(false);
         steer_kin_  = make_ratio_steering_kinematics(
                           std::max(1e-6, vp_.steering_ratio));
         spdlog::debug("[L2 7-DOF] init: mass={:.0f} kg, L={:.2f} m, Tw_f={:.2f} m, "
@@ -178,11 +174,7 @@ public:
         contact_loads_.fill(detail::ContactLoad{});
         l4_contact_kinematics_ = detail::L4ContactKinematics{};
         ci_.fill(ITireModel::ContactInput{});
-        drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
-        brake_      = make_default_brake(vp_, vp_.brake_deadtime_s);
-        steering_   = vp_.steering_dynamic
-                          ? std::unique_ptr<ISteeringSystem>(std::make_unique<DynamicSteering>(vp_))
-                          : make_default_steering(vp_, vp_.steer_deadtime_s);
+        rebuild_actuators_(true);
         steer_kin_  = make_ratio_steering_kinematics(
                           std::max(1e-6, vp_.steering_ratio));
         // Clear diagnostics so accessors don't return stale values before step().
@@ -259,19 +251,39 @@ public:
     const std::array<detail::ContactLoad, NUM_WHEELS>& contact_loads() const noexcept {
         return contact_loads_;
     }
+    /**
+     * @brief Build the built-in drivetrain / brake / steering; keep user modules (51c).
+     *
+     * A slot filled by set_*_module() keeps its (guarded) user module across
+     * initialize() and reset(); the other slots get a new built-in module as before.
+     * @param reset_user true on the reset path: call reset() on the kept user modules.
+     */
+    void rebuild_actuators_(bool reset_user) noexcept {
+        if (user_drivetrain_) { if (reset_user) drivetrain_->reset(); }
+        else drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
+        if (user_brake_) { if (reset_user) brake_->reset(); }
+        else brake_ = make_default_brake(vp_, vp_.brake_deadtime_s);
+        if (user_steering_) { if (reset_user) steering_->reset(); }
+        else steering_ = vp_.steering_dynamic
+                 ? std::unique_ptr<ISteeringSystem>(std::make_unique<DynamicSteering>(vp_))
+                 : make_default_steering(vp_, vp_.steer_deadtime_s);
+    }
     bool   set_brake_module(std::shared_ptr<IBrakeSystem> m) override {
         if (!m) return false;
         brake_ = detail::guard_brake(std::move(m), &module_latch_);
+        user_brake_ = true;
         return true;
     }
     bool   set_steering_module(std::shared_ptr<ISteeringSystem> m) override {
         if (!m) return false;
         steering_ = detail::guard_steering(std::move(m), &module_latch_);
+        user_steering_ = true;
         return true;
     }
     bool   set_drivetrain_module(std::shared_ptr<IDrivetrain> m) override {
         if (!m) return false;
         drivetrain_ = detail::guard_drivetrain(std::move(m), &module_latch_);
+        user_drivetrain_ = true;
         return true;
     }
     void set_aero_ride(double dz, double pitch, double roll) noexcept {
@@ -1096,6 +1108,8 @@ private:
     AeroState aero_ride_ {};   // ride states of the L3 host (work order 51); vx unused
     std::shared_ptr<IBrakeSystem>        brake_;
     std::shared_ptr<ISteeringSystem>     steering_;
+    // 51c: slots holding a user module (kept across initialize / reset).
+    bool user_drivetrain_ {false}, user_brake_ {false}, user_steering_ {false};
     std::unique_ptr<ISteeringKinematics> steer_kin_;  // rack_travel → FL/FR angles
     std::array<double, NUM_WHEELS> I_wheel_ {{1.0, 1.0, 1.0, 1.0}};
 

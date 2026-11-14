@@ -151,9 +151,7 @@ public:
             comp_min_[i] = -F_preload_[i] / ks;   // rebound stop engages (spring free length)
             comp_max_[i] =  0.10;                 // bump stop engages [m] above static
         }
-        drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
-        brake_      = make_default_brake(vp_, vp_.brake_deadtime_s);
-        steering_   = make_default_steering(vp_, vp_.steer_deadtime_s);
+        rebuild_actuators_(false);
         validate_steer_input(vp_);
         validate_l5_steer_input(vp_);
         gyro_mode_ = wheel_gyro_mode(vp_);
@@ -225,9 +223,7 @@ public:
         ci_.fill(ITireModel::ContactInput{});
         Re_w_.fill(vp_.wheel_radius_nominal > 1e-6 ? vp_.wheel_radius_nominal : 0.32);
         if (aero_module_ && !aero_settling_) aero_module_->reset();
-        drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
-        brake_      = make_default_brake(vp_, vp_.brake_deadtime_s);
-        steering_   = make_default_steering(vp_, vp_.steer_deadtime_s);
+        rebuild_actuators_(true);
         tire_F_.fill(Vec3::Zero());
         tire_Fz_.fill(0.0);
         slip_ratio_.fill(0.0);
@@ -295,19 +291,51 @@ public:
 
     // User-defined modules. L5 carries the planar actuator subsystems (no vertical
     // suspension/ARB objects), so brake/steering/drivetrain can be replaced.
+    /**
+     * @brief Build the built-in drivetrain / brake / steering; keep user modules (51c).
+     *
+     * A slot filled by set_*_module() keeps its (guarded) user module across
+     * initialize() and reset(), except during the aero settle run, which runs on the
+     * built-in modules; set_aero_settling(false) puts the user modules back.
+     * @param reset_user true on the reset path: call reset() on the kept user modules.
+     */
+    void rebuild_actuators_(bool reset_user) noexcept {
+        const bool keep = !aero_settling_;
+        if (user_drivetrain_ && keep) {
+            drivetrain_ = user_drivetrain_;
+            if (reset_user) drivetrain_->reset();
+        } else {
+            drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
+        }
+        if (user_brake_ && keep) {
+            brake_ = user_brake_;
+            if (reset_user) brake_->reset();
+        } else {
+            brake_ = make_default_brake(vp_, vp_.brake_deadtime_s);
+        }
+        if (user_steering_ && keep) {
+            steering_ = user_steering_;
+            if (reset_user) steering_->reset();
+        } else {
+            steering_ = make_default_steering(vp_, vp_.steer_deadtime_s);
+        }
+    }
     bool set_brake_module(std::shared_ptr<IBrakeSystem> m) override {
         if (!m) return false;
         brake_ = detail::guard_brake(std::move(m), &module_latch_);
+        user_brake_ = brake_;
         return true;
     }
     bool set_steering_module(std::shared_ptr<ISteeringSystem> m) override {
         if (!m) return false;
         steering_ = detail::guard_steering(std::move(m), &module_latch_);
+        user_steering_ = steering_;
         return true;
     }
     bool set_drivetrain_module(std::shared_ptr<IDrivetrain> m) override {
         if (!m) return false;
         drivetrain_ = detail::guard_drivetrain(std::move(m), &module_latch_);
+        user_drivetrain_ = drivetrain_;
         return true;
     }
     // Aero module (work order 51). Attach before reset(): reset runs the settle run that
@@ -406,7 +434,15 @@ public:
     void set_contact_provider(IContactProvider* p) noexcept { provider_ = p; }
     // Work order 51: static aero reference hooks (free_3d_aero_internal.hpp).
     bool aero_needs_settle() const noexcept { return aero_slopes_ || aero_module_ != nullptr; }
-    void set_aero_settling(bool on) noexcept { aero_settling_ = on; }
+    void set_aero_settling(bool on) noexcept {
+        aero_settling_ = on;
+        // 51c: the user modules (reset by the reset() before the settle run) come back.
+        if (!on) {
+            if (user_drivetrain_) drivetrain_ = user_drivetrain_;
+            if (user_brake_) brake_ = user_brake_;
+            if (user_steering_) steering_ = user_steering_;
+        }
+    }
     // Work order 51 B3b-L5i: read-only observation of the first aero evaluation.
     void arm_aero_obs() noexcept { aero_obs_ = detail::AeroObs{}; }
     detail::AeroObs aero_obs() const noexcept { return aero_obs_; }
@@ -1301,6 +1337,10 @@ private:
     std::shared_ptr<IDrivetrain> drivetrain_;
     std::shared_ptr<IBrakeSystem> brake_;
     std::shared_ptr<ISteeringSystem> steering_;
+    // 51c: user modules (guarded), kept across initialize / reset; null = built-in.
+    std::shared_ptr<IDrivetrain> user_drivetrain_;
+    std::shared_ptr<IBrakeSystem> user_brake_;
+    std::shared_ptr<ISteeringSystem> user_steering_;
     std::array<Vec3, NUM_WHEELS> r_body_ {};
     double aero_origin_dz_ {0.0};   // cg_height - body origin height [m] (aero arm shift)
     // Work order 51: static aero reference (body-origin z [m], pitch / roll [rad]) set by
