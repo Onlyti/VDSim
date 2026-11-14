@@ -504,7 +504,7 @@ plant.finalize_trace()
 contact (no hardpoints) and runs with the `vdsim_realtime` L5 solver settings.
 Any other level string is a `ValueError` here and in every core entry point
 (`K` and `L0` are also accepted by the session builders). L5 linearization
-and L5 in `VecSession` are refused explicitly in 0.8.1.
+and L5 in `VecSession` are refused explicitly (still so in 0.8.2).
 
 `0.1` and `0.2` traces stay readable. A `0.3` file that omits any of the
 required fields is an error, not a warning.

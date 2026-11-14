@@ -87,7 +87,7 @@ tests:    664/664
 config:   cmake --preset validation && cmake --build --preset validation && ctest --preset validation
 presets:  CMakePresets.json@c98fe5e64c842faaeb06598af46476f3507c18a6
 toolchain: cmake 3.31.10
-commit:   654ce75d6a0ddf5a1b91d599e9e5206f08b5f468
+commit:   dda9111c1393532380a8c7ae3cdc509e03c307f5
 date:     2026-11-14
 excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
