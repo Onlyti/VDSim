@@ -3025,11 +3025,11 @@ not, so that a result is never read outside its validity envelope.</p>
   brake defaults to <code>unsprung</code>.</li>
 <li><code>unsprung</code> currently resolves to the equivalent chassis route. An explicit
   <code>unsprung</code> target on a hard-joint DAE path warns once per process and produces the
-  bit-identical sprung result. The DAE knuckle route and its steady-speed pitch issue
-  remain 0.8.2 work.</li>
-<li>Spatial-strut load transfer uses a whole-system height derived from <code>cg_height</code>,
-  which still denotes sprung-mass height. Its axle transfer is about 1–3% above the
-  analytical target; the <code>cg_height</code> meaning and R2 revalidation remain 0.8.2 work.</li>
+  bit-identical sprung result. The DAE knuckle route moves to 0.9.0; the DAE
+  steady-speed pitch oscillation is fixed in 0.8.2 (contact-patch jacking slope).</li>
+<li>Since 0.8.2 <code>cg_height</code> is the whole-vehicle CG height on the spatial-strut and DAE
+  paths as well (<code>cg_height_ref: sprung</code> keeps the 0.8.1 sprung-mass meaning), and
+  the strut-path axle load transfer passes the ±2 % R2 gate.</li>
 </ul>
 </div>
 <div class="admonition note">
