@@ -12,6 +12,7 @@ add_executable(vdsim_integration_tests
     test_stunt.cpp
     test_l5_driving.cpp
     test_l5_strut_validation.cpp
+    test_l5_dae_pitch.cpp
     test_l5_reaction.cpp
     test_l5_rack_travel.cpp
     test_l5_wheel_gyro.cpp
@@ -44,7 +45,8 @@ add_executable(vdsim_integration_tests
 
 target_include_directories(vdsim_integration_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../../cosim
-    ${CMAKE_CURRENT_SOURCE_DIR}/../support)
+    ${CMAKE_CURRENT_SOURCE_DIR}/../support
+    ${CMAKE_SOURCE_DIR}/core/src)
 
 target_compile_definitions(vdsim_integration_tests PRIVATE
     VDSIM_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
