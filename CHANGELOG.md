@@ -148,6 +148,17 @@ one level-id factory, L5 from Python). Not released yet.
   the new channels.
 
 ### Known limitations
+- The knuckle reaction route stays off: an `unsprung` drive or brake reaction on the
+  corner-model path still resolves like `sprung` (once-per-process warning), so link
+  anti-dive / anti-squat does not act through the knuckle. With the route switched on
+  the anti-geometry gates R3 do not pass (rear travel beyond their 5 mm static-centre
+  range); route and R3 move to 0.9.0.
+- Coasting at low speed on a corner model with bump toe, the LuGre lateral friction
+  limit (μ·Fz also near zero slip angle) lets a small toe scrub carry close to the full
+  friction force, so the car settles to a different pitch and coasts down faster than
+  with the wheel-centre slope (10 m/s, anti-dive sample: about 3 mrad more pitch,
+  coast deceleration about 0.002 to 0.037 m/s²). The tyre-model side is tracked
+  separately.
 - The L4 hardpoint path has no camber, toe or coordinate output (valid false, no
   points).
 - The L5 five-link corner solves its driven coordinates as an over-determined
@@ -166,6 +177,17 @@ one level-id factory, L5 from Python). Not released yet.
   label `known_failure` (reproduce with `ctest -L known_failure`).
 
 ### Fixed
+- L5 strut path with a corner model (hard-joint DAE): the cruise pitch oscillation
+  (about 1.8-2.2 Hz, growing or undamped from 25 m/s on the double-wishbone samples) is
+  gone. Two causes, two changes:
+  - the lateral slope that turns the bushing load into a vertical (jacking) force is now
+    taken at the contact patch, d(y_wc − R·sin γ)/dq with R = `wheel_radius_nominal`
+    (the radius the contact query uses), instead of at the wheel centre, whose slope put
+    the roll centre below the ground;
+  - the corner model receives the prescribed travel acceleration, so its constraint
+    stabilisation no longer lags the travel by about 25 deg at the oscillation frequency.
+  Every L5 strut run with a corner model changes. L1-L4, the L5 penalty path and the
+  strut path without a corner model are bit-identical.
 - L5 strut / DAE path: the tire longitudinal force reacts on the wheel spin about the
   wheel-centre height (`wheel_radius_nominal` minus the tire penetration) instead of the
   effective rolling radius. Slip and the tire model keep the effective rolling radius;
