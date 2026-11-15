@@ -83,17 +83,16 @@ version and the new numbers have to land in the same commit.
 
 <!-- VALIDATION-CURRENCY BEGIN -->
 ```text
-tests:    667/667
+tests:    693/693
 config:   cmake --preset validation && cmake --build --preset validation && ctest --preset validation
 presets:  CMakePresets.json@c98fe5e64c842faaeb06598af46476f3507c18a6
 toolchain: cmake 3.31.10
-commit:   233a48a7e192e6b899f74f0061994c49e662d45d
+commit:   bf320b9d78eb7d22d83d136b2fa151abd654124c
 date:     2026-11-15
 excluded: gui_v3_e2e (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: gui_v3_api_smoke (GUI v3 test group formally deferred -- VDSIM_BUILD_GUI_V3_TESTS=OFF)
 excluded: closedloop_wallclock_timing (label timing, excluded by the validation test preset: wall-clock S6/S7 verdicts depend on host load -- local low-load evidence in the work order 31 PR description)
 excluded: L5HardpointKnownFailure.K4FiveLinkPrescribedSweep (known_failure -- five-link driven pose is a least-squares fit, link lengths off the K4 line; points not exported in 0.8.2, 48c K4 verdict option 1)
-excluded: L5WheelGyro.V3_SkidpadRollMomentStrut (known_failure -- L5 strut path does not pass the mount-to-wheel-mass couple to the chassis; out of the 0.8.2 verdict, PROP-2741 option 2, repair in 0.8.3)
 ```
 <!-- VALIDATION-CURRENCY END -->
 

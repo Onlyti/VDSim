@@ -61,13 +61,15 @@ SimSession::SimSession(std::unique_ptr<IVehicleDynamics> dyn,
     : dyn_(std::move(dyn)), ground_(std::move(ground)), vp_(vp),
       session_kind_(cfg.session_kind) {
     base_vp_ = vp;
-    base_ts_ = ts;
+    // tire_low_speed acts on the tyres the session runs (and re-runs after a reset /
+    // randomization, which start from base_ts_).
+    base_ts_ = apply_tire_low_speed(vp, ts);
     base_sp_ = sp;
     base_sensor_delay_s_ = cfg.sensor_delay_s;
     base_sensors_ = cfg.sensors;
     nominal_dt_ = cfg.nominal_dt;
     validate_aero_params(vp);
-    dyn_->initialize(vp, ts, sp);
+    dyn_->initialize(vp, base_ts_, sp);
     {
         // L1/L2 have no roll split for aero: an element y offset is ignored.
         const auto lvl = dyn_->level();
