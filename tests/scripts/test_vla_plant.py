@@ -339,6 +339,115 @@ def test_private_preset_root():
     print("private preset root: ok")
 
 
+import vdsim_plant as _vdsim_plant_mod  # noqa: E402
+
+
+# --- Work order 58 (gate fixed before the fix) ------------------------------
+# P3: reporter case (a low-mu band on the right of a curved path), B1: the new
+# blend_distance argument left out equals 1.0, B2: blend over 0.5 m outside a
+# patch, B3: argument validation. reset() reports wheel mu = 0 (no contact query
+# before the first step), so every check below reads mu after one step; the
+# expected blend uses the contact point the session actually queried.
+
+
+def _first_step(plant, pose):
+    plant.reset(pose)
+    obs = plant.step([0.0, 0.0])
+    return obs, plant._sess.output().contacts
+
+def _curved_right_band(reverse):
+    """Band 0.3..1.8 m right of a left-turning R 40 m arc, 60+60 vertices."""
+    R, n, ph0, ph1 = 40.0, 60, 0.1, 1.1
+    phs = [ph0 + (ph1 - ph0) * k / (n - 1) for k in range(n)]
+    outer = [(math.sin(p) * (R + 1.8), R - math.cos(p) * (R + 1.8)) for p in phs]
+    inner = [(math.sin(p) * (R + 0.3), R - math.cos(p) * (R + 0.3)) for p in reversed(phs)]
+    poly = outer + inner
+    return poly[::-1] if reverse else poly
+
+
+def test_curved_band_right_wheels_58():
+    R, phc = 40.0, 0.6
+    pose = [R * math.sin(phc), R - R * math.cos(phc), phc, 5.0, 0.0, 0.0]
+    for reverse in (False, True):
+        poly = _curved_right_band(reverse)
+        assert len(poly) >= 100
+        plant = VDSimPlant(friction_map_2d=[{"polygon": poly, "mu": 0.15}],
+                           base_mu=0.9, control_dt=DT, substep_dt=SUB)
+        obs, _ = _first_step(plant, pose)
+        mus = [w["mu"] for w in obs["wheel"]]
+        for i in (1, 3):  # FR, RR
+            assert abs(mus[i] - 0.15) <= 1e-9, (
+                f"reverse={reverse}: right wheel {i} mu={mus[i]!r}, expected 0.15")
+        print(f"58 P3 curved right band (reverse={reverse}): ok mu={mus}")
+
+
+def _obs_run(**kw):
+    plant = VDSimPlant(base_mu=0.9, control_dt=DT, substep_dt=SUB, **kw)
+    out = [plant.reset([0.0, 0.0, 0.0, 10.0, 0.0, 0.0])]
+    for k in range(60):
+        out.append(plant.step([0.04 if k > 20 else 0.0, 0.0]))
+    return out
+
+
+def test_blend_distance_default_is_one_58():
+    rect = [{"polygon": [(5.0, -0.2), (20.0, -0.2), (20.0, 3.0), (5.0, 3.0)], "mu": 0.5}]
+    for kw in ({"friction_map": [(5.0, 20.0, 0.5)]}, {"friction_map_2d": rect}):
+        a = _obs_run(**kw)
+        b = _obs_run(blend_distance=1.0, **kw)
+        assert a == b, f"blend_distance=1.0 differs from the default for {list(kw)}"
+    print("58 B1 blend_distance unset == 1.0: ok")
+
+
+def test_blend_distance_outside_patch_58():
+    vp = vdsim.VehicleParams.from_yaml(str(_vdsim_plant_mod.resolve_vehicle_config("generic_sedan.yaml")))
+    a = float(vp.cg_to_front)
+    pose = [20.5 - a, 0.0, 0.0, 0.0, 0.0, 0.0]  # front hubs 0.5 m past x = 20
+    maps = (
+        {"friction_map_2d": [{"polygon": [(0.0, -50.0), (20.0, -50.0), (20.0, 50.0), (0.0, 50.0)],
+                              "mu": 0.5}]},
+        {"friction_map": [(0.0, 20.0, 0.5)]},
+    )
+    for kw in maps:
+        for blend in (1.0, 0.3):
+            plant = VDSimPlant(base_mu=0.9, control_dt=DT, substep_dt=SUB,
+                               blend_distance=blend, **kw)
+            obs, contacts = _first_step(plant, pose)
+            for i in (0, 1):
+                d = float(contacts[i].position[0]) - 20.0
+                assert abs(d - 0.5) < 1e-3, f"front hub not 0.5 m past the patch: d={d}"
+                expected = 0.5 + min(d / blend, 1.0) * (0.9 - 0.5)
+                for mu in (obs["wheel"][i]["mu"], float(contacts[i].mu_long)):
+                    assert abs(mu - expected) <= 1e-9, (
+                        f"{list(kw)} blend={blend}: wheel {i} mu={mu!r}, expected {expected!r}")
+    print("58 B2 blend outside patch (1.0 linear, 0.3 base): ok")
+
+
+def test_blend_distance_validation_58():
+    for bad in (float("nan"), float("inf"), float("-inf"), -0.1):
+        try:
+            VDSimPlant(base_mu=0.9, control_dt=DT, substep_dt=SUB, blend_distance=bad)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"blend_distance={bad!r} must raise ValueError")
+    vp = vdsim.VehicleParams.from_yaml(str(_vdsim_plant_mod.resolve_vehicle_config("generic_sedan.yaml")))
+    a = float(vp.cg_to_front)
+    poly = [{"polygon": [(0.0, -50.0), (20.0, -50.0), (20.0, 50.0), (0.0, 50.0)], "mu": 0.5}]
+    plant = VDSimPlant(friction_map_2d=poly, base_mu=0.9, control_dt=DT, substep_dt=SUB,
+                       blend_distance=0.0)
+    for x_hub, expected in ((19.5, 0.5), (20.001, 0.9), (20.5, 0.9)):
+        obs, _ = _first_step(plant, [x_hub - a, 0.0, 0.0, 0.0, 0.0, 0.0])
+        for i in (0, 1):
+            assert obs["wheel"][i]["mu"] == expected, (
+                f"blend 0, hub x={x_hub}: mu={obs['wheel'][i]['mu']!r} expected {expected}")
+    obs = plant.reset([10.0, 0.0, 0.0, 10.0, 0.0, 0.0])
+    for _ in range(40):
+        obs = plant.step([0.0, 0.0])
+    assert all(math.isfinite(obs[k]) for k in ("X", "Y", "vx")), obs
+    assert obs["X"] > 20.0 + a, f"expected to cross the step boundary, X={obs['X']}"
+    print("58 B3 blend_distance validation and step boundary: ok")
+
+
 def main():
     test_private_preset_root()
     test_level_default_and_rejects()
@@ -348,6 +457,10 @@ def main():
     test_dry_qualitative_lane_change()
     test_roll_pitch_in_obs()
     test_polygon_friction_map_2d()
+    test_curved_band_right_wheels_58()
+    test_blend_distance_default_is_one_58()
+    test_blend_distance_outside_patch_58()
+    test_blend_distance_validation_58()
     test_patch_brake_turn_grip_loss()
     test_gt_consistency_and_determinism()
     test_speed_budget()

@@ -9,9 +9,9 @@ Acceptance criteria of work order 31 (section 5):
   ticking, both when the controller sleeps and when it spins in Python with
   the GIL held, and the late sample is counted as an overrun.
 * S8 -- normal end, a controller exception, an early ``stop()`` and a
-  KeyboardInterrupt in the caller all join both threads: the Python thread
-  count, the native thread count and the child-process count return to their
-  baseline, and a fresh interpreter running the mode exits on its own.
+  KeyboardInterrupt in the caller all join both threads: no Python thread,
+  native thread (TID) or child process that was not there before the run is
+  left afterwards, and a fresh interpreter running the mode exits on its own.
 
 Wall-clock results depend on the host; run this file serially (the ctest
 entry is RUN_SERIAL) and, on a host with faulty cores, under ``taskset``.
@@ -50,10 +50,26 @@ def _eval(ctrl, duration, overrun="skip", **kw):
                           overrun=overrun, state0=STATE0, **kw)
 
 
-def _native_threads():
-    """Kernel thread count of this process (Linux), else None."""
+def _native_thread_ids():
+    """Kernel thread ids (TIDs) of this process (Linux), else None.
+
+    @return frozenset of int TIDs from /proc/self/task, or None off Linux
+    """
     task = Path("/proc/self/task")
-    return len(os.listdir(task)) if task.is_dir() else None
+    if not task.is_dir():
+        return None
+    return frozenset(int(name) for name in os.listdir(task))
+
+
+def _python_thread_ids():
+    """Native ids of the live Python threads (``Thread.native_id``).
+
+    The kernel TID is used rather than ``Thread.ident``: ``ident`` is the
+    pthread handle, which the C library reuses as soon as a thread is freed.
+
+    @return frozenset of int native ids
+    """
+    return frozenset(th.native_id for th in threading.enumerate())
 
 
 def _child_processes():
@@ -77,28 +93,75 @@ def _child_processes():
     return kids
 
 
-def _counts():
-    return threading.active_count(), _native_threads(), len(_child_processes())
+def _ids():
+    """Identifier sets of what this process runs right now.
+
+    @return (Python thread native ids, kernel TIDs or None, child PIDs)
+    """
+    return (_python_thread_ids(), _native_thread_ids(),
+            frozenset(_child_processes()))
 
 
-def _settled_counts(base, timeout=2.0):
-    """Poll _counts() until it equals base or timeout expires.
+def _new_ids(base, cur):
+    """Identifiers in ``cur`` that were not in the baseline ``base``.
+
+    Only additions count.  An identifier of the baseline that is gone (a thread
+    of the test runner or the interpreter that ended meanwhile) is not a leak,
+    so a count comparison would fail on it while this one does not.  Known
+    limit: a leaked thread that receives the TID of a baseline thread which
+    ended in between is missed; Linux hands out TIDs in increasing order, so in
+    the short window of one run this is unlikely.
+
+    @param base  tuple from _ids() taken before the run
+    @param cur   tuple from _ids() taken after the run
+    @return tuple of three frozensets (Python ids, TIDs, child PIDs)
+    """
+    return tuple(frozenset() if c is None else c - (b or frozenset())
+                 for b, c in zip(base, cur))
+
+
+def _comm(path):
+    """Process or thread name from a /proc ``comm`` file, else '?'."""
+    try:
+        return Path(path).read_text().strip()
+    except OSError:
+        return "?"
+
+
+def _describe(new):
+    """Readable form of _new_ids() output for an assertion message.
+
+    @param new  tuple of three frozensets (Python ids, TIDs, child PIDs)
+    @return dict kind -> {identifier: name}
+    """
+    py_names = {th.native_id: th.name for th in threading.enumerate()}
+    return {
+        "python": {i: py_names.get(i, "?") for i in sorted(new[0])},
+        "native": {t: _comm(f"/proc/self/task/{t}/comm") for t in sorted(new[1])},
+        "child": {p: _comm(f"/proc/{p}/comm") for p in sorted(new[2])},
+    }
+
+
+def _settled_new_ids(base, timeout=2.0):
+    """Poll until no identifier outside the baseline is left, or timeout.
 
     join() returns once a thread has signalled exit, but the kernel may keep its
     /proc/self/task entry (and the interpreter its OS thread) for a moment
     longer, so a single read right after join can race.  A leaked thread never
     goes away, so waiting a bounded time keeps the check strict.  The poll
-    returns as soon as the counts match.
+    returns as soon as no new identifier remains.
 
-    @return (last counts, seconds waited)
+    @param base     tuple from _ids() taken before the run
+    @param timeout  longest wait [s]
+    @return (last _new_ids() tuple, seconds waited)
     """
     t0 = time.perf_counter()
     deadline = t0 + timeout
-    cur = _counts()
-    while cur != base and time.perf_counter() < deadline:
+    new = _new_ids(base, _ids())
+    while any(new) and time.perf_counter() < deadline:
         time.sleep(0.01)
-        cur = _counts()
-    return cur, time.perf_counter() - t0
+        new = _new_ids(base, _ids())
+    return new, time.perf_counter() - t0
 
 
 def test_s6_wallclock_rtf_and_jitter(duration=10.0):
@@ -166,15 +229,15 @@ def test_s7_sim_runs_while_controller_blocks():
 def test_s8_threads_joined_on_every_exit():
     """S8: normal / exception / stop() / KeyboardInterrupt leave nothing behind."""
     _eval(controller, 0.2).run()            # warm-up: lazy imports, pools
-    base = _counts()
+    base = _ids()
     waits = {}
 
     # Normal end.
     res = _eval(controller, 0.5).run()
     assert not res.stats["stopped_early"]
     assert res.stats["t_stop"] is None           # work order 34: common key
-    after, waits["normal"] = _settled_counts(base)
-    assert after == base, ("normal", after, base)
+    new, waits["normal"] = _settled_new_ids(base)
+    assert not any(new), ("normal", _describe(new))
 
     # Controller exception: re-raised on the caller, threads joined.
     def bad(obs, t):
@@ -187,8 +250,8 @@ def test_s8_threads_joined_on_every_exit():
         assert "on purpose" in str(exc)
     else:
         raise AssertionError("controller exception was swallowed")
-    after, waits["exception"] = _settled_counts(base)
-    assert after == base, ("exception", after, base)
+    new, waits["exception"] = _settled_new_ids(base)
+    assert not any(new), ("exception", _describe(new))
 
     # Early stop() from inside the controller.
     holder = [None]
@@ -205,8 +268,8 @@ def test_s8_threads_joined_on_every_exit():
     assert res.stats["sim_ticks"] < res.stats["sim_ticks_planned"]
     # t_stop is the session time the run ended at: the closing row's time.
     assert res.stats["t_stop"] == res.trace["t"][-1] > 0.1, res.stats["t_stop"]
-    after, waits["stop"] = _settled_counts(base)
-    assert after == base, ("stop", after, base)
+    new, waits["stop"] = _settled_new_ids(base)
+    assert not any(new), ("stop", _describe(new))
 
     # KeyboardInterrupt delivered to the caller's thread mid-run.
     fired = {"done": False}
@@ -222,23 +285,24 @@ def test_s8_threads_joined_on_every_exit():
         pass
     else:
         raise AssertionError("KeyboardInterrupt did not reach the caller")
-    after, waits["interrupt"] = _settled_counts(base)
-    assert after == base, ("interrupt", after, base)
-    print(f"S8: python/native threads and children back to {base} after "
-          "normal, exception, stop and KeyboardInterrupt; settle wait [s] = "
+    new, waits["interrupt"] = _settled_new_ids(base)
+    assert not any(new), ("interrupt", _describe(new))
+    print("S8: no Python thread, native thread or child process created by "
+          "the run outlives it after normal, exception, stop and "
+          "KeyboardInterrupt; settle wait [s] = "
           + ", ".join(f"{k} {v:.3f}" for k, v in waits.items()))
 
 
 def test_s8_check_catches_a_leaked_thread():
     """S8 negative check: a thread leaked during a run still fails after the wait.
 
-    The controller starts one extra thread that outlives run().  The settled
-    counts must differ from the baseline after the full 2 s poll, which shows
+    The controller starts one extra thread that outlives run().  After the full
+    2 s poll an identifier outside the baseline must still be there, which shows
     the wait does not hide a real leak.  The thread is released afterwards and
-    the counts must then return to the baseline.
+    no new identifier may then remain.
     """
     _eval(controller, 0.2).run()
-    base = _counts()
+    base = _ids()
     release = threading.Event()
     leaked = []
 
@@ -250,17 +314,18 @@ def test_s8_check_catches_a_leaked_thread():
         return controller(obs, t)
     try:
         _eval(leaky, 0.3).run()
-        after, waited = _settled_counts(base)
-        assert after != base, ("leak not detected", after, base)
+        new, waited = _settled_new_ids(base)
+        assert any(new), ("leak not detected", new)
         assert waited >= 2.0, waited
+        seen = _describe(new)
     finally:
         release.set()
         for th in leaked:
             th.join(5.0)
-    restored, _ = _settled_counts(base)
-    assert restored == base, ("after release", restored, base)
+    restored, _ = _settled_new_ids(base)
+    assert not any(restored), ("after release", _describe(restored))
     print(f"S8 negative: leaked thread seen after {waited:.2f} s wait "
-          f"({after} vs baseline {base}); counts restored after release")
+          f"({seen}); no new identifier left after release")
 
 
 _CHILD = r"""

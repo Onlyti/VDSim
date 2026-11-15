@@ -842,11 +842,16 @@ private:
                                   + Vec3(0.0, 0.0, -m_u * kGravity)) / m_u;
                 d_upos[i] = v_u;
                 d_uvel[i] = a_u;
-                // Body feels the equal-opposite connection reaction at the mount.
+                // Body feels the equal-opposite connection reaction. The massless links
+                // between the mount and the wheel particle carry it to the particle, so the
+                // chassis also takes the couple (x_u - mount) x F_conn: the reaction acts on
+                // the line through the particle and the internal pair has no net moment
+                // (work order 57 C). cg_height_ref: sprung keeps the 0.8.1 mount arm.
                 const Vec3 F_conn = -(F_strut_on_u + F_bush);   // = F_susp*u_hat - F_bush
                 F_total_world += F_conn;
                 F_body[i] = R.transpose() * F_conn;
-                tau_body += rb.cross(F_body[i]);
+                const Vec3 r_arm = sprung_ref_ ? rb : Vec3(rb + R.transpose() * rel);
+                tau_body += r_arm.cross(F_body[i]);
                 tau_body.z() += mz_wheel[i];
                 if (jack_probe_) {   // 49a P10b diagnostic: observes, never feeds back
                     detail::JackingPairSample js;

@@ -38,6 +38,7 @@ add_executable(vdsim_integration_tests
     test_d0_flat_contact_baseline.cpp
     test_contact_frame_dynamics.cpp
     test_d2_grade_bank.cpp
+    test_reverse_slip.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../cosim/scene_loader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../cosim/world_scenario.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../parity/test_chrono_pac02_parity.cpp
@@ -76,8 +77,8 @@ target_link_libraries(vdsim_l5_ref_dump PRIVATE vdsim::core)
 # L5HardpointKnownFailure.K4FiveLinkPrescribedSweep: the five-link driven pose is a
 # least-squares fit, links off the K4 line; its points are not exported in 0.8.2
 # (48c K4 verdict, option 1). Information item for the repair.
-# L5WheelGyro.V3_SkidpadRollMomentStrut: strut path misses the mount couple, out of
-# the 0.8.2 verdict (PROP-2741 option 2); the couple repair is planned for 0.8.3.
+# L5WheelGyro.V3_SkidpadRollMomentStrut returned to the release verdict with the strut
+# mount couple repair (work order 57 C).
 add_executable(vdsim_known_failure_tests test_l5_hardpoint_output.cpp test_l5_wheel_gyro.cpp)
 target_include_directories(vdsim_known_failure_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../support)
@@ -89,8 +90,7 @@ target_link_libraries(vdsim_known_failure_tests PRIVATE
     GTest::gtest
     GTest::gtest_main
 )
-foreach(_kf L5HardpointKnownFailure.K4FiveLinkPrescribedSweep
-            L5WheelGyro.V3_SkidpadRollMomentStrut)
+foreach(_kf L5HardpointKnownFailure.K4FiveLinkPrescribedSweep)
     add_test(NAME ${_kf} COMMAND vdsim_known_failure_tests --gtest_filter=${_kf})
     set_tests_properties(${_kf} PROPERTIES LABELS known_failure)
 endforeach()

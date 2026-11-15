@@ -16,6 +16,10 @@
 //      Gate: q_rms <= 1e-3 rad/s and growth < 0.5, all four cases.
 //      Same windows as the diagnosis analysis script (analyze3.py, sha256 4c9a1a108ce24ef8),
 //      written here with integer tick indices.
+// K3 (work order 57 K3, gate commit after the 49a main merge, before the measurement):
+//      the P1 probe and gate unchanged (same fixtures, speeds, windows, q_rms <= 1e-3
+//      rad/s, growth < 0.5) with VehicleParams::tire_low_speed = "relaxed". The relaxed
+//      coefficients are not tuned on a miss (PROP-2784 option 2, work order 57 7.4).
 // P2': the same probe at v0 10 m/s, both fixtures (gate changed by user decision PROP-2782,
 //      replacing P2 after the measurement; PO mail c337f6ec). Over the P1 window ticks
 //      k = 4999..9998 (t in [5, 10) s), fit q_k = a + b (k - 4999) by least squares and take
@@ -38,9 +42,14 @@
 //                Newton, as the work order 50 V3b budget). x_m uses the body origin height
 //                the core uses (h_s above).
 //        E = sum (x_u,i - G) x F_t,i
-//        L = sum (x_m,i - x_u,i) x (F_t,i - m_u a_u,i - m_u g e_z)
-//            (moment of the strut connection pair: force on the particle at x_u, its
-//             reaction on the body at the mount; g = 9.80665)
+//        L = sum (r_arm,i - x_u,i) x (F_t,i - m_u a_u,i - m_u g e_z): the part of the
+//            strut connection couple the core does not pass to the chassis (g = 9.80665).
+//            r_arm,i is the chassis torque arm of the core (work order 57 C): the mount
+//            x_m,i under cg_height_ref: sprung, the wheel particle x_u,i otherwise, so
+//            L == 0 with the vehicle key. 49a wrote L with the mount arm, the core arm on
+//            every strut run before 57 C; after 57 C that form counts the couple twice
+//            (same correction as the work order 50 V3b budget, PO verdict on 57 C
+//            condition 6). Gate, window, S and the preconditions are unchanged.
 //        T = (x_b - G) x m_b a_b + sum (x_u,i - G) x m_u a_u,i
 //        B = omega_w x (R_wb I_b omega_b)
 //        W = -Gw,  Gw = r_b sum I_w,i omega_w,i s_y,i  (wheel spin precession, as V3:
@@ -242,10 +251,13 @@ double detrended_rms(const std::vector<double>& q, int k0, int k1) {
  * @param fixture 0 = antidive, 1 = sports
  * @param v0      initial speed [m/s]
  * @param probe   optional P10b connection-pair probe
+ * @param low_speed optional VehicleParams::tire_low_speed (K3: "relaxed")
  * @return q_rms (t in [5,10) s), growth ([8,10) / [2,4) s) and the P2' detrended RMS
  */
-Pitch coast(int fixture, double v0, const detail::JackingPairProbe& probe = {}) {
-    const VehicleParams vp = sedan();
+Pitch coast(int fixture, double v0, const detail::JackingPairProbe& probe = {},
+            const char* low_speed = nullptr) {
+    VehicleParams vp = sedan();
+    if (low_speed) vp.tire_low_speed = low_speed;
     auto s = make(vp, fixture, v0, probe);
     std::vector<double> q(10000, 0.0);
     const CmdL4 u;
@@ -272,6 +284,19 @@ void p1(int fixture, double v0) {
     const Pitch p = coast(fixture, v0);
     EXPECT_LE(p.q_rms, 1e-3) << name(fixture) << " v0 " << v0;
     EXPECT_LT(p.growth, 0.5) << name(fixture) << " v0 " << v0;
+}
+
+/**
+ * @brief K3 gate: the P1 gate with tire_low_speed relaxed.
+ * @param fixture 0 = antidive, 1 = sports
+ * @param v0      initial speed [m/s]
+ */
+void k3(int fixture, double v0) {
+    const Pitch p = coast(fixture, v0, {}, "relaxed");
+    std::printf("K3 relaxed %s v0=%.0f q_rms=%.17g rad/s growth=%.17g\n", name(fixture), v0,
+                p.q_rms, p.growth);
+    EXPECT_LE(p.q_rms, 1e-3) << "K3 relaxed " << name(fixture) << " v0 " << v0;
+    EXPECT_LT(p.growth, 0.5) << "K3 relaxed " << name(fixture) << " v0 " << v0;
 }
 
 /**
@@ -307,6 +332,8 @@ Budget skidpad(int fixture, const detail::JackingPairProbe& probe = {},
     VehicleParams vp = sedan();
     vp.ackerman_percent = 0.0;
     auto s = make(vp, fixture, kV, probe);
+    // L arm: the chassis torque arm of the core strut branch (57 C).
+    const bool mount_arm = cg_height_ref_is_sprung(vp);
 
     const double R_w = vp.wheel_radius_nominal;
     std::array<double, NUM_WHEELS> I_w {}, m_u {};
@@ -369,7 +396,8 @@ Budget skidpad(int fixture, const detail::JackingPairProbe& probe = {},
                 const Vec3 F_c = Rm * o.tire_forces[i];   // strut path: connection force
                 const Vec3 F_t = F_c + m_u[i] * a_u + W_u;  // tyre force (particle Newton)
                 E += (x_u - G).cross(F_t);
-                L += (x_m - x_u).cross(F_t - m_u[i] * a_u - W_u);
+                const Vec3 r_arm = mount_arm ? x_m : x_u;
+                L += (r_arm - x_u).cross(F_t - m_u[i] * a_u - W_u);
                 T += (x_u - G).cross(m_u[i] * a_u);
                 const double d = i < 2 ? steer : 0.0;
                 H_y += I_w[i] * st.wheel_spin[i] / std::sqrt(1.0 + d * d);
@@ -569,6 +597,10 @@ TEST(L5DaePitch, P1_Antidive25) { p1(0, 25.0); }
 TEST(L5DaePitch, P1_Antidive35) { p1(0, 35.0); }
 TEST(L5DaePitch, P1_Sports25) { p1(1, 25.0); }
 TEST(L5DaePitch, P1_Sports35) { p1(1, 35.0); }
+TEST(L5DaePitch, K3_RelaxedAntidive25) { k3(0, 25.0); }
+TEST(L5DaePitch, K3_RelaxedAntidive35) { k3(0, 35.0); }
+TEST(L5DaePitch, K3_RelaxedSports25) { k3(1, 25.0); }
+TEST(L5DaePitch, K3_RelaxedSports35) { k3(1, 35.0); }
 TEST(L5DaePitch, P2prime_Antidive10NotWorse) { p2prime(0); }
 TEST(L5DaePitch, P2prime_Sports10NotWorse) { p2prime(1); }
 TEST(L5DaePitch, P10_AntidiveSkidpadRollBudget) { p10(0); }
