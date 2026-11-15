@@ -1849,10 +1849,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#v082-l5-strut-path-and-hardpoint-output-2026-11-14" class="md-nav__link">
+  <a href="#v082-l5-strut-path-and-hardpoint-output-2026-11-14-tagged" class="md-nav__link">
     <span class="md-ellipsis">
       
-        v0.8.2 — L5 strut path and hardpoint output (2026-11-14)
+        v0.8.2 — L5 strut path and hardpoint output (2026-11-14, tagged)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v083-reverse-driving-and-strut-mount-couple-2026-11-15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.8.3 — Reverse driving and strut mount couple (2026-11-15)
       
     </span>
   </a>
@@ -3523,10 +3534,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#v082-l5-strut-path-and-hardpoint-output-2026-11-14" class="md-nav__link">
+  <a href="#v082-l5-strut-path-and-hardpoint-output-2026-11-14-tagged" class="md-nav__link">
     <span class="md-ellipsis">
       
-        v0.8.2 — L5 strut path and hardpoint output (2026-11-14)
+        v0.8.2 — L5 strut path and hardpoint output (2026-11-14, tagged)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v083-reverse-driving-and-strut-mount-couple-2026-11-15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.8.3 — Reverse driving and strut mount couple (2026-11-15)
       
     </span>
   </a>
@@ -3620,7 +3642,8 @@ Detail specs: <code>docs/design/*</code>; tire phases in <a href="../design/TIRE
 </div>
 <p><strong>Velocity (recent):</strong> v0.6 L5 MBD → <strong>v0.7.0 first PyPI release</strong> (generic default
 vehicle) → <strong>v0.8.0 aero elements</strong> (per-element aero, <code>air_density</code>, L5 downforce) →
-<strong>v0.8.1 L5 reactions</strong> → <strong>v0.8.2 L5 strut path and hardpoint output</strong>.</p>
+<strong>v0.8.1 L5 reactions</strong> → <strong>v0.8.2 L5 strut path and hardpoint output</strong> →
+<strong>v0.8.3 reverse driving and strut mount couple</strong>.</p>
 <hr />
 <h2 id="at-a-glance">At a glance<a class="headerlink" href="#at-a-glance" title="Permanent link">&para;</a></h2>
 <table>
@@ -3709,7 +3732,8 @@ vehicle) → <strong>v0.8.0 aero elements</strong> (per-element aero, <code>air_
     section v0.8
         Aero elements + air density + L5 downforce : 2026-10-29
         L5 drive and brake reactions + level ids : 2026-11-01
-        L5 strut CG meaning + DAE pitch fix + hardpoint output : 2026-11-14</code></pre>
+        L5 strut CG meaning + DAE pitch fix + hardpoint output : 2026-11-14
+        Reverse driving + strut mount couple + polygon friction fix : 2026-11-15</code></pre>
 <h2 id="next">Next<a class="headerlink" href="#next" title="Permanent link">&para;</a></h2>
 <p>Plan, not a commitment: scope and order may change, and nothing here is promised
 for a date.</p>
@@ -3721,10 +3745,6 @@ for a date.</p>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>0.8.3</td>
-<td>Reverse driving (slip angle, pedal and RL / driver-model direction); strut mount-to-wheel-mass couple; low-speed tyre key <code>tire_low_speed</code>; friction-polygon inside test</td>
-</tr>
 <tr>
 <td>0.9.0</td>
 <td>Aero stage 2 (ride-height and pitch slopes, user aero module); per-axle tyres and rotor gyro; user-module fault boundary; five-link exact driven pose; knuckle reaction route</td>
@@ -4896,13 +4916,20 @@ LuGre (contact bristle, presliding). See <a href="../design/TIRE_ROADMAP/"><code
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> L5 drive / brake torque reactions per axle; LuGre wheel-spin reaction</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> One level-id factory: an unknown <code>level</code> string is an error; L5 sessions from Python</li>
 </ul>
-<h3 id="v082-l5-strut-path-and-hardpoint-output-2026-11-14">v0.8.2 — L5 strut path and hardpoint output (2026-11-14)<a class="headerlink" href="#v082-l5-strut-path-and-hardpoint-output-2026-11-14" title="Permanent link">&para;</a></h3>
+<h3 id="v082-l5-strut-path-and-hardpoint-output-2026-11-14-tagged">v0.8.2 — L5 strut path and hardpoint output (2026-11-14, tagged)<a class="headerlink" href="#v082-l5-strut-path-and-hardpoint-output-2026-11-14-tagged" title="Permanent link">&para;</a></h3>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <code>cg_height</code> is the whole-vehicle CG on the L5 strut / DAE path (<code>cg_height_ref: sprung</code> keeps 0.8.1); strut-path axle transfer back in the verdict</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Cruise pitch oscillation on the corner-model (DAE) path fixed (contact-patch jacking slope, prescribed travel acceleration)</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Rack input mirrored on right-hand hardpoint corners; <code>steer_input: rack_travel</code>; <code>rack_per_rad</code></li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> L5 per-wheel camber, toe and hardpoint output (C++, Python, <code>.vdtrace</code>); <code>vdsim.attach_l5_hardpoints</code></li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <code>wheel_gyro</code> (<code>legacy</code> | <code>full</code> | <code>off</code>)</li>
+</ul>
+<h3 id="v083-reverse-driving-and-strut-mount-couple-2026-11-15">v0.8.3 — Reverse driving and strut mount couple (2026-11-15)<a class="headerlink" href="#v083-reverse-driving-and-strut-mount-couple-2026-11-15" title="Permanent link">&para;</a></h3>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Reverse driving: slip angle on |Vx|, acceleration command and RL pedal / driver model drive backward in reverse gear</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> L5 strut path delivers the mount-to-wheel-mass couple to the chassis</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Low-speed tyre key <code>tire_low_speed: off | relaxed</code></li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Friction-polygon inside test on slanted edges; <code>VDSimPlant(blend_distance=...)</code></li>
 </ul>
 <h3 id="v052-planned">v0.5.2+ (planned)<a class="headerlink" href="#v052-planned" title="Permanent link">&para;</a></h3>
 <ul class="task-list">
