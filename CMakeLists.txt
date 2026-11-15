@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(VDSim
-    VERSION 0.8.2
+    VERSION 0.8.3
     DESCRIPTION "Vehicle Dynamics Simulation Platform"
     LANGUAGES CXX
 )
