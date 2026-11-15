@@ -4,7 +4,7 @@ All notable changes to VDSim are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow
 [SemVer](https://semver.org/).
 
-## [0.8.3]
+## [0.8.3] - 2026-11-15
 
 ### Changed
 - The L5 refusal messages of `linearize` and `make_vec_session` no longer name a
@@ -48,6 +48,11 @@ All notable changes to VDSim are documented here. Format follows
 ### Known limitations
 - `cg_height_ref: sprung` keeps the 0.8.1 mount arm, so the mount couple stays
   missing in that mode (0.8.1 reproduction contract).
+- L2, L3 and L4 dynamic steering (`steering_dynamic: true`): the rack tyre-feedback
+  term has the wrong sign and lever arm, and the rack inertia and damping act in
+  handwheel-angle coordinates, so with zero driver torque the rack runs to its lock
+  (about 0.2 s at 15 m/s). The default kinematic steering is unaffected. Fix planned
+  for 0.10.0.
 
 ## [0.8.2] - 2026-11-14
 

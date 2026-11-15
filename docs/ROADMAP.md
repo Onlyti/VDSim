@@ -16,7 +16,8 @@ Detail specs: `docs/design/*`; tire phases in [`design/TIRE_ROADMAP.md`](design/
 
 **Velocity (recent):** v0.6 L5 MBD → **v0.7.0 first PyPI release** (generic default
 vehicle) → **v0.8.0 aero elements** (per-element aero, `air_density`, L5 downforce) →
-**v0.8.1 L5 reactions** → **v0.8.2 L5 strut path and hardpoint output**.
+**v0.8.1 L5 reactions** → **v0.8.2 L5 strut path and hardpoint output** →
+**v0.8.3 reverse driving and strut mount couple**.
 
 ---
 
@@ -66,6 +67,7 @@ timeline
         Aero elements + air density + L5 downforce : 2026-10-29
         L5 drive and brake reactions + level ids : 2026-11-01
         L5 strut CG meaning + DAE pitch fix + hardpoint output : 2026-11-14
+        Reverse driving + strut mount couple + polygon friction fix : 2026-11-15
 ```
 
 ## Next
@@ -75,7 +77,6 @@ for a date.
 
 | Version | Content |
 |---|---|
-| 0.8.3 | Reverse driving (slip angle, pedal and RL / driver-model direction); strut mount-to-wheel-mass couple; low-speed tyre key `tire_low_speed`; friction-polygon inside test |
 | 0.9.0 | Aero stage 2 (ride-height and pitch slopes, user aero module); per-axle tyres and rotor gyro; user-module fault boundary; five-link exact driven pose; knuckle reaction route |
 | later | K&C sweep arguments and outputs (roll centre, anti angles, bump steer, camber gain) |
 | 0.10.0 | Driver and cone-course API; rocker and U-shaped anti-roll bars |
@@ -456,13 +457,20 @@ Single tag **v0.4.0** per [`V0.4_PLAN.md`](design/V0.4_PLAN.md). Does not block 
 - [x] L5 drive / brake torque reactions per axle; LuGre wheel-spin reaction
 - [x] One level-id factory: an unknown `level` string is an error; L5 sessions from Python
 
-### v0.8.2 — L5 strut path and hardpoint output (2026-11-14)
+### v0.8.2 — L5 strut path and hardpoint output (2026-11-14, tagged)
 
 - [x] `cg_height` is the whole-vehicle CG on the L5 strut / DAE path (`cg_height_ref: sprung` keeps 0.8.1); strut-path axle transfer back in the verdict
 - [x] Cruise pitch oscillation on the corner-model (DAE) path fixed (contact-patch jacking slope, prescribed travel acceleration)
 - [x] Rack input mirrored on right-hand hardpoint corners; `steer_input: rack_travel`; `rack_per_rad`
 - [x] L5 per-wheel camber, toe and hardpoint output (C++, Python, `.vdtrace`); `vdsim.attach_l5_hardpoints`
 - [x] `wheel_gyro` (`legacy` | `full` | `off`)
+
+### v0.8.3 — Reverse driving and strut mount couple (2026-11-15)
+
+- [x] Reverse driving: slip angle on |Vx|, acceleration command and RL pedal / driver model drive backward in reverse gear
+- [x] L5 strut path delivers the mount-to-wheel-mass couple to the chassis
+- [x] Low-speed tyre key `tire_low_speed: off | relaxed`
+- [x] Friction-polygon inside test on slanted edges; `VDSimPlant(blend_distance=...)`
 
 ### v0.5.2+ (planned)
 
