@@ -62,7 +62,7 @@ after the v0.8.2 tag.
   the applied load.
 - The L5 settle run costs about 0.1 s of wall clock per reset (example car).
 
-## [0.8.3]
+## [0.8.3] - 2026-11-15
 
 ### Changed
 - The L5 refusal messages of `linearize` and `make_vec_session` no longer name a
@@ -106,6 +106,11 @@ after the v0.8.2 tag.
 ### Known limitations
 - `cg_height_ref: sprung` keeps the 0.8.1 mount arm, so the mount couple stays
   missing in that mode (0.8.1 reproduction contract).
+- L2, L3 and L4 dynamic steering (`steering_dynamic: true`): the rack tyre-feedback
+  term has the wrong sign and lever arm, and the rack inertia and damping act in
+  handwheel-angle coordinates, so with zero driver torque the rack runs to its lock
+  (about 0.2 s at 15 m/s). The default kinematic steering is unaffected. Fix planned
+  for 0.10.0.
 
 ## [0.8.2] - 2026-11-14
 
