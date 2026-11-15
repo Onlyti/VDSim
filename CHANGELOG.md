@@ -7,7 +7,7 @@ All notable changes to VDSim are documented here. Format follows
 ## [0.9.0] (not released)
 
 Work order 51: aero ride-height / pitch slopes and the aero user module. Merged
-after the v0.8.2 tag.
+after the v0.8.3 tag.
 
 ### Added
 - Per-element ride slopes in `aero.elements`: `h_ref` [m], `dClA_dh` [m²/m] and
