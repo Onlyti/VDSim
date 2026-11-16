@@ -74,6 +74,18 @@ after the v0.8.3 tag.
   (`register_module_name`, `forget_module_name`) and new private members in
   `SimSession`. Code built against 0.8.x headers has to be rebuilt. Runs without a
   user module are unchanged bit for bit.
+- User modules stay attached across `reset()`, `reset_settled()`, `restore()` and
+  the randomized reset (work order 51c): brake / steering / drivetrain on L2–L5 and
+  suspension / anti-roll bar on L3/L4 installed with `set_*_module()` are kept and
+  their `reset()` is called. Before, L2–L5 rebuilt the built-in brake / steering /
+  drivetrain on every reset, so an RL episode reset dropped a user module without a
+  warning, and L3/L4 never called the suspension / anti-roll bar `reset()`. Built-in
+  modules are rebuilt as before, so a model without user modules runs bit for bit as
+  before. On L5 the aero settle run inside a reset uses the built-in actuators and
+  the user modules come back after it.
+- A user module `reset()` that throws no longer ends the process: the next `tick()`
+  raises `std::invalid_argument` / `ValueError` naming the module and
+  `exception in reset()`, until the next `reset()` / `restore()`.
 
 ### Rejected (`std::invalid_argument` / `ValueError`)
 - An element with one or two of the three slope keys; a non-finite slope key.

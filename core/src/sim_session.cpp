@@ -605,6 +605,8 @@ void SimSession::tick(double dt) {
     if (module_fault_) throw std::invalid_argument(module_fault_msg_);
     ++tick_index_;
     capture_fault_kinematics_();
+    // 51c: a user module reset() that threw in reset() / restore() refuses this tick.
+    raise_if_module_fault_();
 
     // T3: rack_travel on L5 requires front hardpoints. Must throw here
     // (not in IVehicleDynamics::step, which is noexcept).

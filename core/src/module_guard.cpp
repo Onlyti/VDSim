@@ -88,6 +88,17 @@ struct GuardBase {
         }
         return false;
     }
+    /// Run a module reset(); an exception is recorded (cause "exception in reset(): ...").
+    template <class F>
+    void run_reset(F&& f) noexcept {
+        try {
+            f();
+        } catch (const std::exception& e) {
+            latch->record(kind, name, std::string("exception in reset(): ") + e.what());
+        } catch (...) {
+            latch->record(kind, name, "exception in reset(): unknown (not std::exception)");
+        }
+    }
     /// Record a non-finite field; true when v is finite.
     bool finite(double v, const char* field) {
         if (std::isfinite(v)) return true;
@@ -117,7 +128,7 @@ public:
     void begin_step(const SubsystemContext& ctx, double dt) override {
         if (!faulted()) run([&] { m_->begin_step(ctx, dt); });
     }
-    void reset() override { m_->reset(); }
+    void reset() override { run_reset([&] { m_->reset(); }); }
 
 private:
     std::shared_ptr<IBrakeSystem> m_;
@@ -141,7 +152,7 @@ public:
     void begin_step(const SubsystemContext& ctx, double dt) override {
         if (!faulted()) run([&] { m_->begin_step(ctx, dt); });
     }
-    void reset() override { m_->reset(); }
+    void reset() override { run_reset([&] { m_->reset(); }); }
 
 private:
     std::shared_ptr<ISteeringSystem> m_;
@@ -165,7 +176,7 @@ public:
     void begin_step(const SubsystemContext& ctx, double dt) override {
         if (!faulted()) run([&] { m_->begin_step(ctx, dt); });
     }
-    void reset() override { m_->reset(); }
+    void reset() override { run_reset([&] { m_->reset(); }); }
     double engine_rpm() const override { return m_->engine_rpm(); }
     int current_gear() const override { return m_->current_gear(); }
     double wheel_engine_inertia(int wheel) const override { return m_->wheel_engine_inertia(wheel); }
@@ -185,7 +196,7 @@ public:
         if (!run([&] { f = m_->force(ctx, c); })) return 0.0;
         return finite(f, "force") ? f : 0.0;
     }
-    void reset() override { m_->reset(); }
+    void reset() override { run_reset([&] { m_->reset(); }); }
 
 private:
     std::shared_ptr<ISuspension> m_;
@@ -202,7 +213,7 @@ public:
         if (!finite(f.first, "force[0]") || !finite(f.second, "force[1]")) return {0.0, 0.0};
         return f;
     }
-    void reset() override { m_->reset(); }
+    void reset() override { run_reset([&] { m_->reset(); }); }
 
 private:
     std::shared_ptr<IAntiRollBar> m_;
@@ -228,7 +239,7 @@ public:
     void begin_step(const SubsystemContext& ctx, double dt) override {
         if (!faulted()) run([&] { m_->begin_step(ctx, dt); });
     }
-    void reset() override { m_->reset(); }
+    void reset() override { run_reset([&] { m_->reset(); }); }
 
 private:
     std::shared_ptr<IAeroModel> m_;

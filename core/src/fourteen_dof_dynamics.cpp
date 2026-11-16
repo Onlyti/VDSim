@@ -95,9 +95,10 @@ public:
         validate_rack_per_rad(vp);
         vp_ = vp; ts_ = ts; sp_ = sp;
         inner_->initialize(vp, ts, sp);
-        suspension_ = make_default_suspension(vp);
-        arb_front_  = make_default_antirollbar(vp, 0);
-        arb_rear_   = make_default_antirollbar(vp, 1);
+        // 51c: user suspension / anti-roll bars stay; built-in ones are rebuilt.
+        if (!user_suspension_) suspension_ = make_default_suspension(vp);
+        if (!user_arb_front_)  arb_front_  = make_default_antirollbar(vp, 0);
+        if (!user_arb_rear_)   arb_rear_   = make_default_antirollbar(vp, 1);
 
         const double a = vp.cg_to_front, b = vp.cg_to_rear;
         const double tw_f = vp.track_front * 0.5, tw_r = vp.track_rear * 0.5;
@@ -167,6 +168,10 @@ public:
         if (!suspension_) suspension_ = make_default_suspension(vp_);
         if (!arb_front_)  arb_front_  = make_default_antirollbar(vp_, 0);
         if (!arb_rear_)   arb_rear_   = make_default_antirollbar(vp_, 1);
+        // 51c: user modules are kept and reset; built-in ones are left as before.
+        if (user_suspension_) suspension_->reset();
+        if (user_arb_front_)  arb_front_->reset();
+        if (user_arb_rear_)   arb_rear_->reset();
     }
 
     void step(const ControlInput& u,
@@ -464,13 +469,14 @@ public:
     // Suspension/ARB are the L3 vertical/roll subsystems hosted here.
     bool   set_suspension_module(std::shared_ptr<ISuspension> m) override
         { if (!m) return false;
-          suspension_ = detail::guard_suspension(std::move(m), &module_latch()); return true; }
+          suspension_ = detail::guard_suspension(std::move(m), &module_latch());
+          user_suspension_ = true; return true; }
     bool   set_antirollbar_module(int axle, std::shared_ptr<IAntiRollBar> m) override {
         if (!m) return false;
         if (axle != 0 && axle != 1) return false;
         m = detail::guard_antirollbar(std::move(m), &module_latch());
-        if (axle == 0) arb_front_ = std::move(m);
-        else           arb_rear_  = std::move(m);
+        if (axle == 0) { arb_front_ = std::move(m); user_arb_front_ = true; }
+        else           { arb_rear_  = std::move(m); user_arb_rear_  = true; }
         return true;
     }
     std::array<double, NUM_WHEELS> tire_Fz() const override
@@ -690,6 +696,8 @@ private:
     std::shared_ptr<ISuspension> suspension_;
     std::shared_ptr<IAntiRollBar> arb_front_;
     std::shared_ptr<IAntiRollBar> arb_rear_;
+    // 51c: slots holding a user module (kept across initialize / reset).
+    bool user_suspension_ {false}, user_arb_front_ {false}, user_arb_rear_ {false};
     DriverCmd susp_ctx_cmd_ {};   // threaded into the suspension/ARB ctx (default modules ignore it)
     std::array<double, NUM_WHEELS> Fz_static_           {};
     std::array<double, NUM_WHEELS> static_compression_  {};

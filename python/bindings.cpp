@@ -111,6 +111,37 @@ struct PyAntiRollBar : vdsim::IAntiRollBar {
     void reset() override { VDSIM_PY_GUARDED(PYBIND11_OVERRIDE(void, vdsim::IAntiRollBar, reset, );) }
 };
 
+/// @brief Cast a Python user module to its C++ interface and tie the Python object's
+///        lifetime to the C++ owner (work order 51c K1, PROP-2796).
+/// @details The trampolines find the Python overrides through the Python instance. A plain
+///          cast keeps only the C++ side, so a module attached without a user reference
+///          lost its overrides once the Python object was collected ("Tried to call pure
+///          virtual function"). The returned pointer aliases the same C++ object and owns
+///          one reference to the Python object; the reference is dropped under the GIL
+///          when the model releases the module (replacement or destruction). After
+///          interpreter shutdown the reference is left in place instead of released.
+/// @tparam T module interface (IBrakeSystem, ISteeringSystem, ...)
+/// @param obj Python module object, not None
+/// @return shared_ptr<T> that keeps @p obj alive while any copy of it exists
+template <class T>
+std::shared_ptr<T> hold_python_module(const py::object& obj) {
+    struct Release {
+        std::shared_ptr<T> cpp;
+        py::object* ref;
+        void operator()(T*) {
+            if (ref == nullptr) return;
+            if (!Py_IsInitialized()) { ref = nullptr; return; }
+            py::gil_scoped_acquire gil;
+            cpp.reset();
+            delete ref;
+            ref = nullptr;
+        }
+    };
+    auto cpp = obj.cast<std::shared_ptr<T>>();
+    T* raw = cpp.get();
+    return std::shared_ptr<T>(raw, Release{std::move(cpp), new py::object(obj)});
+}
+
 // std::array<double,4> via def_readwrite copies on read — element __setitem__ is a no-op.
 class MutableWheelArray {
 public:
@@ -1237,7 +1268,7 @@ PYBIND11_MODULE(vdsim, m) {
              "Returns False if this model has no gearbox.")
         .def("set_brake_module",       [](vdsim::IVehicleDynamics& d, py::object obj) {
                  if (obj.is_none()) return d.set_brake_module(nullptr);
-                 auto m = obj.cast<std::shared_ptr<vdsim::IBrakeSystem>>();
+                 auto m = hold_python_module<vdsim::IBrakeSystem>(obj);
                  const void* key = m.get();
                  vdsim::register_module_name(key, py::str(obj.get_type().attr("__name__")));
                  const bool ok = d.set_brake_module(std::move(m));
@@ -1247,7 +1278,7 @@ PYBIND11_MODULE(vdsim, m) {
              "Install a user BrakeModule (L2/L3). False if unsupported.")
         .def("set_steering_module",    [](vdsim::IVehicleDynamics& d, py::object obj) {
                  if (obj.is_none()) return d.set_steering_module(nullptr);
-                 auto m = obj.cast<std::shared_ptr<vdsim::ISteeringSystem>>();
+                 auto m = hold_python_module<vdsim::ISteeringSystem>(obj);
                  const void* key = m.get();
                  vdsim::register_module_name(key, py::str(obj.get_type().attr("__name__")));
                  const bool ok = d.set_steering_module(std::move(m));
@@ -1257,7 +1288,7 @@ PYBIND11_MODULE(vdsim, m) {
              "Install a user SteeringModule (L2/L3). False if unsupported.")
         .def("set_drivetrain_module",  [](vdsim::IVehicleDynamics& d, py::object obj) {
                  if (obj.is_none()) return d.set_drivetrain_module(nullptr);
-                 auto m = obj.cast<std::shared_ptr<vdsim::IDrivetrain>>();
+                 auto m = hold_python_module<vdsim::IDrivetrain>(obj);
                  const void* key = m.get();
                  vdsim::register_module_name(key, py::str(obj.get_type().attr("__name__")));
                  const bool ok = d.set_drivetrain_module(std::move(m));
@@ -1267,20 +1298,19 @@ PYBIND11_MODULE(vdsim, m) {
              "Install a user DrivetrainModule (L2/L3). False if unsupported.")
         .def("set_aero_module",        [](vdsim::IVehicleDynamics& d, py::object obj) {
                  if (obj.is_none()) return d.set_aero_module(nullptr);
-                 auto m = obj.cast<std::shared_ptr<vdsim::IAeroModel>>();
+                 auto m = hold_python_module<vdsim::IAeroModel>(obj);
                  const void* key = m.get();
                  vdsim::register_module_name(key, py::str(obj.get_type().attr("__name__")));
                  const bool ok = d.set_aero_module(std::move(m));
                  vdsim::forget_module_name(key);
                  return ok;
              },
-             py::keep_alive<1, 2>(),
              "Install a user AeroModule (L2-L5; replaces the built-in aero). On L5 attach "
              "before reset() so the static-reference settle run happens. False on L1. The "
              "model keeps the Python module object alive.")
         .def("set_suspension_module",  [](vdsim::IVehicleDynamics& d, py::object obj) {
                  if (obj.is_none()) return d.set_suspension_module(nullptr);
-                 auto m = obj.cast<std::shared_ptr<vdsim::ISuspension>>();
+                 auto m = hold_python_module<vdsim::ISuspension>(obj);
                  const void* key = m.get();
                  vdsim::register_module_name(key, py::str(obj.get_type().attr("__name__")));
                  const bool ok = d.set_suspension_module(std::move(m));
@@ -1290,7 +1320,7 @@ PYBIND11_MODULE(vdsim, m) {
              "Install a user SuspensionModule (L3 only). False if unsupported.")
         .def("set_antirollbar_module", [](vdsim::IVehicleDynamics& d, int axle, py::object obj) {
                  if (obj.is_none()) return d.set_antirollbar_module(axle, nullptr);
-                 auto m = obj.cast<std::shared_ptr<vdsim::IAntiRollBar>>();
+                 auto m = hold_python_module<vdsim::IAntiRollBar>(obj);
                  const void* key = m.get();
                  vdsim::register_module_name(key, py::str(obj.get_type().attr("__name__")));
                  const bool ok = d.set_antirollbar_module(axle, std::move(m));

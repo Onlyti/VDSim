@@ -69,7 +69,14 @@ different rates:
 a memoryless function of the instantaneous deflection and must be evaluated every stage so
 the vertical/roll ODE stays consistent.
 
-`reset()` is called when the model is reset; clear your module state there.
+`reset()` is called on every model reset (`reset()`, `reset_settled()`, `restore()` and
+the randomized reset); clear your module state there. The module stays attached across
+resets (0.9.0, work order 51c): only built-in modules are rebuilt, so attaching once is
+enough and attaching again after a reset still works. On L5 the aero settle run inside a
+reset uses the built-in brake / steering / drivetrain; your module is not called during
+it. A `reset()` that raises refuses the next tick with the module named (the process
+keeps running). In Python the model holds the module object while it is attached, so
+`dyn.set_brake_module(MyBrake())` without a variable is fine.
 
 ## 3a. Faults (0.9.0)
 
@@ -109,9 +116,9 @@ custom module can do the same or use `copysign`.
 
 ## 4a. Aero module (0.9.0)
 
-`dyn.set_aero_module(m)` replaces the whole built-in aero (ch. 26.8). Unlike the
-brake / steering / drivetrain modules it survives `reset()` (its `reset()` is called
-once per reset), and the model keeps the Python object alive. On L5 attach it before
+`dyn.set_aero_module(m)` replaces the whole built-in aero (ch. 26.8). Like the other
+modules it survives `reset()` (its `reset()` is called once per reset), and like every
+Python module here the session holds the object while it is attached. On L5 attach it before
 `reset()`: the reset runs the static-reference settle run, during which `compute`
 and `begin_step` are not called. On L3/L4 `compute` is called by the ride model
 (tyre loads) and by the inner planar model (drag), so more than once per stage.
