@@ -117,8 +117,8 @@ custom module can do the same or use `copysign`.
 ## 4a. Aero module (0.9.0)
 
 `dyn.set_aero_module(m)` replaces the whole built-in aero (ch. 26.8). Like the other
-modules it survives `reset()` (its `reset()` is called once per reset); unlike them the
-model also keeps the Python object alive. On L5 attach it before
+modules it survives `reset()` (its `reset()` is called once per reset), and like every
+Python module here the session holds the object while it is attached. On L5 attach it before
 `reset()`: the reset runs the static-reference settle run, during which `compute`
 and `begin_step` are not called. On L3/L4 `compute` is called by the ride model
 (tyre loads) and by the inner planar model (drag), so more than once per stage.
