@@ -1031,6 +1031,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#rotor-gyroscopic-term-rotor_axis-090" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rotor gyroscopic term (rotor_axis, 0.9.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3037,6 +3048,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#rotor-gyroscopic-term-rotor_axis-090" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rotor gyroscopic term (rotor_axis, 0.9.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3421,10 +3443,57 @@ only with a roll or pitch rate, through <span class="arithmatex">\(\omega_{x,y}\
 reflected drivetrain and engine inertia is not part of <span class="arithmatex">\(\mathbf{H}\)</span> (it enters the spin
 equation only); the steer tilt keeps the 0.8.1 small-angle form; the camber is non-zero
 only with an attached corner model (without it <code>full</code> equals <code>legacy</code> bit for bit).
-Rotor gyroscopics (<code>rotor_*</code>) are not in this term (0.9.0).
+Rotor gyroscopics are the separate term below (<code>rotor_axis</code>, 0.9.0).
 Tests: <code>tests/unit/test_wheel_gyro_keys.cpp</code> (key, helper, zero-camber identity),
 <code>tests/integration/test_l5_wheel_gyro.cpp</code> (corner-model wiring, steady skidpad roll
 moment against the term above), <code>Stunt.GyroscopicWheelSpinCouplesYawToRoll</code>.</p>
+<h3 id="rotor-gyroscopic-term-rotor_axis-090">Rotor gyroscopic term (<code>rotor_axis</code>, 0.9.0)<a class="headerlink" href="#rotor-gyroscopic-term-rotor_axis-090" title="Permanent link">&para;</a></h3>
+<p>The motor or engine rotor spins at the carrier speed times the ratio about a
+body-fixed axis <span class="arithmatex">\(\hat{\mathbf{e}}\)</span> (<code>rotor_axis</code>), so it carries</p>
+<div class="arithmatex">\[
+\mathbf{H}_r = I_r\,G\,\omega_c\,\hat{\mathbf{e}},
+\qquad
+\boldsymbol{\tau}_{\mathrm{rotor}} = -\,\boldsymbol{\omega}\times\mathbf{H}_r ,
+\]</div>
+<p>with <span class="arithmatex">\(I_r\)</span> = <code>rotor_inertia</code> (= <code>engine_rotational_inertia</code>, 0 when <span class="arithmatex">\(\le 0\)</span>),
+<span class="arithmatex">\(G\)</span> = <code>rotor_ratio</code> (= <code>final_drive_ratio</code>) and <span class="arithmatex">\(\omega_c\)</span> the carrier speed of the
+driven axle: <span class="arithmatex">\((\omega_{RL}+\omega_{RR})/2\)</span> (RWD), <span class="arithmatex">\((\omega_{FL}+\omega_{FR})/2\)</span> (FWD),
+half of each (AWD). The same <span class="arithmatex">\(I_r\)</span> and <span class="arithmatex">\(G\)</span> give the reflected spin inertia
+<span class="arithmatex">\(I_r G^2\)</span> of the spin equation (one source).</p>
+<table>
+<thead>
+<tr>
+<th><code>rotor_axis</code></th>
+<th><span class="arithmatex">\(\hat{\mathbf{e}}\)</span> (body)</th>
+<th>Steady-turn effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>unset / <code>none</code></td>
+<td>—</td>
+<td>no term (bit identical to 0.8.2)</td>
+</tr>
+<tr>
+<td><code>+y</code> / <code>-y</code> (transverse rotor)</td>
+<td><span class="arithmatex">\(\pm\hat{\mathbf{y}}\)</span></td>
+<td>roll moment <span class="arithmatex">\(\tau_x = \pm r\,I_r G\,\omega_c\)</span></td>
+</tr>
+<tr>
+<td><code>+x</code> / <code>-x</code> (longitudinal rotor)</td>
+<td><span class="arithmatex">\(\pm\hat{\mathbf{x}}\)</span></td>
+<td>pitch moment <span class="arithmatex">\(\tau_y = \mp r\,I_r G\,\omega_c\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>The sign of <code>rotor_axis</code> is the rotor spin direction for forward rolling
+(<span class="arithmatex">\(\omega_c &gt; 0\)</span>). The term is independent of <code>wheel_gyro</code> and of ground contact.
+With a <code>powertrain:</code> block the rotor is the engine: <span class="arithmatex">\(\mathbf{H}_r = I_e\,\omega_e\,\hat{\mathbf{e}}\)</span>
+from the engine inertia and speed (information path, no gate). L1–L4 ignore the axis.
+Code: <code>free_3d_dynamics.cpp</code> (<code>rotor_axis_</code>), <code>rotor_axis_vector</code> (<code>params.cpp</code>).
+Tests: <code>tests/unit/test_rotor_keys.cpp</code> (keys, single source),
+<code>tests/integration/test_l5_wheel_gyro.cpp</code> <code>L5RotorGyro.*</code> (reflected inertia from the
+test constants, skidpad roll and pitch budget against <span class="arithmatex">\((\boldsymbol\omega\times\mathbf{H}_r)\)</span>).</p>
 <p>Position and attitude integrate as</p>
 <div class="arithmatex">\[
 \dot{\mathbf{p}} = \mathbf{R}\,\mathbf{v}, \qquad

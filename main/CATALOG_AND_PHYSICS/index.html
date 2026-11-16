@@ -3241,6 +3241,9 @@ driven axle and coupled on open diffs (<code>core/include/vdsim/drivetrain_inert
 </tbody>
 </table>
 <p>Set <code>engine_rotational_inertia: 0</code> for legacy wheel-only spin-up.</p>
+<p><code>rotor_inertia</code> / <code>rotor_ratio</code> (0.9.0) are names of the same two parameters; giving
+both names with different values is an error. <code>rotor_axis</code> (<code>none</code>, <code>±x</code>, <code>±y</code>)
+adds the L5 rotor gyroscopic moment from the same values (theory ch. 20).</p>
 <p>ISO / accel benchmarks may shift vs pre-inertia baselines — re-run
 <code>apps/validation/run_validation.py</code> when re-baselining.</p>
 <h2 id="lugre-dynamic-tire-opt-in">LuGre dynamic tire (opt-in)<a class="headerlink" href="#lugre-dynamic-tire-opt-in" title="Permanent link">&para;</a></h2>
