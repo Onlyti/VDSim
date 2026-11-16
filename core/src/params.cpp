@@ -9,6 +9,7 @@
 #include "vdsim/params.hpp"
 #include "vdsim/aero.hpp"
 #include "vdsim/sensors.hpp"
+#include "vdsim/tire_low_speed.hpp"
 
 #include <yaml-cpp/yaml.h>
 #include <spdlog/spdlog.h>
@@ -176,7 +177,8 @@ void parse_powertrain(const YAML::Node& root, PowertrainParams& pt) {
 /**
  * @brief Parse `aero: {elements: [...]}` into vp.aero_elements.
  *
- * Each element needs name, ClA, CdA, x, z (y optional, default 0). With
+ * Each element needs name, ClA, CdA, x, z (y optional, default 0; h_ref,
+ * dClA_dh, dClA_dpitch optional, all three or none). With
  * elements present the four legacy keys and aero_drag_height must be absent
  * from the same file; a silent override is never allowed.
  * @throws std::invalid_argument on a malformed list or a double specification
@@ -206,6 +208,12 @@ void parse_aero_elements(const YAML::Node& root, VehicleParams& p) {
         el.x    = e["x"].as<double>();
         el.z    = e["z"].as<double>();
         if (e["y"] && !e["y"].IsNull()) el.y = e["y"].as<double>();
+        // Ride-height / pitch slopes (work order 51): all three or none,
+        // checked by validate_aero_params().
+        if (e["h_ref"] && !e["h_ref"].IsNull()) el.h_ref = e["h_ref"].as<double>();
+        if (e["dClA_dh"] && !e["dClA_dh"].IsNull()) el.dClA_dh = e["dClA_dh"].as<double>();
+        if (e["dClA_dpitch"] && !e["dClA_dpitch"].IsNull())
+            el.dClA_dpitch = e["dClA_dpitch"].as<double>();
         p.aero_elements.push_back(std::move(el));
     }
     if (p.aero_elements.empty()) return;
@@ -286,6 +294,30 @@ WheelGyro wheel_gyro_mode(const VehicleParams& vp) {
     if (s == "off") return WheelGyro::Off;
     throw std::invalid_argument(
         "wheel_gyro: unknown value '" + s + "' (expected legacy, full or off)");
+}
+
+TireLowSpeed tire_low_speed_mode(const VehicleParams& vp) {
+    const auto& s = vp.tire_low_speed;
+    if (s.empty() || s == "off") return TireLowSpeed::Off;
+    if (s == "relaxed") return TireLowSpeed::Relaxed;
+    throw std::invalid_argument(
+        "tire_low_speed: unknown value '" + s + "' (expected off or relaxed)");
+}
+
+TireSetup apply_tire_low_speed(const VehicleParams& vp, const TireSetup& ts) {
+    if (tire_low_speed_mode(vp) == TireLowSpeed::Off) return ts;
+    TireSetup out = ts;
+    for (auto& t : out.wheel) {
+        if (!t.belt.enabled) {
+            t.belt.enabled = true;
+            t.belt.sigma_lat = t.relaxation_length_lat > 1e-6 ? t.relaxation_length_lat
+                                                              : kRelaxedSigmaLat;
+            t.belt.sigma_long = t.relaxation_length_long > 1e-6 ? t.relaxation_length_long
+                                                                : kRelaxedSigmaLong;
+        }
+        t.belt.v_low = kRelaxedVLow;
+    }
+    return out;
 }
 
 void warn_if_wheel_gyro_unused(const VehicleParams& vp) {
@@ -460,6 +492,8 @@ VehicleParams VehicleParams::from_yaml(const std::string& path) {
     (void)wheel_gyro_mode(p);
     pull(root, "rotor_axis",            p.rotor_axis);
     (void)rotor_axis_vector(p);
+    pull(root, "tire_low_speed",        p.tire_low_speed);
+    (void)tire_low_speed_mode(p);
     pull(root, "rack_per_rad",          p.rack_per_rad);
     validate_rack_per_rad(p);
 
@@ -551,6 +585,9 @@ void VehicleParams::to_yaml(const std::string& path) const {
         out << YAML::Key << "wheel_gyro" << YAML::Value << wheel_gyro;
     if (!rotor_axis.empty())
         out << YAML::Key << "rotor_axis" << YAML::Value << rotor_axis;
+    if (!tire_low_speed.empty())   // quoted: "off" is a YAML 1.1 boolean to other readers
+        out << YAML::Key << "tire_low_speed" << YAML::Value << YAML::DoubleQuoted
+            << tire_low_speed;
     out << YAML::Key << "rack_per_rad"          << YAML::Value << rack_per_rad;
 
     if (aero_elements.empty()) {
@@ -571,6 +608,12 @@ void VehicleParams::to_yaml(const std::string& path) const {
             out << YAML::Key << "x"    << YAML::Value << e.x;
             out << YAML::Key << "y"    << YAML::Value << e.y;
             out << YAML::Key << "z"    << YAML::Value << e.z;
+            if (e.h_ref)
+                out << YAML::Key << "h_ref" << YAML::Value << *e.h_ref;
+            if (e.dClA_dh)
+                out << YAML::Key << "dClA_dh" << YAML::Value << *e.dClA_dh;
+            if (e.dClA_dpitch)
+                out << YAML::Key << "dClA_dpitch" << YAML::Value << *e.dClA_dpitch;
             out << YAML::EndMap;
         }
         out << YAML::EndSeq;

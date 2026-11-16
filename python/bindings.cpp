@@ -42,6 +42,18 @@ struct PyBrakeSystem : vdsim::IBrakeSystem {
     void reset() override { PYBIND11_OVERRIDE(void, vdsim::IBrakeSystem, reset, ); }
 };
 
+struct PyAeroModel : vdsim::IAeroModel {
+    using vdsim::IAeroModel::IAeroModel;
+    std::vector<vdsim::AeroForce> compute(const vdsim::SubsystemContext& ctx,
+                                          const vdsim::AeroInput& in) override {
+        PYBIND11_OVERRIDE_PURE(std::vector<vdsim::AeroForce>, vdsim::IAeroModel, compute, ctx, in);
+    }
+    void begin_step(const vdsim::SubsystemContext& ctx, double dt) override {
+        PYBIND11_OVERRIDE(void, vdsim::IAeroModel, begin_step, ctx, dt);
+    }
+    void reset() override { PYBIND11_OVERRIDE(void, vdsim::IAeroModel, reset, ); }
+};
+
 struct PySteeringSystem : vdsim::ISteeringSystem {
     using vdsim::ISteeringSystem::ISteeringSystem;
     vdsim::SteeringOutput apply(const vdsim::SubsystemContext& ctx) override {
@@ -314,20 +326,29 @@ PYBIND11_MODULE(vdsim, m) {
         "front axle [m]; ClA > 0 is downforce [m^2], CdA >= 0 [m^2].")
         .def(py::init<>())
         .def(py::init([](std::string name, double ClA, double CdA,
-                         double x, double z, double y) {
+                         double x, double z, double y, std::optional<double> h_ref,
+                         std::optional<double> dClA_dh, std::optional<double> dClA_dpitch) {
                  vdsim::AeroElement e;
                  e.name = std::move(name); e.ClA = ClA; e.CdA = CdA;
                  e.x = x; e.y = y; e.z = z;
+                 e.h_ref = h_ref; e.dClA_dh = dClA_dh; e.dClA_dpitch = dClA_dpitch;
                  return e;
              }),
              py::arg("name"), py::arg("ClA"), py::arg("CdA"),
-             py::arg("x"), py::arg("z"), py::arg("y") = 0.0)
+             py::arg("x"), py::arg("z"), py::arg("y") = 0.0,
+             py::arg("h_ref") = py::none(), py::arg("dClA_dh") = py::none(),
+             py::arg("dClA_dpitch") = py::none())
         .def_readwrite("name", &vdsim::AeroElement::name)
         .def_readwrite("ClA",  &vdsim::AeroElement::ClA)
         .def_readwrite("CdA",  &vdsim::AeroElement::CdA)
         .def_readwrite("x",    &vdsim::AeroElement::x)
         .def_readwrite("y",    &vdsim::AeroElement::y)
         .def_readwrite("z",    &vdsim::AeroElement::z)
+        .def_readwrite("h_ref",       &vdsim::AeroElement::h_ref,
+                       "static reference height [m] (None = no ride slopes)")
+        .def_readwrite("dClA_dh",     &vdsim::AeroElement::dClA_dh, "dClA/dh [m^2/m] or None")
+        .def_readwrite("dClA_dpitch", &vdsim::AeroElement::dClA_dpitch,
+                       "dClA/dtheta [m^2/rad] (ISO + nose down) or None")
         .def("__repr__", [](const vdsim::AeroElement& e) {
             return "AeroElement(name='" + e.name + "', ClA=" + std::to_string(e.ClA) +
                    ", CdA=" + std::to_string(e.CdA) + ", x=" + std::to_string(e.x) +
@@ -335,12 +356,22 @@ PYBIND11_MODULE(vdsim, m) {
         });
     py::class_<vdsim::AeroState>(m, "AeroState")
         .def(py::init<>())
-        .def(py::init([](double vx) { vdsim::AeroState s; s.vx = vx; return s; }),
-             py::arg("vx"))
-        .def_readwrite("vx", &vdsim::AeroState::vx);
+        .def(py::init([](double vx, double dz, double pitch, double roll) {
+                 vdsim::AeroState s;
+                 s.vx = vx; s.dz = dz; s.pitch = pitch; s.roll = roll;
+                 return s;
+             }),
+             py::arg("vx"), py::arg("dz") = 0.0, py::arg("pitch") = 0.0,
+             py::arg("roll") = 0.0)
+        .def_readwrite("vx", &vdsim::AeroState::vx)
+        .def_readwrite("dz", &vdsim::AeroState::dz, "heave vs the static reference [m], + up")
+        .def_readwrite("pitch", &vdsim::AeroState::pitch,
+                       "pitch vs the static reference [rad], ISO + nose down")
+        .def_readwrite("roll", &vdsim::AeroState::roll, "roll vs the static reference [rad]");
     py::class_<vdsim::AeroElementLoad>(m, "AeroElementLoad")
         .def_readonly("fz", &vdsim::AeroElementLoad::fz)
-        .def_readonly("fx", &vdsim::AeroElementLoad::fx);
+        .def_readonly("fx", &vdsim::AeroElementLoad::fx)
+        .def_readonly("h", &vdsim::AeroElementLoad::h, "element height above ground [m]");
     py::class_<vdsim::AeroLoads>(m, "AeroLoads")
         .def_readonly("elements",          &vdsim::AeroLoads::elements)
         .def_readonly("fz_total",          &vdsim::AeroLoads::fz_total)
@@ -455,6 +486,7 @@ PYBIND11_MODULE(vdsim, m) {
              },
              "Alias of final_drive_ratio [-] (same storage); to_yaml keeps this name once "
              "it is set.")
+        .def_readwrite("tire_low_speed",       &vdsim::VehicleParams::tire_low_speed)
         .def_readwrite("rack_per_rad",         &vdsim::VehicleParams::rack_per_rad)
         .def_readwrite("steering_dynamic",     &vdsim::VehicleParams::steering_dynamic)
         .def_readwrite("rack_mass",            &vdsim::VehicleParams::rack_mass)
@@ -870,7 +902,7 @@ PYBIND11_MODULE(vdsim, m) {
               // than return a Jacobian nobody has validated.
               if (level == "L5")
                   throw std::invalid_argument(
-                      "L5 linearization is not supported in 0.8.1 (the planar "
+                      "L5 linearization is not supported yet (the planar "
                       "[X,Y,psi,vx,vy,r] map is not validated on the free-3D state)");
               auto dyn = vdsim::create_dynamics_for_level(level);
               vdsim::SolverParams sp;
@@ -1062,6 +1094,57 @@ PYBIND11_MODULE(vdsim, m) {
         .def("wheel_torque", &vdsim::IBrakeSystem::wheel_torque)
         .def("begin_step",   &vdsim::IBrakeSystem::begin_step)
         .def("reset",        &vdsim::IBrakeSystem::reset);
+    py::class_<vdsim::AeroReference>(m, "AeroReference",
+        "L5 static aero reference of the last reset (in-reset settle run, work order 51).")
+        .def_readonly("ran",       &vdsim::AeroReference::ran)
+        .def_readonly("ref_z",     &vdsim::AeroReference::ref_z, "body-origin world z [m]")
+        .def_readonly("ref_pitch", &vdsim::AeroReference::ref_pitch, "pitch [rad]")
+        .def_readonly("ref_roll",  &vdsim::AeroReference::ref_roll, "roll [rad]")
+        .def_readonly("settled",   &vdsim::AeroReference::settled)
+        .def_readonly("t_settle",  &vdsim::AeroReference::t_settle, "[s]")
+        .def_readonly("unmet",     &vdsim::AeroReference::unmet);
+    // Aero module (work order 51): replaces the whole built-in aero of the vehicle.
+    py::class_<vdsim::AeroInput>(m, "AeroInput",
+        "Input of an aero module; ride quantities relative to the static reference.")
+        .def(py::init<>())
+        .def_readwrite("v_air_body", &vdsim::AeroInput::v_air_body, "air-relative velocity, body [m/s]")
+        .def_readwrite("slip_angle", &vdsim::AeroInput::slip_angle, "atan2(vy, vx) [rad]")
+        .def_readwrite("dz_heave",   &vdsim::AeroInput::dz_heave, "body-origin heave vs static [m], + up")
+        .def_readwrite("pitch",      &vdsim::AeroInput::pitch, "pitch vs static [rad], ISO + nose down")
+        .def_readwrite("roll",       &vdsim::AeroInput::roll, "roll vs static [rad]")
+        .def_readwrite("dh_front",   &vdsim::AeroInput::dh_front, "front-axle ride change [m]")
+        .def_readwrite("dh_rear",    &vdsim::AeroInput::dh_rear, "rear-axle ride change [m]")
+        .def_readwrite("rho",        &vdsim::AeroInput::rho, "air density [kg/m^3]");
+    py::class_<vdsim::AeroForce>(m, "AeroForce",
+        "One module force: force_body [N] in body axes (drag -x, downforce -z), point [m] "
+        "in the aero.elements frame (origin on the ground below the front axle).")
+        .def(py::init<>())
+        .def(py::init([](std::string name, vdsim::Vec3 force_body, vdsim::Vec3 point) {
+                 vdsim::AeroForce f;
+                 f.name = std::move(name);
+                 f.force_body = force_body;
+                 f.point = point;
+                 return f;
+             }),
+             py::arg("name"), py::arg("force_body"), py::arg("point"))
+        .def_readwrite("name",       &vdsim::AeroForce::name)
+        .def_readwrite("force_body", &vdsim::AeroForce::force_body)
+        .def_readwrite("point",      &vdsim::AeroForce::point);
+    py::class_<vdsim::IAeroModel, PyAeroModel, std::shared_ptr<vdsim::IAeroModel>>(
+            m, "AeroModule",
+            "Subclass and override compute(ctx, inp) -> list[AeroForce]. Replaces the "
+            "built-in aero; begin_step(ctx, dt) once per step, compute() per force "
+            "evaluation (pure), reset() on model reset. Install with dyn.set_aero_module().")
+        .def(py::init<>())
+        .def("compute",    &vdsim::IAeroModel::compute)
+        .def("begin_step", &vdsim::IAeroModel::begin_step)
+        .def("reset",      &vdsim::IAeroModel::reset);
+    m.def("make_aero_input", &vdsim::make_aero_input, py::arg("vp"), py::arg("v_body"),
+          py::arg("state"), "AeroInput from a body velocity and an AeroState (vx ignored).");
+    m.def("aero_loads_from_forces", &vdsim::aero_loads_from_forces, py::arg("vp"),
+          py::arg("forces"), py::arg("lateral"),
+          "Axle / wheel / wrench loads of module forces (same split as compute_aero_loads).");
+
     // SimpleABS reference module: dyn.set_brake_module(vdsim.make_simple_abs(vp)).
     m.def("make_simple_abs",
           [](const vdsim::VehicleParams& vp, double slip_target, double slip_release) {
@@ -1141,6 +1224,11 @@ PYBIND11_MODULE(vdsim, m) {
              "Install a user SteeringModule (L2/L3). False if unsupported.")
         .def("set_drivetrain_module",  &vdsim::IVehicleDynamics::set_drivetrain_module,
              "Install a user DrivetrainModule (L2/L3). False if unsupported.")
+        .def("set_aero_module",        &vdsim::IVehicleDynamics::set_aero_module,
+             py::keep_alive<1, 2>(),
+             "Install a user AeroModule (L2-L5; replaces the built-in aero). On L5 attach "
+             "before reset() so the static-reference settle run happens. False on L1. The "
+             "model keeps the Python module object alive.")
         .def("set_suspension_module",  &vdsim::IVehicleDynamics::set_suspension_module,
              "Install a user SuspensionModule (L3 only). False if unsupported.")
         .def("set_antirollbar_module", &vdsim::IVehicleDynamics::set_antirollbar_module,
@@ -1478,6 +1566,8 @@ PYBIND11_MODULE(vdsim, m) {
                  return st;
              }, py::arg("state"),
              "Return the spawn pose dropped onto this session's ground (R7).")
+        .def("aero_reference", &vdsim::SimSession::aero_reference,
+             "L5 static aero reference of the last reset (settle run, work order 51).")
         .def("reset_settled", &vdsim::SimSession::reset_settled, py::arg("state"),
              "settle_on_ground() then reset(); returns the settled state.")
         .def("set_seed", &vdsim::SimSession::set_seed, py::arg("seed"),
@@ -1728,7 +1818,7 @@ PYBIND11_MODULE(vdsim, m) {
               // resolution, reset); refuse it until a work order opens it.
               if (level == "L5")
                   throw std::invalid_argument(
-                      "L5 is not supported in VecSession in 0.8.1");
+                      "L5 is not supported in VecSession yet");
               std::vector<std::unique_ptr<vdsim::SimSession>> v;
               v.reserve(static_cast<std::size_t>(num_envs));
               for (int i = 0; i < num_envs; ++i)

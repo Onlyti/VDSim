@@ -176,6 +176,15 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 300
         ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
+    # Aero ride-height / pitch slopes, Python side (work order 51): B2 grid,
+    # B6 rejection rules and the to_yaml round trip.
+    add_test(NAME aero_ride_51
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_aero_ride_51.py)
+    set_tests_properties(aero_ride_51 PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 300
+        ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
     # wheel_gyro key, Python side (work order 50): round trip, ValueError cases,
     # one warning below L5, L5 zero-camber bit identity.
     add_test(NAME wheel_gyro
@@ -193,6 +202,24 @@ if(Python3_FOUND)
     set_tests_properties(axle_tire_rotor PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 600
+        ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
+    # tire_low_speed key, Python side (work order 57): round trip, ValueError cases,
+    # explicit off == unset state bits on L2 and L5 penalty.
+    add_test(NAME tire_low_speed
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_tire_low_speed.py)
+    set_tests_properties(tire_low_speed PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 300
+        ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
+    # Work order 57 U3c (PROP-2785 (b)): RL pedal action while reversing drives backward
+    # (throttle) or brakes, one L2 env from -3 m/s.
+    add_test(NAME reverse_rl_pedal
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_reverse_rl_pedal.py)
+    set_tests_properties(reverse_rl_pedal PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 300
         ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
     # L5 hardpoint output, Python side (work order 48c): attach_l5_hardpoints,
     # camber/toe/hardpoints bit-equal to the C++ values, rack_per_rad, trace channels.

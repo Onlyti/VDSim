@@ -2,14 +2,19 @@
 #include "vdsim/sim_session.hpp"
 
 #include "vdsim/aero.hpp"
+#include "free_3d_aero_internal.hpp"
 #include "spawn_settle_internal.hpp"
+#include "vdsim/coordinate.hpp"
 
 #include <spdlog/spdlog.h>
 
+#include <algorithm>
 #include <atomic>
 
 #include <cmath>
 #include <stdexcept>
+#include <string>
+#include <utility>
 
 namespace vdsim {
 
@@ -61,13 +66,25 @@ SimSession::SimSession(std::unique_ptr<IVehicleDynamics> dyn,
     : dyn_(std::move(dyn)), ground_(std::move(ground)), vp_(vp),
       session_kind_(cfg.session_kind) {
     base_vp_ = vp;
-    base_ts_ = ts;
+    // tire_low_speed acts on the tyres the session runs (and re-runs after a reset /
+    // randomization, which start from base_ts_).
+    base_ts_ = apply_tire_low_speed(vp, ts);
     base_sp_ = sp;
     base_sensor_delay_s_ = cfg.sensor_delay_s;
     base_sensors_ = cfg.sensors;
     nominal_dt_ = cfg.nominal_dt;
     validate_aero_params(vp);
-    dyn_->initialize(vp, ts, sp);
+    {
+        // Ride-height / pitch slopes need ride states (L3-L5). L1/L2 accept the
+        // keys only with both slopes 0 (then bit identical, work order 51 B6).
+        const auto lvl = dyn_->level();
+        if ((lvl == IVehicleDynamics::Level::L1_Bicycle ||
+             lvl == IVehicleDynamics::Level::L2_SevenDOF) && aero_has_active_slopes(vp))
+            throw std::invalid_argument(
+                "aero element ride-height / pitch slopes (dClA_dh, dClA_dpitch != 0) "
+                "need a ride model (L3-L5); L1/L2 have no heave or pitch");
+    }
+    dyn_->initialize(vp, base_ts_, sp);
     {
         // L1/L2 have no roll split for aero: an element y offset is ignored.
         const auto lvl = dyn_->level();
@@ -381,7 +398,13 @@ void SimSession::reset(const State& s0) {
         sp.seed = seed_;
         sensors_.initialize(sp);
     }
+    if (in_aero_settle_)
+        throw std::logic_error("SimSession::reset re-entered from the aero settle run");
     dyn_->reset(s0);
+    aero_ref_ = AeroReference{};
+    if (dyn_->level() == IVehicleDynamics::Level::L5_Stunt &&
+        (aero_settle_force_ || detail::free_3d_aero_needs_settle(*dyn_)))
+        run_aero_settle_locked(s0);
     network_->reset();
     actuator_.reset();
     sensor_.reset(s0);
@@ -411,6 +434,117 @@ void SimSession::reset(const State& s0) {
     tire_forces_wheel_.fill(Vec3::Zero());
     sensors_meas_ = SensorMeas{};
     last_input_tp_ = std::chrono::steady_clock::now();
+}
+
+// ---- Work order 51: L5 static aero reference --------------------------------
+
+/**
+ * @brief In-reset settle run of the L5 aero static reference (mtx_ held).
+ *
+ * From the reset pose with zero velocity and zero command, steps the model at
+ * 1 ms until the 48b settle condition (speed and angular rate <= 1e-3, per wheel
+ * travel rate <= 1e-3 m/s, toe rate <= 0.01 deg/s, load rate <= 1 N/s, load > 0)
+ * holds for 0.5 s or the limit (8 s) is reached, records the body-origin z,
+ * pitch and roll, then restores the model exactly as reset(s0) left it. Aero is
+ * off and the aero module untouched during the run; nothing else of the session
+ * (time, actuator, sensors, cascade, diagnostics) is touched.
+ * @param s0 the reset state
+ */
+void SimSession::run_aero_settle_locked(const State& s0) {
+    constexpr double kDt = 1e-3;
+    constexpr int kHold = 500;
+    in_aero_settle_ = true;
+    std::vector<double> aux;
+    dyn_->save_aux(aux);
+    detail::free_3d_set_aero_settling(*dyn_, true);
+
+    State sz = s0;
+    sz.velocity.setZero();
+    sz.angular_velocity.setZero();
+    for (int i = 0; i < NUM_WHEELS; ++i) {
+        sz.wheel_spin[i] = 0.0;
+        sz.susp_velocity[i] = 0.0;
+        sz.unsprung_vel[i].setZero();
+    }
+    dyn_->reset(sz);
+
+    const int n_max = std::max(1, static_cast<int>(std::lround(aero_settle_limit_s_ / kDt)));
+    auto prev_toe = free_3d_wheel_toe(*dyn_);
+    auto prev_fz = dyn_->tire_Fz();
+    int held = 0;
+    int k = 0;
+    bool settled = false;
+    std::string unmet;
+    for (k = 1; k <= n_max; ++k) {
+        ContactArray contacts;
+        ground_->query(dyn_->state(), vp_, contacts);
+        if (mu_scale_ != 1.0) {
+            for (auto& cp : contacts) {
+                cp.mu_long *= mu_scale_;
+                cp.mu_lat  *= mu_scale_;
+            }
+        }
+        dyn_->step(ControlInput{CmdL4{}}, contacts, kDt);
+        const State& st = dyn_->state();
+        const auto toe = free_3d_wheel_toe(*dyn_);
+        const auto fz = dyn_->tire_Fz();
+        const bool speed_ok = st.velocity.norm() <= 1e-3;
+        const bool rate_ok = st.angular_velocity.norm() <= 1e-3;
+        bool travel_ok = true, toe_ok = true, load_rate_ok = true, load_ok = true;
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            travel_ok = travel_ok && std::abs(st.susp_velocity[i]) <= 1e-3;
+            toe_ok = toe_ok && std::abs(toe[i] - prev_toe[i]) * (180.0 / 3.14159265358979323846) / kDt <= 0.01;
+            load_rate_ok = load_rate_ok && std::abs(fz[i] - prev_fz[i]) / kDt <= 1.0;
+            load_ok = load_ok && fz[i] > 0.0;
+        }
+        prev_toe = toe;
+        prev_fz = fz;
+        const bool ok = speed_ok && rate_ok && travel_ok && toe_ok && load_rate_ok && load_ok;
+        held = ok ? held + 1 : 0;
+        if (held >= kHold) {
+            settled = true;
+            break;
+        }
+        if (k == n_max) {
+            const std::pair<bool, const char*> ch[] = {
+                {speed_ok, "speed"}, {rate_ok, "angular_rate"},
+                {travel_ok, "wheel_travel_rate"}, {toe_ok, "toe_rate"},
+                {load_rate_ok, "load_rate"}, {load_ok, "load_positive"}};
+            for (const auto& c : ch) {
+                if (c.first) continue;
+                if (!unmet.empty()) unmet += ",";
+                unmet += c.second;
+            }
+            if (unmet.empty()) unmet = "hold_time";
+        }
+    }
+    const State& st = dyn_->state();
+    const Euler e = euler_from_quat(st.orientation);
+    AeroReference ref;
+    ref.ran = true;
+    ref.ref_z = st.position.z();
+    ref.ref_pitch = e.pitch;
+    ref.ref_roll = e.roll;
+    ref.settled = settled;
+    ref.t_settle = std::min(k, n_max) * kDt;
+    ref.unmet = settled ? std::string() : unmet;
+
+    dyn_->reset(s0);
+    std::size_t p = 0;
+    dyn_->restore_aux(aux, p);
+    detail::free_3d_set_aero_settling(*dyn_, false);
+    detail::free_3d_set_aero_reference(*dyn_, ref.ref_z, ref.ref_pitch, ref.ref_roll);
+    aero_ref_ = ref;
+    in_aero_settle_ = false;
+    if (!settled)
+        spdlog::warn("[vdsim aero] static reference settle run reached its {} s limit "
+                     "without settling (unmet: {}); the last state is the reference",
+                     aero_settle_limit_s_, ref.unmet);
+}
+
+AeroReference SimSession::aero_reference() const {
+    std::lock_guard<std::mutex> lk(mtx_);
+    return aero_ref_;
 }
 
 void SimSession::set_input(const CmdL4& u) {

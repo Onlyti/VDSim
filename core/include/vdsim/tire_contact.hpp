@@ -17,7 +17,7 @@ constexpr double kTireSpeedEps = 0.15;
 // than every dynamics model.
 struct ContactKinematics {
     double kappa      {0.0};   // [-]   slip ratio   (Re*omega - Vx)/max(|Vx|,eps)
-    double alpha      {0.0};   // [rad] slip angle   atan2(Vy, Vx)
+    double alpha      {0.0};   // [rad] slip angle   atan2(Vy, |Vx|), in [-pi/2, pi/2]
     double Re         {0.0};   // [m]   effective rolling radius used
     double vsx        {0.0};   // [m/s] longitudinal slip velocity  Re*omega - Vx
     double vsy        {0.0};   // [m/s] lateral slip velocity        Vy
@@ -43,7 +43,12 @@ inline ContactKinematics tire_contact_kinematics(
     ck.vsx = ck.Re * omega - Vx;
     ck.vsy = Vy;
     ck.kappa = ck.vsx / denom;
-    ck.alpha = std::atan2(Vy, Vx);
+    // Slip angle against the rolling direction magnitude: reversing with a small
+    // lateral velocity is a small slip angle with the same sign convention as
+    // forward (Fy opposes Vy), not an angle near +-pi.  For Vx > 0 this is the
+    // same value as atan2(Vy, Vx); Vx = 0 with Vy != 0 stays +-pi/2 (pure side
+    // slide).
+    ck.alpha = std::atan2(Vy, std::abs(Vx));
     if (tp.crown_radius > 0.0) {
         ck.contact_dy = tp.crown_radius * std::sin(gamma);
         ck.contact_dz = tp.crown_radius * (1.0 - std::cos(gamma));

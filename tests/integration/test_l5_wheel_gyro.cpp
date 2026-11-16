@@ -34,8 +34,14 @@
 //                               F_i = m_u a_u,i + R F_tire,i + m_u g e_z (strut particle)
 //   T = (x_b - G) x m_b a_b + sum_i (strut) (x_u,i - G) x m_u a_u,i
 //   B = omega_w x (R I_b omega)                 (sprung body spin)
-//   L = sum_i (strut) (x_b + R r_i - x_u,i) x R F_tire,i  (mount-to-particle couple of
-//       the strut connection; 0 on the penalty path)
+//   L = sum_i (strut) (r_arm,i - x_u,i) x R F_tire,i : the part of the strut connection
+//       couple that the core does not pass to the chassis. r_arm,i is the chassis torque
+//       arm of the core (work order 57 C, 61fc1cb): the mount x_b + R r_i under
+//       cg_height_ref: sprung (0.8.1 strut behaviour), the wheel particle x_u,i otherwise,
+//       so L == 0 with the vehicle key. Work order 50 wrote L with the mount arm, which
+//       was the core arm on every strut run then; once 57 C delivers the couple, that
+//       form counts it twice (PO verdict on 57 C, option 1). 0 on the penalty path.
+//       The gate, window, normalisation and expected value (-G_w) are unchanged.
 //   D = (E + L - T - B) . e_x
 //   dD = mean(D)_full - mean(D)_off * mean(a)_full / mean(a)_off
 //   Gate: | dD / (-G_w) - 1 | <= 0.02, preconditions as V3 with the condition's V and R.
@@ -64,11 +70,11 @@
 //         Gate | dD_k / Gr_k - 1 | <= 0.02, L5 penalty and strut, preconditions as V3.
 //         Not determinable (= failure) when |Gr_k| < 2 N m.
 //         Lc: the strut connection couple the core does not pass to the chassis, charged
-//         to the core chassis torque arm. At faf59f2 that arm is the mount x_b + R r_i
-//         with the strut-body height h_s (l5_strut_body_height), so Lc keeps the mount
-//         form at the core height. When work order 57 (61fc1cb / d6a389a) reaches main,
-//         the arm follows 57: mount under cg_height_ref: sprung, wheel particle otherwise
-//         (Lc == 0) -- the merge resolves this together with the V3b L line below.
+//         to the core chassis torque arm. Work order 57 (61fc1cb / d6a389a) is on main
+//         since 0724358, so the arm follows 57: the mount x_b + R r_i at the strut-body
+//         height h_s (l5_strut_body_height) under cg_height_ref: sprung, the wheel
+//         particle otherwise (Lc == 0), the same switch as the V3b L line below
+//         (resolved in the 52 <- main 9214fb7 merge, as fixed here before the runs).
 //         The off-run pitch residual mean(D_y)_off is printed as information.
 //   V5d : V5c at R 15 m, V 9.5 m/s, fixed here before any run of it.
 #include "free_3d_rotor_internal.hpp"
@@ -198,9 +204,12 @@ constexpr double kIr = 0.25;
 constexpr double kG = 5.0;
 
 Skid skidpad(const char* mode, bool strut, double kV = 7.0, double kR = 8.5,
-             const char* rotor_axis = nullptr) {
+             const char* rotor_axis = nullptr, const char* cg_ref = nullptr) {
     constexpr double kT = 15.0, kAvg = 2.0;
     VehicleParams vp = with_gyro(mode);
+    if (cg_ref) vp.cg_height_ref = cg_ref;
+    // V3b L and V5c Lc arm: the chassis torque arm of the core strut branch (57 C).
+    const bool mount_arm = strut && cg_height_ref_is_sprung(vp);
     if (rotor_axis) {
         vp.drive_type = VehicleParams::Drive::RWD;
         vp.engine_rotational_inertia = kIr;
@@ -294,8 +303,13 @@ Skid skidpad(const char* mode, bool strut, double kV = 7.0, double kR = 8.5,
                     const Vec3 a_u = w_w.cross(st.unsprung_vel[i]);
                     F += m_u[i] * a_u + Vec3(0.0, 0.0, m_u[i] * 9.80665);
                     T += (st.unsprung_pos[i] - G).cross(m_u[i] * a_u);
-                    L += (st.position + Rm * r_mount[i] - st.unsprung_pos[i]).cross(F_t);
-                    Lc += (st.position + Rm * r_core[i] - st.unsprung_pos[i]).cross(F_t);
+                    const Vec3 r_arm = mount_arm ? Vec3(st.position + Rm * r_mount[i])
+                                                 : Vec3(st.unsprung_pos[i]);
+                    L += (r_arm - st.unsprung_pos[i]).cross(F_t);
+                    // Work order 52 Lc: same core arm, mount at the core height h_s.
+                    const Vec3 r_carm = mount_arm ? Vec3(st.position + Rm * r_core[i])
+                                                  : Vec3(st.unsprung_pos[i]);
+                    Lc += (r_carm - st.unsprung_pos[i]).cross(F_t);
                 }
                 E += (p[i] - G).cross(F);
             }
@@ -361,9 +375,9 @@ void v3(bool strut) {
     EXPECT_LE(std::abs(rel), 0.02);
 }
 
-void v3b(bool strut, double V, double R) {
-    const Skid off = skidpad("off", strut, V, R);
-    const Skid full = skidpad("full", strut, V, R);
+void v3b(bool strut, double V, double R, const char* cg_ref = nullptr) {
+    const Skid off = skidpad("off", strut, V, R, nullptr, cg_ref);
+    const Skid full = skidpad("full", strut, V, R, nullptr, cg_ref);
     const char* path = strut ? "strut" : "penalty";
     for (const auto* run : {&off, &full}) {
         std::printf("V3b %s R=%.1f V=%.1f %s V=%.6f r=%.6f R=%.6f max|dV|=%.3e R_rel=%.3e "
@@ -463,14 +477,10 @@ TEST(L5WheelGyro, V2_CornerModelUnsetLegacyAndFullReactsToCamber) {
 
 TEST(L5WheelGyro, V3_SkidpadRollMomentPenalty) { v3(false); }
 
-// Strut path: the fixed V3 roll-moment gate is not met because the strut path does
-// not pass the mount-to-wheel-mass couple to the chassis (V3b, which includes that
-// couple, holds the gyro term itself). Built only into vdsim_known_failure_tests with
-// label `known_failure` (PROP-2741 option 2); gate and formula unchanged; the couple
-// repair is planned for 0.8.3.
-#ifdef VDSIM_KNOWN_FAILURE_TESTS
+// Strut path: out of the 0.8.2 verdict (known_failure, PROP-2741 option 2) while the
+// strut path did not pass the mount-to-wheel-mass couple to the chassis. Back in the
+// release verdict after work order 57 C delivers the couple; gate and formula unchanged.
 TEST(L5WheelGyro, V3_SkidpadRollMomentStrut) { v3(true); }
-#endif  // VDSIM_KNOWN_FAILURE_TESTS
 
 // ---- V3b (exact budget incl. the strut mount couple) ----------------------------------
 

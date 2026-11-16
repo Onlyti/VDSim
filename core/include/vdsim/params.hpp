@@ -25,6 +25,22 @@ struct AeroElement {
     double x   {0.0};     ///< centre of pressure, from the front axle, + forward [m]
     double y   {0.0};     ///< lateral offset, + left [m] (roll moment on L3-L5 only)
     double z   {0.0};     ///< height above ground [m], >= 0
+    // Ride-height / pitch slopes (work order 51). All three or none; without them
+    // the element keeps ClA. With them ClA_eff = ClA + dClA_dh*(h - h_ref) +
+    // dClA_dpitch*theta, h - h_ref = dz - (x - x_o)*theta, dz / theta the body
+    // heave [m, + up] and pitch [rad, ISO + nose down] relative to the static
+    // reference, x_o = -cg_to_front (see aero.hpp).
+    std::optional<double> h_ref;        ///< static reference height of the element [m]
+    std::optional<double> dClA_dh;      ///< dClA/dh [m^2/m]
+    std::optional<double> dClA_dpitch;  ///< dClA/dtheta [m^2/rad]
+    /** @brief True when the element carries the three slope keys. */
+    bool has_ride_slopes() const noexcept {
+        return h_ref.has_value() && dClA_dh.has_value() && dClA_dpitch.has_value();
+    }
+    /** @brief True when a slope is non-zero (the element reacts to ride states). */
+    bool slopes_active() const noexcept {
+        return has_ride_slopes() && (*dClA_dh != 0.0 || *dClA_dpitch != 0.0);
+    }
 };
 
 struct VehicleParams {
@@ -124,6 +140,9 @@ struct VehicleParams {
     std::string rotor_axis;
     bool rotor_inertia_named {false};
     bool rotor_ratio_named {false};
+    // Low-speed tyre option (work order 57). Empty or "off" = tyres as given; "relaxed" =
+    // belt slip relaxation on every wheel with a low-speed floor (tire_low_speed.hpp).
+    std::string tire_low_speed;
     // Tie-rod rack travel per road-wheel rad [m/rad] on the hardpoint paths (L4 native
     // kinematics, L5 corner model) when the command is a road-wheel angle. Must be > 0.
     double rack_per_rad {0.08};
@@ -226,6 +245,17 @@ WheelGyro wheel_gyro_mode(const VehicleParams& vp);
  */
 void warn_if_wheel_gyro_unused(const VehicleParams& vp);
 
+/// Low-speed tyre option selected by VehicleParams::tire_low_speed.
+enum class TireLowSpeed { Off, Relaxed };
+
+/**
+ * @brief Parse VehicleParams::tire_low_speed.
+ * @param vp Vehicle parameters.
+ * @return Off for empty or "off", Relaxed for "relaxed".
+ * @throws std::invalid_argument for any other string.
+ */
+TireLowSpeed tire_low_speed_mode(const VehicleParams& vp);
+
 /**
  * @brief Body-axis unit vector of VehicleParams::rotor_axis (work order 52).
  * @param vp Vehicle parameters.
@@ -288,6 +318,9 @@ struct BeltTireParams {
     bool   enabled   {false};
     double sigma_lat  {0.5};   // lateral relaxation length sigma_y [m]
     double sigma_long {0.5};   // longitudinal relaxation length sigma_x [m]
+    // Low-speed floor of the relaxation speed [m/s]; 0 = none. Set by the vehicle key
+    // tire_low_speed: relaxed (not a tyre-file key).
+    double v_low      {0.0};
 };
 
 enum class LowSpeedMode {
@@ -413,6 +446,20 @@ struct TireSetup {
                                             const std::string& rl_path = {},
                                             const std::string& rr_path = {});
 };
+
+/**
+ * @brief Tyres as the session runs them under VehicleParams::tire_low_speed.
+ *
+ * off (or unset): returns ts unchanged. relaxed: on every wheel the belt relaxation is
+ * switched on (a tyre that already enables its belt keeps its sigmas; otherwise sigma_y /
+ * sigma_x = the tyre's relaxation_length_lat / _long when > 0, else kRelaxedSigmaLat /
+ * kRelaxedSigmaLong) and the low-speed floor is kRelaxedVLow.
+ * @param vp Vehicle parameters (reads tire_low_speed).
+ * @param ts Tyres as given.
+ * @return Effective tyres.
+ * @throws std::invalid_argument for an unknown tire_low_speed.
+ */
+TireSetup apply_tire_low_speed(const VehicleParams& vp, const TireSetup& ts);
 
 struct SolverParams {
     enum class Integrator { Euler, RK4 };
