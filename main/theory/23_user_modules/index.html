@@ -3059,7 +3059,14 @@ different rates:</p>
 <p><code>SuspensionModule</code> and <code>AntiRollBarModule</code> have no <code>begin_step</code>: a suspension/ARB force is
 a memoryless function of the instantaneous deflection and must be evaluated every stage so
 the vertical/roll ODE stays consistent.</p>
-<p><code>reset()</code> is called when the model is reset; clear your module state there.</p>
+<p><code>reset()</code> is called on every model reset (<code>reset()</code>, <code>reset_settled()</code>, <code>restore()</code> and
+the randomized reset); clear your module state there. The module stays attached across
+resets (0.9.0, work order 51c): only built-in modules are rebuilt, so attaching once is
+enough and attaching again after a reset still works. On L5 the aero settle run inside a
+reset uses the built-in brake / steering / drivetrain; your module is not called during
+it. A <code>reset()</code> that raises refuses the next tick with the module named (the process
+keeps running). In Python the model holds the module object while it is attached, so
+<code>dyn.set_brake_module(MyBrake())</code> without a variable is fine.</p>
 <h2 id="3a-faults-090">3a. Faults (0.9.0)<a class="headerlink" href="#3a-faults-090" title="Permanent link">&para;</a></h2>
 <p>A module installed with <code>set_*_module()</code> (brake, steering, drivetrain, suspension,
 anti-roll bar, aero; C++ or Python) runs inside the dynamics step, which cannot throw.
@@ -3092,9 +3099,9 @@ T_i = -\operatorname{sign}(\omega_{\mathrm{spin},i})\,\lvert T_i \rvert
 built-in brake uses a smoothed sign near zero spin to avoid chatter at a standstill; a
 custom module can do the same or use <code>copysign</code>.</p>
 <h2 id="4a-aero-module-090">4a. Aero module (0.9.0)<a class="headerlink" href="#4a-aero-module-090" title="Permanent link">&para;</a></h2>
-<p><code>dyn.set_aero_module(m)</code> replaces the whole built-in aero (ch. 26.8). Unlike the
-brake / steering / drivetrain modules it survives <code>reset()</code> (its <code>reset()</code> is called
-once per reset), and the model keeps the Python object alive. On L5 attach it before
+<p><code>dyn.set_aero_module(m)</code> replaces the whole built-in aero (ch. 26.8). Like the other
+modules it survives <code>reset()</code> (its <code>reset()</code> is called once per reset), and like every
+Python module here the session holds the object while it is attached. On L5 attach it before
 <code>reset()</code>: the reset runs the static-reference settle run, during which <code>compute</code>
 and <code>begin_step</code> are not called. On L3/L4 <code>compute</code> is called by the ride model
 (tyre loads) and by the inner planar model (drag), so more than once per stage.
