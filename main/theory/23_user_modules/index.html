@@ -1368,6 +1368,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#3a-faults-090" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3a. Faults (0.9.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#4-sign-convention" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2888,6 +2899,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#3a-faults-090" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3a. Faults (0.9.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#4-sign-convention" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3038,6 +3060,27 @@ different rates:</p>
 a memoryless function of the instantaneous deflection and must be evaluated every stage so
 the vertical/roll ODE stays consistent.</p>
 <p><code>reset()</code> is called when the model is reset; clear your module state there.</p>
+<h2 id="3a-faults-090">3a. Faults (0.9.0)<a class="headerlink" href="#3a-faults-090" title="Permanent link">&para;</a></h2>
+<p>A module installed with <code>set_*_module()</code> (brake, steering, drivetrain, suspension,
+anti-roll bar, aero; C++ or Python) runs inside the dynamics step, which cannot throw.
+The model therefore wraps it:</p>
+<ul>
+<li>An exception, or a non-finite value in any numeric output field (steering output, the
+  four drivetrain wheel torques, the anti-roll bar pair, <code>AeroForce.force_body</code> and
+  <code>point</code>, …), is recorded and that call contributes zero for the rest of the step.</li>
+<li>The next session tick then raises: <code>std::invalid_argument</code> in C++, <code>ValueError</code> in
+  Python. The message names the module kind, the module name (the Python class name for
+  a Python module), the tick number since the last reset and the cause (the exception
+  text or the non-finite field name). Only the first fault is recorded.</li>
+<li>After a fault the dynamics state is treated as spoiled: further <code>tick()</code> / <code>step()</code>
+  calls raise the same message, and <code>output()</code> keeps the output of the last good tick.</li>
+<li><code>reset()</code> / <code>reset_settled()</code> or <code>restore(snapshot)</code> clears the fault; the run after it
+  is the same as a fresh session from the same initial state.</li>
+<li>In a <code>VecSession</code> the faulty environment's error reaches the caller and the process
+  keeps running; the state of the other environments in that call is not specified.</li>
+<li>A Python module object shared by several environments running in threads is not made
+  thread safe; give each environment its own object.</li>
+</ul>
 <h2 id="4-sign-convention">4. Sign convention<a class="headerlink" href="#4-sign-convention" title="Permanent link">&para;</a></h2>
 <p><code>BrakeModule.wheel_torque</code> and <code>DrivetrainModule.apply().wheel_torque</code> are <strong>signed</strong>
 torques applied to each wheel-spin DOF, ordered <code>FL, FR, RL, RR</code>. A brake must oppose
@@ -3055,8 +3098,7 @@ once per reset), and the model keeps the Python object alive. On L5 attach it be
 <code>reset()</code>: the reset runs the static-reference settle run, during which <code>compute</code>
 and <code>begin_step</code> are not called. On L3/L4 <code>compute</code> is called by the ride model
 (tyre loads) and by the inner planar model (drag), so more than once per stage.
-Exceptions and non-finite returns are handled as for every module here: an exception
-ends the process, a non-finite force propagates.</p>
+Exceptions and non-finite returns are handled as for every module here (§3a).</p>
 <h2 id="5-example">5. Example<a class="headerlink" href="#5-example" title="Permanent link">&para;</a></h2>
 <p><code>examples/user_brake_module.py</code> subclasses <code>BrakeModule</code> to implement a front-biased brake
 with a crude per-wheel slip limiter (an ABS stand-in), installs it on an L2 model, and
