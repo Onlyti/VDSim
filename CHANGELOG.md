@@ -54,6 +54,13 @@ after the v0.8.3 tag.
   I_r · G². It is independent of `wheel_gyro`. Unset or `none` leaves every result
   unchanged. L1–L4 read `rotor_axis` and ignore it (one warning per process); the
   reflected spin inertia applies on every level as before.
+- User module fault boundary (work order 51b). An exception or a non-finite output
+  field in a user module (brake, steering, drivetrain, suspension, anti-roll bar,
+  aero; C++ or Python) no longer ends the process or propagates NaN: the next
+  `SimSession` tick raises `std::invalid_argument` / `ValueError` naming the module
+  kind, its name, the tick and the cause, refuses further ticks with the same message
+  and keeps the last good `output()` until `reset()` / `restore()` (docs/theory/23
+  §3a). A `VecSession` passes the error of the faulty environment to the caller.
 
 ### Changed
 - L3/L4 hand their ride states to the inner planar aero each step, so every RK
@@ -63,6 +70,10 @@ after the v0.8.3 tag.
   return the live tyre model of their inner planar core (per-axle `TireSetup`
   included). Earlier releases returned `nullptr` / `None` on these levels.
   Simulation results are unchanged.
+- C++ ABI (work order 51b): new public header `vdsim/module_guard.hpp`
+  (`register_module_name`, `forget_module_name`) and new private members in
+  `SimSession`. Code built against 0.8.x headers has to be rebuilt. Runs without a
+  user module are unchanged bit for bit.
 
 ### Rejected (`std::invalid_argument` / `ValueError`)
 - An element with one or two of the three slope keys; a non-finite slope key.
@@ -83,9 +94,8 @@ after the v0.8.3 tag.
   12 mm of element height per degree at x = 0.7 m).
 - L5: attach the aero module before `reset()`; a module attached after it has no
   static reference until the next reset.
-- An aero module that raises or returns a non-finite force is handled like the
-  other user modules (docs/theory/23): an exception ends the process, a
-  non-finite value propagates. No dedicated handling.
+- A Python user module object shared by several `VecSession` environments running
+  in threads is not made thread safe; use one module object per environment.
 - The optional aero trace channels (`aero_<name>_fz`, …) are evaluated at the
   sample's body-x speed without ride states; with a non-zero slope they are not
   the applied load.
