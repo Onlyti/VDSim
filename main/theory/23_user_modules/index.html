@@ -1379,6 +1379,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#4a-aero-module-090" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4a. Aero module (0.9.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#5-example" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2888,6 +2899,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#4a-aero-module-090" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4a. Aero module (0.9.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#5-example" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2968,6 +2990,12 @@ its own state.</p>
 <td><code>(left, right)</code> wheel forces (N)</td>
 <td>L3, L4</td>
 </tr>
+<tr>
+<td><code>AeroModule</code> / <code>IAeroModel</code> (0.9.0)</td>
+<td><code>compute(ctx, inp)</code></td>
+<td><code>[AeroForce(name, force_body, point)]</code></td>
+<td>L2, L3, L4, L5</td>
+</tr>
 </tbody>
 </table>
 <p>The brake/steering/drivetrain hooks are available wherever the plant routes through the
@@ -3020,6 +3048,15 @@ T_i = -\operatorname{sign}(\omega_{\mathrm{spin},i})\,\lvert T_i \rvert
 <p>Returning a positive magnitude would drive the wheel and accelerate the vehicle. The
 built-in brake uses a smoothed sign near zero spin to avoid chatter at a standstill; a
 custom module can do the same or use <code>copysign</code>.</p>
+<h2 id="4a-aero-module-090">4a. Aero module (0.9.0)<a class="headerlink" href="#4a-aero-module-090" title="Permanent link">&para;</a></h2>
+<p><code>dyn.set_aero_module(m)</code> replaces the whole built-in aero (ch. 26.8). Unlike the
+brake / steering / drivetrain modules it survives <code>reset()</code> (its <code>reset()</code> is called
+once per reset), and the model keeps the Python object alive. On L5 attach it before
+<code>reset()</code>: the reset runs the static-reference settle run, during which <code>compute</code>
+and <code>begin_step</code> are not called. On L3/L4 <code>compute</code> is called by the ride model
+(tyre loads) and by the inner planar model (drag), so more than once per stage.
+Exceptions and non-finite returns are handled as for every module here: an exception
+ends the process, a non-finite force propagates.</p>
 <h2 id="5-example">5. Example<a class="headerlink" href="#5-example" title="Permanent link">&para;</a></h2>
 <p><code>examples/user_brake_module.py</code> subclasses <code>BrakeModule</code> to implement a front-biased brake
 with a crude per-wheel slip limiter (an ABS stand-in), installs it on an L2 model, and
