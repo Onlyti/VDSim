@@ -9,6 +9,7 @@
 #include "vdsim/params.hpp"
 #include "vdsim/aero.hpp"
 #include "vdsim/sensors.hpp"
+#include "vdsim/tire_low_speed.hpp"
 
 #include <yaml-cpp/yaml.h>
 #include <spdlog/spdlog.h>
@@ -295,6 +296,30 @@ WheelGyro wheel_gyro_mode(const VehicleParams& vp) {
         "wheel_gyro: unknown value '" + s + "' (expected legacy, full or off)");
 }
 
+TireLowSpeed tire_low_speed_mode(const VehicleParams& vp) {
+    const auto& s = vp.tire_low_speed;
+    if (s.empty() || s == "off") return TireLowSpeed::Off;
+    if (s == "relaxed") return TireLowSpeed::Relaxed;
+    throw std::invalid_argument(
+        "tire_low_speed: unknown value '" + s + "' (expected off or relaxed)");
+}
+
+TireSetup apply_tire_low_speed(const VehicleParams& vp, const TireSetup& ts) {
+    if (tire_low_speed_mode(vp) == TireLowSpeed::Off) return ts;
+    TireSetup out = ts;
+    for (auto& t : out.wheel) {
+        if (!t.belt.enabled) {
+            t.belt.enabled = true;
+            t.belt.sigma_lat = t.relaxation_length_lat > 1e-6 ? t.relaxation_length_lat
+                                                              : kRelaxedSigmaLat;
+            t.belt.sigma_long = t.relaxation_length_long > 1e-6 ? t.relaxation_length_long
+                                                                : kRelaxedSigmaLong;
+        }
+        t.belt.v_low = kRelaxedVLow;
+    }
+    return out;
+}
+
 void warn_if_wheel_gyro_unused(const VehicleParams& vp) {
     (void)wheel_gyro_mode(vp);
     if (vp.wheel_gyro.empty()) return;
@@ -303,6 +328,66 @@ void warn_if_wheel_gyro_unused(const VehicleParams& vp) {
         spdlog::warn("[vdsim] wheel_gyro='{}' is ignored on L1-L4; L5 only",
                      vp.wheel_gyro);
     });
+}
+
+Vec3 rotor_axis_vector(const VehicleParams& vp) {
+    const auto& s = vp.rotor_axis;
+    if (s.empty() || s == "none") return Vec3::Zero();
+    if (s == "+x") return Vec3(1.0, 0.0, 0.0);
+    if (s == "-x") return Vec3(-1.0, 0.0, 0.0);
+    if (s == "+y") return Vec3(0.0, 1.0, 0.0);
+    if (s == "-y") return Vec3(0.0, -1.0, 0.0);
+    throw std::invalid_argument(
+        "rotor_axis: unknown value '" + s + "' (expected none, +x, -x, +y or -y)");
+}
+
+void warn_if_rotor_axis_unused(const VehicleParams& vp) {
+    if (rotor_axis_vector(vp) == Vec3::Zero()) return;
+    static std::once_flag once;
+    std::call_once(once, [&] {
+        spdlog::warn("[vdsim] rotor_axis='{}' is ignored on L1-L4; L5 only (the reflected "
+                     "rotor spin inertia applies on every level)", vp.rotor_axis);
+    });
+}
+
+/**
+ * @brief Read one rotor alias key (work order 52) into the shared drivetrain storage.
+ *
+ * A conflict is judged only between names written in the YAML. The range check applies
+ * to the alias name only; the existing names keep no range check (PO condition, mail
+ * c8103d86). A `powertrain:` map takes the engine inertia and gear ratios from itself,
+ * so the alias is refused there (rotor_axis alone is accepted).
+ *
+ * @param root              Vehicle YAML root.
+ * @param alias             rotor_inertia or rotor_ratio.
+ * @param legacy            The existing key the alias shares storage with.
+ * @param strictly_positive true: value > 0 (ratio); false: value >= 0 (inertia).
+ * @param dst               Shared storage.
+ * @param named             Set when the alias was written (to_yaml keeps the name).
+ * @throws std::invalid_argument on a range error, a conflict or a powertrain map.
+ */
+static void pull_rotor_alias(const YAML::Node& root, const char* alias, const char* legacy,
+                             bool strictly_positive, double& dst, bool& named) {
+    const YAML::Node n = root[alias];
+    if (!n || n.IsNull()) return;
+    const double v = n.as<double>();
+    const bool in_range = strictly_positive ? (v > 0.0) : (v >= 0.0);
+    if (!in_range)
+        throw std::invalid_argument(std::string(alias) + ": must be " +
+                                    (strictly_positive ? "> 0" : ">= 0") + ", got " +
+                                    std::to_string(v));
+    const YAML::Node l = root[legacy];
+    if (l && !l.IsNull() && l.as<double>() != v)
+        throw std::invalid_argument(std::string(alias) + " and " + legacy +
+                                    " are the same parameter but were given different "
+                                    "values");
+    const YAML::Node pt = root["powertrain"];
+    if (pt && pt.IsMap())
+        throw std::invalid_argument(std::string(alias) + " cannot be combined with a "
+                                    "powertrain: block (engine inertia and gear ratios come "
+                                    "from it); rotor_axis alone is accepted");
+    dst = v;
+    named = true;
 }
 
 void validate_cg_height_ref(const VehicleParams& vp) {
@@ -385,6 +470,10 @@ VehicleParams VehicleParams::from_yaml(const std::string& path) {
     pull(root, "max_motor_torque", p.max_motor_torque);
     pull(root, "final_drive_ratio", p.final_drive_ratio);
     pull(root, "engine_rotational_inertia", p.engine_rotational_inertia);
+    pull_rotor_alias(root, "rotor_inertia", "engine_rotational_inertia", false,
+                     p.engine_rotational_inertia, p.rotor_inertia_named);
+    pull_rotor_alias(root, "rotor_ratio", "final_drive_ratio", true,
+                     p.final_drive_ratio, p.rotor_ratio_named);
     pull(root, "max_brake_torque", p.max_brake_torque);
     pull(root, "brake_bias_front",  p.brake_bias_front);
     pull(root, "brake_ebd_enabled", p.brake_ebd_enabled);
@@ -401,6 +490,10 @@ VehicleParams VehicleParams::from_yaml(const std::string& path) {
     validate_steer_input(p);
     pull(root, "wheel_gyro",            p.wheel_gyro);
     (void)wheel_gyro_mode(p);
+    pull(root, "rotor_axis",            p.rotor_axis);
+    (void)rotor_axis_vector(p);
+    pull(root, "tire_low_speed",        p.tire_low_speed);
+    (void)tire_low_speed_mode(p);
     pull(root, "rack_per_rad",          p.rack_per_rad);
     validate_rack_per_rad(p);
 
@@ -472,6 +565,10 @@ void VehicleParams::to_yaml(const std::string& path) const {
     out << YAML::Key << "max_motor_torque"  << YAML::Value << max_motor_torque;
     out << YAML::Key << "final_drive_ratio" << YAML::Value << final_drive_ratio;
     out << YAML::Key << "engine_rotational_inertia" << YAML::Value << engine_rotational_inertia;
+    if (rotor_inertia_named)
+        out << YAML::Key << "rotor_inertia" << YAML::Value << engine_rotational_inertia;
+    if (rotor_ratio_named)
+        out << YAML::Key << "rotor_ratio" << YAML::Value << final_drive_ratio;
     out << YAML::Key << "max_brake_torque"  << YAML::Value << max_brake_torque;
     out << YAML::Key << "brake_bias_front"  << YAML::Value << brake_bias_front;
     out << YAML::Key << "brake_ebd_enabled" << YAML::Value << brake_ebd_enabled;
@@ -486,6 +583,11 @@ void VehicleParams::to_yaml(const std::string& path) const {
         out << YAML::Key << "steer_input" << YAML::Value << steer_input;
     if (!wheel_gyro.empty())
         out << YAML::Key << "wheel_gyro" << YAML::Value << wheel_gyro;
+    if (!rotor_axis.empty())
+        out << YAML::Key << "rotor_axis" << YAML::Value << rotor_axis;
+    if (!tire_low_speed.empty())   // quoted: "off" is a YAML 1.1 boolean to other readers
+        out << YAML::Key << "tire_low_speed" << YAML::Value << YAML::DoubleQuoted
+            << tire_low_speed;
     out << YAML::Key << "rack_per_rad"          << YAML::Value << rack_per_rad;
 
     if (aero_elements.empty()) {

@@ -10,7 +10,9 @@
 
 #include "free_3d_aero_internal.hpp"
 #include "module_guard_internal.hpp"
+#include "free_3d_jacking_internal.hpp"
 #include "free_3d_reaction_internal.hpp"
+#include "free_3d_rotor_internal.hpp"
 #include "free_3d_wheel_gyro_internal.hpp"
 
 #include <spdlog/spdlog.h>
@@ -25,6 +27,7 @@
 #include <memory>
 #include <numeric>
 #include <type_traits>
+#include <utility>
 #include <variant>
 
 namespace vdsim {
@@ -155,6 +158,7 @@ public:
         validate_steer_input(vp_);
         validate_l5_steer_input(vp_);
         gyro_mode_ = wheel_gyro_mode(vp_);
+        rotor_axis_ = rotor_axis_vector(vp_);
         validate_rack_per_rad(vp_);
         for (int axle = 0; axle < 2; ++axle) {
             const bool front = (axle == 0);
@@ -233,6 +237,8 @@ public:
         toe_dae_.fill(0.0);
         rack_dy_.fill(0.0);
         path_valid_.fill(false);
+        zdot_prev_.fill(0.0);
+        zdot_init_.fill(false);
         path_off_.fill(Vec3::Zero());
         path_tan_.fill(Vec3::UnitZ());
         theta_p_.fill(0.0);
@@ -459,7 +465,13 @@ public:
         aero_ref_pitch_ = pitch;
         aero_ref_roll_ = roll;
     }
+    /// @brief Install the 49a P10b connection-pair probe (empty = off). @param p sink
+    void set_jacking_probe(detail::JackingPairProbe p) { jack_probe_ = std::move(p); }
     std::array<double, NUM_WHEELS> wheel_camber() const noexcept { return gamma_dae_; }
+    /// Reflected spin inertia per wheel of the last spin equation (work order 52).
+    std::array<double, NUM_WHEELS> engine_inertia_obs() const noexcept { return obs_I_eng_; }
+    /// Wheel spin inertia per wheel the spin equation uses (work order 52).
+    std::array<double, NUM_WHEELS> wheel_inertia_obs() const noexcept { return I_wheel_; }
     std::array<double, NUM_WHEELS> wheel_toe()    const noexcept { return toe_dae_; }
     std::array<double, NUM_WHEELS> rack_dy()      const noexcept { return rack_dy_; }
     std::array<bool, NUM_WHEELS> kin_valid() const noexcept {
@@ -775,6 +787,7 @@ private:
                 // the chassis through the bushing, so every body<->wheel force is a genuine
                 // two-point element and the strut roll moment is delivered directly.
                 const Vec3& rb = r_body_[i];
+                const Vec3 F_total_before = F_total_world;           // P10b probe only
                 const Vec3 mount   = s.position + R * rb;             // current mount, world
                 const Vec3 v_mount = R * (v_body + omega.cross(rb));  // its world velocity
                 const Vec3 u_hat   = ez_world;                        // strut axis (body up)
@@ -876,12 +889,37 @@ private:
                                   + Vec3(0.0, 0.0, -m_u * kGravity)) / m_u;
                 d_upos[i] = v_u;
                 d_uvel[i] = a_u;
-                // Body feels the equal-opposite connection reaction at the mount.
+                // Body feels the equal-opposite connection reaction. The massless links
+                // between the mount and the wheel particle carry it to the particle, so the
+                // chassis also takes the couple (x_u - mount) x F_conn: the reaction acts on
+                // the line through the particle and the internal pair has no net moment
+                // (work order 57 C). cg_height_ref: sprung keeps the 0.8.1 mount arm.
                 const Vec3 F_conn = -(F_strut_on_u + F_bush);   // = F_susp*u_hat - F_bush
                 F_total_world += F_conn;
                 F_body[i] = R.transpose() * F_conn;
-                tau_body += rb.cross(F_body[i]);
+                const Vec3 r_arm = sprung_ref_ ? rb : Vec3(rb + R.transpose() * rel);
+                tau_body += r_arm.cross(F_body[i]);
                 tau_body.z() += mz_wheel[i];
+                if (jack_probe_) {   // 49a P10b diagnostic: observes, never feeds back
+                    detail::JackingPairSample js;
+                    js.corner = i;
+                    js.path_valid = path_valid_[i];
+                    js.f_on_body = F_total_world - F_total_before;
+                    js.f_on_body_moment = R * F_body[i];
+                    js.f_on_wheel = m_u * a_u - tire_total
+                                    - Vec3(0.0, 0.0, -m_u * kGravity);
+                    js.jack_radius = jack_radius_[i];
+                    js.contact_radius = vp_.wheel_radius_nominal;
+                    js.tyre_force_body = R.transpose() * tire_total;
+                    js.unsprung_inertia_body = R.transpose() * (m_u * a_u);
+                    js.unsprung_weight_body =
+                        R.transpose() * Vec3(0.0, 0.0, -m_u * kGravity);
+                    js.conn_on_body_body = F_body[i];
+                    js.strut_force = F_susp;
+                    js.path_tangent_body = path_tan_[i];
+                    js.cp_slope_body = probe_cp_slope_[i];
+                    jack_probe_(js);
+                }
                 continue;
             }
             if (!contacts[i].is_valid || contacts[i].penetration <= 0.0) {
@@ -1088,6 +1126,29 @@ private:
             tau_body += detail::wheel_gyro_moment(gyro_mode_, omega, I_wheel_,
                                                   s.wheel_spin, delta_g, gamma_g);
         }
+        // Rotor gyroscope (work order 52, theory 20): the motor / engine rotor spins at
+        // the carrier speed times the ratio about a body-fixed axis, H_r = I_r G omega_c
+        // e_axis, from the same storage as the reflected spin inertia I_r G^2. The body
+        // takes -omega x H_r. Independent of wheel_gyro and of ground contact. rotor_axis
+        // none leaves the arithmetic untouched.
+        if (rotor_axis_ != Vec3::Zero()) {
+            double H_mag = 0.0;
+            if (vp_.powertrain.enabled) {
+                // Drivetrain v2: engine inertia at the engine speed (information path).
+                H_mag = vp_.powertrain.engine.inertia * drivetrain_->engine_rpm() *
+                        (2.0 * 3.14159265358979323846 / 60.0);
+            } else {
+                const double I_r = vp_.engine_rotational_inertia > 0.0
+                                       ? vp_.engine_rotational_inertia : 0.0;
+                const double w_f = 0.5 * (s.wheel_spin[WHEEL_FL] + s.wheel_spin[WHEEL_FR]);
+                const double w_r = 0.5 * (s.wheel_spin[WHEEL_RL] + s.wheel_spin[WHEEL_RR]);
+                double w_c = w_r;
+                if (vp_.drive_type == VehicleParams::Drive::FWD) w_c = w_f;
+                else if (vp_.drive_type == VehicleParams::Drive::AWD) w_c = 0.5 * w_f + 0.5 * w_r;
+                H_mag = I_r * vp_.final_drive_ratio * w_c;
+            }
+            tau_body -= omega.cross(H_mag * rotor_axis_);
+        }
         const Vec3 Iw(
             vp_.inertia_diag.x() * omega.x(),
             vp_.inertia_diag.y() * omega.y(),
@@ -1132,6 +1193,7 @@ private:
             T_net[i]   = T_drive + Tb[i] - T_react;
             I_eng_w[i] = grounded ? eff_wheel_I(i) : 0.0;
         }
+        obs_I_eng_ = I_eng_w;
         if (open_diff) {
             open_axle_spin_accel(d_out.domega[WHEEL_FL], d_out.domega[WHEEL_FR],
                                  T_net[WHEEL_FL], T_net[WHEEL_FR],
@@ -1213,6 +1275,13 @@ private:
             mb::PrescribedCornerMotion mot;
             mot.travel_z      = state_.susp_compression[i];
             mot.travel_z_dot  = state_.susp_velocity[i];
+            // Work order 49a: prescribed travel acceleration (finite difference of the strut
+            // travel rate over the outer step) so the corner DAE tracks the prescribed travel
+            // without the constraint-stabilisation lag.
+            if (dt > 0.0 && zdot_init_[i])
+                mot.travel_z_ddot = (mot.travel_z_dot - zdot_prev_[i]) / dt;
+            zdot_prev_[i] = mot.travel_z_dot;
+            zdot_init_[i] = true;
             mot.steer_rack_dy = front
                 ? (rack ? so.rack_travel : steer_rad * vp_.rack_per_rad)
                 : 0.0;
@@ -1234,6 +1303,17 @@ private:
             const Vec3 dwr = tm.w - w0_[i];
             path_off_[i] = Vec3(dwr.x(), s * dwr.y(), dwr.z());
             path_tan_[i] = Vec3(tm.w_dq.x(), s * tm.w_dq.y(), tm.w_dq.z());
+            // Work order 49a: the tyre lateral force acts at the contact patch, so the
+            // lateral slope that turns it into a vertical (jacking) reaction is the
+            // contact-patch slope dy_cp/dz_v = dy_wc/dz_v - R dgamma/dz_v, R being the
+            // radius the contact query reads. x and z stay those of the wheel-centre path.
+            jack_radius_[i] = vp_.wheel_radius_nominal;
+            path_tan_[i].y() = s * detail::contact_patch_lateral_slope(
+                *dae, mot.travel_z, mot.steer_rack_dy, mb_state_[i].knuckle_aa, jack_radius_[i]);
+            if (jack_probe_)   // 49a P10c diagnostic: observes, never feeds back
+                probe_cp_slope_[i] = s * detail::contact_patch_lateral_slope(
+                    *dae, mot.travel_z, mot.steer_rack_dy, mb_state_[i].knuckle_aa,
+                    vp_.wheel_radius_nominal);
             path_valid_[i] = true;
             // Knuckle pitch rate for an unsprung torque reaction (pitch is unchanged by
             // the left/right mirror). Only evaluated when the axle needs it.
@@ -1351,9 +1431,15 @@ private:
     bool   aero_h_warned_ {false};   // element below ground warned (once per model)
     double aero_ref_z_ {0.0}, aero_ref_pitch_ {0.0}, aero_ref_roll_ {0.0};
     detail::AeroObs aero_obs_ {};   // B3b-L5i observation (diagnostic only)
+    std::array<double, NUM_WHEELS> zdot_prev_ {};   // 49a ZDDOT: last travel rate
+    std::array<bool, NUM_WHEELS> zdot_init_ {};
     bool sprung_ref_ {false};       // cg_height_ref = sprung: 0.8.1 strut behaviour (Re arm)
     std::array<double, NUM_WHEELS> I_wheel_ {};
     WheelGyro gyro_mode_ {WheelGyro::Legacy};   // VehicleParams::wheel_gyro
+    Vec3 rotor_axis_ {Vec3::Zero()};             // VehicleParams::rotor_axis (zero = none)
+    // Reflected engine / rotor spin inertia per wheel the last spin equation used
+    // (read-only observation, work order 52 V5b2).
+    std::array<double, NUM_WHEELS> obs_I_eng_ {};
     Vec3 I_body_inv_ {Vec3::Zero()};
     // Spatial strut (l5_spatial_suspension): per-corner sprung static load (preload so
     // comp=0 is the static ride position) and travel limits (bump / droop stops).
@@ -1369,6 +1455,19 @@ private:
     // Optional contact provider for per-substep re-query (shrinks the once-per-step
     // frozen-contact O(dt) term). Non-owning; null -> use the frozen ContactArray passed in.
     IContactProvider* provider_ {nullptr};
+    // 49a P10b diagnostic sink (empty = off) and the radius the contact-patch jacking slope
+    // used per corner (NaN until that slope is in use).
+    detail::JackingPairProbe jack_probe_ {};
+    // 49a P10c diagnostic: contact-patch slope per corner at the last outer step, evaluated
+    // only while a probe is installed (NaN otherwise).
+    std::array<double, NUM_WHEELS> probe_cp_slope_ {{std::numeric_limits<double>::quiet_NaN(),
+                                                     std::numeric_limits<double>::quiet_NaN(),
+                                                     std::numeric_limits<double>::quiet_NaN(),
+                                                     std::numeric_limits<double>::quiet_NaN()}};
+    std::array<double, NUM_WHEELS> jack_radius_ {{std::numeric_limits<double>::quiet_NaN(),
+                                                  std::numeric_limits<double>::quiet_NaN(),
+                                                  std::numeric_limits<double>::quiet_NaN(),
+                                                  std::numeric_limits<double>::quiet_NaN()}};
     // Per-corner L4 hard-joint corner DAE (B2): one model per axle (front/rear) shared by
     // its two corners, each with its own state, fed the corner strut travel. Produces the
     // per-wheel toe/camber applied to the tire. Inactive unless attached AND strut path on.
@@ -1486,12 +1585,34 @@ AeroObs free_3d_aero_obs(const IVehicleDynamics& dyn) {
     return p ? p->aero_obs() : AeroObs{};
 }
 
+bool free_3d_set_jacking_probe(IVehicleDynamics& dyn, JackingPairProbe probe) {
+    auto* p = dynamic_cast<Free3DDynamics*>(&dyn);
+    if (!p) return false;
+    p->set_jacking_probe(std::move(probe));
+    return true;
+}
 }  // namespace detail
 
 std::array<double, NUM_WHEELS> free_3d_wheel_camber(const IVehicleDynamics& dyn) {
     const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);
     return p ? p->wheel_camber() : std::array<double, NUM_WHEELS>{};
 }
+
+namespace detail {
+
+std::array<double, NUM_WHEELS> free_3d_wheel_engine_inertia_obs(const IVehicleDynamics& dyn) {
+    const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);
+    if (!p) throw std::invalid_argument("free_3d_wheel_engine_inertia_obs: not the L5 model");
+    return p->engine_inertia_obs();
+}
+
+std::array<double, NUM_WHEELS> free_3d_wheel_inertia_obs(const IVehicleDynamics& dyn) {
+    const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);
+    if (!p) throw std::invalid_argument("free_3d_wheel_inertia_obs: not the L5 model");
+    return p->wheel_inertia_obs();
+}
+
+}  // namespace detail
 
 std::array<double, NUM_WHEELS> free_3d_wheel_toe(const IVehicleDynamics& dyn) {
     const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);

@@ -169,6 +169,36 @@ Hard-joint DAE suspension also falls back to the same sprung result and warns on
 process when `unsprung` is explicit. LuGre wheel-spin dynamics use the clamped tire
 longitudinal force for the tire reaction torque.
 
+### Corner-model jacking at the contact patch (0.8.2)
+
+With a hard-joint corner model the wheel particle moves along the travel path of the
+linkage, coordinate $q$ (positive in bump). The bushing carries the horizontal load
+$\mathbf{H}$ the particle needs and its strut-axis part follows from the path slopes,
+
+$$
+J_i = -\frac{H_x\,t_x + H_y\,s_{cp}}{t_z}, \qquad
+s_{cp} = \frac{\partial}{\partial q}\big(y_{wc} - R\sin\gamma\big),
+$$
+
+where $(t_x, t_y, t_z)$ is the path tangent, $y_{wc}$ the wheel-centre lateral position,
+$\gamma$ the camber and $R$ = `wheel_radius_nominal` (the radius the contact query
+uses), evaluated by a central difference of the linkage pose at $q \pm h$.
+$s_{cp}$ is the lateral slope of the contact patch: the tyre force acts there,
+not at the wheel centre. Up to 0.8.1 the wheel-centre slope $\partial y_{wc}/\partial q$
+was used; on the double-wishbone samples it has the opposite sign and puts the roll
+centre about 0.3 m below the ground, which together with the bump-steer slip path
+sustained a 1.8–2.2 Hz pitch oscillation at cruise.
+
+The corner model tracks the prescribed travel through constraint stabilisation
+(Baumgarte, $\alpha = \beta = 12$). It now also receives the travel acceleration
+$\ddot z$ (finite difference of the travel rate over the outer step), so the knuckle
+state follows the travel without the second-order lag
+$H(s) = (24s+144)/(s+12)^2$.
+Tests: `tests/integration/test_l5_dae_pitch.cpp` (P1 cruise pitch, P2' low-speed
+pitch rate, P10/P10b/P10c reaction consistency and jacking magnitude),
+`tests/unit/test_dae_contact_slope.cpp` (P9, slope against the independent solver
+`tools/kinematics/dw_3d_solver.py`).
+
 ### Wheel-spin gyroscopic term (`wheel_gyro`, 0.8.2)
 
 Each wheel carries spin angular momentum $I_{w,i}\,\omega_i$ along its spin axis
@@ -209,10 +239,42 @@ Assumptions: the steer-rate contribution to the wheel angular velocity is omitte
 reflected drivetrain and engine inertia is not part of $\mathbf{H}$ (it enters the spin
 equation only); the steer tilt keeps the 0.8.1 small-angle form; the camber is non-zero
 only with an attached corner model (without it `full` equals `legacy` bit for bit).
-Rotor gyroscopics (`rotor_*`) are not in this term (0.9.0).
+Rotor gyroscopics are the separate term below (`rotor_axis`, 0.9.0).
 Tests: `tests/unit/test_wheel_gyro_keys.cpp` (key, helper, zero-camber identity),
 `tests/integration/test_l5_wheel_gyro.cpp` (corner-model wiring, steady skidpad roll
 moment against the term above), `Stunt.GyroscopicWheelSpinCouplesYawToRoll`.
+
+### Rotor gyroscopic term (`rotor_axis`, 0.9.0)
+
+The motor or engine rotor spins at the carrier speed times the ratio about a
+body-fixed axis $\hat{\mathbf{e}}$ (`rotor_axis`), so it carries
+
+$$
+\mathbf{H}_r = I_r\,G\,\omega_c\,\hat{\mathbf{e}},
+\qquad
+\boldsymbol{\tau}_{\mathrm{rotor}} = -\,\boldsymbol{\omega}\times\mathbf{H}_r ,
+$$
+
+with $I_r$ = `rotor_inertia` (= `engine_rotational_inertia`, 0 when $\le 0$),
+$G$ = `rotor_ratio` (= `final_drive_ratio`) and $\omega_c$ the carrier speed of the
+driven axle: $(\omega_{RL}+\omega_{RR})/2$ (RWD), $(\omega_{FL}+\omega_{FR})/2$ (FWD),
+half of each (AWD). The same $I_r$ and $G$ give the reflected spin inertia
+$I_r G^2$ of the spin equation (one source).
+
+| `rotor_axis` | $\hat{\mathbf{e}}$ (body) | Steady-turn effect |
+|---|---|---|
+| unset / `none` | — | no term (bit identical to 0.8.2) |
+| `+y` / `-y` (transverse rotor) | $\pm\hat{\mathbf{y}}$ | roll moment $\tau_x = \pm r\,I_r G\,\omega_c$ |
+| `+x` / `-x` (longitudinal rotor) | $\pm\hat{\mathbf{x}}$ | pitch moment $\tau_y = \mp r\,I_r G\,\omega_c$ |
+
+The sign of `rotor_axis` is the rotor spin direction for forward rolling
+($\omega_c > 0$). The term is independent of `wheel_gyro` and of ground contact.
+With a `powertrain:` block the rotor is the engine: $\mathbf{H}_r = I_e\,\omega_e\,\hat{\mathbf{e}}$
+from the engine inertia and speed (information path, no gate). L1–L4 ignore the axis.
+Code: `free_3d_dynamics.cpp` (`rotor_axis_`), `rotor_axis_vector` (`params.cpp`).
+Tests: `tests/unit/test_rotor_keys.cpp` (keys, single source),
+`tests/integration/test_l5_wheel_gyro.cpp` `L5RotorGyro.*` (reflected inertia from the
+test constants, skidpad roll and pitch budget against $(\boldsymbol\omega\times\mathbf{H}_r)$).
 
 Position and attitude integrate as
 
@@ -340,6 +402,9 @@ v0.5 terrain note.
   with that arm and the whole-vehicle `cg_height` (§20.2) the strut-path axle load
   transfer (`L5Reaction.R2_*`) passes its ±2 % gate. `cg_height_ref: sprung` keeps the
   0.8.1 arm.
+- **Corner-model limits (0.8.2).** The knuckle reaction route is off; the anti-geometry
+  gates R3 move to 0.9.0. The jacking slope is the contact-patch slope (§20.3); the
+  anti-dive (x) direction keeps the wheel-centre path.
 - **Not yet (→ v0.5):** general curved/banked track (`CurvedGround`, banked oval)
   and a GUI panel to *author* stunt scenes; today the GUI renders loaded ramp/loop
   scenes only. See [`design/V0.5_TERRAIN_L5.md`](../design/V0.5_TERRAIN_L5.md).

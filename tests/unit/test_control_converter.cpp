@@ -62,6 +62,55 @@ TEST(LongAxController, OutputsAreClamped) {
     EXPECT_GE(t, 0.0);
 }
 
+TEST(LongAxController, DirectedForwardIsUpdateBitForBit) {
+    // Forward and the standstill band keep the plain mapping with gear +1.
+    for (double vx : {3.0, 0.0, -0.5 * vdsim::LongAxController::kReverseVx}) {
+        vdsim::LongAxController a, b;
+        a.initialize({});
+        b.initialize({});
+        for (int i = 0; i < 50; ++i) {
+            const double tgt = (i % 7) * 0.4 - 1.2, meas = (i % 5) * 0.3 - 0.6;
+            const auto [t, br] = a.update(tgt, meas, 0.005);
+            const auto pd = b.update_directed(tgt, meas, vx, 0.005);
+            EXPECT_EQ(pd.throttle, t);
+            EXPECT_EQ(pd.brake, br);
+            EXPECT_EQ(pd.gear, 1);
+        }
+        EXPECT_EQ(a.integrator(), b.integrator());
+    }
+}
+
+TEST(LongAxController, DirectedReverseBrakesToSlowAndDrivesBackward) {
+    vdsim::LongAxController c;
+    c.initialize({});
+    // Reversing, positive ax demand slows the backward motion -> brake.
+    const auto slow = c.update_directed(1.0, 0.0, -3.0, 0.005);
+    EXPECT_EQ(slow.gear, -1);
+    EXPECT_EQ(slow.throttle, 0.0);
+    EXPECT_GT(slow.brake, 0.0);
+    c.reset();
+    // Reversing, negative ax demand speeds it up backward -> throttle in reverse.
+    const auto fast = c.update_directed(-1.0, 0.0, -3.0, 0.005);
+    EXPECT_EQ(fast.gear, -1);
+    EXPECT_GT(fast.throttle, 0.0);
+    EXPECT_EQ(fast.brake, 0.0);
+    // Same body-frame command magnitude as the forward mirror.
+    vdsim::LongAxController f;
+    f.initialize({});
+    const auto [ft, fb] = f.update(-1.0, 0.0, 0.005);
+    EXPECT_EQ(slow.brake, fb);
+    EXPECT_EQ(ft, 0.0);
+}
+
+TEST(LongAxController, DirectedZeroDtReturnsZeroPedals) {
+    vdsim::LongAxController c;
+    c.initialize({});
+    const auto pd = c.update_directed(1.0, 0.0, -3.0, 0.0);
+    EXPECT_EQ(pd.throttle, 0.0);
+    EXPECT_EQ(pd.brake, 0.0);
+    EXPECT_EQ(c.integrator(), 0.0);
+}
+
 TEST(LongAxController, IntegratorAntiwindup) {
     vdsim::LongAxController c;
     vdsim::LongAxController::Gains g;
