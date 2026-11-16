@@ -85,8 +85,8 @@ def _dc_opts(level, dt=5e-4):
 
 #: entry point -> exact refusal message for "L5" (others accept L5)
 L5_REFUSED = {
-    "linearize": "L5 linearization is not supported in 0.8.1",
-    "make_vec_session": "L5 is not supported in VecSession in 0.8.1",
+    "linearize": "L5 linearization is not supported yet",
+    "make_vec_session": "L5 is not supported in VecSession yet",
 }
 
 

@@ -7,7 +7,7 @@ All notable changes to VDSim are documented here. Format follows
 ## [0.9.0] (not released)
 
 Work order 51: aero ride-height / pitch slopes and the aero user module. Merged
-after the v0.8.2 tag.
+after the v0.8.3 tag.
 
 ### Added
 - Per-element ride slopes in `aero.elements`: `h_ref` [m], `dClA_dh` [m²/m] and
@@ -37,15 +37,44 @@ after the v0.8.2 tag.
   path. `AeroInput` carries the air-relative velocity, slip angle, `dz_heave`,
   `pitch`, `roll`, `dh_front`, `dh_rear` and `rho`; `AeroForce.point` uses the
   `aero.elements` frame. Fy acts on L5 only (ignored with one warning on L2–L4).
+- Per-axle tyres from Python (work order 52, R4). `vdsim.make_sim_session`,
+  `make_vec_session`, `make_sim_session_heightmap` and `make_sim_session_psd` take a
+  `vdsim.TireSetup` (front / rear axle or four corners) as `tire`; a `TireParams`
+  still works and builds the same session as before (it converts to
+  `TireSetup(tp)`). `vdsim_lab`: `Experiment.tire(front, rear=None)`,
+  `Sim(..., tire_rear=None)` and the config key `tire_rear`. The C++ YAML paths
+  (`vdsim_realtime`, world scenarios, catalog) already read per-axle tyres and are
+  unchanged.
+- Rotor keys (work order 52). `rotor_inertia` [kg m²] and `rotor_ratio` [-] are
+  YAML and Python names of `engine_rotational_inertia` and `final_drive_ratio`
+  (same parameter; `to_yaml` keeps the name that was written).
+  `rotor_axis: none | +x | -x | +y | -y` (body axes) adds the L5 rotor gyroscopic
+  moment −ω × H_r, H_r = I_r · G · ω_c · ê (ω_c = driven-axle carrier speed, AWD
+  front and rear half each), from the same I_r and G as the reflected spin inertia
+  I_r · G². It is independent of `wheel_gyro`. Unset or `none` leaves every result
+  unchanged. L1–L4 read `rotor_axis` and ignore it (one warning per process); the
+  reflected spin inertia applies on every level as before.
 
 ### Changed
 - L3/L4 hand their ride states to the inner planar aero each step, so every RK
   stage and the reported tyre `Fz` see the same ride slopes as the L3 tyre-load
   path. No effect without a non-zero slope.
+- L3 and L4 `tire(wheel)` (C++ `IVehicleDynamics::tire`, Python `.tire()`) now
+  return the live tyre model of their inner planar core (per-axle `TireSetup`
+  included). Earlier releases returned `nullptr` / `None` on these levels.
+  Simulation results are unchanged.
 
 ### Rejected (`std::invalid_argument` / `ValueError`)
 - An element with one or two of the three slope keys; a non-finite slope key.
 - L1 or L2 with a non-zero slope (the keys with both slopes 0 are accepted).
+- `rotor_inertia` < 0, `rotor_ratio` ≤ 0, an unknown `rotor_axis`.
+- `rotor_inertia` together with `engine_rotational_inertia` (or `rotor_ratio`
+  with `final_drive_ratio`) written with different values.
+- `rotor_inertia` / `rotor_ratio` together with a `powertrain:` block (the engine
+  inertia and gear ratios come from that block); `rotor_axis` alone is accepted
+  there and uses the engine speed.
+- `vdsim_lab`: `tire_rear` without `tire` in a config; a non-tyre object as `tire`
+  in the session factories (`TypeError`).
 
 ### Known limitations
 - L3/L4: downforce is added to the tyre loads only and does not change the
@@ -61,11 +90,189 @@ after the v0.8.2 tag.
   sample's body-x speed without ride states; with a non-zero slope they are not
   the applied load.
 - The L5 settle run costs about 0.1 s of wall clock per reset (example car).
+- The range check is on the `rotor_*` names only: `final_drive_ratio` and
+  `engine_rotational_inertia` keep no range check, so existing YAML behaves as
+  before. A check on the existing names is a separate candidate.
+- The rotor gyroscope does not depend on ground contact (an airborne driven wheel
+  drops the reflected spin inertia, not the rotor moment).
+- `make_init_state(vp, tp)` takes one tyre: with per-axle tyres pass the front tyre;
+  the rear wheels then start at the front tyre's free-rolling radius.
 
-## [Unreleased]
+## [0.8.3] - 2026-11-15
 
-Planned as 0.8.1 (work order 43: L5 longitudinal reactions; work order 44:
-one level-id factory, L5 from Python). Not released yet.
+### Changed
+- The L5 refusal messages of `linearize` and `make_vec_session` no longer name a
+  release: "L5 linearization is not supported yet (...)" and "L5 is not supported
+  in VecSession yet". Both still raise `ValueError`.
+
+### Fixed
+- Polygon friction (`friction_map_2d`, `create_polygon_friction_ground`): the
+  inside test clipped the edge denominator to a positive floor, so on polygons
+  with slanted edges a point could be classed inside when outside and the other
+  way round (mu wrong by the full patch step). Present since 0.7.0. Axis-aligned
+  rectangles and `friction_map` x bands were not affected.
+- Test `closedloop_wallclock` (S8, threads joined after a mode C run): the check
+  compares the sets of Python thread ids, kernel thread ids and child PIDs created
+  by the run instead of their counts, so a thread that existed before the run and
+  ended meanwhile no longer fails it intermittently. Test definition only; no
+  behaviour change.
+- Reverse driving on the RL pedal action and the driver model. Reversing (vx < -0.05
+  m/s), the RL pedal action now selects gear -1 so the throttle drives backward, and
+  the driver model follows the acceleration target through the direction-aware pedal
+  map with the gear in its output. Forward driving is unchanged.
+- Tyre slip angle while reversing is atan2(Vy, |Vx|); before, reversing with a small
+  lateral velocity gave a slip angle near +-pi and a saturated side force. Unchanged
+  whenever Vx > 0.
+- Acceleration command (CmdL5 ax_target) while reversing: a positive demand now
+  brakes and a negative one drives in reverse gear. Forward mapping unchanged.
+- L5 strut path delivers the strut mount-to-wheel couple to the chassis (roll and
+  pitch angular momentum was partly missing). L5 strut results change; penalty path,
+  L1-L4 and DAE-free cases outside the strut branch are unchanged.
+
+### Added
+- `VDSimPlant(blend_distance=1.0)`: friction blend width [m] shared by
+  `friction_map` x bands and `friction_map_2d` polygons. Default unchanged; 0 gives
+  a step edge; negative or non-finite raises `ValueError`.
+- Vehicle key `tire_low_speed: off | relaxed` (default off). relaxed switches the
+  belt slip relaxation on for every wheel (sigma_y 0.6 m, sigma_x 0.15 m unless the
+  tyre sets its own, low-speed floor 0.15 m/s). Below 0.3 m/s relaxed equals off:
+  the force law reads the key-off slip below 0.15 m/s and blends linearly up to 0.3
+  m/s; the standstill correction is the LuGre bristle's (theory 21.3.1).
+
+### Known limitations
+- `cg_height_ref: sprung` keeps the 0.8.1 mount arm, so the mount couple stays
+  missing in that mode (0.8.1 reproduction contract).
+- L2, L3 and L4 dynamic steering (`steering_dynamic: true`): the rack tyre-feedback
+  term has the wrong sign and lever arm, and the rack inertia and damping act in
+  handwheel-angle coordinates, so with zero driver torque the rack runs to its lock
+  (about 0.2 s at 15 m/s). The default kinematic steering is unaffected. Fix planned
+  for 0.10.0.
+
+## [0.8.2] - 2026-11-14
+
+### Changed — BREAKING: `cg_height` is the whole-vehicle CG on the L5 strut / DAE path
+- On the L5 spatial-strut path (`l5_spatial_suspension`, with or without a corner
+  model) `cg_height` now means the whole-vehicle CG height above ground (sprung +
+  unsprung), as on L1-L4 and the L5 penalty path. The sprung body sits at the derived
+  h_s = (m·h − Σm_u·R)/(m − Σm_u), m_u = max(1, `unsprung_mass`); the wheel mounts,
+  the spawn height and the aero arm origin follow h_s. Every strut-path run changes.
+- `cg_height_ref: sprung` reproduces the 0.8.1 strut-path behaviour as a whole: sprung
+  body at `cg_height` and the effective-rolling-radius wheel reaction arm (below).
+- h_s ≤ `wheel_radius_nominal` + 0.01 m raises `std::invalid_argument` /
+  `ValueError` on the strut path (mass and height do not fit together).
+- Aero on the strut path: drag still acts at `cg_height` above ground (four-key
+  path) or at `aero_drag_height`; element points keep their own z. Only the arm
+  origin moved to the body CG.
+
+### Added
+- `VehicleParams.wheel_gyro` (`legacy` | `full` | `off`, YAML / Python / `to_yaml`).
+  Unset is `legacy`, the 0.8.1 L5 wheel-spin gyroscopic term (bit-identical).
+  `full` also tilts the spin axis by the corner-model camber; without a corner model
+  the camber is zero and `full` equals `legacy`. `off` removes the term. Unknown
+  values raise `std::invalid_argument` / `ValueError`; L1-L4 ignore the key with one
+  warning per process. The term is written out in theory chapter 20.3.
+- `VehicleParams.cg_height_ref` (`vehicle` | `sprung`). Empty is `vehicle`. YAML,
+  Python and `to_yaml` (written only when set). L1-L4 and the L5 penalty path read it
+  and ignore it, with one warning per process when it is set.
+- Optional trace geometry key `body_cg_height_m` (L5 strut / DAE pose origin height);
+  the 3D renderer places the wheels at −(h_s − R) below the pose when it is present.
+- `VehicleParams.steer_input` (`roadwheel` | `rack_travel`). Empty is `roadwheel`.
+- L5 hardpoint path can read `SteeringOutput.rack_travel` as physical +y [m].
+  Rack mode skips `rack_per_rad` and Ackerman; wheel progress comes from DAE toe only.
+- `VehicleParams.rack_per_rad` [m/rad] (default 0.08): tie-rod rack travel per
+  roadwheel radian in `roadwheel` mode. It replaces the two constants of L4 and L5
+  (same value, so a vehicle without the key is unchanged). YAML, Python and
+  `to_yaml` round trip; a value <= 0 or not finite raises `ValueError`.
+- L5 per-wheel camber, toe and hardpoint output on the strut path with a corner
+  model attached: `SimOutput.wheel_camber` / `wheel_toe` [rad] (equal to
+  `free_3d_wheel_camber/toe`, product toe of theory 14 section 14.16),
+  `wheel_kin_valid`, and `hardpoints` (per wheel, `count` points [m] in the vehicle
+  design frame). Names and offsets per axle come from `free_3d_hardpoint_layout()`;
+  also `free_3d_wheel_kin_valid()`, `free_3d_wheel_hardpoints()`,
+  `free_3d_rack_dy()`. Every other level and path reports 0, valid false, no points.
+  Frame and channel rules: theory 14 section 14.17.
+- Python: the fields above, `vdsim.attach_l5_hardpoints(dyn, front_yaml=,
+  rear_yaml=, enable_dynamics=True)` and `vdsim_lab.attach_kinematics` delegating to
+  it on L5. `attach_front/rear_kinematics(_from_yaml)` keep returning `False` on L5.
+- `.vdtrace` (schema stays 0.5, channels are opt-in and additive): an L5 run with a
+  corner model records `wheel_camber`, `wheel_toe` (4,) [rad] and one (3,) [m]
+  channel per exported point, `hp_<wheel>_<key>` (regex
+  `^hp_(fl|fr|rl|rr)_[a-z0-9_]+$`), plus a manifest `hardpoints` block (frame,
+  `axle_offset_x`, `wheel_center_dy`, CG position, points per corner). A wheel
+  without a corner model is NaN. An older 0.5 reader opens such a trace and ignores
+  the new channels.
+
+### Known limitations
+- The knuckle reaction route stays off: an `unsprung` drive or brake reaction on the
+  corner-model path still resolves like `sprung` (once-per-process warning), so link
+  anti-dive / anti-squat does not act through the knuckle. With the route switched on
+  the anti-geometry gates R3 do not pass (rear travel beyond their 5 mm static-centre
+  range); route and R3 move to 0.9.0.
+- Coasting at low speed on a corner model with bump toe, the LuGre lateral friction
+  limit (μ·Fz also near zero slip angle) lets a small toe scrub carry close to the full
+  friction force, so the car settles to a different pitch and coasts down faster than
+  with the wheel-centre slope (10 m/s, anti-dive sample: about 3 mrad more pitch,
+  coast deceleration about 0.002 to 0.037 m/s²). The tyre-model side is tracked
+  separately.
+- The L4 hardpoint path has no camber, toe or coordinate output (valid false, no
+  points).
+- The L5 five-link corner solves its driven coordinates as an over-determined
+  least-squares fit (the lower_aft knuckle point held on its axis circle), so its
+  links do not keep their lengths exactly: against the exact link-length solution
+  the toe differs by up to about 2.6 deg at +30 mm bump (1 s ramp under a 3000 N
+  vertical wheel load), wheel centre about 2.2 mm. Its hardpoints are therefore not
+  exported (count 0, manifest `points: {}` with `excluded`); camber and toe are
+  still reported. `ctest -L known_failure` keeps the link-length sweep runnable.
+- A five-link corner model initialised at a non-zero travel starts in the pose of the
+  opposite travel (the driven angle is read back with the opposite sign). This affects the
+  L4 hardpoint DAE path and direct use of the corner model; L5 dynamic sessions initialise
+  at travel 0 and are not affected. Repair planned for 0.9.0.
+- Hardpoint output is the part-YAML geometry. Where the YAML wheel centre y differs
+  from track/2, the coordinates sit `wheel_center_dy` (manifest) away from the
+  dynamics wheel mount; check that field for the pair in use.
+- L5 strut path does not pass the mount-to-wheel-mass couple to the chassis, so part of
+  the angular momentum is lost. The wheel gyro magnitude is exact (V3b). Repair in 0.8.3.
+  The strut skidpad roll-moment gate `L5WheelGyro.V3_SkidpadRollMomentStrut` carries
+  label `known_failure` (reproduce with `ctest -L known_failure`).
+
+### Fixed
+- L4 and L5 hardpoint corners with a corner model: the right-hand corner is solved in the
+  mirrored (left-hand) frame, but the steering rack travel entered it unmirrored, so a
+  steer input moved the right wheel against the left one. The rack travel is now mirrored
+  before the right-hand solve. Steered L4 / L5 runs with a corner model change; static
+  toe and camber are unchanged.
+- L5 strut path with a corner model (hard-joint DAE): the cruise pitch oscillation
+  (about 1.8-2.2 Hz, growing or undamped from 25 m/s on the double-wishbone samples) is
+  gone. Two causes, two changes:
+  - the lateral slope that turns the bushing load into a vertical (jacking) force is now
+    taken at the contact patch, d(y_wc − R·sin γ)/dq with R = `wheel_radius_nominal`
+    (the radius the contact query uses), instead of at the wheel centre, whose slope put
+    the roll centre below the ground;
+  - the corner model receives the prescribed travel acceleration, so its constraint
+    stabilisation no longer lags the travel by about 25 deg at the oscillation frequency.
+  Every L5 strut run with a corner model changes. L1-L4, the L5 penalty path and the
+  strut path without a corner model are bit-identical.
+- L5 strut / DAE path: the tire longitudinal force reacts on the wheel spin about the
+  wheel-centre height (`wheel_radius_nominal` minus the tire penetration) instead of the
+  effective rolling radius. Slip and the tire model keep the effective rolling radius;
+  the penalty path is unchanged. The same drive or brake torque now gives a larger tire
+  force on the strut path (about 5 % on `generic_sedan` in the R2 manoeuvre).
+- Strut-path axle load transfer (`L5Reaction.R2_*`, a 0.8.1 known limitation with label
+  `known_failure`) is back in the release verdict and passes the unchanged +/-2 % gate.
+
+### `rack_travel` meaning by level
+
+| Level | Channel meaning | Left turn |
+|---|---|---|
+| L2-L4 | Wheel angle times `steering_ratio` (dimensionless) | + |
+| L5 `roadwheel` (default) | Channel is not the L5 steer command | n/a |
+| L5 `rack_travel` | Physical +y displacement [m] | Geometry decides. Rear-of-axle rack: left turn is -y |
+
+Product toe is `atan2(spin_x, spin_y)` with right-side `s=-1`.
+On the T5 fixture (tie-rod x behind the wheel centre) product-toe + is ISO 8855 steer -.
+VDSim does not flip rear-axle rack sign in code; that correction belongs to the builder.
+
+## [0.8.1] - 2026-11-01
 
 ### Changed — BREAKING: L5 drive/brake torque reactions and the LuGre spin reaction
 - L5 now returns each wheel's drive and brake torque reaction to a reaction body
@@ -150,99 +357,6 @@ one level-id factory, L5 from Python). Not released yet.
   `apps/validation/run_validation.py`,
   `carla_integration/python/vdsim_carla_bridge.py`,
   `docs/figures_src/plot_theory_figures.py`.
-
-## [0.8.2]
-
-### Changed — BREAKING: `cg_height` is the whole-vehicle CG on the L5 strut / DAE path
-- On the L5 spatial-strut path (`l5_spatial_suspension`, with or without a corner
-  model) `cg_height` now means the whole-vehicle CG height above ground (sprung +
-  unsprung), as on L1-L4 and the L5 penalty path. The sprung body sits at the derived
-  h_s = (m·h − Σm_u·R)/(m − Σm_u), m_u = max(1, `unsprung_mass`); the wheel mounts,
-  the spawn height and the aero arm origin follow h_s. Every strut-path run changes.
-- `cg_height_ref: sprung` reproduces the 0.8.1 strut-path behaviour as a whole: sprung
-  body at `cg_height` and the effective-rolling-radius wheel reaction arm (below).
-- h_s ≤ `wheel_radius_nominal` + 0.01 m raises `std::invalid_argument` /
-  `ValueError` on the strut path (mass and height do not fit together).
-- Aero on the strut path: drag still acts at `cg_height` above ground (four-key
-  path) or at `aero_drag_height`; element points keep their own z. Only the arm
-  origin moved to the body CG.
-
-### Added
-- `VehicleParams.wheel_gyro` (`legacy` | `full` | `off`, YAML / Python / `to_yaml`).
-  Unset is `legacy`, the 0.8.1 L5 wheel-spin gyroscopic term (bit-identical).
-  `full` also tilts the spin axis by the corner-model camber; without a corner model
-  the camber is zero and `full` equals `legacy`. `off` removes the term. Unknown
-  values raise `std::invalid_argument` / `ValueError`; L1-L4 ignore the key with one
-  warning per process. The term is written out in theory chapter 20.3.
-- `VehicleParams.cg_height_ref` (`vehicle` | `sprung`). Empty is `vehicle`. YAML,
-  Python and `to_yaml` (written only when set). L1-L4 and the L5 penalty path read it
-  and ignore it, with one warning per process when it is set.
-- Optional trace geometry key `body_cg_height_m` (L5 strut / DAE pose origin height);
-  the 3D renderer places the wheels at −(h_s − R) below the pose when it is present.
-- `VehicleParams.steer_input` (`roadwheel` | `rack_travel`). Empty is `roadwheel`.
-- L5 hardpoint path can read `SteeringOutput.rack_travel` as physical +y [m].
-  Rack mode skips `rack_per_rad` and Ackerman; wheel progress comes from DAE toe only.
-- `VehicleParams.rack_per_rad` [m/rad] (default 0.08): tie-rod rack travel per
-  roadwheel radian in `roadwheel` mode. It replaces the two constants of L4 and L5
-  (same value, so a vehicle without the key is unchanged). YAML, Python and
-  `to_yaml` round trip; a value <= 0 or not finite raises `ValueError`.
-- L5 per-wheel camber, toe and hardpoint output on the strut path with a corner
-  model attached: `SimOutput.wheel_camber` / `wheel_toe` [rad] (equal to
-  `free_3d_wheel_camber/toe`, product toe of theory 14 section 14.16),
-  `wheel_kin_valid`, and `hardpoints` (per wheel, `count` points [m] in the vehicle
-  design frame). Names and offsets per axle come from `free_3d_hardpoint_layout()`;
-  also `free_3d_wheel_kin_valid()`, `free_3d_wheel_hardpoints()`,
-  `free_3d_rack_dy()`. Every other level and path reports 0, valid false, no points.
-  Frame and channel rules: theory 14 section 14.17.
-- Python: the fields above, `vdsim.attach_l5_hardpoints(dyn, front_yaml=,
-  rear_yaml=, enable_dynamics=True)` and `vdsim_lab.attach_kinematics` delegating to
-  it on L5. `attach_front/rear_kinematics(_from_yaml)` keep returning `False` on L5.
-- `.vdtrace` (schema stays 0.5, channels are opt-in and additive): an L5 run with a
-  corner model records `wheel_camber`, `wheel_toe` (4,) [rad] and one (3,) [m]
-  channel per exported point, `hp_<wheel>_<key>` (regex
-  `^hp_(fl|fr|rl|rr)_[a-z0-9_]+$`), plus a manifest `hardpoints` block (frame,
-  `axle_offset_x`, `wheel_center_dy`, CG position, points per corner). A wheel
-  without a corner model is NaN. An older 0.5 reader opens such a trace and ignores
-  the new channels.
-
-### Known limitations
-- The L4 hardpoint path has no camber, toe or coordinate output (valid false, no
-  points).
-- The L5 five-link corner solves its driven coordinates as an over-determined
-  least-squares fit (the lower_aft knuckle point held on its axis circle), so its
-  links do not keep their lengths exactly: against the exact link-length solution
-  the toe differs by up to about 2.6 deg at +30 mm bump (1 s ramp under a 3000 N
-  vertical wheel load), wheel centre about 2.2 mm. Its hardpoints are therefore not
-  exported (count 0, manifest `points: {}` with `excluded`); camber and toe are
-  still reported. `ctest -L known_failure` keeps the link-length sweep runnable.
-- Hardpoint output is the part-YAML geometry. Where the YAML wheel centre y differs
-  from track/2, the coordinates sit `wheel_center_dy` (manifest) away from the
-  dynamics wheel mount; check that field for the pair in use.
-- L5 strut path does not pass the mount-to-wheel-mass couple to the chassis, so part of
-  the angular momentum is lost. The wheel gyro magnitude is exact (V3b). Repair in 0.8.3.
-  The strut skidpad roll-moment gate `L5WheelGyro.V3_SkidpadRollMomentStrut` carries
-  label `known_failure` (reproduce with `ctest -L known_failure`).
-
-### Fixed
-- L5 strut / DAE path: the tire longitudinal force reacts on the wheel spin about the
-  wheel-centre height (`wheel_radius_nominal` minus the tire penetration) instead of the
-  effective rolling radius. Slip and the tire model keep the effective rolling radius;
-  the penalty path is unchanged. The same drive or brake torque now gives a larger tire
-  force on the strut path (about 5 % on `generic_sedan` in the R2 manoeuvre).
-- Strut-path axle load transfer (`L5Reaction.R2_*`, a 0.8.1 known limitation with label
-  `known_failure`) is back in the release verdict and passes the unchanged +/-2 % gate.
-
-### `rack_travel` meaning by level
-
-| Level | Channel meaning | Left turn |
-|---|---|---|
-| L2-L4 | Wheel angle times `steering_ratio` (dimensionless) | + |
-| L5 `roadwheel` (default) | Channel is not the L5 steer command | n/a |
-| L5 `rack_travel` | Physical +y displacement [m] | Geometry decides. Rear-of-axle rack: left turn is -y |
-
-Product toe is `atan2(spin_x, spin_y)` with right-side `s=-1`.
-On the T5 fixture (tie-rod x behind the wheel centre) product-toe + is ISO 8855 steer -.
-VDSim does not flip rear-axle rack sign in code; that correction belongs to the builder.
 
 ## [0.8.0] - 2026-10-29
 

@@ -34,13 +34,50 @@
 //                               F_i = m_u a_u,i + R F_tire,i + m_u g e_z (strut particle)
 //   T = (x_b - G) x m_b a_b + sum_i (strut) (x_u,i - G) x m_u a_u,i
 //   B = omega_w x (R I_b omega)                 (sprung body spin)
-//   L = sum_i (strut) (x_b + R r_i - x_u,i) x R F_tire,i  (mount-to-particle couple of
-//       the strut connection; 0 on the penalty path)
+//   L = sum_i (strut) (r_arm,i - x_u,i) x R F_tire,i : the part of the strut connection
+//       couple that the core does not pass to the chassis. r_arm,i is the chassis torque
+//       arm of the core (work order 57 C, 61fc1cb): the mount x_b + R r_i under
+//       cg_height_ref: sprung (0.8.1 strut behaviour), the wheel particle x_u,i otherwise,
+//       so L == 0 with the vehicle key. Work order 50 wrote L with the mount arm, which
+//       was the core arm on every strut run then; once 57 C delivers the couple, that
+//       form counts it twice (PO verdict on 57 C, option 1). 0 on the penalty path.
+//       The gate, window, normalisation and expected value (-G_w) are unchanged.
 //   D = (E + L - T - B) . e_x
 //   dD = mean(D)_full - mean(D)_off * mean(a)_full / mean(a)_off
 //   Gate: | dD / (-G_w) - 1 | <= 0.02, preconditions as V3 with the condition's V and R.
 //   Condition 1: R 8.5 m, V 7 m/s (the V3 skidpad; seen in the stop diagnostic).
 //   Condition 2: R 15 m, V 9.5 m/s (a_y ~ 6.0 m/s2), fixed here before any run of it.
+//
+// Work order 52 (rotor gyroscope), fixed before the implementation commit
+// (definition: tests/fixtures/axle_rotor_52/DEFINITION.md).
+//   Test constants: rotor_inertia I_r = 0.25 kg m2, rotor_ratio G = 5.0, RWD.
+//   V5a : rotor_axis none == unset bit for bit (both L5 paths); the rotor term acts with
+//         wheel_gyro off as well (independent of wheel_gyro).
+//   V5b2: RWD / FWD / AWD with rotor_axis +y: the reflected spin inertia the core uses
+//         per wheel (observation hook) == share * I_r * G^2 from the test constants
+//         (RWD rear and FWD front 0.5, AWD 0.25, others 0), bit for bit, and the wheel
+//         inertia itself unchanged. Written as an equality of the reflected part so no
+//         subtraction rounding enters the bit comparison.
+//   V5c : the V3b skidpad (R 8.5 m, V 7 m/s, PI hold, last 2 s) with rotor_axis none
+//         (off) and +y / +x (on), wheel_gyro legacy in both runs.
+//         H_r = I_r G omega_c e_axis (body), omega_c = (omega_RL + omega_RR) / 2.
+//         The budget residual D = (E + Lc - T - B) is the momentum rate that the external
+//         moments supply beyond the modelled bodies, i.e. omega x H of the unmodelled
+//         spin; the rotor moment on the chassis is -omega x H_r, so the expected change
+//         is Gr = mean_on((R omega) x (R H_r)), the same convention as V3b (-G_w).
+//         Lateral axis (+y): roll component e_x; longitudinal axis (+x): pitch e_y.
+//         dD_k = mean(D_k)_on - mean(D_k)_off * mean(a)_on / mean(a)_off.
+//         Gate | dD_k / Gr_k - 1 | <= 0.02, L5 penalty and strut, preconditions as V3.
+//         Not determinable (= failure) when |Gr_k| < 2 N m.
+//         Lc: the strut connection couple the core does not pass to the chassis, charged
+//         to the core chassis torque arm. Work order 57 (61fc1cb / d6a389a) is on main
+//         since 0724358, so the arm follows 57: the mount x_b + R r_i at the strut-body
+//         height h_s (l5_strut_body_height) under cg_height_ref: sprung, the wheel
+//         particle otherwise (Lc == 0), the same switch as the V3b L line below
+//         (resolved in the 52 <- main 9214fb7 merge, as fixed here before the runs).
+//         The off-run pitch residual mean(D_y)_off is printed as information.
+//   V5d : V5c at R 15 m, V 9.5 m/s, fixed here before any run of it.
+#include "free_3d_rotor_internal.hpp"
 #include "vdsim/control.hpp"
 #include "vdsim/interfaces.hpp"
 #include "vdsim/multibody.hpp"
@@ -157,11 +194,29 @@ struct Skid {
     double M {0}, a {0}, Gw {0}, V {0}, r {0};
     double E {0}, T {0}, B {0}, L {0};   // V3b budget terms, heading-frame x [N m]
     double max_dV {0}, R_rel {0}, r_cv {0};
+    // Work order 52: core-arm couple Lc (x, y), pitch components (heading-frame y) and
+    // the expected rotor term Gr = (R omega) x (R H_r) from the test constants.
+    double Lcx {0}, Ey {0}, Ty {0}, By {0}, Lcy {0}, Grx {0}, Gry {0};
 };
 
-Skid skidpad(const char* mode, bool strut, double kV = 7.0, double kR = 8.5) {
+// Work order 52 test constants (rotor_inertia, rotor_ratio).
+constexpr double kIr = 0.25;
+constexpr double kG = 5.0;
+
+Skid skidpad(const char* mode, bool strut, double kV = 7.0, double kR = 8.5,
+             const char* rotor_axis = nullptr, const char* cg_ref = nullptr) {
     constexpr double kT = 15.0, kAvg = 2.0;
     VehicleParams vp = with_gyro(mode);
+    if (cg_ref) vp.cg_height_ref = cg_ref;
+    // V3b L and V5c Lc arm: the chassis torque arm of the core strut branch (57 C).
+    const bool mount_arm = strut && cg_height_ref_is_sprung(vp);
+    if (rotor_axis) {
+        vp.drive_type = VehicleParams::Drive::RWD;
+        vp.engine_rotational_inertia = kIr;
+        vp.final_drive_ratio = kG;
+        vp.rotor_axis = rotor_axis;
+    }
+    const Vec3 e_rotor = rotor_axis ? rotor_axis_vector(vp) : Vec3::Zero();
     vp.aero_drag_coeff = 0.0;
     vp.aero_lift_front = 0.0;
     vp.aero_lift_rear = 0.0;
@@ -186,6 +241,10 @@ Skid skidpad(const char* mode, bool strut, double kV = 7.0, double kR = 8.5) {
         Vec3(vp.cg_to_front, -0.5 * vp.track_front, hz),
         Vec3(-vp.cg_to_rear, 0.5 * vp.track_rear, hz),
         Vec3(-vp.cg_to_rear, -0.5 * vp.track_rear, hz)}};
+    // Core chassis mount of the strut path (strut-body height h_s, work order 47).
+    const double hz_core = strut ? -(l5_strut_body_height(vp) - R_w) : hz;
+    std::array<Vec3, NUM_WHEELS> r_core = r_mount;
+    for (auto& r : r_core) r.z() = hz_core;
 
     const int n_tot = static_cast<int>(kT / kDt);
     const int n_avg = static_cast<int>(kAvg / kDt);
@@ -235,7 +294,7 @@ Skid skidpad(const char* mode, bool strut, double kV = 7.0, double kR = 8.5) {
             // V3b budget (exact angular momentum about G, heading-frame x)
             const Vec3 e_x(std::cos(psi), std::sin(psi), 0.0);
             const Vec3 w_w = Rm * st.angular_velocity;
-            Vec3 E = Vec3::Zero(), T = Vec3::Zero(), L = Vec3::Zero();
+            Vec3 E = Vec3::Zero(), T = Vec3::Zero(), L = Vec3::Zero(), Lc = Vec3::Zero();
             T += (st.position - G).cross(m_b * w_w.cross(v_w));
             for (int i = 0; i < NUM_WHEELS; ++i) {
                 const Vec3 F_t = Rm * o.tire_forces[i];
@@ -244,7 +303,13 @@ Skid skidpad(const char* mode, bool strut, double kV = 7.0, double kR = 8.5) {
                     const Vec3 a_u = w_w.cross(st.unsprung_vel[i]);
                     F += m_u[i] * a_u + Vec3(0.0, 0.0, m_u[i] * 9.80665);
                     T += (st.unsprung_pos[i] - G).cross(m_u[i] * a_u);
-                    L += (st.position + Rm * r_mount[i] - st.unsprung_pos[i]).cross(F_t);
+                    const Vec3 r_arm = mount_arm ? Vec3(st.position + Rm * r_mount[i])
+                                                 : Vec3(st.unsprung_pos[i]);
+                    L += (r_arm - st.unsprung_pos[i]).cross(F_t);
+                    // Work order 52 Lc: same core arm, mount at the core height h_s.
+                    const Vec3 r_carm = mount_arm ? Vec3(st.position + Rm * r_core[i])
+                                                  : Vec3(st.unsprung_pos[i]);
+                    Lc += (r_carm - st.unsprung_pos[i]).cross(F_t);
                 }
                 E += (p[i] - G).cross(F);
             }
@@ -256,6 +321,18 @@ Skid skidpad(const char* mode, bool strut, double kV = 7.0, double kR = 8.5) {
             out.T += T.dot(e_x) / n_avg;
             out.B += w_w.cross(H_b).dot(e_x) / n_avg;
             out.L += L.dot(e_x) / n_avg;
+            // Work order 52: pitch components and the expected rotor term.
+            const Vec3 e_yh(-std::sin(psi), std::cos(psi), 0.0);
+            const double omega_c = 0.5 * (st.wheel_spin[2] + st.wheel_spin[3]);
+            const Vec3 H_r = Rm * ((kIr * kG * omega_c) * e_rotor);
+            const Vec3 Gr = w_w.cross(H_r);
+            out.Lcx += Lc.dot(e_x) / n_avg;
+            out.Ey += E.dot(e_yh) / n_avg;
+            out.Ty += T.dot(e_yh) / n_avg;
+            out.By += w_w.cross(H_b).dot(e_yh) / n_avg;
+            out.Lcy += Lc.dot(e_yh) / n_avg;
+            out.Grx += Gr.dot(e_x) / n_avg;
+            out.Gry += Gr.dot(e_yh) / n_avg;
             out.M += M / n_avg;
             out.a += V * r / n_avg;
             out.Gw += st.angular_velocity.z() * H_y / n_avg;
@@ -298,9 +375,9 @@ void v3(bool strut) {
     EXPECT_LE(std::abs(rel), 0.02);
 }
 
-void v3b(bool strut, double V, double R) {
-    const Skid off = skidpad("off", strut, V, R);
-    const Skid full = skidpad("full", strut, V, R);
+void v3b(bool strut, double V, double R, const char* cg_ref = nullptr) {
+    const Skid off = skidpad("off", strut, V, R, nullptr, cg_ref);
+    const Skid full = skidpad("full", strut, V, R, nullptr, cg_ref);
     const char* path = strut ? "strut" : "penalty";
     for (const auto* run : {&off, &full}) {
         std::printf("V3b %s R=%.1f V=%.1f %s V=%.6f r=%.6f R=%.6f max|dV|=%.3e R_rel=%.3e "
@@ -319,6 +396,53 @@ void v3b(bool strut, double V, double R) {
     std::printf("V3b %s R=%.1f V=%.1f dD=%.6f N m expected=%.6f N m rel=%+.4f %% (gate +-2 %%)\n",
                 path, R, V, dD, expected, 100.0 * rel);
     EXPECT_LE(std::abs(rel), 0.02);
+}
+
+// ---- work order 52: rotor gyroscope ----------------------------------------------------
+
+/// V5c / V5d: rotor off (none) vs on (+y lateral -> roll, +x longitudinal -> pitch).
+void v5c(bool strut, const char* axis, double V, double R) {
+    const Skid off = skidpad("legacy", strut, V, R, "none");
+    const Skid on = skidpad("legacy", strut, V, R, axis);
+    const char* path = strut ? "strut" : "penalty";
+    const bool pitch = std::string(axis).find('x') != std::string::npos;
+    for (const auto* run : {&off, &on}) {
+        std::printf("V5c %s axis=%s R=%.1f V=%.1f %s V=%.6f r=%.6f R=%.6f max|dV|=%.3e "
+                    "R_rel=%.3e r_cv=%.3e roll E=%.6f T=%.6f B=%.6f Lc=%.6f pitch E=%.6f "
+                    "T=%.6f B=%.6f Lc=%.6f a=%.6f Gr=(%.6f, %.6f) N m\n",
+                    path, axis, R, V, run == &off ? "off" : "on ", run->V, run->r,
+                    run->V / run->r, run->max_dV, run->R_rel, run->r_cv, run->E, run->T,
+                    run->B, run->Lcx, run->Ey, run->Ty, run->By, run->Lcy, run->a,
+                    run->Grx, run->Gry);
+        EXPECT_LE(run->max_dV, 0.05) << "precondition: speed hold";
+        EXPECT_LE(run->R_rel, 0.01) << "precondition: radius hold";
+        EXPECT_LE(run->r_cv, 0.005) << "precondition: steady yaw rate";
+    }
+    const auto Dx = [](const Skid& x) { return x.E + x.Lcx - x.T - x.B; };
+    const auto Dy = [](const Skid& x) { return x.Ey + x.Lcy - x.Ty - x.By; };
+    std::printf("V5c-info %s R=%.1f V=%.1f off-run pitch residual mean(D_y)=%.6f N m\n",
+                path, R, V, Dy(off));
+    const double dDx = Dx(on) - Dx(off) * on.a / off.a;
+    const double dDy = Dy(on) - Dy(off) * on.a / off.a;
+    const double dD = pitch ? dDy : dDx;
+    const double expected = pitch ? on.Gry : on.Grx;
+    std::printf("V5c %s axis=%s R=%.1f V=%.1f dD(roll)=%.6f dD(pitch)=%.6f expected=%.6f N m "
+                "rel=%+.4f %% (gate +-2 %%, judged on %s)\n",
+                path, axis, R, V, dDx, dDy, expected, 100.0 * (dD / expected - 1.0),
+                pitch ? "pitch" : "roll");
+    ASSERT_GE(std::abs(expected), 2.0) << "not determinable: |expected| < 2 N m";
+    EXPECT_LE(std::abs(dD / expected - 1.0), 0.02);
+}
+
+/// Session for V5a / V5b2 on L5 (path 0 penalty, 1 strut) with the rotor test constants.
+VehicleParams rotor_vp(const char* gyro, const char* axis,
+                       VehicleParams::Drive drive = VehicleParams::Drive::RWD) {
+    VehicleParams vp = with_gyro(gyro);
+    vp.drive_type = drive;
+    vp.engine_rotational_inertia = kIr;
+    vp.final_drive_ratio = kG;
+    if (axis) vp.rotor_axis = axis;
+    return vp;
 }
 
 }  // namespace
@@ -353,14 +477,10 @@ TEST(L5WheelGyro, V2_CornerModelUnsetLegacyAndFullReactsToCamber) {
 
 TEST(L5WheelGyro, V3_SkidpadRollMomentPenalty) { v3(false); }
 
-// Strut path: the fixed V3 roll-moment gate is not met because the strut path does
-// not pass the mount-to-wheel-mass couple to the chassis (V3b, which includes that
-// couple, holds the gyro term itself). Built only into vdsim_known_failure_tests with
-// label `known_failure` (PROP-2741 option 2); gate and formula unchanged; the couple
-// repair is planned for 0.8.3.
-#ifdef VDSIM_KNOWN_FAILURE_TESTS
+// Strut path: out of the 0.8.2 verdict (known_failure, PROP-2741 option 2) while the
+// strut path did not pass the mount-to-wheel-mass couple to the chassis. Back in the
+// release verdict after work order 57 C delivers the couple; gate and formula unchanged.
 TEST(L5WheelGyro, V3_SkidpadRollMomentStrut) { v3(true); }
-#endif  // VDSIM_KNOWN_FAILURE_TESTS
 
 // ---- V3b (exact budget incl. the strut mount couple) ----------------------------------
 
@@ -371,3 +491,71 @@ TEST(L5WheelGyro, V3b_ExactBudgetStrutR8p5V7) { v3b(true, 7.0, 8.5); }
 TEST(L5WheelGyro, V3b_ExactBudgetPenaltyR15V9p5) { v3b(false, 9.5, 15.0); }
 
 TEST(L5WheelGyro, V3b_ExactBudgetStrutR15V9p5) { v3b(true, 9.5, 15.0); }
+
+// ---- work order 52: rotor gyroscope ----------------------------------------------------
+
+TEST(L5RotorGyro, V5a_NoneEqualsUnsetAndActsWithWheelGyroOff) {
+    for (int path : {0, 1}) {
+        VehicleParams none = sedan();
+        none.rotor_axis = "none";
+        EXPECT_TRUE(same_bits(trace(sedan(), path, 1500), trace(none, path, 1500)))
+            << "rotor_axis none == unset, path " << path;
+        const auto off_unset = trace(with_gyro("off"), path, 1500);
+        EXPECT_TRUE(same_bits(off_unset, trace(rotor_vp("off", "none"), path, 1500)))
+            << "wheel_gyro off, rotor none == rotor unset, path " << path;
+        EXPECT_FALSE(same_bits(off_unset, trace(rotor_vp("off", "+y"), path, 1500)))
+            << "the rotor term acts with wheel_gyro off, path " << path;
+        EXPECT_FALSE(same_bits(trace(with_gyro("legacy"), path, 1500),
+                               trace(rotor_vp("legacy", "+x"), path, 1500)))
+            << "the rotor term acts with wheel_gyro legacy, path " << path;
+    }
+}
+
+TEST(L5RotorGyro, V5b2_ReflectedSpinInertiaFromTestConstants) {
+    using D = VehicleParams::Drive;
+    const double full = kIr * kG * kG;
+    const struct { D drive; const char* name; double front, rear; } cases[] = {
+        {D::RWD, "RWD", 0.0, 0.5 * full},
+        {D::FWD, "FWD", 0.5 * full, 0.0},
+        {D::AWD, "AWD", 0.5 * (0.5 * full), 0.5 * (0.5 * full)}};
+    for (const auto& c : cases) {
+        for (int path : {0, 1}) {
+            const VehicleParams vp = rotor_vp("legacy", "+y", c.drive);
+            auto s = make(vp, path, 10.0);
+            for (int k = 0; k < 300; ++k) {
+                CmdL4 u;
+                u.throttle = 0.2;
+                s->set_input(u);
+                s->tick(kDt);
+            }
+            const auto I_eng = detail::free_3d_wheel_engine_inertia_obs(s->dynamics());
+            const auto I_whl = detail::free_3d_wheel_inertia_obs(s->dynamics());
+            const double R_w = vp.wheel_radius_nominal;
+            for (int i = 0; i < NUM_WHEELS; ++i) {
+                const double m_w = vp.unsprung_mass[i] > 0.0 ? vp.unsprung_mass[i] : 25.0;
+                const double I_w = vp.wheel_inertia[i] > 0.0
+                                       ? vp.wheel_inertia[i]
+                                       : std::max(0.01, 0.5 * m_w * R_w * R_w);
+                const double want = i < 2 ? c.front : c.rear;
+                std::printf("V5b2 %s path=%d wheel=%d I_eng=%.17g want=%.17g I_wheel=%.17g\n",
+                            c.name, path, i, I_eng[i], want, I_whl[i]);
+                EXPECT_EQ(std::memcmp(&I_eng[i], &want, sizeof(double)), 0)
+                    << c.name << " path " << path << " wheel " << i;
+                EXPECT_EQ(std::memcmp(&I_whl[i], &I_w, sizeof(double)), 0)
+                    << c.name << " path " << path << " wheel " << i << " wheel inertia";
+            }
+        }
+    }
+}
+
+// V5c: the V3b skidpad, R 8.5 m, V 7 m/s.
+TEST(L5RotorGyro, V5c_LateralAxisRollPenaltyR8p5V7) { v5c(false, "+y", 7.0, 8.5); }
+TEST(L5RotorGyro, V5c_LateralAxisRollStrutR8p5V7) { v5c(true, "+y", 7.0, 8.5); }
+TEST(L5RotorGyro, V5c_LongitudinalAxisPitchPenaltyR8p5V7) { v5c(false, "+x", 7.0, 8.5); }
+TEST(L5RotorGyro, V5c_LongitudinalAxisPitchStrutR8p5V7) { v5c(true, "+x", 7.0, 8.5); }
+
+// V5d: R 15 m, V 9.5 m/s, fixed before any run of it.
+TEST(L5RotorGyro, V5d_LateralAxisRollPenaltyR15V9p5) { v5c(false, "+y", 9.5, 15.0); }
+TEST(L5RotorGyro, V5d_LateralAxisRollStrutR15V9p5) { v5c(true, "+y", 9.5, 15.0); }
+TEST(L5RotorGyro, V5d_LongitudinalAxisPitchPenaltyR15V9p5) { v5c(false, "+x", 9.5, 15.0); }
+TEST(L5RotorGyro, V5d_LongitudinalAxisPitchStrutR15V9p5) { v5c(true, "+x", 9.5, 15.0); }

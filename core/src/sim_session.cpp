@@ -67,7 +67,9 @@ SimSession::SimSession(std::unique_ptr<IVehicleDynamics> dyn,
     : dyn_(std::move(dyn)), ground_(std::move(ground)), vp_(vp),
       session_kind_(cfg.session_kind) {
     base_vp_ = vp;
-    base_ts_ = ts;
+    // tire_low_speed acts on the tyres the session runs (and re-runs after a reset /
+    // randomization, which start from base_ts_).
+    base_ts_ = apply_tire_low_speed(vp, ts);
     base_sp_ = sp;
     base_sensor_delay_s_ = cfg.sensor_delay_s;
     base_sensors_ = cfg.sensors;
@@ -83,7 +85,7 @@ SimSession::SimSession(std::unique_ptr<IVehicleDynamics> dyn,
                 "aero element ride-height / pitch slopes (dClA_dh, dClA_dpitch != 0) "
                 "need a ride model (L3-L5); L1/L2 have no heave or pitch");
     }
-    dyn_->initialize(vp, ts, sp);
+    dyn_->initialize(vp, base_ts_, sp);
     module_latch_ = detail::module_latch_of(*dyn_);
     {
         // L1/L2 have no roll split for aero: an element y offset is ignored.
@@ -113,6 +115,8 @@ SimSession::SimSession(std::unique_ptr<IVehicleDynamics> dyn,
     }
     // wheel_gyro is an L5 term; L1-L4 validate it, ignore it and warn once per process.
     if (dyn_->level() != IVehicleDynamics::Level::L5_Stunt) warn_if_wheel_gyro_unused(vp);
+    // rotor_axis (work order 52) likewise; L5 validates it when the dynamics is built.
+    if (dyn_->level() != IVehicleDynamics::Level::L5_Stunt) warn_if_rotor_axis_unused(vp);
     {
         // cg_height_ref selects a meaning on the L5 strut / DAE path only; L1-L4 and
         // the L5 penalty path always treat cg_height as the whole-vehicle CG.

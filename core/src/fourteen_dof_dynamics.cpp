@@ -438,6 +438,9 @@ public:
         { return inner_->tire_forces_body(); }
     std::array<Vec3,   NUM_WHEELS> tire_forces_wheel() const override
         { return inner_->tire_forces_wheel(); }
+    // L3/L4 run the planar tyres of the inner L2 model (per-axle TireSetup included);
+    // read-only view of that live model (work order 52, T3).
+    const ITireModel* tire(int wheel) const override { return inner_->tire(wheel); }
     double engine_rpm()   const override { return inner_->engine_rpm(); }
     int    current_gear() const override { return inner_->current_gear(); }
     bool   set_shift_policy(ShiftPolicy fn) override

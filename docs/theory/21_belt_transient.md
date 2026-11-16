@@ -102,6 +102,35 @@ behaviour (and the published ISO baseline) unchanged.
                   63%            ~100%
 ```
 
+### 21.3.1 Vehicle key `tire_low_speed: relaxed` (0.8.3)
+
+The vehicle key `tire_low_speed: off | relaxed` (default `off` = key unset) switches
+the belt on for every wheel without editing the tyre files:
+$\sigma_y$ / $\sigma_x$ = the tyre's `relaxation_length_lat` / `_long` when set, else
+0.6 m / 0.15 m, and a low-speed floor $v_{\mathrm{low}} = 0.15$ m/s.
+
+- **State update.** The decay uses $\max(|V_x|, v_{\mathrm{low}})$, so at standstill
+  the state keeps tracking $s_{\mathrm{geom}}$ with $\tau = \sigma/v_{\mathrm{low}}$
+  instead of freezing (a restart does not read a stale value).
+- **Force input.** The force law reads
+
+$$
+s_{\mathrm{in}} = s_{\mathrm{off}} + w\,(s_{\mathrm{eff}} - s_{\mathrm{off}}),\qquad
+w = \mathrm{clamp}\!\left(\frac{|V_x| - v_{\mathrm{low}}}{v_{\mathrm{low}}}, 0, 1\right),
+$$
+
+  where $s_{\mathrm{off}}$ is the slip the key `off` feeds at the same place
+  (`belt_force_weight`, `belt_force_input`). Below $v_{\mathrm{low}}$ the input is
+  exactly the key-off one, above $2v_{\mathrm{low}} = 0.3$ m/s it is exactly the
+  relaxed state.
+- **Why.** Near standstill the LuGre bristle already carries the tyre compliance;
+  stacking the belt lag on it closes a feedback loop that made the wheel forces
+  chatter while holding a stop. Hence **below 0.3 m/s `relaxed` equals `off`** and
+  the standstill correction is the LuGre bristle's; the key only changes the
+  transient above that speed.
+- A tyre whose belt is switched on in its own file keeps $v_{\mathrm{low}} = 0$ and
+  the original update and input ($w = 1$).
+
 ---
 
 ## 21.4 Validation
