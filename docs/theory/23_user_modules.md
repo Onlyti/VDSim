@@ -71,6 +71,28 @@ the vertical/roll ODE stays consistent.
 
 `reset()` is called when the model is reset; clear your module state there.
 
+## 3a. Faults (0.9.0)
+
+A module installed with `set_*_module()` (brake, steering, drivetrain, suspension,
+anti-roll bar, aero; C++ or Python) runs inside the dynamics step, which cannot throw.
+The model therefore wraps it:
+
+- An exception, or a non-finite value in any numeric output field (steering output, the
+  four drivetrain wheel torques, the anti-roll bar pair, `AeroForce.force_body` and
+  `point`, …), is recorded and that call contributes zero for the rest of the step.
+- The next session tick then raises: `std::invalid_argument` in C++, `ValueError` in
+  Python. The message names the module kind, the module name (the Python class name for
+  a Python module), the tick number since the last reset and the cause (the exception
+  text or the non-finite field name). Only the first fault is recorded.
+- After a fault the dynamics state is treated as spoiled: further `tick()` / `step()`
+  calls raise the same message, and `output()` keeps the output of the last good tick.
+- `reset()` / `reset_settled()` or `restore(snapshot)` clears the fault; the run after it
+  is the same as a fresh session from the same initial state.
+- In a `VecSession` the faulty environment's error reaches the caller and the process
+  keeps running; the state of the other environments in that call is not specified.
+- A Python module object shared by several environments running in threads is not made
+  thread safe; give each environment its own object.
+
 ## 4. Sign convention
 
 `BrakeModule.wheel_torque` and `DrivetrainModule.apply().wheel_torque` are **signed**
@@ -93,8 +115,7 @@ once per reset), and the model keeps the Python object alive. On L5 attach it be
 `reset()`: the reset runs the static-reference settle run, during which `compute`
 and `begin_step` are not called. On L3/L4 `compute` is called by the ride model
 (tyre loads) and by the inner planar model (drag), so more than once per stage.
-Exceptions and non-finite returns are handled as for every module here: an exception
-ends the process, a non-finite force propagates.
+Exceptions and non-finite returns are handled as for every module here (§3a).
 
 ## 5. Example
 

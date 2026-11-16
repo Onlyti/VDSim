@@ -36,6 +36,7 @@
 //
 // matches the Task 22 quasi-static formulas.  Damper gives transient ringing.
 
+#include "module_guard_internal.hpp"
 #include "vdsim/snapshot.hpp"
 #include "vdsim/aero.hpp"
 #include "vdsim/control.hpp"
@@ -73,7 +74,7 @@ double steer_wheel_rad(const ControlInput& u) noexcept {
     }, u);
 }
 
-class FourteenDOFDynamics : public IVehicleDynamics {
+class FourteenDOFDynamics : public IVehicleDynamics, public detail::ModuleGuardHost {
 public:
     FourteenDOFDynamics() : inner_(create_seven_dof()) {}
     explicit FourteenDOFDynamics(std::unique_ptr<ITireModel> tire)
@@ -454,18 +455,22 @@ public:
     // Aero module (work order 51): the inner planar model owns it (drag, begin_step,
     // reset); this model also reads it for the ride-aware tire loads.
     bool   set_aero_module(std::shared_ptr<IAeroModel> m) override {
+        // One guard shared with the inner model (it keeps an already guarded module).
+        m = detail::guard_aero(std::move(m), &module_latch());
         if (!m || !inner_->set_aero_module(m)) return false;
         aero_module_ = std::move(m);
         return true;
     }
     // Suspension/ARB are the L3 vertical/roll subsystems hosted here.
     bool   set_suspension_module(std::shared_ptr<ISuspension> m) override
-        { if (!m) return false; suspension_ = std::move(m); return true; }
+        { if (!m) return false;
+          suspension_ = detail::guard_suspension(std::move(m), &module_latch()); return true; }
     bool   set_antirollbar_module(int axle, std::shared_ptr<IAntiRollBar> m) override {
         if (!m) return false;
-        if (axle == 0)      arb_front_ = std::move(m);
-        else if (axle == 1) arb_rear_  = std::move(m);
-        else return false;
+        if (axle != 0 && axle != 1) return false;
+        m = detail::guard_antirollbar(std::move(m), &module_latch());
+        if (axle == 0) arb_front_ = std::move(m);
+        else           arb_rear_  = std::move(m);
         return true;
     }
     std::array<double, NUM_WHEELS> tire_Fz() const override
@@ -485,6 +490,11 @@ public:
     // RK4-weighted mean of dz_dot), not a finite difference of z_s_.
     double az_body_est()    const override { return az_est_; }
     double heave_z()        const override { return z_s_; }
+
+    /// The inner planar model's latch: one fault record for every module of this model.
+    detail::ModuleFaultLatch& module_latch() override {
+        return dynamic_cast<detail::ModuleGuardHost&>(*inner_).module_latch();
+    }
 
 private:
     struct Deriv6 {

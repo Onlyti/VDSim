@@ -257,6 +257,23 @@ private:
     // Work order 51: in-reset aero settle run (L5).
     AeroReference aero_ref_ {};
     bool   aero_settle_force_ {false};   // test hook: run it with no slope / module
+    // Work order 51b: user-module fault boundary. tick_index_ counts tick() calls since
+    // the last reset / restore; a fault freezes the published output and refuses ticks.
+    long long   tick_index_ {0};
+    bool        module_fault_ {false};
+    std::string module_fault_msg_;
+    void*       module_latch_ {nullptr};   // detail::ModuleFaultLatch* (nullptr: no modules)
+    bool        fault_kin_valid_ {false};
+    decltype(SimOutput::wheel_kin_valid) fault_kin_ok_ {};
+    decltype(SimOutput::wheel_camber)    fault_camber_ {};
+    decltype(SimOutput::wheel_toe)       fault_toe_ {};
+    decltype(SimOutput::hardpoints)      fault_hardpoints_ {};
+    /** @brief Clear the module fault (reset / restore). */
+    void clear_module_fault_() noexcept;
+    /** @brief Capture the L5 wheel kinematics output() reads live (only with user modules). */
+    void capture_fault_kinematics_();
+    /** @brief After a dynamics step: throw std::invalid_argument when a module faulted. */
+    void raise_if_module_fault_();
     double aero_settle_limit_s_ {8.0};   // 48b limit [s]; test hook may shorten it
     bool   in_aero_settle_ {false};      // re-entry guard
 };

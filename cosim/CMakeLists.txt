@@ -194,6 +194,15 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 300
         ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
+    # Work order 51b M3: Python user modules that raise or return NaN -> ValueError at the
+    # tick, interpreter alive; VecSession with threads. Each case in a child interpreter.
+    add_test(NAME module_fault
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_module_fault.py)
+    set_tests_properties(module_fault PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 900
+        ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
     # Axle tyres and rotor keys, Python side (work order 52): factory TireSetup bit
     # identity, per-axle tyre against independent references, Lab tire_rear, rotor keys.
     add_test(NAME axle_tire_rotor

@@ -8,6 +8,7 @@ add_library(vdsim_core
     src/bicycle_dynamics.cpp
     src/kinematic_dynamics.cpp
     src/seven_dof_dynamics.cpp
+    src/module_guard.cpp
     src/fourteen_dof_dynamics.cpp
     src/free_3d_dynamics.cpp
     src/free_3d_reaction.cpp

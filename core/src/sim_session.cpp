@@ -4,6 +4,7 @@
 #include "vdsim/aero.hpp"
 #include "free_3d_aero_internal.hpp"
 #include "spawn_settle_internal.hpp"
+#include "module_guard_internal.hpp"
 #include "vdsim/coordinate.hpp"
 
 #include <spdlog/spdlog.h>
@@ -85,6 +86,7 @@ SimSession::SimSession(std::unique_ptr<IVehicleDynamics> dyn,
                 "need a ride model (L3-L5); L1/L2 have no heave or pitch");
     }
     dyn_->initialize(vp, base_ts_, sp);
+    module_latch_ = detail::module_latch_of(*dyn_);
     {
         // L1/L2 have no roll split for aero: an element y offset is ignored.
         const auto lvl = dyn_->level();
@@ -220,6 +222,7 @@ SessionSnapshot SimSession::snapshot() const {
 
 void SimSession::restore(const SessionSnapshot& s) {
     std::lock_guard<std::mutex> lk(mtx_);
+    clear_module_fault_();
     const auto& v = s.d;
     std::size_t p = 0;
     snap::check_header(v, p);
@@ -400,6 +403,7 @@ void SimSession::reset(const State& s0) {
     }
     if (in_aero_settle_)
         throw std::logic_error("SimSession::reset re-entered from the aero settle run");
+    clear_module_fault_();
     dyn_->reset(s0);
     aero_ref_ = AeroReference{};
     if (dyn_->level() == IVehicleDynamics::Level::L5_Stunt &&
@@ -597,6 +601,10 @@ ControlInput with_steer_angle(const ControlInput& u, double steer) {
 
 void SimSession::tick(double dt) {
     if (!(dt > 0.0)) return;
+    // 51b: a faulted session stays refused (same message) until reset() / restore().
+    if (module_fault_) throw std::invalid_argument(module_fault_msg_);
+    ++tick_index_;
+    capture_fault_kinematics_();
 
     // T3: rack_travel on L5 requires front hardpoints. Must throw here
     // (not in IVehicleDynamics::step, which is noexcept).
@@ -682,6 +690,7 @@ void SimSession::tick(double dt) {
         }
 
         dyn_->step(dyn_cmd, contacts, dt);
+        raise_if_module_fault_();
         const State next = dyn_->state();
         const State meas = sensor_.apply(next, dt);
 
@@ -726,6 +735,7 @@ void SimSession::tick(double dt) {
     const CmdL4 realized = actuator_.apply(net_l4, speed, dt);
 
     dyn_->step(ControlInput{realized}, contacts, dt);
+    raise_if_module_fault_();
     const State next = dyn_->state();
     const State meas = sensor_.apply(next, dt);
 
@@ -757,6 +767,42 @@ void SimSession::tick(double dt) {
     }
 }
 
+void SimSession::clear_module_fault_() noexcept {
+    if (module_latch_) static_cast<detail::ModuleFaultLatch*>(module_latch_)->clear();
+    module_fault_ = false;
+    module_fault_msg_.clear();
+    tick_index_ = 0;
+    fault_kin_valid_ = false;
+}
+
+void SimSession::capture_fault_kinematics_() {
+    // Only a session with a guarded user module can fault; others pay nothing.
+    auto* latch = static_cast<detail::ModuleFaultLatch*>(module_latch_);
+    if (!latch || latch->installed == 0 ||
+        dyn_->level() != IVehicleDynamics::Level::L5_Stunt)
+        return;
+    fault_kin_ok_ = free_3d_wheel_kin_valid(*dyn_);
+    const auto camber = free_3d_wheel_camber(*dyn_);
+    const auto toe = free_3d_wheel_toe(*dyn_);
+    for (int i = 0; i < NUM_WHEELS; ++i) {
+        fault_camber_[i] = camber[i];
+        fault_toe_[i] = toe[i];
+    }
+    fault_hardpoints_ = free_3d_wheel_hardpoints(*dyn_);
+}
+
+void SimSession::raise_if_module_fault_() {
+    auto* latch = static_cast<detail::ModuleFaultLatch*>(module_latch_);
+    if (!latch || !latch->set) return;
+    std::lock_guard<std::mutex> lk(mtx_);
+    module_fault_ = true;
+    fault_kin_valid_ = latch->installed > 0 &&
+                       dyn_->level() == IVehicleDynamics::Level::L5_Stunt;
+    module_fault_msg_ = "user module fault: " + latch->kind + " module '" + latch->name +
+                        "' at tick " + std::to_string(tick_index_) + ": " + latch->cause;
+    throw std::invalid_argument(module_fault_msg_);
+}
+
 SimOutput SimSession::output() const {
     std::lock_guard<std::mutex> lk(mtx_);
     SimOutput o;
@@ -779,7 +825,16 @@ SimOutput SimSession::output() const {
     o.wheel_alpha_peak = wheel_alpha_peak_;
     o.wheel_kappa_peak = wheel_kappa_peak_;
     o.sensors = sensors_meas_;
-    if (dyn_->level() == IVehicleDynamics::Level::L5_Stunt) {
+    if (module_fault_ && fault_kin_valid_) {
+        // 51b: the model state is contaminated by the faulted step; publish the last
+        // good tick's wheel kinematics.
+        o.wheel_kin_valid = fault_kin_ok_;
+        for (int i = 0; i < NUM_WHEELS; ++i) {
+            o.wheel_camber[i] = o.wheel_kin_valid[i] ? fault_camber_[i] : 0.0;
+            o.wheel_toe[i] = o.wheel_kin_valid[i] ? fault_toe_[i] : 0.0;
+        }
+        o.hardpoints = fault_hardpoints_;
+    } else if (dyn_->level() == IVehicleDynamics::Level::L5_Stunt) {
         o.wheel_kin_valid = free_3d_wheel_kin_valid(*dyn_);
         const auto camber = free_3d_wheel_camber(*dyn_);
         const auto toe = free_3d_wheel_toe(*dyn_);

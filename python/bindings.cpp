@@ -16,6 +16,7 @@
 #include "vdsim/params.hpp"
 #include "vdsim/realtime_runner.hpp"
 #include "vdsim/sim_session.hpp"
+#include "vdsim/module_guard.hpp"
 #include "vdsim/vec_session.hpp"
 #include "vdsim/scenario.hpp"
 #include "vdsim/state.hpp"
@@ -27,6 +28,22 @@ namespace py = pybind11;
 
 // ---- User-defined subsystem modules: trampolines so Python can subclass the
 // C++ interfaces (vdsim/subsystems.hpp) and the model can call back into them.
+
+// 51b: a Python module's exception leaves the trampoline as std::runtime_error carrying
+// the Python error text, read while the GIL is held (the error object is released by
+// pybind11 under the GIL too).
+#define VDSIM_PY_GUARDED(...)                                                    \
+    try {                                                                        \
+        __VA_ARGS__                                                              \
+    } catch (py::error_already_set & e) {                                        \
+        std::string vdsim_py_msg;                                                \
+        {                                                                        \
+            py::gil_scoped_acquire vdsim_py_gil;                                 \
+            vdsim_py_msg = e.what();                                             \
+        }                                                                        \
+        throw std::runtime_error(vdsim_py_msg);                                  \
+    }
+
 namespace {
 using WheelArray = std::array<double, vdsim::NUM_WHEELS>;
 using PairDD     = std::pair<double, double>;
@@ -34,64 +51,64 @@ using PairDD     = std::pair<double, double>;
 struct PyBrakeSystem : vdsim::IBrakeSystem {
     using vdsim::IBrakeSystem::IBrakeSystem;
     WheelArray wheel_torque(const vdsim::SubsystemContext& ctx) override {
-        PYBIND11_OVERRIDE_PURE(WheelArray, vdsim::IBrakeSystem, wheel_torque, ctx);
+        VDSIM_PY_GUARDED(PYBIND11_OVERRIDE_PURE(WheelArray, vdsim::IBrakeSystem, wheel_torque, ctx);)
     }
     void begin_step(const vdsim::SubsystemContext& ctx, double dt) override {
-        PYBIND11_OVERRIDE(void, vdsim::IBrakeSystem, begin_step, ctx, dt);
+        VDSIM_PY_GUARDED(PYBIND11_OVERRIDE(void, vdsim::IBrakeSystem, begin_step, ctx, dt);)
     }
-    void reset() override { PYBIND11_OVERRIDE(void, vdsim::IBrakeSystem, reset, ); }
+    void reset() override { VDSIM_PY_GUARDED(PYBIND11_OVERRIDE(void, vdsim::IBrakeSystem, reset, );) }
 };
 
 struct PyAeroModel : vdsim::IAeroModel {
     using vdsim::IAeroModel::IAeroModel;
     std::vector<vdsim::AeroForce> compute(const vdsim::SubsystemContext& ctx,
                                           const vdsim::AeroInput& in) override {
-        PYBIND11_OVERRIDE_PURE(std::vector<vdsim::AeroForce>, vdsim::IAeroModel, compute, ctx, in);
+        VDSIM_PY_GUARDED(PYBIND11_OVERRIDE_PURE(std::vector<vdsim::AeroForce>, vdsim::IAeroModel, compute, ctx, in);)
     }
     void begin_step(const vdsim::SubsystemContext& ctx, double dt) override {
-        PYBIND11_OVERRIDE(void, vdsim::IAeroModel, begin_step, ctx, dt);
+        VDSIM_PY_GUARDED(PYBIND11_OVERRIDE(void, vdsim::IAeroModel, begin_step, ctx, dt);)
     }
-    void reset() override { PYBIND11_OVERRIDE(void, vdsim::IAeroModel, reset, ); }
+    void reset() override { VDSIM_PY_GUARDED(PYBIND11_OVERRIDE(void, vdsim::IAeroModel, reset, );) }
 };
 
 struct PySteeringSystem : vdsim::ISteeringSystem {
     using vdsim::ISteeringSystem::ISteeringSystem;
     vdsim::SteeringOutput apply(const vdsim::SubsystemContext& ctx) override {
-        PYBIND11_OVERRIDE_PURE(vdsim::SteeringOutput, vdsim::ISteeringSystem, apply, ctx);
+        VDSIM_PY_GUARDED(PYBIND11_OVERRIDE_PURE(vdsim::SteeringOutput, vdsim::ISteeringSystem, apply, ctx);)
     }
     void begin_step(const vdsim::SubsystemContext& ctx, double dt) override {
-        PYBIND11_OVERRIDE(void, vdsim::ISteeringSystem, begin_step, ctx, dt);
+        VDSIM_PY_GUARDED(PYBIND11_OVERRIDE(void, vdsim::ISteeringSystem, begin_step, ctx, dt);)
     }
-    void reset() override { PYBIND11_OVERRIDE(void, vdsim::ISteeringSystem, reset, ); }
+    void reset() override { VDSIM_PY_GUARDED(PYBIND11_OVERRIDE(void, vdsim::ISteeringSystem, reset, );) }
 };
 
 struct PyDrivetrain : vdsim::IDrivetrain {
     using vdsim::IDrivetrain::IDrivetrain;
     vdsim::DrivetrainOutput apply(const vdsim::SubsystemContext& ctx) override {
-        PYBIND11_OVERRIDE_PURE(vdsim::DrivetrainOutput, vdsim::IDrivetrain, apply, ctx);
+        VDSIM_PY_GUARDED(PYBIND11_OVERRIDE_PURE(vdsim::DrivetrainOutput, vdsim::IDrivetrain, apply, ctx);)
     }
     void begin_step(const vdsim::SubsystemContext& ctx, double dt) override {
-        PYBIND11_OVERRIDE(void, vdsim::IDrivetrain, begin_step, ctx, dt);
+        VDSIM_PY_GUARDED(PYBIND11_OVERRIDE(void, vdsim::IDrivetrain, begin_step, ctx, dt);)
     }
-    void reset() override { PYBIND11_OVERRIDE(void, vdsim::IDrivetrain, reset, ); }
-    double engine_rpm()   const override { PYBIND11_OVERRIDE(double, vdsim::IDrivetrain, engine_rpm, ); }
-    int    current_gear() const override { PYBIND11_OVERRIDE(int,    vdsim::IDrivetrain, current_gear, ); }
+    void reset() override { VDSIM_PY_GUARDED(PYBIND11_OVERRIDE(void, vdsim::IDrivetrain, reset, );) }
+    double engine_rpm()   const override { VDSIM_PY_GUARDED(PYBIND11_OVERRIDE(double, vdsim::IDrivetrain, engine_rpm, );) }
+    int    current_gear() const override { VDSIM_PY_GUARDED(PYBIND11_OVERRIDE(int,    vdsim::IDrivetrain, current_gear, );) }
 };
 
 struct PySuspension : vdsim::ISuspension {
     using vdsim::ISuspension::ISuspension;
     double force(const vdsim::SubsystemContext& ctx, const vdsim::CornerInput& c) override {
-        PYBIND11_OVERRIDE_PURE(double, vdsim::ISuspension, force, ctx, c);
+        VDSIM_PY_GUARDED(PYBIND11_OVERRIDE_PURE(double, vdsim::ISuspension, force, ctx, c);)
     }
-    void reset() override { PYBIND11_OVERRIDE(void, vdsim::ISuspension, reset, ); }
+    void reset() override { VDSIM_PY_GUARDED(PYBIND11_OVERRIDE(void, vdsim::ISuspension, reset, );) }
 };
 
 struct PyAntiRollBar : vdsim::IAntiRollBar {
     using vdsim::IAntiRollBar::IAntiRollBar;
     PairDD force(const vdsim::SubsystemContext& ctx, const vdsim::AxleDefl& d) override {
-        PYBIND11_OVERRIDE_PURE(PairDD, vdsim::IAntiRollBar, force, ctx, d);
+        VDSIM_PY_GUARDED(PYBIND11_OVERRIDE_PURE(PairDD, vdsim::IAntiRollBar, force, ctx, d);)
     }
-    void reset() override { PYBIND11_OVERRIDE(void, vdsim::IAntiRollBar, reset, ); }
+    void reset() override { VDSIM_PY_GUARDED(PYBIND11_OVERRIDE(void, vdsim::IAntiRollBar, reset, );) }
 };
 
 // std::array<double,4> via def_readwrite copies on read — element __setitem__ is a no-op.
@@ -1218,20 +1235,68 @@ PYBIND11_MODULE(vdsim, m) {
         .def("set_shift_policy", &vdsim::IVehicleDynamics::set_shift_policy,
              "Install a Python shift policy: fn(ShiftContext) -> desired gear. "
              "Returns False if this model has no gearbox.")
-        .def("set_brake_module",       &vdsim::IVehicleDynamics::set_brake_module,
+        .def("set_brake_module",       [](vdsim::IVehicleDynamics& d, py::object obj) {
+                 if (obj.is_none()) return d.set_brake_module(nullptr);
+                 auto m = obj.cast<std::shared_ptr<vdsim::IBrakeSystem>>();
+                 const void* key = m.get();
+                 vdsim::register_module_name(key, py::str(obj.get_type().attr("__name__")));
+                 const bool ok = d.set_brake_module(std::move(m));
+                 vdsim::forget_module_name(key);
+                 return ok;
+             },
              "Install a user BrakeModule (L2/L3). False if unsupported.")
-        .def("set_steering_module",    &vdsim::IVehicleDynamics::set_steering_module,
+        .def("set_steering_module",    [](vdsim::IVehicleDynamics& d, py::object obj) {
+                 if (obj.is_none()) return d.set_steering_module(nullptr);
+                 auto m = obj.cast<std::shared_ptr<vdsim::ISteeringSystem>>();
+                 const void* key = m.get();
+                 vdsim::register_module_name(key, py::str(obj.get_type().attr("__name__")));
+                 const bool ok = d.set_steering_module(std::move(m));
+                 vdsim::forget_module_name(key);
+                 return ok;
+             },
              "Install a user SteeringModule (L2/L3). False if unsupported.")
-        .def("set_drivetrain_module",  &vdsim::IVehicleDynamics::set_drivetrain_module,
+        .def("set_drivetrain_module",  [](vdsim::IVehicleDynamics& d, py::object obj) {
+                 if (obj.is_none()) return d.set_drivetrain_module(nullptr);
+                 auto m = obj.cast<std::shared_ptr<vdsim::IDrivetrain>>();
+                 const void* key = m.get();
+                 vdsim::register_module_name(key, py::str(obj.get_type().attr("__name__")));
+                 const bool ok = d.set_drivetrain_module(std::move(m));
+                 vdsim::forget_module_name(key);
+                 return ok;
+             },
              "Install a user DrivetrainModule (L2/L3). False if unsupported.")
-        .def("set_aero_module",        &vdsim::IVehicleDynamics::set_aero_module,
+        .def("set_aero_module",        [](vdsim::IVehicleDynamics& d, py::object obj) {
+                 if (obj.is_none()) return d.set_aero_module(nullptr);
+                 auto m = obj.cast<std::shared_ptr<vdsim::IAeroModel>>();
+                 const void* key = m.get();
+                 vdsim::register_module_name(key, py::str(obj.get_type().attr("__name__")));
+                 const bool ok = d.set_aero_module(std::move(m));
+                 vdsim::forget_module_name(key);
+                 return ok;
+             },
              py::keep_alive<1, 2>(),
              "Install a user AeroModule (L2-L5; replaces the built-in aero). On L5 attach "
              "before reset() so the static-reference settle run happens. False on L1. The "
              "model keeps the Python module object alive.")
-        .def("set_suspension_module",  &vdsim::IVehicleDynamics::set_suspension_module,
+        .def("set_suspension_module",  [](vdsim::IVehicleDynamics& d, py::object obj) {
+                 if (obj.is_none()) return d.set_suspension_module(nullptr);
+                 auto m = obj.cast<std::shared_ptr<vdsim::ISuspension>>();
+                 const void* key = m.get();
+                 vdsim::register_module_name(key, py::str(obj.get_type().attr("__name__")));
+                 const bool ok = d.set_suspension_module(std::move(m));
+                 vdsim::forget_module_name(key);
+                 return ok;
+             },
              "Install a user SuspensionModule (L3 only). False if unsupported.")
-        .def("set_antirollbar_module", &vdsim::IVehicleDynamics::set_antirollbar_module,
+        .def("set_antirollbar_module", [](vdsim::IVehicleDynamics& d, int axle, py::object obj) {
+                 if (obj.is_none()) return d.set_antirollbar_module(axle, nullptr);
+                 auto m = obj.cast<std::shared_ptr<vdsim::IAntiRollBar>>();
+                 const void* key = m.get();
+                 vdsim::register_module_name(key, py::str(obj.get_type().attr("__name__")));
+                 const bool ok = d.set_antirollbar_module(axle, std::move(m));
+                 vdsim::forget_module_name(key);
+                 return ok;
+             },
              py::arg("axle"), py::arg("module"),
              "Install a user AntiRollBarModule on axle 0=front/1=rear (L3 only).")
         .def("wheel_slip_ratio", &vdsim::IVehicleDynamics::wheel_slip_ratio)

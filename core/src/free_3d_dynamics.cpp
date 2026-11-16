@@ -9,6 +9,7 @@
 #include "vdsim/subsystems.hpp"
 
 #include "free_3d_aero_internal.hpp"
+#include "module_guard_internal.hpp"
 #include "free_3d_jacking_internal.hpp"
 #include "free_3d_reaction_internal.hpp"
 #include "free_3d_rotor_internal.hpp"
@@ -84,7 +85,7 @@ constexpr double kLinkStiffness = 1.0e8;   // [N/m] perpendicular (rigid-link pe
 // reaction on a linkage path resolves like sprung and an explicit key warns once.
 constexpr bool kKnuckleReactionRoute = false;
 
-class Free3DDynamics final : public IVehicleDynamics {
+class Free3DDynamics final : public IVehicleDynamics, public detail::ModuleGuardHost {
 public:
     Free3DDynamics() = default;
     explicit Free3DDynamics(std::unique_ptr<ITireModel> tire)
@@ -302,17 +303,17 @@ public:
     // suspension/ARB objects), so brake/steering/drivetrain can be replaced.
     bool set_brake_module(std::shared_ptr<IBrakeSystem> m) override {
         if (!m) return false;
-        brake_ = std::move(m);
+        brake_ = detail::guard_brake(std::move(m), &module_latch_);
         return true;
     }
     bool set_steering_module(std::shared_ptr<ISteeringSystem> m) override {
         if (!m) return false;
-        steering_ = std::move(m);
+        steering_ = detail::guard_steering(std::move(m), &module_latch_);
         return true;
     }
     bool set_drivetrain_module(std::shared_ptr<IDrivetrain> m) override {
         if (!m) return false;
-        drivetrain_ = std::move(m);
+        drivetrain_ = detail::guard_drivetrain(std::move(m), &module_latch_);
         return true;
     }
     // Aero module (work order 51). Attach before reset(): reset runs the settle run that
@@ -320,7 +321,7 @@ public:
     bool set_aero_module(std::shared_ptr<IAeroModel> m) override {
         if (!m) return false;
         warn_aero_module_replaces(vp_);
-        aero_module_ = std::move(m);
+        aero_module_ = detail::guard_aero(std::move(m), &module_latch_);
         return true;
     }
 
@@ -533,7 +534,11 @@ public:
         return mz_front_sum_ / std::max(1e-6, vp_.steering_ratio);
     }
 
+    /// User-module fault latch (work order 51b).
+    detail::ModuleFaultLatch& module_latch() override { return module_latch_; }
+
 private:
+    detail::ModuleFaultLatch module_latch_;
     // Strut spring force along the strut axis at compression comp (+ toward body):
     // coil rate via the held eye-to-eye length and motion ratio when the DAE exposes
     // the spring geometry, else the constant wheel rate; plus the bump/rebound stop.
