@@ -176,6 +176,15 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 300
         ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
+    # Aero ride-height / pitch slopes, Python side (work order 51): B2 grid,
+    # B6 rejection rules and the to_yaml round trip.
+    add_test(NAME aero_ride_51
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_aero_ride_51.py)
+    set_tests_properties(aero_ride_51 PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 300
+        ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
     # wheel_gyro key, Python side (work order 50): round trip, ValueError cases,
     # one warning below L5, L5 zero-camber bit identity.
     add_test(NAME wheel_gyro

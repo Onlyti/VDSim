@@ -88,6 +88,24 @@ struct SimOutput {
     std::array<WheelHardpoints, NUM_WHEELS> hardpoints {};
 };
 
+/**
+ * @brief L5 static aero reference of the last reset (work order 51).
+ *
+ * Filled by the in-reset settle run, which runs only when some aero element has
+ * a non-zero ride slope or an aero module is attached (ran = false otherwise).
+ */
+struct AeroReference {
+    bool        ran {false};        ///< a settle run happened at the last reset
+    double      ref_z {0.0};        ///< body-origin world z [m]
+    double      ref_pitch {0.0};    ///< body pitch [rad] (ISO + nose down)
+    double      ref_roll {0.0};     ///< body roll [rad]
+    bool        settled {false};    ///< the 48b settle condition held for 0.5 s
+    double      t_settle {0.0};     ///< settle-run time when it held [s] (limit if not)
+    std::string unmet;              ///< channels not settled at the limit ("" if settled)
+};
+
+namespace detail { struct AeroSettleTestAccess; }
+
 // R5: runtime domain randomization.  Stored on the session and applied at the
 // next reset(): the dynamics is re-initialized in place and the friction the
 // ground reports is scaled, so nothing is re-allocated (no new contact
@@ -178,8 +196,13 @@ public:
     // Access the (initialized) plant — e.g. to install user module plugins post-construct.
     IVehicleDynamics& dynamics() { return *dyn_; }
 
+    // L5 static aero reference of the last reset (work order 51).
+    AeroReference aero_reference() const;
+
 private:
+    friend struct detail::AeroSettleTestAccess;
     void apply_randomization_locked();
+    void run_aero_settle_locked(const State& s0);
 
     std::unique_ptr<IVehicleDynamics> dyn_;
     std::unique_ptr<IContactProvider> ground_;
@@ -231,6 +254,11 @@ private:
     double sim_time_ {0.0};
     SessionKind session_kind_ {SessionKind::Standard};
     std::chrono::steady_clock::time_point last_input_tp_ {std::chrono::steady_clock::now()};
+    // Work order 51: in-reset aero settle run (L5).
+    AeroReference aero_ref_ {};
+    bool   aero_settle_force_ {false};   // test hook: run it with no slope / module
+    double aero_settle_limit_s_ {8.0};   // 48b limit [s]; test hook may shorten it
+    bool   in_aero_settle_ {false};      // re-entry guard
 };
 
 struct FrictionMapConfig {

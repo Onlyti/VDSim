@@ -8,6 +8,7 @@
 #include "vdsim/multibody.hpp"
 #include "vdsim/subsystems.hpp"
 
+#include "free_3d_aero_internal.hpp"
 #include "free_3d_jacking_internal.hpp"
 #include "free_3d_reaction_internal.hpp"
 #include "free_3d_wheel_gyro_internal.hpp"
@@ -128,6 +129,7 @@ public:
         // Aero wrenches are formed about the ground-referenced point at cg_height
         // (aero.cpp); shifting them to the body origin adds dz x F with dz = h - h_body.
         aero_origin_dz_ = vp.cg_height - h_body;
+        aero_slopes_ = aero_has_active_slopes(vp);
         const double hz  = -(h_body - R);
         r_body_[WHEEL_FL] = Vec3(a,  tw_f, hz);
         r_body_[WHEEL_FR] = Vec3(a, -tw_f, hz);
@@ -223,6 +225,7 @@ public:
         transient_.fill(ITireModel::Transient{});
         ci_.fill(ITireModel::ContactInput{});
         Re_w_.fill(vp_.wheel_radius_nominal > 1e-6 ? vp_.wheel_radius_nominal : 0.32);
+        if (aero_module_ && !aero_settling_) aero_module_->reset();
         drivetrain_ = make_default_drivetrain(vp_, vp_.drive_deadtime_s);
         brake_      = make_default_brake(vp_, vp_.brake_deadtime_s);
         steering_   = make_default_steering(vp_, vp_.steer_deadtime_s);
@@ -269,6 +272,7 @@ public:
         brake_->begin_step(ctx, dt);
         drivetrain_->begin_step(ctx, dt);
         steering_->begin_step(ctx, dt);
+        if (aero_module_ && !aero_settling_) aero_module_->begin_step(ctx, dt);
 
         // Free-3D strut: freeze the wheel-particle position the (once-per-step) contact
         // query evaluated penetration at (the provider now samples the surface at the actual
@@ -307,6 +311,14 @@ public:
     bool set_drivetrain_module(std::shared_ptr<IDrivetrain> m) override {
         if (!m) return false;
         drivetrain_ = std::move(m);
+        return true;
+    }
+    // Aero module (work order 51). Attach before reset(): reset runs the settle run that
+    // gives the module its static reference.
+    bool set_aero_module(std::shared_ptr<IAeroModel> m) override {
+        if (!m) return false;
+        warn_aero_module_replaces(vp_);
+        aero_module_ = std::move(m);
         return true;
     }
 
@@ -395,6 +407,25 @@ public:
         return axle == 0 ? mb_enabled_front_ : mb_enabled_rear_;
     }
     void set_contact_provider(IContactProvider* p) noexcept { provider_ = p; }
+    // Work order 51: static aero reference hooks (free_3d_aero_internal.hpp).
+    bool aero_needs_settle() const noexcept { return aero_slopes_ || aero_module_ != nullptr; }
+    void set_aero_settling(bool on) noexcept { aero_settling_ = on; }
+    // Work order 51 B3b-L5i: read-only observation of the first aero evaluation.
+    void arm_aero_obs() noexcept { aero_obs_ = detail::AeroObs{}; }
+    detail::AeroObs aero_obs() const noexcept { return aero_obs_; }
+    void record_aero_obs(const AeroLoads& al, const AeroState& as, double vx) noexcept {
+        if (aero_obs_.count++ != 0) return;
+        aero_obs_.fz_front = al.fz_front;
+        aero_obs_.fz_rear = al.fz_rear;
+        aero_obs_.dz = as.dz;
+        aero_obs_.pitch = as.pitch;
+        aero_obs_.vx = vx;
+    }
+    void set_aero_reference(double z, double pitch, double roll) noexcept {
+        aero_ref_z_ = z;
+        aero_ref_pitch_ = pitch;
+        aero_ref_roll_ = roll;
+    }
     /// @brief Install the 49a P10b connection-pair probe (empty = off). @param p sink
     void set_jacking_probe(detail::JackingPairProbe p) { jack_probe_ = std::move(p); }
     std::array<double, NUM_WHEELS> wheel_camber() const noexcept { return gamma_dae_; }
@@ -912,7 +943,26 @@ private:
         }
 
         const double vx_fwd = v_body.x();
-        if (!aero_uses_element_path(vp_)) {
+        if (aero_settling_) {
+            // In-reset settle run (work order 51): aero contributes exactly 0.
+        } else if (aero_module_) {
+            // Aero module (work order 51): the whole built-in aero is replaced; Fy acts.
+            AeroState as;
+            const Euler e = euler_from_quat(s.orientation);
+            as.dz = s.position.z() - aero_ref_z_;
+            as.pitch = e.pitch - aero_ref_pitch_;
+            as.roll = e.roll - aero_ref_roll_;
+            const DriverCmd aero_cmd{
+                cmd.steer_angle_wheel, cmd.throttle, cmd.brake, cmd.gear, cmd.handbrake};
+            const SubsystemContext actx{s, aero_cmd, 0.0};
+            const AeroLoads al = aero_loads_from_forces(
+                vp_, aero_module_->compute(actx, make_aero_input(vp_, v_body, as)), true);
+            record_aero_obs(al, as, vx_fwd);
+            F_total_world += R * al.force_body;
+            tau_body += al.torque_body;
+            if (aero_origin_dz_ != 0.0)
+                tau_body += Vec3(0.0, 0.0, aero_origin_dz_).cross(al.force_body);
+        } else if (!aero_uses_element_path(vp_)) {
             // Four-key path: drag at the whole-vehicle CG height (cg_height above
             // ground); the lift keys now also act on L5 (front axle x=0 / rear axle
             // x=-L at the ground). The penalty path's body origin is that CG (zero
@@ -932,7 +982,19 @@ private:
             }
         } else {
             // Elements / drag height: each force at its own point (wrench about the CG).
-            const AeroLoads al = compute_aero_loads(vp_, AeroState{vx_fwd});
+            // Ride slopes read heave / pitch of the body origin relative to the static
+            // reference of the in-reset settle run (work order 51).
+            AeroState as;
+            as.vx = vx_fwd;
+            if (aero_slopes_) {
+                const Euler e = euler_from_quat(s.orientation);
+                as.dz = s.position.z() - aero_ref_z_;
+                as.pitch = e.pitch - aero_ref_pitch_;
+                as.roll = e.roll - aero_ref_roll_;
+            }
+            const AeroLoads al = compute_aero_loads(vp_, as);
+            warn_negative_element_height(vp_, al, aero_h_warned_);
+            record_aero_obs(al, as, vx_fwd);
             F_total_world += R * al.force_body;
             tau_body += al.torque_body;
             if (aero_origin_dz_ != 0.0)
@@ -1286,6 +1348,14 @@ private:
     std::shared_ptr<ISteeringSystem> steering_;
     std::array<Vec3, NUM_WHEELS> r_body_ {};
     double aero_origin_dz_ {0.0};   // cg_height - body origin height [m] (aero arm shift)
+    // Work order 51: static aero reference (body-origin z [m], pitch / roll [rad]) set by
+    // SimSession's in-reset settle run; reset() leaves it alone (snapshot restore keeps it).
+    std::shared_ptr<IAeroModel> aero_module_;   // null = built-in aero
+    bool   aero_slopes_ {false};     // some element has a non-zero ride slope
+    bool   aero_settling_ {false};   // settle run in progress: aero off
+    bool   aero_h_warned_ {false};   // element below ground warned (once per model)
+    double aero_ref_z_ {0.0}, aero_ref_pitch_ {0.0}, aero_ref_roll_ {0.0};
+    detail::AeroObs aero_obs_ {};   // B3b-L5i observation (diagnostic only)
     std::array<double, NUM_WHEELS> zdot_prev_ {};   // 49a ZDDOT: last travel rate
     std::array<bool, NUM_WHEELS> zdot_init_ {};
     bool sprung_ref_ {false};       // cg_height_ref = sprung: 0.8.1 strut behaviour (Re arm)
@@ -1413,6 +1483,29 @@ bool free_3d_attach_contact_provider(IVehicleDynamics& dyn, IContactProvider* pr
 }
 
 namespace detail {
+
+bool free_3d_aero_needs_settle(const IVehicleDynamics& dyn) {
+    const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);
+    return p != nullptr && p->aero_needs_settle();
+}
+
+void free_3d_set_aero_settling(IVehicleDynamics& dyn, bool on) {
+    if (auto* p = dynamic_cast<Free3DDynamics*>(&dyn)) p->set_aero_settling(on);
+}
+
+void free_3d_set_aero_reference(IVehicleDynamics& dyn, double z, double pitch, double roll) {
+    if (auto* p = dynamic_cast<Free3DDynamics*>(&dyn)) p->set_aero_reference(z, pitch, roll);
+}
+
+void free_3d_aero_obs_arm(IVehicleDynamics& dyn) {
+    if (auto* p = dynamic_cast<Free3DDynamics*>(&dyn)) p->arm_aero_obs();
+}
+
+AeroObs free_3d_aero_obs(const IVehicleDynamics& dyn) {
+    const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);
+    return p ? p->aero_obs() : AeroObs{};
+}
+
 bool free_3d_set_jacking_probe(IVehicleDynamics& dyn, JackingPairProbe probe) {
     auto* p = dynamic_cast<Free3DDynamics*>(&dyn);
     if (!p) return false;

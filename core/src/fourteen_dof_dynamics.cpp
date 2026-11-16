@@ -47,6 +47,7 @@
 #include "vdsim/suspension.hpp"
 
 #include "contact_frame_internal.hpp"
+#include "seven_dof_aero_internal.hpp"
 
 #include <spdlog/spdlog.h>
 
@@ -218,6 +219,9 @@ public:
         }
         inner_->set_camber_per_wheel(gamma);
         inner_->set_toe_per_wheel(toe);
+        // Ride slopes (work order 51): the inner aero (drag, quasi-static load of the
+        // RK stages, reported tire_Fz) reads the same ride states as the load path below.
+        detail::seven_dof_set_aero_ride(*inner_, z_s_, th_, phi_);
 
         {
             const double k_tire = std::max(1.0, ts_.for_wheel(WHEEL_FL).tire_vertical_stiffness);
@@ -228,8 +232,34 @@ public:
             // Four-key path keeps its original arithmetic; elements / drag
             // height use compute_aero_loads with the per-axle-track roll split.
             // Aero only adds to the tire loads (no sprung-body heave/pitch).
-            const bool aero_el = aero_uses_element_path(vp_);
-            const AeroLoads aero = aero_el ? compute_aero_loads(vp_, AeroState{vx}) : AeroLoads{};
+            // Ride slopes (work order 51) read the ride states, which are
+            // deviations from the static equilibrium of reset.
+            const bool aero_el = aero_module_ != nullptr || aero_uses_element_path(vp_);
+            AeroLoads aero;
+            if (aero_module_) {
+                // Work order 51: the module sees the same ride states as the slopes.
+                const CmdL4* c4 = std::get_if<CmdL4>(&u);
+                const DriverCmd aero_cmd =
+                    c4 ? DriverCmd{c4->steer_angle_wheel, c4->throttle, c4->brake, c4->gear,
+                                   c4->handbrake, c4->steer_mode, c4->steer_actuator}
+                       : DriverCmd{steer_rad, 0.0, 0.0, 1, false, SteerMode::Angle, 0.0};
+                const SubsystemContext actx{state_, aero_cmd, dt};
+                AeroState as;
+                as.dz = z_s_;
+                as.pitch = th_;
+                as.roll = phi_;
+                aero = aero_loads_from_forces(
+                    vp_, aero_module_->compute(actx, make_aero_input(vp_, state_.velocity, as)),
+                    false);
+            } else if (aero_el) {
+                AeroState as;
+                as.vx = vx;
+                as.dz = z_s_;
+                as.pitch = th_;
+                as.roll = phi_;
+                aero = compute_aero_loads(vp_, as);
+                warn_negative_element_height(vp_, aero, aero_h_warned_);
+            }
             const double q_aero = 0.5 * vp_.air_density * vp_.frontal_area * vx * std::abs(vx);
             const double aero_f = 0.5 * vp_.aero_lift_front * q_aero;
             const double aero_r = 0.5 * vp_.aero_lift_rear  * q_aero;
@@ -418,6 +448,13 @@ public:
         { return inner_->set_steering_module(std::move(m)); }
     bool   set_drivetrain_module(std::shared_ptr<IDrivetrain> m) override
         { return inner_->set_drivetrain_module(std::move(m)); }
+    // Aero module (work order 51): the inner planar model owns it (drag, begin_step,
+    // reset); this model also reads it for the ride-aware tire loads.
+    bool   set_aero_module(std::shared_ptr<IAeroModel> m) override {
+        if (!m || !inner_->set_aero_module(m)) return false;
+        aero_module_ = std::move(m);
+        return true;
+    }
     // Suspension/ARB are the L3 vertical/roll subsystems hosted here.
     bool   set_suspension_module(std::shared_ptr<ISuspension> m) override
         { if (!m) return false; suspension_ = std::move(m); return true; }
@@ -647,6 +684,8 @@ private:
     std::array<double, NUM_WHEELS> ry_                  {};
 
     State state_;
+    std::shared_ptr<IAeroModel> aero_module_;   // work order 51 (shared with inner_)
+    bool aero_h_warned_ {false};   // element below ground warned (once per model)
     double z_s_ {0.0}, z_s_dot_ {0.0};
     double az_est_ {0.0};   // [m/s^2] last integrated heave acceleration
     double phi_ {0.0}, phi_dot_ {0.0};

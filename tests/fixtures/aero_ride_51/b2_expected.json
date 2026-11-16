@@ -1,0 +1,169 @@
+{
+ "cases": [
+  {
+   "dz": -0.02,
+   "fz": {
+    "body": 0.0,
+    "front_wing": 95.40184999999998,
+    "rear_wing": 358.82,
+    "undertray": 195.3938
+   },
+   "h": {
+    "body": 0.28045,
+    "front_wing": 0.0937,
+    "rear_wing": 0.973,
+    "undertray": 0.0207
+   },
+   "theta": -0.01
+  },
+  {
+   "dz": -0.02,
+   "fz": {
+    "body": 0.0,
+    "front_wing": 170.09,
+    "rear_wing": 349.5,
+    "undertray": 195.72000000000003
+   },
+   "h": {
+    "body": 0.27999999999999997,
+    "front_wing": 0.08,
+    "rear_wing": 0.98,
+    "undertray": 0.02
+   },
+   "theta": 0.0
+  },
+  {
+   "dz": -0.02,
+   "fz": {
+    "body": 0.0,
+    "front_wing": 319.4663,
+    "rear_wing": 330.85999999999996,
+    "undertray": 196.3724
+   },
+   "h": {
+    "body": 0.27909999999999996,
+    "front_wing": 0.052599999999999994,
+    "rear_wing": 0.994,
+    "undertray": 0.018600000000000002
+   },
+   "theta": 0.02
+  },
+  {
+   "dz": 0.0,
+   "fz": {
+    "body": 0.0,
+    "front_wing": 88.41185,
+    "rear_wing": 358.82,
+    "undertray": 186.07380000000003
+   },
+   "h": {
+    "body": 0.30045,
+    "front_wing": 0.11370000000000001,
+    "rear_wing": 0.993,
+    "undertray": 0.0407
+   },
+   "theta": -0.01
+  },
+  {
+   "dz": 0.0,
+   "fz": {
+    "body": 0.0,
+    "front_wing": 163.1,
+    "rear_wing": 349.5,
+    "undertray": 186.4
+   },
+   "h": {
+    "body": 0.3,
+    "front_wing": 0.1,
+    "rear_wing": 1.0,
+    "undertray": 0.04
+   },
+   "theta": 0.0
+  },
+  {
+   "dz": 0.0,
+   "fz": {
+    "body": 0.0,
+    "front_wing": 312.4763,
+    "rear_wing": 330.85999999999996,
+    "undertray": 187.0524
+   },
+   "h": {
+    "body": 0.2991,
+    "front_wing": 0.0726,
+    "rear_wing": 1.014,
+    "undertray": 0.0386
+   },
+   "theta": 0.02
+  },
+  {
+   "dz": 0.015,
+   "fz": {
+    "body": 0.0,
+    "front_wing": 83.16934999999998,
+    "rear_wing": 358.82,
+    "undertray": 179.08380000000002
+   },
+   "h": {
+    "body": 0.31545,
+    "front_wing": 0.1287,
+    "rear_wing": 1.008,
+    "undertray": 0.0557
+   },
+   "theta": -0.01
+  },
+  {
+   "dz": 0.015,
+   "fz": {
+    "body": 0.0,
+    "front_wing": 157.8575,
+    "rear_wing": 349.5,
+    "undertray": 179.41
+   },
+   "h": {
+    "body": 0.315,
+    "front_wing": 0.115,
+    "rear_wing": 1.015,
+    "undertray": 0.055
+   },
+   "theta": 0.0
+  },
+  {
+   "dz": 0.015,
+   "fz": {
+    "body": 0.0,
+    "front_wing": 307.2338,
+    "rear_wing": 330.85999999999996,
+    "undertray": 180.0624
+   },
+   "h": {
+    "body": 0.3141,
+    "front_wing": 0.0876,
+    "rear_wing": 1.029,
+    "undertray": 0.0536
+   },
+   "theta": 0.02
+  }
+ ],
+ "rel_tol": 1e-09,
+ "rho": 1.165,
+ "slopes": {
+  "front_wing": {
+   "dClA_dh": -1.5,
+   "dClA_dpitch": 30.0,
+   "h_ref": 0.1
+  },
+  "rear_wing": {
+   "dClA_dh": 0.0,
+   "dClA_dpitch": -4.0,
+   "h_ref": 1.0
+  },
+  "undertray": {
+   "dClA_dh": -2.0,
+   "dClA_dpitch": 0.0,
+   "h_ref": 0.04
+  }
+ },
+ "vx": 20.0,
+ "x_o": -0.82
+}

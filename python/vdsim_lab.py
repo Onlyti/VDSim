@@ -110,6 +110,21 @@ def attach_kinematics(sess, front=None, rear=None):
     return info
 
 
+def aero_reference_block(sess):
+    """Trace manifest ``aero`` block of the L5 static aero reference (work order 51).
+
+    :param sess: a ``vdsim.SimSession`` right after its reset.
+    :returns: ``{ref_z, ref_pitch, ref_roll, settled, t_settle}`` when the reset ran
+        the settle run (ride slope or aero module on L5), else ``None`` (no change).
+    """
+    ref = sess.aero_reference()
+    if not ref.ran:
+        return None
+    return {"ref_z": float(ref.ref_z), "ref_pitch": float(ref.ref_pitch),
+            "ref_roll": float(ref.ref_roll), "settled": bool(ref.settled),
+            "t_settle": float(ref.t_settle)}
+
+
 #: Frame of the exported L5 hardpoints, as written to the trace manifest.
 HARDPOINT_FRAME = (
     "vehicle design frame: body-fixed, x forward, y left, z up; origin on the ground "
@@ -930,6 +945,10 @@ class Experiment:
         s0 = vdsim.make_init_state(vp, tp, x=x0, y=y0, yaw=self._man.init_yaw,
                                    v=self._man.init_v)
         sess.reset(s0)
+        if self._trace is not None:
+            block = aero_reference_block(sess)
+            if block is not None:
+                self._trace.extra["aero"] = block
         rows, n = [], int(duration / self.dt)
         for k in range(n):
             o = sess.output()

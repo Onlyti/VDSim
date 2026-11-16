@@ -17,6 +17,8 @@
 
 namespace vdsim {
 
+class IAeroModel;   // vdsim/aero.hpp (work order 51 aero module)
+
 inline double mf_peak_slip(double B, double C, double E) {
     constexpr double kPi = 3.14159265358979323846;
     if (!(C > 1.0) || std::abs(B) < 1e-12)
@@ -198,6 +200,10 @@ public:
     virtual bool set_steering_module(std::shared_ptr<ISteeringSystem> /*m*/)  { return false; }
     virtual bool set_drivetrain_module(std::shared_ptr<IDrivetrain> /*m*/)    { return false; }
     virtual bool set_suspension_module(std::shared_ptr<ISuspension> /*m*/)    { return false; }
+    // Aero module (work order 51): replaces the whole built-in aero (four keys, default
+    // drag, elements, slopes). Hosted on L2-L5; false on L1. On L5 attach it before
+    // reset() so the static-reference settle run happens.
+    virtual bool set_aero_module(std::shared_ptr<IAeroModel> /*m*/)          { return false; }
     virtual bool set_antirollbar_module(int /*axle*/,
                                         std::shared_ptr<IAntiRollBar> /*m*/)  { return false; }
 };

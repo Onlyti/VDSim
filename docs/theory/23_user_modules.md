@@ -19,6 +19,7 @@ its own state.
 | `DrivetrainModule` / `IDrivetrain`    | `apply(ctx)`        | `DrivetrainOutput(wheel_torque[4])` (signed) | L2, L3, L4, L5 |
 | `SuspensionModule` / `ISuspension`    | `force(ctx, corner)`| corner force (N)                     | L3, L4 |
 | `AntiRollBarModule` / `IAntiRollBar`  | `force(ctx, axle)`  | `(left, right)` wheel forces (N)     | L3, L4 |
+| `AeroModule` / `IAeroModel` (0.9.0)    | `compute(ctx, inp)` | `[AeroForce(name, force_body, point)]` | L2, L3, L4, L5 |
 
 The brake/steering/drivetrain hooks are available wherever the plant routes through the
 pluggable subsystem objects: L2 (seven-DOF), L3 (fourteen-DOF, via its inner L2), L4
@@ -83,6 +84,17 @@ $$
 Returning a positive magnitude would drive the wheel and accelerate the vehicle. The
 built-in brake uses a smoothed sign near zero spin to avoid chatter at a standstill; a
 custom module can do the same or use `copysign`.
+
+## 4a. Aero module (0.9.0)
+
+`dyn.set_aero_module(m)` replaces the whole built-in aero (ch. 26.8). Unlike the
+brake / steering / drivetrain modules it survives `reset()` (its `reset()` is called
+once per reset), and the model keeps the Python object alive. On L5 attach it before
+`reset()`: the reset runs the static-reference settle run, during which `compute`
+and `begin_step` are not called. On L3/L4 `compute` is called by the ride model
+(tyre loads) and by the inner planar model (drag), so more than once per stage.
+Exceptions and non-finite returns are handled as for every module here: an exception
+ends the process, a non-finite force propagates.
 
 ## 5. Example
 
