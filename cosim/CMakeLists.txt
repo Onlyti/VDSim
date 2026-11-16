@@ -194,6 +194,15 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TIMEOUT 300
         ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
+    # Axle tyres and rotor keys, Python side (work order 52): factory TireSetup bit
+    # identity, per-axle tyre against independent references, Lab tire_rear, rotor keys.
+    add_test(NAME axle_tire_rotor
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/scripts/test_axle_tire_rotor.py)
+    set_tests_properties(axle_tire_rotor PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TIMEOUT 600
+        ENVIRONMENT "VDSIM_BUILD_DIR=${CMAKE_BINARY_DIR};PYTHONPATH=${CMAKE_BINARY_DIR}/python:${CMAKE_SOURCE_DIR}/python")
     # tire_low_speed key, Python side (work order 57): round trip, ValueError cases,
     # explicit off == unset state bits on L2 and L5 penalty.
     add_test(NAME tire_low_speed

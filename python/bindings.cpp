@@ -174,7 +174,7 @@ static py::list hardpoints_to_py(const std::array<vdsim::WheelHardpoints, vdsim:
 // by make_sim_session() and the RL vector factory make_vec_session() so the two
 // cannot drift apart.
 static std::unique_ptr<vdsim::SimSession> build_ground_session(
-    const vdsim::VehicleParams& vp, const vdsim::TireParams& tp,
+    const vdsim::VehicleParams& vp, const vdsim::TireSetup& tp,
     const std::string& level, double sensor_delay_s, double mu,
     double nominal_dt, const vdsim::ActuatorParams& actuator,
     const vdsim::SolverParams& solver, const vdsim::SensorParams& sensors,
@@ -464,6 +464,28 @@ PYBIND11_MODULE(vdsim, m) {
         .def_readwrite("ackerman_percent",     &vdsim::VehicleParams::ackerman_percent)
         .def_readwrite("steer_input",          &vdsim::VehicleParams::steer_input)
         .def_readwrite("wheel_gyro",           &vdsim::VehicleParams::wheel_gyro)
+        .def_readwrite("rotor_axis",           &vdsim::VehicleParams::rotor_axis,
+             "none | +x | -x | +y | -y (body axes): L5 rotor gyroscope axis (work order 52).")
+        .def_property("rotor_inertia",
+             [](const vdsim::VehicleParams& v) { return v.engine_rotational_inertia; },
+             [](vdsim::VehicleParams& v, double x) {
+                 if (!(x >= 0.0))
+                     throw std::invalid_argument("rotor_inertia: must be >= 0");
+                 v.engine_rotational_inertia = x;
+                 v.rotor_inertia_named = true;
+             },
+             "Alias of engine_rotational_inertia [kg m^2] (same storage); to_yaml keeps "
+             "this name once it is set.")
+        .def_property("rotor_ratio",
+             [](const vdsim::VehicleParams& v) { return v.final_drive_ratio; },
+             [](vdsim::VehicleParams& v, double x) {
+                 if (!(x > 0.0))
+                     throw std::invalid_argument("rotor_ratio: must be > 0");
+                 v.final_drive_ratio = x;
+                 v.rotor_ratio_named = true;
+             },
+             "Alias of final_drive_ratio [-] (same storage); to_yaml keeps this name once "
+             "it is set.")
         .def_readwrite("tire_low_speed",       &vdsim::VehicleParams::tire_low_speed)
         .def_readwrite("rack_per_rad",         &vdsim::VehicleParams::rack_per_rad)
         .def_readwrite("steering_dynamic",     &vdsim::VehicleParams::steering_dynamic)
@@ -1614,9 +1636,13 @@ PYBIND11_MODULE(vdsim, m) {
         .def("stats",    &vdsim::RealTimeRunner::stats,
              py::call_guard<py::gil_scoped_release>());
 
+    // The session factories take a TireSetup (per-axle or per-wheel tyres, work order
+    // 52); a TireParams converts to TireSetup(tp), the same session as before.
+    py::implicitly_convertible<vdsim::TireParams, vdsim::TireSetup>();
+
     // Factory: build a SimSession (flat ground) from level + params.
     m.def("make_sim_session",
-          [](const vdsim::VehicleParams& vp, const vdsim::TireParams& tp,
+          [](const vdsim::VehicleParams& vp, const vdsim::TireSetup& tp,
              const std::string& level, double sensor_delay_s, double mu,
              double nominal_dt, const vdsim::ActuatorParams& actuator,
              const vdsim::SolverParams& solver, const vdsim::SensorParams& sensors,
@@ -1776,7 +1802,7 @@ PYBIND11_MODULE(vdsim, m) {
           "Zero the substep clamp counter.");
 
     m.def("make_vec_session",
-          [](int num_envs, const vdsim::VehicleParams& vp, const vdsim::TireParams& tp,
+          [](int num_envs, const vdsim::VehicleParams& vp, const vdsim::TireSetup& tp,
              const std::string& level, double sensor_delay_s, double mu,
              double nominal_dt, const vdsim::ActuatorParams& actuator,
              const vdsim::SolverParams& solver, const vdsim::SensorParams& sensors,
@@ -1829,7 +1855,7 @@ PYBIND11_MODULE(vdsim, m) {
     // bilinear height + gradient normal -> slope-gravity works on arbitrary
     // terrain (Blender mesh baked to a heightmap).
     m.def("make_sim_session_heightmap",
-          [](const vdsim::VehicleParams& vp, const vdsim::TireParams& tp,
+          [](const vdsim::VehicleParams& vp, const vdsim::TireSetup& tp,
              const std::string& level,
              py::array_t<double, py::array::c_style | py::array::forcecast> arr,
              double x0, double y0, double dx, double dy, double mu,
@@ -1856,7 +1882,7 @@ PYBIND11_MODULE(vdsim, m) {
     // Session on a PSD road. Analytic Gd0/waviness(/dual-slope), or a measured
     // (n, Gd) table when both n and gd are non-empty.
     m.def("make_sim_session_psd",
-          [](const vdsim::VehicleParams& vp, const vdsim::TireParams& tp,
+          [](const vdsim::VehicleParams& vp, const vdsim::TireSetup& tp,
              const std::string& level, double gd_n0, double waviness,
              double n_break, double waviness_high, double n_min, double n_max,
              double mu, std::vector<double> n, std::vector<double> gd,

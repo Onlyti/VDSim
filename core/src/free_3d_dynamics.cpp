@@ -11,6 +11,7 @@
 #include "free_3d_aero_internal.hpp"
 #include "free_3d_jacking_internal.hpp"
 #include "free_3d_reaction_internal.hpp"
+#include "free_3d_rotor_internal.hpp"
 #include "free_3d_wheel_gyro_internal.hpp"
 
 #include <spdlog/spdlog.h>
@@ -158,6 +159,7 @@ public:
         validate_steer_input(vp_);
         validate_l5_steer_input(vp_);
         gyro_mode_ = wheel_gyro_mode(vp_);
+        rotor_axis_ = rotor_axis_vector(vp_);
         validate_rack_per_rad(vp_);
         for (int axle = 0; axle < 2; ++axle) {
             const bool front = (axle == 0);
@@ -429,6 +431,10 @@ public:
     /// @brief Install the 49a P10b connection-pair probe (empty = off). @param p sink
     void set_jacking_probe(detail::JackingPairProbe p) { jack_probe_ = std::move(p); }
     std::array<double, NUM_WHEELS> wheel_camber() const noexcept { return gamma_dae_; }
+    /// Reflected spin inertia per wheel of the last spin equation (work order 52).
+    std::array<double, NUM_WHEELS> engine_inertia_obs() const noexcept { return obs_I_eng_; }
+    /// Wheel spin inertia per wheel the spin equation uses (work order 52).
+    std::array<double, NUM_WHEELS> wheel_inertia_obs() const noexcept { return I_wheel_; }
     std::array<double, NUM_WHEELS> wheel_toe()    const noexcept { return toe_dae_; }
     std::array<double, NUM_WHEELS> rack_dy()      const noexcept { return rack_dy_; }
     std::array<bool, NUM_WHEELS> kin_valid() const noexcept {
@@ -1079,6 +1085,29 @@ private:
             tau_body += detail::wheel_gyro_moment(gyro_mode_, omega, I_wheel_,
                                                   s.wheel_spin, delta_g, gamma_g);
         }
+        // Rotor gyroscope (work order 52, theory 20): the motor / engine rotor spins at
+        // the carrier speed times the ratio about a body-fixed axis, H_r = I_r G omega_c
+        // e_axis, from the same storage as the reflected spin inertia I_r G^2. The body
+        // takes -omega x H_r. Independent of wheel_gyro and of ground contact. rotor_axis
+        // none leaves the arithmetic untouched.
+        if (rotor_axis_ != Vec3::Zero()) {
+            double H_mag = 0.0;
+            if (vp_.powertrain.enabled) {
+                // Drivetrain v2: engine inertia at the engine speed (information path).
+                H_mag = vp_.powertrain.engine.inertia * drivetrain_->engine_rpm() *
+                        (2.0 * 3.14159265358979323846 / 60.0);
+            } else {
+                const double I_r = vp_.engine_rotational_inertia > 0.0
+                                       ? vp_.engine_rotational_inertia : 0.0;
+                const double w_f = 0.5 * (s.wheel_spin[WHEEL_FL] + s.wheel_spin[WHEEL_FR]);
+                const double w_r = 0.5 * (s.wheel_spin[WHEEL_RL] + s.wheel_spin[WHEEL_RR]);
+                double w_c = w_r;
+                if (vp_.drive_type == VehicleParams::Drive::FWD) w_c = w_f;
+                else if (vp_.drive_type == VehicleParams::Drive::AWD) w_c = 0.5 * w_f + 0.5 * w_r;
+                H_mag = I_r * vp_.final_drive_ratio * w_c;
+            }
+            tau_body -= omega.cross(H_mag * rotor_axis_);
+        }
         const Vec3 Iw(
             vp_.inertia_diag.x() * omega.x(),
             vp_.inertia_diag.y() * omega.y(),
@@ -1123,6 +1152,7 @@ private:
             T_net[i]   = T_drive + Tb[i] - T_react;
             I_eng_w[i] = grounded ? eff_wheel_I(i) : 0.0;
         }
+        obs_I_eng_ = I_eng_w;
         if (open_diff) {
             open_axle_spin_accel(d_out.domega[WHEEL_FL], d_out.domega[WHEEL_FR],
                                  T_net[WHEEL_FL], T_net[WHEEL_FR],
@@ -1361,6 +1391,10 @@ private:
     bool sprung_ref_ {false};       // cg_height_ref = sprung: 0.8.1 strut behaviour (Re arm)
     std::array<double, NUM_WHEELS> I_wheel_ {};
     WheelGyro gyro_mode_ {WheelGyro::Legacy};   // VehicleParams::wheel_gyro
+    Vec3 rotor_axis_ {Vec3::Zero()};             // VehicleParams::rotor_axis (zero = none)
+    // Reflected engine / rotor spin inertia per wheel the last spin equation used
+    // (read-only observation, work order 52 V5b2).
+    std::array<double, NUM_WHEELS> obs_I_eng_ {};
     Vec3 I_body_inv_ {Vec3::Zero()};
     // Spatial strut (l5_spatial_suspension): per-corner sprung static load (preload so
     // comp=0 is the static ride position) and travel limits (bump / droop stops).
@@ -1518,6 +1552,22 @@ std::array<double, NUM_WHEELS> free_3d_wheel_camber(const IVehicleDynamics& dyn)
     const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);
     return p ? p->wheel_camber() : std::array<double, NUM_WHEELS>{};
 }
+
+namespace detail {
+
+std::array<double, NUM_WHEELS> free_3d_wheel_engine_inertia_obs(const IVehicleDynamics& dyn) {
+    const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);
+    if (!p) throw std::invalid_argument("free_3d_wheel_engine_inertia_obs: not the L5 model");
+    return p->engine_inertia_obs();
+}
+
+std::array<double, NUM_WHEELS> free_3d_wheel_inertia_obs(const IVehicleDynamics& dyn) {
+    const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);
+    if (!p) throw std::invalid_argument("free_3d_wheel_inertia_obs: not the L5 model");
+    return p->wheel_inertia_obs();
+}
+
+}  // namespace detail
 
 std::array<double, NUM_WHEELS> free_3d_wheel_toe(const IVehicleDynamics& dyn) {
     const auto* p = dynamic_cast<const Free3DDynamics*>(&dyn);

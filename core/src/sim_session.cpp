@@ -113,6 +113,8 @@ SimSession::SimSession(std::unique_ptr<IVehicleDynamics> dyn,
     }
     // wheel_gyro is an L5 term; L1-L4 validate it, ignore it and warn once per process.
     if (dyn_->level() != IVehicleDynamics::Level::L5_Stunt) warn_if_wheel_gyro_unused(vp);
+    // rotor_axis (work order 52) likewise; L5 validates it when the dynamics is built.
+    if (dyn_->level() != IVehicleDynamics::Level::L5_Stunt) warn_if_rotor_axis_unused(vp);
     {
         // cg_height_ref selects a meaning on the L5 strut / DAE path only; L1-L4 and
         // the L5 penalty path always treat cg_height as the whole-vehicle CG.

@@ -289,6 +289,18 @@ def _catalog_root():
     return REPO
 
 
+def _tire_arg(front, rear=None):
+    """Tyre argument for the session factories (work order 52).
+
+    :param front: :class:`Tire` of the front axle (all four wheels when rear is None).
+    :param rear: :class:`Tire` of the rear axle, or None.
+    :returns: ``front.tp`` alone, or ``vdsim.TireSetup(front.tp, rear.tp)``.
+    """
+    if rear is None:
+        return front.tp
+    return vdsim.TireSetup(front.tp, rear.tp)
+
+
 def _resolve_preset(vehicle="sedan", tire="default_pacejka"):
     root = _catalog_root()
     pkg = Path(__file__).resolve().parent
@@ -686,6 +698,7 @@ class Experiment:
         self.level, self.dt = level, dt
         self._veh = Vehicle.preset("sedan")
         self._tire = Tire.preset()
+        self._tire_rear = None
         self._road = Road.flat()
         self._man = Maneuver.constant_speed(15.0)
         self._sensors = None
@@ -702,7 +715,15 @@ class Experiment:
         self._channels = ()
 
     def vehicle(self, v): self._veh = v; return self
-    def tire(self, t): self._tire = t; return self
+    def tire(self, t, rear=None):
+        """Set the tyre (all wheels), or the front and rear axle tyres (work order 52).
+
+        :param t: :class:`Tire` of the front axle, or of every wheel when rear is None.
+        :param rear: :class:`Tire` of the rear axle, or None.
+        """
+        self._tire = t
+        self._tire_rear = rear
+        return self
     def road(self, r): self._road = r; return self
     def maneuver(self, m): self._man = m; return self
     def sensors(self, s): self._sensors = s; return self
@@ -730,7 +751,10 @@ class Experiment:
             cfg = yaml.safe_load(open(_EXP / f"{cfg}.yaml"))
         exp = cls(level=cfg.get("level", "L2"))
         exp.vehicle(Vehicle.preset(cfg.get("vehicle", "sedan")))
-        exp.tire(Tire.preset(cfg.get("tire", "default_pacejka")))
+        if "tire_rear" in cfg and "tire" not in cfg:
+            raise ValueError("tire_rear needs tire (the front axle tyre) in the same config")
+        exp.tire(Tire.preset(cfg.get("tire", "default_pacejka")),
+                 Tire.preset(cfg["tire_rear"]) if "tire_rear" in cfg else None)
         kin = cfg.get("kinematics")
         if kin is not None:
             # Stems or paths; resolve_susp_kinematics() resolves them at attach
@@ -938,7 +962,8 @@ class Experiment:
         vp, tp = self._veh.vp, self._tire.tp
         sp = self._sensors.sp if self._sensors else vdsim.SensorParams()
         sess, self._kin_info = _build_session(
-            self._road, vp, tp, self.level, self.dt, sp, self._kin)
+            self._road, vp, _tire_arg(self._tire, getattr(self, "_tire_rear", None)),
+            self.level, self.dt, sp, self._kin)
         if self._trace_pending is not None:
             self._open_trace(sess)
         x0, y0 = getattr(self._man, "start", (0.0, 0.0))
@@ -990,8 +1015,8 @@ class Simulation:
         self.dt = dt or exp.dt
         self.duration = duration if duration is not None else getattr(exp, "_duration", 1e18)
         self.sess, self._kin_info = _build_session(
-            exp._road, self._vp, exp._tire.tp, exp.level, self.dt, sp,
-            getattr(exp, "_kin", None))
+            exp._road, self._vp, _tire_arg(exp._tire, getattr(exp, "_tire_rear", None)),
+            exp.level, self.dt, sp, getattr(exp, "_kin", None))
         man = exp._man
         x0, y0 = getattr(man, "start", (0.0, 0.0))
         self.sess.reset(vdsim.make_init_state(self._vp, exp._tire.tp,
@@ -1163,9 +1188,11 @@ class Sim:
     def __init__(self, vehicle="sedan", tire="default_pacejka", level="L2",
                  road=None, sensors=None, dt=0.005,
                  x0=0.0, y0=0.0, yaw0=0.0, v0=0.0, sensor_mounts=None,
-                 ref_point=None, kinematics=None):
+                 ref_point=None, kinematics=None, tire_rear=None):
         self._veh = _as_vehicle(vehicle)
         self._tire = _as_tire(tire)
+        # Rear-axle tyre (work order 52); None = the same tyre on every wheel.
+        self._tire_rear = None if tire_rear is None else _as_tire(tire_rear)
         self._road = road or Road.flat()
         self.level, self.dt = level, dt
         vp, tp = self._veh.vp, self._tire.tp
@@ -1176,7 +1203,8 @@ class Sim:
         else:
             sp = sensors                           # raw vdsim.SensorParams
         self.sess, self._kin_info = _build_session(
-            self._road, vp, tp, level, dt, sp, kinematics)
+            self._road, vp, _tire_arg(self._tire, self._tire_rear), level, dt, sp,
+            kinematics)
         self.sess.reset(vdsim.make_init_state(vp, tp, x=x0, y=y0, yaw=yaw0, v=v0))
         self._vp = vp
         self._tp = tp

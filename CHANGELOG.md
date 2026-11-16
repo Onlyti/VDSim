@@ -37,15 +37,44 @@ after the v0.8.3 tag.
   path. `AeroInput` carries the air-relative velocity, slip angle, `dz_heave`,
   `pitch`, `roll`, `dh_front`, `dh_rear` and `rho`; `AeroForce.point` uses the
   `aero.elements` frame. Fy acts on L5 only (ignored with one warning on L2–L4).
+- Per-axle tyres from Python (work order 52, R4). `vdsim.make_sim_session`,
+  `make_vec_session`, `make_sim_session_heightmap` and `make_sim_session_psd` take a
+  `vdsim.TireSetup` (front / rear axle or four corners) as `tire`; a `TireParams`
+  still works and builds the same session as before (it converts to
+  `TireSetup(tp)`). `vdsim_lab`: `Experiment.tire(front, rear=None)`,
+  `Sim(..., tire_rear=None)` and the config key `tire_rear`. The C++ YAML paths
+  (`vdsim_realtime`, world scenarios, catalog) already read per-axle tyres and are
+  unchanged.
+- Rotor keys (work order 52). `rotor_inertia` [kg m²] and `rotor_ratio` [-] are
+  YAML and Python names of `engine_rotational_inertia` and `final_drive_ratio`
+  (same parameter; `to_yaml` keeps the name that was written).
+  `rotor_axis: none | +x | -x | +y | -y` (body axes) adds the L5 rotor gyroscopic
+  moment −ω × H_r, H_r = I_r · G · ω_c · ê (ω_c = driven-axle carrier speed, AWD
+  front and rear half each), from the same I_r and G as the reflected spin inertia
+  I_r · G². It is independent of `wheel_gyro`. Unset or `none` leaves every result
+  unchanged. L1–L4 read `rotor_axis` and ignore it (one warning per process); the
+  reflected spin inertia applies on every level as before.
 
 ### Changed
 - L3/L4 hand their ride states to the inner planar aero each step, so every RK
   stage and the reported tyre `Fz` see the same ride slopes as the L3 tyre-load
   path. No effect without a non-zero slope.
+- L3 and L4 `tire(wheel)` (C++ `IVehicleDynamics::tire`, Python `.tire()`) now
+  return the live tyre model of their inner planar core (per-axle `TireSetup`
+  included). Earlier releases returned `nullptr` / `None` on these levels.
+  Simulation results are unchanged.
 
 ### Rejected (`std::invalid_argument` / `ValueError`)
 - An element with one or two of the three slope keys; a non-finite slope key.
 - L1 or L2 with a non-zero slope (the keys with both slopes 0 are accepted).
+- `rotor_inertia` < 0, `rotor_ratio` ≤ 0, an unknown `rotor_axis`.
+- `rotor_inertia` together with `engine_rotational_inertia` (or `rotor_ratio`
+  with `final_drive_ratio`) written with different values.
+- `rotor_inertia` / `rotor_ratio` together with a `powertrain:` block (the engine
+  inertia and gear ratios come from that block); `rotor_axis` alone is accepted
+  there and uses the engine speed.
+- `vdsim_lab`: `tire_rear` without `tire` in a config; a non-tyre object as `tire`
+  in the session factories (`TypeError`).
 
 ### Known limitations
 - L3/L4: downforce is added to the tyre loads only and does not change the
@@ -61,6 +90,13 @@ after the v0.8.3 tag.
   sample's body-x speed without ride states; with a non-zero slope they are not
   the applied load.
 - The L5 settle run costs about 0.1 s of wall clock per reset (example car).
+- The range check is on the `rotor_*` names only: `final_drive_ratio` and
+  `engine_rotational_inertia` keep no range check, so existing YAML behaves as
+  before. A check on the existing names is a separate candidate.
+- The rotor gyroscope does not depend on ground contact (an airborne driven wheel
+  drops the reflected spin inertia, not the rotor moment).
+- `make_init_state(vp, tp)` takes one tyre: with per-axle tyres pass the front tyre;
+  the rear wheels then start at the front tyre's free-rolling radius.
 
 ## [0.8.3] - 2026-11-15
 

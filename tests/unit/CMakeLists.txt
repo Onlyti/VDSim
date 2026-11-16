@@ -11,6 +11,7 @@ add_executable(vdsim_unit_tests
     test_l5_reaction_keys.cpp
     test_dae_contact_slope.cpp
     test_wheel_gyro_keys.cpp
+    test_rotor_keys.cpp
     test_rack_per_rad_key.cpp
     test_cg_height_ref_keys.cpp
     test_scenario_yaml.cpp
